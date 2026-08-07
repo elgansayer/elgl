@@ -2,7 +2,6 @@ import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { RouterLink } from '@angular/router';
-import { JoyrideModule } from 'ngx-joyride';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
@@ -19,34 +18,29 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [JoyrideModule, TranslatePipe, RouterLink],
+  imports: [TranslatePipe, RouterLink],
   template: `
     <div class="max-w-6xl mx-auto p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
       <p class="mb-6 text-sm opacity-70">{{ 'shop.subtitle' | t }}</p>
-      <span joyrideStep="economyTour@shopLink" [text]="'tour.shopLinkDesc' | t" stepPosition="bottom">
-        <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
-      </span>
+      <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
       @if (message()) {
-        <p class="mb-4 text-sm text-indigo-300" role="status" aria-live="polite">{{ message() }}</p>
+        <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" role="list" aria-label="{{ 'shop.title' | t }}">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         @for (item of items(); track item.id) {
-          <div class="rounded-xl bg-surface p-3 shadow flex flex-col" role="listitem">
-            <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl" aria-hidden="true">
+          <div class="rounded-xl bg-surface p-3 shadow flex flex-col">
+            <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl">
               {{ item.imageUrl ? '' : '🎁' }}
             </div>
             <h2 class="font-semibold text-sm sm:text-base truncate">{{ item.name }}</h2>
             <p class="text-xs opacity-60 line-clamp-2">{{ item.description }}</p>
             <p class="mt-auto pt-1 font-semibold text-indigo-400 text-sm sm:text-base">
-              <span class="sr-only">{{ 'common.price' | t }}: </span>{{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
+              {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
             </p>
             <button
-              type="button"
               class="mt-2 w-full rounded-full bg-indigo-600 py-1.5 text-xs sm:text-sm font-medium hover:bg-indigo-500 transition-colors"
-              (click)="addToCart(item.id)"
-              [attr.aria-label]="('cart.add' | t) + ' ' + item.name + ' - ' + item.price + ' ' + ('common.coins' | t)"
-            >
+              (click)="addToCart(item.id)">
               {{ 'cart.add' | t }}
             </button>
           </div>
@@ -54,19 +48,6 @@ interface CatalogItem {
       </div>
     </div>
   `,
-  styles: [`
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border-width: 0;
-    }
-  `],
 })
 export class ShopComponent {
   private http = inject(HttpClient);

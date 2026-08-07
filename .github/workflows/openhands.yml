@@ -42,12 +42,26 @@ jobs:
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
             Issue body: "${{ github.event.issue.body }}".
+
+            MANDATORY VERIFICATION GATE — follow these steps IN ORDER:
+
             1. Write the code to fix the issue completely.
-            2. Run tests to verify the fix works.
-            3. Commit your changes with a descriptive message.
-            4. Create a PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
-            CRITICAL: If GitHub rejects the merge because checks are still running, poll
-            'gh pr checks <number> --watch' and retry. DO NOT FINISH until the PR is created.
+            2. Run the full verification suite. This is NOT optional:
+               - Backend: cd backend && npm run lint && npm run build && npm test
+               - Frontend: cd frontend && npm run lint && npx ng build && npm test -- --watch=false
+               - Root: npm run check:constitution 2>/dev/null || true
+            3. If ANY build fails or ANY test fails, FIX THE CODE and re-run from step 2.
+               Do NOT proceed until EVERYTHING passes.
+            4. Run: npm run check:control-flow 2>/dev/null || true
+            5. Run: npm run check:rtl-logical 2>/dev/null || true
+            6. Run: npm run check:template-bindings 2>/dev/null || true
+            7. Scan ALL changed files for merge conflict markers (<<<<<<<, =======, >>>>>>>).
+               If ANY are found, DELETE them and re-run verification from step 2.
+            8. Only when ALL checks pass: commit with a descriptive message.
+            9. Create a PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
+
+            CRITICAL: A PR with broken builds or failing tests is UNACCEPTABLE.
+            Fix everything before creating the PR. DO NOT FINISH until all checks pass and the PR is created.
 
       # Auto-skip: claude-code-action exits 0 even on auth/quota errors.
       # We check whether a PR was actually created for this issue instead.
@@ -87,11 +101,17 @@ jobs:
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
             Issue body: "${{ github.event.issue.body }}".
-            1. Write the code to fix the issue completely.
-            2. Run tests to verify the fix works.
-            3. Commit your changes with a descriptive message.
-            4. Create a PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
-            CRITICAL: DO NOT FINISH until the PR is created and visible on GitHub.
+
+            MANDATORY: Before creating a PR, you MUST run the full verification and fix all failures:
+
+            1. Write the code.
+            2. cd backend && npm run lint && npm run build && npm test
+            3. cd frontend && npm run lint && npx ng build && npm test -- --watch=false
+            4. If ANYTHING fails, FIX IT and re-run from step 2.
+            5. Scan for conflict markers (<<<<<<<, =======, >>>>>>>) in ALL changed files. Remove them.
+            6. Only when EVERYTHING passes: commit and create PR:
+               gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
+            DO NOT create a PR with broken code. Fix everything first.
           cli_args: "--max-iterations 50"
           openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
@@ -108,10 +128,16 @@ jobs:
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
             Issue body: "${{ github.event.issue.body }}".
-            1. Write the code to fix the issue completely.
-            2. Commit your changes with a descriptive message.
-            3. Create a PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
-            CRITICAL: DO NOT FINISH until the PR is created.
+
+            MANDATORY: Before creating a PR:
+            1. Write the code.
+            2. cd backend && npm run build && npm test
+            3. cd frontend && npx ng build && npm test -- --watch=false
+            4. Fix any failures, re-run until everything passes.
+            5. Scan for and remove conflict markers (<<<<<<<, =======, >>>>>>>).
+            6. Commit and create PR:
+               gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
+            DO NOT create a PR with broken code. Fix everything first.
           cli_args: "--max-iterations 30"
           openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"

@@ -4,7 +4,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
-import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { withRetry, isRateLimitError } from '../common/retry';
 
@@ -30,7 +29,6 @@ export class FlashcardsService {
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     private readonly metricsService: MetricsService,
-    private readonly cloudflareCacheService: CloudflareCacheService,
   ) {}
 
   /**
@@ -355,29 +353,13 @@ export class FlashcardsService {
     };
   }
 
-  private static readonly FLASHCARD_PAGE_SIZE = 50;
-  private static readonly FLASHCARD_MAX_LIMIT = 100;
-
-  async getFlashcards(
-    userId: string,
-    level?: number,
-    limit?: number,
-    offset?: number,
-  ): Promise<Flashcard[]> {
-    const sanitisedLimit = Math.min(
-      Math.max(1, limit ?? FlashcardsService.FLASHCARD_PAGE_SIZE),
-      FlashcardsService.FLASHCARD_MAX_LIMIT,
-    );
-    const sanitisedOffset = Math.max(0, offset ?? 0);
-
+  async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('flashcards')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(sanitisedLimit)
-      .range(sanitisedOffset, sanitisedOffset + sanitisedLimit - 1);
+      .order('created_at', { ascending: false });
 
     if (level !== undefined && !isNaN(level)) {
       query = query.eq('srs_level', level);
@@ -391,8 +373,7 @@ export class FlashcardsService {
             { userId },
             'Database unavailable for getFlashcards, returning from memory store',
           );
-          const cached = this.getCachedFlashcards(userId, level);
-          return cached.slice(sanitisedOffset, sanitisedOffset + sanitisedLimit);
+          return this.getCachedFlashcards(userId, level);
         }
         return [];
       }
@@ -402,8 +383,7 @@ export class FlashcardsService {
         { userId, error: (error as Error).message },
         'getFlashcards failed, returning from memory store',
       );
-      const cached = this.getCachedFlashcards(userId, level);
-      return cached.slice(sanitisedOffset, sanitisedOffset + sanitisedLimit);
+      return this.getCachedFlashcards(userId, level);
     }
   }
 

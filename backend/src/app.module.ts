@@ -168,7 +168,9 @@ import { CloudflareModule } from './cloudflare/cloudflare.module';
     AssessmentsModule,
     AnalyticsModule,
     MetricsModule,
-],
+    ReadingEngineModule,
+    CloudflareModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

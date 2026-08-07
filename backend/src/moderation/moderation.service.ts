@@ -51,12 +51,13 @@ const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map((flag
 
 @Injectable()
 export class ModerationService {
-  private readonly logger = new (require('@nestjs/common')).Logger(ModerationService.name);
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
+    @InjectPinoLogger(ModerationService.name)
+    private readonly logger: PinoLogger,
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -210,7 +211,9 @@ export class ModerationService {
     }
   }
 
-  async approveItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+  async approveItem(
+    dto: ModerationActionDto,
+  ): Promise<ModerationDegradedResponse> {
     const startTime = Date.now();
     try {
       const { error } = await this.supabase
@@ -235,7 +238,9 @@ export class ModerationService {
     }
   }
 
-  async rejectItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+  async rejectItem(
+    dto: ModerationActionDto,
+  ): Promise<ModerationDegradedResponse> {
     const startTime = Date.now();
     try {
       const { error } = await this.supabase

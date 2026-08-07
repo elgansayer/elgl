@@ -1696,7 +1696,7 @@ export class I18nService {
     'escrow.status.disputed': 'Disputed',
     'escrow.status.cancelled': 'Cancelled',
 
-    // Escrow onboarding tooltips (ngx-joyride)
+    // Escrow onboarding tooltips
     'escrow.onboarding.helpBtn': 'Show guided tour',
     'escrow.onboarding.stepTitleTitle': 'Escrow Payments',
     'escrow.onboarding.stepTitleText':

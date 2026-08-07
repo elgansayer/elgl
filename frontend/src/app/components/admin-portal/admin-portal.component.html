@@ -27,83 +27,83 @@
   </form>
 
   <div aria-live="polite">
-    @if (errorMessage()) {
-      <app-empty-state
-        icon="⚠️"
-        [title]="'admin.loadError' | t"
-        [description]="'admin.loadErrorDesc' | t"
-        [actionLabel]="'common.retry' | t"
-        (actionClicked)="retryLoad()"
-      />
-    } @else if (isLoading()) {
-      <div class="space-y-3">
-        @for (i of [1, 2, 3, 4, 5]; track i) {
-          <app-card customClass="p-4 space-y-3">
-            <div class="flex items-center gap-3">
+  @if (errorMessage()) {
+    <app-empty-state
+      icon="⚠️"
+      [title]="'admin.loadError' | t"
+      [description]="'admin.loadErrorDesc' | t"
+      [actionLabel]="'common.retry' | t"
+      (actionClicked)="loadUsers()"
+    />
+  } @else if (isLoading()) {
+    <div class="space-y-3">
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <app-card customClass="p-4 space-y-3">
+          <div class="flex items-center gap-3">
+            <app-skeleton-loader
+              [height]="'42px'"
+              [width]="'42px'"
+              [variant]="'circle'"
+            />
+            <div class="flex-1 space-y-2">
               <app-skeleton-loader
-                [height]="'42px'"
-                [width]="'42px'"
-                [variant]="'circle'"
-              />
-              <div class="flex-1 space-y-2">
-                <app-skeleton-loader
-                  [height]="'14px'"
-                  [width]="'50%'"
-                  [variant]="'text'"
-                />
-                <app-skeleton-loader
-                  [height]="'11px'"
-                  [width]="'35%'"
-                  [variant]="'text'"
-                />
-              </div>
-              <app-skeleton-loader
-                [height]="'28px'"
-                [width]="'60px'"
-                [borderRadius]="'12px'"
+                [height]="'14px'"
+                [width]="'50%'"
+                [variant]="'text'"
               />
               <app-skeleton-loader
-                [height]="'28px'"
-                [width]="'60px'"
-                [borderRadius]="'12px'"
+                [height]="'11px'"
+                [width]="'35%'"
+                [variant]="'text'"
               />
             </div>
-          </app-card>
-        }
-      </div>
-    } @else if (users().length === 0) {
-      <app-empty-state
-        icon="👥"
-        [title]="'admin.emptyTitle' | t"
-        [description]="'admin.emptyDesc' | t"
-      />
-    } @else {
-      <div class="space-y-3" role="table" [attr.aria-label]="'admin.userTableAria' | t">
-        <div role="rowgroup">
-          @for (user of users(); track user.id) {
-            <app-card variant="default" padding="md">
-              <div class="flex flex-wrap items-center gap-3" role="row">
-                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden" role="cell">
-                  @if (user.avatar_url) {
-                    <img loading="lazy" [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
-                  } @else {
-                    <div
-                      class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
-                      aria-hidden="true"
-                    >
-                      {{ displayNameFor(user).charAt(0) }}
-                    </div>
-                  }
+            <app-skeleton-loader
+              [height]="'28px'"
+              [width]="'60px'"
+              [borderRadius]="'12px'"
+            />
+            <app-skeleton-loader
+              [height]="'28px'"
+              [width]="'60px'"
+              [borderRadius]="'12px'"
+            />
+          </div>
+        </app-card>
+      }
+    </div>
+  } @else if (users().length === 0) {
+    <app-empty-state
+      icon="👥"
+      [title]="'admin.emptyTitle' | t"
+      [description]="'admin.emptyDesc' | t"
+    />
+  } @else {
+    <div class="space-y-3" role="table" [attr.aria-label]="'admin.userTableAria' | t">
+      <div role="rowgroup">
+      @for (user of users(); track user.id) {
+        <app-card variant="default" padding="md">
+          <div class="flex flex-wrap items-center gap-3" role="row">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden" role="cell">
+              @if (user.avatar_url) {
+                <img loading="lazy" [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
+              } @else {
+                <div
+                  class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
+                  aria-hidden="true"
+                >
+                  {{ displayNameFor(user).charAt(0) }}
                 </div>
+              }
+            </div>
 
-                <div class="flex-1 min-w-[10rem]" role="cell">
-                  <p class="font-semibold">{{ displayNameFor(user) | sanitiseHtml }}</p>
-                  <p class="text-xs text-text-secondary">
-                    {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
-                  </p>
-                </div>
+            <div class="flex-1 min-w-[10rem]" role="cell">
+              <p class="font-semibold">{{ displayNameFor(user) }}</p>
+              <p class="text-xs text-text-secondary">
+                {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
+              </p>
+            </div>
 
-                <div class="flex items-center gap-2" role="cell">
+            <div class="flex items-center gap-2" role="cell">
                   @if (user.is_admin) {
                     <app-pill colour="info" size="sm" [label]="'admin.badgeAdmin' | t" />
                   }
@@ -173,10 +173,10 @@
                         <li class="text-xs text-text-secondary">
                           {{ entry.created_at | date: 'medium' }}
                           @if (entry.ip_address) {
-                            &middot; {{ entry.ip_address | sanitiseHtml }}
+                            &middot; {{ entry.ip_address }}
                           }
                           @if (entry.user_agent) {
-                            &middot; {{ entry.user_agent | sanitiseHtml }}
+                            &middot; {{ entry.user_agent }}
                           }
                         </li>
                       }

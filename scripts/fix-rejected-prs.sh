@@ -1,12 +1,11 @@
 #!/bin/bash
-# fix-rejected-prs.sh — Parallel PR fixer that NEVER discards changes.
+# fix-rejected-prs.sh — Parallel PR fixer that NEVER commits conflict markers.
 #
-# Strategy: rebase each PR branch onto main. If rebase conflicts, accept
-# conflict markers (both sides preserved) and push back so the AI PR
-# reviewer can resolve them intelligently in the next review cycle.
+# Strategy: rebase each PR branch onto main. If rebase conflicts, abort and
+# leave the branch as-is for the AI PR reviewer to resolve intelligently.
+# NEVER commits raw conflict markers (<<<<<<<, =======, >>>>>>>).
 #
 # Processes PRs in parallel batches for maximum throughput.
-# Destructive strategies like `-X ours` are NEVER used.
 
 set -e
 
@@ -17,8 +16,8 @@ cd "$REPO_DIR"
 
 MAX_PARALLEL="${MAX_PARALLEL_PR_FIXER:-20}"
 
-echo "=== Autonomous PR Fixer & Merger (Parallel Safe Mode) ==="
-echo "Strategy: rebase-first, accept-conflict-markers-never-discard"
+echo "=== Autonomous PR Fixer & Merger (Zero Conflict Marker Policy) ==="
+echo "Strategy: rebase-only, NEVER commit conflict markers"
 echo "Parallel workers: $MAX_PARALLEL"
 
 git config user.email "swarm@hellotalk.ai" 2>/dev/null || true
@@ -70,40 +69,26 @@ process_pr() {
 
         if git push origin "pr-${pr}:refs/heads/$(gh pr view "$pr" --json headRefName -q '.headRefName' 2>/dev/null)" --force-with-lease 2>/dev/null; then
           echo "[$pr] ✓ Pushed rebased branch."
-        else
-          echo "[$pr] ⚠ Push failed - skipping merge."
-          exit 0
-        fi
 
-        echo "[$pr] Waiting for checks to complete..."
-        gh pr checks "$pr" --watch 2>/dev/null || true
+          echo "[$pr] Waiting for checks to complete..."
+          gh pr checks "$pr" --watch 2>/dev/null || true
 
-        if gh pr merge "$pr" --squash --delete-branch 2>/dev/null; then
-          echo "[$pr] ✓ Merged successfully."
+          if gh pr merge "$pr" --squash --delete-branch 2>/dev/null; then
+            echo "[$pr] ✓ Merged successfully."
+          else
+            echo "[$pr] ⚠ Merge failed (checks may have failed) — leaving for AI review."
+          fi
         else
-          echo "[$pr] ⚠ Merge failed (checks may have failed) - leaving for AI review."
+          echo "[$pr] ⚠ Push failed — skipping."
         fi
       else
-        # ── Rebase failed - abort, try merge with markers ──────────
-        echo "[$pr] Rebase conflicts detected. Aborting rebase - switching to safe merge."
+        # ── Rebase failed — ABORT, do NOT commit conflict markers ──
+        echo "[$pr] ⚠ Rebase conflicts with main. Aborting rebase."
         git rebase --abort 2>/dev/null || true
 
-        if git merge origin/main --no-edit 2>/dev/null; then
-          echo "[$pr] ✓ Clean merge - no conflicts after all."
-        else
-          echo "[$pr] Merge conflicts detected. Accepting conflict markers for AI resolution."
-          echo "[$pr] NEVER discarding changes - both sides preserved in markers."
-          git diff --name-only --diff-filter=U || true
-          git add .
-          git commit -m "merge: accept conflict markers with main for AI resolution" 2>/dev/null || true
-        fi
-
-        if git push origin "pr-${pr}:refs/heads/$(gh pr view "$pr" --json headRefName -q '.headRefName' 2>/dev/null)" --force-with-lease 2>/dev/null; then
-          echo "[$pr] ✓ Pushed branch (conflict markers included if any)."
-          echo "[$pr] AI reviewer will resolve conflicts on next review cycle."
-        else
-          echo "[$pr] ⚠ Push failed."
-        fi
+        echo "[$pr] Leaving branch as-is for the AI PR reviewer to resolve."
+        echo "[$pr] NEVER committing conflict markers — the reviewer will handle this."
+        echo "[$pr] Run: gh pr checks $pr --watch once resolved."
       fi
     )
     rc=$?

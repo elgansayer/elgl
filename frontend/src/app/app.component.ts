@@ -42,7 +42,6 @@ import { NoNetworkBannerComponent } from './components/primitives/no-network-ban
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 import { TourService } from './services/tour.service';
 
-
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }

@@ -40,14 +40,24 @@ jobs:
             You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
 
+            MANDATORY GATE — you MUST verify the code is correct before merging:
+
             1. Review the code changes in this branch.
-            2. Run the local tests and linters to verify the code is correct.
-            3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
-            4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL: Once all tests pass, execute:
-               gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
-               and retry. DO NOT FINISH until the PR is successfully merged.
+            2. Run the FULL verification suite:
+               - Backend: cd backend && npm run lint && npm run build && npm test
+               - Frontend: cd frontend && npm run lint && npx ng build && npm test -- --watch=false
+            3. If ANY build fails or ANY test fails, write the fixes, commit, and push them to this branch.
+               Then re-run verification from step 2. Do NOT proceed until everything passes.
+            4. Check for merge conflict markers (<<<<<<<, =======, >>>>>>>) in ALL files.
+               If found, resolve the markers properly and re-run verification from step 2.
+            5. Resolve any merge conflicts with `main` properly.
+            6. CRITICAL: Only when ALL checks pass, execute:
+               gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
+               If GitHub blocks the merge because checks are still running:
+               gh pr checks ${{ github.event.pull_request.number }} --watch
+               Then retry: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
+
+            NEVER merge a PR with failing builds or tests. Fix everything first.
 
       # Auto-skip: check if Claude actually merged the PR
       - name: Check if Claude merged the PR
@@ -80,16 +90,16 @@ jobs:
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
             You are the AI PR Reviewer and Fixer.
-            Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
+            Pull Request #${{ github.event.pull_request.number }}.
 
-            1. Review the code changes in this branch.
-            2. Run the local tests and linters to verify the code is correct.
-            3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
-            4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL: Once all tests pass, execute:
-               gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
-               and retry. DO NOT FINISH until the PR is successfully merged.
+            MANDATORY before merging:
+            1. Review code. 2. Run backend: cd backend && npm run build && npm test
+            3. Run frontend: cd frontend && npx ng build && npm test -- --watch=false
+            4. Fix any failures, re-run until all pass.
+            5. Remove all conflict markers. Resolve merge conflicts properly.
+            6. Only when ALL pass: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
+            7. If blocked by checks: gh pr checks ${{ github.event.pull_request.number }} --watch, then retry merge.
+            NEVER merge broken code. Fix everything first.
           cli_args: "--max-iterations 50"
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
@@ -104,11 +114,10 @@ jobs:
           openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
           prompt: >
-            You are the AI PR Reviewer and Fixer.
-            Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
-
-            1. Review the code changes in this branch.
-            2. Run local tests. Fix any failures, commit, and push.
-            3. CRITICAL: Execute gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               Poll checks if needed. DO NOT FINISH until the PR is merged.
+            PR #${{ github.event.pull_request.number }}. MANDATORY:
+            1. Review code. 2. cd backend && npm run build && npm test
+            3. cd frontend && npx ng build && npm test -- --watch=false
+            4. Fix all failures, remove conflict markers.
+            5. gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
+            NEVER merge broken code.
           cli_args: "--max-iterations 30"

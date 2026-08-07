@@ -1,5 +1,4 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
-import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { EconomyStore, StickerPack } from '../../services/economy.store';
@@ -11,7 +10,6 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 @Component({
   selector: 'app-sticker-store',
   imports: [
-    JoyrideModule,
     TranslatePipe,
     AppCardComponent,
     AppPillComponent,
@@ -21,22 +19,18 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
   <!-- Header -->
   <div class="flex items-center justify-between px-4 pt-4 pb-2">
     <div>
-      <span joyrideStep="economyTour@stickerStore" [text]="'tour.stickerStoreDesc' | t" stepPosition="bottom">
-        <h1 class="text-2xl font-bold text-white">{{ 'stickerStore.title' | t }}</h1>
-      </span>
+      <h1 class="text-2xl font-bold text-white">{{ 'stickerStore.title' | t }}</h1>
       <p class="text-sm text-neutral-400 mt-1">{{ 'stickerStore.subtitle' | t }}</p>
     </div>
-    <span joyrideStep="economyTour@coinsBalance" [text]="'tour.coinsBalanceDesc' | t" stepPosition="bottom">
-      <app-pill colour="warning" size="md">
-        <span class="flex items-center gap-1 font-semibold" [attr.aria-label]="userCoins() + ' ' + ('common.coins' | t)">
-          <span class="text-lg" aria-hidden="true">&#x1FA99;</span> {{ userCoins() }}
+    <app-pill colour="warning" size="md">
+        <span class="flex items-center gap-1 font-semibold">
+          <span class="text-lg">&#x1FA99;</span> {{ userCoins() }}
         </span>
       </app-pill>
-    </span>
   </div>
 
   <!-- Category filters -->
-  <div class="px-4 pb-4 overflow-x-auto" role="group" [attr.aria-label]="'sticker.filterCategory' | t">
+  <div class="px-4 pb-4 overflow-x-auto">
     <div class="flex gap-2">
       @for (pill of categoryPills(); track pill.id) {
         <button
@@ -46,7 +40,6 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
           [class.text-white]="selectedCategory() === pill.id"
           [class.bg-neutral-800]="selectedCategory() !== pill.id"
           [class.text-neutral-300]="selectedCategory() !== pill.id"
-          [attr.aria-pressed]="selectedCategory() === pill.id"
           (click)="selectedCategory.set(pill.id)"
         >
           {{ pill.label }}
@@ -57,8 +50,8 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
   <!-- Loading -->
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-20" role="status" aria-live="polite">
-      <div class="h-8 w-8 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent" aria-hidden="true"></div>
+    <div class="flex items-center justify-center py-20">
+      <div class="h-8 w-8 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent"></div>
       <span class="ms-3 text-neutral-400">{{ 'common.loading' | t }}</span>
     </div>
   }
@@ -74,12 +67,11 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
   <!-- Packs grid -->
   @if (!isLoading() && filteredPacks().length > 0) {
-    <div class="px-4 pb-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" role="list" [attr.aria-label]="'stickerStore.packsList' | t">
+    <div class="px-4 pb-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       @for (pack of filteredPacks(); track pack.id) {
         <app-card
           variant="elevated"
           padding="md"
-          role="listitem"
           class="relative flex flex-col overflow-hidden transition-all duration-200"
           [class.opacity-60]="pack.owned"
         >
@@ -87,7 +79,6 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
           <div
             class="relative mb-3 flex h-28 items-center justify-center rounded-xl shadow-lg"
             [class]="'bg-gradient-to-br ' + getPackColour(pack.id)"
-            aria-hidden="true"
           >
             <span class="text-5xl drop-shadow-lg">{{ getPackIllustration(pack.id) }}</span>
             @if (pack.owned) {
@@ -127,13 +118,12 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                 type="button"
                 class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-2 text-sm font-semibold text-white transition-all disabled:opacity-50"
                 [disabled]="userCoins() < pack.cost_coins || purchasingId() === pack.id"
-                [attr.aria-label]="'stickerStore.purchasePack' | t: { packName: pack.name, cost: pack.cost_coins }"
                 (click)="purchasePack(pack)"
               >
                 @if (purchasingId() === pack.id) {
-                  <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true"></div>
+                  <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                 } @else {
-                  <span class="text-base" aria-hidden="true">&#x1FA99;</span>
+                  <span class="text-base">&#x1FA99;</span>
                   {{ pack.cost_coins }}
                 }
               </button>
@@ -145,19 +135,6 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
   }
 </div>
 `,
-  styles: [`
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border-width: 0;
-    }
-  `],
 })
 export class StickerStoreComponent {
   private readonly economyStore = inject(EconomyStore);
@@ -229,16 +206,16 @@ export class StickerStoreComponent {
 
   getPackIllustration(packId: string): string {
     const map: Record<string, string> = {
-      stk_pack_1: '🐶',
-      stk_pack_2: '🦄',
-      stk_pack_3: '📚',
-      stk_pack_4: '🐉',
-      stk_pack_5: '🎉',
-      stk_pack_6: '😌',
-      stk_pack_7: '🍕',
-      stk_pack_8: '✈️',
+      stk_pack_1: '\u{1F436}',
+      stk_pack_2: '\u{1F984}',
+      stk_pack_3: '\u{1F4DA}',
+      stk_pack_4: '\u{1F409}',
+      stk_pack_5: '\u{1F389}',
+      stk_pack_6: '\u{1F60C}',
+      stk_pack_7: '\u{1F355}',
+      stk_pack_8: '\u{2708}\u{FE0F}',
     };
-    return map[packId] ?? '🎨';
+    return map[packId] ?? '\u{1F3A8}';
   }
 
   getPackColour(packId: string): string {

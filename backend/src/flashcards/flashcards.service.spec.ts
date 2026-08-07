@@ -3,7 +3,6 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 
@@ -129,10 +128,6 @@ describe('FlashcardsService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
-        },
-        {
-          provide: CloudflareCacheService,
-          useValue: { purgeByCacheTags: jest.fn().mockResolvedValue(true) },
         },
       ],
     }).compile();

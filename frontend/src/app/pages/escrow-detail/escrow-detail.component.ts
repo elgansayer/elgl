@@ -243,7 +243,7 @@ export class EscrowDetailComponent {
       this.loading.set(true);
       this.error.set(false);
       try {
-        return (await this.escrowService.getEscrow(id)) ?? null;
+        return await this.escrowService.getEscrow(id) ?? null;
       } catch {
         this.error.set(true);
         return null;
@@ -255,7 +255,7 @@ export class EscrowDetailComponent {
 
   protected readonly escrow = computed(() => this.escrowResource.value() ?? null);
 
-  protected statusColour(status: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  protected statusColour(status: string): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
     switch (status) {
       case 'released':
         return 'success';
