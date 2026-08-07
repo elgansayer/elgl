@@ -98,8 +98,9 @@ describe('FlashcardReviewComponent', () => {
     const component = fixture.componentInstance;
     fixture.detectChanges();
 
+    // MOCK_CARDS has 2 cards, so grading should increment
     await component.gradeReview('good');
-    expect(component.sessionStats().good).toBe(0); // No cards, so no grade applied
+    expect(component.sessionStats().good).toBe(1);
   });
 
   it('should advance to next card after grading', async () => {
@@ -109,7 +110,8 @@ describe('FlashcardReviewComponent', () => {
 
     expect(component.currentIndex()).toBe(0);
     await component.gradeReview('good');
-    expect(component.currentIndex()).toBe(0); // No cards, so no advance
+    // MOCK_CARDS has 2 cards, so should advance to card 1
+    expect(component.currentIndex()).toBe(1);
   });
 
   it('should show completion state after all cards reviewed', async () => {
@@ -117,7 +119,11 @@ describe('FlashcardReviewComponent', () => {
     const component = fixture.componentInstance;
     fixture.detectChanges();
 
-    // With empty cards, already complete
+    // MOCK_CARDS has 2 cards, not yet complete at index 0
+    expect(component.isComplete()).toBe(false);
+    // Advance past all cards
+    await component.gradeReview('good');
+    await component.gradeReview('good');
     expect(component.isComplete()).toBe(true);
   });
 });
