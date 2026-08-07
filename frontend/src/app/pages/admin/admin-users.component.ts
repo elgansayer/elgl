@@ -2,11 +2,14 @@ import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { AppCardComponent } from '../../components/primitives/card/card.component';
+import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, AppCardComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {
@@ -33,6 +36,7 @@ export class AdminUsersComponent {
   readonly users = computed(() => this.usersResource.value()?.users ?? []);
   readonly total = computed(() => this.usersResource.value()?.total ?? 0);
   readonly isLoading = computed(() => this.usersResource.isLoading());
+  readonly loadError = computed(() => this.usersResource.error());
 
   readonly pageTotal = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
 
@@ -53,6 +57,10 @@ export class AdminUsersComponent {
   });
 
   readonly loginHistory = computed(() => this.historyResource.value() ?? []);
+
+  retry(): void {
+    this.refreshToken.update((v) => v + 1);
+  }
 
   onSearchInput(event: Event): void {
     const target = event.target;
