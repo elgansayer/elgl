@@ -5,12 +5,26 @@ import { signal } from '@angular/core';
 import { ReadingEngineComponent } from './reading-engine.component';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
-import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
+import { NetworkStatusService } from '../../services/network-status.service';
+import { OfflineReadingService } from '../../services/offline-reading.service';
 
 class I18nStub {
   translate(key: string): string {
     return key;
   }
+}
+
+class NetworkStatusStub {
+  isOnline = signal(true);
+}
+
+class OfflineReadingStub {
+  isOfflineMode = signal(false);
+  async cacheArticles(): Promise<void> {}
+  async getCachedArticles(): Promise<unknown[]> { return []; }
+  async recordReadingHistory(): Promise<void> {}
+  async getReadingHistory(): Promise<unknown[]> { return []; }
+  async clearAll(): Promise<void> {}
 }
 
 describe('ReadingEngineComponent', () => {
@@ -35,7 +49,8 @@ describe('ReadingEngineComponent', () => {
       providers: [
         { provide: VocabularyStore, useValue: mockVocabStore },
         { provide: I18nService, useClass: I18nStub },
-        HtmlSanitisationService,
+        { provide: NetworkStatusService, useClass: NetworkStatusStub },
+        { provide: OfflineReadingService, useClass: OfflineReadingStub },
       ],
     })
       .overrideComponent(ReadingEngineComponent, {
@@ -76,7 +91,6 @@ describe('ReadingEngineComponent', () => {
   });
 
   it('should signal isLoading when resource is loading', () => {
-    // Resource starts loading asynchronously
     expect(component.isLoading()).toBeDefined();
   });
 
@@ -153,5 +167,20 @@ describe('ReadingEngineComponent', () => {
 
   it('should return empty distinct topics when no articles loaded', () => {
     expect(component.distinctTopics()).toEqual([]);
+  });
+
+  it('should indicate offline status via isOffline signal', () => {
+    expect(component.isOffline()).toBe(false);
+  });
+
+  it('should load reading history', async () => {
+    await component.loadReadingHistory();
+    expect(component.readingHistory()).toEqual([]);
+  });
+
+  it('should format read date without throwing', () => {
+    const formatted = component.formatReadDate(Date.now());
+    expect(formatted).toBeTruthy();
+    expect(typeof formatted).toBe('string');
   });
 });
