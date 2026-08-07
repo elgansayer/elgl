@@ -1903,6 +1903,63 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      escrow_payments: {
+        Row: {
+          id: string;
+          payer_id: string;
+          payee_id: string;
+          amount_coins: number;
+          status: string;
+          reference_type: string;
+          reference_id: string;
+          held_at: string;
+          expires_at: string;
+          released_at: string | null;
+          refunded_at: string | null;
+          cancelled_at: string | null;
+          dispute_reason: string | null;
+          metadata: Record<string, unknown> | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          payer_id: string;
+          payee_id: string;
+          amount_coins: number;
+          status: string;
+          reference_type: string;
+          reference_id: string;
+          held_at: string;
+          expires_at: string;
+          released_at?: string | null;
+          refunded_at?: string | null;
+          cancelled_at?: string | null;
+          dispute_reason?: string | null;
+          metadata?: Record<string, unknown> | null;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          payer_id?: string;
+          payee_id?: string;
+          amount_coins?: number;
+          status?: string;
+          reference_type?: string;
+          reference_id?: string;
+          held_at?: string;
+          expires_at?: string;
+          released_at?: string | null;
+          refunded_at?: string | null;
+          cancelled_at?: string | null;
+          dispute_reason?: string | null;
+          metadata?: Record<string, unknown> | null;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

@@ -85,6 +85,7 @@ const EXPECTED_MODULE_NAMES = [
   'SpamDetectionModule',
   'UserStatisticsModule',
   'MetricsModule',
+  'EscrowModule',
 ];
 
 function findProvider(
