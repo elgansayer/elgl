@@ -123,6 +123,33 @@ export class CancelEscrowDto {
   transaction_id!: string;
 }
 
+export class DisputeEscrowDto {
+  @ApiProperty({
+    description: 'UUID of the escrow transaction to dispute',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
+  @IsString()
+  transaction_id!: string;
+
+  @ApiProperty({
+    description: 'Reason for the dispute',
+    example: 'Service was not delivered as agreed',
+    maxLength: 500,
+  })
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({
+    description: 'Supporting evidence or details for the dispute',
+    maxLength: 2000,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  evidence?: string;
+}
+
 export interface EscrowTransactionResponse {
   id: string;
   payer_id: string;

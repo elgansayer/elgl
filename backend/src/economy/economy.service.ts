@@ -242,59 +242,78 @@ export class EconomyService {
   private static readonly STICKER_PACKS_CACHE_TTL = 300;
 
   async getCatalog(): Promise<VirtualGiftRow[]> {
-    const redis = this.supabaseService.getRedisClient();
-
-    const cached = await redis.get(EconomyService.CATALOG_CACHE_KEY);
-    if (cached) {
-      try {
-        const parsed: unknown = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed as VirtualGiftRow[];
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      const cached = await redis.get(EconomyService.CATALOG_CACHE_KEY);
+      if (cached) {
+        try {
+          const parsed: unknown = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed as VirtualGiftRow[];
+          }
+        } catch {
+          this.logger.warn(
+            'Invalid economy catalog cache entry, falling back to DB',
+          );
         }
-      } catch {
-        this.logger.warn(
-          'Invalid economy catalog cache entry, falling back to DB',
-        );
       }
+    } catch (redisError: unknown) {
+      this.logger.warn(
+        `Redis unavailable for catalog cache: ${redisError instanceof Error ? redisError.message : 'unknown error'}, falling back to DB`,
+      );
     }
 
-    const supabase = this.supabaseService.getClient();
-        const response = await withExponentialBackoff(
-      () =>
-        supabase
-        .from('virtual_gifts')
-        .select('*')
-        .order('cost_coins', { ascending: true })
-      ,
-      'getCatalog',
-      { logger: this.logger },
-    );
-    const rows = response.data;
     let gifts: VirtualGiftRow[];
-    if (!Array.isArray(rows)) {
-      gifts = this.getDefaultGiftCatalog();
-    } else {
-      const filtered = rows.filter(
-        (item: unknown): item is VirtualGiftRow =>
-          typeof item === 'object' &&
-          item !== null &&
-          'id' in item &&
-          'name' in item &&
-          'icon' in item &&
-          'cost_coins' in item &&
-          'animation_type' in item,
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await withExponentialBackoff(
+        () =>
+          supabase
+          .from('virtual_gifts')
+          .select('*')
+          .order('cost_coins', { ascending: true })
+        ,
+        'getCatalog',
+        { logger: this.logger },
       );
-      gifts = filtered.length > 0 ? filtered : this.getDefaultGiftCatalog();
+      const rows = response.data;
+      if (!Array.isArray(rows)) {
+        gifts = this.getDefaultGiftCatalog();
+      } else {
+        const filtered = rows.filter(
+          (item: unknown): item is VirtualGiftRow =>
+            typeof item === 'object' &&
+            item !== null &&
+            'id' in item &&
+            'name' in item &&
+            'icon' in item &&
+            'cost_coins' in item &&
+            'animation_type' in item,
+        );
+        gifts = filtered.length > 0 ? filtered : this.getDefaultGiftCatalog();
+      }
+    } catch (dbError: unknown) {
+      this.logger.warn(
+        `Database unavailable for catalog query: ${dbError instanceof Error ? dbError.message : 'unknown error'}, using default catalog`,
+      );
+      gifts = this.getDefaultGiftCatalog();
     }
 
     const sanitised = sanitiseEconomyData(gifts);
 
-    void redis.set(
-      EconomyService.CATALOG_CACHE_KEY,
-      JSON.stringify(sanitised),
-      'EX',
-      EconomyService.CATALOG_CACHE_TTL,
-    );
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      redis.set(
+        EconomyService.CATALOG_CACHE_KEY,
+        JSON.stringify(sanitised),
+        'EX',
+        EconomyService.CATALOG_CACHE_TTL,
+      ).catch(() => {
+        // Redis write failure is non-critical; catalog already returned
+      });
+    } catch {
+      // Redis client access failure is non-critical
+    }
 
     return sanitised;
   }
@@ -408,27 +427,49 @@ export class EconomyService {
   }
 
   async getBalance(userId: string): Promise<{ coins_balance: number }> {
-    const supabase = this.supabaseService.getClient();
-        const response = await withExponentialBackoff(
-      () =>
-        supabase
-        .from('users')
-        .select('coins_balance')
-        .eq('id', userId)
-        .single()
-      ,
-      'getBalance',
-      { logger: this.logger },
-    );
-    if (response.error || !response.data) {
-      const profile = await this.usersService.getProfile(userId);
-      return { coins_balance: profile.coins_balance ?? 50 };
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await withExponentialBackoff(
+        () =>
+          supabase
+          .from('users')
+          .select('coins_balance')
+          .eq('id', userId)
+          .single()
+        ,
+        'getBalance',
+        { logger: this.logger },
+      );
+      if (response.error || !response.data) {
+        try {
+          const profile = await this.usersService.getProfile(userId);
+          return { coins_balance: profile.coins_balance ?? 50 };
+        } catch (profileError: unknown) {
+          this.logger.warn(
+            `Profile lookup failed for user ${userId}: ${profileError instanceof Error ? profileError.message : 'unknown error'}, returning default balance`,
+          );
+          return { coins_balance: 50 };
+        }
+      }
+      const row = response.data;
+      if (!isCoinBalanceRow(row)) {
+        this.logger.warn(
+          `Invalid coin balance row for user ${userId}, returning default balance`,
+        );
+        return { coins_balance: 50 };
+      }
+      return { coins_balance: row.coins_balance };
+    } catch (dbError: unknown) {
+      this.logger.warn(
+        `Database unavailable for balance lookup: ${dbError instanceof Error ? dbError.message : 'unknown error'}, trying profile fallback`,
+      );
+      try {
+        const profile = await this.usersService.getProfile(userId);
+        return { coins_balance: profile.coins_balance ?? 50 };
+      } catch {
+        return { coins_balance: 50 };
+      }
     }
-    const row = response.data;
-    if (!isCoinBalanceRow(row)) {
-      throw new BadRequestException('Invalid user coin balance');
-    }
-    return { coins_balance: row.coins_balance };
   }
 
   async claimDailyCheckIn(userId: string): Promise<{
@@ -1412,12 +1453,14 @@ this.invalidateUserEconomyCaches(userId);
       });
     }
 
-    void redis.set(
+    redis.set(
       cacheKey,
       JSON.stringify(result),
       'EX',
       EconomyService.STICKER_PACKS_CACHE_TTL,
-    );
+    ).catch(() => {
+      // Redis write failure is non-critical
+    });
 
     return result;
   }
@@ -1428,8 +1471,14 @@ this.invalidateUserEconomyCaches(userId);
    * (purchaseCoins, sendGift, unlockStickerPack, claimDailyCheckIn).
    */
   private invalidateUserEconomyCaches(userId: string): void {
-    const redis = this.supabaseService.getRedisClient();
-    void redis.del(`${EconomyService.STICKER_PACKS_CACHE_PREFIX}${userId}`);
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      redis.del(`${EconomyService.STICKER_PACKS_CACHE_PREFIX}${userId}`).catch(() => {
+        // Redis invalidation failure is non-critical; cache entries expire via TTL
+      });
+    } catch {
+      // Redis client access failure is non-critical; cache entries expire via TTL
+    }
   }
 
   private getDefaultStickerPacks(): StickerPackRow[] {

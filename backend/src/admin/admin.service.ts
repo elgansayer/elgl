@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import Redis from 'ioredis';
 import { SupabaseService, type UsersRow } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
@@ -29,11 +30,11 @@ const CACHE_PREFIX_LOGIN_HISTORY = 'admin:login-history:';
 
 @Injectable()
 export class AdminService {
-  private readonly logger = new Logger(AdminService.name);
-
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly scrubbingService: DataScrubbingService,
+    @InjectPinoLogger(AdminService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   private getRedis(): Redis {
@@ -46,12 +47,12 @@ export class AdminService {
       const keys = await redis.keys(`${CACHE_PREFIX_USERS}*`);
       if (keys.length > 0) {
         await redis.del(...keys);
-        this.logger.log(
+        this.logger.info(
           `Invalidated ${keys.length} admin user list cache key(s)`,
         );
       }
     } catch (err) {
-      this.logger.error('Failed to invalidate admin user list caches', err);
+      this.logger.error(err, 'Failed to invalidate admin user list caches');
     }
   }
 
@@ -61,12 +62,12 @@ export class AdminService {
       const keys = await redis.keys(`${CACHE_PREFIX_BLOCKS}*`);
       if (keys.length > 0) {
         await redis.del(...keys);
-        this.logger.log(
+        this.logger.info(
           `Invalidated ${keys.length} admin blocks list cache key(s)`,
         );
       }
     } catch (err) {
-      this.logger.error('Failed to invalidate admin blocks list caches', err);
+      this.logger.error(err, 'Failed to invalidate admin blocks list caches');
     }
   }
 
@@ -76,12 +77,12 @@ export class AdminService {
       const keys = await redis.keys(`${CACHE_PREFIX_REPORTS}*`);
       if (keys.length > 0) {
         await redis.del(...keys);
-        this.logger.log(
+        this.logger.info(
           `Invalidated ${keys.length} admin reports list cache key(s)`,
         );
       }
     } catch (err) {
-      this.logger.error('Failed to invalidate admin reports list caches', err);
+      this.logger.error(err, 'Failed to invalidate admin reports list caches');
     }
   }
 
@@ -92,8 +93,8 @@ export class AdminService {
       await redis.del(key);
     } catch (err) {
       this.logger.error(
-        `Failed to invalidate login history cache for user ${userId}`,
         err,
+        `Failed to invalidate login history cache for user ${userId}`,
       );
     }
   }
@@ -119,7 +120,7 @@ export class AdminService {
         }
       }
     } catch (err) {
-      this.logger.warn('Failed to read admin user list from cache', err);
+      this.logger.warn(err, 'Failed to read admin user list from cache');
     }
 
     const from = (page - 1) * pageSize;
@@ -139,7 +140,7 @@ export class AdminService {
       .range(from, to);
 
     if (error) {
-      this.logger.warn(`Failed to list admin users: ${error.message}`);
+      this.logger.warn(error, `Failed to list admin users`);
       return { users: [], total: 0, page, pageSize };
     }
 
@@ -154,7 +155,7 @@ export class AdminService {
       const redis = this.getRedis();
       await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL_USERS);
     } catch (err) {
-      this.logger.warn('Failed to cache admin user list', err);
+      this.logger.warn(err, 'Failed to cache admin user list');
     }
 
     return result;
@@ -205,8 +206,8 @@ export class AdminService {
       }
     } catch (err) {
       this.logger.warn(
-        `Failed to read login history cache for user ${userId}`,
         err,
+        `Failed to read login history cache for user ${userId}`,
       );
     }
 
@@ -220,7 +221,8 @@ export class AdminService {
 
     if (error) {
       this.logger.warn(
-        `Failed to fetch login history for user ${userId}: ${error.message}`,
+        error,
+        `Failed to fetch login history for user ${userId}`,
       );
       return [];
     }
@@ -239,7 +241,7 @@ export class AdminService {
         CACHE_TTL_LOGIN_HISTORY,
       );
     } catch (err) {
-      this.logger.warn(`Failed to cache login history for user ${userId}`, err);
+      this.logger.warn(err, `Failed to cache login history for user ${userId}`);
     }
 
     return result;
@@ -252,7 +254,7 @@ export class AdminService {
       blocked_id: targetUserId,
     });
     if (error) {
-      this.logger.error(`Failed to ban user ${targetUserId}: ${error.message}`);
+      this.logger.error(error, `Failed to ban user ${targetUserId}`);
       throw new NotFoundException(`Unable to ban user ${targetUserId}`);
     }
 
@@ -271,9 +273,7 @@ export class AdminService {
       status: 'open',
     });
     if (error) {
-      this.logger.error(
-        `Failed to warn user ${targetUserId}: ${error.message}`,
-      );
+      this.logger.error(error, `Failed to warn user ${targetUserId}`);
       throw new NotFoundException(`Unable to warn user ${targetUserId}`);
     }
 
@@ -300,7 +300,7 @@ export class AdminService {
         }
       }
     } catch (err) {
-      this.logger.warn('Failed to read admin blocks list from cache', err);
+      this.logger.warn(err, 'Failed to read admin blocks list from cache');
     }
 
     const supabase = this.supabaseService.getClient();
@@ -317,7 +317,7 @@ export class AdminService {
       .range(from, to);
 
     if (error) {
-      this.logger.warn(`Failed to list blocks: ${error.message}`);
+      this.logger.warn(error, 'Failed to list blocks');
       return { blocks: [], total: 0, page, pageSize };
     }
 
@@ -355,7 +355,7 @@ export class AdminService {
       const redis = this.getRedis();
       await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL_BLOCKS);
     } catch (err) {
-      this.logger.warn('Failed to cache admin blocks list', err);
+      this.logger.warn(err, 'Failed to cache admin blocks list');
     }
 
     return result;
@@ -384,7 +384,7 @@ export class AdminService {
         }
       }
     } catch (err) {
-      this.logger.warn('Failed to read admin reports list from cache', err);
+      this.logger.warn(err, 'Failed to read admin reports list from cache');
     }
 
     const supabase = this.supabaseService.getClient();
@@ -407,7 +407,7 @@ export class AdminService {
       .range(from, to);
 
     if (error) {
-      this.logger.warn(`Failed to list reports: ${error.message}`);
+      this.logger.warn(error, 'Failed to list reports');
       return { reports: [], total: 0, page, pageSize };
     }
 
@@ -445,7 +445,7 @@ export class AdminService {
         CACHE_TTL_REPORTS,
       );
     } catch (err) {
-      this.logger.warn('Failed to cache admin reports list', err);
+      this.logger.warn(err, 'Failed to cache admin reports list');
     }
 
     return result;
@@ -457,7 +457,7 @@ export class AdminService {
     const { error } = await supabase.from('blocks').delete().eq('id', blockId);
 
     if (error) {
-      this.logger.error(`Failed to remove block ${blockId}: ${error.message}`);
+      this.logger.error(error, `Failed to remove block ${blockId}`);
       throw new NotFoundException(`Unable to remove block ${blockId}`);
     }
 
