@@ -3,6 +3,11 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { EscrowController } from './escrow.controller';
 import { EscrowService } from './escrow.service';
 
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
+jest.mock('./sanitise-escrow.helper', () => ({
+  sanitiseEscrowData: <T>(value: T): T => value,
+}));
+
 describe('EscrowController', () => {
   let controller: EscrowController;
   let mockEscrowService: Record<string, jest.Mock>;

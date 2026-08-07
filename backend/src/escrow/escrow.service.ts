@@ -19,6 +19,7 @@ import {
   CreateEscrowHoldDto,
   EscrowTransactionResponse,
 } from './dto/escrow.dto';
+import { sanitiseEscrowData } from './sanitise-escrow.helper';
 
 const RETRY_CONFIG = {
   maxRetries: 5,
@@ -60,7 +61,7 @@ export class EscrowService {
     degraded = false,
     fallbackReason?: string,
   ): EscrowTransactionResponse {
-    return {
+    return sanitiseEscrowData({
       id: row.id,
       payer_id: row.payer_id,
       payee_id: row.payee_id,
@@ -78,7 +79,7 @@ export class EscrowService {
       updated_at: row.updated_at,
       degraded,
       fallback_reason: fallbackReason,
-    };
+    });
   }
 
   /**
@@ -109,7 +110,7 @@ export class EscrowService {
       degradedMarker,
     );
 
-    return {
+    return sanitiseEscrowData({
       success: true,
       transaction_id:
         typeof result === 'object' && result !== null && 'id' in result
@@ -117,7 +118,7 @@ export class EscrowService {
           : '',
       degraded: degradedMarker.degraded,
       fallback_reason: degradedMarker.reason,
-    };
+    });
   }
 
   private async performHold(
@@ -276,12 +277,12 @@ export class EscrowService {
       degradedMarker,
     );
 
-    return {
+    return sanitiseEscrowData({
       success: true,
       transaction_id: result.id,
       degraded: degradedMarker.degraded,
       fallback_reason: degradedMarker.reason,
-    };
+    });
   }
 
   private async performRelease(
@@ -718,7 +719,7 @@ export class EscrowService {
       );
     }
 
-    return { processed, failed };
+    return sanitiseEscrowData({ processed, failed });
   }
 
   /**

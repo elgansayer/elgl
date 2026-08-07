@@ -10,6 +10,11 @@ import { CircuitBreakerService } from './circuit-breaker.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateEscrowHoldDto } from './dto/escrow.dto';
 
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
+jest.mock('./sanitise-escrow.helper', () => ({
+  sanitiseEscrowData: <T>(value: T): T => value,
+}));
+
 describe('EscrowService', () => {
   let service: EscrowService;
   let mockSupabaseClient: Record<string, jest.Mock>;
