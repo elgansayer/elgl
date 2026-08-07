@@ -120,7 +120,7 @@ describe('LivekitService', () => {
   });
 
   describe('getToken', () => {
-    it('should POST to the livekit token endpoint', async () => {
+    it('should POST to the livekit token endpoint and return the token', async () => {
       const tokenPromise = service.getToken('my-room', 'user-123');
       const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
       expect(req.request.method).toBe('POST');
@@ -128,9 +128,32 @@ describe('LivekitService', () => {
         room_name: 'my-room',
         participant_identity: 'user-123',
       });
-      req.flush({ token: 'test-token' });
+      req.flush({ token: 'test-token', ice_servers: [] });
       const token = await tokenPromise;
       expect(token).toBe('test-token');
+    });
+  });
+
+  describe('getTokenAndIceServers', () => {
+    it('should return ICE servers from the backend response', async () => {
+      const iceServers = [{ urls: 'stun:stun.example.com:3478' }];
+      const promise = service.getTokenAndIceServers('room-a', 'user-1');
+      const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
+      req.flush({ token: 'tok', ice_servers: iceServers });
+      const result = await promise;
+      expect(result.token).toBe('tok');
+      expect(result.iceServers).toEqual(iceServers);
+    });
+
+    it('should fall back to default STUN servers when backend returns none', async () => {
+      const promise = service.getTokenAndIceServers('room-b', 'user-2');
+      const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
+      req.flush({ token: 'tok2', ice_servers: [] });
+      const result = await promise;
+      expect(result.token).toBe('tok2');
+      expect(result.iceServers).toEqual([
+        { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+      ]);
     });
   });
 
@@ -141,22 +164,25 @@ describe('LivekitService', () => {
   });
 
   describe('joinRoom', () => {
-    it('should connect to a room with the token from the backend', async () => {
+    it('should connect to a room with the token and ICE servers from the backend', async () => {
       const fakeRoom = mockRoom({
         connect: mockRoomConnect,
         disconnect: mockRoomDisconnect,
       });
-      // Override the private createRoom factory so we do not depend on the
-      // real livekit-client Room constructor during this test.
       (service as unknown as { createRoom: (options: unknown) => unknown }).createRoom = () => fakeRoom;
 
+      const iceServers = [{ urls: 'stun:stun.example.com:3478' }];
       mockRoomConnect.mockImplementation(async () => {});
       const roomPromise = service.joinRoom('my-room', 'user-123', false);
       const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
       expect(req.request.method).toBe('POST');
-      req.flush({ token: 'test-token' });
+      req.flush({ token: 'test-token', ice_servers: iceServers });
       const room = await roomPromise;
-      expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token');
+      expect(mockRoomConnect).toHaveBeenCalledWith(
+        environment.liveKitUrl,
+        'test-token',
+        { rtcConfig: { iceServers } },
+      );
       expect(room).toBe(fakeRoom);
       expect(internals(service).room).toEqual(fakeRoom);
     });

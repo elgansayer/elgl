@@ -11,6 +11,22 @@ import {
   Track,
 } from 'livekit-client';
 
+export interface IceServer {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+}
+
+interface TokenResponse {
+  token: string;
+  ice_servers: IceServer[];
+}
+
+/** Fallback ICE servers when the backend does not return any. */
+const FALLBACK_ICE_SERVERS: IceServer[] = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+];
+
 @Injectable({
   providedIn: 'root',
 })
@@ -28,16 +44,32 @@ export class LivekitService {
   }
 
   /**
-   * Get a LiveKit access token from the backend.
+   * Get a LiveKit access token and ICE server configuration from the
+   * backend.  The ICE servers are used for NAT traversal and are
+   * critical for users on strict corporate networks.
    */
-  async getToken(roomName: string, participantIdentity: string): Promise<string> {
+  async getTokenAndIceServers(
+    roomName: string,
+    participantIdentity: string,
+  ): Promise<{ token: string; iceServers: IceServer[] }> {
     const response = await firstValueFrom(
-      this.http.post<{ token: string }>(`${environment.apiUrl}/livekit/token`, {
+      this.http.post<TokenResponse>(`${environment.apiUrl}/livekit/token`, {
         room_name: roomName,
         participant_identity: participantIdentity,
       }),
     );
-    return response.token;
+    return {
+      token: response.token,
+      iceServers: response.ice_servers?.length
+        ? response.ice_servers
+        : FALLBACK_ICE_SERVERS,
+    };
+  }
+
+  /** @deprecated Use {@link getTokenAndIceServers} for proper ICE config. */
+  async getToken(roomName: string, participantIdentity: string): Promise<string> {
+    const result = await this.getTokenAndIceServers(roomName, participantIdentity);
+    return result.token;
   }
 
   /**
@@ -53,7 +85,10 @@ export class LivekitService {
     _isVideoCall: boolean,
     e2eeKey?: string,
   ): Promise<Room> {
-    const token = await this.getToken(roomName, userId);
+    const { token, iceServers } = await this.getTokenAndIceServers(
+      roomName,
+      userId,
+    );
     let roomOptions: RoomOptions = {};
 
     if (e2eeKey) {
@@ -72,16 +107,7 @@ export class LivekitService {
     const room = this.createRoom(roomOptions);
     this.room = room;
     await room.connect(this.getLiveKitUrl(), token, {
-      rtcConfig: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          {
-            urls: environment.turnServerUrl,
-            username: environment.turnUsername,
-            credential: environment.turnPassword,
-          },
-        ],
-      },
+      rtcConfig: { iceServers },
     });
     return room;
   }
