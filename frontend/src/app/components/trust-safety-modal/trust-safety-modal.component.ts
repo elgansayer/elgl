@@ -1,12 +1,14 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { EconomyStore } from '../../services/economy.store';
+import { SafetyService, ReportCategory } from '../../services/safety.service';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-trust-safety-modal',
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, AppSkeletonLoaderComponent],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
@@ -26,7 +28,7 @@ import { EconomyStore } from '../../services/economy.store';
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
             [attr.aria-label]="'safety.closeBtn' | t"
           >
-            ✕
+            &#x2715;
           </button>
         </div>
 
@@ -53,6 +55,12 @@ import { EconomyStore } from '../../services/economy.store';
 
         @if (mode === 'report') {
           <div class="space-y-3 text-xs">
+@if (categoriesLoading()) {
+            <div class="space-y-2">
+              <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
+              <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
+            </div>
+          } @else {
             <div>
               <label for="report-reason-select" class="font-bold text-text-primary block mb-1 ps-1"
                 >{{ 'safety.reasonLabel' | t }}</label
@@ -62,17 +70,16 @@ import { EconomyStore } from '../../services/economy.store';
                 [(ngModel)]="reportReason"
                 class="w-full px-3 py-2 border rounded-xl bg-surface-300 font-medium"
               >
-                <option value="harassment">{{ 'safety.optHarassment' | t }}</option>
-                <option value="spam">{{ 'safety.optSpam' | t }}</option>
-                <option value="inappropriate">{{ 'safety.optInappropriate' | t }}</option>
-                <option value="scam">{{ 'safety.optScam' | t }}</option>
-                <option value="other">{{ 'safety.optOther' | t }}</option>
+                @for (cat of reportCategories(); track cat.value) {
+                  <option [value]="cat.value">{{ cat.label }}</option>
+                }
               </select>
             </div>
-            <div>
-              <label for="report-details-textarea" class="font-bold text-text-primary block mb-1 ps-1"
-                >{{ 'safety.detailsLabel' | t }}</label
-              >
+          }
+          <div>
+            <label for="report-details-textarea" class="font-bold text-text-primary block mb-1 ps-1"
+              >{{ 'safety.detailsLabel' | t }}</label
+            >
               <textarea
                 id="report-details-textarea"
                 [(ngModel)]="reportDetails"
@@ -131,9 +138,37 @@ export class TrustSafetyModalComponent {
   closed = output<void>();
 
   readonly store = inject(EconomyStore);
+  private readonly safetyService = inject(SafetyService);
   mode: 'report' | 'block' = 'report';
   reportReason = 'harassment';
   reportDetails = '';
+
+  readonly categoriesLoading = signal<boolean>(false);
+  readonly reportCategories = signal<ReportCategory[]>([
+    { value: 'harassment', label: 'Harassment / Bullying' },
+    { value: 'spam', label: 'Spam / Commercial Advertising' },
+    { value: 'inappropriate', label: 'Inappropriate / Offensive Language' },
+    { value: 'scam', label: 'Suspicious Link / Scam' },
+    { value: 'other', label: 'Other Violation' },
+  ]);
+
+  constructor() {
+    this.loadCategories();
+  }
+
+  private async loadCategories(): Promise<void> {
+    this.categoriesLoading.set(true);
+    try {
+      const cats = await this.safetyService.getReportCategories();
+      if (cats.length > 0) {
+        this.reportCategories.set(cats);
+      }
+    } catch {
+      // Keep default categories
+    } finally {
+      this.categoriesLoading.set(false);
+    }
+  }
 
   async submitReport(): Promise<void> {
     await this.store.reportUser(this.targetId(), this.reportReason, this.reportDetails);

@@ -215,6 +215,15 @@
                     {{ translations()[msg.id] }}
                   </p>
                 }
+                @if (msg.link_preview; as lp) {
+                  <app-link-preview-card
+                    [url]="lp.url"
+                    [title]="lp.title"
+                    [description]="lp.description"
+                    [image]="lp.image"
+                    [siteName]="lp.siteName"
+                  ></app-link-preview-card>
+                }
               }
               @if (msg.message_type === 'correction' && msg.correction_payload) {
                 <app-visual-diff

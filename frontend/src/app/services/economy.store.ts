@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
+import { GiftAnimationService, GiftAnimationType } from './gift-animation.service';
 
 export interface VirtualGift {
   id: string;
@@ -69,6 +70,7 @@ export class EconomyStore {
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private giftAnimationService = inject(GiftAnimationService);
   private baseUrl = `${environment.apiUrl}/economy`;
   private monetisationUrl = `${environment.apiUrl}/monetisation`;
   private safetyUrl = `${environment.apiUrl}/safety`;
@@ -365,9 +367,49 @@ export class EconomyStore {
 
   triggerGiftAnimation(overlay: ActiveGiftOverlay): void {
     this.activeGiftAnimation.set(overlay);
-    setTimeout(() => {
-      this.activeGiftAnimation.set(null);
-    }, 4500);
+    const animationType = this.sanitiseAnimationType(overlay.gift.animation_type);
+    this.giftAnimationService.playAnimation({
+      id: overlay.gift.id,
+      giftName: overlay.gift.name,
+      giftIcon: overlay.gift.icon,
+      animationType,
+      animationUrl: overlay.gift.animationUrl,
+      senderName: overlay.sender_name,
+      receiverName: overlay.receiver_name,
+      coinValue: overlay.gift.cost_coins,
+    });
+  }
+
+  private readonly validAnimationTypes = new Set<string>(['float', 'confetti', 'premium', 'sparkle', 'hearts']);
+  private sanitiseAnimationType(raw: string): GiftAnimationType {
+    if (this.isAnimationType(raw)) return raw;
+    return 'float';
+  }
+  private isAnimationType(value: string): value is GiftAnimationType {
+    return this.validAnimationTypes.has(value);
+  }
+
+  triggerPublicGiftAnimation(payload: {
+    giftId: string;
+    giftName: string;
+    giftIcon: string;
+    animationType: string;
+    animationUrl?: string;
+    senderName: string;
+    receiverName: string;
+    coinValue: number;
+  }): void {
+    const animationType = this.sanitiseAnimationType(payload.animationType);
+    this.giftAnimationService.playAnimation({
+      id: payload.giftId,
+      giftName: payload.giftName,
+      giftIcon: payload.giftIcon,
+      animationType,
+      animationUrl: payload.animationUrl,
+      senderName: payload.senderName,
+      receiverName: payload.receiverName,
+      coinValue: payload.coinValue,
+    });
   }
 
   async loadStickerPacks(): Promise<void> {

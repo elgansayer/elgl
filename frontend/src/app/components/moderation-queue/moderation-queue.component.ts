@@ -1,10 +1,14 @@
 import { Component, signal, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppCardComponent } from '../primitives/card/card.component';
 import { ModerationService, ModerationItem } from '../../services/moderation.service';
 
 @Component({
   selector: 'app-moderation-queue',
-  imports: [DatePipe],
+  imports: [DatePipe, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './moderation-queue.component.html',
   styleUrls: ['./moderation-queue.component.scss'],
 })
@@ -16,8 +20,8 @@ export class ModerationQueueComponent {
   momentItems = signal<ModerationItem[]>([]);
   profileItems = signal<ModerationItem[]>([]);
 
-  loadingMoments = signal(false);
-  loadingProfiles = signal(false);
+  loadingMoments = signal(true);
+  loadingProfiles = signal(true);
 
   error = signal<string | null>(null);
 

@@ -8,7 +8,7 @@
       <!-- Header -->
       <div class="p-4 border-b border-surface-100 flex justify-between items-center">
         <h2 class="text-lg font-bold text-text-primary">{{ 'share.title' | t }}</h2>
-        <button class="p-2 text-text-secondary hover:bg-surface-300 rounded-full" (click)="closed.emit()" aria-label="Close">
+        <button class="p-2 text-text-secondary hover:bg-surface-300 rounded-full" (click)="closed.emit()" [attr.aria-label]="'common.close' | t">
           ✕
         </button>
       </div>

@@ -31,6 +31,7 @@
       <button
         (click)="setLanguage('')"
         class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100 whitespace-nowrap"
+        [attr.aria-label]="'discovery.langAny' | t"
       >
         {{ 'discovery.langAny' | t }}
       </button>
