@@ -22,7 +22,7 @@ import {
   CacheControlInterceptor,
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
-  CACHE_PRIVATE_NO_STORE,
+  CACHE_NO_STORE,
 } from './cache.interceptor';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 
@@ -61,7 +61,7 @@ export class EconomyController {
    */
   @Get('balance')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async getBalance(@CurrentUser() user: User | null) {
     if (!user) return { coins_balance: 0 };
     return await this.economyService.getBalance(user.id);
@@ -72,7 +72,7 @@ export class EconomyController {
    */
   @Post('daily-check-in')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async claimDailyCheckIn(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.economyService.claimDailyCheckIn(user.id);
@@ -83,7 +83,7 @@ export class EconomyController {
    */
   @Post('create-checkout-session')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async createCheckoutSession(
     @CurrentUser() user: User | null,
     @Body() dto: CreateCoinCheckoutSessionDto,
@@ -100,7 +100,7 @@ export class EconomyController {
    */
   @Post('purchase-coins')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async purchaseCoins(
     @CurrentUser() user: User | null,
     @Body() dto: PurchaseCoinsDto,
@@ -114,7 +114,7 @@ export class EconomyController {
    */
   @Post('send-gift')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async sendGift(@CurrentUser() user: User | null, @Body() dto: SendGiftDto) {
     if (!user) return null;
     return await this.economyService.sendGift(user.id, dto);
@@ -138,7 +138,7 @@ export class EconomyController {
    */
   @Post('unlock-sticker-pack')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async unlockStickerPack(
     @CurrentUser() user: User | null,
     @Body() dto: UnlockStickerPackDto,
