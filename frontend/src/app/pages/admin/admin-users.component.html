@@ -1,33 +1,39 @@
 <div class="p-4">
+  <app-admin-offline-banner />
   <h2 class="text-2xl font-bold mb-4">{{ 'admin.users.title' | t }}</h2>
 
-  <div class="flex items-center mb-4 gap-2">
+  <div class="flex flex-wrap items-center mb-4 gap-2">
     <input
       type="search"
       [value]="searchTerm()"
       (input)="onSearchInput($event)"
       placeholder="{{ 'admin.users.searchPlaceholder' | t }}"
-      class="border border-slate-300 rounded px-3 py-2 ms-2"
-     [attr.aria-label]=\"'admin.users.next' | t\"/>
-    <button
-      type="button"
-      (click)="changePage(-1)"
-      [disabled]="page() <= 1"
-      class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
-     [attr.aria-label]="'admin.users.previous' | t">
-      {{ 'admin.users.previous' | t }}
-    </button>
-    <span class="text-sm">
-      {{ 'admin.users.page' | t: { current: page(), total: pageTotal() } }}
-    </span>
-    <button
-      type="button"
-      (click)="changePage(1)"
-      [disabled]="page()  [attr.aria-label]="'admin.users.next' | t">= pageTotal()"
-      class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
-    >
-      {{ 'admin.users.next' | t }}
-    </button>
+      class="border border-slate-300 rounded px-3 py-2 min-w-[12rem] flex-1"
+      [attr.aria-label]="'admin.users.searchPlaceholder' | t"
+    />
+    <div class="flex items-center gap-2 flex-wrap">
+      <button
+        type="button"
+        (click)="changePage(-1)"
+        [disabled]="page() <= 1"
+        class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+        [attr.aria-label]="'admin.users.previous' | t"
+      >
+        {{ 'admin.users.previous' | t }}
+      </button>
+      <span class="text-sm whitespace-nowrap">
+        {{ 'admin.users.page' | t: { current: page(), total: pageTotal() } }}
+      </span>
+      <button
+        type="button"
+        (click)="changePage(1)"
+        [disabled]="page() >= pageTotal()"
+        class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+        [attr.aria-label]="'admin.users.next' | t"
+      >
+        {{ 'admin.users.next' | t }}
+      </button>
+    </div>
   </div>
 
   @if (isLoading()) {
@@ -80,9 +86,9 @@
                   <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
                 }
               </td>
-              <td class="px-3 py-2">{{ user.display_name ?? '-' }}</td>
-              <td class="px-3 py-2">{{ user.native_languages.join(', ') }}</td>
-              <td class="px-3 py-2">{{ user.target_languages.join(', ') }}</td>
+              <td class="px-3 py-2">{{ (user.display_name ?? '-') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ (user.native_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ (user.target_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
               <td class="px-3 py-2">
                 <span
                   [class.text-green-600]="user.is_vip"
@@ -96,38 +102,45 @@
               <td class="px-3 py-2">
                 {{ user.last_active_at ? (user.last_active_at | date: 'medium') : '-' }}
               </td>
-              <td class="px-3 py-2 whitespace-nowrap">
-                <button
-                  type="button"
-                  (click)="openHistory(user)"
-                  class="btn btn-sm rounded border border-slate-300 px-3 py-1 me-2 hover:bg-slate-100"
-                 [attr.aria-label]="'admin.users.loginHistory' | t">
-                  {{ 'admin.users.loginHistory' | t }}
-                </button>
-                <button
-                  type="button"
-                  (click)="toggleVip(user)"
-                  [disabled]="isVipUpdating() === user.id"
-                  class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50"
-                 [attr.aria-label]="'admin.users.disableVip' | t">
-                  {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
-                </button>
-                <button
-                  type="button"
-                  (click)="warnUser(user)"
-                  [disabled]="isWarning() !== null"
-                  class="btn btn-sm rounded border border-amber-500 text-amber-600 px-3 py-1 hover:bg-amber-50 disabled:opacity-50 ms-2"
-                >
-                  {{ 'admin.users.warn' | t }}
-                </button>
-                <button
-                  type="button"
-                  (click)="banUser(user)"
-                  [disabled]="isBanning() !== null"
-                  class="btn btn-sm rounded border border-red-500 text-red-600 px-3 py-1 hover:bg-red-50 disabled:opacity-50 ms-2"
-                >
-                  {{ 'admin.users.ban' | t }}
-                </button>
+              <td class="px-3 py-2">
+                <div class="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    (click)="openHistory(user)"
+                    class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 whitespace-nowrap"
+                    [attr.aria-label]="'admin.users.loginHistory' | t"
+                  >
+                    {{ 'admin.users.loginHistory' | t }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="toggleVip(user)"
+                    [disabled]="isVipUpdating() === user.id || !isOnline()"
+                    class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50 whitespace-nowrap"
+                    [attr.aria-label]="'admin.users.disableVip' | t"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
+                  >
+                    {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="warnUser(user)"
+                    [disabled]="isWarning() !== null || !isOnline()"
+                    class="btn btn-sm rounded border border-amber-500 text-amber-600 px-3 py-1 hover:bg-amber-50 disabled:opacity-50 whitespace-nowrap"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
+                  >
+                    {{ 'admin.users.warn' | t }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="banUser(user)"
+                    [disabled]="isBanning() !== null || !isOnline()"
+                    class="btn btn-sm rounded border border-red-500 text-red-600 px-3 py-1 hover:bg-red-50 disabled:opacity-50 whitespace-nowrap"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
+                  >
+                    {{ 'admin.users.ban' | t }}
+                  </button>
+                </div>
               </td>
             </tr>
           } @empty {
@@ -173,8 +186,8 @@
               @for (entry of loginHistory(); track entry.id) {
                 <tr>
                   <td class="px-3 py-2">{{ entry.created_at | date: 'medium' }}</td>
-                  <td class="px-3 py-2">{{ entry.ip_address ?? '-' }}</td>
-                  <td class="px-3 py-2">{{ entry.user_agent ?? '-' }}</td>
+                  <td class="px-3 py-2">{{ (entry.ip_address ?? '-') | sanitiseHtml }}</td>
+                  <td class="px-3 py-2">{{ (entry.user_agent ?? '-') | sanitiseHtml }}</td>
                 </tr>
               }
             </tbody>

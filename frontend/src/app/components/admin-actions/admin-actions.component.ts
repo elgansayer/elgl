@@ -1,19 +1,29 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-actions',
+  imports: [TranslatePipe],
   template: `
-    <div class="admin-actions">
-      <h2>One‑click moderation</h2>
-      <ul>
+    <div class="admin-actions" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">
+      <h2>{{ 'admin.quickModeration' | t }}</h2>
+      <ul role="list">
         @for (user of users(); track user.id) {
           <li>
             <span>{{ user.display_name ?? user.id }}</span>
-            <button (click)="ban(user.id)">Ban</button>
-            <button (click)="warn(user.id)">Warn</button>
+            <button
+              type="button"
+              [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
+              (click)="ban(user.id)"
+            >{{ 'admin.banBtn' | t }}</button>
+            <button
+              type="button"
+              [attr.aria-label]="'admin.warnUserAria' | t: { name: user.display_name ?? user.id }"
+              (click)="warn(user.id)"
+            >{{ 'admin.warnBtn' | t }}</button>
           </li>
         }
       </ul>
@@ -25,7 +35,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
         margin: 16px;
       }
       button {
-        margin-left: 8px;
+        margin-inline-start: 8px;
       }
     `,
   ],

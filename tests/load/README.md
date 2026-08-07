@@ -1,6 +1,6 @@
-# HelloTalk Trust & Safety Load Testing Suite
+# HelloTalk Load Testing Suite
 
-Artillery load-testing suite for HelloTalk's Trust & Safety architecture, covering user reporting, blocking, moderation, and spam detection endpoints.
+Artillery load-testing suite for HelloTalk, covering Trust & Safety, Spam Detection, and Virtual Coin Economy endpoints.
 
 ## Prerequisites
 
@@ -19,6 +19,9 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:trust-safe
 
 # Run the Spam Detection load test
 API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detection
+
+# Run the Escrow Payments load test
+API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-payments
 ```
 
 ## Test Scripts
@@ -27,7 +30,12 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detec
 |--------|------|-------------|
 | `test:trust-safety` | `trust-and-safety.load.yml` | Load tests all Safety, Moderation, and Blocks endpoints |
 | `test:spam-detection` | `spam-detection.load.yml` | Load tests the SpamDetectionService `/spam-detection/check` endpoint |
+| `test:economy` | `economy.load.yml` | Load tests the Virtual Coin Economy: gift catalog, coin packages, balance, daily check-in, checkout, purchase, gift sending, sticker packs |
 | `test:trust-safety:report` | (output + HTML) | Runs the Trust & Safety test and generates an HTML report |
+| `test:srs-flashcards` | `srs-flashcards.load.yml` | SRS flashcard creation, review (SM-2), and retrieval load testing |
+| `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
+| `test:escrow-payments` | `escrow-payments.load.yml` | Load tests the Escrow Payments endpoints |
+| `test:escrow-payments:report` | (output + HTML) | Runs the Escrow Payments test and generates an HTML report |
 
 ## Configuration
 
@@ -80,3 +88,32 @@ Both test scripts include the following phases:
 
 ### Spam Detection (`/spam-detection`)
 - `POST /spam-detection/check` - Content spam check
+
+### SRS Flashcards (`/flashcards`)
+- `POST /flashcards` - Create or update a flashcard
+- `PATCH /flashcards/:id/srs` - Review a flashcard with SM-2 spaced repetition scoring
+- `GET /flashcards` - List all flashcards for the authenticated user
+- `GET /flashcards?level=<n>` - List flashcards filtered by SRS level (0-4)
+- `GET /flashcards/due` - Get flashcards currently due for review
+
+### Escrow Payments (`/escrow`)
+- `GET /escrow/transactions` - List paginated user escrow transactions with status/sort filters
+- `POST /escrow/transactions` - Create a new escrow transaction with milestones
+- `GET /escrow/transactions/:id` - Get details for a single escrow transaction
+- `GET /escrow/transactions/:id/status` - Check escrow transaction status
+- `POST /escrow/transactions/:id/release` - Release escrow milestone payment
+- `POST /escrow/transactions/:id/refund` - Refund escrow transaction to payer
+- `POST /escrow/transactions/:id/dispute` - File a dispute for an escrow transaction
+- `POST /escrow/transactions/:id/cancel` - Cancel a pending escrow transaction
+- `GET /escrow/summary` - Get escrow summary statistics
+
+### Economy Module (`/economy`)
+- `GET /economy/catalog` - Virtual gift catalog
+- `GET /economy/packages` - Coin package definitions
+- `GET /economy/balance` - User coin balance
+- `POST /economy/daily-check-in` - Daily check-in claim
+- `POST /economy/create-checkout-session` - Stripe checkout session creation
+- `POST /economy/purchase-coins` - Coin purchase via receipt verification
+- `POST /economy/send-gift` - Send virtual gift to another user
+- `GET /economy/sticker-packs` - Sticker pack storefront
+- `POST /economy/unlock-sticker-pack` - Unlock a sticker pack

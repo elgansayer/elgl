@@ -47,11 +47,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
             (click)="toggleCoinPackages()"
             class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow"
           >
-            {{ (showCoinPackages ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
+            {{ (showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
           </button>
         </div>
 
-        @if (showCoinPackages) {
+        @if (showCoinPackages()) {
           <div class="space-y-3 animate-fadeIn">
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.bundlePrompt' | t
@@ -85,7 +85,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </div>
         }
 
-        @if (!showCoinPackages) {
+        @if (!showCoinPackages()) {
           <div class="space-y-3">
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.selectPrompt' | t: { name: receiverName() }
@@ -98,7 +98,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   [disabled]="gift.cost_coins > effectiveBalance()"
                   [class]="
                     'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
-                    (selectedGift?.id === gift.id
+                    (selectedGift()?.id === gift.id
                       ? 'border-primary bg-primary/5 shadow-md scale-105'
                       : gift.cost_coins > effectiveBalance()
                         ? 'border-surface-100 bg-surface-300 opacity-40 cursor-not-allowed'
@@ -125,18 +125,18 @@ import { TranslatePipe } from '../../services/translate.pipe';
           >
             {{ 'giftModal.cancelBtn' | t }}
           </button>
-          @if (!showCoinPackages) {
+          @if (!showCoinPackages()) {
             <button
-              [disabled]="!selectedGift || isSending"
+              [disabled]="!selectedGift() || isSending()"
               (click)="confirmSend()"
               class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
             >
               {{
-                isSending
+                isSending()
                   ? ('giftModal.sendingBtn' | t)
-                  : selectedGift
+                  : selectedGift()
                     ? ('giftModal.sendBtnText'
-                      | t: { icon: selectedGift.icon, cost: selectedGift.cost_coins })
+                      | t: { icon: selectedGift().icon, cost: selectedGift().cost_coins })
                     : ('giftModal.selectGift' | t)
               }}
             </button>
@@ -153,12 +153,12 @@ export class VirtualGiftModalComponent {
   closed = output<void>();
 
   readonly economyStore = inject(EconomyStore);
-  selectedGift: VirtualGift | null = null;
-  showCoinPackages = false;
-  isSending = false;
-  deductedAmount = signal(0);
+  readonly selectedGift = signal<VirtualGift | null>(null);
+  readonly showCoinPackages = signal(false);
+  readonly isSending = signal(false);
+  readonly deductedAmount = signal(0);
 
-  effectiveBalance = (): number => this.economyStore.coinsBalance() - this.deductedAmount();
+  readonly effectiveBalance = () => this.economyStore.coinsBalance() - this.deductedAmount();
 
   private ensureDataLoaded(): void {
     if (this.economyStore.catalog().length === 0) {
@@ -167,9 +167,9 @@ export class VirtualGiftModalComponent {
   }
 
   toggleCoinPackages(): void {
-    this.showCoinPackages = !this.showCoinPackages;
+    this.showCoinPackages.update((v) => !v);
     this.ensureDataLoaded();
-    if (this.showCoinPackages && this.economyStore.coinPackages().length === 0) {
+    if (this.showCoinPackages() && this.economyStore.coinPackages().length === 0) {
       void this.economyStore.loadCoinPackages();
     }
   }
@@ -179,15 +179,15 @@ export class VirtualGiftModalComponent {
   }
 
   selectGift(gift: VirtualGift): void {
-    this.selectedGift = gift;
+    this.selectedGift.set(gift);
     // Auto-deduction: preview the remaining balance after the gift cost
     this.deductedAmount.set(gift.cost_coins);
   }
 
   async confirmSend(): Promise<void> {
-    if (!this.selectedGift) return;
-    this.isSending = true;
-    const gift = this.selectedGift;
+    const gift = this.selectedGift();
+    if (!gift) return;
+    this.isSending.set(true);
     try {
       const ok = await this.economyStore.sendGift(
         this.receiverId(),
@@ -203,7 +203,7 @@ export class VirtualGiftModalComponent {
         this.closed.emit();
       }
     } finally {
-      this.isSending = false;
+      this.isSending.set(false);
     }
   }
 }

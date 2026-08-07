@@ -1,13 +1,14 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
-import { AdminService, AdminBlockedUser } from '../../../services/admin.service';
+import { SanitiseHtmlPipe } from '../../../pipes/sanitise-html.pipe';
+import { AdminService, AdminBlockEntry } from '../../../services/admin.service';
 import { AppCardComponent } from '../../../components/primitives/card/card.component';
 import { AppEmptyStateComponent } from '../../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../../components/primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [TranslatePipe, AppCardComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [TranslatePipe, SanitiseHtmlPipe, AppCardComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-blocks.component.html',
   styles: [],
 })
@@ -17,8 +18,11 @@ export class AdminBlocksComponent {
   private readonly refreshToken = signal(0);
 
   private readonly blocksResource = resource({
-    request: () => this.refreshToken(),
-    loader: () => this.adminService.listBlockedUsers(),
+    params: () => ({ refresh: this.refreshToken() }),
+    loader: async () => {
+      const result = await this.adminService.listAllBlocks();
+      return result.blocks;
+    },
   });
 
   readonly blockedUsers = computed(() => this.blocksResource.value() ?? []);
@@ -31,17 +35,17 @@ export class AdminBlocksComponent {
     return this.unblockingIds().has(userId);
   }
 
-  async onUnblock(user: AdminBlockedUser): Promise<void> {
-    this.unblockingIds.update((set) => new Set(set).add(user.id));
+  async onUnblock(entry: AdminBlockEntry): Promise<void> {
+    this.unblockingIds.update((set) => new Set(set).add(entry.id));
     try {
-      await this.adminService.adminUnblockUser(user.id);
+      await this.adminService.removeBlock(entry.id);
       this.refreshToken.update((v) => v + 1);
     } catch {
       // silently handle; reload happens on refreshToken bump if needed
     } finally {
       this.unblockingIds.update((set) => {
         const next = new Set(set);
-        next.delete(user.id);
+        next.delete(entry.id);
         return next;
       });
     }
