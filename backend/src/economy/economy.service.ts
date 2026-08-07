@@ -13,6 +13,7 @@ import Stripe from 'stripe';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { MetricsService } from '../metrics/metrics.service';
 import {
   PurchaseCoinsDto,
   SendGiftDto,
@@ -225,6 +226,7 @@ export class EconomyService {
     private readonly centrifugoService: CentrifugoService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly metricsService: MetricsService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY') || '',
@@ -416,12 +418,18 @@ export class EconomyService {
     coins_rewarded: number;
     new_balance: number;
   }> {
+    const startTime = Date.now();
     const redis = this.supabaseService.getRedisClient();
     const today = new Date().toISOString().slice(0, 10);
     const key = `daily_checkin:${userId}:${today}`;
 
     const alreadyClaimed = await redis.get(key);
     if (alreadyClaimed) {
+      this.metricsService.recordDailyCheckInClaim(false);
+      this.metricsService.observeCoinTransactionLatency(
+        'daily_checkin',
+        (Date.now() - startTime) / 1000,
+      );
       const { coins_balance } = await this.getBalance(userId);
       return { claimed: false, coins_rewarded: 0, new_balance: coins_balance };
     }
@@ -438,6 +446,7 @@ export class EconomyService {
       .eq('id', userId);
 
     if (error) {
+      this.metricsService.recordCoinPurchaseError('daily_checkin', 'supabase_update');
       throw new InternalServerErrorException(
         'Failed to update coin balance for daily check-in',
       );
@@ -445,6 +454,12 @@ export class EconomyService {
 
     // Set key to expire in 24 hours
     await redis.set(key, '1', 'EX', 86400);
+
+    this.metricsService.recordDailyCheckInClaim(true);
+    this.metricsService.observeCoinTransactionLatency(
+      'daily_checkin',
+      (Date.now() - startTime) / 1000,
+    );
 
     this.logger.debug(
       `User ${userId} claimed daily check-in reward of ${reward} coins.`,
@@ -469,11 +484,13 @@ export class EconomyService {
     userId: string,
     dto: PurchaseCoinsDto,
   ): Promise<{ coins: number; new_balance: number }> {
+    const startTime = Date.now();
     const supabase = this.supabaseService.getClient();
 
     const platform = this.detectPlatform(dto.receipt_token);
 
     if (dto.platform && dto.platform !== platform) {
+      this.metricsService.recordCoinFraudAttempt(platform, 'platform_mismatch');
       throw new BadRequestException(
         `Receipt platform (${platform}) does not match provided platform (${dto.platform})`,
       );
@@ -485,6 +502,7 @@ export class EconomyService {
     });
 
     if (!isReceiptValid) {
+      this.metricsService.recordCoinFraudAttempt(platform, 'invalid_receipt');
       throw new BadRequestException('Invalid purchase receipt');
     }
 
@@ -566,6 +584,7 @@ export class EconomyService {
       }
 
       if (existingWeb.status === 'completed') {
+        this.metricsService.recordCoinFraudAttempt('web', 'duplicate_transaction');
         throw new ConflictException(
           'This transaction has already been processed',
         );
@@ -596,6 +615,7 @@ export class EconomyService {
         .eq('transaction_id', transactionId)
         .maybeSingle();
       if (existing) {
+        this.metricsService.recordCoinFraudAttempt(platform, 'duplicate_transaction');
         throw new ConflictException(
           'This transaction has already been processed',
         );
@@ -679,6 +699,16 @@ export class EconomyService {
     );
 
     this.invalidateUserEconomyCaches(userId);
+    this.metricsService.recordCoinPurchase(
+      platform,
+      coinPackage.id,
+      'success',
+      coinPackage.price,
+    );
+    this.metricsService.observeCoinTransactionLatency(
+      'purchase_coins',
+      (Date.now() - startTime) / 1000,
+    );
 
     return {
       coins: coinPackage.coins,
@@ -1061,6 +1091,11 @@ export class EconomyService {
 
     this.invalidateUserEconomyCaches(senderId);
     this.invalidateUserEconomyCaches(dto.receiver_id);
+    this.metricsService.recordGiftSent(
+      gift.id,
+      gift.animation_type,
+      gift.cost_coins,
+    );
 
     return sanitiseEconomyData({
       success: true,
@@ -1129,7 +1164,8 @@ export class EconomyService {
       );
     }
 
-    this.invalidateUserEconomyCaches(userId);
+this.invalidateUserEconomyCaches(userId);
+    this.metricsService.recordStickerPurchase(pack.id, pack.cost_coins);
 
     return sanitiseEconomyData({
       success: true,

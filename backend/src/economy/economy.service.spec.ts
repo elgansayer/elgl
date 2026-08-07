@@ -40,6 +40,7 @@ import { HttpService } from '@nestjs/axios';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { of } from 'rxjs';
 import type Stripe from 'stripe';
 
@@ -130,6 +131,20 @@ describe('EconomyService', () => {
           useValue: {
             post: jest.fn(),
             get: jest.fn(),
+          },
+        },
+        {
+          provide: MetricsService,
+          useValue: {
+            recordCoinPurchase: jest.fn(),
+            recordCoinPurchaseError: jest.fn(),
+            recordCoinFraudAttempt: jest.fn(),
+            setCoinBalanceTotal: jest.fn(),
+            setCoinHighBalanceUsers: jest.fn(),
+            recordDailyCheckInClaim: jest.fn(),
+            recordGiftSent: jest.fn(),
+            recordStickerPurchase: jest.fn(),
+            observeCoinTransactionLatency: jest.fn(),
           },
         },
       ],

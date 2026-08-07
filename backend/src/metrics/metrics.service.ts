@@ -26,7 +26,7 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
-  // Trust & Safety metrics
+// Trust & Safety metrics
   readonly tsReportsSubmitted: Counter<string>;
   readonly tsBlocksCreated: Counter<string>;
   readonly tsBlocksRemoved: Counter<string>;
@@ -48,6 +48,19 @@ export class MetricsService {
   readonly readingEngineSessionDuration: Histogram<string>;
   readonly readingEngineUserWordsLookedUp: Counter<string>;
   readonly readingEngineDailyActiveReaders: Gauge<string>;
+  // Virtual Coin Economy metrics
+  readonly coinPurchaseTotal: Counter<string>;
+  readonly coinPurchaseValue: Counter<string>;
+  readonly coinBalanceTotal: Gauge<string>;
+  readonly coinHighBalanceUsers: Gauge<string>;
+  readonly coinDailyClaimTotal: Counter<string>;
+  readonly coinGiftTotal: Counter<string>;
+  readonly coinGiftValue: Counter<string>;
+  readonly coinStickerPurchaseTotal: Counter<string>;
+  readonly coinStickerRevenueTotal: Counter<string>;
+  readonly coinPurchaseErrorsTotal: Counter<string>;
+  readonly coinFraudAttemptsTotal: Counter<string>;
+  readonly coinTransactionLatency: Histogram<string>;
 
   constructor() {
     this.register = new Registry();
@@ -145,7 +158,7 @@ export class MetricsService {
       registers: [this.register],
     });
 
-    // --- Trust & Safety Metrics ---
+// --- Trust & Safety Metrics ---
 
     this.tsReportsSubmitted = new Counter({
       name: 'hellotalk_ts_reports_submitted_total',
@@ -280,6 +293,90 @@ export class MetricsService {
       help: 'Number of unique users who started a reading session in the last 24h',
       registers: [this.register],
     });
+    // --- Virtual Coin Economy Metrics ---
+
+    this.coinPurchaseTotal = new Counter({
+      name: 'hellotalk_coin_purchases_total',
+      help: 'Total number of coin purchase transactions (all platforms)',
+      labelNames: ['platform', 'package_id', 'status'],
+      registers: [this.register],
+    });
+
+    this.coinPurchaseValue = new Counter({
+      name: 'hellotalk_coin_purchase_value_total',
+      help: 'Total monetary value of coin purchases in USD cents',
+      labelNames: ['platform', 'package_id'],
+      registers: [this.register],
+    });
+
+    this.coinBalanceTotal = new Gauge({
+      name: 'hellotalk_coin_balance_total',
+      help: 'Aggregate coin balance across all users (sampled periodically)',
+      registers: [this.register],
+    });
+
+    this.coinHighBalanceUsers = new Gauge({
+      name: 'hellotalk_coin_high_balance_users',
+      help: 'Number of users with coin balance exceeding 10000 (potential fraud indicator)',
+      registers: [this.register],
+    });
+
+    this.coinDailyClaimTotal = new Counter({
+      name: 'hellotalk_coin_daily_claims_total',
+      help: 'Total number of daily check-in coin claims',
+      labelNames: ['claimed'],
+      registers: [this.register],
+    });
+
+    this.coinGiftTotal = new Counter({
+      name: 'hellotalk_coin_gifts_total',
+      help: 'Total number of virtual gift transactions',
+      labelNames: ['gift_id', 'animation_type'],
+      registers: [this.register],
+    });
+
+    this.coinGiftValue = new Counter({
+      name: 'hellotalk_coin_gift_value_total',
+      help: 'Total coin value of all virtual gifts sent',
+      labelNames: ['gift_id'],
+      registers: [this.register],
+    });
+
+    this.coinStickerPurchaseTotal = new Counter({
+      name: 'hellotalk_coin_sticker_purchases_total',
+      help: 'Total number of sticker pack purchases',
+      labelNames: ['pack_id'],
+      registers: [this.register],
+    });
+
+    this.coinStickerRevenueTotal = new Counter({
+      name: 'hellotalk_coin_sticker_revenue_total',
+      help: 'Total coin value spent on sticker pack purchases',
+      labelNames: ['pack_id'],
+      registers: [this.register],
+    });
+
+    this.coinPurchaseErrorsTotal = new Counter({
+      name: 'hellotalk_coin_purchase_errors_total',
+      help: 'Total number of coin purchase errors',
+      labelNames: ['error_type', 'platform'],
+      registers: [this.register],
+    });
+
+    this.coinFraudAttemptsTotal = new Counter({
+      name: 'hellotalk_coin_fraud_attempts_total',
+      help: 'Total number of suspected fraudulent coin purchase attempts',
+      labelNames: ['reason', 'platform'],
+      registers: [this.register],
+    });
+
+    this.coinTransactionLatency = new Histogram({
+      name: 'hellotalk_coin_transaction_latency_seconds',
+      help: 'Latency of coin-related transactions',
+      labelNames: ['operation'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+    });
   }
 
   recordHttpRequest(
@@ -350,7 +447,7 @@ export class MetricsService {
     this.srsDecksCreated.inc();
   }
 
-  // --- Trust & Safety metric helpers ---
+// --- Trust & Safety metric helpers ---
 
   recordTsReportSubmitted(reasonCategory: string = 'unknown'): void {
     this.tsReportsSubmitted.inc({ reason_category: reasonCategory });
@@ -438,6 +535,57 @@ export class MetricsService {
 
   setReadingEngineDailyActiveReaders(count: number): void {
     this.readingEngineDailyActiveReaders.set(count);
+  }
+
+  // --- Coin Economy metric helpers ---
+
+  recordCoinPurchase(
+    platform: string,
+    packageId: string,
+    status: 'success' | 'failed' | 'fraud_blocked',
+    amountUsdCents: number = 0,
+  ): void {
+    this.coinPurchaseTotal.inc({ platform, package_id: packageId, status });
+    if (status === 'success' && amountUsdCents > 0) {
+      this.coinPurchaseValue.inc(
+        { platform, package_id: packageId },
+        amountUsdCents,
+      );
+    }
+  }
+
+  recordCoinPurchaseError(platform: string, errorType: string): void {
+    this.coinPurchaseErrorsTotal.inc({ platform, error_type: errorType });
+  }
+
+  recordCoinFraudAttempt(platform: string, reason: string): void {
+    this.coinFraudAttemptsTotal.inc({ platform, reason });
+  }
+
+  setCoinBalanceTotal(total: number): void {
+    this.coinBalanceTotal.set(total);
+  }
+
+  setCoinHighBalanceUsers(count: number): void {
+    this.coinHighBalanceUsers.set(count);
+  }
+
+  recordDailyCheckInClaim(claimed: boolean): void {
+    this.coinDailyClaimTotal.inc({ claimed: String(claimed) });
+  }
+
+  recordGiftSent(giftId: string, animationType: string, coinValue: number): void {
+    this.coinGiftTotal.inc({ gift_id: giftId, animation_type: animationType });
+    this.coinGiftValue.inc({ gift_id: giftId }, coinValue);
+  }
+
+  recordStickerPurchase(packId: string, coinCost: number): void {
+    this.coinStickerPurchaseTotal.inc({ pack_id: packId });
+    this.coinStickerRevenueTotal.inc({ pack_id: packId }, coinCost);
+  }
+
+  observeCoinTransactionLatency(operation: string, durationSeconds: number): void {
+    this.coinTransactionLatency.observe({ operation }, durationSeconds);
   }
 
   getRegister(): Registry {
