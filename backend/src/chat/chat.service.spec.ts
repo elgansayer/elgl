@@ -45,7 +45,7 @@ describe('ChatService', () => {
       upsert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      single: jest.fn().mockReturnThis(),
       maybeSingle: jest.fn().mockReturnThis(),
       // Make the builder thenable so that `await supabase.from(...)` calls resolve
       then: jest.fn((resolve) => resolve({ data: [] })),
@@ -368,7 +368,7 @@ describe('ChatService', () => {
       };
 
       const originalFrom = mockSupabaseClient.from;
-      let callCounter = 0;
+      let usersCallCount = 0;
       mockSupabaseClient.from = jest
         .fn()
         .mockImplementation((table: string) => {
@@ -383,7 +383,6 @@ describe('ChatService', () => {
             };
           }
           if (table === 'chat_messages') {
-            callCounter++;
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
@@ -393,7 +392,8 @@ describe('ChatService', () => {
             };
           }
           if (table === 'users') {
-            if (callCounter === 1) {
+            usersCallCount++;
+            if (usersCallCount === 1) {
               return {
                 select: jest.fn().mockReturnThis(),
                 eq: jest.fn().mockReturnThis(),
@@ -433,7 +433,7 @@ describe('ChatService', () => {
         text_content: 'Hi!',
       };
 
-      let callCounter = 0;
+      let usersCallCount = 0;
       const originalFrom = mockSupabaseClient.from;
       mockSupabaseClient.from = jest
         .fn()
@@ -449,7 +449,6 @@ describe('ChatService', () => {
             };
           }
           if (table === 'chat_messages') {
-            callCounter++;
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
@@ -459,7 +458,8 @@ describe('ChatService', () => {
             };
           }
           if (table === 'users') {
-            if (callCounter === 1) {
+            usersCallCount++;
+            if (usersCallCount === 1) {
               return {
                 select: jest.fn().mockReturnThis(),
                 eq: jest.fn().mockReturnThis(),
@@ -497,7 +497,7 @@ describe('ChatService', () => {
         text_content: 'Hi!',
       };
 
-      let callCounter = 0;
+      let usersCallCount = 0;
       const originalFrom = mockSupabaseClient.from;
       mockSupabaseClient.from = jest
         .fn()
@@ -513,7 +513,6 @@ describe('ChatService', () => {
             };
           }
           if (table === 'chat_messages') {
-            callCounter++;
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
@@ -523,7 +522,8 @@ describe('ChatService', () => {
             };
           }
           if (table === 'users') {
-            if (callCounter === 1) {
+            usersCallCount++;
+            if (usersCallCount === 1) {
               return {
                 select: jest.fn().mockReturnThis(),
                 eq: jest.fn().mockReturnThis(),
@@ -561,7 +561,7 @@ describe('ChatService', () => {
         text_content: 'Hi!',
       };
 
-      let callCounter = 0;
+      let usersCallCount = 0;
       const originalFrom = mockSupabaseClient.from;
       mockSupabaseClient.from = jest
         .fn()
@@ -577,7 +577,6 @@ describe('ChatService', () => {
             };
           }
           if (table === 'chat_messages') {
-            callCounter++;
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
@@ -587,7 +586,8 @@ describe('ChatService', () => {
             };
           }
           if (table === 'users') {
-            if (callCounter === 1) {
+            usersCallCount++;
+            if (usersCallCount === 1) {
               return {
                 select: jest.fn().mockReturnThis(),
                 eq: jest.fn().mockReturnThis(),
@@ -633,7 +633,6 @@ describe('ChatService', () => {
         text_content: 'Hello again!',
       };
 
-      let callCounter = 0;
       const originalFrom = mockSupabaseClient.from;
       mockSupabaseClient.from = jest
         .fn()
@@ -649,7 +648,6 @@ describe('ChatService', () => {
             };
           }
           if (table === 'chat_messages') {
-            callCounter++;
             // First call to chat_messages is count query - return count > 0
             return {
               select: jest.fn().mockReturnThis(),

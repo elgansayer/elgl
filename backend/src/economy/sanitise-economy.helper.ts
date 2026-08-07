@@ -66,3 +66,71 @@ export function sanitiseEconomyData<T>(value: T): T {
 
   return value;
 }
+
+/**
+ * Scrub a receipt token for GDPR archive export.
+ *
+ * Receipt tokens (Apple receipt-data, Google Play purchase tokens, Stripe
+ * session IDs) are PII under GDPR because they link a natural person to a
+ * financial transaction. We preserve the last 4 characters for support
+ * reference while redacting the rest.
+ *
+ * Returns null/undefined/empty-string unchanged. Tokens shorter than 8
+ * characters are fully redacted as they cannot be meaningfully truncated.
+ */
+export function scrubReceiptToken(
+  raw: string | null | undefined,
+): string | null | undefined {
+  if (raw === null || raw === undefined || raw === '') {
+    return raw;
+  }
+  if (raw.length < 8) {
+    return '[REDACTED-SHORT-TOKEN]';
+  }
+  return `***...${raw.slice(-4)}`;
+}
+
+/**
+ * Scrub a single coin-purchase record for GDPR archive export.
+ *
+ * Returns null/undefined unchanged. Returns a shallow copy with
+ * receipt_token and transaction_id redacted via scrubReceiptToken.
+ * Does not mutate the original record.
+ */
+export function scrubCoinPurchaseForArchive(
+  record: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null | undefined {
+  if (record === null || record === undefined) {
+    return record;
+  }
+  return {
+    ...record,
+    receipt_token: scrubReceiptToken(
+      record['receipt_token'] as string | null | undefined,
+    ),
+    transaction_id: scrubReceiptToken(
+      record['transaction_id'] as string | null | undefined,
+    ),
+  };
+}
+
+/**
+ * Scrub an array of coin-purchase records for GDPR archive export.
+ *
+ * Returns null/undefined unchanged. Returns a new array where each record
+ * is scrubbed via scrubCoinPurchaseForArchive. Non-object entries pass
+ * through unchanged. Does not mutate originals.
+ */
+export function scrubCoinPurchasesForArchive(
+  records: Record<string, unknown>[] | null | undefined,
+): Record<string, unknown>[] | null | undefined {
+  if (records === null || records === undefined) {
+    return records;
+  }
+  return records.map((r) => {
+    if (r !== null && typeof r === 'object') {
+      return scrubCoinPurchaseForArchive(r);
+    }
+    return r;
+  }) as Record<string, unknown>[];
+}
