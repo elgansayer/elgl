@@ -1,24 +1,3 @@
-// Mock jsdom and dompurify to avoid parsing ESM dependencies (transitively imported through the module)
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
-}));
-jest.mock('dompurify', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({
-    sanitize: (dirty: string) => {
-      if (typeof dirty !== 'string') return dirty;
-      return dirty.replace(/<[^>]*>/g, '');
-    },
-    setConfig: jest.fn(),
-  })),
-}));
-
 import { FlashcardsModule } from './flashcards.module';
 import { FlashcardsController } from './flashcards.controller';
 import { FlashcardsService } from './flashcards.service';
