@@ -15,6 +15,7 @@ import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
+import { CoinEconomyTourService } from './services/coin-economy-tour.service';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -40,6 +41,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
   };
 
   const economyStoreMock = {
+    coinsBalance: vi.fn(() => 50),
     loadInitialData: vi.fn(() => Promise.resolve()),
     claimDailyCheckIn: vi.fn(() =>
       Promise.resolve({ claimed: true, coins_rewarded: 123 }),
@@ -91,6 +93,12 @@ getAccessToken: vi.fn(() => 'mock-token'),
     currentLocale: vi.fn(() => 'en'),
   };
 
+  const coinEconomyTourMock = {
+    startTour: vi.fn(() => true),
+    closeTour: vi.fn(),
+    isTourInProgress: vi.fn(() => false),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     subscribeCallback = undefined;
@@ -115,6 +123,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
         { provide: VersionCheckService, useValue: versionCheckServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
+        { provide: CoinEconomyTourService, useValue: coinEconomyTourMock },
         { provide: DOCUMENT, useValue: document },
       ],
     })

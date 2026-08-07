@@ -1808,5 +1808,20 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-  "wordModal.translationLabel": "Translation"
+  "wordModal.translationLabel": "Translation",
+  "coinEco.sectionTitle": "Coin Economy",
+  "nav.buyCoins": "Buy Coins",
+  "nav.shop": "Shop",
+  "nav.stickerStore": "Sticker Store",
+  "nav.vip": "VIP",
+  "tour.stepCoinsBalance.title": "Coin Balance",
+  "tour.stepCoinsBalance.text": "Your virtual coin balance is displayed here. You currently have {{coins}} coins. Use them to send gifts, unlock sticker packs, or tip hosts.",
+  "tour.stepCoinsBuy.title": "Buy Coins",
+  "tour.stepCoinsBuy.text": "Purchase coin packages to top up your balance. Coins can be spent on virtual gifts, stickers, and more.",
+  "tour.stepShopNav.title": "Virtual Shop",
+  "tour.stepShopNav.text": "Browse and spend your coins on virtual gifts, items, and premium content for your language partners.",
+  "tour.stepStickerNav.title": "Sticker Store",
+  "tour.stepStickerNav.text": "Unlock animated sticker packs to use in your chats. Each pack costs coins and adds fun expressions to your conversations.",
+  "tour.stepVipNav.title": "VIP Subscription",
+  "tour.stepVipNav.text": "Upgrade to VIP for premium features including ad-free experience, advanced analytics, and exclusive content."
 }

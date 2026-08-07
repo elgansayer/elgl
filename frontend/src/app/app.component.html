@@ -33,6 +33,29 @@
   <div class="flex items-center justify-between ps-4 pe-4 py-2 bg-surface-200 border-b border-surface-100">
     <app-app-language-selector />
     <div class="flex items-center gap-2">
+      <!-- Coins balance with joyride step -->
+      <div
+        class="flex items-center gap-1 bg-amber-500/15 rounded-full px-3 py-1.5 border border-amber-500/30"
+        joyrideStep="tourCoinsBalance"
+        [title]="'tour.stepCoinsBalance.title' | t"
+        [text]="'tour.stepCoinsBalance.text' | t: { coins: economyStore.coinsBalance() }"
+        stepPosition="bottom"
+      >
+        <span class="text-sm leading-none" aria-hidden="true">🪙</span>
+        <span class="text-xs font-bold text-amber-400">{{ economyStore.coinsBalance() }}</span>
+      </div>
+      <a
+        routerLink="/shop"
+        class="hidden sm:flex items-center gap-1 bg-indigo-500/15 rounded-full px-3 py-1.5 border border-indigo-500/30 hover:bg-indigo-500/25 transition-colors"
+        joyrideStep="tourCoinsBuy"
+        [title]="'tour.stepCoinsBuy.title' | t"
+        [text]="'tour.stepCoinsBuy.text' | t"
+        stepPosition="bottom"
+        [attr.aria-label]="'nav.buyCoins' | t"
+      >
+        <span class="text-sm leading-none" aria-hidden="true">➕</span>
+        <span class="text-xs font-bold text-indigo-300">{{ 'nav.buyCoins' | t }}</span>
+      </a>
       <a
         routerLink="/notifications"
         class="relative p-2 rounded-full hover:bg-surface-100 transition-colors"
