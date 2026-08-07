@@ -27,7 +27,7 @@
           </p>
         }
       </div>
-      <button aria-label="Close" (click)="close()" class="text-white/80 hover:text-white font-bold text-2xl">✕</button>
+      <button [attr.aria-label]="'wordModal.closeAriaLabel' | t" (click)="close()" class="text-white/80 hover:text-white font-bold text-2xl">✕</button>
     </div>
 
     <div class="p-6 space-y-4">
@@ -61,7 +61,7 @@
             <div
               class="text-xs text-text-secondary italic bg-amber-500/10/50 p-3 rounded-app border border-amber-500/30/50"
             >
-              <span class="font-bold not-italic text-amber-400">{{ 'wordModal.contextLabel' | t }}</span>
+              <span class="font-bold not-italic text-amber-400">{{ 'wordDef.contextLabel' | t }}</span>
               "{{ contextSentence() }}"
             </div>
           }

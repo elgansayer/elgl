@@ -1,10 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../services/translate.pipe';
-import { ModerationItem, ModerationService } from '../services/moderation.service';
+import { ModerationItem, ModerationService } from './moderation.service';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
+
 
 @Component({
   selector: 'app-moderation-dashboard',
@@ -150,6 +150,7 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
       </div>
     </div>
   `,
+
 })
 export class ModerationDashboardComponent {
   private moderationService = inject(ModerationService);
