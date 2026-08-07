@@ -22,12 +22,39 @@ export type NotificationCategory = 'direct_messages' | 'groups' | 'likes' | 'voi
 
 export type NotificationChannel = 'push' | 'badge';
 
+export interface LegacyChannelPreference {
+  push: boolean;
+  badge: boolean;
+}
+
+export interface LegacyNotificationPreferences {
+  userId: string;
+  direct_messages: LegacyChannelPreference;
+  groups: LegacyChannelPreference;
+  likes: LegacyChannelPreference;
+  voice_rooms: LegacyChannelPreference;
+  do_not_disturb: boolean;
+  updatedAt: string;
+}
+
+export type LegacyCategory = keyof Omit<
+  LegacyNotificationPreferences,
+  'userId' | 'updatedAt' | 'do_not_disturb'
+>;
+
+export type LegacyChannel = 'push' | 'badge';
+
 @Injectable({
   providedIn: 'root',
 })
 export class NotificationPreferencesService {
   private readonly http = inject(HttpClient);
+<<<<<<< HEAD
   private readonly baseUrl = `${environment.apiUrl}/notifications/preferences`;
+=======
+  private readonly baseUrl = '/api/notification-preferences';
+  private readonly notificationsUrl = '/api/notifications';
+>>>>>>> origin/main
 
   async getPreferences(): Promise<NotificationPreferences> {
     return firstValueFrom(this.http.get<NotificationPreferences>(this.baseUrl));
@@ -65,6 +92,23 @@ export class NotificationPreferencesService {
       likes: { push: true, badge: true },
       voice_rooms: { push: true, badge: true },
     });
+  }
+
+  getLegacyPreferences(): Promise<LegacyNotificationPreferences> {
+    return firstValueFrom(
+      this.http.get<LegacyNotificationPreferences>(`${this.notificationsUrl}/preferences`),
+    );
+  }
+
+  updateLegacyPreferences(
+    dto: Partial<LegacyNotificationPreferences>,
+  ): Promise<{ success: boolean; preferences: LegacyNotificationPreferences }> {
+    return firstValueFrom(
+      this.http.put<{ success: boolean; preferences: LegacyNotificationPreferences }>(
+        `${this.notificationsUrl}/preferences`,
+        dto,
+      ),
+    );
   }
 
   updateCustomizationPreferences(
