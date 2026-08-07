@@ -78,13 +78,13 @@ describe.skip('OfflineReadingService', () => {
                 req.result = Array.from(storeData.values());
                 setTimeout(() => {
                   if (req.onsuccess) req.onsuccess();
-                  if (oncompleteFn) oncompleteFn();
+                  if (oncompleteFn) { const fn = oncompleteFn; fn(); }
                 }, 0);
                 return req;
               },
               clear: () => {
                 storeData.clear();
-                if (oncompleteFn) setTimeout(() => oncompleteFn!(), 0);
+                if (oncompleteFn) { const fn = oncompleteFn; setTimeout(() => fn(), 0); }
                 const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
                 setTimeout(() => {
                   if (req.onsuccess) req.onsuccess();

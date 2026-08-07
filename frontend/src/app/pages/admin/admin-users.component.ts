@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
