@@ -1821,6 +1821,7 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
+
   "wordModal.translationLabel": "Translation"
 ,
   "escrow.title": "Escrow Payments",
@@ -1843,5 +1844,16 @@
   "escrow.status.disputed": "Disputed",
   "escrow.status.cancelled": "Cancelled",
   "common.back": "Back",
-  "common.loading": "Loading..."
+  "common.loading": "Loading...",
+
+  "wordModal.translationLabel": "Translation",
+  "errorBoundary.title": "Something went wrong",
+  "errorBoundary.message": "We had trouble loading the coin economy. Your balance is safe.",
+  "errorBoundary.retry": "Try Again",
+  "errorBoundary.report": "Report Issue",
+  "errorBoundary.reported": "Reported",
+  "errorBoundary.reportedMessage": "Thank you. Our team will investigate.",
+  "errorBoundary.clearData": "Clear Crash Data",
+  "errorBoundary.repeatedCrashes": "Repeated {{ count }} times",
+  "errorBoundary.pendingReports": "{{ count }} offline report(s) queued"
 }

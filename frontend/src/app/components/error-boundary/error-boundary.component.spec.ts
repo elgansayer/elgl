@@ -5,6 +5,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ErrorBoundaryComponent } from './error-boundary.component';
 import { EconomyErrorHandlerService } from '../../services/economy-error-handler.service';
+import { environment } from '../../../environments/environment';
+
+const ANALYTICS_URL = `${environment.apiUrl}/analytics/client-error`;
 
 describe('ErrorBoundaryComponent', () => {
   let httpTesting: HttpTestingController;
@@ -38,6 +41,11 @@ describe('ErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     component.handleBoundaryError(new Error('Test rendering crash'));
+
+    // Flush the crash report request
+    const req = httpTesting.expectOne(ANALYTICS_URL);
+    req.flush({ status: 'logged' });
+
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -51,6 +59,11 @@ describe('ErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     component.handleBoundaryError(new Error('Temporary error'));
+
+    // Flush the crash report request
+    const req = httpTesting.expectOne(ANALYTICS_URL);
+    req.flush({ status: 'logged' });
+
     expect(component.hasError()).toBe(true);
 
     component.resetError();
@@ -67,7 +80,7 @@ describe('ErrorBoundaryComponent', () => {
     component.handleBoundaryError(testError);
 
     // The error handler should fire a POST to analytics
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(ANALYTICS_URL);
     expect(req.request.method).toBe('POST');
     const body = req.request.body as Record<string, unknown>;
     expect(body['message']).toBe('Coin balance rendering failure');
@@ -84,5 +97,21 @@ describe('ErrorBoundaryComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('h2')).toBeNull();
+  });
+
+  it('should show reported state when report button is clicked', () => {
+    const fixture = TestBed.createComponent(ErrorBoundaryComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    component.handleBoundaryError(new Error('Reported crash'));
+    const req1 = httpTesting.expectOne(ANALYTICS_URL);
+    req1.flush({ status: 'logged' });
+
+    component.reportCrash();
+    const req2 = httpTesting.expectOne(ANALYTICS_URL);
+    req2.flush({ status: 'logged' });
+
+    expect(component.reported()).toBe(true);
   });
 });
