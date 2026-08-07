@@ -1601,6 +1601,18 @@ export class I18nService {
     'escrow.status.refunded': 'Refunded',
     'escrow.status.disputed': 'Disputed',
     'escrow.status.cancelled': 'Cancelled',
+
+    // Escrow onboarding tooltips (ngx-joyride)
+    'escrow.onboarding.helpBtn': 'Show guided tour',
+    'escrow.onboarding.stepTitleTitle': 'Escrow Payments',
+    'escrow.onboarding.stepTitleText':
+      'Welcome to Escrow Payments. Securely hold coins until both parties confirm the transaction is complete.',
+    'escrow.onboarding.stepFiltersTitle': 'Filter by Status',
+    'escrow.onboarding.stepFiltersText':
+      'Use these pills to filter transactions by their status: pending, released, refunded, or disputed.',
+    'escrow.onboarding.stepTransactionsTitle': 'Your Transactions',
+    'escrow.onboarding.stepTransactionsText':
+      'This list shows all your escrow transactions. Tap any transaction to view details, release funds, request a refund, or open a dispute.',
     'escrow.serviceType.lesson': 'Lesson',
     'escrow.serviceType.language_exchange': 'Language Exchange',
     'escrow.serviceType.proofreading': 'Proofreading',
