@@ -295,9 +295,15 @@ export class AppComponent implements OnInit {
     }
   }
 
-  onDeclineCall(_callData: IncomingCallData): void {
+  onDeclineCall(callData: IncomingCallData): void {
     this.incomingCallData.set(null);
-    // TODO: Send decline notification via Centrifugo
+    this.centrifugeService.publish(`user_${callData.callerId}`, {
+      type: 'call_rejected',
+      data: {
+        userId: this.authService.currentUser()?.id,
+        roomName: callData.roomName,
+      },
+    });
   }
 
   async toggleBiometricLock(): Promise<void> {
