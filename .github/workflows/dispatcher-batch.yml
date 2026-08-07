@@ -36,7 +36,7 @@ jobs:
           HIGH=$(gh issue list --repo ${{ github.repository }} --state open --label "priority:high" \
             --search "-label:swarm-active sort:created-asc" --limit "$SLOTS" --json number -q '.[].number' 2>/dev/null || echo "")
           UNLABELLED=$(gh issue list --repo ${{ github.repository }} --state open \
-            --search "-label:swarm-active -label:priority:high -label:priority:medium -label:priority:low sort:created-asc" \
+            --search "-label:swarm-active -label:priority:high -label:priority:medium -label:priority:low -label:guardian-alert sort:created-asc" \
             --limit "$SLOTS" --json number -q '.[].number' 2>/dev/null || echo "")
           MEDIUM=$(gh issue list --repo ${{ github.repository }} --state open --label "priority:medium" \
             --search "-label:swarm-active sort:created-asc" --limit "$SLOTS" --json number -q '.[].number' 2>/dev/null || echo "")

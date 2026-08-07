@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_run:
-    workflows: ["AI Auto-Resolver"]
+    workflows: ['AI Auto-Resolver']
     types:
       - completed
 
@@ -51,7 +51,7 @@ jobs:
           if [ -z "$ISSUE_NUM" ] || [ "$ISSUE_NUM" = "null" ]; then
             ISSUE_NUM=$(gh issue list --repo ${{ github.repository }} \
               --state open \
-              --search "-label:swarm-active -label:priority:high -label:priority:medium -label:priority:low sort:created-asc" \
+              --search "-label:swarm-active -label:priority:high -label:priority:medium -label:priority:low -label:guardian-alert sort:created-asc" \
               --limit 1 --json number -q '.[0].number' 2>/dev/null || echo "")
           fi
 
