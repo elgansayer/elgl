@@ -49,6 +49,13 @@ interface MockMetricsService {
   recordSrsDeckCreated: jest.Mock;
 }
 
+interface MockRedisClient {
+  get: jest.Mock;
+  set: jest.Mock;
+  del: jest.Mock;
+  keys: jest.Mock;
+}
+
 function mockFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
   return {
     id: 'card-1',
@@ -71,6 +78,7 @@ describe('FlashcardsService', () => {
   let mockQueryBuilder: MockQueryBuilder;
   let mockLogger: MockLogger;
   let mockMetricsService: MockMetricsService;
+  let mockRedisClient: MockRedisClient;
 
   beforeEach(async () => {
     mockLogger = {
@@ -103,6 +111,13 @@ describe('FlashcardsService', () => {
       single: jest.fn(),
     };
 
+    mockRedisClient = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn().mockResolvedValue(1),
+      keys: jest.fn().mockResolvedValue([]),
+    };
+
     mockSupabaseClient = {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
@@ -118,6 +133,7 @@ describe('FlashcardsService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
@@ -524,6 +540,177 @@ describe('FlashcardsService', () => {
       await service.getDueReviews('user-1');
 
       expect(withRetry).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Redis cache invalidation', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    describe('getFlashcards caching', () => {
+      it('should return cached data from Redis when available', async () => {
+        const cachedCards = [mockFlashcard()];
+        mockRedisClient.get.mockResolvedValueOnce(JSON.stringify(cachedCards));
+
+        const result = await service.getFlashcards('user-1');
+
+        expect(mockRedisClient.get).toHaveBeenCalledWith('srs:flashcards:user-1:all');
+        expect(result).toEqual(cachedCards);
+        expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+      });
+
+      it('should fall through to database when cache is empty, then store result in Redis', async () => {
+        mockRedisClient.get.mockResolvedValueOnce(null);
+        const dbCards = [mockFlashcard()];
+        mockQueryBuilder.order.mockResolvedValue({ data: dbCards, error: null });
+
+        const result = await service.getFlashcards('user-1');
+
+        expect(mockRedisClient.get).toHaveBeenCalledWith('srs:flashcards:user-1:all');
+        expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
+        expect(mockRedisClient.set).toHaveBeenCalledWith(
+          'srs:flashcards:user-1:all',
+          JSON.stringify(dbCards),
+          'EX',
+          300,
+        );
+        expect(result).toEqual(dbCards);
+      });
+
+      it('should use level-specific cache key when level filter is provided', async () => {
+        mockRedisClient.get.mockResolvedValueOnce(null);
+        const dbCards = [mockFlashcard({ srs_level: 2 })];
+        mockQueryBuilder.then = (resolve: (value: unknown) => void) =>
+          resolve({ data: dbCards, error: null });
+
+        await service.getFlashcards('user-1', 2);
+
+        expect(mockRedisClient.get).toHaveBeenCalledWith('srs:flashcards:user-1:2');
+        expect(mockRedisClient.set).toHaveBeenCalledWith(
+          'srs:flashcards:user-1:2',
+          JSON.stringify(dbCards),
+          'EX',
+          300,
+        );
+      });
+
+      it('should gracefully handle Redis read errors and fall through to database', async () => {
+        mockRedisClient.get.mockRejectedValueOnce(new Error('Redis connection error'));
+        const dbCards = [mockFlashcard()];
+        mockQueryBuilder.order.mockResolvedValue({ data: dbCards, error: null });
+
+        const result = await service.getFlashcards('user-1');
+
+        expect(result).toEqual(dbCards);
+        expect(mockLogger.warn).toHaveBeenCalled();
+      });
+
+      it('should gracefully handle Redis write errors after fetching from database', async () => {
+        mockRedisClient.get.mockResolvedValueOnce(null);
+        const dbCards = [mockFlashcard()];
+        mockQueryBuilder.order.mockResolvedValue({ data: dbCards, error: null });
+        mockRedisClient.set.mockRejectedValueOnce(new Error('Redis write error'));
+
+        const result = await service.getFlashcards('user-1');
+
+        expect(result).toEqual(dbCards);
+        expect(mockLogger.warn).toHaveBeenCalled();
+      });
+    });
+
+    describe('getDueReviews caching', () => {
+      it('should return cached due reviews from Redis when available', async () => {
+        const cachedDue = [mockFlashcard({ srs_level: 1 })];
+        mockRedisClient.get.mockResolvedValueOnce(JSON.stringify(cachedDue));
+
+        const result = await service.getDueReviews('user-1');
+
+        expect(mockRedisClient.get).toHaveBeenCalledWith('srs:due:user-1');
+        expect(result).toEqual(cachedDue);
+        expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+      });
+
+      it('should fall through to database and cache with shorter TTL for due reviews', async () => {
+        mockRedisClient.get.mockResolvedValueOnce(null);
+        const dbDue = [mockFlashcard({ srs_level: 0 })];
+        mockQueryBuilder.order.mockResolvedValue({ data: dbDue, error: null });
+
+        const result = await service.getDueReviews('user-1');
+
+        expect(mockRedisClient.get).toHaveBeenCalledWith('srs:due:user-1');
+        expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
+        expect(mockRedisClient.set).toHaveBeenCalledWith(
+          'srs:due:user-1',
+          JSON.stringify(dbDue),
+          'EX',
+          120,
+        );
+        expect(result).toEqual(dbDue);
+      });
+    });
+
+    describe('cache invalidation on mutations', () => {
+      it('should invalidate flashcard caches and due reviews on createOrUpdateFlashcard', async () => {
+        const dto = { word_token: 'new', translation: 'nuevo' } as CreateFlashcardDto;
+        const savedCard = mockFlashcard({ id: 'card-new', word_token: 'new' });
+        mockQueryBuilder.single.mockResolvedValue({ data: savedCard, error: null });
+        mockRedisClient.keys.mockResolvedValueOnce([
+          'srs:flashcards:user-1:all',
+          'srs:flashcards:user-1:0',
+        ]);
+
+        await service.createOrUpdateFlashcard('user-1', dto);
+
+        expect(mockRedisClient.keys).toHaveBeenCalledWith('srs:flashcards:user-1:*');
+        expect(mockRedisClient.del).toHaveBeenCalledWith(
+          'srs:flashcards:user-1:all',
+          'srs:flashcards:user-1:0',
+        );
+        expect(mockRedisClient.del).toHaveBeenCalledWith('srs:due:user-1');
+      });
+
+      it('should invalidate caches on updateSrsLevel', async () => {
+        const currentCard = { easiness_factor: 2.5, repetitions: 0, interval_days: 0 };
+        const updatedCard = mockFlashcard({ srs_level: 1, easiness_factor: 2.6, repetitions: 1, interval_days: 1 });
+        mockQueryBuilder.single
+          .mockResolvedValueOnce({ data: currentCard, error: null })
+          .mockResolvedValueOnce({ data: updatedCard, error: null });
+
+        await service.updateSrsLevel('user-1', 'card-1', { quality: 5 });
+
+        expect(mockRedisClient.del).toHaveBeenCalledWith('srs:due:user-1');
+        expect(mockRedisClient.keys).toHaveBeenCalledWith('srs:flashcards:user-1:*');
+      });
+
+      it('should gracefully handle Redis errors during invalidation', async () => {
+        const dto = { word_token: 'new', translation: 'nuevo' } as CreateFlashcardDto;
+        const savedCard = mockFlashcard({ id: 'card-new', word_token: 'new' });
+        mockQueryBuilder.single.mockResolvedValue({ data: savedCard, error: null });
+        mockRedisClient.keys.mockRejectedValueOnce(new Error('Redis unavailable'));
+
+        await service.createOrUpdateFlashcard('user-1', dto);
+
+        expect(mockLogger.warn).toHaveBeenCalled();
+      });
+    });
+
+    describe('invalidateSrsCacheForUser', () => {
+      it('should invalidate both flashcard lists and due reviews', async () => {
+        mockRedisClient.keys.mockResolvedValueOnce([
+          'srs:flashcards:user-1:all',
+          'srs:flashcards:user-1:2',
+        ]);
+
+        await service.invalidateSrsCacheForUser('user-1');
+
+        expect(mockRedisClient.keys).toHaveBeenCalledWith('srs:flashcards:user-1:*');
+        expect(mockRedisClient.del).toHaveBeenCalledWith(
+          'srs:flashcards:user-1:all',
+          'srs:flashcards:user-1:2',
+        );
+        expect(mockRedisClient.del).toHaveBeenCalledWith('srs:due:user-1');
+      });
     });
   });
 });

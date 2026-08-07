@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import Redis from 'ioredis';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
@@ -6,6 +7,12 @@ import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { withRetry } from '../common/retry';
+
+const CACHE_TTL_FLASHCARDS = 300;
+const CACHE_TTL_DUE_REVIEWS = 120;
+
+const CACHE_PREFIX_FLASHCARDS = 'srs:flashcards:';
+const CACHE_PREFIX_DUE_REVIEWS = 'srs:due:';
 
 @Injectable()
 export class FlashcardsService {
@@ -16,6 +23,49 @@ export class FlashcardsService {
     private readonly xpService: XpService,
     private readonly metricsService: MetricsService,
   ) {}
+
+  private getRedis(): Redis {
+    return this.supabaseService.getRedisClient();
+  }
+
+  private async invalidateFlashcardCaches(userId: string): Promise<void> {
+    try {
+      const redis = this.getRedis();
+      const keys = await redis.keys(`${CACHE_PREFIX_FLASHCARDS}${userId}:*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        this.logger.debug(
+          { userId, count: keys.length },
+          'Invalidated SRS flashcard cache keys',
+        );
+      }
+    } catch (err: unknown) {
+      this.logger.warn(
+        { userId, error: err instanceof Error ? err.message : 'Unknown error' },
+        'Failed to invalidate SRS flashcard caches; proceeding without invalidation',
+      );
+    }
+  }
+
+  private async invalidateDueReviewsCache(userId: string): Promise<void> {
+    try {
+      const redis = this.getRedis();
+      const key = `${CACHE_PREFIX_DUE_REVIEWS}${userId}`;
+      await redis.del(key);
+    } catch (err: unknown) {
+      this.logger.warn(
+        { userId, error: err instanceof Error ? err.message : 'Unknown error' },
+        'Failed to invalidate SRS due reviews cache; proceeding without invalidation',
+      );
+    }
+  }
+
+  async invalidateSrsCacheForUser(userId: string): Promise<void> {
+    await Promise.all([
+      this.invalidateFlashcardCaches(userId),
+      this.invalidateDueReviewsCache(userId),
+    ]);
+  }
 
   async createOrUpdateFlashcard(
     userId: string,
@@ -52,6 +102,9 @@ export class FlashcardsService {
       );
       throw new Error(`Failed to create/update flashcard: ${msg}`);
     }
+
+    void this.invalidateFlashcardCaches(userId);
+    void this.invalidateDueReviewsCache(userId);
 
     // Award XP for creating a flashcard
     void this.xpService.awardXpForActivity(userId, 'create_flashcard');
@@ -133,6 +186,9 @@ export class FlashcardsService {
       );
       throw new Error(`Failed to update SRS review level: ${msg}`);
     }
+
+    void this.invalidateDueReviewsCache(userId);
+    void this.invalidateFlashcardCaches(userId);
 
     // Award XP for reviewing a flashcard
     void this.xpService.awardXpForActivity(userId, 'review_flashcard');
@@ -234,6 +290,24 @@ export class FlashcardsService {
   }
 
   async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+    const cacheKey = `${CACHE_PREFIX_FLASHCARDS}${userId}:${level ?? 'all'}`;
+
+    try {
+      const redis = this.getRedis();
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed as Flashcard[];
+        }
+      }
+    } catch (err: unknown) {
+      this.logger.warn(
+        { userId, error: err instanceof Error ? err.message : 'Unknown error' },
+        'Failed to read SRS flashcards from cache; falling through to database',
+      );
+    }
+
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('flashcards')
@@ -246,13 +320,41 @@ export class FlashcardsService {
     }
 
     const response = await query;
-    if (response.error || !response.data) {
-      return [];
+    const result: Flashcard[] =
+      response.error || !response.data ? [] : (response.data as Flashcard[]);
+
+    try {
+      const redis = this.getRedis();
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL_FLASHCARDS);
+    } catch (err: unknown) {
+      this.logger.warn(
+        { userId, error: err instanceof Error ? err.message : 'Unknown error' },
+        'Failed to cache SRS flashcards; proceeding without caching',
+      );
     }
-    return response.data;
+
+    return result;
   }
 
   async getDueReviews(userId: string): Promise<Flashcard[]> {
+    const cacheKey = `${CACHE_PREFIX_DUE_REVIEWS}${userId}`;
+
+    try {
+      const redis = this.getRedis();
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed as Flashcard[];
+        }
+      }
+    } catch (err: unknown) {
+      this.logger.warn(
+        { userId, error: err instanceof Error ? err.message : 'Unknown error' },
+        'Failed to read SRS due reviews from cache; falling through to database',
+      );
+    }
+
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('flashcards')
@@ -262,9 +364,19 @@ export class FlashcardsService {
       .lte('next_review_at', new Date().toISOString())
       .order('next_review_at', { ascending: true });
 
-    if (response.error || !response.data) {
-      return [];
+    const result: Flashcard[] =
+      response.error || !response.data ? [] : (response.data as Flashcard[]);
+
+    try {
+      const redis = this.getRedis();
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL_DUE_REVIEWS);
+    } catch (err: unknown) {
+      this.logger.warn(
+        { userId, error: err instanceof Error ? err.message : 'Unknown error' },
+        'Failed to cache SRS due reviews; proceeding without caching',
+      );
     }
-    return response.data;
+
+    return result;
   }
 }
