@@ -99,11 +99,15 @@ export class ReadingEngineController {
   @ApiOperation({ summary: 'Tokenise a reading resource using Intl.Segmenter' })
   @ApiParam({ name: 'id', description: 'Resource UUID' })
   @ApiQuery({ name: 'lang', required: false, description: 'ISO 639-1 language override' })
+  @ApiQuery({ name: 'tokenLimit', required: false, description: 'Max tokens to return (1-5000, default 500)' })
+  @ApiQuery({ name: 'tokenOffset', required: false, description: 'Token offset for pagination (default 0)' })
   async tokenise(
     @Param('id') id: string,
     @Query('lang') lang?: string,
+    @Query('tokenLimit') tokenLimit?: number,
+    @Query('tokenOffset') tokenOffset?: number,
   ): Promise<ReadingTokenBreakdown> {
-    return this.readingService.tokenise('user', id, lang);
+    return this.readingService.tokenise('user', id, lang, tokenLimit, tokenOffset);
   }
 
   /* ---- Progress ---- */

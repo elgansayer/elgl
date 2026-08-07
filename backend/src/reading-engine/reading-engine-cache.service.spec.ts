@@ -9,6 +9,8 @@ describe('ReadingEngineCacheService', () => {
     set: jest.Mock;
     del: jest.Mock;
     scan: jest.Mock;
+    quit: jest.Mock;
+    disconnect: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -17,6 +19,8 @@ describe('ReadingEngineCacheService', () => {
       set: jest.fn().mockResolvedValue('OK'),
       del: jest.fn().mockResolvedValue(1),
       scan: jest.fn().mockResolvedValue(['0', []]),
+      quit: jest.fn().mockResolvedValue('OK'),
+      disconnect: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -202,5 +206,34 @@ describe('ReadingEngineCacheService', () => {
 
   it('returns safe default for unknown namespace', () => {
     expect(service['inferTtl']('unknown:key')).toBe(300);
+  });
+
+  /* ---- Cache value size validation ---- */
+
+  it('refuses to write a value exceeding the size limit', async () => {
+    const largeValue = { data: 'x'.repeat(1_100_000) };
+    await service.set('reading:resource:user:abc:res-big', largeValue);
+    expect(redis.set).not.toHaveBeenCalled();
+  });
+
+  it('writes a value at the size limit boundary', async () => {
+    // Create a value whose serialised size is just under 1 MB
+    const size = 900_000;
+    const value = { data: 'x'.repeat(size - 20) }; // subtract JSON framing overhead
+    await service.set('reading:resource:user:abc:res-big', value);
+    expect(redis.set).toHaveBeenCalledTimes(1);
+  });
+
+  /* ---- Lifecycle hooks ---- */
+
+  it('gracefully quits Redis on module destroy', async () => {
+    await service.onModuleDestroy();
+    expect(redis.quit).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to disconnect when quit fails', async () => {
+    redis.quit.mockRejectedValueOnce(new Error('connection lost'));
+    await service.onModuleDestroy();
+    expect(redis.disconnect).toHaveBeenCalledTimes(1);
   });
 });

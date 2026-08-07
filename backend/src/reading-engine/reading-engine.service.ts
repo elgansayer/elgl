@@ -16,6 +16,17 @@ import {
   ReadingSession,
 } from './interfaces/reading.interface';
 
+/** Default list page size to prevent unbounded query results. */
+const DEFAULT_LIST_LIMIT = 50;
+/** Hard cap on list results per request. */
+const MAX_LIST_LIMIT = 200;
+/** Max tokens returned per tokenise call to keep payload size bounded. */
+const DEFAULT_TOKEN_LIMIT = 500;
+/** Absolute cap on tokens returned in a single tokenise request. */
+const MAX_TOKEN_LIMIT = 5_000;
+/** Max content length in bytes we allow into the Redis cache (512 KB). */
+const MAX_CACHEABLE_CONTENT_BYTES = 512 * 1024;
+
 @Injectable()
 export class ReadingEngineService {
   private readonly logger = new Logger(ReadingEngineService.name);
@@ -105,7 +116,18 @@ export class ReadingEngineService {
     if (!data) throw new NotFoundException('Resource not found');
 
     const resource = this.toResource(data);
-    await this.cacheService.set(cacheKey, resource);
+
+    // Only cache resources whose content is below the size threshold
+    const contentSize = Buffer.byteLength(resource.content, 'utf8');
+    if (contentSize <= MAX_CACHEABLE_CONTENT_BYTES) {
+      await this.cacheService.set(cacheKey, resource);
+    } else {
+      this.logger.debug(
+        { resourceId, contentSize },
+        'Skipping cache write -- content exceeds size threshold',
+      );
+    }
+
     return resource;
   }
 
@@ -116,16 +138,22 @@ export class ReadingEngineService {
     limit?: number;
     offset?: number;
   }): Promise<ReadingResource[]> {
+    const effectiveLimit = Math.min(
+      Math.max(params.limit ?? DEFAULT_LIST_LIMIT, 1),
+      MAX_LIST_LIMIT,
+    );
+    const effectiveOffset = Math.max(params.offset ?? 0, 0);
+
     let query = this.db
       .from('reading_resources')
       .select()
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(effectiveLimit)
+      .range(effectiveOffset, effectiveOffset + effectiveLimit - 1);
 
     if (params.language) query = query.eq('language', params.language);
     if (params.difficulty) query = query.eq('difficulty', params.difficulty);
     if (params.topic) query = query.eq('topic', params.topic);
-    if (params.limit) query = query.limit(params.limit);
-    if (params.offset) query = query.range(params.offset, params.offset + (params.limit ?? 20) - 1);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -150,12 +178,20 @@ export class ReadingEngineService {
     userId: string,
     resourceId: string,
     language?: string,
+    tokenLimit?: number,
+    tokenOffset?: number,
   ): Promise<ReadingTokenBreakdown> {
+    const effectiveLimit = Math.min(
+      Math.max(tokenLimit ?? DEFAULT_TOKEN_LIMIT, 1),
+      MAX_TOKEN_LIMIT,
+    );
+    const effectiveOffset = Math.max(tokenOffset ?? 0, 0);
+
     const cacheKey = this.cacheService.buildKey({
       namespace: ReadingEngineCacheNamespace.TOKEN,
       userId,
       resourceId,
-      extra: language,
+      extra: `${language ?? 'auto'}:l${effectiveLimit}:o${effectiveOffset}`,
     });
 
     const cached = await this.cacheService.get<ReadingTokenBreakdown>(cacheKey);
@@ -165,7 +201,7 @@ export class ReadingEngineService {
     const locale = language ?? resource.language ?? 'en';
 
     const segmenter = new Intl.Segmenter(locale, { granularity: 'word' });
-    const tokens = Array.from(segmenter.segment(resource.content))
+    const allTokens = Array.from(segmenter.segment(resource.content))
       .filter((s) => s.isWordLike)
       .map((s, i) => ({
         index: i,
@@ -174,12 +210,16 @@ export class ReadingEngineService {
         isWordLike: s.isWordLike ?? true,
       }));
 
+    const totalTokens = allTokens.length;
+    const uniqueTokens = new Set(allTokens.map((t) => t.token.toLowerCase())).size;
+    const pagedTokens = allTokens.slice(effectiveOffset, effectiveOffset + effectiveLimit);
+
     const breakdown: ReadingTokenBreakdown = {
       resourceId,
       language: locale,
-      totalTokens: tokens.length,
-      uniqueTokens: new Set(tokens.map((t) => t.token.toLowerCase())).size,
-      tokens,
+      totalTokens,
+      uniqueTokens,
+      tokens: pagedTokens,
     };
 
     await this.cacheService.set(cacheKey, breakdown);

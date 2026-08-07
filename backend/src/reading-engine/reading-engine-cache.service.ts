@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleDestroy } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import Redis from 'ioredis';
 import {
@@ -8,6 +8,9 @@ import {
   CacheKeyOptions,
 } from './interfaces/cache-rules.interface';
 
+/** Maximum size in bytes for a single cached value (1 MB). */
+const MAX_CACHED_VALUE_BYTES = 1_048_576;
+
 /**
  * Centralised Redis cache service for the LingQ Reading Engine.
  *
@@ -15,10 +18,12 @@ import {
  * - Builds namespaced, user-scoped cache keys.
  * - Reads / writes cached values with appropriate TTLs.
  * - Invalidates single keys or entire patterns on data-mutation events.
+ * - Validates cache value sizes to prevent memory exhaustion.
+ * - Gracefully tears down the Redis connection on module destruction.
  * - Provides observability through structured logging.
  */
 @Injectable()
-export class ReadingEngineCacheService {
+export class ReadingEngineCacheService implements OnModuleDestroy {
   private readonly logger = new Logger(ReadingEngineCacheService.name);
 
   /** Canonical set of invalidation rules for the entire reading engine. */
@@ -128,9 +133,20 @@ export class ReadingEngineCacheService {
     ttlSeconds?: number,
   ): Promise<void> {
     try {
+      const payload = JSON.stringify(value);
+      const size = Buffer.byteLength(payload, 'utf8');
+
+      if (size > MAX_CACHED_VALUE_BYTES) {
+        this.logger.warn(
+          { key, size, limit: MAX_CACHED_VALUE_BYTES },
+          'Skipping cache write -- value exceeds size limit',
+        );
+        return;
+      }
+
       const ttl = ttlSeconds ?? this.inferTtl(key);
-      await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
-      this.logger.debug({ key, ttl }, 'Cache write');
+      await this.redis.set(key, payload, 'EX', ttl);
+      this.logger.debug({ key, ttl, size }, 'Cache write');
     } catch (err) {
       this.logger.error({ key, error: (err as Error).message }, 'Cache write failed');
     }
@@ -245,6 +261,23 @@ export class ReadingEngineCacheService {
       { userId: payload.userId },
       'Bulk-invalidated all reading-engine caches for user (user_data_cleared)',
     );
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  Lifecycle                                                         */
+  /* ------------------------------------------------------------------ */
+
+  async onModuleDestroy(): Promise<void> {
+    try {
+      await this.redis.quit();
+      this.logger.log('Redis connection closed gracefully');
+    } catch (err) {
+      this.logger.warn(
+        { error: (err as Error).message },
+        'Failed to close Redis connection gracefully, forcing disconnect',
+      );
+      this.redis.disconnect();
+    }
   }
 
   /* ------------------------------------------------------------------ */
