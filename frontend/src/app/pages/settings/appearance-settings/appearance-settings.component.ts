@@ -1,14 +1,24 @@
+<<<<<<< HEAD
 import { Component, computed, effect, inject, resource, signal } from '@angular/core';
+=======
+import { Component, computed, inject, signal, resource } from '@angular/core';
+>>>>>>> origin/main
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { FontScaleService } from '../../../services/font-scale.service';
 import { Theme, ThemeService } from '../../../services/theme.service';
+<<<<<<< HEAD
 import { UserService } from '../../../services/user.service';
+=======
+import { UserService, UserProfile } from '../../../services/user.service';
+>>>>>>> origin/main
 import { I18nService } from '../../../services/i18n.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
+<<<<<<< HEAD
   imports: [TranslatePipe],
   template: `
     <div class="min-h-screen bg-surface-50">
@@ -116,16 +126,29 @@ import { I18nService } from '../../../services/i18n.service';
 export class AppearanceSettingsComponent {
   private fontScaleService = inject(FontScaleService);
   private themeService = inject(ThemeService);
+=======
+  imports: [TranslatePipe, FormsModule],
+  templateUrl: './appearance-settings.component.html',
+})
+export class AppearanceSettingsComponent {
+  readonly fontScaleService = inject(FontScaleService);
+  readonly themeService = inject(ThemeService);
+>>>>>>> origin/main
   private userService = inject(UserService);
   private location = inject(Location);
-  private i18nService = inject(I18nService);
+  readonly i18nService = inject(I18nService);
 
+<<<<<<< HEAD
   readonly saving = signal(false);
+=======
+  readonly isSaving = signal(false);
+>>>>>>> origin/main
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
   readonly fontScale = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
   readonly currentTheme = this.themeService.currentTheme;
+<<<<<<< HEAD
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
   readonly currentLang = this.i18nService.currentLang;
   readonly availableLanguages = this.i18nService.availableLanguages;
@@ -154,6 +177,43 @@ export class AppearanceSettingsComponent {
         this.selectedAccentColor.set(profile.primary_accent_color);
       }
     });
+=======
+
+  readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
+
+  readonly primaryAccentColor = signal('#4f46e5');
+  readonly isVip = signal(false);
+
+  readonly availableColors = [
+    '#4f46e5',
+    '#e11d48',
+    '#16a34a',
+    '#d97706',
+    '#9333ea',
+    '#0891b2',
+  ];
+
+  private profileResource = resource<UserProfile | null, void>({
+    loader: async () => {
+      try {
+        const profile = await this.userService.getMyProfile();
+        if (profile) {
+          this.isVip.set(Boolean(profile.is_vip));
+          this.primaryAccentColor.set(profile.primary_accent_color ?? '#4f46e5');
+        }
+        return profile;
+      } catch {
+        this.errorMessage.set('Failed to load profile');
+        return null;
+      }
+    },
+  });
+
+  readonly isLoading = computed(() => this.profileResource.isLoading());
+
+  setTheme(theme: Theme): void {
+    this.themeService.setTheme(theme);
+>>>>>>> origin/main
   }
 
   onFontScaleChange(event: Event): void {
@@ -164,6 +224,7 @@ export class AppearanceSettingsComponent {
     this.fontScaleService.setScale(percent / 100);
   }
 
+<<<<<<< HEAD
   setTheme(theme: Theme): void {
     this.themeService.setTheme(theme);
   }
@@ -177,11 +238,17 @@ export class AppearanceSettingsComponent {
   setAccentColour(colour: string): void {
     if (!this.isVip()) return;
     this.selectedAccentColor.set(colour);
+=======
+  setAccentColor(color: string): void {
+    if (!this.isVip()) return;
+    this.primaryAccentColor.set(color);
+>>>>>>> origin/main
   }
 
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
+<<<<<<< HEAD
     this.saving.set(true);
 
     try {
@@ -190,11 +257,34 @@ export class AppearanceSettingsComponent {
       });
 
       this.successMessage.set(this.i18nService.translate('settings.saveSuccess'));
+=======
+    this.isSaving.set(true);
+
+    try {
+      await this.userService.updateMyProfile({
+        primary_accent_color: this.primaryAccentColor(),
+      });
+      this.successMessage.set('settings.saved');
+>>>>>>> origin/main
     } catch {
       this.errorMessage.set(this.i18nService.translate('settings.saveError'));
     } finally {
+<<<<<<< HEAD
       this.saving.set(false);
+=======
+      this.isSaving.set(false);
+>>>>>>> origin/main
     }
+  }
+
+  changeUiLanguage(lang: string): void {
+    this.i18nService.setLanguage(lang);
+  }
+
+  onLanguageSelect(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    this.i18nService.setLanguage(target.value);
   }
 
   goBack(): void {

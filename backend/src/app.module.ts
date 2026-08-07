@@ -16,6 +16,7 @@ import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
+import { DecksModule } from './decks/decks.module';
 import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
@@ -42,6 +43,7 @@ import { ShoppingModule } from './shopping/shopping.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { LegalModule } from './legal/legal.module';
 import { AiConversationModule } from './ai-conversation/ai-conversation.module';
 import { CorrectorScoreModule } from './corrector-score/corrector-score.module';
 import { AchievementsModule } from './achievements/achievements.module';
@@ -65,9 +67,10 @@ import { LanguageIslandsModule } from './language-islands/language-islands.modul
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
-import { AssessmentsService } from './assessments/assessments.service';
+import { AssessmentsModule } from './assessments/assessments.module';
 
 @Module({
   imports: [
@@ -103,6 +106,7 @@ import { AssessmentsService } from './assessments/assessments.service';
     ChatModule,
     NlpModule,
     FlashcardsModule,
+    DecksModule,
     MomentsModule,
     AudioRoomsModule,
     MonetisationModule,
@@ -125,6 +129,7 @@ import { AssessmentsService } from './assessments/assessments.service';
     StudyStreakModule,
     HostDashboardModule,
     PrivacyModule,
+    LegalModule,
     AiConversationModule,
     AchievementsModule,
     CulturalModule,
@@ -151,6 +156,8 @@ import { AssessmentsService } from './assessments/assessments.service';
     LanguageIslandsModule,
     EmailModule,
     PasswordResetModule,
+	    AssessmentsModule,
+	    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -162,7 +169,6 @@ import { AssessmentsService } from './assessments/assessments.service';
     },
     PronunciationScoringService,
     AnkiiIntegrationService,
-    AssessmentsService,
   ],
 })
 export class AppModule {}

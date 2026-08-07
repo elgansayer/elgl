@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Location } from '@angular/common';
 import { Pipe, PipeTransform, signal } from '@angular/core';
@@ -15,10 +16,22 @@ class MockTranslatePipe implements PipeTransform {
     return key;
   }
 }
+=======
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Location } from '@angular/common';
+import { signal } from '@angular/core';
+import { AppearanceSettingsComponent } from './appearance-settings.component';
+import { I18nService } from '../../../services/i18n.service';
+import { FontScaleService } from '../../../services/font-scale.service';
+import { ThemeService } from '../../../services/theme.service';
+import { UserService } from '../../../services/user.service';
+>>>>>>> origin/main
 
 describe('AppearanceSettingsComponent', () => {
   let component: AppearanceSettingsComponent;
   let fixture: ComponentFixture<AppearanceSettingsComponent>;
+<<<<<<< HEAD
   let fontScaleService: Partial<FontScaleService>;
   let setScaleSpy: Mock;
   let currentTheme: ReturnType<typeof signal<Theme>>;
@@ -44,17 +57,74 @@ describe('AppearanceSettingsComponent', () => {
       getMyProfile: vi.fn().mockResolvedValue({
         is_vip: false,
         primary_accent_color: '#4f46e5',
+=======
+  let i18nServiceMock: Partial<I18nService>;
+  let themeServiceMock: Partial<ThemeService>;
+  let fontScaleServiceMock: Partial<FontScaleService>;
+  let userServiceMock: Partial<UserService>;
+  let locationMock: Partial<Location>;
+
+  beforeEach(async () => {
+    i18nServiceMock = {
+      currentLang: signal('en-GB'),
+      translate: vi.fn((key: string) => key),
+      setLanguage: vi.fn(),
+      availableLanguages: [
+        { code: 'en-GB', flag: '🇬🇧', nativeName: 'English', name: 'English' },
+        { code: 'es', flag: '🇪🇸', nativeName: 'Español', name: 'Spanish' },
+      ],
+    };
+
+    themeServiceMock = {
+      currentTheme: signal<'light' | 'dark' | 'system'>('system'),
+      setTheme: vi.fn(),
+    };
+
+    fontScaleServiceMock = {
+      scaleFactor: signal(1.0),
+      setScale: vi.fn(),
+      min: 0.8,
+      max: 1.2,
+      step: 0.05,
+    };
+
+    userServiceMock = {
+      getMyProfile: vi.fn().mockResolvedValue({
+        id: '1',
+        is_vip: true,
+        primary_accent_color: '#4f46e5',
+        native_languages: [],
+        target_languages: [],
+        coins_balance: 0,
+        study_streak_days: 0,
+        correction_ratio: 0,
+        is_serious_learner: false,
+        privacy_hide_age: false,
+        privacy_hide_location: false,
+        privacy_hide_gender: false,
+        privacy_hide_from_search: false,
+        is_admin: false,
+        vip_tier: '',
+        created_at: '',
+>>>>>>> origin/main
       }),
       updateMyProfile: vi.fn().mockResolvedValue({}),
     };
 
+<<<<<<< HEAD
     i18nSetLanguageSpy = vi.fn();
     i18nTranslateSpy = vi.fn((key: string) => key);
     locationBackSpy = vi.fn();
+=======
+    locationMock = {
+      back: vi.fn(),
+    };
+>>>>>>> origin/main
 
     await TestBed.configureTestingModule({
       imports: [AppearanceSettingsComponent],
       providers: [
+<<<<<<< HEAD
         { provide: FontScaleService, useValue: fontScaleService },
         { provide: ThemeService, useValue: { currentTheme, setTheme: setThemeSpy } },
         { provide: UserService, useValue: userService },
@@ -78,10 +148,20 @@ describe('AppearanceSettingsComponent', () => {
         add: { imports: [MockTranslatePipe] },
       })
       .compileComponents();
+=======
+        { provide: I18nService, useValue: i18nServiceMock },
+        { provide: ThemeService, useValue: themeServiceMock },
+        { provide: FontScaleService, useValue: fontScaleServiceMock },
+        { provide: UserService, useValue: userServiceMock },
+        { provide: Location, useValue: locationMock },
+      ],
+    }).compileComponents();
+>>>>>>> origin/main
 
     fixture = TestBed.createComponent(AppearanceSettingsComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+<<<<<<< HEAD
   });
 
   it('should create the component', () => {
@@ -163,5 +243,54 @@ describe('AppearanceSettingsComponent', () => {
     await component.saveSettings();
     expect(component.errorMessage()).toBe('settings.saveError');
     expect(component.saving()).toBe(false);
+=======
+    await fixture.whenStable();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should set the theme', () => {
+    component.setTheme('dark');
+    expect(themeServiceMock.setTheme).toHaveBeenCalledWith('dark');
+  });
+
+  it('should set the font scale from input event', () => {
+    const event = { target: { value: '110' } } as unknown as Event;
+    component.onFontScaleChange(event);
+    expect(fontScaleServiceMock.setScale).toHaveBeenCalledWith(1.1);
+  });
+
+  it('should navigate back', () => {
+    component.goBack();
+    expect(locationMock.back).toHaveBeenCalled();
+  });
+
+  it('should change UI language', () => {
+    component.changeUiLanguage('es');
+    expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
+  });
+
+  it('should change language from select event', () => {
+    const select = document.createElement('select');
+    select.value = 'es';
+    Object.defineProperty(select, 'value', { value: 'es' });
+    const event = { target: select } as unknown as Event;
+    component.onLanguageSelect(event);
+    expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
+  });
+
+  it('should set accent colour when VIP', () => {
+    component.isVip.set(true);
+    component.setAccentColor('#e11d48');
+    expect(component.primaryAccentColor()).toBe('#e11d48');
+  });
+
+  it('should not set accent colour when not VIP', () => {
+    component.isVip.set(false);
+    component.setAccentColor('#e11d48');
+    expect(component.primaryAccentColor()).toBe('#4f46e5');
+>>>>>>> origin/main
   });
 });

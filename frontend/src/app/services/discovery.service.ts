@@ -32,6 +32,7 @@ export interface SearchFilterParams {
   availability_evening?: boolean;
   available_time_start?: string;
   available_time_end?: string;
+  voice_room_active?: boolean;
 }
 
 @Injectable({
@@ -128,6 +129,8 @@ export class DiscoveryService {
       params = params.set('available_time_start', filters.available_time_start);
     if (filters.available_time_end !== undefined)
       params = params.set('available_time_end', filters.available_time_end);
+    if (filters.voice_room_active !== undefined)
+      params = params.set('voice_room_active', filters.voice_room_active.toString());
 
     const users = await firstValueFrom(
       this.http

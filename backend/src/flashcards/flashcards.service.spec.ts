@@ -100,55 +100,230 @@ describe('FlashcardsService', () => {
     });
   });
 
-  describe('updateSrsLevel', () => {
-    const testCases = [
-      { level: 0, expectedDays: 1 },
-      { level: 1, expectedDays: 3 },
-      { level: 2, expectedDays: 7 },
-      { level: 3, expectedDays: 14 },
-      { level: 4, expectedDays: 30 },
-      { level: 5, expectedDays: 1 },
-    ];
+  describe('updateSrsLevel (SM-2 algorithm)', () => {
+    const fakeNow = new Date('2026-07-22T12:00:00Z');
 
-    testCases.forEach(({ level, expectedDays }) => {
-      it(`should calculate next review correctly (+${expectedDays} days) for srs_level ${level}`, async () => {
-        const fakeNow = new Date('2026-07-22T12:00:00Z');
-        jest.useFakeTimers().setSystemTime(fakeNow);
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(fakeNow);
+    });
 
-        const expectedDate = new Date(fakeNow);
-        expectedDate.setDate(expectedDate.getDate() + expectedDays);
+    afterEach(() => {
+      jest.useRealTimers();
+    });
 
-        const updatedCard = { id: 'card-1', srs_level: level };
-        mockQueryBuilder.single.mockResolvedValue({
-          data: updatedCard,
-          error: null,
+    // Helper to create mock card SRS state
+    function mockCurrentCard(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'card-1',
+        user_id: 'user-1',
+        word_token: 'bonjour',
+        translation: 'hello',
+        srs_level: 0,
+        easiness_factor: 2.5,
+        repetition_count: 0,
+        next_review_at: fakeNow.toISOString(),
+        ...overrides,
+      };
+    }
+
+    function expectUpdateCalled(expected: Record<string, unknown>) {
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining(expected),
+      );
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'card-1');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    }
+
+    describe('quality >= 3 (successful recall)', () => {
+      it('quality=5, first success: interval=1 day, srs=1, rep=1', async () => {
+        // First .single() is for fetching current card
+        mockQueryBuilder.single
+          .mockResolvedValueOnce({ data: mockCurrentCard(), error: null })
+          .mockResolvedValueOnce({
+            data: { id: 'card-1', srs_level: 1 },
+            error: null,
+          });
+
+        await service.updateSrsLevel('user-1', 'card-1', { quality: 5 });
+
+        const nextDate = new Date(fakeNow);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        expectUpdateCalled({
+          srs_level: 1,
+          easiness_factor: 2.6,
+          repetition_count: 1,
+          next_review_at: nextDate.toISOString(),
         });
+      });
 
-        const result = await service.updateSrsLevel('user-1', 'card-1', {
-          srs_level: level,
+      it('quality=3, first success: interval=1 day, srs=1, rep=1, EF=2.36', async () => {
+        mockQueryBuilder.single
+          .mockResolvedValueOnce({ data: mockCurrentCard(), error: null })
+          .mockResolvedValueOnce({
+            data: { id: 'card-1', srs_level: 1 },
+            error: null,
+          });
+
+        await service.updateSrsLevel('user-1', 'card-1', { quality: 3 });
+
+        const nextDate = new Date(fakeNow);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        // EF = 2.5 + (0.1 - (5-3)*(0.08 + (5-3)*0.02))
+        //    = 2.5 + (0.1 - 2 * (0.08 + 2*0.02))
+        //    = 2.5 + (0.1 - 2 * 0.12)
+        //    = 2.5 + (0.1 - 0.24)
+        //    = 2.5 - 0.14
+        //    = 2.36
+        expectUpdateCalled({
+          srs_level: 1,
+          easiness_factor: 2.36,
+          repetition_count: 1,
+          next_review_at: nextDate.toISOString(),
         });
+      });
 
-        expect(mockQueryBuilder.update).toHaveBeenCalledWith({
-          srs_level: level,
-          next_review_at: expectedDate.toISOString(),
+      it('quality=5, second success: interval=6 days, srs=2, rep=2', async () => {
+        mockQueryBuilder.single
+          .mockResolvedValueOnce({
+            data: mockCurrentCard({ srs_level: 1, repetition_count: 1, easiness_factor: 2.6 }),
+            error: null,
+          })
+          .mockResolvedValueOnce({
+            data: { id: 'card-1', srs_level: 2 },
+            error: null,
+          });
+
+        await service.updateSrsLevel('user-1', 'card-1', { quality: 5 });
+
+        const nextDate = new Date(fakeNow);
+        nextDate.setDate(nextDate.getDate() + 6);
+
+        // EF = 2.6 + 0.1 = 2.7
+        expectUpdateCalled({
+          srs_level: 2,
+          easiness_factor: 2.7,
+          repetition_count: 2,
+          next_review_at: nextDate.toISOString(),
         });
-        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'card-1');
-        expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
-        expect(result).toEqual(updatedCard);
+      });
 
-        jest.useRealTimers();
+      it('quality=4, third success with EF=2.5: interval=round(6*2.58)=15 days', async () => {
+        // EF = 2.5 + (0.1 - (5-4)*(0.08 + (5-4)*0.02))
+        //    = 2.5 + (0.1 - 1*0.10)
+        //    = 2.5 - 0.0 = 2.5 ... wait
+        //    = 2.5 + 0.1 - 0.10 = 2.5
+        // Actually: newEF = 2.5 + (0.1 - 1 * (0.08 + 1*0.02)) = 2.5 + (0.1 - 0.10) = 2.5
+        mockQueryBuilder.single
+          .mockResolvedValueOnce({
+            data: mockCurrentCard({ srs_level: 2, repetition_count: 2, easiness_factor: 2.5 }),
+            error: null,
+          })
+          .mockResolvedValueOnce({
+            data: { id: 'card-1', srs_level: 3 },
+            error: null,
+          });
+
+        await service.updateSrsLevel('user-1', 'card-1', { quality: 4 });
+
+        const nextDate = new Date(fakeNow);
+        // prevInterval = 6 (level 2 base), newInterval = round(6 * 2.5) = 15
+        nextDate.setDate(nextDate.getDate() + 15);
+
+        expectUpdateCalled({
+          srs_level: 3,
+          easiness_factor: 2.5,
+          repetition_count: 3,
+          next_review_at: nextDate.toISOString(),
+        });
       });
     });
 
-    it('should throw Error when updateSrsLevel fails', async () => {
-      mockQueryBuilder.single.mockResolvedValue({
+    describe('quality < 3 (failed recall)', () => {
+      it('quality=2: resets repetition, interval=1 day, srs decrements', async () => {
+        mockQueryBuilder.single
+          .mockResolvedValueOnce({
+            data: mockCurrentCard({ srs_level: 2, repetition_count: 2, easiness_factor: 2.7 }),
+            error: null,
+          })
+          .mockResolvedValueOnce({
+            data: { id: 'card-1', srs_level: 1 },
+            error: null,
+          });
+
+        await service.updateSrsLevel('user-1', 'card-1', { quality: 2 });
+
+        const nextDate = new Date(fakeNow);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        // EF = 2.7 + (0.1 - (5-2)*(0.08 + (5-2)*0.02))
+        //    = 2.7 + (0.1 - 3 * (0.08 + 0.06))
+        //    = 2.7 + (0.1 - 3 * 0.14)
+        //    = 2.7 + (0.1 - 0.42)
+        //    = 2.7 - 0.32 = 2.38
+        expectUpdateCalled({
+          srs_level: 1,
+          easiness_factor: 2.38,
+          repetition_count: 0,
+          next_review_at: nextDate.toISOString(),
+        });
+      });
+
+      it('quality=0: resets repetition, interval=1 day, srs min 0, EF minimum 1.3', async () => {
+        mockQueryBuilder.single
+          .mockResolvedValueOnce({
+            data: mockCurrentCard({ srs_level: 0, repetition_count: 0, easiness_factor: 1.3 }),
+            error: null,
+          })
+          .mockResolvedValueOnce({
+            data: { id: 'card-1', srs_level: 0 },
+            error: null,
+          });
+
+        await service.updateSrsLevel('user-1', 'card-1', { quality: 0 });
+
+        const nextDate = new Date(fakeNow);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        // EF = 1.3 + (0.1 - 5*(0.08 + 5*0.02))
+        //    = 1.3 + (0.1 - 5 * 0.18)
+        //    = 1.3 + (0.1 - 0.90)
+        //    = 1.3 - 0.80 = 0.5 -> clamped to 1.3
+        expectUpdateCalled({
+          srs_level: 0,
+          easiness_factor: 1.3,
+          repetition_count: 0,
+          next_review_at: nextDate.toISOString(),
+        });
+      });
+    });
+
+    it('should throw Error when fetch of current card fails', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'Card not found' },
       });
 
       await expect(
-        service.updateSrsLevel('user-1', 'card-1', { srs_level: 2 } as any),
+        service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
       ).rejects.toThrow('Failed to update SRS review level: Card not found');
+    });
+
+    it('should throw Error when update fails', async () => {
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({
+          data: mockCurrentCard(),
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'Database error' },
+        });
+
+      await expect(
+        service.updateSrsLevel('user-1', 'card-1', { quality: 4 }),
+      ).rejects.toThrow('Failed to update SRS review level: Database error');
     });
   });
 
@@ -173,10 +348,6 @@ describe('FlashcardsService', () => {
     it('should filter by level when a valid number is provided', async () => {
       const cards = [{ id: 'card-2', srs_level: 2 }];
       mockQueryBuilder.eq.mockReturnThis();
-      // Since order is called after eq when building, let's make sure our mock returns response when awaited
-      // Notice query builds: from().select().eq(user_id).order(). Then if level !== undefined && !isNaN(level), query.eq('srs_level', level).
-      // So when query is awaited, it returns whatever eq returns or order returns if eq returns this.
-      // Let's set up the promise resolution on queryBuilder itself or mock eq to return a promise when awaited.
       mockQueryBuilder.then = (resolve: any) =>
         resolve({ data: cards, error: null });
 
@@ -198,7 +369,7 @@ describe('FlashcardsService', () => {
   });
 
   describe('getDueReviews', () => {
-    it('should return due cards ordered by next_review_at', async () => {
+    it('should return due cards ordered by next_review_at (no longer filters by srs_level<4)', async () => {
       const cards = [{ id: 'card-1' }];
       mockQueryBuilder.order.mockResolvedValue({
         data: cards,
@@ -209,7 +380,7 @@ describe('FlashcardsService', () => {
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(mockQueryBuilder.lt).toHaveBeenCalledWith('srs_level', 4);
+      // No longer filters by lt('srs_level', 4) - SM-2 allows reviews at any level
       expect(mockQueryBuilder.lte).toHaveBeenCalledWith(
         'next_review_at',
         expect.any(String),

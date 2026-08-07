@@ -1,12 +1,14 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
 import { EconomyStore } from '../../services/economy.store';
+import { SafetyService, ReportCategory } from '../../services/safety.service';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-trust-safety-modal',
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, AppSkeletonLoaderComponent],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
@@ -15,17 +17,18 @@ import { EconomyStore } from '../../services/economy.store';
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
             <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
-              <span>🛡️ Trust and safety moderation</span>
+              <span>{{ 'safety.title' | t }}</span>
             </h3>
             <p class="text-xs text-text-secondary">
-              Report or block {{ targetName() }} to keep our community safe
+              {{ 'safety.subtitle' | t: { name: targetName() } }}
             </p>
           </div>
           <button
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            [attr.aria-label]="'safety.closeBtn' | t"
           >
-            ✕
+            &#x2715;
           </button>
         </div>
 
@@ -37,7 +40,7 @@ import { EconomyStore } from '../../services/economy.store';
               (mode === 'report' ? 'bg-surface-200 text-primary shadow-sm' : 'text-text-secondary')
             "
           >
-            ⚠️ Report user
+            {{ 'safety.tabReport' | t }}
           </button>
           <button
             (click)="mode = 'block'"
@@ -46,37 +49,42 @@ import { EconomyStore } from '../../services/economy.store';
               (mode === 'block' ? 'bg-red-600 text-white shadow-sm' : 'text-text-secondary')
             "
           >
-            🚫 Block user
+            {{ 'safety.tabBlock' | t }}
           </button>
         </div>
 
         @if (mode === 'report') {
           <div class="space-y-3 text-xs">
+@if (categoriesLoading()) {
+            <div class="space-y-2">
+              <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
+              <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
+            </div>
+          } @else {
             <div>
-              <label for="report-reason-select" class="font-bold text-text-primary block mb-1"
-                >Select violation category:</label
+              <label for="report-reason-select" class="font-bold text-text-primary block mb-1 ps-1"
+                >{{ 'safety.reasonLabel' | t }}</label
               >
               <select
                 id="report-reason-select"
                 [(ngModel)]="reportReason"
                 class="w-full px-3 py-2 border rounded-xl bg-surface-300 font-medium"
               >
-                <option value="harassment">Harassment / Bullying</option>
-                <option value="spam">Spam / Commercial Advertising</option>
-                <option value="inappropriate">Inappropriate / Offensive Language</option>
-                <option value="scam">Suspicious Link / Scam</option>
-                <option value="other">Other Violation</option>
+                @for (cat of reportCategories(); track cat.value) {
+                  <option [value]="cat.value">{{ cat.label }}</option>
+                }
               </select>
             </div>
-            <div>
-              <label for="report-details-textarea" class="font-bold text-text-primary block mb-1"
-                >Additional context (optional):</label
-              >
+          }
+          <div>
+            <label for="report-details-textarea" class="font-bold text-text-primary block mb-1 ps-1"
+              >{{ 'safety.detailsLabel' | t }}</label
+            >
               <textarea
                 id="report-details-textarea"
                 [(ngModel)]="reportDetails"
                 rows="3"
-                placeholder="Provide context or specific phrase where violation occurred..."
+                [placeholder]="'safety.detailsPlaceholder' | t"
                 class="w-full p-3 border rounded-xl bg-surface-300"
               ></textarea>
             </div>
@@ -86,12 +94,12 @@ import { EconomyStore } from '../../services/economy.store';
         @if (mode === 'block') {
           <div class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs">
             <span class="font-bold text-red-900 block"
-              >⚠️ What happens when you block {{ targetName() }}:</span
+              >{{ 'safety.blockWarning' | t: { name: targetName() } }}</span
             >
             <ul class="list-disc list-inside space-y-1 text-text-primary">
-              <li>They will not be able to send you direct chat messages.</li>
-              <li>Their Moments will immediately vanish from your timeline.</li>
-              <li>They cannot see when you visit their profile.</li>
+              <li>{{ 'safety.blockList1' | t }}</li>
+              <li>{{ 'safety.blockList2' | t }}</li>
+              <li>{{ 'safety.blockList3' | t }}</li>
             </ul>
           </div>
         }
@@ -108,7 +116,7 @@ import { EconomyStore } from '../../services/economy.store';
               (click)="submitReport()"
               class="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold text-xs shadow"
             >
-              Submit report
+              {{ 'safety.submitReportBtn' | t }}
             </button>
           }
           @if (mode === 'block') {
@@ -116,7 +124,7 @@ import { EconomyStore } from '../../services/economy.store';
               (click)="confirmBlock()"
               class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-extrabold text-xs shadow"
             >
-              Confirm block
+              {{ 'safety.confirmBlockBtn' | t }}
             </button>
           }
         </div>
@@ -130,9 +138,37 @@ export class TrustSafetyModalComponent {
   closed = output<void>();
 
   readonly store = inject(EconomyStore);
+  private readonly safetyService = inject(SafetyService);
   mode: 'report' | 'block' = 'report';
   reportReason = 'harassment';
   reportDetails = '';
+
+  readonly categoriesLoading = signal<boolean>(false);
+  readonly reportCategories = signal<ReportCategory[]>([
+    { value: 'harassment', label: 'Harassment / Bullying' },
+    { value: 'spam', label: 'Spam / Commercial Advertising' },
+    { value: 'inappropriate', label: 'Inappropriate / Offensive Language' },
+    { value: 'scam', label: 'Suspicious Link / Scam' },
+    { value: 'other', label: 'Other Violation' },
+  ]);
+
+  constructor() {
+    this.loadCategories();
+  }
+
+  private async loadCategories(): Promise<void> {
+    this.categoriesLoading.set(true);
+    try {
+      const cats = await this.safetyService.getReportCategories();
+      if (cats.length > 0) {
+        this.reportCategories.set(cats);
+      }
+    } catch {
+      // Keep default categories
+    } finally {
+      this.categoriesLoading.set(false);
+    }
+  }
 
   async submitReport(): Promise<void> {
     await this.store.reportUser(this.targetId(), this.reportReason, this.reportDetails);

@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
-import { ThemeService } from './theme.service';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
   let service: ThemeService;
@@ -150,8 +149,8 @@ describe('ThemeService', () => {
     }));
 
     expect(changeListener).toBeTruthy();
-    if (changeListener && typeof changeListener === 'function') {
-      changeListener(new Event('change'));
+    if (changeListener) {
+      (changeListener as EventListener)(new Event('change'));
     }
 
     expect(document.documentElement.classList.toggle).toHaveBeenCalledWith('dark', true);
