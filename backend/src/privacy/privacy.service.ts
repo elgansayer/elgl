@@ -232,6 +232,29 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
 
+    // 11) LingQ Reading Engine: reading progress (user personal stats)
+    let userReadingProgress: unknown = null;
+    const { data: progressData, error: progressError } = await supabase
+      .from('reading_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (progressError && progressError.code !== 'PGRST116') {
+      this.logger.warn(
+        `Failed to fetch reading progress for archive: ${progressError.message}`,
+      );
+    } else if (!progressError) {
+      userReadingProgress = progressData;
+    }
+
+    // 12) Reading resources authored by the user (content they created)
+    const { data: userReadingResources } = await supabase
+      .from('reading_resources')
+      .select('*')
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false });
+
     return {
       export_generated_at: new Date().toISOString(),
       user_profile: userProfile ?? null,
@@ -245,6 +268,8 @@ export class PrivacyService {
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
+      reading_progress: userReadingProgress,
+      reading_resources: userReadingResources ?? [],
     };
   }
 }
