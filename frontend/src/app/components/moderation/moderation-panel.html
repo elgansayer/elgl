@@ -25,7 +25,7 @@
   </div>
 
   @if (loading()) {
-    <div class="space-y-3">
+    <div class="space-y-3" role="status" [attr.aria-label]="'safety.moderation.loadingTitle' | t">
       <p class="text-sm text-text-secondary mb-2">{{ 'safety.moderation.loadingTitle' | t }}</p>
       @for (i of [1, 2, 3]; track i) {
         <app-card customClass="p-3 space-y-2">
@@ -88,7 +88,7 @@
           </div>
         </div>
         @if (analysisResult(); as res) {
-          <div class="mt-2 p-2 bg-slate-800 rounded text-xs">
+          <div class="mt-2 p-2 bg-slate-800 rounded text-xs" role="status" [attr.aria-label]="'moderation.riskScore' | t">
             <p class="text-amber-300">{{ 'moderation.riskScore' | t }}: {{ res.riskScore }}%</p>
             @if (res.flags.length) {
               <p class="text-red-300 mt-1">{{ 'moderation.flags' | t }}: {{ res.flags.join(', ') }}</p>

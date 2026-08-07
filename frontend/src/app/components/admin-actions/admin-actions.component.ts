@@ -10,18 +10,22 @@ import { showToast, showErrorToast } from '../../services/toast.service';
   template: `
     <div class="p-4">
       <h2 class="text-xl font-bold mb-4 text-text-primary">{{ 'moderation.quickActions' | t }}</h2>
-      <ul class="space-y-2">
+      <ul class="space-y-2" role="list">
         @for (user of users(); track user.id) {
           <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface p-3">
             <span class="text-sm text-text-primary">{{ user.display_name ?? user.id }}</span>
             <div class="flex gap-2">
               <button
+                type="button"
                 (click)="ban(user.id)"
                 class="rounded-lg bg-red-600 text-white px-3 py-1.5 text-xs font-bold hover:bg-red-700 transition-colors"
+                [attr.aria-label]="'admin.banBtn' | t"
               >{{ 'admin.banBtn' | t }}</button>
               <button
+                type="button"
                 (click)="warn(user.id)"
                 class="rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-bold hover:bg-amber-700 transition-colors"
+                [attr.aria-label]="'admin.warnBtn' | t"
               >{{ 'admin.warnBtn' | t }}</button>
             </div>
           </li>

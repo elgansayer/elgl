@@ -26,7 +26,10 @@
   </div>
 
   @if (error()) {
-    <div class="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-red-700 text-sm">
+    <div
+      class="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-red-700 text-sm"
+      role="alert"
+    >
       {{ error() }}
     </div>
   }

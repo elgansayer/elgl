@@ -1,8 +1,8 @@
-<div class="ps-4 pe-4 pt-4 pb-4">
+<div class="ps-4 pe-4 pt-4 pb-4" aria-live="polite">
   <h1 class="text-2xl font-bold mb-4 text-text-primary">{{ 'safety.blockManagement.title' | t }}</h1>
 
   @if (isLoading()) {
-    <div class="space-y-3">
+    <div class="space-y-3" role="status" [attr.aria-label]="'common.loading' | t">
       @for (i of [1, 2, 3, 4, 5]; track i) {
         <app-card customClass="flex items-center gap-3 p-3">
           <app-skeleton-loader
