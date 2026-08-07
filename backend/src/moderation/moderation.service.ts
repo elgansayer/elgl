@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { ReportUserDto } from './dto/report-user.dto';
@@ -22,8 +22,68 @@ export interface ModerationItem {
   momentAuthorName?: string | null;
 }
 
+export interface ModerationDegradedResponse {
+  success: boolean;
+  error?: string;
+}
+
+const DATING_FLAGS: ReadonlyArray<string> = [
+  'dating',
+  'date',
+  'relationship',
+  'boyfriend',
+  'girlfriend',
+  'love',
+  'marry',
+  'marriage',
+  'romance',
+  'romantic',
+  'sex',
+  'hookup',
+  'flirt',
+  'hot',
+  'sexy',
+  'single',
+  'looking for',
+  'meetup',
+  'in a relationship',
+  'partner',
+  'romantically',
+  'kiss',
+  'kissing',
+  'date me',
+  'looking for a man',
+  'looking for a woman',
+  'man for me',
+  'woman for me',
+  'marry me',
+  'fwb',
+  'friends with benefits',
+  'casual sex',
+  'affair',
+  'dinner',
+  'coffee',
+  'drinks',
+  'hang out',
+  'meet up',
+  'hook up',
+  'one night',
+  'sexting',
+  'daddy',
+  'mommy',
+  'horny',
+] as const;
+
+const DATING_REGEXPS: ReadonlyArray<RegExp> = [...new Set(DATING_FLAGS)].map(
+  (flag) => {
+    const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`, 'i');
+  },
+);
+
 @Injectable()
 export class ModerationService {
+  private readonly logger = new Logger(ModerationService.name);
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
   constructor(
@@ -45,8 +105,6 @@ export class ModerationService {
         status,
         reason_category,
         created_at,
-        reporter_id,
-        reported_user_id,
         reported_moment_id,
         description,
         reporter:reporter_id ( id, display_name ),
@@ -59,234 +117,259 @@ export class ModerationService {
       query = query.eq('status', status);
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      throw new NotFoundException('Failed to fetch moderation items.');
-    }
-
-    const rows = (data ?? []) as unknown[];
-
-    const items: ModerationItem[] = rows.map((row) => {
-      const obj = row as { [key: string]: unknown };
-      return {
-        id: obj.id as string,
-        status: obj.status as string,
-        reason: obj.reason_category as string,
-        created_at: obj.created_at as string,
-        description: obj.description as string | undefined,
-        reporter: obj.reporter as Reporter | null,
-        reported_user: obj.reported_user as Reporter | null,
-        reportedMomentId: (obj.reported_moment_id as string | null) ?? null,
-      };
-    });
-
+    // DB-level filtering: profile type requires reported_user_id, moment type requires reported_moment_id
     if (type === 'profile') {
-      return items.filter((item) => item.reported_user != null);
+      query = query.not('reported_user_id', 'is', null);
+    } else {
+      query = query.not('reported_moment_id', 'is', null);
     }
 
-    // For moment reports, fetch the attached moment content
-    const momentItems = items.filter((item) => item.reportedMomentId != null);
+    try {
+      const { data, error } = await query;
 
-    const hydrated: ModerationItem[] = [];
-    for (const item of momentItems) {
-      const moment = await this.getMomentContent(
-        item.reportedMomentId as string,
-      );
-      if (moment) {
-        hydrated.push({
-          ...item,
-          moment_content: moment.content_text,
-          momentAuthorName: moment.authorName,
-        });
+      if (error) {
+        this.logger.warn(`Failed to fetch moderation items: ${error.message}`);
+        return [];
       }
-    }
 
-    return hydrated;
+      const rows = (data ?? []) as unknown[];
+
+      const items: ModerationItem[] = rows.map((row) => {
+        const obj = row as { [key: string]: unknown };
+        return {
+          id: obj.id as string,
+          status: obj.status as string,
+          reason: obj.reason_category as string,
+          created_at: obj.created_at as string,
+          description: obj.description as string | undefined,
+          reporter: obj.reporter as Reporter | null,
+          reported_user: obj.reported_user as Reporter | null,
+          reportedMomentId: (obj.reported_moment_id as string | null) ?? null,
+        };
+      });
+
+      // Batch-fetch moment content for all moment items in a single query
+      if (type !== 'profile') {
+        const momentIds = items
+          .map((item) => item.reportedMomentId)
+          .filter((id): id is string => id != null);
+
+        if (momentIds.length > 0) {
+          const momentContentMap = await this.batchGetMomentContent(momentIds);
+          for (const item of items) {
+            if (item.reportedMomentId) {
+              const moment = momentContentMap.get(item.reportedMomentId);
+              if (moment) {
+                item.moment_content = moment.content_text;
+                item.momentAuthorName = moment.authorName;
+              }
+            }
+          }
+        }
+      }
+
+      return items;
+    } catch (err) {
+      this.logger.warn(
+        'Failed to fetch moderation items, returning empty result',
+        err,
+      );
+      return [];
+    }
   }
 
-  private async getMomentContent(
-    momentId: string,
-  ): Promise<{ content_text: string; authorName: string | null } | null> {
+  private async batchGetMomentContent(
+    momentIds: string[],
+  ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
+    const result = new Map<
+      string,
+      { content_text: string; authorName: string | null }
+    >();
+
     const { data, error } = await this.supabase
       .from('moments')
-      .select('content_text, author_id, author:author_id ( display_name )')
-      .eq('id', momentId)
-      .maybeSingle();
+      .select('id, content_text, author_id, author:author_id ( display_name )')
+      .in('id', momentIds);
 
     if (error || !data) {
-      return null;
+      return result;
     }
 
-    const row = data as {
+    const rows = data as Array<{
+      id: string;
       content_text: string;
       author: { display_name?: string } | null;
-    };
+    }>;
 
-    return {
-      content_text: row.content_text ?? '',
-      authorName: row.author?.display_name ?? null,
-    };
-  }
-
-  async reportUser(reporterId: string, dto: ReportUserDto) {
-    const { data, error } = await this.supabase.from('reports').insert({
-      reporter_id: reporterId,
-      reported_user_id: dto.reportedUserId,
-      reason_category: dto.reasonCategory,
-      description: dto.description ?? null,
-      status: 'pending',
-    });
-
-    if (error) {
-      throw new NotFoundException('Failed to create report');
+    for (const row of rows) {
+      result.set(row.id, {
+        content_text: row.content_text ?? '',
+        authorName: row.author?.display_name ?? null,
+      });
     }
 
-    return data;
+    return result;
   }
 
-  async approveItem(dto: ModerationActionDto) {
-    const { error } = await this.supabase
-      .from('reports')
-      .update({ status: 'approved' })
-      .eq('id', dto.itemId);
+  async reportUser(
+    reporterId: string,
+    dto: ReportUserDto,
+  ): Promise<ModerationDegradedResponse> {
+    try {
+      const { error } = await this.supabase.from('reports').insert({
+        reporter_id: reporterId,
+        reported_user_id: dto.reportedUserId,
+        reason_category: dto.reasonCategory,
+        description: dto.description ?? null,
+        status: 'pending',
+      });
 
-    if (error) {
-      throw new NotFoundException('Failed to approve item');
+      if (error) {
+        this.logger.warn(`Failed to create report: ${error.message}`);
+        return { success: false, error: 'Failed to create report' };
+      }
+
+      return { success: true };
+    } catch (err) {
+      this.logger.warn('Failed to create report, degraded', err);
+      return { success: false, error: 'Service temporarily unavailable' };
     }
+<<<<<<< HEAD
 
     this.metricsService.recordTsModerationAction('approved', dto.type);
 
     return { success: true };
+=======
+>>>>>>> origin/main
   }
 
-  async rejectItem(dto: ModerationActionDto) {
-    const { error } = await this.supabase
-      .from('reports')
-      .update({
-        status: 'rejected',
-        reason_category: dto.reason ?? undefined,
-      })
-      .eq('id', dto.itemId);
+  async approveItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+    try {
+      const { error } = await this.supabase
+        .from('reports')
+        .update({ status: 'approved' })
+        .eq('id', dto.itemId);
 
-    if (error) {
-      throw new NotFoundException('Failed to reject item');
+      if (error) {
+        this.logger.warn(`Failed to approve item ${dto.itemId}: ${error.message}`);
+        return { success: false, error: 'Failed to approve item' };
+      }
+
+      return { success: true };
+    } catch (err) {
+      this.logger.warn('Failed to approve item, degraded', err);
+      return { success: false, error: 'Service temporarily unavailable' };
     }
+  }
 
+<<<<<<< HEAD
     this.metricsService.recordTsModerationAction('rejected', dto.type);
 
     return { success: true };
+=======
+  async rejectItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+    try {
+      const { error } = await this.supabase
+        .from('reports')
+        .update({
+          status: 'rejected',
+          reason_category: dto.reason ?? undefined,
+        })
+        .eq('id', dto.itemId);
+
+      if (error) {
+        this.logger.warn(`Failed to reject item ${dto.itemId}: ${error.message}`);
+        return { success: false, error: 'Failed to reject item' };
+      }
+
+      return { success: true };
+    } catch (err) {
+      this.logger.warn('Failed to reject item, degraded', err);
+      return { success: false, error: 'Service temporarily unavailable' };
+    }
+>>>>>>> origin/main
   }
 
   async analyseUserForDatingBehaviour(
     userId: string,
   ): Promise<{ riskScore: number; flags: string[] }> {
-    const { data: userData, error: userError } = await this.supabase
-      .from('users')
-      .select(
-        'display_name, bio_text, target_languages, native_language, status_text, greeting_message, away_message',
-      )
-      .eq('id', userId)
-      .single();
+    try {
+      const { data: userData, error: userError } = await this.supabase
+        .from('users')
+        .select(
+          'display_name, bio_text, target_languages, native_language, status_text, greeting_message, away_message',
+        )
+        .eq('id', userId)
+        .single();
 
-    if (userError || !userData) {
-      throw new NotFoundException('User not found');
-    }
-
-    const u = userData as {
-      display_name: string;
-      bio_text: string;
-      native_language: string;
-      target_languages: string[];
-      status_text?: string;
-      greeting_message?: string;
-      away_message?: string;
-    };
-
-    const combinedText = [
-      u.display_name ?? '',
-      u.bio_text ?? '',
-      u.native_language ?? '',
-      (u.target_languages ?? []).join(' '),
-      u.status_text ?? '',
-      u.greeting_message ?? '',
-      u.away_message ?? '',
-    ].join(' ');
-
-    const { data: moments } = await this.supabase
-      .from('moments')
-      .select('content_text')
-      .eq('author_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    const momentRows = (moments ?? []) as unknown[];
-    const momentText = momentRows
-      .map((row) => {
-        const obj = row as { content_text?: string };
-        return obj.content_text ?? '';
-      })
-      .join(' ');
-
-    const fullText = (combinedText + ' ' + momentText).toLowerCase();
-
-    const datingFlags = [
-      'dating',
-      'date',
-      'relationship',
-      'boyfriend',
-      'girlfriend',
-      'love',
-      'marry',
-      'marriage',
-      'romance',
-      'romantic',
-      'sex',
-      'hookup',
-      'flirt',
-      'hot',
-      'sexy',
-      'single',
-      'looking for',
-      'meetup',
-      'in a relationship',
-      'partner',
-      'romantically',
-      'kiss',
-      'kissing',
-      'date me',
-      'looking for a man',
-      'looking for a woman',
-      'man for me',
-      'woman for me',
-      'marry me',
-      'fwb',
-      'friends with benefits',
-      'casual sex',
-      'affair',
-      'dinner',
-      'coffee',
-      'drinks',
-      'hang out',
-      'meet up',
-      'hook up',
-      'one night',
-      'sexting',
-      'daddy',
-      'mommy',
-      'horny',
-    ];
-
-    const flags: string[] = [];
-    const regexFlags = [...new Set(datingFlags)];
-
-    for (const flag of regexFlags) {
-      const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`\\b${escaped}\\b`, 'i');
-      if (regex.test(fullText)) {
-        flags.push(flag);
+      if (userError || !userData) {
+        this.logger.warn(`User ${userId} not found for analysis`);
+        return { riskScore: 0, flags: [] };
       }
+
+      const u = userData as {
+        display_name: string;
+        bio_text: string;
+        native_language: string;
+        target_languages: string[];
+        status_text?: string;
+        greeting_message?: string;
+        away_message?: string;
+      };
+
+      const combinedText = [
+        u.display_name ?? '',
+        u.bio_text ?? '',
+        u.native_language ?? '',
+        (u.target_languages ?? []).join(' '),
+        u.status_text ?? '',
+        u.greeting_message ?? '',
+        u.away_message ?? '',
+      ].join(' ');
+
+      const { data: moments } = await this.supabase
+        .from('moments')
+        .select('content_text')
+        .eq('author_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const momentRows = (moments ?? []) as unknown[];
+      const momentText = momentRows
+        .map((row) => {
+          const obj = row as { content_text?: string };
+          return obj.content_text ?? '';
+        })
+        .join(' ');
+
+      const fullText = (combinedText + ' ' + momentText).toLowerCase();
+
+      const flags: string[] = [];
+      const uniqueFlags = [...new Set(DATING_FLAGS)];
+
+      for (let i = 0; i < uniqueFlags.length; i++) {
+        if (DATING_REGEXPS[i].test(fullText)) {
+          flags.push(uniqueFlags[i]);
+        }
+      }
+
+      const matchedFlags = [...new Set(flags)];
+      const hitRatio = matchedFlags.length / uniqueFlags.length;
+      const riskScore = Math.min(
+        100,
+        Math.round(
+          hitRatio * 100 +
+            (matchedFlags.length > 5 ? 20 : 0) +
+            (matchedFlags.length > 10 ? 10 : 0),
+        ),
+      );
+
+      return { riskScore, flags: matchedFlags };
+    } catch (err) {
+      this.logger.warn(`Failed to analyse user ${userId}, degraded`, err);
+      return { riskScore: 0, flags: [] };
     }
+<<<<<<< HEAD
 
     const uniqueFlags = [...new Set(flags)];
     const hitRatio = uniqueFlags.length / regexFlags.length;
@@ -302,5 +385,7 @@ export class ModerationService {
     this.metricsService.observeTsDatingRiskScore(riskScore);
 
     return { riskScore, flags: uniqueFlags };
+=======
+>>>>>>> origin/main
   }
 }

@@ -124,6 +124,7 @@ describe('MetricsService', () => {
   });
 
   describe('Trust & Safety metrics', () => {
+<<<<<<< HEAD
     it('should record reports with category and status labels', () => {
       expect(() => service.recordTsReport('harassment', 'pending')).not.toThrow();
     });
@@ -182,6 +183,67 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_trust_safety_moderation_actions_total');
       expect(metrics).toContain('hellotalk_trust_safety_dating_risk_score');
       expect(metrics).toContain('hellotalk_trust_safety_high_risk_users');
+=======
+    it('should record report submitted', () => {
+      expect(() => service.recordTsReportSubmitted('harassment')).not.toThrow();
+    });
+
+    it('should record report submitted with default category', () => {
+      expect(() => service.recordTsReportSubmitted()).not.toThrow();
+    });
+
+    it('should record block created', () => {
+      expect(() => service.recordTsBlockCreated()).not.toThrow();
+    });
+
+    it('should record block removed', () => {
+      expect(() => service.recordTsBlockRemoved()).not.toThrow();
+    });
+
+    it('should set pending reports gauge', () => {
+      expect(() => service.setTsPendingReports(15)).not.toThrow();
+    });
+
+    it('should set active blocks total gauge', () => {
+      expect(() => service.setTsActiveBlocksTotal(200)).not.toThrow();
+    });
+
+    it('should record moderation action', () => {
+      expect(() =>
+        service.recordTsModerationAction('approve', 'moment', 1.2),
+      ).not.toThrow();
+    });
+
+    it('should record moderation action (reject)', () => {
+      expect(() =>
+        service.recordTsModerationAction('reject', 'profile', 0.5),
+      ).not.toThrow();
+    });
+
+    it('should record dating risk score', () => {
+      expect(() => service.recordTsDatingRiskScore(65)).not.toThrow();
+    });
+
+    it('should include T&S metrics in getMetrics output', async () => {
+      service.recordTsReportSubmitted('spam');
+      service.recordTsBlockCreated();
+      service.recordTsBlockRemoved();
+      service.setTsPendingReports(10);
+      service.setTsActiveBlocksTotal(100);
+      service.recordTsModerationAction('approve', 'moment', 0.8);
+      service.recordTsDatingRiskScore(42);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_ts_reports_submitted_total');
+      expect(metrics).toContain('hellotalk_ts_blocks_created_total');
+      expect(metrics).toContain('hellotalk_ts_blocks_removed_total');
+      expect(metrics).toContain('hellotalk_ts_pending_reports');
+      expect(metrics).toContain('hellotalk_ts_active_blocks_total');
+      expect(metrics).toContain('hellotalk_ts_moderation_actions_total');
+      expect(metrics).toContain('hellotalk_ts_dating_risk_score');
+      expect(metrics).toContain('hellotalk_ts_reports_by_category_total');
+      expect(metrics).toContain('hellotalk_ts_moderation_queue_latency_seconds');
+>>>>>>> origin/main
     });
   });
 });

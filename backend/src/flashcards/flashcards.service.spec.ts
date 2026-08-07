@@ -3,6 +3,8 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { Flashcard } from './interfaces/flashcard.interface';
+import { CreateFlashcardDto } from './dto/flashcard.dto';
 
 // Mock the retry module so we can verify it's being used for SRS operations
 jest.mock('../common/retry', () => ({
@@ -10,14 +12,87 @@ jest.mock('../common/retry', () => ({
   isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
 }));
 
+// Mock jsdom and dompurify to avoid parsing ESM dependencies in Node test env
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: {
+      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
+      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
+      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
+    },
+  })),
+}));
+
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: (dirty: string) => {
+      if (typeof dirty !== 'string') return dirty;
+      return dirty.replace(/<[^>]*>/g, '');
+    },
+    setConfig: jest.fn(),
+  })),
+}));
+
 import { withRetry } from '../common/retry';
+
+interface MockLogger {
+  info: jest.Mock;
+  error: jest.Mock;
+  warn: jest.Mock;
+  debug: jest.Mock;
+}
+
+interface MockQueryBuilder {
+  upsert: jest.Mock;
+  update: jest.Mock;
+  select: jest.Mock;
+  eq: jest.Mock;
+  lt: jest.Mock;
+  lte: jest.Mock;
+  order: jest.Mock;
+  single: jest.Mock;
+  then?: jest.Mock;
+}
+
+interface MockSupabaseClient {
+  from: jest.Mock;
+}
+
+interface MockMetricsService {
+  recordSrsFlashcardCreated: jest.Mock;
+  recordSrsReviewCompleted: jest.Mock;
+  setSrsDueCards: jest.Mock;
+  setSrsAverageEasinessFactor: jest.Mock;
+  setSrsReviewSuccessRate: jest.Mock;
+  setSrsCardsPerLevel: jest.Mock;
+  setSrsCardsStuck: jest.Mock;
+  setSrsDecksTotal: jest.Mock;
+  recordSrsDeckCreated: jest.Mock;
+}
+
+function mockFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
+  return {
+    id: 'card-1',
+    user_id: 'user-1',
+    word_token: 'test',
+    translation: 'test',
+    srs_level: 0,
+    easiness_factor: 2.5,
+    repetitions: 0,
+    interval_days: 0,
+    next_review_at: '2026-01-01T00:00:00Z',
+    created_at: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
 
 describe('FlashcardsService', () => {
   let service: FlashcardsService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
-  let mockLogger: any;
-  let mockMetricsService: any;
+  let mockSupabaseClient: MockSupabaseClient;
+  let mockQueryBuilder: MockQueryBuilder;
+  let mockLogger: MockLogger;
+  let mockMetricsService: MockMetricsService;
 
   beforeEach(async () => {
     mockLogger = {
@@ -93,14 +168,20 @@ describe('FlashcardsService', () => {
 
   describe('createOrUpdateFlashcard', () => {
     it('should clean word token and upsert flashcard successfully', async () => {
-      const dto: any = {
+      const dto: CreateFlashcardDto = {
         word_token: '  BONJOUR  ',
         original_context: 'Bonjour le monde',
         translation: 'Hello',
         definition: 'Greeting',
         pronunciation_url: 'http://audio.mock/b.mp3',
       };
-      const savedCard: any = { id: 'card-1', word_token: 'bonjour', ...dto };
+      const savedCard = mockFlashcard({
+        word_token: 'bonjour',
+        original_context: 'Bonjour le monde',
+        translation: 'Hello',
+        definition: 'Greeting',
+        pronunciation_url: 'http://audio.mock/b.mp3',
+      });
       mockQueryBuilder.single.mockResolvedValue({
         data: savedCard,
         error: null,
@@ -125,7 +206,10 @@ describe('FlashcardsService', () => {
     });
 
     it('should throw Error when upsert fails', async () => {
-      const dto: any = { word_token: 'test', translation: 'test' };
+      const dto: CreateFlashcardDto = {
+        word_token: 'test',
+        translation: 'test',
+      };
       mockQueryBuilder.single.mockResolvedValue({
         data: null,
         error: { message: 'Unique constraint error' },
@@ -187,7 +271,9 @@ describe('FlashcardsService', () => {
         next_review_at: '2026-07-23T12:00:00.000Z',
       });
       expect(mockMetricsService.recordSrsReviewCompleted).toHaveBeenCalledWith(
-        5, 'pass', expect.any(Number),
+        5,
+        'pass',
+        expect.any(Number),
       );
       expect(result).toEqual(updatedCard);
     });
@@ -332,8 +418,9 @@ describe('FlashcardsService', () => {
       // Notice query builds: from().select().eq(user_id).order(). Then if level !== undefined && !isNaN(level), query.eq('srs_level', level).
       // So when query is awaited, it returns whatever eq returns or order returns if eq returns this.
       // Let's set up the promise resolution on queryBuilder itself or mock eq to return a promise when awaited.
-      mockQueryBuilder.then = (resolve: any) =>
-        resolve({ data: cards, error: null });
+      mockQueryBuilder.then = (
+        resolve: (value: { data: unknown[]; error: null }) => void,
+      ) => resolve({ data: cards, error: null });
 
       const result = await service.getFlashcards('user-1', 2);
 
@@ -392,8 +479,11 @@ describe('FlashcardsService', () => {
     });
 
     it('should wrap createOrUpdateFlashcard Supabase call with withRetry', async () => {
-      const dto: any = { word_token: 'hello', translation: 'hola' };
-      const savedCard: any = { id: 'card-1', word_token: 'hello' };
+      const dto: CreateFlashcardDto = {
+        word_token: 'hello',
+        translation: 'hola',
+      };
+      const savedCard = mockFlashcard({ word_token: 'hello' });
       mockQueryBuilder.single.mockResolvedValue({
         data: savedCard,
         error: null,

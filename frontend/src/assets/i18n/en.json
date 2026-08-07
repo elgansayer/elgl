@@ -1821,5 +1821,17 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-  "wordModal.translationLabel": "Translation"
+  "wordModal.translationLabel": "Translation",
+  "tour.prev": "Previous",
+  "tour.next": "Next",
+  "tour.done": "Done",
+  "tour.close": "Close",
+  "tour.coinsBalanceDesc": "Your virtual coin balance. Use coins to send gifts, buy stickers, and unlock premium items.",
+  "tour.shopLinkDesc": "Browse the shop for virtual gifts, sticker packs, and exclusive items you can purchase with your coins.",
+  "tour.cartLinkDesc": "Your shopping cart. Review and check out items you want to purchase with coins.",
+  "tour.stickerStoreDesc": "Explore themed sticker packs to express yourself in chats. Some packs are animated!",
+  "tour.giftButtonDesc": "Send virtual gifts to your language partners during chats. Gifts cost coins and appear as fun animations.",
+  "tour.vipLinkDesc": "Upgrade to VIP for premium features, more stickers, and exclusive coin packages.",
+  "tour.economyOverviewTitle": "Virtual Coin Economy",
+  "tour.economyOverviewDesc": "Welcome to HelloTalk's Virtual Coin Economy! Let us show you how to earn and spend coins."
 }

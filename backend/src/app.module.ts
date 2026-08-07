@@ -5,6 +5,7 @@ import { validationSchema } from './config/validation.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SharedLoggerModule } from './common/logger/logger.module';
+import { RetryModule } from './common/retry/retry.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LocationModule } from './location/location.module';
@@ -100,6 +101,7 @@ import { MetricsModule } from './metrics/metrics.module';
       ignoreErrors: false,
     }),
     SharedLoggerModule,
+    RetryModule,
     SupabaseModule,
     LocationModule,
     AuthModule,

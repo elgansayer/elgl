@@ -7,6 +7,10 @@ import {
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+<<<<<<< HEAD
+=======
+import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
+>>>>>>> origin/main
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
@@ -50,6 +54,10 @@ export class SafetyService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
+<<<<<<< HEAD
+=======
+    private readonly cacheInvalidationService: SafetyCacheInvalidationService,
+>>>>>>> origin/main
   ) {}
 
   getCategories() {
@@ -106,11 +114,19 @@ export class SafetyService {
       throw new Error('Failed to submit report: no data returned');
     }
 
+    this.metricsService.recordTsReportSubmitted(dto.reason_category);
+
     this.logger.log(
       `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
     );
 
+<<<<<<< HEAD
     this.metricsService.recordTsReport(dto.reason_category, 'pending');
+=======
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserCaches(dto.reported_id);
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+>>>>>>> origin/main
 
     return { id: data.id };
   }
@@ -157,9 +173,20 @@ export class SafetyService {
       throw new Error(`Failed to block user: ${error.message}`);
     }
 
+    this.metricsService.recordTsBlockCreated();
+
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
 
+<<<<<<< HEAD
     this.metricsService.recordTsBlock();
+=======
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserPairCaches(
+      blockerId,
+      dto.blocked_id,
+    );
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+>>>>>>> origin/main
 
     return { success: true, blocked_id: dto.blocked_id };
   }
@@ -179,7 +206,17 @@ export class SafetyService {
       throw new Error(`Failed to unblock user: ${error.message}`);
     }
 
+    this.metricsService.recordTsBlockRemoved();
+
     this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
+
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserPairCaches(
+      blockerId,
+      blockedId,
+    );
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+
     return { success: true };
   }
 

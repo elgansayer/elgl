@@ -66,6 +66,21 @@
       }
     },
     {
+      "name": "api-economy",
+      "urls": [
+        "/api/economy/catalog",
+        "/api/economy/balance",
+        "/api/economy/packages",
+        "/api/economy/sticker-packs"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 30,
+        "maxAge": "12h",
+        "timeout": "10s"
+      }
+    },
+    {
       "name": "api-freshness",
       "urls": [
         "/api/messages/**",
@@ -77,6 +92,19 @@
         "maxSize": 50,
         "maxAge": "30s",
         "timeout": "3s"
+      }
+    },
+    {
+      "name": "admin-api",
+      "urls": [
+        "/api/admin/**",
+        "/api/moderation/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 200,
+        "maxAge": "5m",
+        "timeout": "10s"
       }
     },
     {
