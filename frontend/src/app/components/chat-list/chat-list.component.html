@@ -70,9 +70,9 @@
         [ngModel]="search()"
         (ngModelChange)="search.set($event)"
         type="text"
-        placeholder="Search"
+        [placeholder]="'common.search' | t"
         class="bg-transparent border-none outline-none text-sm text-text-primary w-full placeholder-text-muted"
-       [attr.aria-label]="'Search'"/>
+       [attr.aria-label]="'common.search' | t"/>
     </div>
 
     <!-- Filter Pills -->

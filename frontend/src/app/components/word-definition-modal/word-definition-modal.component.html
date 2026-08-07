@@ -7,7 +7,7 @@
         <span
           class="text-xs font-bold uppercase tracking-wider bg-surface-200/20 px-2 py-0.5 rounded-full"
         >
-          LingQ Interactive Reader
+          {{ 'lingq.reader' | t }}
         </span>
         <h3 class="text-2xl font-extrabold mt-1 flex items-center gap-2.5">
           <span>{{ wordToken() }}</span>
@@ -41,7 +41,7 @@
         <div class="space-y-3">
           <div class="bg-surface-300 p-4 rounded-card border border-surface-100">
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider block mb-1"
-              >Translation</span
+              >{{ 'lingq.translation' | t }}</span
             >
             <p class="text-lg font-bold text-text-primary">
               {{ trans.translated_text }}
@@ -50,7 +50,7 @@
           @if (trans.definition) {
             <div class="bg-surface-300 p-4 rounded-card border border-surface-100">
               <span class="text-xs font-bold text-text-muted uppercase tracking-wider block mb-1"
-                >Dictionary definition</span
+                >{{ 'lingq.dictionaryDefinition' | t }}</span
               >
               <p class="text-sm text-text-primary leading-relaxed">
                 {{ trans.definition }}
@@ -61,7 +61,7 @@
             <div
               class="text-xs text-text-secondary italic bg-amber-500/10/50 p-3 rounded-app border border-amber-500/30/50"
             >
-              <span class="font-bold not-italic text-amber-400">Context:</span>
+              <span class="font-bold not-italic text-amber-400">{{ 'lingq.context' | t }}:</span>
               "{{ contextSentence() }}"
             </div>
           }
@@ -72,8 +72,8 @@
         <span
           class="text-xs font-bold text-text-secondary uppercase tracking-wider block text-center"
         >
-          Spaced repetition status:
-          {{ existingCard() ? 'Level ' + existingCard()!.srs_level : 'New (Blue)' }}
+          {{ 'lingq.spacedRepetitionStatus' | t }}:
+          {{ existingCard() ? ('lingq.level' | t: { level: existingCard()!.srs_level }) : ('lingq.newBlue' | t) }}
         </span>
 
         <div class="grid grid-cols-2 gap-2">
@@ -81,16 +81,16 @@
             [disabled]="isSaving()"
             (click)="setLevel(1)"
             class="py-2.5 px-3 bg-amber-400 hover:bg-amber-500 text-amber-950 rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
-           [attr.aria-label]="'🟡 Save to learning'">
-            <span>🟡 Save to learning</span>
+           [attr.aria-label]="'lingq.saveToLearning' | t">
+            <span>🟡 {{ 'lingq.saveToLearning' | t }}</span>
           </button>
 
           <button
             [disabled]="isSaving()"
             (click)="setLevel(4)"
             class="py-2.5 px-3 bg-surface-100 hover:bg-surface-200 text-text-primary rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
-           [attr.aria-label]="'⚪ Mark known'">
-            <span>⚪ Mark known</span>
+           [attr.aria-label]="'lingq.markKnown' | t">
+            <span>⚪ {{ 'lingq.markKnown' | t }}</span>
           </button>
         </div>
 
@@ -99,8 +99,8 @@
             [disabled]="isSaving()"
             (click)="setLevel(0)"
             class="w-full py-2 bg-blue-500/20 hover:bg-blue-200 text-blue-400 rounded-app font-semibold text-xs transition-colors"
-           [attr.aria-label]="'Reset to new (Level 0 / Blue)'">
-            Reset to new (Level 0 / Blue)
+           [attr.aria-label]="'lingq.resetToNew' | t">
+            {{ 'lingq.resetToNew' | t }}
           </button>
         }
       </div>

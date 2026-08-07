@@ -75,36 +75,36 @@
         <input
           type="text"
           [(ngModel)]="newGroupName"
-          placeholder="New Group Name"
+          [placeholder]="'chat.newGroupName' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'New Group Name'"/>
-        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'Rename'">
-          Rename
+         [attr.aria-label]="'chat.newGroupName' | t"/>
+        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chat.rename' | t">
+          {{ 'chat.rename' | t }}
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newMemberId"
-          placeholder="User ID to Add"
+          [placeholder]="'chat.userIdToAdd' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'User ID to Add'"/>
-        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'Add Member'">
-          Add Member
+         [attr.aria-label]="'chat.userIdToAdd' | t"/>
+        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chat.addMember' | t">
+          {{ 'chat.addMember' | t }}
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="memberToRemoveId"
-          placeholder="User ID to Remove"
+          [placeholder]="'chat.userIdToRemove' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'User ID to Remove'"/>
+         [attr.aria-label]="'chat.userIdToRemove' | t"/>
         <button
           (click)="removeMember()"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
-         [attr.aria-label]="'Remove Member'">
-          Remove Member
+         [attr.aria-label]="'chat.removeMember' | t">
+          {{ 'chat.removeMember' | t }}
         </button>
       </div>
     </div>

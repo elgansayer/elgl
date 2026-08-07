@@ -531,15 +531,38 @@ describe('EconomyService', () => {
       const mockOwned = [{ pack_id: 'stk_pack_1' }];
       const mockBalance = { id: 'user-1', coins_balance: 300 };
 
-      const selectMock = jest.fn();
-      const orderMock = jest.fn().mockResolvedValue({ data: mockPacks, error: null });
-      const eqMock = jest.fn().mockReturnValue({ select: selectMock });
-      const singleMock = jest.fn().mockResolvedValue({ data: mockBalance, error: null });
+      const buildChain = (terminalResult: unknown) => {
+        const chain: any = {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          order: jest.fn(),
+          single: jest.fn(),
+        };
+        chain.then = (resolve: (v: unknown) => void) => {
+          resolve(terminalResult);
+          return { catch: jest.fn() };
+        };
+        return chain;
+      };
 
-      mockQueryBuilder.order = orderMock;
-      mockQueryBuilder.eq = eqMock;
-      selectMock.mockResolvedValue({ data: mockOwned, error: null });
-      mockQueryBuilder.single = singleMock;
+      const packsChain = buildChain({ data: mockPacks, error: null });
+      packsChain.order = jest.fn().mockResolvedValue({ data: mockPacks, error: null });
+
+      const ownedChain = buildChain({ data: mockOwned, error: null });
+      ownedChain.select = jest.fn().mockReturnValue(ownedChain);
+      ownedChain.eq = jest.fn().mockReturnValue(ownedChain);
+
+      const balanceChain = buildChain({ data: mockBalance, error: null });
+      balanceChain.select = jest.fn().mockReturnValue(balanceChain);
+      balanceChain.eq = jest.fn().mockReturnValue(balanceChain);
+      balanceChain.single = jest.fn().mockResolvedValue({ data: mockBalance, error: null });
+
+      (mockSupabaseClient.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'sticker_packs') return packsChain;
+        if (table === 'user_sticker_packs') return ownedChain;
+        if (table === 'users') return balanceChain;
+        return buildChain({ data: null, error: null });
+      });
 
       const result = await service.getStickerPacks('user-1');
 
@@ -549,19 +572,37 @@ describe('EconomyService', () => {
     });
 
     it('should return default packs when DB returns empty', async () => {
-      const orderMock = jest.fn().mockResolvedValue({ data: [], error: null });
-      const selectMock = jest.fn().mockResolvedValue({ data: [], error: null });
-      const eqMock = jest.fn().mockReturnValue({ select: selectMock });
-      const singleMock = jest.fn().mockResolvedValue({ data: null, error: null });
+      const buildChain = (terminalResult: unknown) => {
+        const chain: any = {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          order: jest.fn(),
+          single: jest.fn(),
+        };
+        chain.then = (resolve: (v: unknown) => void) => {
+          resolve(terminalResult);
+          return { catch: jest.fn() };
+        };
+        return chain;
+      };
 
-      mockQueryBuilder.order = orderMock;
-      mockQueryBuilder.eq = eqMock;
-      mockQueryBuilder.single = singleMock;
+      const packsChain = buildChain({ data: [], error: null });
+      packsChain.order = jest.fn().mockResolvedValue({ data: [], error: null });
+      const ownedChain = buildChain({ data: [], error: null });
+      const balanceChain = buildChain({ data: null, error: null });
+      balanceChain.single = jest.fn().mockResolvedValue({ data: null, error: null });
+
+      (mockSupabaseClient.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'sticker_packs') return packsChain;
+        if (table === 'user_sticker_packs') return ownedChain;
+        if (table === 'users') return balanceChain;
+        return buildChain({ data: null, error: null });
+      });
 
       const result = await service.getStickerPacks('user-1');
 
       expect(result.packs).toHaveLength(8);
-      expect(result.packs[1].is_animated).toBe(true); // Rainbow Unicorns
+      expect(result.packs[1]!.is_animated).toBe(true);
     });
   });
 
