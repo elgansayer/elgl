@@ -10,7 +10,7 @@ import { EscrowService } from './escrow.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { CreateEscrowHoldDto } from './dto/escrow.dto';
+import { CreateEscrowDto } from './dto/escrow.dto';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
 jest.mock('./sanitise-escrow.helper', () => ({
@@ -105,7 +105,7 @@ describe('EscrowService', () => {
   });
 
   describe('holdCoins', () => {
-    const dto: CreateEscrowHoldDto = {
+    const dto: CreateEscrowDto = {
       payee_id: mockPayeeId,
       amount_coins: 50,
       reason: 'Test escrow',

@@ -1,10 +1,13 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { environment } from '../../environments/environment';
 
 interface ReadingArticle {
   id: string;
@@ -300,6 +303,8 @@ interface ReadingArticle {
 export class ReadingEngineComponent {
   private i18n = inject(I18nService);
   private vocabStore = inject(VocabularyStore);
+  private http = inject(HttpClient);
+  private readingApiUrl = `${environment.apiUrl}/reading`;
 
   readonly activeTab = signal<'articles' | 'vocabulary' | 'history'>('articles');
   readonly selectedArticleId = signal<string | null>(null);
@@ -371,59 +376,15 @@ export class ReadingEngineComponent {
 
   private async fetchArticles(): Promise<ReadingArticle[]> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      return [
-        {
-          id: '1',
-          title: 'A Day in the Life of a Language Learner',
-          content: 'Every morning I wake up and start my day with a cup of coffee. I open my favourite language learning app and review my flashcards for ten minutes. Then I listen to a podcast in my target language while getting ready. During my commute I read news articles and look up new words. In the evening I practice speaking with my language exchange partner.',
-          language: 'en-GB',
-          difficulty: 'beginner',
-          topic: 'daily-life',
-          audioUrl: undefined,
-          wordCount: 73,
-        },
-        {
-          id: '2',
-          title: 'The Benefits of Bilingualism',
-          content: 'Research has shown that speaking multiple languages can have profound effects on the brain. Bilingual individuals often demonstrate enhanced executive function, better attention control, and delayed onset of dementia in later life. The cognitive benefits extend beyond language processing to improved problem-solving skills and greater mental flexibility.',
-          language: 'en-GB',
-          difficulty: 'intermediate',
-          topic: 'science',
-          audioUrl: undefined,
-          wordCount: 54,
-        },
-        {
-          id: '3',
-          title: 'Exploring Cultural Nuances Through Language',
-          content: 'Language is inextricably woven into the fabric of culture. When we learn a new language, we are not merely acquiring vocabulary and grammar rules; we are gaining access to an entirely different worldview. Idiomatic expressions, honourifics, and even the way colours are categorised can reveal profound insights about how a society thinks and what it values.',
-          language: 'en-GB',
-          difficulty: 'advanced',
-          topic: 'culture',
-          audioUrl: undefined,
-          wordCount: 63,
-        },
-        {
-          id: '4',
-          title: 'How to Order Food Like a Local',
-          content: 'When travelling abroad, ordering food can be one of the most intimidating yet rewarding experiences. Learn the essential phrases for greeting the waiter, asking about ingredients, specifying dietary restrictions, and complimenting the chef. Understanding local dining customs will help you avoid cultural faux pas and make your meals more enjoyable.',
-          language: 'en-GB',
-          difficulty: 'beginner',
-          topic: 'travel',
-          audioUrl: undefined,
-          wordCount: 58,
-        },
-        {
-          id: '5',
-          title: 'The Future of Machine Translation',
-          content: 'Neural machine translation has made remarkable strides in recent years, with transformer-based architectures achieving near-human performance on many language pairs. However, significant challenges remain: handling low-resource languages, preserving nuance and tone, and maintaining contextual coherence across long passages. The future likely lies in human-AI collaboration.',
-          language: 'en-GB',
-          difficulty: 'advanced',
-          topic: 'technology',
-          audioUrl: undefined,
-          wordCount: 67,
-        },
-      ];
+      const params = new URLSearchParams();
+      params.set('limit', '100');
+      params.set('offset', '0');
+      const list = await firstValueFrom(
+        this.http.get<ReadingArticle[]>(
+          `${this.readingApiUrl}/resources?${params.toString()}`,
+        ),
+      );
+      return list ?? [];
     } catch {
       this.fetchError.set(this.i18n.translate('readingEngine.fetchError'));
       return [];
