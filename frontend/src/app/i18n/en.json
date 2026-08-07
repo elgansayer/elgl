@@ -6,5 +6,26 @@
     "daily": "Daily Study Streak",
     "day": "day",
     "days": "days"
+  },
+  "settings": {
+    "linkedAccounts": {
+      "title": "Linked Accounts",
+      "subtitle": "Connect your social accounts to sign in with multiple providers and keep your account secure.",
+      "active": "Connected",
+      "inactive": "Not connected",
+      "unlink": "Unlink",
+      "none": "No accounts linked yet. Connect one to get started.",
+      "linkGoogle": "Link Google",
+      "linkApple": "Link Apple",
+      "linkEmail": "Link Email",
+      "linkFacebook": "Link Facebook",
+      "linkTwitter": "Link X (Twitter)",
+      "unlinkConfirm": "Are you sure you want to unlink this account?",
+      "unlinkDisabled": "Cannot unlink your only linked account. Add another provider first.",
+      "linkSuccess": "Account linked successfully.",
+      "unlinkSuccess": "Account unlinked successfully.",
+      "linkFailed": "Failed to link account. Please try again.",
+      "unlinkFailed": "Failed to unlink account. Please try again."
+    }
   }
 }
