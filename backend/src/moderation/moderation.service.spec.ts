@@ -2,6 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationService } from './moderation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
+const mockPinoLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+};
+
 describe('ModerationService', () => {
   let service: ModerationService;
   let mockSupabaseClient: any;
@@ -29,6 +36,10 @@ describe('ModerationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ModerationService,
+        {
+          provide: 'PinoLogger:ModerationService',
+          useValue: mockPinoLogger,
+        },
         {
           provide: SupabaseService,
           useValue: {

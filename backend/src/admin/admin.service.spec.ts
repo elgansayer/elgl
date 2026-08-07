@@ -4,6 +4,13 @@ import { AdminService } from './admin.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
 
+const mockPinoLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+};
+
 describe('AdminService', () => {
   let service: AdminService;
   let mockSupabaseClient: Record<string, jest.Mock>;
@@ -61,6 +68,10 @@ describe('AdminService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
+        {
+          provide: 'PinoLogger:AdminService',
+          useValue: mockPinoLogger,
+        },
         {
           provide: SupabaseService,
           useValue: {
