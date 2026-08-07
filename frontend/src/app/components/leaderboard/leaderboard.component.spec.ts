@@ -48,7 +48,7 @@ describe('LeaderboardComponent', () => {
 
   function flushRequest(data: unknown) {
     const req = httpTesting.expectOne(API_URL);
-    req.flush(data);
+    req.flush(data as Record<string, unknown>);
   }
 
   function errorRequest() {

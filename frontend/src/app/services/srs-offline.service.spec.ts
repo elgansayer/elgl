@@ -34,7 +34,7 @@ describe('SrsOfflineService', () => {
 
     it('should initialise queuedReviewCount as 0', () => {
       service = new SrsOfflineService();
-      expect(service.queuedReviewCount()).toBe(0);
+      expect(service.pendingActionCount()).toBe(0);
     });
   });
 
@@ -146,14 +146,14 @@ describe('SrsOfflineService', () => {
                 put: (value: unknown) => {
                   const record = value as Record<string, unknown>;
                   if (record && 'id' in record) {
-                    storeData.set(String(record.id), value);
+                    storeData.set(String(record['id']), value);
                   } else if (record && 'flashcardId' in record) {
-                    storeData.set(String(record.flashcardId), value);
+                    storeData.set(String(record['flashcardId']), value);
                   }
                   const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
                   setTimeout(() => {
                     if (req.onsuccess) req.onsuccess();
-                    if (oncompleteFn) oncompleteFn();
+                    if (oncompleteFn) oncompleteFn?.();
                   }, 0);
                   return req;
                 },
@@ -162,7 +162,7 @@ describe('SrsOfflineService', () => {
                   req.result = Array.from(storeData.values());
                   setTimeout(() => {
                     if (req.onsuccess) req.onsuccess();
-                    if (oncompleteFn) oncompleteFn();
+                    if (oncompleteFn) oncompleteFn?.();
                   }, 0);
                   return req;
                 },
@@ -176,7 +176,7 @@ describe('SrsOfflineService', () => {
                 },
                 clear: () => {
                   storeData.clear();
-                  if (oncompleteFn) setTimeout(() => oncompleteFn(), 0);
+                  if (oncompleteFn) setTimeout(() => oncompleteFn?.(), 0);
                 },
                 delete: (key: string) => {
                   storeData.delete(key);
@@ -187,7 +187,7 @@ describe('SrsOfflineService', () => {
                     req.result = Array.from(storeData.values());
                     setTimeout(() => {
                       if (req.onsuccess) req.onsuccess();
-                      if (oncompleteFn) oncompleteFn();
+                      if (oncompleteFn) oncompleteFn?.();
                     }, 0);
                     return req;
                   },
@@ -229,7 +229,7 @@ describe('SrsOfflineService', () => {
       // Wait for DB init
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(service.queuedReviewCount()).toBe(0);
+      expect(service.pendingActionCount()).toBe(0);
     });
 
     it('should cache and retrieve flashcards', async () => {
@@ -260,7 +260,7 @@ describe('SrsOfflineService', () => {
 
       // Override refreshQueueCount since it uses private method
       await service.queueSrsReview('card1', 4, 2);
-      expect(service.queuedReviewCount()).toBe(1);
+      expect(service.pendingActionCount()).toBe(1);
     });
 
     it('should sync queued reviews without error', async () => {

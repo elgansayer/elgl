@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { AdminBlocksComponent } from './admin-blocks.component';
-import { AdminBlockedUser, AdminService } from '../../../services/admin.service';
+import { AdminService } from '../../../services/admin.service';
 import { I18nService } from '../../../services/i18n.service';
 
 const __filename = fileURLToPath(import.meta.url);

@@ -113,7 +113,7 @@ export class OfflineEconomyService {
   async cacheCatalog(catalog: VirtualGift[]): Promise<void> {
     await this.ensureDB();
     await this.clearStore(STORE_CATALOG);
-    await Promise.all(catalog.map((g) => this.putInStore(STORE_CATALOG, g)));
+    await Promise.all(catalog.map((g) => this.putInStore(STORE_CATALOG, g as unknown as Record<string, unknown>)));
   }
 
   async getCachedCatalog(): Promise<VirtualGift[]> {
@@ -124,7 +124,7 @@ export class OfflineEconomyService {
   async cacheCoinPackages(packages: CoinPackage[]): Promise<void> {
     await this.ensureDB();
     await this.clearStore(STORE_PACKAGES);
-    await Promise.all(packages.map((p) => this.putInStore(STORE_PACKAGES, p)));
+    await Promise.all(packages.map((p) => this.putInStore(STORE_PACKAGES, p as unknown as Record<string, unknown>)));
   }
 
   async getCachedCoinPackages(): Promise<CoinPackage[]> {
@@ -135,7 +135,7 @@ export class OfflineEconomyService {
   async cacheStickerPacks(packs: StickerPack[]): Promise<void> {
     await this.ensureDB();
     await this.clearStore(STORE_STICKERS);
-    await Promise.all(packs.map((p) => this.putInStore(STORE_STICKERS, p)));
+    await Promise.all(packs.map((p) => this.putInStore(STORE_STICKERS, p as unknown as Record<string, unknown>)));
   }
 
   async getCachedStickerPacks(): Promise<StickerPack[]> {

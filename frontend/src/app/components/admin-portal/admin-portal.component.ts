@@ -57,6 +57,11 @@ export class AdminPortalComponent implements OnInit {
     this.searchTerm.set(value);
   }
 
+  onSubmit(event: Event): void {
+    event.preventDefault();
+    this.runSearch();
+  }
+
   async runSearch(): Promise<void> {
     this.page.set(1);
     await this.loadUsers();

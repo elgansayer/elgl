@@ -73,7 +73,7 @@ describe('LegalDocumentViewerComponent', () => {
 
   it('should handle Date objects for lastUpdated', () => {
     const date = new Date('2026-06-15');
-    host.lastUpdated = date;
+    (host as any).lastUpdated = date;
     fixture.detectChanges();
     const footer = viewerElement?.querySelector('footer');
     expect(footer?.textContent).toContain('Last updated:');

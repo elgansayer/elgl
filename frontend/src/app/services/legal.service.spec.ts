@@ -67,7 +67,7 @@ describe('LegalService', () => {
 
     try {
       await resultPromise;
-      fail('Expected fetchTermsOfService to throw');
+      expect.unreachable('Expected fetchTermsOfService to throw');
     } catch (error) {
       expect(error).toBeTruthy();
     }
@@ -81,7 +81,7 @@ describe('LegalService', () => {
 
     try {
       await resultPromise;
-      fail('Expected fetchPrivacyPolicy to throw');
+      expect.unreachable('Expected fetchPrivacyPolicy to throw');
     } catch (error) {
       expect(error).toBeTruthy();
     }

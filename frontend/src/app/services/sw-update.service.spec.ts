@@ -7,10 +7,10 @@ import { SwUpdateService } from './sw-update.service';
 
 describe('SwUpdateService', () => {
   let service: SwUpdateService;
-  let versionUpdatesSubject: Subject<{ type: string; latestVersion?: string }>;
-  let unrecoverableSubject: Subject<{ reason: string }>;
+  let versionUpdatesSubject: Subject<unknown>;
+  let unrecoverableSubject: Subject<unknown>;
   let mockSwUpdate: { isEnabled: boolean; versionUpdates: Subject<unknown>; unrecoverable: Subject<unknown>; checkForUpdate: ReturnType<typeof vi.fn>; activateUpdate: ReturnType<typeof vi.fn> };
-  let mockAppRef: { isStable: ReturnType<typeof vi.fn> };
+  let mockAppRef: { isStable: ReturnType<typeof vi.fn> } = { isStable: of(true) as unknown as ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     TestBed.resetTestingModule();
@@ -24,10 +24,6 @@ describe('SwUpdateService', () => {
       unrecoverable: unrecoverableSubject,
       checkForUpdate: vi.fn().mockResolvedValue(false),
       activateUpdate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    mockAppRef = {
-      isStable: of(true),
     };
 
     TestBed.configureTestingModule({
@@ -50,10 +46,12 @@ describe('SwUpdateService', () => {
 
     service.initialise();
 
-    versionUpdatesSubject.next({
+    const event: VersionReadyEvent = {
       type: 'VERSION_READY',
-      latestVersion: '2.0.0',
-    } as VersionReadyEvent);
+      currentVersion: { hash: 'abc', appData: undefined },
+      latestVersion: { hash: 'def', appData: undefined },
+    };
+    versionUpdatesSubject.next(event);
 
     expect(service.updateAvailable()).toBe(true);
   });

@@ -58,6 +58,7 @@ describe('LikedByModalComponent', () => {
     const mockUsers: LikedUser[] = [
       {
         id: 'user-1',
+        avatar_url: null,
         display_name: 'Alice',
         native_languages: ['en'],
         target_languages: ['es', 'fr'],
@@ -172,6 +173,7 @@ describe('LikedByModalComponent', () => {
     const mockUsers: LikedUser[] = [
       {
         id: 'user-1',
+        avatar_url: null,
         display_name: 'Alice',
         native_languages: ['en'],
         target_languages: ['es'],

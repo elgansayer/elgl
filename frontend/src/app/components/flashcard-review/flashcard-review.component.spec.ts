@@ -6,6 +6,7 @@ import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 
 const MOCK_CARD: Flashcard = {
   id: '1',
+  easiness_factor: 2.5,  repetitions: 0,  interval_days: 1,
   user_id: 'u1',
   word_token: 'abundant',
   translation: '丰富的',

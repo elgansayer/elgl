@@ -136,7 +136,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   ? ('giftModal.sendingBtn' | t)
                   : selectedGift()
                     ? ('giftModal.sendBtnText'
-                      | t: { icon: selectedGift().icon, cost: selectedGift().cost_coins })
+                      | t: { icon: selectedGift()!.icon, cost: selectedGift()!.cost_coins })
                     : ('giftModal.selectGift' | t)
               }}
             </button>

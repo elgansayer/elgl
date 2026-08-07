@@ -7,8 +7,18 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
+import { JoyrideModule, JoyrideService } from 'ngx-joyride';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
+
+interface JoyrideOptions {
+  steps: string[];
+  startWith?: string;
+  waitingTime?: number;
+  stepDefaultPosition?: string;
+  themeColor?: string;
+  showCounter?: boolean;
+  showPrevButton?: boolean;
+}
 
 type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
 type EscrowServiceType = 'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';

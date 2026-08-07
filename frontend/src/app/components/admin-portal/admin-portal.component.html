@@ -2,7 +2,7 @@
   <h1 id="admin-title" class="text-2xl font-bold mb-1">{{ 'admin.title' | t }}</h1>
   <p class="text-sm text-text-secondary mb-4">{{ 'admin.subtitle' | t }}</p>
 
-  <form class="flex gap-2 mb-4" (submit)="$event.preventDefault(); runSearch()" role="search" [attr.aria-label]="'admin.searchLabel' | t">
+  <form class="flex gap-2 mb-4" (submit)="onSubmit($event)" role="search" [attr.aria-label]="'admin.searchLabel' | t">
     <label class="sr-only" for="admin-user-search">{{ 'admin.searchLabel' | t }}</label>
     <input
       id="admin-user-search"
@@ -103,7 +103,7 @@
           </div>
 
           <details class="mt-3" (toggle)="onLoginHistoryToggle(user, $any($event.target).open)">
-            <summary class="cursor-pointer text-sm text-primary select-none" [attr.aria-expanded]="$any($event.target).open ? 'true' : 'false'">
+            <summary class="cursor-pointer text-sm text-primary select-none">
               {{ 'admin.viewLoginHistory' | t }}
             </summary>
 

@@ -25,9 +25,9 @@ class MockI18nService {
 }
 
 class MockCentrifugoService {
-  subscribeLiveRoom = jest.fn();
-  unsubscribeLiveRoom = jest.fn();
-  publish = jest.fn();
+  subscribeLiveRoom = vi.fn();
+  unsubscribeLiveRoom = vi.fn();
+  publish = vi.fn();
 }
 
 @Component({

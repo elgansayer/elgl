@@ -165,7 +165,7 @@ describe('GiftPickerComponent', () => {
 
   it('should emit closed when cancel button is clicked', () => {
     let emitted = false;
-    const sub = component.closed.listen(() => { emitted = true; });
+    const sub = component.closed.subscribe(() => { emitted = true; });
 
     const cancelBtn = fixture.debugElement.queryAll(By.css('.border-t button'))[0];
     cancelBtn.triggerEventHandler('click', null);

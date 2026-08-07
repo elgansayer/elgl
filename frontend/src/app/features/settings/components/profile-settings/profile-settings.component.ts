@@ -4,8 +4,6 @@ import { debounceTime } from 'rxjs';
 import { TranslatePipe } from '../../../../services/translate.pipe';
 import { SettingsService } from '../../../../core/services/settings.service';
 import { LanguageLevel, JLPTLevel, ProfileDiscoverySettings } from '../../../../core/models/settings.model';
-import template from './profile-settings.component.html?raw';
-
 function isHTMLInputElement(element: EventTarget | null): element is HTMLInputElement {
   return element !== null && 'value' in element;
 }
@@ -22,7 +20,7 @@ const isJLPTLevel = (level: unknown): level is JLPTLevel => {
   selector: 'app-profile-settings',
   standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe],
-  template: template,
+  templateUrl: './profile-settings.component.html',
 })
 export class ProfileSettingsComponent implements OnInit {
   private fb = inject(FormBuilder);
@@ -132,17 +130,18 @@ export class ProfileSettingsComponent implements OnInit {
 
     const tLangs: Array<{ language: string; level: LanguageLevel; jlptLevel?: JLPTLevel; }> = [];
     if (Array.isArray(formValue.targetLanguages)) {
-        for (const lang of formValue.targetLanguages) {
+        for (const rawLang of formValue.targetLanguages) {
+            const lang = rawLang as Record<string, unknown>;
             let lvlVal: LanguageLevel = 'Beginner';
-            if (isLanguageLevel(lang.level)) {
-                lvlVal = lang.level;
+            if (isLanguageLevel(lang['level'])) {
+                lvlVal = lang['level'];
             }
             let jlptVal: JLPTLevel | undefined = undefined;
-            if (isJLPTLevel(lang.jlptLevel)) {
-                jlptVal = lang.jlptLevel;
+            if (isJLPTLevel(lang['jlptLevel'])) {
+                jlptVal = lang['jlptLevel'];
             }
             tLangs.push({
-                language: String(lang.language || ''),
+                language: String(lang['language'] || ''),
                 level: lvlVal,
                 jlptLevel: jlptVal
             });
