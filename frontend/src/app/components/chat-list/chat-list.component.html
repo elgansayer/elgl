@@ -96,15 +96,23 @@
 
   <main class="divide-y divide-surface-200">
     @if (isLoading()) {
-      <div class="app-empty-state">
-        {{ 'chatList.loading' | t }}
-      </div>
+      <app-empty-state
+        [title]="'chatList.loading' | t"
+        [customClass]="'py-16'">
+      </app-empty-state>
     }
 
     @if (!isLoading() && regularAndPinnedPreviews().length === 0) {
-      <div class="app-empty-state">
-        {{ 'chatList.empty' | t }}
-      </div>
+      <app-empty-state
+        [illustration]="'/assets/illustrations/no-messages.svg'"
+        [title]="'chatList.noMessagesFound' | t"
+        [description]="'chatList.noMessagesHint' | t"
+        [actionLabel]="'chatList.findPartnersBtn' | t"
+        [customClass]="'py-16'">
+        <a [routerLink]="['/discovery']" class="text-primary font-semibold text-xs mt-2 inline-block">
+          {{ 'chatList.browseDiscovery' | t }}
+        </a>
+      </app-empty-state>
     }
 
     @for (preview of regularAndPinnedPreviews(); track preview.id) {
