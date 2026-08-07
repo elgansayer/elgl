@@ -27,6 +27,7 @@ export class AuthController {
   @UseGuards(SupabaseAuthGuard)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('change-password')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async changePassword(
     @Req() req: RequestWithUser,
     @Body() dto: ChangePasswordDto,
@@ -39,6 +40,7 @@ export class AuthController {
   @UseGuards(SupabaseAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post('two-factor/enable')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async enableTwoFactor(
     @Req() req: RequestWithUser,
   ): Promise<{ secret: string; qrCodeUrl: string }> {
@@ -49,6 +51,7 @@ export class AuthController {
   @UseGuards(SupabaseAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('two-factor/verify')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async verifyTwoFactor(
     @Req() req: RequestWithUser,
     @Body('token') token: string,
@@ -67,6 +70,7 @@ export class AuthController {
   @UseGuards(SupabaseAuthGuard)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('two-factor/disable')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async disableTwoFactor(
     @Req() req: RequestWithUser,
     @Body('token') _token: string,
@@ -89,6 +93,7 @@ export class AuthController {
   @UseGuards(SupabaseAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/generate')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async generateTransferLink(
     @Req() req: RequestWithUser,
   ): Promise<{ url: string }> {
@@ -101,6 +106,7 @@ export class AuthController {
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/consume')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async consumeTransferLink(
     @Body('token') token: string,
   ): Promise<{ swapToken: string }> {
@@ -113,6 +119,7 @@ export class AuthController {
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/swap')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async swapTransferLink(@Body('swapToken') swapToken: string): Promise<{
     access_token: string;
     refresh_token: string;
