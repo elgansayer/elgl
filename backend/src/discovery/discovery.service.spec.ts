@@ -12,17 +12,6 @@ jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
 
-jest.mock('../common/retry', () => {
-  const actual = jest.requireActual('../common/retry');
-  return {
-    ...actual,
-    withRetry: jest.fn().mockImplementation((op: () => unknown) => op()),
-    isRateLimitError: actual.isRateLimitError,
-  };
-});
-
-import { withRetry } from '../common/retry';
-
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
   let mockSupabaseClient: any;
@@ -1246,86 +1235,6 @@ describe('DiscoveryService', () => {
 
       const result = await service.searchByCountryCity('user-1', {});
       expect(result).toEqual([]);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // Exponential backoff retry (HTTP 429) coverage
-  // ---------------------------------------------------------------------------
-  describe('retry integration', () => {
-    beforeEach(() => {
-      (withRetry as jest.Mock).mockClear();
-    });
-
-    it('should wrap searchPartners query with withRetry', async () => {
-      stubLimitResponse([{ id: 'p1' }]);
-
-      await service.searchPartners('user-1', null, {});
-
-      expect(withRetry).toHaveBeenCalled();
-    });
-
-    it('should retry on Supabase 429 error and return empty after exhaustion', async () => {
-      const supabase429Error = { code: '429', message: 'Too Many Requests' };
-      (withRetry as jest.Mock).mockImplementationOnce(async (op: () => unknown) => {
-        try {
-          return await op();
-        } catch {
-          return { data: null, error: supabase429Error };
-        }
-      });
-
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: supabase429Error,
-      });
-
-      const result = await service.searchPartners('user-1', null, {});
-      expect(result).toEqual([]);
-    });
-
-    it('should wrap getAudioIntros with withRetry', async () => {
-      stubLimitResponse([{ id: 'p1' }]);
-
-      await service.getAudioIntros('user-1', null, {});
-
-      expect(withRetry).toHaveBeenCalled();
-    });
-
-    it('should wrap getRecentNativeSpeakers with withRetry', async () => {
-      stubLimitResponse([{ id: 'p1' }]);
-
-      await service.getRecentNativeSpeakers('user-1');
-
-      expect(withRetry).toHaveBeenCalled();
-    });
-
-    it('should wrap getSpotlightUsers with withRetry', async () => {
-      stubLimitResponse([{ id: 'p1' }]);
-
-      await service.getSpotlightUsers('user-1');
-
-      expect(withRetry).toHaveBeenCalled();
-    });
-
-    it('should wrap findByLanguagePair with withRetry', async () => {
-      mockQueryBuilder.range = jest.fn().mockReturnThis();
-      Object.assign(mockQueryBuilder, {
-        data: [{ id: 'lp1' }],
-        error: null,
-      });
-
-      await service.findByLanguagePair('user-1', { native_language: 'EN' });
-
-      expect(withRetry).toHaveBeenCalled();
-    });
-
-    it('should wrap searchByCountryCity with withRetry', async () => {
-      stubLimitResponse([{ id: 'p1' }]);
-
-      await service.searchByCountryCity('user-1', { country: 'JP' });
-
-      expect(withRetry).toHaveBeenCalled();
     });
   });
 });

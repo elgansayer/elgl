@@ -604,6 +604,7 @@ export class I18nService {
     'videoRoom.inviteCoHostCollapsed': 'Invite co-host picker collapsed',
     'videoRoom.speakerPickerAria': 'Select speaker to invite as co-host',
     'videoRoom.speakerOptionAria': 'Invite {{id}} as co-host',
+    'videoRoom.connectingToRoom': 'Connecting to room...',
 
     // Video Classrooms Marketplace
     'classroomsMarketplace.title': '&#127979;&#65039; Video Classrooms',
