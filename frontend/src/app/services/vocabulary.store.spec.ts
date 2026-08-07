@@ -418,4 +418,54 @@ describe('VocabularyStore', () => {
       await promise;
     });
   });
+
+  describe('signal reactivity', () => {
+    it('should manually set isLoading signal', () => {
+      expect(store.isLoading()).toBe(false);
+      store.isLoading.set(true);
+      expect(store.isLoading()).toBe(true);
+    });
+
+    it('should reflect allFlashcards updates reactively after saveWord', async () => {
+      const payload = { word_token: 'test', translation: 'prueba' };
+      const newCard = { ...mockFlashcard, id: '3', word_token: 'test', translation: 'prueba' };
+
+      const promise = store.saveWord(payload);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(newCard);
+      await promise;
+
+      expect(store.allFlashcards()[0].word_token).toBe('test');
+    });
+
+    it('should reflect flashcardMap updates reactively after loadAllFlashcards', async () => {
+      const cardA = { ...mockFlashcard, id: 'a', word_token: 'alpha' };
+      const cardB = { ...mockFlashcard, id: 'b', word_token: 'beta' };
+
+      const promise = store.loadAllFlashcards();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([cardA, cardB]);
+      await promise;
+
+      expect(store.flashcardMap().size).toBe(2);
+      expect(store.flashcardMap().get('alpha')).toEqual(cardA);
+      expect(store.flashcardMap().get('beta')).toEqual(cardB);
+    });
+
+    it('should maintain separate dueReviews signal independent of allFlashcards', async () => {
+      // Load full list
+      const promise1 = store.loadAllFlashcards();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([mockFlashcard]);
+      await promise1;
+
+      expect(store.allFlashcards().length).toBe(1);
+      expect(store.dueReviews().length).toBe(0);
+
+      // Load due reviews
+      const promise2 = store.loadDueReviews();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush([mockFlashcard]);
+      await promise2;
+
+      expect(store.dueReviews().length).toBe(1);
+      expect(store.allFlashcards().length).toBe(1);
+    });
+  });
 });
