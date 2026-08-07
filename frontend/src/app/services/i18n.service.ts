@@ -182,6 +182,11 @@ export class I18nService {
     'nav.helloTalk': '💬 HelloTalk',
     'nav.connect': '🌍 Connect',
     'nav.liveRooms': '🎙️ Live Rooms',
+    'nav.settings': '⚙️ Settings',
+    'nav.mainNav': 'Main navigation',
+
+    // Accessibility
+    'a11y.skipToContent': 'Skip to main content',
     'nav.chatRoom': '💬 Chat Room',
     'nav.lingqReader': '📚 LingQ Reader',
     'nav.favourites': '⭐ Favourites',
