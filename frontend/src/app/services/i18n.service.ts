@@ -1285,7 +1285,6 @@ export class I18nService {
     'safety.tabListLabel': 'Safety actions',
     'safety.submitReportAria': 'Submit report against {{name}}',
     'safety.confirmBlockAria': 'Confirm blocking {{name}}',
-    'safety.categoriesLoading': 'Loading report categories',
     'safety.blockManagement.title': '🛡️ Blocked Users',
     'safety.blockManagement.unblock': 'Unblock',
     'safety.blockManagement.unblockAria': 'Unblock {{name}}',
@@ -1298,7 +1297,7 @@ export class I18nService {
     'safety.moderation.emptyDesc': 'There are no reports to review at this time.',
     'safety.moderation.loadError': 'Failed to load moderation items',
     'safety.moderation.loadErrorDesc': 'Please try again or contact support if the issue persists.',
-    'safety.categoriesLoading': 'Loading categories...',
+    'safety.categoriesLoading': 'Loading report categories',
     'safety.categoriesError': 'Could not load report categories',
 
     'common.retry': 'Retry',
