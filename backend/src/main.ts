@@ -84,18 +84,18 @@ All endpoints are rate-limited via \`@nestjs/throttler\`. Check individual endpo
     .addTag('Admin - Users', 'Administrative user management operations')
     .addTag('Admin - Blocks', 'Administrative block management operations')
     .addTag('Moderation', 'Content moderation and reporting operations')
-<<<<<<< HEAD
-<<<<<<< HEAD
     .addTag(
       'Escrow Payments',
       'Escrow payment system for holding and releasing coins between users for service transactions',
     )
-=======
-    .addTag('Escrow Payments', 'Escrow-based coin payment transactions between users with circuit breaker resilience')
-    .addTag('Virtual Coin Economy', 'Virtual currency, gift catalog, sticker packs, and coin purchasing endpoints')
->>>>>>> origin/main
-=======
->>>>>>> origin/main
+    .addTag(
+      'Video Classrooms',
+      'Video classrooms and audio rooms for real-time language exchange. ' +
+      'Built on LiveKit WebRTC SFU architecture with E2EE encryption, stage management, ' +
+      'call waiting queues, group calls, polls, reactions, soundboard, captions, and host dashboard analytics. ' +
+      'Includes 1:1 video/audio calls, group calls with configurable participant limits, ' +
+      'call hold/resume/switch functionality, and audio room stage management with co-host delegation.',
+    )
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, documentFactory);

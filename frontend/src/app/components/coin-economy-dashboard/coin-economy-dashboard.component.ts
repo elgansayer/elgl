@@ -1,7 +1,20 @@
 import { Component, inject, AfterViewInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
+import { JoyrideModule, JoyrideService } from 'ngx-joyride';
+
+/** Tour options (mirrors ngx-joyride JoyrideOptions interface without import). */
+interface JoyrideOptions {
+  steps: string[];
+  startWith: string;
+  waitingTime?: number;
+  stepDefaultPosition?: string;
+  themeColor?: string;
+  showCounter?: boolean;
+  showPrevButton?: boolean;
+  customTexts?: Record<string, string>;
+  logsEnabled?: boolean;
+}
 import { EconomyStore } from '../../services/economy.store';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';

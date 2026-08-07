@@ -7,13 +7,16 @@
  * page load, partner listing, filter controls (pills, language,
  * sort, gender, age range, distance, serious learner, voice room),
  * partner card interactions, empty/loading states, VIP gates,
- * global search, and banner dismissal.
+ * global search, banner dismissal, error handling, and graceful
+ * degradation of non-critical endpoints.
  *
- * Discovery endpoints:
- *  - GET  /api/discovery/partners         (partner search)
- *  - GET  /api/discovery/partner-of-week   (partner-of-week IDs)
- *  - GET  /api/users/me                    (user profile for target languages)
- *  - GET  /api/safety/blocked-ids          (blocked user IDs)
+ * Discovery endpoints exercised:
+ *  - GET  /api/discovery/partners          (partner search with 15+ query params)
+ *  - GET  /api/discovery/partner-of-week   (partner-of-week IDs, graceful fallback)
+ *  - GET  /api/users/me                    (user profile for target language pills)
+ *  - GET  /api/safety/blocked-ids          (blocked user filtering)
+ *
+ * Test count: 17 describe blocks, 45+ it cases.
  */
 
 // -----------------------------------------------------------------

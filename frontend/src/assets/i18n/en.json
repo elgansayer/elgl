@@ -714,6 +714,9 @@
   "discovery.searchPlaceholder": "Search by name, language, or bio...",
   "discovery.search_button": "Search Button",
   "discovery.searching": "Searching partners...",
+  "discovery.showFilters": "Filters",
+  "discovery.hideFilters": "Hide Filters",
+  "discovery.toggleFilters": "Toggle search filters",
   "discovery.seriousModeDesc": "Serious Mode Desc",
   "discovery.seriousModeToggle": "Serious Mode Toggle",
   "discovery.seriousOnly": "Serious learners only",
@@ -1869,5 +1872,16 @@
   "safety.submitReportAria": "Submit report against {{name}}",
   "safety.confirmBlockAria": "Confirm blocking {{name}}",
   "safety.categoriesLoading": "Loading report categories",
-  "safety.blockManagement.unblockAria": "Unblock {{name}}"
+  "safety.blockManagement.unblockAria": "Unblock {{name}}",
+  "tour.prev": "Previous",
+  "tour.next": "Next",
+  "tour.done": "Got it!",
+  "tour.close": "Skip",
+  "discoveryTour.stepTitle": "Welcome to the Discovery Map. Find language partners based on your goals and preferences.",
+  "discoveryTour.stepFilterPills": "Use these filter pills to quickly switch between All Users, Serious Learners, Nearby partners, and Paid Practice.",
+  "discoveryTour.stepLanguagePills": "Tap a language chip to filter partners by target language, or use the language picker to search for more languages.",
+  "discoveryTour.stepSortGender": "Sort results by best match, online status, or distance. VIP users can also filter by gender.",
+  "discoveryTour.stepAgeDistance": "Adjust the age range and distance radius to narrow down your partner search. VIP users can fine-tune distance control.",
+  "discoveryTour.stepGlobalSearch": "Use the global search bar to search partners by name, native language, target language, or proficiency level.",
+  "discoveryTour.stepPartnerCards": "Browse partner cards showing display names, VIP badges, personality types, fluency indicators, and shared interests. Tap a card to start a chat."
 }

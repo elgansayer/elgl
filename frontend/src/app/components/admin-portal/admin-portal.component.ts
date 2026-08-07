@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -45,6 +46,10 @@ export class AdminPortalComponent {
 
   onSearchInput(value: string): void {
     this.searchTerm.set(value);
+  }
+
+  retryLoad(): void {
+    this.usersResource.reload();
   }
 
   runSearch(): void {

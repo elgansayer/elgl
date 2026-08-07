@@ -61,10 +61,10 @@ describe('VideoRoomComponent', () => {
     fixture.detectChanges();
   }
 
-  it('should render nothing when there is no current room', async () => {
+  it('should render connecting skeleton loader when there is no current room', async () => {
     await setup(null, 'host-1');
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent?.trim()).toBe('');
+    expect(compiled.textContent?.trim()).toContain('Connecting to room...');
   });
 
   it('should show the invite co-host button for the host when eligible speakers exist', async () => {

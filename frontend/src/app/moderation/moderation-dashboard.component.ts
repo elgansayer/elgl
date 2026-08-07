@@ -1,6 +1,11 @@
+import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
+<<<<<<< HEAD
 import { ModerationItem, ModerationService } from './moderation.service';
+=======
+import { ModerationItem, ModerationService } from '../services/moderation.service';
+>>>>>>> origin/main
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
@@ -9,6 +14,7 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
   selector: 'app-moderation-dashboard',
   standalone: true,
   imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+<<<<<<< HEAD
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4" role="main" aria-labelledby="moderation-title">
       <h2 id="moderation-title" class="text-2xl font-bold mb-4">{{ 'moderation.title' | t }}</h2>
@@ -149,6 +155,9 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
       </div>
     </div>
   `,
+=======
+  templateUrl: './moderation-dashboard.component.html',
+>>>>>>> origin/main
 })
 export class ModerationDashboardComponent {
   private moderationService = inject(ModerationService);

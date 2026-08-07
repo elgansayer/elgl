@@ -130,8 +130,7 @@ describe('SrsOfflineService', () => {
             createIndex: () => undefined,
           };
         },
-        transaction: (storeNames: string | string[], mode: string) => {
-          const names = Array.isArray(storeNames) ? storeNames : [storeNames];
+        transaction: (_storeNames: string | string[], _mode: string) => {
           let oncompleteFn: (() => void) | null = null;
           let onerrorFn: (() => void) | null = null;
 
@@ -181,7 +180,7 @@ describe('SrsOfflineService', () => {
                 delete: (key: string) => {
                   storeData.delete(key);
                 },
-                index: (indexName: string) => ({
+                index: (_indexName: string) => ({
                   getAll: () => {
                     const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null, result: [] as unknown[] };
                     req.result = Array.from(storeData.values());

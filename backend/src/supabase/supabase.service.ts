@@ -32,6 +32,7 @@ export type UsersRow = {
   /** @deprecated superseded by native_languages (see migration 013); retained for legacy callers */
   native_language?: string | null;
   privacy_hide_from_search?: boolean | null;
+  matchmaking_consent?: boolean | null;
   incognito_visits?: boolean | null;
   age?: number | null;
   is_deleted?: boolean | null;
@@ -2080,10 +2081,15 @@ export interface Database {
           search_lat: number;
           search_lon: number;
           radius_m: number;
-          exclude_user_id: string;
-          filter_native: string[] | null;
+          exclude_user_id: string | null;
+          filter_native_arr: string[] | null;
           filter_target: string | null;
           serious_only: boolean;
+          filter_level: string | null;
+          filter_gender: string | null;
+          filter_age_min: number | null;
+          filter_age_max: number | null;
+          filter_audio_intro: boolean;
         };
         Returns: unknown[];
       };
