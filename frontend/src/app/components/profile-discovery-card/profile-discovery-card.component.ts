@@ -11,7 +11,7 @@ import { UserProfile } from '../../services/user.service';
           [src]="profile().avatar_url || '/assets/default-avatar.png'"
           [alt]="profile().display_name"
           class="w-12 h-12 rounded-full object-cover ring-2 ring-blue-400/30"
-        />
+         loading="lazy" />
         <div class="flex-1 min-w-0">
           <h3 class="text-white font-semibold text-base truncate">{{ profile().display_name }}</h3>
           <p class="text-gray-400 text-sm truncate">

@@ -21,13 +21,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
               [src]="coverPhotoPreview()"
               alt="Cover preview"
               class="w-full h-full object-cover"
-            />
+             loading="lazy" />
           } @else if (profile()?.cover_photo_url) {
             <img
               [src]="profile()?.cover_photo_url"
               alt="Cover"
               class="w-full h-full object-cover"
-            />
+             loading="lazy" />
           } @else {
             <div class="flex items-center justify-center h-full text-text-muted">
               <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
