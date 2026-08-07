@@ -3,14 +3,24 @@ import { test, expect } from '@playwright/test';
 /**
  * Spaced Repetition System (SRS) E2E Test Flows
  *
+ * Comprehensive Playwright E2E test suite for the HelloTalk SRS feature.
+ * Covers the full user journey across 41 test cases, multiplied across
+ * 4 browser/locale configurations (desktop-english, rtl-arabic, rtl-hebrew,
+ * mobile-safari-english) for a total of 164 test instances.
+ *
  * Covers:
- * - Flashcard deck CRUD (list, create, edit, delete)
- * - Deck detail: adding/removing flashcards
- * - Flashcard review session (flip, grade, progress, completion)
- * - Navigation between decks and review pages
- * - Accessibility (ARIA labels, keyboard navigation, focus management)
- * - Error boundary handling
- * - RTL locale compatibility
+ * - Flashcard deck CRUD (list, create, edit, delete, colour/icon pickers)
+ * - Deck detail: card management (add, remove, review launch)
+ * - Flashcard review session (3D flip card, click/keyboard toggle, grading
+ *   via Again/Good/Known SM-2 quality buttons, progress tracking, completion)
+ * - Navigation and routing between decks/review pages
+ * - Accessibility (ARIA labels, roles, live regions, heading hierarchy, focus)
+ * - Error resilience (SRS error boundary, API 500 interception, page reload)
+ * - RTL locale compatibility (Arabic, Hebrew logical property verification)
+ * - Mobile viewport rendering and touch-friendly grading buttons
+ * - API integration verification (decks & flashcards/due endpoints)
+ *
+ * See: #2327
  */
 
 test.describe('SRS - Flashcard Deck Management', () => {
