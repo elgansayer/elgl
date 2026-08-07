@@ -94,4 +94,7 @@ export interface RefundEscrowResult {
   amount_coins: number;
   payer_balance: number;
 }
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
 >>>>>>> origin/main

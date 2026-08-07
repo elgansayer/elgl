@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { SupabaseModule } from '../supabase/supabase.module';
 import { EscrowController } from './escrow.controller';
 import { EscrowService } from './escrow.service';
+<<<<<<< HEAD
 <<<<<<< HEAD
 import { GdprDataScrubbingService } from './gdpr-data-scrubbing.service';
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -15,12 +17,19 @@ export class EscrowModule {}
 =======
 import { MonetisationModule } from '../monetisation/monetisation.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+=======
+import { CircuitBreakerService } from './circuit-breaker.service';
+import { EscrowQueueWorker } from './escrow-queue.worker';
+>>>>>>> origin/main
 
 @Module({
-  imports: [MonetisationModule, SupabaseModule],
+  imports: [SupabaseModule],
   controllers: [EscrowController],
-  providers: [EscrowService],
-  exports: [EscrowService],
+  providers: [EscrowService, CircuitBreakerService, EscrowQueueWorker],
+  exports: [EscrowService, CircuitBreakerService],
 })
 export class EscrowModule {}
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
 >>>>>>> origin/main
