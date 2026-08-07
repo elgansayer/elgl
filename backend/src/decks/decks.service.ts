@@ -2,10 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateDeckDto, UpdateDeckDto } from './dto/deck.dto';
 import { Deck } from './interfaces/deck.interface';
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class DecksService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   async createDeck(userId: string, dto: CreateDeckDto): Promise<Deck> {
     const supabase = this.supabaseService.getClient();
