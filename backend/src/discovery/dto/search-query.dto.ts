@@ -12,10 +12,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SearchQueryDto {
   @ApiPropertyOptional({
-    description: 'GPS latitude for geospatial proximity search (-90 to 90)',
+    description: 'Latitude for location-based search (-90 to 90)',
+    example: 35.6895,
     minimum: -90,
     maximum: 90,
-    example: 35.6762,
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
@@ -27,10 +27,10 @@ export class SearchQueryDto {
   latitude?: number;
 
   @ApiPropertyOptional({
-    description: 'GPS longitude for geospatial proximity search (-180 to 180)',
+    description: 'Longitude for location-based search (-180 to 180)',
+    example: 139.6917,
     minimum: -180,
     maximum: 180,
-    example: 139.6503,
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
@@ -42,11 +42,11 @@ export class SearchQueryDto {
   longitude?: number;
 
   @ApiPropertyOptional({
-    description: 'Proximity search radius in metres (default 50000)',
+    description: 'Search radius in metres (1000-20000000, default 50000)',
+    example: 50000,
     minimum: 1000,
     maximum: 20000000,
     default: 50000,
-    example: 10000,
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
@@ -58,24 +58,24 @@ export class SearchQueryDto {
   radius_metres?: number = 50000;
 
   @ApiPropertyOptional({
-    description: 'Required native language of partner (ISO 639-1 code)',
-    example: 'ja',
+    description: 'Comma-separated list of native language ISO 639-1 codes',
+    example: 'en,fr',
   })
   @IsOptional()
   @IsString()
   native_languages?: string;
 
   @ApiPropertyOptional({
-    description: 'Required target language of partner (ISO 639-1 code)',
-    example: 'en',
+    description: 'Target language ISO 639-1 code',
+    example: 'ja',
   })
   @IsOptional()
   @IsString()
   target_language?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter to serious learners only (study streak > 7 days AND correction ratio >= 0.8)',
-    example: false,
+    description: 'Filter to only show serious learners (study streak > 7 and correction ratio >= 0.8)',
+    example: true,
   })
   @IsOptional()
   @Transform(
@@ -85,24 +85,24 @@ export class SearchQueryDto {
   serious_learner_only?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by proficiency level (e.g. Beginner, Intermediate, Advanced)',
-    example: 'Intermediate',
+    description: 'Proficiency level filter',
+    example: 'intermediate',
   })
   @IsOptional()
   @IsString()
   level?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by gender (VIP users only)',
-    example: 'Female',
+    description: 'Gender filter (VIP users only)',
+    example: 'female',
   })
   @IsOptional()
   @IsString()
   gender?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by shared interests',
-    example: 'music',
+    description: 'Comma-separated list of interest tags',
+    example: 'sports,music',
   })
   @IsOptional()
   @IsString()
@@ -110,9 +110,9 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description: 'Minimum age filter (1-120)',
+    example: 18,
     minimum: 1,
     maximum: 120,
-    example: 18,
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
@@ -125,9 +125,9 @@ export class SearchQueryDto {
 
   @ApiPropertyOptional({
     description: 'Maximum age filter (1-120)',
+    example: 65,
     minimum: 1,
     maximum: 120,
-    example: 35,
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
@@ -139,8 +139,8 @@ export class SearchQueryDto {
   age_max?: number;
 
   @ApiPropertyOptional({
-    description: 'Filter to users currently active in an audio room',
-    example: false,
+    description: 'Filter to only show users currently hosting voice rooms',
+    example: true,
   })
   @IsOptional()
   @Transform(
@@ -150,15 +150,15 @@ export class SearchQueryDto {
   voice_room_active?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Sort order for results',
-    example: 'distance',
+    description: 'Sort order: best_match, nearest, newest, or online_now',
+    example: 'best_match',
   })
   @IsOptional()
   @IsString()
   sort?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter to users who have recorded an audio introduction',
+    description: 'Filter to only show users with audio introductions',
     example: true,
   })
   @IsOptional()
@@ -169,7 +169,7 @@ export class SearchQueryDto {
   has_audio_intro?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by country name (fuzzy ILIKE match)',
+    description: 'Country filter (case-insensitive partial match)',
     example: 'Japan',
   })
   @IsOptional()
@@ -177,7 +177,7 @@ export class SearchQueryDto {
   country?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by city name (fuzzy ILIKE match)',
+    description: 'City filter (case-insensitive partial match)',
     example: 'Tokyo',
   })
   @IsOptional()
@@ -185,8 +185,8 @@ export class SearchQueryDto {
   city?: string;
 
   @ApiPropertyOptional({
-    description: 'Enable serious learner mode (auto-enabled for serious learners)',
-    example: false,
+    description: 'Serious learner mode flag (auto-set when user has it enabled in profile)',
+    example: true,
   })
   @IsOptional()
   @Transform(
@@ -196,8 +196,8 @@ export class SearchQueryDto {
   serious_learner_mode?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by learning goals',
-    example: 'fluency',
+    description: 'Comma-separated list of learning goals to match',
+    example: 'fluency,cultural',
   })
   @IsOptional()
   @IsString()
@@ -212,7 +212,7 @@ export class SearchQueryDto {
   learning_goals_mode?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by morning availability',
+    description: 'Filter users available in the morning',
     example: true,
   })
   @IsOptional()
@@ -223,8 +223,8 @@ export class SearchQueryDto {
   availability_morning?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by afternoon availability',
-    example: false,
+    description: 'Filter users available in the afternoon',
+    example: true,
   })
   @IsOptional()
   @Transform(
@@ -234,8 +234,8 @@ export class SearchQueryDto {
   availability_afternoon?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by evening availability',
-    example: false,
+    description: 'Filter users available in the evening',
+    example: true,
   })
   @IsOptional()
   @Transform(
@@ -245,9 +245,8 @@ export class SearchQueryDto {
   availability_evening?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Available time start in HH:mm format',
+    description: 'Availability start time in HH:mm format',
     example: '09:00',
-    pattern: '^\\d{2}:\\d{2}$',
   })
   @IsOptional()
   @IsString()
@@ -257,9 +256,8 @@ export class SearchQueryDto {
   available_time_start?: string;
 
   @ApiPropertyOptional({
-    description: 'Available time end in HH:mm format',
-    example: '18:00',
-    pattern: '^\\d{2}:\\d{2}$',
+    description: 'Availability end time in HH:mm format',
+    example: '17:00',
   })
   @IsOptional()
   @IsString()
