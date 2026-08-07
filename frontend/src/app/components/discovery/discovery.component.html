@@ -9,8 +9,9 @@
         routerLink="/notifications"
         class="p-2 text-xl hover:opacity-80 transition-opacity"
         [attr.aria-label]="'nav.notifications' | t"
-        >🔔</a
-      >
+        ><span aria-hidden="true">🔔</span
+          ><span class="sr-only">{{ 'nav.notifications' | t }}</span></a
+        >
     </div>
 
     <!-- Top Filter Pills (Horizontal Scroll) -->
@@ -18,6 +19,8 @@
       [pills]="filterPills()"
       [selected]="selectedFilter()"
       (select)="onFilterSelect($any($event))"
+      role="radiogroup"
+      [attr.aria-label]="'discovery.filterAriaLabel' | t"
     >
     </app-scrollable-pills>
 
@@ -170,13 +173,17 @@
   @if (showBanner()) {
     <div
       class="mx-4 mt-2 mb-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 p-4 shadow-lg relative overflow-hidden"
+      role="complementary"
+      [attr.aria-label]="'discovery.bannerPaid' | t"
     >
       <!-- Decorative background elements -->
       <div
         class="absolute -end-6 -top-6 w-24 h-24 bg-white opacity-10 rounded-full blur-xl pointer-events-none"
+        aria-hidden="true"
       ></div>
       <div
         class="absolute end-12 bottom-0 w-16 h-16 bg-yellow-300 opacity-20 rounded-full blur-lg pointer-events-none"
+        aria-hidden="true"
       ></div>
 
       <div class="flex justify-between items-center relative z-10">
@@ -188,11 +195,11 @@
         </div>
         <div class="flex flex-col items-end gap-2">
           <button
-            aria-label="Close banner"
+            [attr.aria-label]="'common.close' | t"
             (click)="showBanner.set(false)"
             class="text-white/60 hover:text-white absolute -top-2 -end-2 p-1"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
           <button
             [routerLink]="['/vip']"
@@ -214,22 +221,31 @@
   <!-- Content States -->
   <main class="p-0">
     @if (isLoading()) {
-      <app-empty-state [title]="'discovery.searching' | t" [customClass]="'py-16'">
-      </app-empty-state>
+      <section aria-live="polite" aria-busy="true">
+        <app-empty-state [title]="'discovery.searching' | t" [customClass]="'py-16'" role="status">
+        </app-empty-state>
+      </section>
     } @else if (partners().length === 0) {
-      <app-empty-state
-        [illustration]="'/assets/illustrations/no-users-nearby.svg'"
-        [title]="'discovery.noUsersNearby' | t"
-        [description]="'discovery.noUsersHint' | t"
-      >
-      </app-empty-state>
+      <section aria-live="polite">
+        <app-empty-state
+          [illustration]="'/assets/illustrations/no-users-nearby.svg'"
+          [title]="'discovery.noUsersNearby' | t"
+          [description]="'discovery.noUsersHint' | t"
+        >
+        </app-empty-state>
+      </section>
     } @else {
+      <!-- Screen reader announcement of results count -->
+      <div class="sr-only" role="status" aria-live="polite">
+        {{ 'discovery.matchCount' | t: { count: partners().length } }}
+      </div>
       <!-- User List -->
-      <div class="divide-y divide-surface-200">
+      <div class="divide-y divide-surface-200" role="list" aria-label="{{ 'discovery.partnerListLabel' | t }}">
         @for (partner of partners(); track partner.id) {
           <article
             class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer"
             [routerLink]="['/chat', partner.id]"
+            role="listitem"
           >
             <div class="flex items-center gap-3 min-w-0">
               <!-- Avatar -->
@@ -237,11 +253,12 @@
                 <img
                   loading="lazy"
                   [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
-                  alt="avatar"
+                  [attr.alt]="('discovery.partnerAvatar' | t: { name: partner.display_name || ('discovery.partnerFallback' | t) })"
                   class="h-14 w-14 rounded-full object-cover"
                 />
                 <span
                   class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
+                  aria-hidden="true"
                 ></span>
               </div>
 
@@ -351,8 +368,9 @@
               size="icon"
               (clicked)="$event.stopPropagation()"
               [routerLink]="['/chat', partner.id]"
+              [ariaLabel]="('discovery.startChat' | t) + ': ' + (partner.display_name || ('discovery.partnerFallback' | t))"
             >
-              <span class="text-xl">👋</span>
+              <span class="text-xl" aria-hidden="true">👋</span>
             </app-gradient-button>
           </article>
         }

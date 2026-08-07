@@ -601,5 +601,10 @@
   "common.pleaseWait": "お待ちください...",
   "common.submit": "送信",
   "economy.offlinePurchaseUnavailable": "オフライン中は購入できません。インターネット接続を確認してください。",
-  "economy.offlineGiftQueued": "ギフトはキューに入れられました。接続が復旧次第送信されます。"
+  "economy.offlineGiftQueued": "ギフトはキューに入れられました。接続が復旧次第送信されます。",
+  "safety.tabListLabel": "安全アクション",
+  "safety.submitReportAria": "{{name}}を通報する",
+  "safety.confirmBlockAria": "{{name}}をブロックする",
+  "safety.categoriesLoading": "通報カテゴリを読み込み中",
+  "safety.blockManagement.unblockAria": "{{name}}のブロックを解除"
 }
