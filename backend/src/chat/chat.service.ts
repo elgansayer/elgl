@@ -13,6 +13,7 @@ import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
+import { SendTypingDto } from './dto/send-typing.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
@@ -79,6 +80,13 @@ export class ChatService {
     } catch (error) {
       throw new Error(`Failed to generate Centrifugo token: ${error.message}`);
     }
+  }
+
+  async sendTyping(userId: string, dto: SendTypingDto): Promise<void> {
+    await this.centrifugoService.publish(`chat:${dto.room_id}`, {
+      typing: dto.is_typing === 'true',
+      sender_id: userId,
+    });
   }
 
   private async generateCorrectionPayloadIfNeeded(

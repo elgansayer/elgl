@@ -475,6 +475,7 @@ export class I18nService {
     'chatRoom.saveBtn': 'Save',
     'chatRoom.favBtn': 'Fav',
     'chatRoom.typing': 'Someone is typing...',
+    'chatRoom.someoneTyping': 'Someone is typing...',
     'chatRoom.originalPlaceholder': 'Original sentence',
     'chatRoom.correctedPlaceholder': 'Corrected sentence',
     'chatRoom.explanationPlaceholder': 'Explanation',

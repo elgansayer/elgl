@@ -139,15 +139,13 @@ export class ChatRoomComponent implements OnDestroy {
   explanationText = '';
 
   private subscription: { unsubscribe: () => void } | null = null;
+  private typingTimeout: ReturnType<typeof setTimeout> | null = null;
+  private typingSent = false;
 
   private isChatEventPayload(
     value: unknown,
-  ): value is { message?: ChatMessage; typing?: boolean } {
-    return (
-      !!value &&
-      typeof value === 'object' &&
-      ('message' in value || 'typing' in value)
-    );
+  ): value is { message?: ChatMessage; typing?: boolean; sender_id?: string } {
+    return !!value && typeof value === 'object' && ('message' in value || 'typing' in value);
   }
 
   private async initializeRoom(): Promise<void> {
@@ -264,11 +262,15 @@ export class ChatRoomComponent implements OnDestroy {
     }
     this.subscription = this.centrifugeService.subscribe(`chat:${this.roomId}`, (data: unknown) => {
       const payload = this.isChatEventPayload(data) ? data : null;
+      const currentUserId = this.authService.currentUser()?.id;
       if (payload?.message) {
         this.messages.update((list) => [...list, payload.message!]);
-      } else if (payload?.typing) {
+      } else if (payload?.typing && payload?.sender_id !== currentUserId) {
         this.isTyping.set(true);
-        setTimeout(() => this.isTyping.set(false), 3000);
+        if (this.typingTimeout) {
+          clearTimeout(this.typingTimeout);
+        }
+        this.typingTimeout = setTimeout(() => this.isTyping.set(false), 3000);
       }
     });
   }
@@ -293,6 +295,21 @@ export class ChatRoomComponent implements OnDestroy {
     } else {
       this.mentionQuery.set(null);
     }
+
+    // Emit typing indicator via Centrifugo
+    if (!this.typingSent && target.value.trim().length > 0) {
+      this.typingSent = true;
+      void this.chatService.sendTypingIndicator(this.roomId, true);
+    }
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
+    this.typingTimeout = setTimeout(() => {
+      if (this.typingSent) {
+        this.typingSent = false;
+        void this.chatService.sendTypingIndicator(this.roomId, false);
+      }
+    }, 2000);
   }
 
   onComposerKeydown(event: KeyboardEvent): void {

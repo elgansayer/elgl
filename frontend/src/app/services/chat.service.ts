@@ -696,6 +696,23 @@ export class ChatService {
     return response.wallpaperUrl;
   }
 
+  async sendTypingIndicator(roomId: string, isTyping: boolean): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.post(
+          `${this.baseUrl}/typing`,
+          {
+            room_id: roomId,
+            is_typing: isTyping ? 'true' : 'false',
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      // Silently ignore typing indicator errors -- not critical
+    }
+  }
+
   async deleteMessage(messageId: string, scope: 'self' | 'everyone' = 'self'): Promise<void> {
     await firstValueFrom(
       this.http.delete(`${this.baseUrl}/messages/${messageId}`, {
