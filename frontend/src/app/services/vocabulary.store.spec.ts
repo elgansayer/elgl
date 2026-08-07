@@ -17,6 +17,9 @@ describe('VocabularyStore', () => {
     word_token: 'hello',
     translation: 'hola',
     srs_level: 1,
+    easiness_factor: 2.5,
+    repetitions: 1,
+    interval_days: 1,
     next_review_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
   };
@@ -233,11 +236,11 @@ describe('VocabularyStore', () => {
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
 
       const updatedCard = { ...mockFlashcard, srs_level: 2, next_review_at: '2026-08-07T00:00:00Z' };
-      const promise = store.updateSrsLevel('1', 2);
+      const promise = store.updateSrsLevel('1', 4);
 
       const req = httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`);
       expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({ srs_level: 2 });
+      expect(req.request.body).toEqual({ quality: 4 });
 
       req.flush(updatedCard);
       const result = await promise;
