@@ -1,1 +1,25 @@
 /* Discovery component styles */
+
+/* Hide default scrollbar for horizontal pill containers */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsive partner card on desktop grid */
+@media (min-width: 1024px) {
+  .discovery-grid article {
+    min-height: 120px;
+  }
+}
+
+/* Responsive header: reduce padding-top on larger screens since desktop-sidebar takes nav space */
+@media (min-width: 1024px) {
+  .discovery-header {
+    padding-top: 1rem;
+  }
+}

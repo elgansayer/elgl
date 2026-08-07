@@ -6,6 +6,9 @@ import { DiscoveryService } from '../../services/discovery.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
+import { JoyrideService } from 'ngx-joyride';
 import { provideRouter } from '@angular/router';
 
 class MockAudio {
@@ -58,6 +61,8 @@ describe('DiscoveryComponent', () => {
   };
   let mockSafetyService: { getBlockedIdsAsync: ReturnType<typeof vi.fn> };
   let mockAuthService: { currentUser: ReturnType<typeof signal> };
+  let mockDiscoveryOnboardingService: { startTour: ReturnType<typeof vi.fn> };
+  let mockJoyrideService: { startTour: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     audioInstances = [];
@@ -76,6 +81,13 @@ describe('DiscoveryComponent', () => {
     mockAuthService = {
       currentUser: signal<{ is_vip: boolean } | null>(null),
     };
+    mockDiscoveryOnboardingService = {
+      startTour: vi.fn(),
+    };
+    mockJoyrideService = {
+      startTour: vi.fn(),
+      isTourInProgress: vi.fn().mockReturnValue(false),
+    };
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
@@ -85,6 +97,15 @@ describe('DiscoveryComponent', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: SafetyService, useValue: mockSafetyService },
         { provide: AuthService, useValue: mockAuthService },
+        {
+          provide: OfflineDiscoveryCacheService,
+          useValue: {
+            isOnline: signal(true).asReadonly(),
+            cachedDataAvailable: signal(false).asReadonly(),
+          },
+        },
+        { provide: DiscoveryOnboardingService, useValue: mockDiscoveryOnboardingService },
+        { provide: JoyrideService, useValue: mockJoyrideService },
       ],
     }).compileComponents();
 
@@ -120,6 +141,35 @@ describe('DiscoveryComponent', () => {
     // slider's initial ageRangeChanged emission.
     expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(2);
     expect(component.isLoading()).toBe(false);
+  });
+
+  it('should render skeleton loaders while loading', () => {
+    fixture.detectChanges();
+    const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(skeletons.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('should show empty state with reset action when no partners', async () => {
+    await init();
+
+    const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+    expect(emptyState).toBeTruthy();
+
+    // Verify reset button calls resetFilters
+    const resetSpy = vi.spyOn(component, 'resetFilters');
+    const actionButton = fixture.nativeElement.querySelector('app-empty-state button');
+    if (actionButton) {
+      actionButton.click();
+      expect(resetSpy).toHaveBeenCalled();
+    }
+  });
+
+  it('should not show skeleton loaders after loading completes', async () => {
+    await init();
+
+    fixture.detectChanges();
+    const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(skeletons.length).toBe(0);
   });
 
   it('should populate target languages and restore serious learner mode from profile', async () => {

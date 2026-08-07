@@ -1,9 +1,11 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseFilters, UseGuards } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
+import { sanitiseRecommendationsData } from './sanitise-recommendations.helper';
 
 interface AuthenticatedRequest {
   user?: { id: string };
@@ -11,6 +13,7 @@ interface AuthenticatedRequest {
 
 @Controller('recommendations')
 @UseGuards(SupabaseAuthGuard)
+@UseFilters(MatchmakingExceptionFilter)
 export class RecommendationsController {
   constructor(
     private readonly recommendationsService: RecommendationsService,
@@ -21,7 +24,8 @@ export class RecommendationsController {
     @Req() req: AuthenticatedRequest,
   ): Promise<RecommendedUserDto[]> {
     const userId = req.user!.id;
-    return this.recommendationsService.getRecommendations(userId);
+    const results = await this.recommendationsService.getRecommendations(userId);
+    return sanitiseRecommendationsData(results);
   }
 
   @Get('daily')
@@ -29,6 +33,7 @@ export class RecommendationsController {
     @Req() req: AuthenticatedRequest,
   ): Promise<RecommendedUserDto[]> {
     const userId = req.user!.id;
-    return this.recommendationsService.getDailyRecommendations(userId);
+    const results = await this.recommendationsService.getDailyRecommendations(userId);
+    return sanitiseRecommendationsData(results);
   }
 }

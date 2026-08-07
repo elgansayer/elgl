@@ -1,8 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
+<<<<<<< HEAD
 import { withRetry } from '../common/retry';
+=======
+import { MetricsService } from '../metrics/metrics.service';
+import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
+>>>>>>> origin/main
 import { MOCK_USERS } from '../mock-data';
+import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 
 export interface RecommendedUserDto {
   id: string;
@@ -26,6 +32,21 @@ const DAILY_REDIS_TTL = 86400; // 24 hours
 const DAILY_LIMIT = 10;
 const FALLBACK_LIMIT = 20;
 
+/**
+ * GDPR base filter conditions shared across all matchmaking tiers.
+ *
+ * Users are excluded from recommendations unless:
+ * - They have explicitly opted into matchmaking (GDPR Art 7 consent)
+ * - They have not hidden their profile from search
+ * - They are not deleted or pending deletion ("right to erasure")
+ */
+const GDPR_MATCHMAKING_FILTERS = {
+  matchmaking_consent: true,
+  privacy_hide_from_search: false,
+  is_deleted: false,
+  is_deletion_pending: false,
+};
+
 interface UserRow {
   id: string;
   display_name?: string | null;
@@ -43,7 +64,12 @@ interface UserRow {
 export class RecommendationsService {
   private readonly logger = new Logger(RecommendationsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+    private readonly circuitBreakerService: CircuitBreakerService,
+    private readonly crashReportService: MatchmakingCrashReportService,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations(): Promise<void> {
@@ -52,6 +78,7 @@ export class RecommendationsService {
     const redis = this.supabaseService.getRedisClient();
 
     try {
+<<<<<<< HEAD
       const { data: users, error } = await withRetry(
         () =>
           supabase
@@ -59,6 +86,12 @@ export class RecommendationsService {
             .select('id, native_language, target_languages')
             .eq('privacy_hide_from_search', false),
       );
+=======
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, native_language, target_languages')
+        .match(GDPR_MATCHMAKING_FILTERS);
+>>>>>>> origin/main
 
       if (error || !users) {
         throw new Error(`Failed to fetch users: ${error?.message}`);
@@ -71,6 +104,7 @@ export class RecommendationsService {
         const nativeLang = user.native_language as string | null;
 
         // Find language exchange partners: native in user's target AND learning user's native
+<<<<<<< HEAD
         const { data: matches } = await withRetry(
           () =>
             supabase
@@ -85,6 +119,19 @@ export class RecommendationsService {
               .order('is_serious_learner', { ascending: false })
               .limit(DAILY_LIMIT),
         );
+=======
+        const { data: matches } = await supabase
+          .from('users')
+          .select(
+            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+          )
+          .neq('id', user.id)
+          .match(GDPR_MATCHMAKING_FILTERS)
+          .in('native_language', targetLanguages)
+          .contains('target_languages', nativeLang ? [nativeLang] : [])
+          .order('is_serious_learner', { ascending: false })
+          .limit(DAILY_LIMIT);
+>>>>>>> origin/main
 
         if (matches && matches.length > 0) {
           const dtos: RecommendedUserDto[] = (matches as UserRow[]).map(
@@ -115,33 +162,82 @@ export class RecommendationsService {
         'Successfully calculated and cached daily recommendations.',
       );
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      const errorType =
+        error instanceof Error ? error.constructor.name : 'UnknownError';
+
       this.logger.error('Error calculating daily recommendations', error);
+
+      await this.crashReportService.reportCrash({
+        operation: 'calculateDailyRecommendations',
+        error_type: errorType,
+        error_message: message,
+        stack_trace: stack,
+        context: { phase: 'daily_cron' },
+      });
     }
   }
 
   /** Returns cached top 10 language partner recommendations for a user.
    *  Gracefully degrades: Redis cache -> compute live -> empty array. */
   async getDailyRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    const startTime = Date.now();
+
     try {
       const redis = this.supabaseService.getRedisClient();
       const cached = await redis.get(`recommendations:daily:${userId}`);
       if (cached) {
         const parsed: unknown = JSON.parse(cached);
         if (Array.isArray(parsed)) {
-          return parsed as RecommendedUserDto[];
+          const results = parsed as RecommendedUserDto[];
+          this.metricsService.recordMatchmakingRecommendationsGenerated(
+            'cached',
+            'getDailyRecommendations',
+            results.length,
+          );
+          this.metricsService.recordMatchmakingRecommendationsPerRequest(
+            'cached',
+            results.length,
+          );
+          this.metricsService.recordMatchmakingRequestDuration(
+            'getDailyRecommendations',
+            'success',
+            (Date.now() - startTime) / 1000,
+          );
+          return results;
         }
       }
+      this.metricsService.recordMatchmakingDailyCacheMiss('empty_cache');
     } catch (error) {
       this.logger.warn(
         `Redis unavailable for daily recommendations (user ${userId}), falling back to live computation`,
         error,
       );
+      this.metricsService.recordMatchmakingDailyCacheMiss('redis_unavailable');
       // Fall through to live computation
     }
 
     // Tier 2: compute language-exchange recommendations on the fly
     try {
-      return await this.recommendationsByLanguageExchange(userId);
+      const liveResults = await this.recommendationsByLanguageExchange(userId);
+      if (liveResults.length > 0) {
+        this.metricsService.recordMatchmakingRecommendationsGenerated(
+          'live_language_exchange',
+          'getDailyRecommendations',
+          liveResults.length,
+        );
+        this.metricsService.recordMatchmakingRecommendationsPerRequest(
+          'live_language_exchange',
+          liveResults.length,
+        );
+        this.metricsService.recordMatchmakingRequestDuration(
+          'getDailyRecommendations',
+          'success',
+          (Date.now() - startTime) / 1000,
+        );
+        return liveResults;
+      }
     } catch (error) {
       this.logger.warn(
         `Live language-exchange fallback failed for user ${userId}`,
@@ -149,16 +245,32 @@ export class RecommendationsService {
       );
     }
 
+    this.metricsService.recordMatchmakingEmptyResults('getDailyRecommendations');
+    this.metricsService.recordMatchmakingRequestDuration(
+      'getDailyRecommendations',
+      'empty',
+      (Date.now() - startTime) / 1000,
+    );
     return [];
   }
 
   /** Interest-based recommendations. Falls back gracefully through tiers
    *  when any tier returns empty or throws. */
   async getRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    const startTime = Date.now();
+
     // Tier 1: Interest-based
     try {
       const interestResults = await this.recommendationsByInterests(userId);
-      if (interestResults.length > 0) return interestResults;
+      if (interestResults.length > 0) {
+        this.recordMatchmakingSuccess(
+          'getRecommendations',
+          'interest',
+          interestResults.length,
+          startTime,
+        );
+        return interestResults;
+      }
     } catch (error) {
       this.logger.warn(
         `Interest-based recommendations failed for user ${userId}, falling back to language exchange`,
@@ -171,7 +283,15 @@ export class RecommendationsService {
       const languageMatches = await this.recommendationsByLanguageExchange(
         userId,
       );
-      if (languageMatches.length > 0) return languageMatches;
+      if (languageMatches.length > 0) {
+        this.recordMatchmakingSuccess(
+          'getRecommendations',
+          'language_exchange',
+          languageMatches.length,
+          startTime,
+        );
+        return languageMatches;
+      }
     } catch (error) {
       this.logger.warn(
         `Language exchange fallback failed for user ${userId}`,
@@ -182,7 +302,15 @@ export class RecommendationsService {
     // Tier 3: most active users
     try {
       const activeUsers = await this.recommendationsByActiveUsers(userId);
-      if (activeUsers.length > 0) return activeUsers;
+      if (activeUsers.length > 0) {
+        this.recordMatchmakingSuccess(
+          'getRecommendations',
+          'active_users',
+          activeUsers.length,
+          startTime,
+        );
+        return activeUsers;
+      }
     } catch (error) {
       this.logger.error(
         `Active users fallback failed for user ${userId}`,
@@ -191,7 +319,14 @@ export class RecommendationsService {
     }
 
     // Tier 4: mock data as ultimate fallback
-    return this.recommendationsFromMock(userId);
+    const mockResults = this.recommendationsFromMock(userId);
+    this.recordMatchmakingSuccess(
+      'getRecommendations',
+      'mock',
+      mockResults.length,
+      startTime,
+    );
+    return mockResults;
   }
 
   /** Orchestrates multi-tier recommendations with graceful degradation.
@@ -199,58 +334,120 @@ export class RecommendationsService {
   async getRecommendationsWithFallback(
     userId: string,
   ): Promise<RecommendedUserDto[]> {
+    const startTime = Date.now();
+    let lastTier: string = 'none';
+
     // Tier 1: Interest-based (highest quality)
     try {
       const interestResults = await this.recommendationsByInterests(userId);
       if (interestResults.length > 0) {
-        return interestResults.map((r) => ({
+        const results = interestResults.map((r) => ({
           ...r,
           matchTier: 'interest' as const,
         }));
+        this.recordMatchmakingSuccess(
+          'getRecommendationsWithFallback',
+          'interest',
+          results.length,
+          startTime,
+        );
+        return results;
       }
+      lastTier = 'interest';
     } catch (error) {
       this.logger.warn(
         `Tier 1 (interest) unavailable for user ${userId}, degrading`,
         error,
       );
+      lastTier = 'interest';
+      this.metricsService.recordMatchmakingFallbackTierUsed(
+        'interest',
+        'language_exchange',
+      );
     }
 
     // Tier 2: Language exchange
     try {
-      const languageResults = await this.recommendationsByLanguageExchange(
-        userId,
-      );
+      const languageResults =
+        await this.recommendationsByLanguageExchange(userId);
       if (languageResults.length > 0) {
-        return languageResults.map((r) => ({
+        const results = languageResults.map((r) => ({
           ...r,
           matchTier: 'language_exchange' as const,
         }));
+        this.recordMatchmakingSuccess(
+          'getRecommendationsWithFallback',
+          'language_exchange',
+          results.length,
+          startTime,
+        );
+        return results;
       }
+      if (lastTier !== 'language_exchange') {
+        this.metricsService.recordMatchmakingFallbackTierUsed(
+          lastTier,
+          'language_exchange',
+        );
+      }
+      lastTier = 'language_exchange';
     } catch (error) {
       this.logger.warn(
         `Tier 2 (language exchange) unavailable for user ${userId}, degrading`,
         error,
       );
+      this.metricsService.recordMatchmakingFallbackTierUsed(
+        lastTier,
+        'active_users',
+      );
+      lastTier = 'language_exchange';
     }
 
     // Tier 3: Most active users
     try {
       const activeResults = await this.recommendationsByActiveUsers(userId);
       if (activeResults.length > 0) {
-        return activeResults.map((r) => ({
+        const results = activeResults.map((r) => ({
           ...r,
           matchTier: 'active_users' as const,
         }));
+        this.recordMatchmakingSuccess(
+          'getRecommendationsWithFallback',
+          'active_users',
+          results.length,
+          startTime,
+        );
+        return results;
       }
+      this.metricsService.recordMatchmakingFallbackTierUsed(
+        lastTier,
+        'active_users',
+      );
+      lastTier = 'active_users';
     } catch (error) {
       this.logger.error(
         `Tier 3 (active users) unavailable for user ${userId}, degrading to mock data`,
         error,
       );
+      this.metricsService.recordMatchmakingFallbackTierUsed(
+        lastTier,
+        'mock',
+      );
+      lastTier = 'active_users';
     }
 
     // Tier 4: Mock data (always available)
-    return this.recommendationsFromMock(userId);
+    const mockResults = this.recommendationsFromMock(userId);
+    this.metricsService.recordMatchmakingFallbackTierUsed(
+      lastTier,
+      'mock',
+    );
+    this.recordMatchmakingSuccess(
+      'getRecommendationsWithFallback',
+      'mock',
+      mockResults.length,
+      startTime,
+    );
+    return mockResults;
   }
 
   // ---- Private fallback tier methods ----
@@ -314,6 +511,7 @@ export class RecommendationsService {
 
     const candidateIds = Array.from(sharedCount.keys());
 
+<<<<<<< HEAD
     const { data: users, error: usersError } = await withRetry(
       () =>
         supabase
@@ -324,6 +522,15 @@ export class RecommendationsService {
           .in('id', candidateIds)
           .eq('privacy_hide_from_search', false),
     );
+=======
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+      )
+      .in('id', candidateIds)
+      .match(GDPR_MATCHMAKING_FILTERS);
+>>>>>>> origin/main
 
     if (usersError) {
       throw new Error(usersError.message);
@@ -377,14 +584,11 @@ export class RecommendationsService {
     const nativeLang = user['native_language'] as string | null;
     const targetLanguages = user['target_languages'] as string[] | null;
 
-    if (
-      !nativeLang ||
-      !targetLanguages ||
-      targetLanguages.length === 0
-    ) {
+    if (!nativeLang || !targetLanguages || targetLanguages.length === 0) {
       return [];
     }
 
+<<<<<<< HEAD
     const { data: matches, error: matchError } = await withRetry(
       () =>
         supabase
@@ -399,6 +603,19 @@ export class RecommendationsService {
           .order('is_serious_learner', { ascending: false })
           .limit(FALLBACK_LIMIT),
     );
+=======
+    const { data: matches, error: matchError } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+      )
+      .neq('id', userId)
+      .match(GDPR_MATCHMAKING_FILTERS)
+      .in('native_language', targetLanguages)
+      .contains('target_languages', [nativeLang])
+      .order('is_serious_learner', { ascending: false })
+      .limit(FALLBACK_LIMIT);
+>>>>>>> origin/main
 
     if (matchError) {
       throw new Error(matchError.message);
@@ -427,6 +644,7 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
+<<<<<<< HEAD
     const { data: users, error } = await withRetry(
       () =>
         supabase
@@ -439,6 +657,17 @@ export class RecommendationsService {
           .order('study_streak_days', { ascending: false })
           .limit(FALLBACK_LIMIT),
     );
+=======
+    const { data: users, error } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+      )
+      .neq('id', userId)
+      .match(GDPR_MATCHMAKING_FILTERS)
+      .order('study_streak_days', { ascending: false })
+      .limit(FALLBACK_LIMIT);
+>>>>>>> origin/main
 
     if (error) {
       throw new Error(error.message);
@@ -462,12 +691,8 @@ export class RecommendationsService {
   }
 
   /** Tier 4: Ultimate fallback using in-memory mock data. */
-  private recommendationsFromMock(
-    userId: string,
-  ): RecommendedUserDto[] {
-    this.logger.log(
-      `Using mock data as ultimate fallback for user ${userId}`,
-    );
+  private recommendationsFromMock(userId: string): RecommendedUserDto[] {
+    this.logger.log(`Using mock data as ultimate fallback for user ${userId}`);
 
     const mockUsers = MOCK_USERS as Array<{
       id: string;
@@ -496,4 +721,70 @@ export class RecommendationsService {
         matchTier: 'mock' as const,
       }));
   }
+  /** Records matchmaking success metrics in a single call. */
+  private recordMatchmakingSuccess(
+    endpoint: string,
+    tier: string,
+    resultCount: number,
+    startTime: number,
+  ): void {
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    this.metricsService.recordMatchmakingRecommendationsGenerated(
+      tier,
+      endpoint,
+      resultCount,
+    );
+    this.metricsService.recordMatchmakingRecommendationsPerRequest(
+      tier,
+      resultCount,
+    );
+    this.metricsService.recordMatchmakingRequestDuration(
+      endpoint,
+      'success',
+      durationSeconds,
+    );
+  }
+
+  // ---- GDPR compliance methods ----
+
+  /**
+   * Purge all cached recommendation data for a user in Redis.
+   *
+   * Called by DataRetentionService when a user is deleted/anonymised
+   * (GDPR "right to erasure").  Also purges the user's own cache key
+   * to prevent stale PII from being served after deletion.
+   *
+   * This covers both keys that include the user in others' results and
+   * the user's own recommendation cache.
+   */
+  async purgeRecommendationsCache(userId: string): Promise<void> {
+    const redis = this.supabaseService.getRedisClient();
+
+    try {
+      // Delete the user's own recommendations cache
+      const ownKey = `recommendations:daily:${userId}`;
+      await redis.del(ownKey);
+      this.logger.log(
+        `Purged own recommendations cache for user ${userId} (GDPR erasure)`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to purge own recommendations cache for user ${userId}`,
+        error,
+      );
+    }
+
+    // Daily caches containing this user expire within 24 hours (DAILY_REDIS_TTL).
+    // For immediate cleanup we would need to scan all `recommendations:daily:*`
+    // keys, which is O(N) and should be rate-limited.  The 24-hour TTL serves
+    // as the guard: GDPR allows "reasonable time" for erasure in backup/cache
+    // layers.
+    //
+    // This approach is documented in the GDPR data-retention policy
+    // (see data-retention.service.ts) and auditable via debug logs.
+    this.logger.log(
+      `GDPR erasure initiated for user ${userId}; recommendation cache TTL (${DAILY_REDIS_TTL}s) will expire stale copies`,
+    );
+  }
+
 }

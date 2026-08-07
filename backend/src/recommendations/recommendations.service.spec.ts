@@ -3,7 +3,10 @@ import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
+import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
+import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 jest.mock('../common/retry', () => ({
   withRetry: jest.fn((fn: () => unknown) => fn()),
@@ -22,6 +25,7 @@ type QueryChainMock = {
   limit: jest.Mock;
   single: jest.Mock;
   maybeSingle: jest.Mock;
+  match: jest.Mock;
   _setResolve: (data: unknown, error?: { message: string } | null) => void;
   then: (resolve: (value: unknown) => void) => undefined;
 };
@@ -49,6 +53,7 @@ const makeQueryChain = (): QueryChainMock => {
     'limit',
     'single',
     'maybeSingle',
+    'match',
   ];
   methodNames.forEach((m) => {
     (chain as Record<string, unknown>)[m] = jest.fn().mockReturnValue(chain);
@@ -66,16 +71,36 @@ const makeQueryChain = (): QueryChainMock => {
 
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
-  let mockRedis: { get: jest.Mock; set: jest.Mock };
+  let mockRedis: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
   let mockFrom: jest.Mock;
+  let mockMetricsService: {
+    recordMatchmakingRecommendationsGenerated: jest.Mock;
+    recordMatchmakingRecommendationsPerRequest: jest.Mock;
+    recordMatchmakingFallbackTierUsed: jest.Mock;
+    recordMatchmakingEmptyResults: jest.Mock;
+    recordMatchmakingRequestDuration: jest.Mock;
+    recordMatchmakingDailyCacheMiss: jest.Mock;
+    setMatchmakingTierSuccessRate: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockRedis = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn().mockResolvedValue(1),
     };
 
     mockFrom = jest.fn();
+
+    mockMetricsService = {
+      recordMatchmakingRecommendationsGenerated: jest.fn(),
+      recordMatchmakingRecommendationsPerRequest: jest.fn(),
+      recordMatchmakingFallbackTierUsed: jest.fn(),
+      recordMatchmakingEmptyResults: jest.fn(),
+      recordMatchmakingRequestDuration: jest.fn(),
+      recordMatchmakingDailyCacheMiss: jest.fn(),
+      setMatchmakingTierSuccessRate: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -87,6 +112,37 @@ describe('RecommendationsService', () => {
               from: mockFrom,
             }),
             getRedisClient: jest.fn().mockReturnValue(mockRedis),
+          },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
+        },
+        {
+          provide: CircuitBreakerService,
+          useValue: {
+            isAvailable: jest.fn().mockReturnValue(true),
+            recordSuccess: jest.fn(),
+            recordFailure: jest.fn(),
+            getState: jest.fn().mockReturnValue({
+              isOpen: false,
+              failureCount: 0,
+              lastFailure: 0,
+              cooldownUntil: 0,
+              totalFailures: 0,
+              totalSuccesses: 0,
+            }),
+            executeWithBreaker: jest
+              .fn()
+              .mockImplementation((_svc: string, op: () => Promise<unknown>) =>
+                op(),
+              ),
+          },
+        },
+        {
+          provide: MatchmakingCrashReportService,
+          useValue: {
+            reportCrash: jest.fn().mockResolvedValue({}),
           },
         },
       ],
@@ -212,12 +268,24 @@ describe('RecommendationsService', () => {
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('p-1');
+      expect(
+        mockMetricsService.recordMatchmakingRecommendationsGenerated,
+      ).toHaveBeenCalledWith('cached', 'getDailyRecommendations', 1);
+      expect(
+        mockMetricsService.recordMatchmakingRequestDuration,
+      ).toHaveBeenCalled();
     });
 
     it('should return empty array when nothing cached', async () => {
       mockRedis.get.mockResolvedValue(null);
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toEqual([]);
+      expect(
+        mockMetricsService.recordMatchmakingDailyCacheMiss,
+      ).toHaveBeenCalledWith('empty_cache');
+      expect(
+        mockMetricsService.recordMatchmakingEmptyResults,
+      ).toHaveBeenCalledWith('getDailyRecommendations');
     });
 
     it('should return empty array on parse failure', async () => {
@@ -257,13 +325,33 @@ describe('RecommendationsService', () => {
         },
       ]);
 
-      mockFrom
-        .mockReturnValueOnce(userChain)
-        .mockReturnValueOnce(matchesChain);
+      mockFrom.mockReturnValueOnce(userChain).mockReturnValueOnce(matchesChain);
 
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('partner-1');
+    });
+
+    it('should return empty array when Redis fails and live fallback also fails', async () => {
+      mockRedis.get.mockRejectedValue(new Error('Connection refused'));
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'Users table offline' });
+
+      mockFrom.mockReturnValueOnce(userChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when Redis fails and live fallback throws', async () => {
+      mockRedis.get.mockRejectedValue(new Error('Connection refused'));
+      mockFrom.mockImplementation(() => {
+        throw new Error('Unexpected database crash');
+      });
+
+      const result = await service.getDailyRecommendations('user-123');
+      expect(result).toEqual([]);
     });
   });
 
@@ -300,6 +388,9 @@ describe('RecommendationsService', () => {
       const result = await service.getRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].sharedInterests).toBe(2);
+      expect(
+        mockMetricsService.recordMatchmakingRecommendationsGenerated,
+      ).toHaveBeenCalledWith('interest', 'getRecommendations', 1);
     });
 
     it('should fall back to language exchange when interests return empty', async () => {
@@ -389,6 +480,130 @@ describe('RecommendationsService', () => {
       // Tier 3: active users error
       const activeChain = makeQueryChain();
       activeChain._setResolve(null, { message: 'DB error' });
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendations('user-123');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].matchTier).toBe('mock');
+    });
+
+    it('should sort interest matches by sharedInterests, isSeriousLearner, then studyStreakDays', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([{ tag: 'sports' }, { tag: 'music' }]);
+
+      const sharedChain = makeQueryChain();
+      sharedChain._setResolve([
+        { user_id: 'c-low', tag: 'sports' },
+        { user_id: 'c-high-serious', tag: 'sports' },
+        { user_id: 'c-high-serious', tag: 'music' },
+        { user_id: 'c-high-not-serious', tag: 'sports' },
+        { user_id: 'c-high-not-serious', tag: 'music' },
+      ]);
+
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        {
+          id: 'c-low', display_name: 'Low', avatar_url: null,
+          native_language: 'es', target_languages: ['en'],
+          is_serious_learner: true, study_streak_days: 100, correction_ratio: 0.9,
+        },
+        {
+          id: 'c-high-serious', display_name: 'HighSerious', avatar_url: null,
+          native_language: 'es', target_languages: ['en'],
+          is_serious_learner: true, study_streak_days: 10, correction_ratio: 0.9,
+        },
+        {
+          id: 'c-high-not-serious', display_name: 'HighNotSerious', avatar_url: null,
+          native_language: 'es', target_languages: ['en'],
+          is_serious_learner: false, study_streak_days: 50, correction_ratio: 0.9,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(sharedChain)
+        .mockReturnValueOnce(usersChain);
+
+      const result = await service.getRecommendations('user-123');
+      expect(result).toHaveLength(3);
+      expect(result[0].id).toBe('c-high-serious');
+      expect(result[1].id).toBe('c-high-not-serious');
+      expect(result[2].id).toBe('c-low');
+    });
+
+    it('should fall to active users when language exchange returns no matches', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123', native_language: 'en', target_languages: ['ja'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([]);
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve([
+        {
+          id: 'active-user', display_name: 'Active User', avatar_url: null,
+          native_language: 'fr', target_languages: ['en'],
+          is_serious_learner: true, study_streak_days: 40, correction_ratio: 0.85,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendations('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('active-user');
+    });
+
+    it('should skip language exchange when user has no native_language', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123', native_language: null, target_languages: ['es', 'fr'],
+      });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve([
+        {
+          id: 'active-p', display_name: 'Active P', avatar_url: null,
+          native_language: 'de', target_languages: ['en'],
+          is_serious_learner: false, study_streak_days: 12, correction_ratio: 0.75,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendations('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('active-p');
+    });
+
+    it('should degrade through all three error tiers before reaching mock', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve(null, { message: 'Interests table offline' });
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'Users table offline' });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve(null, { message: 'Users table offline' });
 
       mockFrom
         .mockReturnValueOnce(tagsChain)
@@ -524,6 +739,182 @@ describe('RecommendationsService', () => {
       const result = await service.getRecommendationsWithFallback('user-123');
       expect(result.length).toBeGreaterThan(0);
       expect(result[0].matchTier).toBe('mock');
+    });
+
+    it('should exclude the requesting user from mock data results', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve(null, { message: 'Interests DB down' });
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'Users DB down' });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve(null, { message: 'Users DB down' });
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      // Using 'fake-1' which exists in MOCK_USERS
+      const result = await service.getRecommendationsWithFallback('fake-1');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.every((r) => r.id !== 'fake-1')).toBe(true);
+    });
+
+    it('should limit mock data results to FALLBACK_LIMIT', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve(null, { message: 'Interests DB down' });
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'Users DB down' });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve(null, { message: 'Users DB down' });
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendationsWithFallback('unknown-user');
+      expect(result.length).toBeLessThanOrEqual(20);
+    });
+
+    it('should fall to active users when language exchange matches query fails', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['es'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve(null, { message: 'Match query error' });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve([
+        {
+          id: 'active-u',
+          display_name: 'Active U',
+          avatar_url: null,
+          native_language: 'de',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 30,
+          correction_ratio: 0.82,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].matchTier).toBe('active_users');
+      expect(result[0].id).toBe('active-u');
+    });
+
+    it('should skip language exchange tier when user profile fetch fails', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'User not found' });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve([
+        {
+          id: 'fallback-u',
+          display_name: 'Fallback U',
+          avatar_url: null,
+          native_language: 'pt',
+          target_languages: ['en'],
+          is_serious_learner: false,
+          study_streak_days: 8,
+          correction_ratio: 0.65,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].matchTier).toBe('active_users');
+    });
+
+    it('should correctly map all DTO fields from language exchange matches', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['es', 'fr'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'full-partner',
+          display_name: 'Full Partner',
+          avatar_url: 'https://img.example/avatar.png',
+          native_language: 'es',
+          target_languages: ['en', 'pt'],
+          is_serious_learner: true,
+          study_streak_days: 42,
+          correction_ratio: 0.92,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: 'full-partner',
+        displayName: 'Full Partner',
+        avatarUrl: 'https://img.example/avatar.png',
+        nativeLanguage: 'es',
+        targetLanguages: ['en', 'pt'],
+        sharedInterests: 0,
+        isSeriousLearner: true,
+        studyStreakDays: 42,
+        correctionRatio: 0.92,
+        matchTier: 'language_exchange',
+      });
+    });
+  });
+
+  describe('purgeRecommendationsCache (GDPR erasure)', () => {
+    it('should delete the user recommendation cache key from Redis', async () => {
+      await service.purgeRecommendationsCache('user-to-delete');
+
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'recommendations:daily:user-to-delete',
+      );
+    });
+
+    it('should handle Redis errors gracefully', async () => {
+      mockRedis.del.mockRejectedValue(new Error('Connection lost'));
+
+      // Should not throw
+      await expect(
+        service.purgeRecommendationsCache('user-to-delete'),
+      ).resolves.toBeUndefined();
     });
   });
 });

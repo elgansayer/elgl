@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ConfigService } from '@nestjs/config';
+import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrivacyService } from './privacy.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SafetyCacheInvalidationService } from '../safety/safety-cache-invalidation.service';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 
 // Mock the sanitise-economy helper to avoid loading jsdom/dompurify ESM
@@ -21,7 +23,7 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
       const scrubbed = { ...record };
       for (const key of ['receipt_token', 'transaction_id']) {
         if (typeof scrubbed[key] === 'string') {
-          const val = scrubbed[key] as string;
+          const val = scrubbed[key];
           scrubbed[key] =
             val.length < 8
               ? '[REDACTED-SHORT-TOKEN]'
@@ -32,9 +34,7 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
     },
   ),
   scrubCoinPurchasesForArchive: jest.fn(
-    (
-      records: unknown[] | null | undefined,
-    ): unknown[] | null | undefined => {
+    (records: unknown[] | null | undefined): unknown[] | null | undefined => {
       if (records == null || !Array.isArray(records)) return records;
       return records.map((record) => {
         if (record !== null && typeof record === 'object') {
@@ -42,7 +42,7 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
           const scrubbed = { ...r };
           for (const key of ['receipt_token', 'transaction_id']) {
             if (typeof scrubbed[key] === 'string') {
-              const val = scrubbed[key] as string;
+              const val = scrubbed[key];
               scrubbed[key] =
                 val.length < 8
                   ? '[REDACTED-SHORT-TOKEN]'
@@ -62,21 +62,11 @@ describe('PrivacyService', () => {
   const mockFrom = jest.fn();
   const mockSelect = jest.fn();
   const mockEq = jest.fn();
-  const mockSingle = jest.fn();
   const mockOrder = jest.fn();
   const mockInsert = jest.fn();
   const mockUpdate = jest.fn();
   const mockUpload = jest.fn();
   const mockGetPublicUrl = jest.fn();
-
-  // Helper function to create a fresh mock chain that returns resolved data.
-  const makeEqMock = (resolveData: unknown) =>
-    jest.fn().mockResolvedValue({ data: resolveData, error: null });
-
-  const makeOrderMock = (resolveData: unknown) =>
-    jest.fn().mockReturnValue({
-      eq: makeEqMock(resolveData),
-    });
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -169,6 +159,16 @@ describe('PrivacyService', () => {
           provide: ConfigService,
           useValue: { get: jest.fn() },
         },
+        {
+          provide: SafetyCacheInvalidationService,
+          useValue: {
+            invalidateUserCaches: jest.fn().mockResolvedValue(undefined),
+            invalidateTrustAndSafetyCaches: jest
+              .fn()
+              .mockResolvedValue(undefined),
+            invalidateUserPairCaches: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -187,7 +187,7 @@ describe('PrivacyService', () => {
       );
     });
 
-    it('should set scheduled_for_deletion_at 30 days in the future', async () => {
+    it('should set scheduled_for_deletion_at 30 days in the future and scrub location', async () => {
       const dto: DeleteAccountDto = { confirm_delete: true };
       mockEq.mockResolvedValue({ error: null });
 
@@ -198,6 +198,11 @@ describe('PrivacyService', () => {
 
       const updateArg = mockUpdate.mock.calls[0][0];
       expect(updateArg.is_deletion_pending).toBe(true);
+      expect(updateArg.privacy_hide_from_search).toBe(true);
+      expect(updateArg.location).toBeNull();
+      expect(updateArg.mock_location).toBeNull();
+      expect(updateArg.mock_country).toBeNull();
+      expect(updateArg.mock_city).toBeNull();
       expect(updateArg.scheduled_for_deletion_at).toBeDefined();
       expect(updateArg.deletion_requested_at).toBeDefined();
 
