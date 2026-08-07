@@ -1,4 +1,8 @@
-import { Logger } from '@nestjs/common';
+/** Minimal logger interface for retry operations. Compatible with both NestJS Logger and PinoLogger. */
+export interface RetryLogger {
+  warn(message: string): void;
+  debug(message: string): void;
+}
 
 export interface RetryOptions {
   /** Maximum number of retry attempts (default: 5) */
@@ -8,7 +12,7 @@ export interface RetryOptions {
   /** Maximum total delay across all retries in milliseconds (default: 60000) */
   maxTotalDelayMs?: number;
   /** Optional logger instance for debug output */
-  logger?: Logger;
+  logger?: RetryLogger;
 }
 
 /**

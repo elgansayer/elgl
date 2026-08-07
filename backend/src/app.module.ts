@@ -23,7 +23,6 @@ import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
-import { EscrowModule } from './escrow/escrow.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { InterestsModule } from './interests/interests.module';
@@ -167,7 +166,6 @@ import { EscrowModule } from './escrow/escrow.module';
     AssessmentsModule,
     AnalyticsModule,
     MetricsModule,
-    EscrowModule,
   ],
   controllers: [AppController],
   providers: [
