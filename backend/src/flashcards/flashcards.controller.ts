@@ -44,7 +44,10 @@ export class FlashcardsController {
     status: 201,
     description: 'Flashcard created or updated successfully.',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized -- missing or invalid JWT.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized -- missing or invalid JWT.',
+  })
   async createFlashcard(
     @CurrentUser() user: User | null,
     @Body() dto: CreateFlashcardDto,
@@ -68,10 +71,14 @@ export class FlashcardsController {
   })
   @ApiResponse({
     status: 200,
-    description: 'SRS review applied successfully. Returns updated flashcard with new scheduling.',
+    description:
+      'SRS review applied successfully. Returns updated flashcard with new scheduling.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'Flashcard not found or does not belong to user.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Flashcard not found or does not belong to user.',
+  })
   async updateSrs(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
@@ -92,7 +99,8 @@ export class FlashcardsController {
   @ApiQuery({
     name: 'level',
     required: false,
-    description: 'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
+    description:
+      'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
     example: '2',
   })
   @ApiResponse({ status: 200, description: 'Array of flashcards.' })
