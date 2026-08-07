@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { firstValueFrom } from 'rxjs';
+import Redis from 'ioredis';
 import Stripe from 'stripe';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -20,6 +21,10 @@ import {
 } from './dto/economy.dto';
 import { sanitiseEconomyData } from './sanitise-economy.helper';
 import { withExponentialBackoff } from '../common/http-retry.helper';
+import {
+  ECONOMY_CACHE_KEYS,
+  ECONOMY_CACHE_TTL,
+} from './economy-cache.config';
 
 export interface VirtualGiftRow {
   id: string;
@@ -239,6 +244,50 @@ export class EconomyService {
   private static readonly STICKER_PACKS_CACHE_PREFIX = 'economy:sticker_packs:';
   private static readonly STICKER_PACKS_CACHE_TTL = 300;
 
+  private getRedis(): Redis {
+    return this.supabaseService.getRedisClient();
+  }
+
+  // ---- Public cache-invalidation API for cross-service mutations ----
+
+  /**
+   * Invalidate the cached coin balance for a single user.
+   * Call this from any service that mutates `coins_balance` directly
+   * (monetisation, escrow, audio-rooms, language-challenges, shopping,
+   * apple-notification, admin).
+   */
+  async invalidateUserBalanceCache(userId: string): Promise<void> {
+    try {
+      const redis = this.getRedis();
+      await redis.del(ECONOMY_CACHE_KEYS.USER_BALANCE(userId));
+      this.logger.debug(`Invalidated balance cache for user ${userId}`);
+    } catch (err) {
+      this.logger.warn(
+        `Failed to invalidate balance cache for user ${userId}: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Invalidate ALL economy caches (gift catalog, coin packages, all user
+   * balances, all sticker pack storefronts). Use sparingly, e.g. after a
+   * bulk admin operation or seed data change.
+   */
+  async invalidateAllEconomyCaches(): Promise<void> {
+    try {
+      const redis = this.getRedis();
+      const keys = await redis.keys('economy:*');
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        this.logger.info(`Invalidated ${keys.length} economy cache key(s)`);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to invalidate all economy caches: ${(err as Error).message}`,
+      );
+    }
+  }
+
   async getCatalog(): Promise<VirtualGiftRow[]> {
     const redis = this.supabaseService.getRedisClient();
 
@@ -394,21 +443,64 @@ export class EconomyService {
   }
 
   async getBalance(userId: string): Promise<{ coins_balance: number }> {
+    // 1. Try Redis cache
+    try {
+      const redis = this.getRedis();
+      const cached = await redis.get(ECONOMY_CACHE_KEYS.USER_BALANCE(userId));
+      if (cached) {
+        const parsed: unknown = JSON.parse(cached);
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'coins_balance' in parsed
+        ) {
+          const balance = (parsed as { coins_balance: number }).coins_balance;
+          if (typeof balance === 'number') {
+            return { coins_balance: balance };
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to read balance cache for user ${userId}: ${(err as Error).message}`,
+      );
+    }
+
+    // 2. Fall back to database
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('users')
       .select('coins_balance')
       .eq('id', userId)
       .single();
+    let balance: number;
     if (response.error || !response.data) {
       const profile = await this.usersService.getProfile(userId);
-      return { coins_balance: profile.coins_balance ?? 50 };
+      balance = profile.coins_balance ?? 50;
+    } else {
+      const row = response.data;
+      if (!isCoinBalanceRow(row)) {
+        throw new BadRequestException('Invalid user coin balance');
+      }
+      balance = row.coins_balance;
     }
-    const row = response.data;
-    if (!isCoinBalanceRow(row)) {
-      throw new BadRequestException('Invalid user coin balance');
+
+    // 3. Populate cache
+    try {
+      const redis = this.getRedis();
+      await redis.set(
+        ECONOMY_CACHE_KEYS.USER_BALANCE(userId),
+        JSON.stringify({ coins_balance: balance }),
+        'EX',
+        ECONOMY_CACHE_TTL.USER_BALANCE,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Failed to cache balance for user ${userId}: ${(err as Error).message}`,
+      );
     }
-    return { coins_balance: row.coins_balance };
+
+    return { coins_balance: balance };
   }
 
   async claimDailyCheckIn(userId: string): Promise<{
@@ -1231,6 +1323,7 @@ export class EconomyService {
   private invalidateUserEconomyCaches(userId: string): void {
     const redis = this.supabaseService.getRedisClient();
     void redis.del(`${EconomyService.STICKER_PACKS_CACHE_PREFIX}${userId}`);
+    void redis.del(ECONOMY_CACHE_KEYS.USER_BALANCE(userId));
   }
 
   private getDefaultStickerPacks(): StickerPackRow[] {

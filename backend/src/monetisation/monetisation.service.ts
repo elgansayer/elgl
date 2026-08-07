@@ -11,6 +11,7 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as crypto from 'crypto';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
+import { EconomyCacheInvalidationService } from '../economy/economy-cache-invalidation.service';
 import {
   CreateDiagnosticLogDto,
   AppleReceiptValidationResponse,
@@ -48,6 +49,7 @@ export class MonetisationService {
     private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
+    private readonly economyCacheInvalidation: EconomyCacheInvalidationService,
     @Inject(forwardRef(() => AppleNotificationService))
     private readonly appleNotificationService: AppleNotificationService,
     @Inject(forwardRef(() => GooglePlayNotificationService))
@@ -655,6 +657,9 @@ export class MonetisationService {
       throw new Error(`Failed to deduct coins: ${updateError.message}`);
     }
 
+    // Invalidate economy balance cache
+    void this.economyCacheInvalidation.invalidateUserBalanceCache(userId);
+
     this.logger.info(
       `Deducted ${amount} coins from user ${userId}, remaining ${newBalance}`,
     );
@@ -699,6 +704,10 @@ export class MonetisationService {
     if (updateError) {
       throw new Error(`Failed to add coins: ${updateError.message}`);
     }
+
+    // Invalidate economy balance cache
+    void this.economyCacheInvalidation.invalidateUserBalanceCache(userId);
+
     this.logger.info(
       `Added ${amount} coins to user ${userId}, new balance ${newBalance}`,
     );

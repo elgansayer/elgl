@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MonetisationService } from './monetisation.service';
+import { EconomyCacheInvalidationService } from '../economy/economy-cache-invalidation.service';
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -94,6 +95,16 @@ describe('MonetisationService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: EconomyCacheInvalidationService,
+          useValue: {
+            invalidateUserBalanceCache: jest.fn(),
+            invalidateStickerPackCache: jest.fn(),
+            invalidateGiftCatalogCache: jest.fn(),
+            invalidateCoinPackagesCache: jest.fn(),
+            invalidateAllEconomyCaches: jest.fn(),
           },
         },
         {
