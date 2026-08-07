@@ -1859,5 +1859,10 @@
   "escrow.status.disputed": "Disputed",
   "escrow.status.cancelled": "Cancelled",
   "economy.offlinePurchaseUnavailable": "Purchases are not available while offline. Please check your internet connection.",
-  "economy.offlineGiftQueued": "Gift has been queued and will be sent when your connection is restored."
+  "economy.offlineGiftQueued": "Gift has been queued and will be sent when your connection is restored.",
+  "safety.tabListLabel": "Safety actions",
+  "safety.submitReportAria": "Submit report against {{name}}",
+  "safety.confirmBlockAria": "Confirm blocking {{name}}",
+  "safety.categoriesLoading": "Loading report categories",
+  "safety.blockManagement.unblockAria": "Unblock {{name}}"
 }
