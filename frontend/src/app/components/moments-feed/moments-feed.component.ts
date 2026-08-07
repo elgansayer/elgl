@@ -22,6 +22,7 @@ import {
 } from '../primitives/language-picker/language-picker.component';
 import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 import { DraftService } from '../../services/draft.service';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -39,6 +40,7 @@ import { DraftService } from '../../services/draft.service';
     LanguagePickerComponent,
     TextToSpeechComponent,
     LikedByModalComponent,
+    AppEmptyStateComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
