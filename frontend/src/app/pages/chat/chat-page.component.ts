@@ -39,7 +39,7 @@ interface AiChatMessage {
               [class.bg-blue-500/10]="selectedRoom()?.id === room.id"
             >
               <div class="flex items-center gap-3">
-                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="" />
+                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt=""  loading="lazy" />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate">{{ room.title }}</p>
                   <p class="text-sm text-text-muted truncate">{{ room.subtitle }}</p>
@@ -77,7 +77,7 @@ interface AiChatMessage {
                     [src]="msg.role === 'ai' ? '/assets/ai-partner.svg' : '/assets/default-avatar.svg'"
                     class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
                     alt=""
-                  />
+                   loading="lazy" />
                   <div
                     class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed"
                     [class.bg-blue-600/20]="msg.role === 'user'"
@@ -126,7 +126,7 @@ interface AiChatMessage {
             <!-- Header -->
             <div class="p-4 border-b border-surface-100 ">
               <div class="flex items-center gap-3">
-                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="" />
+                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt=""  loading="lazy" />
                 <div>
                   <h3 class="font-semibold">{{ room.title }}</h3>
                   <p class="text-sm text-text-muted">{{ room.subtitle }}</p>
@@ -152,7 +152,7 @@ interface AiChatMessage {
                     [src]="msg.sender?.avatar_url ?? '/assets/default-avatar.svg'"
                     class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
                     alt=""
-                  />
+                   loading="lazy" />
                   <div
                     class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed "
                     [class.bg-blue-600/20]="msg.sender_id === currentUserId()"
@@ -191,7 +191,7 @@ interface AiChatMessage {
 
                     <!-- media -->
                     @if (msg.media_url && !msg.is_view_once) {
-                      <img [src]="msg.media_url" class="mt-1 rounded-lg max-h-60 object-contain" alt="" />
+                      <img [src]="msg.media_url" class="mt-1 rounded-lg max-h-60 object-contain" alt=""  loading="lazy" />
                     }
                     @if (msg.is_view_once && !msg.viewed_at) {
                       <button
