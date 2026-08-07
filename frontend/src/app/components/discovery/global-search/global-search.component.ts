@@ -70,25 +70,4 @@ export class GlobalSearchComponent {
       proficiency_level: this.level() || undefined,
     });
   }
-
-  onNativeLanguageChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.nativeLanguages.set(target.value);
-    }
-  }
-
-  onTargetLanguageChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.targetLanguage.set(target.value);
-    }
-  }
-
-  onLevelChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement) {
-      this.level.set(target.value);
-    }
-  }
 }

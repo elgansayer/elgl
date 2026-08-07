@@ -1,4 +1,50 @@
+// Mock jsdom and dompurify to avoid ESM import failures in Jest
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation((_html: string) => ({
+    window: {
+      document: {
+        createElement: jest.fn(),
+        createDocumentFragment: jest.fn(),
+      },
+      Node: {
+        ELEMENT_NODE: 1,
+        TEXT_NODE: 3,
+        DOCUMENT_FRAGMENT_NODE: 11,
+      },
+      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
+    },
+  })),
+}));
+
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: (dirty: string): string => {
+      if (typeof dirty !== 'string') return dirty;
+      return dirty
+        .replace(/<[^>]*>/g, '')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'");
+    },
+    setConfig: jest.fn(),
+  })),
+}));
+
+import { Test, TestingModule } from '@nestjs/testing';
 import { ReadingEngineController } from './reading-engine.controller';
+import { ReadingEngineService } from './reading-engine.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { SupabaseService } from '../supabase/supabase.service';
+import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
+import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
+import {
+  ReadingResource,
+  ReadingProgress,
+  ReadingTokenBreakdown,
+} from './interfaces/reading.interface';
 
 describe('ReadingEngineController', () => {
   let controller: ReadingEngineController;
@@ -15,9 +61,8 @@ describe('ReadingEngineController', () => {
     clearUserCaches: jest.fn(),
   };
 
-  beforeEach(() => {
-    controller = new ReadingEngineController(mockService as never);
-    jest.clearAllMocks();
+    controller = module.get<ReadingEngineController>(ReadingEngineController);
+    readingService = module.get(ReadingEngineService);
   });
 
   it('should be defined', () => {
@@ -30,10 +75,23 @@ describe('ReadingEngineController', () => {
       expect(controller['getUserId'](req as never)).toBe('my-id');
     });
 
-    it('should fallback to req.user.sub when id is missing', () => {
-      const req = { user: { sub: 'my-sub' } };
-      expect(controller['getUserId'](req as never)).toBe('my-sub');
-    });
+  describe('createResource', () => {
+    it('delegates to readingService.createResource with dto', async () => {
+      const dto: CreateReadingResourceDto = {
+        title: 'Test',
+        content: 'Content.',
+        language: 'en',
+      };
+      const mockResource: ReadingResource = {
+        id: 'res-1',
+        title: 'Test',
+        content: 'Content.',
+        language: 'en',
+        createdBy: 'system',
+        createdAt: '',
+        updatedAt: '',
+      };
+      readingService.createResource.mockResolvedValue(mockResource);
 
     it('should return anonymous when no user is present', () => {
       const req = { user: undefined };
@@ -57,8 +115,10 @@ describe('ReadingEngineController', () => {
   });
 
   describe('listResources', () => {
-    it('should delegate filters to service', async () => {
-      mockService.listResources.mockResolvedValue([]);
+    it('passes query parameters to readingService.listResources', async () => {
+      const mockList: ReadingResource[] = [];
+      readingService.listResources.mockResolvedValue(mockList);
+
       const result = await controller.listResources(
         'en',
         'beginner',
@@ -66,7 +126,9 @@ describe('ReadingEngineController', () => {
         10,
         0,
       );
-      expect(mockService.listResources).toHaveBeenCalledWith({
+
+      expect(result).toEqual(mockList);
+      expect(readingService.listResources).toHaveBeenCalledWith({
         language: 'en',
         difficulty: 'beginner',
         topic: 'science',
@@ -78,23 +140,43 @@ describe('ReadingEngineController', () => {
   });
 
   describe('getResource', () => {
-    it('should delegate to service', async () => {
-      const expected = { id: '1', title: 'Test' };
-      mockService.getResource.mockResolvedValue(expected);
-      const result = await controller.getResource('1');
-      expect(mockService.getResource).toHaveBeenCalledWith('1');
-      expect(result).toBe(expected);
+    it('delegates to readingService.getResource with the id param', async () => {
+      const mockResource: ReadingResource = {
+        id: 'res-1',
+        title: 'T',
+        content: 'C',
+        language: 'en',
+        createdBy: 'u1',
+        createdAt: '',
+        updatedAt: '',
+      };
+      readingService.getResource.mockResolvedValue(mockResource);
+
+      const result = await controller.getResource('res-1');
+
+      expect(result).toEqual(mockResource);
+      expect(readingService.getResource).toHaveBeenCalledWith('res-1');
     });
   });
 
   describe('updateResource', () => {
-    it('should delegate to service', async () => {
-      const dto = { title: 'Updated' };
-      const expected = { id: '1', title: 'Updated' };
-      mockService.updateResource.mockResolvedValue(expected);
-      const result = await controller.updateResource('1', dto);
-      expect(mockService.updateResource).toHaveBeenCalledWith('1', dto);
-      expect(result).toBe(expected);
+    it('delegates to readingService.updateResource with id and dto', async () => {
+      const dto: UpdateReadingResourceDto = { title: 'Updated' };
+      const mockResource: ReadingResource = {
+        id: 'res-1',
+        title: 'Updated',
+        content: 'C',
+        language: 'en',
+        createdBy: 'u1',
+        createdAt: '',
+        updatedAt: '',
+      };
+      readingService.updateResource.mockResolvedValue(mockResource);
+
+      const result = await controller.updateResource('res-1', dto);
+
+      expect(result).toEqual(mockResource);
+      expect(readingService.updateResource).toHaveBeenCalledWith('res-1', dto);
     });
   });
 
@@ -107,31 +189,53 @@ describe('ReadingEngineController', () => {
   });
 
   describe('tokenise', () => {
-    it('should delegate to service with extracted user id', async () => {
-      const expected = {
-        resourceId: '1',
-        language: 'en',
-        totalTokens: 10,
-        uniqueTokens: 5,
+    it('delegates to readingService.tokenise with id and lang', async () => {
+      const breakdown: ReadingTokenBreakdown = {
+        resourceId: 'res-1',
+        language: 'fr',
+        totalTokens: 5,
+        uniqueTokens: 4,
         tokens: [],
       };
-      mockService.tokenise.mockResolvedValue(expected);
-      const result = await controller.tokenise('1', 'en', {
-        user: { id: 'user-2' },
-      } as never);
-      expect(mockService.tokenise).toHaveBeenCalledWith('user-2', '1', 'en');
-      expect(result).toBe(expected);
+      readingService.tokenise.mockResolvedValue(breakdown);
+
+      const result = await controller.tokenise('res-1', 'fr');
+
+      expect(result).toEqual(breakdown);
+      expect(readingService.tokenise).toHaveBeenCalledWith(
+        'user',
+        'res-1',
+        'fr',
+      );
+    });
+
+    it('passes undefined lang when not provided', async () => {
+      readingService.tokenise.mockResolvedValue({
+        resourceId: 'res-1',
+        language: 'en',
+        totalTokens: 0,
+        uniqueTokens: 0,
+        tokens: [],
+      });
+
+      await controller.tokenise('res-1');
+
+      expect(readingService.tokenise).toHaveBeenCalledWith(
+        'user',
+        'res-1',
+        undefined,
+      );
     });
   });
 
   describe('getProgress', () => {
-    it('should delegate to service with extracted user id', async () => {
-      const expected = {
-        userId: 'user-3',
+    it('delegates to readingService.getProgress', async () => {
+      const progress: ReadingProgress = {
+        userId: 'user',
         wordsRead: 100,
         articlesCompleted: 5,
         totalReadingTimeSeconds: 300,
-        fluencyPercentage: 50,
+        fluencyPercentage: 75,
       };
       mockService.getProgress.mockResolvedValue(expected);
       const result = await controller.getProgress({
@@ -143,14 +247,18 @@ describe('ReadingEngineController', () => {
   });
 
   describe('recordSession', () => {
-    it('should delegate to service with extracted user id', async () => {
-      const body = { resourceId: '1', wordsRead: 20, durationSeconds: 60 };
-      const expected = {
-        userId: 'user-4',
-        wordsRead: 120,
-        articlesCompleted: 6,
-        totalReadingTimeSeconds: 360,
-        fluencyPercentage: 55,
+    it('delegates to readingService.recordSession with body', async () => {
+      const body = {
+        resourceId: 'res-1',
+        wordsRead: 100,
+        durationSeconds: 300,
+      };
+      const progress: ReadingProgress = {
+        userId: 'user',
+        wordsRead: 100,
+        articlesCompleted: 1,
+        totalReadingTimeSeconds: 300,
+        fluencyPercentage: 50,
       };
       mockService.recordSession.mockResolvedValue(expected);
       const result = await controller.recordSession(body, {

@@ -1,15 +1,10 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
-import { NetworkStatusService } from '../../services/network-status.service';
-import { OfflineReadingService } from '../../services/offline-reading.service';
+import { ReadingEngineCrashReportingService } from '../../services/reading-engine-crash-reporting.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
-import { environment } from '../../../environments/environment';
 
 interface ReadingArticle {
   id: string;
@@ -25,40 +20,27 @@ interface ReadingArticle {
 @Component({
   selector: 'app-reading-engine',
   standalone: true,
-  imports: [TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
-  template: `<div class="reading-engine mx-auto max-w-4xl space-y-6 pb-20 pt-4">
-  <!-- Offline banner -->
-  @if (isOffline()) {
-    <div class="flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 text-sm font-semibold rounded-app shadow-md" role="alert" aria-live="assertive">
-      <span class="text-base leading-none" aria-hidden="true">&#x26A0;&#xFE0F;</span>
-      <span>{{ 'readingEngine.offlineBanner' | t }}</span>
-      @if (cachedArticlesCount() > 0) {
-        <span class="text-white/80">
-          {{ 'readingEngine.offlineCachedInfo' | t: { count: cachedArticlesCount() } }}
-        </span>
-      }
-    </div>
-  }
-
+  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  template: `<div class="reading-engine mx-auto max-w-4xl space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pb-16 sm:pb-20 pt-4">
   <!-- Header & Tab Navigation -->
-  <header class="app-card app-padded space-y-4">
+  <header class="app-card app-padded space-y-3 sm:space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="app-section-title">{{ 'readingEngine.title' | t }}</h1>
-        <p class="app-muted">{{ 'readingEngine.subtitle' | t }}</p>
+        <h1 class="app-section-title text-base sm:text-lg">{{ 'readingEngine.title' | t }}</h1>
+        <p class="app-muted text-xs sm:text-sm">{{ 'readingEngine.subtitle' | t }}</p>
       </div>
-      <span class="app-chip bg-primary/20 text-primary font-bold text-xs">
+      <span class="app-chip bg-primary/20 text-primary font-bold text-[10px] sm:text-xs px-2 sm:px-3 py-1">
         {{ 'readingEngine.vocabularyCount' | t: { count: vocabularyCount() } }}
       </span>
     </div>
 
-    <nav class="flex gap-2 border-b border-surface-100 pb-2" role="tablist" [attr.aria-label]="'readingEngine.tabNavAriaLabel' | t">
+    <nav class="flex gap-1 sm:gap-2 overflow-x-auto border-b border-surface-100 pb-2 -mx-1 px-1" role="tablist" [attr.aria-label]="'readingEngine.tabNavAriaLabel' | t">
       <button type="button" role="tab"
         [attr.aria-selected]="activeTab() === 'articles'"
         (click)="activeTab.set('articles')"
         [class.bg-primary]="activeTab() === 'articles'" [class.text-white]="activeTab() === 'articles'"
         [class.bg-surface-300]="activeTab() !== 'articles'" [class.text-text-secondary]="activeTab() !== 'articles'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-3 sm:px-4 py-2.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0">
         {{ 'readingEngine.tab.articles' | t }}
       </button>
       <button type="button" role="tab"
@@ -66,7 +48,7 @@ interface ReadingArticle {
         (click)="activeTab.set('vocabulary')"
         [class.bg-primary]="activeTab() === 'vocabulary'" [class.text-white]="activeTab() === 'vocabulary'"
         [class.bg-surface-300]="activeTab() !== 'vocabulary'" [class.text-text-secondary]="activeTab() !== 'vocabulary'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-3 sm:px-4 py-2.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0">
         {{ 'readingEngine.tab.vocabulary' | t }}
       </button>
       <button type="button" role="tab"
@@ -74,7 +56,7 @@ interface ReadingArticle {
         (click)="activeTab.set('history')"
         [class.bg-primary]="activeTab() === 'history'" [class.text-white]="activeTab() === 'history'"
         [class.bg-surface-300]="activeTab() !== 'history'" [class.text-text-secondary]="activeTab() !== 'history'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-3 sm:px-4 py-2.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0">
         {{ 'readingEngine.tab.history' | t }}
       </button>
     </nav>
@@ -109,19 +91,19 @@ interface ReadingArticle {
               {{ 'readingEngine.wordCount' | t: { count: article.wordCount } }}
             </span>
           </div>
-          <h2 class="text-lg font-black text-text-primary">{{ article.title | sanitiseHtml }}</h2>
+          <h2 class="text-lg font-black text-text-primary">{{ article.title }}</h2>
         </div>
 
         <div class="app-card app-padded space-y-3">
-          <p class="text-base leading-relaxed text-text-primary whitespace-pre-line">{{ article.content | sanitiseHtml }}</p>
+          <p class="text-sm sm:text-base leading-relaxed text-text-primary whitespace-pre-line">{{ article.content }}</p>
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <button type="button" class="app-button-secondary text-xs font-bold"
+          <button type="button" class="app-button-secondary text-[11px] sm:text-xs font-bold py-2.5 sm:py-2 px-3 sm:px-4 min-h-[44px] sm:min-h-0"
             [attr.aria-label]="'readingEngine.saveArticle' | t">
             {{ 'readingEngine.saveArticle' | t }}
           </button>
-          <button type="button" (click)="backToList()" class="app-button-secondary text-xs font-bold"
+          <button type="button" (click)="backToList()" class="app-button-secondary text-[11px] sm:text-xs font-bold py-2.5 sm:py-2 px-3 sm:px-4 min-h-[44px] sm:min-h-0"
             [attr.aria-label]="'readingEngine.nextArticle' | t">
             {{ 'readingEngine.nextArticle' | t }}
           </button>
@@ -158,38 +140,39 @@ interface ReadingArticle {
 
       <!-- Filter controls -->
       @if (!isLoading() && !hasError() && articlesResource.value()) {
-        <div class="flex flex-wrap items-center gap-3" role="group" [attr.aria-label]="'readingEngine.filterControlsAriaLabel' | t">
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] font-bold text-text-muted">{{ 'readingEngine.filterDifficulty' | t }}</span>
+        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3" role="group" [attr.aria-label]="'readingEngine.filterControlsAriaLabel' | t">
+          <!-- Filter row: each group scrolls horizontally on small screens -->
+          <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <span class="text-[10px] sm:text-[11px] font-bold text-text-muted flex-shrink-0">{{ 'readingEngine.filterDifficulty' | t }}</span>
             <button type="button" (click)="setFilter(null)"
               [class.bg-primary]="!filterDifficulty()" [class.text-white]="!filterDifficulty()"
               [class.bg-surface-300]="filterDifficulty()"
-              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+              class="rounded-app px-2 sm:px-2.5 py-1.5 sm:py-1 text-[10px] sm:text-[11px] font-bold transition-colors flex-shrink-0 min-h-[36px] sm:min-h-0">
               {{ 'readingEngine.filterAll' | t }}
             </button>
             @for (diff of ['beginner', 'intermediate', 'advanced']; track diff) {
               <button type="button" (click)="setFilter(diff)"
                 [class.bg-primary]="filterDifficulty() === diff" [class.text-white]="filterDifficulty() === diff"
                 [class.bg-surface-300]="filterDifficulty() !== diff"
-                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+                class="rounded-app px-2 sm:px-2.5 py-1.5 sm:py-1 text-[10px] sm:text-[11px] font-bold transition-colors flex-shrink-0 min-h-[36px] sm:min-h-0">
                 {{ 'readingEngine.difficulty.' + diff | t }}
               </button>
             }
           </div>
 
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] font-bold text-text-muted">{{ 'readingEngine.filterTopic' | t }}</span>
+          <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <span class="text-[10px] sm:text-[11px] font-bold text-text-muted flex-shrink-0">{{ 'readingEngine.filterTopic' | t }}</span>
             <button type="button" (click)="setTopicFilter(null)"
               [class.bg-primary]="!filterTopic()" [class.text-white]="!filterTopic()"
               [class.bg-surface-300]="filterTopic()"
-              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+              class="rounded-app px-2 sm:px-2.5 py-1.5 sm:py-1 text-[10px] sm:text-[11px] font-bold transition-colors flex-shrink-0 min-h-[36px] sm:min-h-0">
               {{ 'readingEngine.filterAll' | t }}
             </button>
             @for (topic of distinctTopics(); track topic) {
               <button type="button" (click)="setTopicFilter(topic)"
                 [class.bg-primary]="filterTopic() === topic" [class.text-white]="filterTopic() === topic"
                 [class.bg-surface-300]="filterTopic() !== topic"
-                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+                class="rounded-app px-2 sm:px-2.5 py-1.5 sm:py-1 text-[10px] sm:text-[11px] font-bold transition-colors flex-shrink-0 min-h-[36px] sm:min-h-0">
                 {{ 'readingEngine.topic.' + topic | t }}
               </button>
             }
@@ -197,7 +180,7 @@ interface ReadingArticle {
 
           @if (filterDifficulty() || filterTopic()) {
             <button type="button" (click)="clearFilters()"
-              class="text-[11px] font-bold text-primary hover:underline">
+              class="text-[10px] sm:text-[11px] font-bold text-primary hover:underline py-1.5 sm:py-0 flex-shrink-0 min-h-[36px] sm:min-h-0">
               {{ 'readingEngine.clearFilters' | t }}
             </button>
           }
@@ -223,7 +206,7 @@ interface ReadingArticle {
               (click)="selectArticle(article.id)"
               class="app-card app-padded w-full text-start space-y-2 hover:bg-surface-300 transition-colors cursor-pointer border border-transparent hover:border-surface-100"
               [attr.aria-label]="'readingEngine.openArticleAriaLabel' | t: { title: article.title }">
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span
                   [class.bg-emerald-500/20]="article.difficulty === 'beginner'"
                   [class.text-emerald-400]="article.difficulty === 'beginner'"
@@ -231,18 +214,18 @@ interface ReadingArticle {
                   [class.text-amber-400]="article.difficulty === 'intermediate'"
                   [class.bg-rose-500/20]="article.difficulty === 'advanced'"
                   [class.text-rose-400]="article.difficulty === 'advanced'"
-                  class="rounded-app px-2 py-0.5 text-[11px] font-bold">
+                  class="rounded-app px-2 py-0.5 text-[10px] sm:text-[11px] font-bold">
                   {{ 'readingEngine.difficulty.' + article.difficulty | t }}
                 </span>
-                <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+                <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-text-secondary">
                   {{ 'readingEngine.topic.' + article.topic | t }}
                 </span>
-                <span class="ms-auto text-[11px] text-text-muted">
+                <span class="ms-auto text-[10px] sm:text-[11px] text-text-muted">
                   {{ 'readingEngine.wordCountShort' | t: { count: article.wordCount } }}
                 </span>
               </div>
-              <h3 class="text-sm font-bold text-text-primary">{{ article.title | sanitiseHtml }}</h3>
-              <p class="text-xs text-text-secondary line-clamp-2">{{ article.content | sanitiseHtml }}</p>
+              <h3 class="text-xs sm:text-sm font-bold text-text-primary">{{ article.title }}</h3>
+              <p class="text-[11px] sm:text-xs text-text-secondary line-clamp-2">{{ article.content }}</p>
             </button>
           }
         </div>
@@ -255,9 +238,6 @@ interface ReadingArticle {
       <div class="app-card app-padded space-y-3">
         <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.vocabularyTabTitle' | t }}</h3>
         <p class="app-muted">{{ 'readingEngine.vocabularyTabDescription' | t }}</p>
-        @if (isOffline()) {
-          <p class="text-xs text-amber-400">{{ 'readingEngine.vocabularyOfflineNote' | t }}</p>
-        }
       </div>
 
       @if (vocabularyCount() === 0) {
@@ -281,46 +261,15 @@ interface ReadingArticle {
       <div class="app-card app-padded space-y-3">
         <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.historyTabTitle' | t }}</h3>
         <p class="app-muted">{{ 'readingEngine.historyTabDescription' | t }}</p>
-        @if (isOffline()) {
-          <p class="text-xs text-amber-400">{{ 'readingEngine.historyOfflineNote' | t }}</p>
-        }
       </div>
 
-      @if (readingHistory().length === 0) {
-        <app-empty-state
-          [icon]="'&#x1F4D6;'"
-          [title]="'readingEngine.noHistoryTitle' | t"
-          [description]="'readingEngine.noHistoryDescription' | t"
-          [actionLabel]="'readingEngine.browseArticlesAction' | t"
-          (actionClicked)="activeTab.set('articles')">
-        </app-empty-state>
-      } @else {
-        <div class="space-y-3" role="list" [attr.aria-label]="'readingEngine.historyListAriaLabel' | t">
-          @for (entry of readingHistory(); track entry.articleId + entry.readAt) {
-            <div class="app-card app-padded flex flex-wrap items-center justify-between gap-2" role="listitem">
-              <div class="space-y-1">
-                <p class="text-sm font-bold text-text-primary">{{ entry.title }}</p>
-                <div class="flex items-center gap-2">
-                  <span
-                    [class.bg-emerald-500/20]="entry.difficulty === 'beginner'"
-                    [class.text-emerald-400]="entry.difficulty === 'beginner'"
-                    [class.bg-amber-500/20]="entry.difficulty === 'intermediate'"
-                    [class.text-amber-400]="entry.difficulty === 'intermediate'"
-                    [class.bg-rose-500/20]="entry.difficulty === 'advanced'"
-                    [class.text-rose-400]="entry.difficulty === 'advanced'"
-                    class="rounded-app px-2 py-0.5 text-[10px] font-bold">
-                    {{ 'readingEngine.difficulty.' + entry.difficulty | t }}
-                  </span>
-                  <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[10px] font-bold text-text-secondary">
-                    {{ 'readingEngine.topic.' + entry.topic | t }}
-                  </span>
-                </div>
-              </div>
-              <span class="text-[10px] text-text-muted">{{ formatReadDate(entry.readAt) }}</span>
-            </div>
-          }
-        </div>
-      }
+      <app-empty-state
+        [icon]="'&#x1F4D6;'"
+        [title]="'readingEngine.noHistoryTitle' | t"
+        [description]="'readingEngine.noHistoryDescription' | t"
+        [actionLabel]="'readingEngine.browseArticlesAction' | t"
+        (actionClicked)="activeTab.set('articles')">
+      </app-empty-state>
     </section>
   }
 </div>
@@ -339,10 +288,7 @@ interface ReadingArticle {
 export class ReadingEngineComponent {
   private i18n = inject(I18nService);
   private vocabStore = inject(VocabularyStore);
-  private http = inject(HttpClient);
-  private networkStatus = inject(NetworkStatusService);
-  private offlineReading = inject(OfflineReadingService);
-  private readingApiUrl = `${environment.apiUrl}/reading`;
+  private crashReporting = inject(ReadingEngineCrashReportingService);
 
   readonly activeTab = signal<'articles' | 'vocabulary' | 'history'>('articles');
   readonly selectedArticleId = signal<string | null>(null);
@@ -350,10 +296,6 @@ export class ReadingEngineComponent {
   readonly filterTopic = signal<string | null>(null);
 
   readonly fetchError = signal<string | null>(null);
-  readonly readingHistory = signal<{ articleId: string; title: string; difficulty: string; topic: string; readAt: number }[]>([]);
-
-  readonly isOffline = computed(() => !this.networkStatus.isOnline());
-  readonly cachedArticlesCount = signal(0);
 
   readonly articlesResource = resource<ReadingArticle[], unknown>({
     loader: async () => this.fetchArticles(),
@@ -392,14 +334,6 @@ export class ReadingEngineComponent {
   selectArticle(id: string): void {
     this.selectedArticleId.set(id);
     this.fetchError.set(null);
-
-    const articles = this.articlesResource.value();
-    const article = articles?.find((a) => a.id === id);
-    if (article) {
-      this.offlineReading
-        .recordReadingHistory(article.id, article.title, article.difficulty, article.topic)
-        .catch(() => undefined);
-    }
   }
 
   backToList(): void {
@@ -424,60 +358,67 @@ export class ReadingEngineComponent {
     this.articlesResource.reload();
   }
 
-  formatReadDate(timestamp: number): string {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
-  async loadReadingHistory(): Promise<void> {
-    try {
-      const entries = await this.offlineReading.getReadingHistory();
-      this.readingHistory.set(entries);
-    } catch {
-      this.readingHistory.set([]);
-    }
-  }
-
   private async fetchArticles(): Promise<ReadingArticle[]> {
     try {
-      const params = new URLSearchParams();
-      params.set('limit', '100');
-      params.set('offset', '0');
-      const list = await firstValueFrom(
-        this.http.get<ReadingArticle[]>(
-          `${this.readingApiUrl}/resources?${params.toString()}`,
-        ),
-      );
-      const articles = list ?? [];
-
-      // Cache articles for offline access
-      this.offlineReading.cacheArticles(articles).catch(() => undefined);
-      this.cachedArticlesCount.set(articles.length);
-
-      return articles;
-    } catch {
-      // If offline, try to serve cached articles
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        const cached = await this.offlineReading.getCachedArticles();
-        if (cached.length > 0) {
-          this.cachedArticlesCount.set(cached.length);
-          return cached.map((c) => ({
-            id: c.id,
-            title: c.title,
-            content: c.content,
-            language: c.language,
-            difficulty: c.difficulty as ReadingArticle['difficulty'],
-            topic: c.topic,
-            audioUrl: c.audioUrl,
-            wordCount: c.wordCount,
-          }));
-        }
-      }
+      return [
+        {
+          id: '1',
+          title: 'A Day in the Life of a Language Learner',
+          content: 'Every morning I wake up and start my day with a cup of coffee. I open my favourite language learning app and review my flashcards for ten minutes. Then I listen to a podcast in my target language while getting ready. During my commute I read news articles and look up new words. In the evening I practice speaking with my language exchange partner.',
+          language: 'en-GB',
+          difficulty: 'beginner',
+          topic: 'daily-life',
+          audioUrl: undefined,
+          wordCount: 73,
+        },
+        {
+          id: '2',
+          title: 'The Benefits of Bilingualism',
+          content: 'Research has shown that speaking multiple languages can have profound effects on the brain. Bilingual individuals often demonstrate enhanced executive function, better attention control, and delayed onset of dementia in later life. The cognitive benefits extend beyond language processing to improved problem-solving skills and greater mental flexibility.',
+          language: 'en-GB',
+          difficulty: 'intermediate',
+          topic: 'science',
+          audioUrl: undefined,
+          wordCount: 54,
+        },
+        {
+          id: '3',
+          title: 'Exploring Cultural Nuances Through Language',
+          content: 'Language is inextricably woven into the fabric of culture. When we learn a new language, we are not merely acquiring vocabulary and grammar rules; we are gaining access to an entirely different worldview. Idiomatic expressions, honourifics, and even the way colours are categorised can reveal profound insights about how a society thinks and what it values.',
+          language: 'en-GB',
+          difficulty: 'advanced',
+          topic: 'culture',
+          audioUrl: undefined,
+          wordCount: 63,
+        },
+        {
+          id: '4',
+          title: 'How to Order Food Like a Local',
+          content: 'When travelling abroad, ordering food can be one of the most intimidating yet rewarding experiences. Learn the essential phrases for greeting the waiter, asking about ingredients, specifying dietary restrictions, and complimenting the chef. Understanding local dining customs will help you avoid cultural faux pas and make your meals more enjoyable.',
+          language: 'en-GB',
+          difficulty: 'beginner',
+          topic: 'travel',
+          audioUrl: undefined,
+          wordCount: 58,
+        },
+        {
+          id: '5',
+          title: 'The Future of Machine Translation',
+          content: 'Neural machine translation has made remarkable strides in recent years, with transformer-based architectures achieving near-human performance on many language pairs. However, significant challenges remain: handling low-resource languages, preserving nuance and tone, and maintaining contextual coherence across long passages. The future likely lies in human-AI collaboration.',
+          language: 'en-GB',
+          difficulty: 'advanced',
+          topic: 'technology',
+          audioUrl: undefined,
+          wordCount: 67,
+        },
+      ];
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.crashReporting.reportCrash(error, {
+        boundaryContext: 'ReadingEngineComponent',
+        operation: 'fetchArticles',
+        renderingError: true,
+      });
       this.fetchError.set(this.i18n.translate('readingEngine.fetchError'));
       return [];
     }

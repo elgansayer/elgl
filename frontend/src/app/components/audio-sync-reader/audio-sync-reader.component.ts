@@ -226,6 +226,7 @@ export class AudioSyncReaderComponent implements OnDestroy {
     });
   }
 
+  /** IMPERATIVE CLEANUP EXCEPTION: Audio element + SpeechSynthesis require imperative teardown. */
   ngOnDestroy(): void {
     this.stopPlayback();
   }

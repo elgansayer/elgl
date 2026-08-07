@@ -96,7 +96,7 @@ import {
 export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
   private readonly sanitisation = inject(HtmlSanitisationService);
-  private readonly errorHandler = inject(ErrorHandler);
+  private errorHandler = inject(ErrorHandler);
 
   wordToken = input.required<string>();
   contextSentence = input<string>('');
@@ -110,6 +110,8 @@ export class WordDefinitionModalComponent {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
+  readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
+
   readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
 
   readonly errorContext = computed<SrsErrorContext>(() => ({
@@ -122,23 +124,31 @@ export class WordDefinitionModalComponent {
     },
   }));
 
-  readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
-
   constructor() {
+    // Auto-fetch definition when word token changes, replacing ngOnInit
     effect(() => {
       const token = this.wordToken();
-      void this.fetchDefinition(token, this.targetLanguage());
+      const target = this.targetLanguage();
+      const status = this.vocabStore.getWordStatus(token);
+      if (status.flashcard) {
+        this.existingCard.set(status.flashcard);
+      }
+      this.fetchDefinition();
     });
   }
 
   handleRetry(): void {
-    void this.fetchDefinition(this.wordToken(), this.targetLanguage());
+    this.fetchDefinition().catch(() => undefined);
   }
 
-  async fetchDefinition(word: string, targetLang: string): Promise<void> {
+  async fetchDefinition(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const res = await this.vocabStore.translateWordOrSentence(word, targetLang);
+      const res = await this.vocabStore.translateWordOrSentence(
+        this.wordToken(),
+        this.targetLanguage(),
+      );
+      // Sanitise all user-visible translation result fields
       this.translationResult.set({
         ...res,
         original_text: this.sanitisation.sanitiseText(res.original_text),
@@ -150,12 +160,13 @@ export class WordDefinitionModalComponent {
       });
     } catch (e) {
       this.translationResult.set({
-        original_text: this.sanitisation.sanitiseText(word),
-        translated_text: `Translation of "${this.sanitisation.sanitiseText(word)}"`,
+        original_text: this.wordToken(),
+        translated_text: `Translation of "${this.wordToken()}"`,
         detected_language: 'auto',
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
-        transliteration: this.sanitisation.sanitiseText(word),
+        transliteration: this.wordToken(),
       });
+      this.handleError(e, 'fetchDefinition');
     } finally {
       this.isLoading.set(false);
     }
@@ -167,7 +178,7 @@ export class WordDefinitionModalComponent {
       const safeUrl = this.sanitisation.sanitiseUrl(url);
       if (safeUrl) {
         const audio = new Audio(safeUrl);
-        audio.play().catch(() => {});
+        audio.play().catch((e) => this.handleError(e, 'playAudio'));
       }
     }
   }
@@ -199,8 +210,9 @@ export class WordDefinitionModalComponent {
           this.statusChanged.emit(created);
         }
       }
-    } catch {
+    } catch (err) {
       showToast('Error updating SRS review schedule.');
+      this.handleError(err, 'setLevel');
     } finally {
       this.isSaving.set(false);
       this.closed.emit();
@@ -209,5 +221,14 @@ export class WordDefinitionModalComponent {
 
   close(): void {
     this.closed.emit();
+  }
+
+  private handleError(err: unknown, operation: string): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    this.errorBoundary()?.captureError(error, undefined, {
+      operation,
+      wordToken: this.wordToken(),
+      srsLevel: this.existingCard()?.srs_level,
+    });
   }
 }
