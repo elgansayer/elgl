@@ -1406,6 +1406,8 @@ export class I18nService {
     // Language Settings Page
     'languageSettings.title': 'Language Settings',
     'languageSettings.description': 'Choose the UI language independently of your study target.',
+    'languageSettings.interfaceLanguage': 'Interface Language',
+    'languageSettings.interfaceLanguageDescription': 'This changes the language used for buttons, menus, and labels throughout the app. It does not affect your study languages.',
     'languageSettings.selectLabel': 'Select interface language',
     'languageSettings.applyBtn': 'Apply',
     'languageSettings.currentLang': 'Current: {{name}}',
