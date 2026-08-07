@@ -127,11 +127,7 @@ export class VocabularyStore {
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedFlashcards();
         if (cached.length > 0) {
-<<<<<<< HEAD
-          const sanitised = this.sanitiseFlashcards(cached as Flashcard[]);
-=======
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
->>>>>>> origin/main
           this.allFlashcards.set(sanitised);
           const map = new Map<string, Flashcard>();
           sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
@@ -159,12 +155,8 @@ export class VocabularyStore {
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedDueReviews();
         if (cached.length > 0) {
-<<<<<<< HEAD
-          this.dueReviews.set(this.sanitiseFlashcards(cached as Flashcard[]));
-=======
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
           this.dueReviews.set(sanitised);
->>>>>>> origin/main
         }
       }
     }
@@ -289,17 +281,15 @@ export class VocabularyStore {
   /**
    * Sync any queued offline SRS reviews to the server.
    */
-  async syncOfflineReviews(): Promise<void> {
-    return this.srsOffline.syncQueuedReviews(async (queue) => {
-      for (const item of queue) {
-        await firstValueFrom(
-          this.http.patch<Flashcard>(
-            `${this.flashcardsUrl}/${item['flashcardId']}/srs`,
-            { quality: item['quality'] },
-            { headers: this.getHeaders() },
-          ),
-        );
-      }
+  async syncOfflineReviews(): Promise<{ synced: number; failed: number }> {
+    return this.srsOffline.syncQueuedReviews(async (item) => {
+      await firstValueFrom(
+        this.http.patch<Flashcard>(
+          `${this.flashcardsUrl}/${item.flashcardId}/srs`,
+          { quality: item.quality },
+          { headers: this.getHeaders() },
+        ),
+      );
     });
   }
 

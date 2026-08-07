@@ -11,15 +11,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
-<<<<<<< HEAD
-  imports: [TranslatePipe, DatePipe, AppCardComponent, AppPillComponent],
-=======
-<<<<<<< HEAD
-  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
-=======
-  imports: [TranslatePipe, AppCardComponent, AppPillComponent],
->>>>>>> origin/main
->>>>>>> origin/main
+  imports: [DatePipe, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
@@ -51,6 +43,10 @@ export class AdminPortalComponent {
   readonly loginHistoryLoadingId = signal<string | null>(null);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
+
+  loadUsers(): void {
+    this.usersResource.reload();
+  }
 
   onSearchInput(value: string): void {
     this.searchTerm.set(value);
