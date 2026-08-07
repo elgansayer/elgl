@@ -1,20 +1,12 @@
 import { Component, input, inject } from '@angular/core';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService } from '../../services/admin.service';
 
 @Component({
   selector: 'app-admin-user-actions',
-  imports: [TranslatePipe],
   template: `
-    <div class="flex flex-wrap gap-2">
-      <button
-        (click)="handleBan()"
-        class="rounded-lg bg-red-600 text-white px-3 py-1.5 text-xs font-bold hover:bg-red-700 transition-colors whitespace-nowrap"
-      >{{ 'admin.banBtn' | t }}</button>
-      <button
-        (click)="handleWarn()"
-        class="rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-bold hover:bg-amber-700 transition-colors whitespace-nowrap"
-      >{{ 'admin.warnBtn' | t }}</button>
+    <div class="flex gap-2">
+      <button (click)="handleBan()" class="btn btn-danger">Ban</button>
+      <button (click)="handleWarn()" class="btn btn-warning">Warn</button>
     </div>
   `,
 })
@@ -27,8 +19,9 @@ export class AdminUserActionsComponent {
     if (!this.userId()) return;
     try {
       await this.adminService.banUser(this.userId());
-    } catch (error) {
-      console.error('Ban failed', error);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Ban failed';
+      console.warn('Ban failed', message);
     }
   }
 
@@ -36,8 +29,9 @@ export class AdminUserActionsComponent {
     if (!this.userId()) return;
     try {
       await this.adminService.warnUser(this.userId());
-    } catch (error) {
-      console.error('Warn failed', error);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Warn failed';
+      console.warn('Warn failed', message);
     }
   }
 }
