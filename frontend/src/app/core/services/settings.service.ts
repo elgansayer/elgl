@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { UserSettings, SocialPrivacySettings, ProfileDiscoverySettings } from '../models/settings.model';
+import { UserSettings, SocialPrivacySettings, ProfileDiscoverySettings, AccountSettings } from '../models/settings.model';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
@@ -13,6 +13,7 @@ export class SettingsService {
   readonly isLoading = this.loading.asReadonly();
   readonly privacySettings = computed(() => this.state()?.social ?? null);
   readonly profileSettings = computed(() => this.state()?.profile ?? null);
+  readonly accountSettings = computed(() => this.state()?.account ?? null);
   readonly theme = computed(() => this.state()?.preferences.appearance.theme ?? 'System');
 
   // Actions
@@ -65,6 +66,23 @@ export class SettingsService {
       await this.mockPatchProfileSettings(_newSettings);
     } catch {
       this.error.set('Failed to update profile settings. Reverting.');
+      this.state.set(currentState);
+    }
+  }
+
+  async updateAccountSettings(_newSettings: Partial<AccountSettings>) {
+    const currentState = this.state();
+    if (!currentState) return;
+
+    this.state.update((state) => ({
+      ...state!,
+      account: { ...state!.account, ..._newSettings },
+    }));
+
+    try {
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
+    } catch {
+      this.error.set('Failed to update account settings. Reverting.');
       this.state.set(currentState);
     }
   }

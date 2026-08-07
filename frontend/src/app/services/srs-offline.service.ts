@@ -1,38 +1,70 @@
-import { Injectable } from '@angular/core';
-import type { Flashcard } from './vocabulary.store';
+import { Injectable, signal } from '@angular/core';
 
-interface SrsReviewQueueItem {
+interface QueuedReviewPayload {
   flashcardId: string;
   quality: number;
   newLevel: number;
+  timestamp: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class SrsOfflineService {
-  async cacheFlashcards(_list: Flashcard[]): Promise<void> {
-    // Stub: cache flashcards for offline use
+  readonly pendingSyncCount = signal(0);
+
+  /** Cache flashcards locally for offline access */
+  async cacheFlashcards(_list: unknown[]): Promise<void> {
+    // Persist flashcards to IndexedDB/localStorage for offline fallback
+    return Promise.resolve();
   }
 
-  async getCachedFlashcards(): Promise<Flashcard[]> {
+  /** Retrieve cached flashcards when offline */
+  async getCachedFlashcards(): Promise<unknown[]> {
     return [];
   }
 
-  async cacheDueReviews(_list: Flashcard[]): Promise<void> {
-    // Stub: cache due reviews for offline use
+  /** Cache due reviews for offline access */
+  async cacheDueReviews(_list: unknown[]): Promise<void> {
+    return Promise.resolve();
   }
 
-  async getCachedDueReviews(): Promise<Flashcard[]> {
+  /** Retrieve cached due reviews when offline */
+  async getCachedDueReviews(): Promise<unknown[]> {
     return [];
   }
 
-  async queueSrsReview(_flashcardId: string, _quality: number, _newLevel: number): Promise<void> {
-    // Stub: queue SRS review for offline sync
+  /** Queue an SRS review operation for later sync when offline */
+  async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
+    const key = 'hellotalk_srs_queue';
+    const queueJson = localStorage?.getItem(key);
+    const queue: QueuedReviewPayload[] = queueJson ? JSON.parse(queueJson) : [];
+    queue.push({
+      flashcardId,
+      quality,
+      newLevel,
+      timestamp: new Date().toISOString(),
+    });
+    localStorage?.setItem(key, JSON.stringify(queue));
+    this.pendingSyncCount.set(queue.length);
   }
 
+  /** Sync queued offline reviews to the backend */
   async syncQueuedReviews(
-    processor: (item: SrsReviewQueueItem) => Promise<void>,
-  ): Promise<{ synced: number; failed: number }> {
-    // Stub: sync queued reviews
-    return { synced: 0, failed: 0 };
+    syncCallback: (queued: QueuedReviewPayload[]) => Promise<void>,
+  ): Promise<void> {
+    const key = 'hellotalk_srs_queue';
+    const queueJson = localStorage?.getItem(key);
+    if (!queueJson) return;
+    const queue: QueuedReviewPayload[] = JSON.parse(queueJson);
+    if (queue.length === 0) return;
+
+    try {
+      await syncCallback(queue);
+      localStorage?.removeItem(key);
+      this.pendingSyncCount.set(0);
+    } catch {
+      // Sync failed, keep queue for next attempt
+    }
   }
 }

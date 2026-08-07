@@ -23,8 +23,11 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CacheControlInterceptor,
-  CACHE_PRIVATE_MEDIUM,
-  CACHE_PRIVATE_NO_STORE,
+  CACHE_EDGE_MEDIUM,
+  CACHE_EDGE_VERY_SHORT,
+  CACHE_NO_STORE,
+  CACHE_TAG_FLASHCARDS,
+  CACHE_TAG_DUE_REVIEWS,
 } from '../common/cache.interceptor';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
@@ -41,7 +44,7 @@ export class FlashcardsController {
   @Post()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 30, windowSeconds: 60 })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Create or update a flashcard',
     description:
@@ -60,13 +63,16 @@ export class FlashcardsController {
     @Body() dto: CreateFlashcardDto,
   ): Promise<Flashcard | null> {
     if (!user) return null;
-    return await this.flashcardsService.createOrUpdateFlashcard(user.id, dto);
+    const result = await this.flashcardsService.createOrUpdateFlashcard(user.id, dto);
+    // Invalidate Cloudflare edge cache for this user's flashcard lists and due reviews
+    void this.flashcardsService.purgeSrsCache(user.id);
+    return result;
   }
 
   @Patch(':id/srs')
   @Throttle({ default: { limit: 120, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 120, windowSeconds: 60 })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Submit an SRS review for a flashcard',
     description:
@@ -93,13 +99,18 @@ export class FlashcardsController {
     @Body() dto: UpdateSrsDto,
   ): Promise<Flashcard | null> {
     if (!user) return null;
-    return await this.flashcardsService.updateSrsLevel(user.id, id, dto);
+    const result = await this.flashcardsService.updateSrsLevel(user.id, id, dto);
+    // Invalidate Cloudflare edge cache for this user's flashcard lists and due reviews
+    void this.flashcardsService.purgeSrsCache(user.id);
+    return result;
   }
 
   @Get()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 30, windowSeconds: 60 })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [CACHE_TAG_FLASHCARDS]),
+  )
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
@@ -126,7 +137,9 @@ export class FlashcardsController {
   @Get('due')
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 60, windowSeconds: 60 })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_VERY_SHORT, [CACHE_TAG_DUE_REVIEWS]),
+  )
   @ApiOperation({
     summary: 'Get flashcards due for review',
     description:

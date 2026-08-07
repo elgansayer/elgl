@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, resource, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
@@ -35,21 +35,21 @@ import { showToast, showErrorToast } from '../../services/toast.service';
         margin: 16px;
       }
       button {
-        margin-left: 8px;
+        margin-inline-start: 8px;
       }
     `,
   ],
 })
-export class AdminActionsComponent implements OnInit {
+export class AdminActionsComponent {
   private readonly adminService = inject(AdminService);
   private readonly i18n = inject(I18nService);
 
-  readonly users = signal<AdminUserSummary[]>([]);
+  private readonly usersResource = resource({
+    params: () => ({ page: 1, pageSize: 10, search: '' }),
+    loader: ({ params }) => this.adminService.listUsers(params.search, params.page, params.pageSize),
+  });
 
-  async ngOnInit() {
-    const result = await this.adminService.listUsers('', 1, 10);
-    this.users.set(result.users);
-  }
+  readonly users = computed(() => this.usersResource.value()?.users ?? []);
 
   async ban(userId: string) {
     try {

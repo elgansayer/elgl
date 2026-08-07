@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { JoyrideDirective } from 'ngx-joyride';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
@@ -16,46 +16,44 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
-  imports: [TranslatePipe, RouterLink],
+  imports: [JoyrideDirective, TranslatePipe],
   template: `
-    <div class="p-4 max-w-2xl mx-auto">
-      <h1 class="text-xl sm:text-2xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
+    <div class="max-w-2xl mx-auto p-4">
+      <span joyrideStep="economyTour@cartLink" [text]="'tour.cartLinkDesc' | t" stepPosition="bottom">
+        <h1 class="text-xl sm:text-2xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
+      </span>
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
       @if (items().length === 0) {
-        <div class="py-12 flex flex-col items-center justify-center text-center">
-          <span class="text-5xl mb-4">🛒</span>
-          <p class="text-sm opacity-60 mb-4">{{ 'cart.empty' | t }}</p>
-          <a routerLink="/shop" class="text-sm font-medium text-indigo-400 underline">{{ 'cart.goShopping' | t }}</a>
-        </div>
+        <p class="text-sm opacity-60">{{ 'cart.empty' | t }}</p>
       } @else {
-        <div class="space-y-3">
+        <ul class="space-y-3">
           @for (item of items(); track item.itemId) {
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl bg-surface p-3 sm:p-4 gap-2">
-              <div class="flex items-center justify-between sm:justify-start sm:gap-2 min-w-0">
-                <span class="font-medium text-sm sm:text-base truncate">{{ item.name }}</span>
-                <span class="ms-2 text-xs opacity-50 flex-shrink-0">x{{ item.quantity }}</span>
+            <li class="flex items-center justify-between rounded-xl bg-surface p-3">
+              <div>
+                <span class="font-medium">{{ item.name }}</span>
+                <span class="ms-2 text-xs opacity-50">x{{ item.quantity }}</span>
               </div>
-              <div class="flex items-center justify-between sm:justify-end gap-2">
-                <span class="text-sm sm:text-base font-semibold whitespace-nowrap">{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold">{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span>
                 <button
-                  class="rounded-full bg-rose-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 transition-colors flex-shrink-0"
+                  class="rounded-full bg-rose-500 px-3 py-1 text-xs font-medium text-white hover:bg-rose-600"
                   (click)="removeItem(item.itemId)"
-                  [attr.aria-label]="'cart.removeItem' | t"
+                  aria-label="{{ 'cart.removeItem' | t }}"
                 >
                   {{ 'cart.remove' | t }}
                 </button>
               </div>
-            </div>
+            </li>
           }
-        </div>
-        <div class="mt-4 flex items-center justify-between rounded-xl bg-surface p-3 sm:p-4">
-          <span class="font-semibold text-sm sm:text-base">{{ 'cart.total' | t }}</span>
-          <span class="font-bold text-indigo-400 text-sm sm:text-base">{{ totalCoins() }} {{ 'common.coins' | t }}</span>
+        </ul>
+        <div class="mt-4 flex items-center justify-between rounded-xl bg-surface p-3">
+          <span class="font-semibold">{{ 'cart.total' | t }}</span>
+          <span class="font-bold text-indigo-400">{{ totalCoins() }} {{ 'common.coins' | t }}</span>
         </div>
         <button
-          class="mt-4 w-full rounded-full bg-indigo-600 py-2.5 sm:py-3 font-semibold text-sm sm:text-base hover:bg-indigo-500 transition-colors"
+          class="mt-4 w-full rounded-full bg-indigo-600 py-2 font-semibold hover:bg-indigo-500"
           (click)="checkout()">
           {{ 'cart.checkout' | t }}
         </button>

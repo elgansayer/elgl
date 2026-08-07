@@ -4,6 +4,8 @@ import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
 import { MetricsInterceptor } from './metrics.interceptor';
 import { SrsMetricsAggregator } from './srs-metrics.aggregator';
+import { TrustSafetyMetricsAggregator } from './ts-metrics.aggregator';
+import { EscrowMetricsAggregator } from './escrow-metrics.aggregator';
 
 @Global()
 @Module({
@@ -11,6 +13,8 @@ import { SrsMetricsAggregator } from './srs-metrics.aggregator';
   providers: [
     MetricsService,
     SrsMetricsAggregator,
+    TrustSafetyMetricsAggregator,
+    EscrowMetricsAggregator,
     {
       provide: APP_INTERCEPTOR,
       useClass: MetricsInterceptor,
