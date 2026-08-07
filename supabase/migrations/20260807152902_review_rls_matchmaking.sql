@@ -20,7 +20,7 @@ CREATE POLICY user_interests_insert_own ON public.user_interests
 CREATE POLICY user_interests_delete_own ON public.user_interests
     FOR DELETE TO authenticated USING (auth.uid() = user_id);
 
--- No UPDATE policy – rows in this table only need INSERT/DELETE.
+-- No UPDATE policy -- rows in this table only need INSERT/DELETE.
 -- The (user_id, tag) UNIQUE constraint ensures idempotent inserts.
 
 -- ── 2. interest_vocabulary: RLS policies ──────────────────────────────────
@@ -41,4 +41,4 @@ CREATE POLICY interest_vocabulary_select_authenticated ON public.interest_vocabu
 -- No changes needed for the function itself.
 
 COMMENT ON FUNCTION public.search_nearby_users IS
-    'SECURITY DEFINER – bypasses RLS to perform efficient PostGIS proximity filtering.  The discovery service applies additional access-control (blocks, privacy) server-side.';
+    'SECURITY DEFINER -- bypasses RLS to perform efficient PostGIS proximity filtering.  The discovery service applies additional access-control (blocks, privacy) server-side.';
