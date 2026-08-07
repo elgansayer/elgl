@@ -3,8 +3,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { ReadingEngineErrorHandlerService } from '../../services/reading-engine-error-handler.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { ReadingEngineErrorBoundaryComponent } from './reading-engine-error-boundary.component';
 
 interface ReadingArticle {
   id: string;
@@ -20,8 +22,16 @@ interface ReadingArticle {
 @Component({
   selector: 'app-reading-engine',
   standalone: true,
-  imports: [TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
-  template: `<div class="reading-engine mx-auto max-w-4xl space-y-6 pb-20 pt-4">
+  imports: [
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+    ReadingEngineErrorBoundaryComponent,
+  ],
+  template: `
+<app-reading-engine-error-boundary (retry)="retryLoad()">
+  <div class="reading-engine mx-auto max-w-4xl space-y-6 pb-20 pt-4">
   <!-- Header & Tab Navigation -->
   <header class="app-card app-padded space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -272,6 +282,7 @@ interface ReadingArticle {
     </section>
   }
 </div>
+</app-reading-engine-error-boundary>
 `,
   styles: [
     `
@@ -287,6 +298,7 @@ interface ReadingArticle {
 export class ReadingEngineComponent {
   private i18n = inject(I18nService);
   private vocabStore = inject(VocabularyStore);
+  private readingEngineErrorHandler = inject(ReadingEngineErrorHandlerService);
 
   readonly activeTab = signal<'articles' | 'vocabulary' | 'history'>('articles');
   readonly selectedArticleId = signal<string | null>(null);
@@ -411,7 +423,12 @@ export class ReadingEngineComponent {
           wordCount: 67,
         },
       ];
-    } catch {
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.readingEngineErrorHandler.reportReadingEngineCrash(error, {
+        action: 'fetchArticles',
+        activeTab: this.activeTab(),
+      });
       this.fetchError.set(this.i18n.translate('readingEngine.fetchError'));
       return [];
     }

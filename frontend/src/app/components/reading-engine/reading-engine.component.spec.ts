@@ -5,7 +5,7 @@ import { signal } from '@angular/core';
 import { ReadingEngineComponent } from './reading-engine.component';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
-import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
+import { ReadingEngineErrorHandlerService } from '../../services/reading-engine-error-handler.service';
 
 class I18nStub {
   translate(key: string): string {
@@ -28,12 +28,17 @@ describe('ReadingEngineComponent', () => {
       }),
     };
 
+    const mockReadingEngineErrorHandler: Partial<ReadingEngineErrorHandlerService> = {
+      reportReadingEngineCrash: () => {},
+      recentCrashes: signal([]),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ReadingEngineComponent, HttpClientTestingModule],
       providers: [
         { provide: VocabularyStore, useValue: mockVocabStore },
         { provide: I18nService, useClass: I18nStub },
-        HtmlSanitisationService,
+        { provide: ReadingEngineErrorHandlerService, useValue: mockReadingEngineErrorHandler },
       ],
     })
       .overrideComponent(ReadingEngineComponent, {

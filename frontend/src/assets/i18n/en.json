@@ -1884,4 +1884,10 @@
   "discoveryTour.stepAgeDistance": "Adjust the age range and distance radius to narrow down your partner search. VIP users can fine-tune distance control.",
   "discoveryTour.stepGlobalSearch": "Use the global search bar to search partners by name, native language, target language, or proficiency level.",
   "discoveryTour.stepPartnerCards": "Browse partner cards showing display names, VIP badges, personality types, fluency indicators, and shared interests. Tap a card to start a chat."
+  ,
+  "readingEngine.errorBoundary.title": "Reading Engine Interrupted",
+  "readingEngine.errorBoundary.description": "Something went wrong while rendering the reading experience. Your progress has been preserved.",
+  "readingEngine.errorBoundary.retryBtn": "Try Again",
+  "readingEngine.errorBoundary.reportBtn": "Report Issue",
+  "readingEngine.errorBoundary.reportedMessage": "Issue reported. Thank you for helping us improve!"
 }

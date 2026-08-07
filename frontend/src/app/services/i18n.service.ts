@@ -891,6 +891,11 @@ export class I18nService {
     'readingEngine.topic.culture': 'Culture',
     'readingEngine.topic.travel': 'Travel',
     'readingEngine.topic.technology': 'Technology',
+    'readingEngine.errorBoundary.title': 'Reading Engine Interrupted',
+    'readingEngine.errorBoundary.description': 'Something went wrong while rendering the reading experience. Your progress has been preserved.',
+    'readingEngine.errorBoundary.retryBtn': 'Try Again',
+    'readingEngine.errorBoundary.reportBtn': 'Report Issue',
+    'readingEngine.errorBoundary.reportedMessage': 'Issue reported. Thank you for helping us improve!',
 
     'vocabDisplay.title': 'Vocabulary from your interests',
     'vocabDisplay.refresh': 'Refresh',
