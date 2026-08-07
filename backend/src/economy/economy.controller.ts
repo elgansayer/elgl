@@ -6,6 +6,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -34,6 +35,7 @@ export class EconomyController {
    * Cloudflare edge nodes for 24 hours with stale-while-revalidate.
    */
   @Get('catalog')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   async getCatalog() {
     return this.economyService.getCatalog();
@@ -45,6 +47,7 @@ export class EconomyController {
    * with app updates, so aggressive caching is safe.
    */
   @Get('packages')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   getPackages() {
     return this.economyService.getPackages();
@@ -54,6 +57,7 @@ export class EconomyController {
    * User coin balance: strictly private, never cached.
    */
   @Get('balance')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async getBalance(@CurrentUser() user: User | null) {
     if (!user) return { coins_balance: 0 };
@@ -64,6 +68,7 @@ export class EconomyController {
    * Daily check-in: mutation endpoint, never cached.
    */
   @Post('daily-check-in')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async claimDailyCheckIn(@CurrentUser() user: User | null) {
     if (!user) return null;
@@ -74,6 +79,7 @@ export class EconomyController {
    * Stripe checkout session creation: mutation, never cached.
    */
   @Post('create-checkout-session')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async createCheckoutSession(
     @CurrentUser() user: User | null,
@@ -90,6 +96,7 @@ export class EconomyController {
    * Coin purchase: mutation, never cached.
    */
   @Post('purchase-coins')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async purchaseCoins(
     @CurrentUser() user: User | null,
@@ -103,6 +110,7 @@ export class EconomyController {
    * Gift sending: mutation with Centrifugo broadcast, never cached.
    */
   @Post('send-gift')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async sendGift(@CurrentUser() user: User | null, @Body() dto: SendGiftDto) {
     if (!user) return null;
@@ -115,6 +123,7 @@ export class EconomyController {
    * fresh enough that recently unlocked packs appear promptly.
    */
   @Get('sticker-packs')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   async getStickerPacks(@CurrentUser() user: User | null) {
     if (!user) return null;
@@ -125,6 +134,7 @@ export class EconomyController {
    * Sticker pack unlock: mutation, never cached.
    */
   @Post('unlock-sticker-pack')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async unlockStickerPack(
     @CurrentUser() user: User | null,
