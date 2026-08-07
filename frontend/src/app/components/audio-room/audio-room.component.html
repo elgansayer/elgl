@@ -287,12 +287,7 @@
           </section>
         </div>
 
-<<<<<<< HEAD
-        <div class="space-y-4">
-=======
         <div class="flex flex-col gap-4">
-          <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
->>>>>>> origin/main
           <app-room-chat></app-room-chat>
           @if (showNotesPanel()) {
             <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
@@ -414,7 +409,7 @@
             [class.bg-purple-500/20]="store.selectedLanguageGroup() === group.language_pair"
             [class.border-surface-100]="store.selectedLanguageGroup() !== group.language_pair"
             [class.bg-surface]="store.selectedLanguageGroup() !== group.language_pair"
-           [attr.aria-label]=\"group.language_pair + ' - ' + group.count + ' room(s)'\">
+           [attr.aria-label]="group.language_pair + ' - ' + group.count + ' room(s)'">
             <span class="text-text-primary">{{ group.language_pair }}</span>
             <span
               class="ms-2 rounded-full px-2 py-0.5 text-[10px]"
