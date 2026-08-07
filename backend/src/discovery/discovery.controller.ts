@@ -12,12 +12,14 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { UsersService } from '../users/users.service';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
-import { DiscoveryService } from './discovery.service';
+import { DiscoveryService, DiscoveryResult } from './discovery.service';
+import { DiscoveryDegradationService } from './discovery-degradation.service';
 import {
   DiscoveryCacheInterceptor,
   DISCOVERY_CACHE_PUBLIC_LONG,
   DISCOVERY_CACHE_PUBLIC_SHORT,
   DISCOVERY_CACHE_PRIVATE_SHORT,
+  DISCOVERY_CACHE_PRIVATE_NO_STORE,
 } from './cache.interceptor';
 import {
   DiscoveryRateLimiterGuard,
@@ -30,6 +32,7 @@ export class DiscoveryController {
   constructor(
     private readonly discoveryService: DiscoveryService,
     private readonly usersService: UsersService,
+    private readonly degradationService: DiscoveryDegradationService,
   ) {}
 
   /**
@@ -44,12 +47,15 @@ export class DiscoveryController {
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
-    // If the authenticated user has serious_learner_mode enabled,
-    // automatically set the serious_learner_mode flag in the query
     if (profile?.is_serious_learner === true) {
       query.serious_learner_mode = true;
     }
-    return this.discoveryService.searchPartners(user.id, profile, query);
+    const result = await this.discoveryService.searchPartnersWithDegradation(
+      user.id,
+      profile,
+      query,
+    );
+    return result.data;
   }
 
   /**
@@ -131,5 +137,51 @@ export class DiscoveryController {
       country,
       city,
     });
+  }
+
+  /**
+   * Degradation status endpoint: returns current circuit breaker states
+   * and recent degradation events for monitoring.
+   */
+  @Get('degradation-status')
+  @UseInterceptors(
+    new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_NO_STORE),
+  )
+  async getDegradationStatus(): Promise<{
+    breakers: Record<string, unknown>;
+    events: unknown[];
+  }> {
+    const breakers = this.degradationService.getAllBreakerStates();
+    const events = await this.degradationService.getRecentDegradationEvents();
+    return {
+      breakers: Object.fromEntries(breakers),
+      events,
+    };
+  }
+
+  /**
+   * Degradation-aware partner search: returns both data and degradation marker.
+   */
+  @Get('partners-with-degradation')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  async findPartnersWithDegradation(
+    @CurrentUser() user: User | null,
+    @Query() query: SearchQueryDto,
+  ): Promise<DiscoveryResult> {
+    if (!user) {
+      return {
+        data: [],
+        marker: { degraded: false, fallbackSource: 'none' },
+      };
+    }
+    const profile = await this.usersService.getProfile(user.id);
+    if (profile?.is_serious_learner === true) {
+      query.serious_learner_mode = true;
+    }
+    return this.discoveryService.searchPartnersWithDegradation(
+      user.id,
+      profile,
+      query,
+    );
   }
 }

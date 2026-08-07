@@ -10,6 +10,10 @@ import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 import { MOCK_USERS } from '../mock-data';
 import { withRetry, isRateLimitError } from '../common/retry';
+import {
+  DiscoveryDegradationService,
+  DegradationMarker,
+} from './discovery-degradation.service';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -31,6 +35,11 @@ type DiscoveryUser = UserProfile & {
   coins_balance?: number;
 };
 
+export interface DiscoveryResult<T = UserProfile[]> {
+  data: T;
+  marker: DegradationMarker;
+}
+
 @Injectable()
 export class DiscoveryService {
   private readonly logger = new Logger(DiscoveryService.name);
@@ -40,6 +49,7 @@ export class DiscoveryService {
     private readonly cloudflareCacheService: CloudflareCacheService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
+    private readonly degradationService: DiscoveryDegradationService,
   ) {}
 
   /**
@@ -479,6 +489,70 @@ export class DiscoveryService {
       query.voice_room_active === true,
     );
     return enrich(filtered);
+  }
+  /**
+   * Degradation-aware variant of searchPartners.
+   * Returns a DiscoveryResult with a degradation marker indicating if
+   * fallback data was served and why.
+   */
+  async searchPartnersWithDegradation(
+    currentUserId: string,
+    currentUserProfile: UserProfile | null,
+    query: SearchQueryDto,
+  ): Promise<DiscoveryResult> {
+    const marker: DegradationMarker = {
+      degraded: false,
+      fallbackSource: 'none',
+    };
+
+    try {
+      const result = await this.degradationService.executeWithBreaker(
+        'discovery_partners',
+        () => this.searchPartners(currentUserId, currentUserProfile, query),
+        () => {
+          marker.fallbackSource = 'basic_query';
+          return [] as UserProfile[];
+        },
+        marker,
+      );
+
+      if (marker.degraded && result.length === 0) {
+        const mockData = this.getMockDiscoveryData(query, []);
+        await this.degradationService.recordDegradationEvent(
+          '/discovery/partners',
+          marker.reason ?? 'Search failed, using mock data',
+          'mock',
+          currentUserId,
+        );
+        return {
+          data: mockData,
+          marker: {
+            degraded: true,
+            reason: `${marker.reason ?? 'unknown'}; fell through to mock data`,
+            fallbackSource: 'mock',
+          },
+        };
+      }
+
+      return { data: result, marker };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.degradationService.recordDegradationEvent(
+        '/discovery/partners',
+        message,
+        'mock',
+        currentUserId,
+      );
+      const mockData = this.getMockDiscoveryData(query, []);
+      return {
+        data: mockData,
+        marker: {
+          degraded: true,
+          reason: message,
+          fallbackSource: 'mock',
+        },
+      };
+    }
   }
 
   async getAudioIntros(
