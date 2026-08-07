@@ -403,6 +403,7 @@ The full interactive OpenAPI 3.0 documentation is served at:
 GET /api/docs
 ```
 
+<<<<<<< HEAD
 This includes all schema models, request/response examples, authentication requirements, and per-endpoint rate limiting documentation.
 ## 14. Postman Collection & Client Generation
 
@@ -422,3 +423,6 @@ npx openapi-generator-cli generate -i http://localhost:3000/api/docs-json -g typ
 - The generated client includes all `ApiProperty` descriptions as JSDoc comments for IDE autocompletion.
 - Rate limit headers (`X-RateLimit-Remaining`, `Retry-After`) are automatically parsed when using the Axios interceptor.
 
+=======
+This includes all schema models, request/response examples, authentication requirements, and per-endpoint rate limiting documentation.
+>>>>>>> origin/main

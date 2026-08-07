@@ -25,7 +25,13 @@
   }
 
   <!-- Header -->
-  <div class="flex items-center gap-3 px-4 py-4">
+  <div
+    class="flex items-center gap-3 px-4 py-4"
+    joyrideStep="escrowStepTitle"
+    [title]="'escrow.onboarding.stepTitleTitle' | t"
+    [text]="'escrow.onboarding.stepTitleText' | t"
+    stepPosition="bottom"
+  >
     <button
       (click)="goBack()"
       class="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
@@ -36,10 +42,24 @@
       </svg>
     </button>
     <h1 class="text-xl font-bold">{{ 'escrow.title' | t }}</h1>
+    <button
+      (click)="startOnboardingTour()"
+      class="ms-auto flex items-center justify-center w-10 h-10 rounded-xl bg-purple-600 hover:bg-purple-700 transition-colors text-sm"
+      aria-label="{{ 'escrow.onboarding.helpBtn' | t }}"
+      [title]="'escrow.onboarding.helpBtn' | t"
+    >
+      ?
+    </button>
   </div>
 
   <!-- Status filter pills -->
-  <div class="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
+  <div
+    class="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide"
+    joyrideStep="escrowStepFilters"
+    [title]="'escrow.onboarding.stepFiltersTitle' | t"
+    [text]="'escrow.onboarding.stepFiltersText' | t"
+    stepPosition="bottom"
+  >
     @for (filter of statusFilters; track filter.value) {
       <button
         (click)="setStatusFilter(filter.value)"
@@ -68,7 +88,13 @@
       <p class="text-slate-400 text-lg">{{ 'escrow.emptyState' | t }}</p>
     </div>
   } @else {
-    <div class="px-4 space-y-3 pb-8">
+    <div
+      class="px-4 space-y-3 pb-8"
+      joyrideStep="escrowStepTransactions"
+      [title]="'escrow.onboarding.stepTransactionsTitle' | t"
+      [text]="'escrow.onboarding.stepTransactionsText' | t"
+      stepPosition="top"
+    >
       @for (escrow of escrows(); track escrow.id) {
         <div
           class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50 hover:border-slate-600/50 transition-colors"

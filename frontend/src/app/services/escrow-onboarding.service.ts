@@ -1,4 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { JoyrideService } from 'ngx-joyride';
+import { I18nService } from './i18n.service';
 
 export interface EscrowOnboardingStep {
   key: string;
@@ -12,6 +14,8 @@ export interface EscrowOnboardingStep {
  */
 @Injectable({ providedIn: 'root' })
 export class EscrowOnboardingService {
+  private readonly joyrideService = inject(JoyrideService);
+  private readonly i18n = inject(I18nService);
   private readonly storageKey = 'hellotalk_escrow_onboarding_done';
 
   /** Whether the escrow onboarding tour has been completed this session. */
@@ -43,6 +47,35 @@ export class EscrowOnboardingService {
 
   get stepNames(): string[] {
     return this.steps.map((s) => s.key);
+  }
+
+  startTour(): void {
+    if (this.joyrideService.isTourInProgress()) {
+      return;
+    }
+
+    this.isTourInProgress.set(true);
+
+    this.joyrideService.startTour({
+      steps: this.stepNames,
+      stepDefaultPosition: 'bottom',
+      themeColor: '#6366f1',
+      showCounter: true,
+      showPrevButton: true,
+      customTexts: {
+        prev: this.i18n.translate('tour.prev'),
+        next: this.i18n.translate('tour.next'),
+        done: this.i18n.translate('tour.done'),
+        close: this.i18n.translate('tour.close'),
+      },
+    }).subscribe({
+      complete: () => {
+        this.markComplete();
+      },
+      error: () => {
+        this.isTourInProgress.set(false);
+      },
+    });
   }
 
   markComplete(): void {

@@ -1,13 +1,14 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { JoyrideDirective } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EscrowService } from '../../services/escrow.service';
+import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
 import { NetworkStatusService } from '../../services/network-status.service';
-import { EscrowRow } from '../../services/escrow-offline.service';
 
 @Component({
   selector: 'app-escrow-payments',
-  imports: [TranslatePipe],
+  imports: [JoyrideDirective, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
   host: {
     '[class]': "'block min-h-screen'",
@@ -15,6 +16,7 @@ import { EscrowRow } from '../../services/escrow-offline.service';
 })
 export class EscrowPaymentsComponent {
   private readonly escrowService = inject(EscrowService);
+  private readonly escrowOnboarding = inject(EscrowOnboardingService);
   private readonly network = inject(NetworkStatusService);
   private readonly router = inject(Router);
 
@@ -22,6 +24,7 @@ export class EscrowPaymentsComponent {
   readonly loading = this.escrowService.loading;
   readonly escrows = this.escrowService.escrows;
   readonly pendingOperationCount = this.escrowService.pendingOperationCount;
+  readonly onboardingTourInProgress = this.escrowOnboarding.isTourInProgress;
 
   readonly selectedStatus = signal<string | undefined>(undefined);
   readonly actionInProgress = signal(false);
@@ -91,6 +94,10 @@ export class EscrowPaymentsComponent {
     } finally {
       this.actionInProgress.set(false);
     }
+  }
+
+  startOnboardingTour(): void {
+    this.escrowOnboarding.startTour();
   }
 
   statusBadgeClass(status: string): string {
