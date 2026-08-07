@@ -26,8 +26,8 @@ export class NotificationsInboxComponent {
   readonly unreadCount = signal<number>(0);
 
   readonly notificationsResource = resource({
-    request: () => this.selectedTab(),
-    loader: ({ request: tab }) => this.loadNotifications(tab),
+    params: () => ({ tab: this.selectedTab() }),
+    loader: ({ params }) => this.loadNotifications(params.tab),
   });
 
   readonly notifications = computed(

@@ -1,8 +1,9 @@
-import { Component, computed, output, signal, inject, resource } from '@angular/core';
+import { Component, computed, input, output, signal, inject, resource } from '@angular/core';
 import { QuizService } from '../../services/quiz.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { showToast } from '../../services/toast.service';
+import type { QuizResultPayload } from '../../services/onboarding.service';
 
 @Component({
   selector: 'app-diagnostic-quiz',
@@ -151,7 +152,8 @@ export class DiagnosticQuizComponent {
   private quizService = inject(QuizService);
   private i18n = inject(I18nService);
 
-  quizCompleted = output<{ score: number; suggestedLevel: string; maxScore: number }>();
+  targetLanguage = input<string>('en');
+  quizCompleted = output<QuizResultPayload>();
 
   currentIndex = signal<number>(0);
   answers = signal<Record<string, number>>({});
@@ -255,6 +257,11 @@ export class DiagnosticQuizComponent {
       this.isSubmitting.set(false);
     }
 
-    this.quizCompleted.emit({ score: totalScore, suggestedLevel, maxScore });
+    this.quizCompleted.emit({
+    score: totalScore,
+    suggestedCefr: suggestedLevel,
+    percentage: Math.round(percentage * 100),
+    skillBreakdown: {},
+  });
   }
 }

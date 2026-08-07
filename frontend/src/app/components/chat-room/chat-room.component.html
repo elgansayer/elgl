@@ -445,7 +445,8 @@
         role="combobox"
         aria-autocomplete="list"
         aria-controls="mention-listbox"
-        [attr.aria-expanded]="mentionSuggestions().length  [attr.aria-label]="'chat-message-input'"> 0"
+        [attr.aria-expanded]="mentionSuggestions().length > 0"
+        [attr.aria-label]="'chat-message-input'"
         [attr.aria-activedescendant]="
           mentionSuggestions().length > 0 ? 'mention-option-' + mentionActiveIndex() : null
         "
@@ -471,6 +472,6 @@
 
 <app-group-participant-drawer
   [isOpen]="showParticipantDrawer()"
-  [participants]="drawerParticipants()"
+  [participants]="groupParticipants()"
   (closed)="showParticipantDrawer.set(false)"
 ></app-group-participant-drawer>
