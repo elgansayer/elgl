@@ -5,9 +5,6 @@
   "allowed_origins": ["*"],
   "engine": "redis",
   "redis_address": "redis://cache:6379",
-  "client_connection_rate_limit": 5,
-  "client_queue_max_size": 1048576,
-  "client_channel_position_check_dangerous": true,
   "namespaces": [
     {
       "name": "chat",

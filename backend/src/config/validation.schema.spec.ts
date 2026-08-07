@@ -14,8 +14,6 @@ describe('validationSchema', () => {
     expect(value.CENTRIFUGO_URL).toBe('http://localhost:8000');
     expect(value.CENTRIFUGO_API_KEY).toBe('test-centrifugo-api-key');
     expect(value.CENTRIFUGO_SECRET).toBe('test-centrifugo-secret');
-    expect(value.CENTRIFUGO_CONNECTION_RATE_LIMIT).toBe(5);
-    expect(value.CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC).toBe(60);
     expect(value.LIVEKIT_URL).toBe('http://localhost:7880');
     expect(value.LIVEKIT_API_KEY).toBe('test-livekit-api-key');
     expect(value.LIVEKIT_SECRET).toBe('test-livekit-secret');
@@ -65,8 +63,6 @@ describe('validationSchema', () => {
       CENTRIFUGO_URL: 'http://centrifugo.example.com',
       CENTRIFUGO_API_KEY: 'cent-api-key',
       CENTRIFUGO_SECRET: 'cent-secret',
-      CENTRIFUGO_CONNECTION_RATE_LIMIT: '10',
-      CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC: '120',
       LIVEKIT_URL: 'http://livekit.example.com',
       LIVEKIT_API_KEY: 'livekit-api-key',
       LIVEKIT_SECRET: 'livekit-secret',
