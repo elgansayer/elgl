@@ -26,6 +26,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
+import { EconomyExceptionFilter } from './economy-exception.filter';
+import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('EconomyController', () => {
@@ -50,11 +52,21 @@ describe('EconomyController', () => {
             unlockStickerPack: jest.fn(),
           },
         },
+        {
+          provide: EconomyExceptionFilter,
+          useValue: { catch: jest.fn() },
+        },
+        {
+          provide: 'PinoLogger:EconomyExceptionFilter',
+          useValue: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(EconomyRateLimiterGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
@@ -235,51 +247,71 @@ describe('EconomyController', () => {
   });
 
   describe('rate limiting decorators', () => {
-    it('should apply Throttle decorators to economy endpoints', () => {
-      const controllerPrototype = Object.getPrototypeOf(controller);
-      const LIMIT = 'THROTTLER:LIMIT';
-      const TTL = 'THROTTLER:TTL';
+    const proto = EconomyController.prototype;
+    const THROTTLER_LIMIT = 'THROTTLER:LIMIT';
+    const THROTTLER_TTL = 'THROTTLER:TTL';
 
-      const catalogLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.getCatalog,
-      );
-      expect(catalogLimit).toBe(30);
-      const catalogTtl = Reflect.getMetadata(
-        TTL + 'default',
-        controllerPrototype.getCatalog,
-      );
-      expect(catalogTtl).toBe(60000);
+    it('should apply Throttle decorator to getCatalog', () => {
+      expect(
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.getCatalog),
+      ).toBe(30);
+      expect(
+        Reflect.getMetadata(THROTTLER_TTL + 'default', proto.getCatalog),
+      ).toBe(60000);
+    });
 
-      const balanceLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.getBalance,
-      );
-      expect(balanceLimit).toBe(30);
+    it('should apply Throttle decorator to getBalance', () => {
+      expect(
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.getBalance),
+      ).toBe(30);
+    });
 
-      const dailyCheckInLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.claimDailyCheckIn,
-      );
-      expect(dailyCheckInLimit).toBe(3);
+    it('should apply Throttle decorator to claimDailyCheckIn', () => {
+      expect(
+        Reflect.getMetadata(
+          THROTTLER_LIMIT + 'default',
+          proto.claimDailyCheckIn,
+        ),
+      ).toBe(3);
+    });
 
-      const purchaseCoinsLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.purchaseCoins,
-      );
-      expect(purchaseCoinsLimit).toBe(5);
+    it('should apply Throttle decorator to purchaseCoins', () => {
+      expect(
+        Reflect.getMetadata(
+          THROTTLER_LIMIT + 'default',
+          proto.purchaseCoins,
+        ),
+      ).toBe(5);
+    });
 
-      const sendGiftLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.sendGift,
-      );
-      expect(sendGiftLimit).toBe(10);
+    it('should apply Throttle decorator to sendGift', () => {
+      expect(
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.sendGift),
+      ).toBe(10);
+    });
 
-      const unlockStickerLimit = Reflect.getMetadata(
-        LIMIT + 'default',
-        controllerPrototype.unlockStickerPack,
+    it('should apply EconomyRateLimit decorator to getBalance', () => {
+      const metadata = Reflect.getMetadata(
+        'economy-rate-limit',
+        proto.getBalance,
       );
-      expect(unlockStickerLimit).toBe(5);
+      expect(metadata).toEqual({ maxRequests: 20, windowSeconds: 60 });
+    });
+
+    it('should apply EconomyRateLimit decorator to createCheckoutSession', () => {
+      const metadata = Reflect.getMetadata(
+        'economy-rate-limit',
+        proto.createCheckoutSession,
+      );
+      expect(metadata).toEqual({ maxRequests: 5, windowSeconds: 60 });
+    });
+
+    it('should apply EconomyRateLimit decorator to sendGift', () => {
+      const metadata = Reflect.getMetadata(
+        'economy-rate-limit',
+        proto.sendGift,
+      );
+      expect(metadata).toEqual({ maxRequests: 10, windowSeconds: 60 });
     });
   });
 });
