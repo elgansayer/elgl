@@ -164,6 +164,15 @@ export class AudioRoomsStore {
     target_user_id?: string;
     caption?: CaptionRecord;
     message?: RoomChatMessage;
+    animation_url?: string;
+    sender_name?: string;
+    receiver_name?: string;
+    coin_value?: number;
+    icon?: string;
+    gift_name?: string;
+    animation_type?: string;
+    tip?: unknown;
+    gift_id?: string;
   } {
     return typeof data === 'object' && data !== null;
   }
@@ -379,12 +388,52 @@ export class AudioRoomsStore {
           this.unpublishLocalCamera();
           showToast(this.i18n.translate('audioRoom.coHostRemovedToast'));
         }
+      } else if (p.type === 'force_mute' && p.target_user_id) {
+        this.stageParticipants.update((list) =>
+          list.map((sp) => (sp.user_id === p.target_user_id ? { ...sp, isMuted: true } : sp)),
+        );
+
+        // If target user is me, mute my local microphone
+        if (p.target_user_id === this.authService.currentUser()?.id) {
+          if (this.livekitRoom) {
+            void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          }
+          showToast(this.i18n.translate('audioRoom.micForceMutedToast'));
+        }
+      } else if (p.type === 'force_unmute' && p.target_user_id) {
+        this.stageParticipants.update((list) =>
+          list.map((sp) => (sp.user_id === p.target_user_id ? { ...sp, isMuted: false } : sp)),
+        );
+
+        // If target user is me, unmute my local microphone
+        if (p.target_user_id === this.authService.currentUser()?.id) {
+          if (this.livekitRoom) {
+            void this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
+          }
+          showToast(this.i18n.translate('audioRoom.micForceUnmutedToast'));
+        }
+      } else if (p.type === 'speaker_kicked' && p.target_user_id) {
+        // Remove kicked user from both currentRoom speakers and stageParticipants
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          return { ...r, speakers: r.speakers.filter((id) => id !== p.target_user_id) };
+        });
+        this.stageParticipants.update((list) =>
+          list.filter((sp) => sp.user_id !== p.target_user_id),
+        );
+
+        // If target user is me, drop publish permission, mute, and notify
+        if (p.target_user_id === this.authService.currentUser()?.id) {
+          this.isSpeaker.set(false);
+          if (this.livekitRoom) {
+            void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          }
+          showToast(this.i18n.translate('audioRoom.speakerKickedToast'));
+        }
       } else if (p.type === 'subtitle' && p.caption) {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
-      } else if (p.type === 'host_tip') {
-        const d = data as Record<string, unknown>;
-        const tip = d['tip'];
-        if (!tip || !this.isHostTipPayload(tip)) return;
+      } else if (p.type === 'host_tip' && p.tip && this.isHostTipPayload(p.tip)) {
+        const tip = p.tip;
         this.economyStore.triggerPublicGiftAnimation({
           giftId: `tip_${tip.tip_id ?? 'unknown'}`,
           giftName: `${tip.amount_coins} Coins`,
@@ -395,21 +444,27 @@ export class AudioRoomsStore {
           receiverName: 'Host',
           coinValue: tip.amount_coins ?? 0,
         });
-      } else if (p.type === 'virtual_gift') {
-        const d = data as Record<string, unknown>;
-        if (!d['icon'] || !d['gift_name']) return;
+      } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
         this.economyStore.triggerPublicGiftAnimation({
-          giftId: typeof d['gift_id'] === 'string' ? d['gift_id'] : 'unknown',
-          giftName: typeof d['gift_name'] === 'string' ? d['gift_name'] : 'Gift',
-          giftIcon: typeof d['icon'] === 'string' ? d['icon'] : '🎁',
-          animationType: typeof d['animation_type'] === 'string' ? d['animation_type'] : 'float',
-          animationUrl: typeof d['animation_url'] === 'string' ? d['animation_url'] : undefined,
-          senderName: typeof d['sender_name'] === 'string' ? d['sender_name'] : 'Someone',
-          receiverName: typeof d['receiver_name'] === 'string' ? d['receiver_name'] : 'Host',
-          coinValue: typeof d['coin_value'] === 'number' ? d['coin_value'] : 0,
+          giftId: typeof p.gift_id === 'string' ? p.gift_id : 'unknown',
+          giftName: typeof p.gift_name === 'string' ? p.gift_name : 'Gift',
+          giftIcon: typeof p.icon === 'string' ? p.icon : '🎁',
+          animationType: typeof p.animation_type === 'string' ? p.animation_type : 'float',
+          animationUrl: typeof p.animation_url === 'string' ? p.animation_url : undefined,
+          senderName: typeof p.sender_name === 'string' ? p.sender_name : 'Someone',
+          receiverName: typeof p.receiver_name === 'string' ? p.receiver_name : 'Host',
+          coinValue: typeof p.coin_value === 'number' ? p.coin_value : 0,
         });
       } else if (p.type === 'chat_message' && p.message) {
         this.roomMessages.update((list) => [...list.slice(-99), p.message!]);
+      } else if (p.type === 'hand_dismissed' && p.target_user_id) {
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          return {
+            ...r,
+            raised_hands: r.raised_hands.filter((id: string) => id !== p.target_user_id),
+          };
+        });
       } else if (p.type === 'room_ended') {
         showToast(this.i18n.translate('audioRoom.roomEndedToast'));
         this.leaveRoom();
@@ -524,11 +579,34 @@ export class AudioRoomsStore {
     }
   }
 
+  async dismissRaisedHand(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    this.currentRoom.update((r) => {
+      if (!r) return r;
+      return { ...r, raised_hands: r.raised_hands.filter((id: string) => id !== targetUserId) };
+    });
+    try {
+      await firstValueFrom(
+        this.http.post<void>(
+          `${this.baseUrl}/dismiss-raised-hand`,
+          { room_id: room.id, target_user_id: targetUserId },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      this.currentRoom.update((r) => {
+        if (!r) return r;
+        return { ...r, raised_hands: [...r.raised_hands, targetUserId] };
+      });
+    }
+  }
+
   async muteSpeaker(targetUserId: string): Promise<void> {
     const room = this.currentRoom();
     if (!room) return;
     try {
-      const updated = await firstValueFrom(
+      await firstValueFrom(
         this.http.post<AudioRoomRecord>(
           `${this.baseUrl}/mute-speaker`,
           {
@@ -538,9 +616,46 @@ export class AudioRoomsStore {
           { headers: this.getHeaders() },
         ),
       );
-      this.currentRoom.set(updated);
     } catch (e) {
       console.error('Mute speaker error:', e);
+    }
+  }
+
+  async unmuteSpeaker(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    try {
+      await firstValueFrom(
+        this.http.post<AudioRoomRecord>(
+          `${this.baseUrl}/unmute-speaker`,
+          {
+            room_id: room.id,
+            target_user_id: targetUserId,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      console.error('Unmute speaker error:', e);
+    }
+  }
+
+  async kickSpeaker(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    try {
+      await firstValueFrom(
+        this.http.post<AudioRoomRecord>(
+          `${this.baseUrl}/kick-speaker`,
+          {
+            room_id: room.id,
+            target_user_id: targetUserId,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      console.error('Kick speaker error:', e);
     }
   }
 
@@ -647,9 +762,7 @@ export class AudioRoomsStore {
     } catch (e: unknown) {
       console.error('Tip host error:', e);
       const message = e instanceof Error ? e.message : String(e);
-      showToast(
-        message || this.i18n.translate('audioRoom.tipError'),
-      );
+      showToast(message || this.i18n.translate('audioRoom.tipError'));
       return false;
     }
   }
