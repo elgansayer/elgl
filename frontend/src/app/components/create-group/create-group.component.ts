@@ -20,7 +20,7 @@ export class CreateGroupComponent {
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
 
-  readonly MAX_MEMBERS = 49;
+  readonly MAX_MEMBERS = 50;
 
   groupName = '';
   searchQuery = '';
