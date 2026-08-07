@@ -5,6 +5,14 @@ import { JSDOM } from 'jsdom';
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
+// Strict sanitisation: strip ALL HTML tags and attributes, only allow plain text.
+purify.setConfig({
+  ALLOWED_TAGS: [],
+  ALLOWED_ATTR: [],
+  ALLOW_DATA_ATTR: false,
+  ALLOWED_URI_REGEXP: /^(?!(?:javascript|data):)/i,
+});
+
 /**
 <<<<<<< HEAD
  * Strict DOMPurify configuration: strip ALL HTML tags and attributes.
@@ -66,7 +74,11 @@ export class SanitiseHtmlPipe implements PipeTransform {
       if (keyName && SANITISATION_EXEMPT_KEYS.has(keyName)) {
         return value;
       }
+<<<<<<< HEAD
       return purify.sanitize(value);
+>>>>>>> origin/main
+=======
+      return purify.sanitize(value, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
 >>>>>>> origin/main
     }
 
