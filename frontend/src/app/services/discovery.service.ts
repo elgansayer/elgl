@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, catchError, of, Subject } from 'rxjs';
+import { firstValueFrom, catchError, of, timeout, retry, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs';
 import { MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
@@ -183,6 +183,8 @@ export class DiscoveryService {
       this.http
         .get<UserProfile[]>(`${this.baseUrl}/partners`, { headers: this.getHeaders(), params })
         .pipe(
+          timeout(15000),
+          retry({ count: 1, delay: 1000 }),
           takeUntil(cancel$),
           catchError(() => of<UserProfile[]>(MOCK_PARTNERS)),
         ),

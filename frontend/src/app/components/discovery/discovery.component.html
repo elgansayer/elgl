@@ -291,6 +291,19 @@
         >
         </app-empty-state>
       </section>
+    } @else if (searchError(); as errorKey) {
+      <section aria-live="polite" class="flex flex-col items-center justify-center py-16 px-4">
+        <div class="text-5xl mb-4" aria-hidden="true">⚠️</div>
+        <p class="text-text-primary font-bold text-lg mb-2">{{ errorKey | t }}</p>
+        <p class="text-text-secondary text-sm mb-4">{{ 'discovery.searchErrorHint' | t }}</p>
+        <button
+          (click)="retrySearch()"
+          class="px-6 py-2 rounded-full bg-accent-500 text-white font-bold hover:bg-accent-600 transition-colors shadow-md"
+          [attr.aria-label]="'discovery.retrySearch' | t"
+        >
+          {{ 'discovery.retrySearch' | t }}
+        </button>
+      </section>
     } @else if (partners().length === 0) {
       <section aria-live="polite">
         <app-empty-state

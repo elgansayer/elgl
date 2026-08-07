@@ -73,7 +73,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     })[]
   >([]);
   readonly isLoading = signal<boolean>(true);
-  readonly hasError = signal<boolean>(false);
+  readonly searchError = signal<string | null>(null);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 
@@ -206,7 +206,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     const signal = this.searchAbortController.signal;
 
     this.isLoading.set(true);
-    this.hasError.set(false);
+    this.searchError.set(null);
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
@@ -250,14 +250,14 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       // Don't log aborted request errors - they are expected
       if (!(e instanceof DOMException && e.name === 'AbortError')) {
         console.error('Partner search failed:', e);
-        this.hasError.set(true);
+        this.searchError.set(this.i18n.translate('discovery.searchError'));
       }
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  /** Schedules a debounced search; cancels any prior pending timer. */
+/** Schedules a debounced search; cancels any prior pending timer. */
   private scheduleSearch(): void {
     if (this.searchDebounceTimer !== null) {
       clearTimeout(this.searchDebounceTimer);
@@ -266,6 +266,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       this.searchDebounceTimer = null;
       void this.searchPartners();
     }, SEARCH_DEBOUNCE_MS);
+  }
+
+  retrySearch(): void {
+    void this.searchPartners();
   }
 
   toggleVoiceRoomActive(): void {

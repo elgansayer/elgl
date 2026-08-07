@@ -341,13 +341,22 @@ export class DiscoveryService {
         query.availability_afternoon !== undefined ||
         query.availability_evening !== undefined
       ) {
-        filtered = this.applyAdvancedFilters(filtered, query);
+        try {
+          filtered = this.applyAdvancedFilters(filtered, query);
+        } catch (err) {
+          this.logger.error('Advanced filters failed, returning unfiltered results', err);
+        }
       }
-      const raw = await this.supabaseService
-        .getRedisClient()
-        .get('partner_of_week_ids');
-      const partnerIds = this.parseStringArray(raw);
-      const partnerSet = new Set(partnerIds);
+      let partnerSet = new Set<string>();
+      try {
+        const raw = await this.supabaseService
+          .getRedisClient()
+          .get('partner_of_week_ids');
+        const partnerIds = this.parseStringArray(raw);
+        partnerSet = new Set(partnerIds);
+      } catch (err) {
+        this.logger.error('Failed to load partner-of-week IDs, continuing without PoW badges', err);
+      }
       const enriched = filtered.map((u) => ({
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
@@ -595,15 +604,19 @@ export class DiscoveryService {
     }
 
     // Attach Partner of the Week flag
-    const rawPoW = await this.supabaseService
-      .getRedisClient()
-      .get('partner_of_week_ids');
-    const partnerIds = this.parseStringArray(rawPoW);
-    const partnerSet = new Set(partnerIds);
-    results = results.map((u) => ({
-      ...u,
-      is_partner_of_week: partnerSet.has(u.id),
-    }));
+    try {
+      const rawPoW = await this.supabaseService
+        .getRedisClient()
+        .get('partner_of_week_ids');
+      const partnerIds = this.parseStringArray(rawPoW);
+      const partnerSet = new Set(partnerIds);
+      results = results.map((u) => ({
+        ...u,
+        is_partner_of_week: partnerSet.has(u.id),
+      }));
+    } catch {
+      // Continue without PoW flag if Redis is unavailable
+    }
 
     return sanitiseDiscoveryData(results);
   }
@@ -633,15 +646,19 @@ export class DiscoveryService {
     }
 
     // Attach Partner of the Week flag
-    const rawPoW = await this.supabaseService
-      .getRedisClient()
-      .get('partner_of_week_ids');
-    const partnerIds = this.parseStringArray(rawPoW);
-    const partnerSet = new Set(partnerIds);
-    results = results.map((u) => ({
-      ...u,
-      is_partner_of_week: partnerSet.has(u.id),
-    }));
+    try {
+      const rawPoW = await this.supabaseService
+        .getRedisClient()
+        .get('partner_of_week_ids');
+      const partnerIds = this.parseStringArray(rawPoW);
+      const partnerSet = new Set(partnerIds);
+      results = results.map((u) => ({
+        ...u,
+        is_partner_of_week: partnerSet.has(u.id),
+      }));
+    } catch {
+      // Continue without PoW flag if Redis is unavailable
+    }
 
     return sanitiseDiscoveryData(results);
   }
@@ -752,9 +769,14 @@ export class DiscoveryService {
     }
 
     // Attach Partner of the Week flag
-    const rawPoW = await redis.get('partner_of_week_ids');
-    const partnerIds = this.parseStringArray(rawPoW);
-    const partnerSet = new Set(partnerIds);
+    let partnerSet = new Set<string>();
+    try {
+      const rawPoW = await redis.get('partner_of_week_ids');
+      const partnerIds = this.parseStringArray(rawPoW);
+      partnerSet = new Set(partnerIds);
+    } catch {
+      // Continue without PoW flag if Redis is unavailable
+    }
     results = results.map((u) => ({
       ...u,
       is_partner_of_week: partnerSet.has(u.id),
@@ -789,8 +811,13 @@ export class DiscoveryService {
     voiceRoomActive: boolean,
   ): Promise<T[]> {
     if (!voiceRoomActive) return users;
-    const activeHostIds = await this.audioRoomsService.getActiveHostIds();
-    return users.filter((u) => activeHostIds.includes(u.id));
+    try {
+      const activeHostIds = await this.audioRoomsService.getActiveHostIds();
+      return users.filter((u) => activeHostIds.includes(u.id));
+    } catch (err) {
+      this.logger.error('Voice room active filter failed, returning unfiltered results', err);
+      return users;
+    }
   }
 
   private getMockDiscoveryData(
