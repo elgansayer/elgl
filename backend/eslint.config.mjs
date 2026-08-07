@@ -58,6 +58,7 @@ export default tseslint.config(
       'src/monetisation/**/*.ts',
       'src/admin/**/*.ts',
       'src/moderation/**/*.ts',
+      'src/video-calls/**/*.ts',
     ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
