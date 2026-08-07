@@ -198,6 +198,14 @@ export const routes: Routes = [
     title: 'Appearance - HelloTalk',
   },
   {
+    path: 'settings/privacy',
+    loadComponent: () =>
+      import('./pages/settings/privacy-settings/privacy-settings.component').then(
+        (m) => m.PrivacySettingsComponent,
+      ),
+    title: 'Privacy Settings - HelloTalk',
+  },
+  {
     path: 'settings/backup-restore',
     loadComponent: () =>
       import('./pages/settings/backup-restore.component').then(

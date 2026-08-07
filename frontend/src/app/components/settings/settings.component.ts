@@ -33,14 +33,6 @@ export class SettingsComponent implements OnInit {
   readonly interests = signal<string[]>([]);
   readonly availableInterests = signal<string[]>([]);
 
-  privacyHideLocation = false;
-  privacyHideSearch = false;
-  privacyHideAge = false;
-  privacyHideGender = false;
-  privacyHideExactLocation = false;
-  privacyHideOnlineStatus = false;
-  privacyHideVipStatus = false;
-  profileVisibility: 'everyone' | 'vips_only' | 'hidden' = 'everyone';
   autoPlayVoiceNotes = false;
   soundEffectsEnabled = false;
   vibrationEnabled = false;
@@ -57,14 +49,6 @@ export class SettingsComponent implements OnInit {
       const profile = await this.userService.getMyProfile();
       if (profile) {
         this.isVip.set(Boolean(profile.is_vip));
-        this.privacyHideLocation = Boolean(profile.privacy_hide_location);
-        this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
-        this.privacyHideAge = Boolean(profile.privacy_hide_age);
-        this.privacyHideGender = Boolean(profile.privacy_hide_gender);
-        this.privacyHideExactLocation = Boolean(profile.privacy_hide_exact_location);
-        this.privacyHideOnlineStatus = Boolean(profile.privacy_hide_online_status);
-        this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
-        this.profileVisibility = this.sanitizeProfileVisibility(profile.profile_visibility);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
         this.autoDownloadMedia.set(Boolean(profile.auto_download_media));
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
@@ -95,15 +79,6 @@ export class SettingsComponent implements OnInit {
     } catch {
       // keep service defaults
     }
-  }
-
-  private sanitizeProfileVisibility(
-    value: string | undefined,
-  ): 'everyone' | 'vips_only' | 'hidden' {
-    if (value === 'everyone' || value === 'vips_only' || value === 'hidden') {
-      return value;
-    }
-    return 'everyone';
   }
 
   goBack(): void {
@@ -148,14 +123,6 @@ export class SettingsComponent implements OnInit {
 
     try {
       await this.userService.updateMyProfile({
-        privacy_hide_location: this.privacyHideLocation,
-        privacy_hide_from_search: this.privacyHideSearch,
-        privacy_hide_age: this.privacyHideAge,
-        privacy_hide_gender: this.privacyHideGender,
-        privacy_hide_exact_location: this.privacyHideExactLocation,
-        privacy_hide_online_status: this.privacyHideOnlineStatus,
-        privacy_hide_vip_status: this.privacyHideVipStatus,
-        profile_visibility: this.profileVisibility,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
         auto_download_media: this.autoDownloadMedia(),
         sound_effects_enabled: this.soundEffectsEnabled,
