@@ -1,10 +1,12 @@
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { Component, effect, inject, input, output, signal, OnDestroy } from '@angular/core';
+import { Component, effect, inject, input, output, signal, OnDestroy, AfterViewInit } from '@angular/core';
 
+import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
+import { LingqOnboardingService } from '../../services/lingq-onboarding.service';
 
 export interface TokenSegmentSpan {
   segment: string;
@@ -16,13 +18,15 @@ export interface TokenSegmentSpan {
 
 @Component({
   selector: 'app-audio-sync-reader',
-  imports: [TranslatePipe, WordDefinitionModalComponent],
+  imports: [TranslatePipe, WordDefinitionModalComponent, JoyrideModule],
   templateUrl: './audio-sync-reader.component.html',
   styleUrls: ['./audio-sync-reader.component.scss'],
 })
-export class AudioSyncReaderComponent implements OnDestroy {
+export class AudioSyncReaderComponent implements OnDestroy, AfterViewInit {
   readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
+  private readonly joyrideService = inject(JoyrideService);
+  private readonly lingqOnboardingService = inject(LingqOnboardingService);
 
   readonly text = input.required<string>();
   readonly language = input<string>('en-GB');
@@ -221,6 +225,41 @@ export class AudioSyncReaderComponent implements OnDestroy {
       token: token.segment,
       context: this.text(),
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.maybeStartTour();
+  }
+
+  private maybeStartTour(): void {
+    if (this.lingqOnboardingService.isCompleted()) {
+      return;
+    }
+    if (this.lingqOnboardingService.isTourInProgress()) {
+      return;
+    }
+    this.lingqOnboardingService.isTourInProgress.set(true);
+
+    setTimeout(() => {
+      const options: JoyrideOptions = {
+        steps: this.lingqOnboardingService.stepNames,
+        startWith: 'lingqStepTitle',
+        waitingTime: 100,
+        stepDefaultPosition: 'bottom',
+        themeColor: '#10b981',
+        showCounter: true,
+        showPrevButton: true,
+      };
+
+      this.joyrideService.startTour(options).subscribe({
+        error: () => {
+          this.lingqOnboardingService.isTourInProgress.set(false);
+        },
+        complete: () => {
+          this.lingqOnboardingService.markComplete();
+        },
+      });
+    }, 500);
   }
 
   ngOnDestroy(): void {
