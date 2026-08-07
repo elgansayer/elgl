@@ -1,71 +1,92 @@
-import { Component, inject, computed, afterNextRender } from '@angular/core';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { Component, inject, computed } from '@angular/core';
+
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
 import { FlashcardService } from '../../services/flashcard.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+
 
 @Component({
   selector: 'app-vocabulary-display',
-  imports: [TranslatePipe],
+  imports: [AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `
     <div class="space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-lg font-bold text-text-primary">{{ 'vocabulary.title' | t }}</h3>
+        <h3 class="text-lg font-bold text-slate-200">Vocabulary from your interests</h3>
         <button
           (click)="refreshVocabulary()"
-          class="text-sm text-primary hover:text-primary/80 transition-colors"
+          class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
           [disabled]="loading()"
         >
           @if (loading()) {
             <span class="inline-block animate-spin">⟳</span>
           } @else {
-            {{ 'vocabulary.refresh' | t }}
+            Refresh
           }
         </button>
       </div>
 
-      @if (vocabularyByTag().size === 0) {
-        <div
-          class="p-8 text-center text-text-muted bg-surface-800/30 rounded-xl border border-dashed border-surface-100"
-        >
-          <p class="text-lg mb-2">📚</p>
-          <p>{{ 'vocabulary.empty' | t }}</p>
-        </div>
-      }
-
-      @for (entry of vocabularyByTagEntries(); track entry[0]) {
-        <div class="space-y-2">
-          <h4 class="text-sm font-semibold text-text-secondary flex items-center gap-2">
-            <span>{{ getTagIcon(entry[0]) }}</span>
-            <span>{{ entry[0] }}</span>
-          </h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            @for (item of entry[1]; track item.word) {
-              <div
-                class="flex items-center justify-between p-3 bg-surface-200 rounded-card border border-surface-100 hover:border-surface-200 transition-colors"
-              >
-                <div>
-                  <p class="text-sm font-medium text-text-primary">{{ item.word }}</p>
-                  <p class="text-xs text-text-muted">{{ item.translation }}</p>
-                </div>
-                <button
-                  (click)="addToFlashcards(item)"
-                  class="text-xs px-2 py-1 rounded-app bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-                  [attr.aria-label]="'vocabulary.addToFlashcards' | t"
-                >
-                  {{ 'vocabulary.addToSrsBtn' | t }}
-                </button>
+      @if (loading()) {
+        <div class="space-y-3">
+          @for (i of [1, 2, 3]; track i) {
+            <div class="space-y-2">
+              <app-skeleton-loader [height]="'16px'" [width]="'120px'" [variant]="'text'" />
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                @for (j of [1, 2]; track j) {
+                  <div class="p-3 rounded-lg border border-slate-700/50 space-y-2">
+                    <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
+                    <app-skeleton-loader [height]="'12px'" [width]="'40%'" [variant]="'text'" />
+                  </div>
+                }
               </div>
-            }
-          </div>
+            </div>
+          }
         </div>
+      } @else if (vocabularyByTag().size === 0) {
+        <app-empty-state
+          icon="📚"
+          title="No vocabulary yet"
+          description="Select some hobbies to get started!"
+          [customClass]="'py-8'"
+        />
+      } @else {
+        @for (entry of vocabularyByTagEntries(); track entry[0]) {
+          <div class="space-y-2">
+            <h4 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+              <span>{{ getTagIcon(entry[0]) }}</span>
+              <span>{{ entry[0] }}</span>
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              @for (item of entry[1]; track item.word) {
+                <div
+                  class="flex items-center justify-between p-3 bg-surface-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors"
+                >
+                  <div>
+                    <p class="text-sm font-medium text-slate-200">{{ item.word }}</p>
+                    <p class="text-xs text-text-muted">{{ item.translation }}</p>
+                  </div>
+                  <button
+                    (click)="addToFlashcards(item)"
+                    class="text-xs px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors"
+                    title="Add to flashcards"
+                  >
+                    + SRS
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        }
       }
     </div>
   `,
 })
 export class VocabularyDisplayComponent {
+
   private readonly store = inject(HobbyTagsStore);
   private readonly flashcardService = inject(FlashcardService);
+
 
   readonly loading = computed(() => this.store.loading());
   readonly vocabularyByTag = computed(() => this.store.vocabularyByTag());
@@ -81,9 +102,7 @@ export class VocabularyDisplayComponent {
   });
 
   constructor() {
-    afterNextRender(() => {
-      this.store.loadVocabulary('en');
-    });
+    this.store.loadVocabulary('en');
   }
 
   refreshVocabulary(): void {
@@ -98,12 +117,13 @@ export class VocabularyDisplayComponent {
     try {
       await this.flashcardService.createFlashcard({
         word: item.word,
-        sourceLanguage: 'en',
+        sourceLanguage: 'en', // default for now, could be passed or inferred
         contextSentence: `Vocabulary from hobby: ${item.hobbyTagName}`,
-        translation: item.translation,
+        translation: item.translation
       });
       showToast('Added to flashcards successfully', 'success');
-    } catch {
+    } catch (error) {
+      console.error('Failed to add to flashcards:', error);
       showErrorToast('Failed to add to flashcards');
     }
   }

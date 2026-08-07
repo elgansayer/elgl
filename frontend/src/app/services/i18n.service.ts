@@ -754,6 +754,7 @@ export class I18nService {
     'vocabulary.chipGrammar': '✏️ Grammar AI',
     'vocabulary.chipPronunciation': '🎙️ Pronunciation AI',
     'vocabulary.noDue': 'No review cards are due right now.',
+    'vocabulary.noDueHint': 'Save words from your chats or moments to build your review deck.',
     'vocabulary.restart': 'Restart review',
     'vocabulary.cardCounter': 'Card {{current}} of {{total}}',
     'vocabulary.levelBadge': 'Level {{level}}/4',
@@ -846,6 +847,9 @@ export class I18nService {
     'review.completeTitle': 'Review Complete!',
     'review.completeDesc': 'Great job! Come back regularly to keep your vocabulary fresh.',
     'review.restart': 'Start Again',
+    'review.emptyTitle': 'No cards to review',
+    'review.emptyDesc': 'Save some vocabulary words first and come back when they are due for review.',
+    'review.goToDecks': 'Browse Decks',
     'profile.playAudioIntro': 'Play Introduction',
 
     // User Detail Component

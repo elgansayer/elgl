@@ -7,42 +7,63 @@ import {
 } from '../../services/suggest-flashcards.service';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-suggest-flashcards',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `
-    <div class="mx-auto max-w-2xl space-y-4 pb-20 pt-4">
-      <section class="app-card app-padded space-y-4">
-        <h2 class="app-section-title">{{ 'suggest_flashcards.title' | t }}</h2>
-        <textarea
-          [(ngModel)]="messageInput"
-          [placeholder]="'suggest_flashcards.placeholder' | t"
-          rows="3"
-          class="app-textarea"
-        ></textarea>
-        <button
-          (click)="manualSuggest()"
-          class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold disabled:opacity-60"
-          [disabled]="!messageInput()"
-        >
-          {{ 'suggest_flashcards.suggest_button' | t }}
-        </button>
-        @if (loading()) {
-          <p class="app-muted">{{ 'suggest_flashcards.loading' | t }}</p>
-        }
-        @if (suggestions().length > 0) {
-          <ul class="mt-4 list-disc ps-5">
-            @for (word of suggestions(); track word) {
-              <li class="text-sm text-text-primary">{{ word }}</li>
-            }
-          </ul>
-        }
-        @if (error()) {
-          <p class="mt-2 text-xs font-bold text-rose-400">{{ error() }}</p>
-        }
-      </section>
+    <div class="p-4 bg-surface rounded-xl">
+      <h2 class="text-lg font-semibold mb-2">
+        {{ 'suggest_flashcards.title' | t }}
+      </h2>
+      <textarea
+        [(ngModel)]="messageInput"
+        placeholder="{{ 'suggest_flashcards.placeholder' | t }}"
+        rows="3"
+        class="w-full border rounded p-2 bg-background text-foreground"
+      ></textarea>
+      <button
+        (click)="manualSuggest()"
+        class="mt-2 btn-primary"
+        [disabled]="!messageInput() || loading()"
+      >
+        {{ 'suggest_flashcards.suggest_button' | t }}
+      </button>
+
+      @if (loading()) {
+        <div class="mt-4 space-y-2">
+          @for (i of [1, 2, 3]; track i) {
+            <div class="flex items-center gap-2">
+              <app-skeleton-loader [height]="'8px'" [width]="'8px'" [borderRadius]="'50%'" />
+              <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
+            </div>
+          }
+        </div>
+      }
+
+      @if (!loading() && !error() && suggestions().length > 0) {
+        <ul class="mt-4 list-disc ps-5">
+          @for (word of suggestions(); track word) {
+            <li class="text-sm">{{ word }}</li>
+          }
+        </ul>
+      }
+
+      @if (!loading() && !error() && previousResult() === false && suggestions().length === 0) {
+        <app-empty-state
+          icon="💡"
+          [title]="'suggest_flashcards.emptyTitle' | t"
+          [description]="'suggest_flashcards.emptyDesc' | t"
+          [customClass]="'py-4'"
+        />
+      }
+
+      @if (error()) {
+        <p class="text-red-500 mt-2">{{ error() }}</p>
+      }
     </div>
   `,
 })
@@ -52,27 +73,32 @@ export class SuggestFlashcardsComponent {
   private authService = inject(AuthService);
 
   /** Optional external message to auto‑suggest (e.g., from chat) */
-  readonly externalMessage = input<string>('');
-  readonly externalUserId = input<string | undefined>(undefined);
-  readonly externalTargetLanguage = input<string | undefined>(undefined);
+  externalMessage = input<string>('');
+  externalUserId = input<string | undefined>(undefined);
+  externalTargetLanguage = input<string | undefined>(undefined);
 
-  readonly messageInput = signal<string>('');
-  readonly suggestions = signal<string[]>([]);
-  readonly loading = signal<boolean>(false);
-  readonly error = signal<string | null>(null);
+  messageInput = signal<string>('');
+  suggestions = signal<string[]>([]);
+  loading = signal<boolean>(false);
+  error = signal<string | null>(null);
+  /** Set to true when a suggestion request has been made at least once */
+  previousResult = signal<boolean>(false);
 
-  private readonly autoSuggestEffect = effect(() => {
-    const msg = this.externalMessage();
-    if (msg && msg.trim()) {
-      void this.runSuggest(msg, this.externalUserId(), this.externalTargetLanguage());
-    }
-  });
+  constructor() {
+    effect(() => {
+      const msg = this.externalMessage();
+      if (msg && msg.trim()) {
+        // Auto‑suggest when a parent provides a new message
+        this.runSuggest(msg, this.externalUserId(), this.externalTargetLanguage());
+      }
+    });
+  }
 
   /** Called when the user clicks the button */
   async manualSuggest(): Promise<void> {
     const msg = this.messageInput().trim();
     if (!msg) return;
-    void this.runSuggest(msg);
+    this.runSuggest(msg);
   }
 
   private async runSuggest(
@@ -91,8 +117,10 @@ export class SuggestFlashcardsComponent {
         true, // exclude known words by default
       );
       this.suggestions.set(result.suggestions);
+      this.previousResult.set(true);
     } catch {
       this.error.set(this.i18n.translate('suggest_flashcards.error'));
+      this.previousResult.set(true);
     } finally {
       this.loading.set(false);
     }
