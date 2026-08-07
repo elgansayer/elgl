@@ -80,19 +80,22 @@ export class NlpService {
       throw new BadRequestException('DeepL API key not configured');
     }
 
-    const res = await fetchWithExponentialBackoff('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await fetchWithExponentialBackoff(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: [cleanWord],
+          target_lang: dto.target_language.toUpperCase(),
+          source_lang: detected.toUpperCase(),
+          tag_handling: 'xml',
+        }),
       },
-      body: JSON.stringify({
-        text: [cleanWord],
-        target_lang: dto.target_language.toUpperCase(),
-        source_lang: detected.toUpperCase(),
-        tag_handling: 'xml',
-      }),
-    });
+    );
 
     if (!res.ok) {
       const errorBody = await res.text();
@@ -287,17 +290,20 @@ export class NlpService {
     }
 
     const prompt = `Explain the grammar difference between the original sentence and the corrected sentence. Original: "${dto.original}" Corrected: "${dto.corrected}". Provide a brief explanation in English.`;
-    const res = await fetchWithExponentialBackoff('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await fetchWithExponentialBackoff(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: [prompt],
+          target_lang: 'EN',
+        }),
       },
-      body: JSON.stringify({
-        text: [prompt],
-        target_lang: 'EN',
-      }),
-    });
+    );
     if (!res.ok) {
       const errorBody = await res.text();
       throw new BadRequestException(
@@ -503,18 +509,21 @@ export class NlpService {
 
     const detected = this.detectLanguage(text).language;
 
-    const res = await fetchWithExponentialBackoff('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await fetchWithExponentialBackoff(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: [text],
+          target_lang: 'EN',
+          source_lang: detected.toUpperCase(),
+        }),
       },
-      body: JSON.stringify({
-        text: [text],
-        target_lang: 'EN',
-        source_lang: detected.toUpperCase(),
-      }),
-    });
+    );
 
     if (!res.ok) {
       const errorBody = await res.text();
@@ -571,17 +580,20 @@ export class NlpService {
     const keys = Object.keys(dto.dictionary);
     const values = keys.map((key) => dto.dictionary[key]);
 
-    const res = await fetchWithExponentialBackoff('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await fetchWithExponentialBackoff(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: values,
+          target_lang: targetLang.toUpperCase(),
+        }),
       },
-      body: JSON.stringify({
-        text: values,
-        target_lang: targetLang.toUpperCase(),
-      }),
-    });
+    );
 
     if (!res.ok) {
       const errorBody = await res.text();
@@ -681,19 +693,22 @@ export class NlpService {
     }
 
     // Translate the original text via DeepL
-    const res = await fetchWithExponentialBackoff('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await fetchWithExponentialBackoff(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: [cleanWord],
+          target_lang: dto.target_language.toUpperCase(),
+          source_lang: detected.toUpperCase(),
+          tag_handling: 'xml',
+        }),
       },
-      body: JSON.stringify({
-        text: [cleanWord],
-        target_lang: dto.target_language.toUpperCase(),
-        source_lang: detected.toUpperCase(),
-        tag_handling: 'xml',
-      }),
-    });
+    );
 
     if (!res.ok) {
       const errorBody = await res.text();

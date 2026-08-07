@@ -19,7 +19,7 @@ describe('fetchWithExponentialBackoff', () => {
   it('should return immediately on a successful 200 response', async () => {
     mockFetch.mockResolvedValueOnce({
       status: 200,
-      json: async () => ({ translated_text: 'hello' }),
+      json: () => Promise.resolve({ translated_text: 'hello' }),
     });
 
     const response = await fetchWithExponentialBackoff(
@@ -38,11 +38,11 @@ describe('fetchWithExponentialBackoff', () => {
       .mockResolvedValueOnce({
         status: 429,
         headers: new Headers(),
-        json: async () => ({ error: 'rate limited' }),
+        json: () => Promise.resolve({ error: 'rate limited' }),
       })
       .mockResolvedValueOnce({
         status: 200,
-        json: async () => ({ translated_text: 'bonjour' }),
+        json: () => Promise.resolve({ translated_text: 'bonjour' }),
       });
 
     const promise = fetchWithExponentialBackoff(
@@ -62,7 +62,7 @@ describe('fetchWithExponentialBackoff', () => {
     mockFetch.mockResolvedValue({
       status: 429,
       headers: new Headers(),
-      json: async () => ({ error: 'rate limited' }),
+      json: () => Promise.resolve({ error: 'rate limited' }),
     });
 
     const promise = fetchWithExponentialBackoff(
@@ -86,11 +86,11 @@ describe('fetchWithExponentialBackoff', () => {
       .mockResolvedValueOnce({
         status: 429,
         headers,
-        json: async () => ({ error: 'rate limited' }),
+        json: () => Promise.resolve({ error: 'rate limited' }),
       })
       .mockResolvedValueOnce({
         status: 200,
-        json: async () => ({ ok: true }),
+        json: () => Promise.resolve({ ok: true }),
       });
 
     const promise = fetchWithExponentialBackoff(
@@ -111,11 +111,11 @@ describe('fetchWithExponentialBackoff', () => {
       .mockResolvedValueOnce({
         status: 503,
         headers: new Headers(),
-        json: async () => ({ error: 'service unavailable' }),
+        json: () => Promise.resolve({ error: 'service unavailable' }),
       })
       .mockResolvedValueOnce({
         status: 200,
-        json: async () => ({ ok: true }),
+        json: () => Promise.resolve({ ok: true }),
       });
 
     const promise = fetchWithExponentialBackoff(
@@ -134,7 +134,7 @@ describe('fetchWithExponentialBackoff', () => {
   it('should not retry on client errors 4xx except 429 by default', async () => {
     mockFetch.mockResolvedValueOnce({
       status: 400,
-      json: async () => ({ error: 'bad request' }),
+      json: () => Promise.resolve({ error: 'bad request' }),
     });
 
     const response = await fetchWithExponentialBackoff(
@@ -150,7 +150,7 @@ describe('fetchWithExponentialBackoff', () => {
     mockFetch.mockResolvedValue({
       status: 429,
       headers: new Headers(),
-      json: async () => ({ error: 'rate limited' }),
+      json: () => Promise.resolve({ error: 'rate limited' }),
     });
 
     const promise = fetchWithExponentialBackoff(
@@ -169,7 +169,7 @@ describe('fetchWithExponentialBackoff', () => {
     mockFetch.mockResolvedValue({
       status: 429,
       headers: new Headers(),
-      json: async () => ({ error: 'rate limited' }),
+      json: () => Promise.resolve({ error: 'rate limited' }),
     });
 
     const promise = fetchWithExponentialBackoff(
