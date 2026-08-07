@@ -1,0 +1,115 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for the Admin Moderation Dashboard. All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Moderation] High pending queue backlog",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_moderation_queue_size{*} > 100",
+      "message": "{{#is_alert}}\nThe moderation queue has exceeded 100 pending reports over the last 10 minutes. A growing backlog may delay response to user reports and degrade trust-and-safety responsiveness.\n\n**Current value:** {{value}}\n**Threshold:** 100\n\n**Actions:**\n1. Check if moderator staffing is adequate.\n2. Verify the moderation API endpoints are healthy (latency / error rate).\n3. Investigate whether a spam wave or bot attack is generating excessive reports.\n{{/is_alert}}\n\n{{#is_warning}}\nModeration queue approaching capacity threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moderation", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 100,
+          "warning": 50
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Moderation] No moderation activity",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_moderation_actions_total{*} by {action}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo moderation actions (approve or reject) have been recorded in the last hour. This may indicate a complete outage of the moderation pipeline, or that the moderation team is offline when they should not be.\n\n**Actions:**\n1. Check the moderation API health endpoint.\n2. Verify the NestJS backend is running and the Supabase connection is healthy.\n3. Confirm whether the moderator on-call roster is active.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:moderation", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 60,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Moderation] Elevated rejection rate",
+      "type": "query alert",
+      "query": "avg(last_1h):(avg:hellotalk_moderation_actions_total{action:reject}.as_count() / avg:hellotalk_moderation_actions_total{*}.as_count()) * 100 > 80",
+      "message": "{{#is_alert}}\nThe moderation rejection rate has exceeded 80% over the last hour. While this could indicate a genuine spam wave, it may also point to overly aggressive moderation or misconfigured auto-rejection rules.\n\n**Current value:** {{value}}%\n**Threshold:** 80%\n\n**Actions:**\n1. Audit recently rejected reports for false positives.\n2. Check if any automated moderation rules were recently changed.\n3. Review the distribution of rejection reasons.\n{{/is_alert}}\n\n{{#is_warning}}\nRejection rate approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moderation", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 80,
+          "warning": 60
+        }
+      }
+    },
+    {
+      "name": "[Moderation] Action latency spike",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_moderation_action_duration_seconds{*} > 3",
+      "message": "{{#is_alert}}\nThe average moderation action duration has exceeded 3 seconds over the last 10 minutes. Moderation actions are simple database updates and should complete in well under 1 second. A latency spike points to Supabase query slowdown or database connection issues.\n\n**Current value:** {{value}}s\n**Threshold:** 3s\n\n**Actions:**\n1. Check Supabase / PostgreSQL query performance.\n2. Inspect the reports table for missing indexes.\n3. Check for connection pool exhaustion or rate limiting.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:moderation", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 3,
+          "warning": 1.5
+        }
+      }
+    },
+    {
+      "name": "[Moderation] Spike in user reports",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_moderation_reports_created_total{*} by {reason_category}.as_count() > 20",
+      "message": "{{#is_alert}}\nMore than 20 moderation reports have been filed in the last 30 minutes. This may indicate a coordinated abuse campaign, spam wave, or a viral incident causing users to flood the reporting system.\n\n**Current value:** {{value}}\n**Top reason category:** {{reason_category.name}}\n**Threshold:** 20 reports / 30 min\n\n**Actions:**\n1. Check the reports queue for common patterns (same reported user, same reason category).\n2. Investigate whether a high-profile user or moment triggered mass reporting.\n3. Consider temporary rate limiting on the report endpoint if this is a DDoS attempt.\n{{/is_alert}}\n\n{{#is_warning}}\nReport volume approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moderation", "severity:critical"],
+      "options": {
+        "evaluation_delay": 60,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        }
+      }
+    },
+    {
+      "name": "[Moderation] Spike in dating-behaviour analysis requests",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_moderation_analysis_requests_total{*}.as_count() > 30",
+      "message": "{{#is_alert}}\nMore than 30 user analysis requests for dating-behaviour detection have been made in the last 30 minutes. This may be driven by automated tooling or an overly-aggressive moderator, and could add load to the database.\n\n**Current value:** {{value}}\n**Threshold:** 30 requests / 30 min\n\n**Actions:**\n1. Verify analysis requests are legitimate moderator activity.\n2. Check for any automated scripts calling the endpoint excessively.\n3. Consider adding per-moderator rate limiting on the analysis endpoint.\n{{/is_alert}}\n\n{{#is_warning}}\nAnalysis request volume approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:moderation", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 30,
+          "warning": 15
+        }
+      }
+    }
+  ]
+}

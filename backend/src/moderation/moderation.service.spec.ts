@@ -2,13 +2,27 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ModerationService } from './moderation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('ModerationService', () => {
   let service: ModerationService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockMetricsService: {
+    recordModerationReport: jest.Mock;
+    recordModerationAction: jest.Mock;
+    recordModerationAnalysis: jest.Mock;
+    setModerationQueueSize: jest.Mock;
+  };
 
   beforeEach(async () => {
+    mockMetricsService = {
+      recordModerationReport: jest.fn(),
+      recordModerationAction: jest.fn(),
+      recordModerationAnalysis: jest.fn(),
+      setModerationQueueSize: jest.fn(),
+    };
+
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
@@ -33,6 +47,10 @@ describe('ModerationService', () => {
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();
@@ -69,6 +87,9 @@ describe('ModerationService', () => {
         status: 'pending',
       });
       expect(result).toEqual({ id: 'report-1' });
+      expect(mockMetricsService.recordModerationReport).toHaveBeenCalledWith(
+        'harassment',
+      );
     });
 
     it('should insert a report without description when description is undefined', async () => {
@@ -116,6 +137,11 @@ describe('ModerationService', () => {
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'report-1');
       expect(result).toEqual({ success: true });
+      expect(mockMetricsService.recordModerationAction).toHaveBeenCalledWith(
+        'approve',
+        'profile',
+        expect.any(Number),
+      );
     });
 
     it('should throw NotFoundException when update fails', async () => {
@@ -144,6 +170,11 @@ describe('ModerationService', () => {
       });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'report-1');
       expect(result).toEqual({ success: true });
+      expect(mockMetricsService.recordModerationAction).toHaveBeenCalledWith(
+        'reject',
+        'moment',
+        expect.any(Number),
+      );
     });
 
     it('should reject without reason when reason is undefined', async () => {
@@ -327,6 +358,7 @@ describe('ModerationService', () => {
 
       expect(result.riskScore).toBe(0);
       expect(result.flags).toHaveLength(0);
+      expect(mockMetricsService.recordModerationAnalysis).toHaveBeenCalled();
     });
 
     it('should detect dating keywords and return high risk score', async () => {

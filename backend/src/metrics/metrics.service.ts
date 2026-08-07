@@ -26,6 +26,13 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
+  // Moderation metrics
+  readonly moderationQueueSize: Gauge<string>;
+  readonly moderationReportsCreated: Counter<string>;
+  readonly moderationActionsTotal: Counter<string>;
+  readonly moderationAnalysisRequests: Counter<string>;
+  readonly moderationActionDuration: Histogram<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -121,6 +128,42 @@ export class MetricsService {
       help: 'Total number of decks created',
       registers: [this.register],
     });
+
+    // --- Moderation Metrics ---
+
+    this.moderationQueueSize = new Gauge({
+      name: 'hellotalk_moderation_queue_size',
+      help: 'Number of pending reports in the moderation queue',
+      registers: [this.register],
+    });
+
+    this.moderationReportsCreated = new Counter({
+      name: 'hellotalk_moderation_reports_created_total',
+      help: 'Total number of moderation reports created by users',
+      labelNames: ['reason_category'],
+      registers: [this.register],
+    });
+
+    this.moderationActionsTotal = new Counter({
+      name: 'hellotalk_moderation_actions_total',
+      help: 'Total number of moderation actions taken (approve / reject)',
+      labelNames: ['action', 'type'],
+      registers: [this.register],
+    });
+
+    this.moderationAnalysisRequests = new Counter({
+      name: 'hellotalk_moderation_analysis_requests_total',
+      help: 'Total number of user analysis requests for dating behaviour detection',
+      registers: [this.register],
+    });
+
+    this.moderationActionDuration = new Histogram({
+      name: 'hellotalk_moderation_action_duration_seconds',
+      help: 'Time taken to complete a moderation action',
+      labelNames: ['action', 'type'],
+      registers: [this.register],
+      buckets: [0.1, 0.5, 1, 2, 5, 10, 15, 30],
+    });
   }
 
   recordHttpRequest(
@@ -186,6 +229,29 @@ export class MetricsService {
 
   recordSrsDeckCreated(): void {
     this.srsDecksCreated.inc();
+  }
+
+  // --- Moderation metric helpers ---
+
+  setModerationQueueSize(count: number): void {
+    this.moderationQueueSize.set(count);
+  }
+
+  recordModerationReport(reasonCategory: string = 'unknown'): void {
+    this.moderationReportsCreated.inc({ reason_category: reasonCategory });
+  }
+
+  recordModerationAction(
+    action: 'approve' | 'reject',
+    type: 'moment' | 'profile',
+    durationSeconds: number = 0,
+  ): void {
+    this.moderationActionsTotal.inc({ action, type });
+    this.moderationActionDuration.observe({ action, type }, durationSeconds);
+  }
+
+  recordModerationAnalysis(): void {
+    this.moderationAnalysisRequests.inc();
   }
 
   getRegister(): Registry {

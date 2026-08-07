@@ -122,4 +122,52 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_srs_decks_total');
     });
   });
+
+  describe('moderation metrics', () => {
+    it('should set moderation queue size', () => {
+      expect(() => service.setModerationQueueSize(42)).not.toThrow();
+    });
+
+    it('should record moderation report with reason category', () => {
+      expect(() =>
+        service.recordModerationReport('harassment'),
+      ).not.toThrow();
+    });
+
+    it('should record moderation report with default reason category', () => {
+      expect(() => service.recordModerationReport()).not.toThrow();
+    });
+
+    it('should record moderation approve action with duration', () => {
+      expect(() =>
+        service.recordModerationAction('approve', 'profile', 0.5),
+      ).not.toThrow();
+    });
+
+    it('should record moderation reject action with duration', () => {
+      expect(() =>
+        service.recordModerationAction('reject', 'moment', 1.2),
+      ).not.toThrow();
+    });
+
+    it('should record moderation analysis requests', () => {
+      expect(() => service.recordModerationAnalysis()).not.toThrow();
+    });
+
+    it('should include moderation metrics in getMetrics output', async () => {
+      service.setModerationQueueSize(10);
+      service.recordModerationReport('spam');
+      service.recordModerationAction('approve', 'profile', 0.3);
+      service.recordModerationAction('reject', 'moment', 0.7);
+      service.recordModerationAnalysis();
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_moderation_queue_size');
+      expect(metrics).toContain('hellotalk_moderation_reports_created_total');
+      expect(metrics).toContain('hellotalk_moderation_actions_total');
+      expect(metrics).toContain('hellotalk_moderation_analysis_requests_total');
+      expect(metrics).toContain(
+        'hellotalk_moderation_action_duration_seconds',
+      );
+    });
+  });
 });

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
@@ -25,7 +26,10 @@ export interface ModerationItem {
 export class ModerationService {
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {
     this.supabase = this.supabaseService.getClient();
   }
 
@@ -138,10 +142,12 @@ export class ModerationService {
       throw new NotFoundException('Failed to create report');
     }
 
+    this.metricsService.recordModerationReport(dto.reasonCategory);
     return data;
   }
 
-  async approveItem(dto: ModerationActionDto) {
+  async approveItem(dto: ModerationActionDto): Promise<{ success: boolean }> {
+    const startTime = Date.now();
     const { error } = await this.supabase
       .from('reports')
       .update({ status: 'approved' })
@@ -151,10 +157,13 @@ export class ModerationService {
       throw new NotFoundException('Failed to approve item');
     }
 
+    const duration = (Date.now() - startTime) / 1000;
+    this.metricsService.recordModerationAction('approve', dto.type, duration);
     return { success: true };
   }
 
-  async rejectItem(dto: ModerationActionDto) {
+  async rejectItem(dto: ModerationActionDto): Promise<{ success: boolean }> {
+    const startTime = Date.now();
     const { error } = await this.supabase
       .from('reports')
       .update({
@@ -167,12 +176,15 @@ export class ModerationService {
       throw new NotFoundException('Failed to reject item');
     }
 
+    const duration = (Date.now() - startTime) / 1000;
+    this.metricsService.recordModerationAction('reject', dto.type, duration);
     return { success: true };
   }
 
   async analyseUserForDatingBehaviour(
     userId: string,
   ): Promise<{ riskScore: number; flags: string[] }> {
+    this.metricsService.recordModerationAnalysis();
     const { data: userData, error: userError } = await this.supabase
       .from('users')
       .select(

@@ -32,6 +32,12 @@ prometheus_scrape:
       - hellotalk_srs_cards_stuck: gauge
       - hellotalk_srs_decks_total: gauge
       - hellotalk_srs_decks_created_total: counter
+      # Moderation metrics
+      - hellotalk_moderation_queue_size: gauge
+      - hellotalk_moderation_reports_created_total: counter
+      - hellotalk_moderation_actions_total: counter
+      - hellotalk_moderation_analysis_requests_total: counter
+      - hellotalk_moderation_action_duration_seconds: histogram
       # Infrastructure metrics
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter
