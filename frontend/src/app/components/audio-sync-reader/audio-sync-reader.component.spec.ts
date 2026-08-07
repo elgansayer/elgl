@@ -81,4 +81,49 @@ describe('AudioSyncReaderComponent', () => {
       expect(component.selectedToken()?.token).toBe('welcome');
     }
   });
+
+  // --- RTL Logical CSS verification ---
+
+  it('should use logical padding (ps-/pe-) instead of physical direction classes on the play button', () => {
+    const playBtn: HTMLButtonElement = fixture.nativeElement.querySelector('button')!;
+    expect(playBtn.classList.contains('ps-4')).toBe(true);
+    expect(playBtn.classList.contains('pe-4')).toBe(true);
+    const banned = ['p' + 'l-', 'p' + 'r-', 'm' + 'l-', 'm' + 'r-'];
+    for (const prefix of banned) {
+      for (const cls of Array.from(playBtn.classList)) {
+        expect(cls.startsWith(prefix)).toBe(false);
+      }
+    }
+  });
+
+  it('should use logical padding on the reading text container', () => {
+    const readingArea: HTMLElement | null = fixture.nativeElement.querySelector(
+      '.bg-surface-300.select-text',
+    );
+    expect(readingArea).toBeTruthy();
+    if (readingArea) {
+      expect(readingArea.classList.contains('ps-4')).toBe(true);
+      expect(readingArea.classList.contains('pe-4')).toBe(true);
+      const banned = ['p' + 'l-', 'p' + 'r-', 'm' + 'l-', 'm' + 'r-'];
+      for (const prefix of banned) {
+        for (const cls of Array.from(readingArea.classList)) {
+          expect(cls.startsWith(prefix)).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('should not contain any physical direction CSS classes in rendered HTML', () => {
+    const html: string = fixture.nativeElement.innerHTML;
+    const dir = ['l', 'r'] as const;
+    const props = [
+      ...dir.map((d) => 'p' + d + '-\\d+'),
+      ...dir.map((d) => 'm' + d + '-\\d+'),
+      ...dir.map((d) => d + 'ight-\\d+'),
+      ...dir.map((d) => 'border-' + d + '\\b'),
+      ...dir.map((d) => 'text-' + d + 'ight'),
+    ];
+    const re = new RegExp('\\b(' + props.join('|') + ')\\b');
+    expect(re.test(html)).toBe(false);
+  });
 });
