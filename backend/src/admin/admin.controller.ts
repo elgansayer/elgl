@@ -9,6 +9,7 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
@@ -38,6 +39,11 @@ import {
   AdminReportsListResult,
   LoginHistoryEntry,
 } from './interfaces/admin-user.interface';
+import {
+  CacheControlInterceptor,
+  CACHE_PRIVATE_MEDIUM,
+  CACHE_PRIVATE_NO_STORE,
+} from '../common/cache.interceptor';
 
 interface AuthRequest extends Request {
   user: { sub: string };
@@ -52,6 +58,7 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('users')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({
     summary: 'List platform users',
@@ -131,6 +138,7 @@ export class AdminController {
   }
 
   @Patch('users/:id/vip')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary: 'Set VIP status for a user',
@@ -158,6 +166,7 @@ export class AdminController {
   }
 
   @Get('users/:id/login-history')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @Throttle({ default: { limit: 15, ttl: 60000 } })
   @ApiOperation({
     summary: 'Get login history for a user',
@@ -208,6 +217,7 @@ export class AdminController {
   }
 
   @Post('users/:id/ban')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary: 'Ban a user',
@@ -243,6 +253,7 @@ export class AdminController {
   }
 
   @Post('users/:id/warn')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary: 'Warn a user',
@@ -278,6 +289,7 @@ export class AdminController {
   }
 
   @Get('blocks')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({
     summary: 'List all blocked user relationships',
@@ -456,6 +468,7 @@ export class AdminController {
   }
 
   @Delete('blocks/:blockId')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     summary: 'Remove a block relationship',
