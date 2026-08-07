@@ -12,7 +12,6 @@ describe('ModerationService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       insert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
@@ -246,19 +245,14 @@ describe('ModerationService', () => {
 
       const momentBuilder = {
         select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn((resolve: any) =>
-          resolve({
-            data: [
-              {
-                id: 'moment-1',
-                content_text: 'Hello world',
-                author: { display_name: 'Moment Author' },
-              },
-            ],
-            error: null,
-          }),
-        ),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: {
+            content_text: 'Hello world',
+            author: { display_name: 'Moment Author' },
+          },
+          error: null,
+        }),
       };
 
       mockSupabaseClient.from.mockImplementation((table: string) => {
@@ -293,8 +287,11 @@ describe('ModerationService', () => {
 
       const momentBuilder = {
         select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        then: jest.fn((resolve: any) => resolve({ data: [], error: null })),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'not found' },
+        }),
       };
 
       mockSupabaseClient.from.mockImplementation((table: string) => {

@@ -1,10 +1,15 @@
+<<<<<<< HEAD
 import { Component, inject, signal, computed, afterNextRender } from '@angular/core';
+=======
+import { Component, inject, signal, computed, ErrorHandler } from '@angular/core';
+>>>>>>> origin/main
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
+import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 
 type DeckView = 'list' | 'detail';
 
@@ -14,8 +19,13 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
   template: `
+    <app-srs-error-boundary
+      [context]="errorContext()"
+      [showReportButton]="true"
+      (retry)="handleRetry()"
+    >
     <div class="mx-auto max-w-4xl space-y-6 pb-20">
       <!-- Header -->
       <section class="app-card app-padded space-y-4">
@@ -351,6 +361,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
         }
       }
     </div>
+    </app-srs-error-boundary>
   `,
   styles: [
     `
@@ -366,6 +377,7 @@ export class FlashcardDeckComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
   private router = inject(Router);
+  private errorHandler = inject(ErrorHandler);
 
   // View state
   readonly activeView = signal<DeckView>('list');
@@ -399,6 +411,28 @@ export class FlashcardDeckComponent {
     return all.filter((fc) => !inDeck.has(fc.id));
   });
 
+  readonly errorContext = computed<SrsErrorContext>(() => ({
+    component: 'flashcard-deck',
+    operation: this.activeView(),
+    deckId: this.selectedDeck()?.id,
+  }));
+
+  handleRetry(): void {
+    void this.loadDecks();
+  }
+
+  private reportDeckError(operation: string, err: unknown): void {
+    const deckError = new Error(
+      `[SRS:flashcard-deck] ${operation} failed: ${(err as Error)?.message ?? String(err)}`,
+    );
+    deckError.name = 'SrsDeckError';
+    if (err instanceof Error && err.stack) {
+      deckError.stack = err.stack;
+    }
+    (deckError as Error & { srsOperation?: string }).srsOperation = operation;
+    this.errorHandler.handleError(deckError);
+  }
+
   constructor() {
     afterNextRender(() => {
       this.loadDecks();
@@ -410,7 +444,8 @@ export class FlashcardDeckComponent {
     try {
       const result = await this.deckService.getDecks();
       this.decks.set(result);
-    } catch {
+    } catch (e) {
+      this.reportDeckError('loadDecks', e);
       // ignore
     } finally {
       this.isLoading.set(false);
@@ -444,7 +479,8 @@ export class FlashcardDeckComponent {
       const deck = await this.deckService.createDeck(dto);
       this.decks.update((list) => [deck, ...list]);
       this.toggleCreateForm();
-    } catch {
+    } catch (e) {
+      this.reportDeckError('createDeck', e);
       // error silently
     } finally {
       this.isCreating.set(false);
@@ -486,7 +522,8 @@ export class FlashcardDeckComponent {
       this.selectedDeck.update((d) =>
         d ? { ...d, card_count: d.card_count + 1 } : null,
       );
-    } catch {
+    } catch (e) {
+      this.reportDeckError('addCardToDeck', e);
       // ignore
     }
   }
@@ -507,7 +544,8 @@ export class FlashcardDeckComponent {
       this.selectedDeck.update((d) =>
         d ? { ...d, card_count: Math.max(0, d.card_count - 1) } : null,
       );
-    } catch {
+    } catch (e) {
+      this.reportDeckError('removeCardFromDeck', e);
       // ignore
     }
   }
@@ -517,7 +555,8 @@ export class FlashcardDeckComponent {
     try {
       await this.deckService.deleteDeck(deckId);
       this.decks.update((list) => list.filter((d) => d.id !== deckId));
-    } catch {
+    } catch (e) {
+      this.reportDeckError('deleteDeck', e);
       // ignore
     }
   }
@@ -558,7 +597,8 @@ export class FlashcardDeckComponent {
         this.decks.update((list) => list.map((d) => (d.id === updated.id ? updated : d)));
       }
       this.showEditForm.set(false);
-    } catch {
+    } catch (e) {
+      this.reportDeckError('saveDeckEdits', e);
       // ignore
     }
   }
