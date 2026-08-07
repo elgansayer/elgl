@@ -2,7 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MOCK_USERS } from '../mock-data';
+import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 
 export interface RecommendedUserDto {
   id: string;
@@ -61,6 +63,8 @@ export class RecommendationsService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
+    private readonly circuitBreakerService: CircuitBreakerService,
+    private readonly crashReportService: MatchmakingCrashReportService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
@@ -127,7 +131,20 @@ export class RecommendationsService {
         'Successfully calculated and cached daily recommendations.',
       );
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      const errorType =
+        error instanceof Error ? error.constructor.name : 'UnknownError';
+
       this.logger.error('Error calculating daily recommendations', error);
+
+      await this.crashReportService.reportCrash({
+        operation: 'calculateDailyRecommendations',
+        error_type: errorType,
+        error_message: message,
+        stack_trace: stack,
+        context: { phase: 'daily_cron' },
+      });
     }
   }
 
@@ -320,9 +337,8 @@ export class RecommendationsService {
 
     // Tier 2: Language exchange
     try {
-      const languageResults = await this.recommendationsByLanguageExchange(
-        userId,
-      );
+      const languageResults =
+        await this.recommendationsByLanguageExchange(userId);
       if (languageResults.length > 0) {
         const results = languageResults.map((r) => ({
           ...r,
@@ -518,11 +534,7 @@ export class RecommendationsService {
     const nativeLang = user['native_language'] as string | null;
     const targetLanguages = user['target_languages'] as string[] | null;
 
-    if (
-      !nativeLang ||
-      !targetLanguages ||
-      targetLanguages.length === 0
-    ) {
+    if (!nativeLang || !targetLanguages || targetLanguages.length === 0) {
       return [];
     }
 
@@ -597,12 +609,8 @@ export class RecommendationsService {
   }
 
   /** Tier 4: Ultimate fallback using in-memory mock data. */
-  private recommendationsFromMock(
-    userId: string,
-  ): RecommendedUserDto[] {
-    this.logger.log(
-      `Using mock data as ultimate fallback for user ${userId}`,
-    );
+  private recommendationsFromMock(userId: string): RecommendedUserDto[] {
+    this.logger.log(`Using mock data as ultimate fallback for user ${userId}`);
 
     const mockUsers = MOCK_USERS as Array<{
       id: string;

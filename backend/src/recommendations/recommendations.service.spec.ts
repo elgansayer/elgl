@@ -3,6 +3,8 @@ import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
+import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
+import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
 
@@ -108,6 +110,33 @@ describe('RecommendationsService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+        },
+        {
+          provide: CircuitBreakerService,
+          useValue: {
+            isAvailable: jest.fn().mockReturnValue(true),
+            recordSuccess: jest.fn(),
+            recordFailure: jest.fn(),
+            getState: jest.fn().mockReturnValue({
+              isOpen: false,
+              failureCount: 0,
+              lastFailure: 0,
+              cooldownUntil: 0,
+              totalFailures: 0,
+              totalSuccesses: 0,
+            }),
+            executeWithBreaker: jest
+              .fn()
+              .mockImplementation((_svc: string, op: () => Promise<unknown>) =>
+                op(),
+              ),
+          },
+        },
+        {
+          provide: MatchmakingCrashReportService,
+          useValue: {
+            reportCrash: jest.fn().mockResolvedValue({}),
+          },
         },
       ],
     }).compile();
@@ -289,9 +318,7 @@ describe('RecommendationsService', () => {
         },
       ]);
 
-      mockFrom
-        .mockReturnValueOnce(userChain)
-        .mockReturnValueOnce(matchesChain);
+      mockFrom.mockReturnValueOnce(userChain).mockReturnValueOnce(matchesChain);
 
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);

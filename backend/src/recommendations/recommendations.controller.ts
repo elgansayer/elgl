@@ -1,5 +1,6 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseFilters, UseGuards } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 import {
   RecommendationsService,
   RecommendedUserDto,
@@ -12,6 +13,7 @@ interface AuthenticatedRequest {
 
 @Controller('recommendations')
 @UseGuards(SupabaseAuthGuard)
+@UseFilters(MatchmakingExceptionFilter)
 export class RecommendationsController {
   constructor(
     private readonly recommendationsService: RecommendationsService,
