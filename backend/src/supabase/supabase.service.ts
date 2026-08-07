@@ -33,6 +33,9 @@ export type UsersRow = {
   native_language?: string | null;
   privacy_hide_from_search?: boolean | null;
   incognito_visits?: boolean | null;
+  age?: number | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
   display_name?: string | null;
   avatar_url?: string | null;
   bio_text?: string | null;
@@ -626,7 +629,7 @@ export type ChatMessageRow = {
   edited_at?: string | null;
   is_starred?: boolean;
   is_forwarded?: boolean;
-  delivery_status?: string;
+  delivery_status?: 'sent' | 'delivered' | 'read';
   expires_at?: string | null;
   deleted_for_user_ids?: string[] | null;
 };
