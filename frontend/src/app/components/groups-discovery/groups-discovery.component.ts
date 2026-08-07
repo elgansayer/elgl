@@ -21,40 +21,64 @@ interface DiscoverableGroup {
   selector: 'app-groups-discovery',
   imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe],
   template: `
-    <div class="p-4">
-      <h1 class="text-xl font-bold mb-4">{{ 'groups_discovery_title' | t }}</h1>
+    <div class="p-4 sm:p-6 lg:p-8">
+      <h1 class="text-xl sm:text-2xl font-bold mb-4 text-text-primary">
+        {{ 'groups_discovery_title' | t }}
+      </h1>
       @if (error()) {
-        <div class="text-red-400 mb-3">{{ error() }}</div>
+        <div
+          class="bg-red-500/10 text-red-400 px-3 py-2 rounded-lg mb-3 text-sm"
+          role="alert"
+        >
+          {{ error() }}
+        </div>
       }
       @if (loading()) {
-        <div class="text-slate-400">{{ 'loading' | t }}</div>
+        <div class="text-text-secondary" aria-busy="true">
+          {{ 'loading' | t }}
+        </div>
       } @else {
-        <div class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           @for (group of items(); track group.id) {
-            <div class="bg-slate-800 p-3 rounded-lg flex justify-between items-center">
-              <div>
-                <span class="text-white font-semibold">{{ group.name | sanitiseHtml }}</span>
-                <span class="text-slate-400 text-sm ms-2">
-                  {{ group.member_count }} / {{ group.max_members }} members
+            <div
+              class="bg-surface-400 p-3 sm:p-4 rounded-xl border border-surface-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition hover:border-accent-500/30"
+            >
+              <div class="min-w-0">
+                <span class="text-text-primary font-semibold text-sm sm:text-base block truncate">
+                  {{ group.name | sanitiseHtml }}
+                </span>
+                <span class="text-text-secondary text-xs sm:text-sm">
+                  {{ group.member_count }} / {{ group.max_members }}
+                  {{ 'groups_discovery_members' | t }}
                 </span>
               </div>
-              @if (!group.is_member && group.member_count < group.max_members) {
-                <button
-                  (click)="joinGroup(group.id)"
-                  class="bg-teal-500 hover:bg-teal-400 text-white px-3 py-1 rounded"
-                  [disabled]="joiningId() === group.id"
-                >
-                  {{ 'join' | t }}
-                </button>
-              } @else if (group.is_member) {
-                <span class="text-teal-400 text-sm">{{ 'joined' | t }}</span>
-              } @else {
-                <span class="text-slate-500 text-sm">{{ 'full' | t }}</span>
-              }
+              <div class="shrink-0">
+                @if (!group.is_member && group.member_count < group.max_members) {
+                  <button
+                    (click)="joinGroup(group.id)"
+                    class="bg-accent-500 hover:bg-accent-400 text-white px-4 py-1.5 rounded-full text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                    [disabled]="joiningId() === group.id"
+                  >
+                    {{ joiningId() === group.id ? ('loading' | t) : ('groups_discovery_join' | t) }}
+                  </button>
+                } @else if (group.is_member) {
+                  <span
+                    class="inline-flex items-center gap-1 text-accent-400 text-sm font-bold"
+                    [attr.aria-label]="'groups_discovery_joined' | t"
+                  >
+                    <span aria-hidden="true">&#x2713;</span>
+                    {{ 'groups_discovery_joined' | t }}
+                  </span>
+                } @else {
+                  <span class="text-text-muted text-sm">{{ 'groups_discovery_full' | t }}</span>
+                }
+              </div>
             </div>
           }
           @empty {
-            <div class="text-slate-400">{{ 'no_groups' | t }}</div>
+            <div class="col-span-full text-text-secondary py-8 text-center">
+              {{ 'groups_discovery_empty' | t }}
+            </div>
           }
         </div>
       }
@@ -64,7 +88,7 @@ interface DiscoverableGroup {
     `
       :host {
         display: block;
-        background-color: #121212;
+        background-color: var(--color-surface-500, #121212);
         min-height: 100vh;
       }
     `,
