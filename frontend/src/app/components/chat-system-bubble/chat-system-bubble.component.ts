@@ -78,3 +78,5 @@ export class ChatSystemBubbleComponent {
     () => EVENT_CONFIGS[this.eventType()] ?? DEFAULT_CONFIG,
   );
 }
+
+
