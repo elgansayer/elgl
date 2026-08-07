@@ -1,8 +1,10 @@
-import { Component, inject, input, resource, signal } from '@angular/core';
+import { Component, inject, input, resource, signal, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { DatePipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+import { CentrifugoService } from '../../services/centrifugo.service';
 
 interface VoiceRoomNote {
   id: string;
@@ -17,84 +19,124 @@ interface VoiceRoomNote {
 @Component({
   selector: 'app-voiceroom-notes',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, DatePipe],
   template: `
-    <div class="p-4 bg-surface rounded-lg">
-      <h2 class="text-lg font-semibold mb-2">{{ 'voices.notes.title' | t }}</h2>
+    <div class="flex flex-col h-full">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-surface-100">
+        <h3 class="text-sm font-black text-text-primary">
+          📝 {{ 'voiceroomNotes.panelTitle' | t }}
+        </h3>
+        <button
+          class="px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-600/20 text-purple-300 hover:bg-purple-600/40 transition-colors"
+          (click)="showForm.update(v => !v)"
+        >
+          {{ showForm() ? ('voiceroomNotes.cancelBtn' | t) : ('voiceroomNotes.addNoteBtn' | t) }}
+        </button>
+      </div>
 
-      @if (notesResource.isLoading()) {
-        <p>{{ 'global.loading' | t }}</p>
-      } @else if (notesResource.error()) {
-        <p class="text-red-400">{{ 'global.error' | t }}</p>
-      } @else {
-        <ul class="space-y-3">
-          @for (note of notesResource.value(); track note.id) {
-            <li class="border-s-2 border-primary-500 ps-3 py-2">
-              <p class="text-sm font-medium">{{ note.author_name }}</p>
-              <p class="text-base">{{ note.content }}</p>
-              @if (note.vocabulary) {
-                <p class="text-xs text-muted-foreground mt-1">{{ note.vocabulary }}</p>
-              }
-              <button
-                class="text-xs text-red-400 hover:underline mt-1"
-                (click)="deleteNote(note.id)"
-              >
-                {{ 'voices.notes.delete' | t }}
-              </button>
-            </li>
-          }
-        </ul>
+      @if (showForm()) {
+        <form (ngSubmit)="addNote()" class="mb-3 p-3 rounded-xl bg-surface-200 border border-surface-100">
+          <label class="block mb-1.5 text-[11px] font-bold text-text-secondary">
+            {{ 'voiceroomNotes.contentLabel' | t }}
+            <textarea
+              class="w-full border border-surface-100 rounded-lg p-2.5 bg-surface-300 text-text-primary text-xs resize-none focus:outline-none focus:border-purple-500 transition-colors"
+              rows="3"
+              placeholder="{{ 'voiceroomNotes.contentPlaceholder' | t }}"
+              [value]="content()"
+              (input)="onContentInput($event)"
+            ></textarea>
+          </label>
+
+          <label class="block mt-2 mb-1.5 text-[11px] font-bold text-text-secondary">
+            {{ 'voiceroomNotes.vocabularyLabel' | t }}
+            <input
+              class="w-full border border-surface-100 rounded-lg p-2.5 bg-surface-300 text-text-primary text-xs focus:outline-none focus:border-purple-500 transition-colors"
+              placeholder="{{ 'voiceroomNotes.vocabularyPlaceholder' | t }}"
+              [value]="vocabulary()"
+              (input)="onVocabularyInput($event)"
+            />
+          </label>
+
+          <div class="flex gap-2 mt-3">
+            <button
+              type="submit"
+              class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs flex-1"
+              [disabled]="isPosting()"
+            >
+              {{ isPosting() ? ('voiceroomNotes.postingBtn' | t) : ('voiceroomNotes.postBtn' | t) }}
+            </button>
+            <button
+              type="button"
+              class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
+              (click)="showForm.set(false)"
+            >
+              {{ 'voiceroomNotes.cancelBtn' | t }}
+            </button>
+          </div>
+        </form>
       }
 
-      <hr class="my-4 border-muted" />
-
-      <form (ngSubmit)="addNote()">
-        <label class="block mb-1 text-sm">
-          {{ 'voices.notes.content_label' | t }}
-          <textarea
-            class="w-full border rounded p-2 bg-surface-2"
-            rows="3"
-            [value]="content()"
-            (input)="onContentInput($event)"
-          ></textarea>
-        </label>
-
-        <label class="block mt-2 mb-1 text-sm">
-          {{ 'voices.notes.vocabulary_label' | t }}
-          <input
-            class="w-full border rounded p-2 bg-surface-2"
-            [value]="vocabulary()"
-            (input)="onVocabularyInput($event)"
-          />
-        </label>
-
-        <button
-          type="submit"
-          class="mt-3 btn-primary"
-          [disabled]="isPosting()"
-        >
-          {{ 'voices.notes.post' | t }}
-        </button>
-      </form>
+      <div class="flex-1 overflow-y-auto space-y-2 min-h-0">
+        @if (notesResource.isLoading()) {
+          <div class="text-center py-8 text-text-muted text-xs">
+            {{ 'global.loading' | t }}
+          </div>
+        } @else if (notesResource.error()) {
+          <div class="text-center py-8 text-red-400 text-xs">
+            {{ 'global.error' | t }}
+          </div>
+        } @else {
+          @for (note of notesResource.value(); track note.id) {
+            <div
+              class="p-3 rounded-xl bg-surface-200 border border-surface-100 hover:border-purple-500/30 transition-colors"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-[11px] text-purple-300">{{ note.author_name }}</span>
+                <span class="text-[9px] text-text-muted">{{ note.created_at | date:'shortTime' }}</span>
+              </div>
+              <p class="text-sm text-text-primary break-words">{{ note.content }}</p>
+              @if (note.vocabulary) {
+                <div class="mt-2 flex flex-wrap gap-1">
+                  @for (word of tokeniseVocabulary(note.vocabulary); track word) {
+                    <span class="app-chip bg-indigo-500/15 text-indigo-300 text-[10px]">
+                      {{ word }}
+                    </span>
+                  }
+                </div>
+              }
+              <button
+                class="text-[10px] text-red-400/70 hover:text-red-400 hover:underline mt-1.5 transition-colors"
+                (click)="deleteNote(note.id)"
+              >
+                {{ 'voiceroomNotes.deleteBtn' | t }}
+              </button>
+            </div>
+          } @empty {
+            <div class="text-center py-12 text-text-muted">
+              <p class="text-2xl mb-2">📝</p>
+              <p class="text-xs">{{ 'voiceroomNotes.emptyState' | t }}</p>
+              <p class="text-[10px] mt-1 opacity-70">{{ 'voiceroomNotes.emptyHint' | t }}</p>
+            </div>
+          }
+        }
+      </div>
     </div>
   `,
   styles: [`
-    .btn-primary { background: #6366f1; color: #fff; padding: 0.5rem 1rem; border-radius: 0.375rem; }
-    .bg-surface { background-color: #1e1e1e; }
-    .bg-surface-2 { background-color: #2a2a2a; }
-    .border-muted { border-color: #333; }
-    .text-muted-foreground { color: #9ca3af; }
-    .text-red-400 { color: #f87171; }
+    :host { display: flex; flex-direction: column; height: 100%; }
   `],
 })
 export class VoiceroomNotesComponent {
   private http = inject(HttpClient);
   private i18n = inject(I18nService);
-  roomId = input.required<string>();
+  private centrifugo = inject(CentrifugoService);
+  private injector = inject(Injector);
+  readonly roomId = input<string>('');
 
   content = signal('');
   vocabulary = signal('');
   isPosting = signal(false);
+  showForm = signal(false);
 
   private readonly refreshCounter = signal(0);
 
@@ -109,6 +151,37 @@ export class VoiceroomNotesComponent {
       ),
     defaultValue: [],
   });
+
+  constructor() {
+    // Subscribe/unsubscribe to Centrifugo channel for real-time note updates
+    // This is an exception to the "no effect for side effects" rule (allowed per AGENTS.md §5.3)
+    effect(
+      (onCleanup) => {
+        const id = this.roomId();
+        if (!id) return;
+
+        this.centrifugo.subscribe(`room_${id}`, (data: unknown) => {
+          if (
+            typeof data === 'object' &&
+            data !== null &&
+            'type' in data &&
+            (data as Record<string, unknown>)['type'] === 'voice_room_note'
+          ) {
+            this.refreshCounter.update((value) => value + 1);
+          }
+        });
+
+        onCleanup(() => {
+          this.centrifugo.unsubscribe(`room_${id}`);
+        });
+      },
+      { injector: this.injector },
+    );
+  }
+
+  tokeniseVocabulary(text: string): string[] {
+    return text.split(',').map((w) => w.trim()).filter(Boolean);
+  }
 
   onContentInput(event: Event): void {
     const target = event.target;
@@ -138,6 +211,7 @@ export class VoiceroomNotesComponent {
       this.content.set('');
       this.vocabulary.set('');
       this.refreshCounter.update((value) => value + 1);
+      this.showForm.set(false);
     } catch {
       // handled by UI error display
     } finally {

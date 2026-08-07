@@ -275,7 +275,33 @@
         </div>
 
         <div>
-          <app-room-chat></app-room-chat>
+          <div class="flex border-b border-surface-100 mb-2">
+            <button
+              (click)="sidebarTab.set('chat')"
+              class="flex-1 px-3 py-2 text-xs font-bold transition-colors"
+              [class.border-b-2]="sidebarTab() === 'chat'"
+              [class.border-purple-500]="sidebarTab() === 'chat'"
+              [class.text-purple-300]="sidebarTab() === 'chat'"
+              [class.text-text-muted]="sidebarTab() !== 'chat'"
+            >
+              💬 {{ 'audioRoom.tabChat' | t }}
+            </button>
+            <button
+              (click)="sidebarTab.set('notes')"
+              class="flex-1 px-3 py-2 text-xs font-bold transition-colors"
+              [class.border-b-2]="sidebarTab() === 'notes'"
+              [class.border-purple-500]="sidebarTab() === 'notes'"
+              [class.text-purple-300]="sidebarTab() === 'notes'"
+              [class.text-text-muted]="sidebarTab() !== 'notes'"
+            >
+              📝 {{ 'audioRoom.tabNotes' | t }}
+            </button>
+          </div>
+          @if (sidebarTab() === 'chat') {
+            <app-room-chat></app-room-chat>
+          } @else {
+            <app-voiceroom-notes [roomId]="store.currentRoom()?.id ?? ''"></app-voiceroom-notes>
+          }
         </div>
       </div>
     </section>

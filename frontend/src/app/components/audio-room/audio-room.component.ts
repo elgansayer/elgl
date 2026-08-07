@@ -10,6 +10,7 @@ import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.sto
 import { AuthService } from '../../services/auth.service';
 import { QuickPollService } from '../../services/quick-poll.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
+import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { VideoRoomComponent } from '../video-room/video-room.component';
 import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
 import { VirtualGiftModalComponent } from '../virtual-gift-modal/virtual-gift-modal.component';
@@ -28,6 +29,7 @@ import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay
   imports: [
     TranslatePipe,
     RoomChatComponent,
+    VoiceroomNotesComponent,
     VideoRoomComponent,
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
@@ -54,6 +56,7 @@ export class AudioRoomComponent implements OnInit {
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
+  readonly sidebarTab = signal<'chat' | 'notes'>('chat');
 
   readonly audiencePlaceholderAvatars = computed(() => {
     const count = this.store.audienceCount();
