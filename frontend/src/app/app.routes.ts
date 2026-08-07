@@ -494,6 +494,15 @@ export const routes: Routes = [
     title: 'Moderation - HelloTalk',
   },
   {
+    path: 'admin/blocks',
+    loadComponent: () =>
+      import('./pages/admin/blocks/admin-blocks.component').then(
+        (m) => m.AdminBlocksComponent,
+      ),
+    canActivate: [adminGuard],
+    title: 'Block Management - HelloTalk',
+  },
+  {
     path: 'admin/users',
     loadComponent: () =>
       import('./pages/admin/admin-users.component').then((m) => m.AdminUsersComponent),

@@ -1291,6 +1291,12 @@ export class I18nService {
     'admin.banFailed': 'Ban failed',
     'admin.warningIssued': 'Warning issued',
     'admin.warningFailed': 'Warning failed',
+    'admin.blocks.title': 'Block Management',
+    'admin.blocks.emptyTitle': 'No Blocked Users',
+    'admin.blocks.emptyDesc': 'There are no blocked users in the system.',
+    'admin.blocks.loadError': 'Failed to Load Blocked Users',
+    'admin.blocks.loadErrorDesc': 'An error occurred while loading blocked users. Please try again.',
+    'admin.blocks.unblock': 'Unblock',
 
     // Sticker Store
     'sticker.purchaseSuccess': 'Successfully purchased {{name}}!',

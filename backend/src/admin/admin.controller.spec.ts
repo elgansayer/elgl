@@ -18,6 +18,10 @@ describe('AdminController', () => {
             listUsers: jest.fn(),
             setVipStatus: jest.fn(),
             getLoginHistory: jest.fn(),
+            banUser: jest.fn(),
+            warnUser: jest.fn(),
+            listBlockedUsers: jest.fn(),
+            adminUnblockUser: jest.fn(),
           },
         },
       ],
@@ -80,6 +84,53 @@ describe('AdminController', () => {
 
       expect(adminService.getLoginHistory).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(history);
+    });
+  });
+
+  describe('listBlockedUsers', () => {
+    it('delegates to AdminService.listBlockedUsers', async () => {
+      const blocked = [{ id: 'blocked-1', display_name: 'Spammer' }];
+      (adminService.listBlockedUsers as jest.Mock).mockResolvedValue(blocked);
+
+      const result = await controller.listBlockedUsers();
+
+      expect(adminService.listBlockedUsers).toHaveBeenCalled();
+      expect(result).toEqual(blocked);
+    });
+  });
+
+  describe('adminUnblockUser', () => {
+    it('delegates to AdminService.adminUnblockUser', async () => {
+      (adminService.adminUnblockUser as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await controller.adminUnblockUser('user-1');
+
+      expect(adminService.adminUnblockUser).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual({ message: 'User unblocked' });
+    });
+  });
+
+  describe('banUser', () => {
+    it('delegates to AdminService.banUser and returns a message', async () => {
+      (adminService.banUser as jest.Mock).mockResolvedValue(undefined);
+
+      const mockReq = { user: { sub: 'admin-user' } };
+      const result = await controller.banUser('user-99', mockReq as any);
+
+      expect(adminService.banUser).toHaveBeenCalledWith('user-99', 'admin-user');
+      expect(result).toEqual({ message: 'User banned' });
+    });
+  });
+
+  describe('warnUser', () => {
+    it('delegates to AdminService.warnUser and returns a message', async () => {
+      (adminService.warnUser as jest.Mock).mockResolvedValue(undefined);
+
+      const mockReq = { user: { sub: 'admin-user' } };
+      const result = await controller.warnUser('user-99', mockReq as any);
+
+      expect(adminService.warnUser).toHaveBeenCalledWith('user-99', 'admin-user');
+      expect(result).toEqual({ message: 'User warned' });
     });
   });
 });

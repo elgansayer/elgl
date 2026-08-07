@@ -124,4 +124,55 @@ export class AdminService {
       throw new NotFoundException(`Unable to warn user ${targetUserId}`);
     }
   }
+
+  async listBlockedUsers(): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: blocks, error: blockError } = await supabase
+      .from('blocks')
+      .select('blocked_id');
+
+    if (blockError) {
+      this.logger.error(`Failed to list blocked users: ${blockError.message}`);
+      return [];
+    }
+
+    if (!blocks || blocks.length === 0) {
+      return [];
+    }
+
+    const blockedIds = [...new Set(blocks.map((b: any) => b.blocked_id))];
+
+    const { data: users, error: userError } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url, native_language, target_languages')
+      .in('id', blockedIds);
+
+    if (userError) {
+      this.logger.error(`Failed to fetch blocked user details: ${userError.message}`);
+      return [];
+    }
+
+    return (users ?? []).map((u: any) => ({
+      id: u.id,
+      display_name: u.display_name,
+      avatar_url: u.avatar_url,
+      native_language: u.native_language,
+      target_languages: u.target_languages,
+    }));
+  }
+
+  async adminUnblockUser(blockedId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const { error } = await supabase
+      .from('blocks')
+      .delete()
+      .eq('blocked_id', blockedId);
+
+    if (error) {
+      this.logger.error(`Failed to unblock user ${blockedId}: ${error.message}`);
+      throw new NotFoundException(`Unable to unblock user ${blockedId}`);
+    }
+  }
 }

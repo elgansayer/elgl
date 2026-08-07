@@ -26,6 +26,14 @@ export interface AdminUserListResult {
   pageSize: number;
 }
 
+export interface AdminBlockedUser {
+  id: string;
+  display_name?: string;
+  avatar_url?: string;
+  native_language?: string;
+  target_languages?: string[];
+}
+
 export interface LoginHistoryEntry {
   id: string;
   user_id: string;
@@ -195,6 +203,27 @@ export class AdminService {
       this.http.post<{ message: string }>(
         `${this.baseUrl}/users/${userId}/warn`,
         {},
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async listBlockedUsers(): Promise<AdminBlockedUser[]> {
+    return firstValueFrom(
+      this.http
+        .get<AdminBlockedUser[]>(`${this.baseUrl}/blocks`, {
+          headers: this.getHeaders(),
+        })
+        .pipe(
+          catchError(() => of([])),
+        ),
+    );
+  }
+
+  async adminUnblockUser(blockedId: string): Promise<{ message: string }> {
+    return firstValueFrom(
+      this.http.delete<{ message: string }>(
+        `${this.baseUrl}/blocks/${blockedId}`,
         { headers: this.getHeaders() },
       ),
     );

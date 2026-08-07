@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -68,5 +69,18 @@ export class AdminController {
     const adminUserId = req.user.sub;
     await this.adminService.warnUser(id, adminUserId);
     return { message: 'User warned' };
+  }
+
+  @Get('blocks')
+  async listBlockedUsers(): Promise<any[]> {
+    return this.adminService.listBlockedUsers();
+  }
+
+  @Delete('blocks/:blockedId')
+  async adminUnblockUser(
+    @Param('blockedId') blockedId: string,
+  ): Promise<{ message: string }> {
+    await this.adminService.adminUnblockUser(blockedId);
+    return { message: 'User unblocked' };
   }
 }

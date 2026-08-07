@@ -168,4 +168,114 @@ describe('AdminService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('listBlockedUsers', () => {
+    it('returns empty array when blocks query errors', async () => {
+      mockQueryBuilder.select.mockReturnThis();
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } }),
+      });
+
+      const result = await service.listBlockedUsers();
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array when no blocks exist', async () => {
+      mockQueryBuilder.select.mockReturnThis();
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockResolvedValue({ data: [], error: null }),
+      });
+
+      const result = await service.listBlockedUsers();
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns user details for blocked users', async () => {
+      const blockRows = [{ blocked_id: 'user-a' }, { blocked_id: 'user-b' }];
+      const userRows = [
+        { id: 'user-a', display_name: 'Alice', avatar_url: null, native_language: 'en', target_languages: ['es'] },
+        { id: 'user-b', display_name: 'Bob', avatar_url: '/b.jpg', native_language: 'fr', target_languages: ['de'] },
+      ];
+
+      const fromMock = jest.fn()
+        .mockReturnValueOnce({ data: blockRows, error: null } as any)
+        .mockReturnValueOnce({ data: userRows, error: null } as any);
+
+      mockSupabaseClient.from = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({ data: userRows, error: null }),
+        }),
+      });
+
+      // Re-setup to simulate the full chain
+      const mockBlocksQuery = {
+        select: jest.fn().mockResolvedValue({ data: blockRows, error: null }),
+      };
+      const mockUsersQuery = {
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({ data: userRows, error: null }),
+        }),
+      };
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockReturnValueOnce(mockBlocksQuery)
+        .mockReturnValueOnce(mockUsersQuery);
+
+      const result = await service.listBlockedUsers();
+
+      expect(result).toEqual([
+        { id: 'user-a', display_name: 'Alice', avatar_url: null, native_language: 'en', target_languages: ['es'] },
+        { id: 'user-b', display_name: 'Bob', avatar_url: '/b.jpg', native_language: 'fr', target_languages: ['de'] },
+      ]);
+    });
+
+    it('returns empty array when user details query errors', async () => {
+      const blockRows = [{ blocked_id: 'user-a' }];
+      const mockBlocksQuery = {
+        select: jest.fn().mockResolvedValue({ data: blockRows, error: null }),
+      };
+      const mockUsersQuery = {
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({ data: null, error: { message: 'fail' } }),
+        }),
+      };
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockReturnValueOnce(mockBlocksQuery)
+        .mockReturnValueOnce(mockUsersQuery);
+
+      const result = await service.listBlockedUsers();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('adminUnblockUser', () => {
+    it('deletes all blocks for the given blocked user', async () => {
+      const deleteChain = {
+        eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+      };
+      mockSupabaseClient.from.mockReturnValue({
+        delete: jest.fn().mockReturnValue(deleteChain),
+      });
+
+      await service.adminUnblockUser('spammer-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(deleteChain.eq).toHaveBeenCalledWith('blocked_id', 'spammer-1');
+    });
+
+    it('throws NotFoundException when the delete errors', async () => {
+      const deleteChain = {
+        eq: jest.fn().mockResolvedValue({ data: null, error: { message: 'db error' } }),
+      };
+      mockSupabaseClient.from.mockReturnValue({
+        delete: jest.fn().mockReturnValue(deleteChain),
+      });
+
+      await expect(service.adminUnblockUser('spammer-1')).rejects.toThrow(NotFoundException);
+    });
+  });
 });
