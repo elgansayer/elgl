@@ -260,7 +260,12 @@
                 [class.text-red-500]="moment.is_liked_by_me"
                [attr.aria-label]="'moments.likeBtn' | t">
                 <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
-                <span class="font-bold">{{ moment.likes_count || ('moments.likeBtn' | t) }}</span>
+              </button>
+              <button
+                (click)="openLikedBy(moment)"
+                class="flex items-center gap-1.5 hover:text-text-primary transition-colors font-bold"
+              >
+                <span>{{ moment.likes_count || 0 }}</span>
               </button>
               <button
                 (click)="toggleComments(moment)"
@@ -402,5 +407,13 @@
       (cancelled)="activeCorrectionMomentId.set(null)"
     >
     </app-correction-modal>
+  }
+
+  <!-- Liked By Modal -->
+  @if (activeLikedByMomentId(); as likedMomentId) {
+    <app-liked-by-modal
+      [momentId]="likedMomentId"
+      (closeModal)="closeLikedBy()"
+    ></app-liked-by-modal>
   }
 </div>

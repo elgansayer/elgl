@@ -20,6 +20,7 @@ import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
+import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -36,6 +37,7 @@ import {
     CorrectionModalComponent,
     LanguagePickerComponent,
     TextToSpeechComponent,
+    LikedByModalComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
