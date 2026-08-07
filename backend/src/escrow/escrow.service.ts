@@ -687,6 +687,70 @@ export class EscrowService {
   }
 
   /**
+   * File a dispute against an escrow transaction.
+   * Either party can dispute a held escrow. Updates status to 'disputed'
+   * and stores the dispute reason with optional evidence.
+   */
+  async disputeEscrow(
+    transactionId: string,
+    userId: string,
+    reason: string,
+    evidence?: string,
+  ): Promise<EscrowTransactionResponse> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: txRow, error: txError } = await supabase
+      .from('escrow_transactions' as never)
+      .select('*')
+      .eq('id', transactionId)
+      .single();
+
+    if (txError || !txRow) {
+      throw new NotFoundException('Escrow transaction not found');
+    }
+
+    const tx = txRow as EscrowTransaction;
+
+    if (tx.payer_id !== userId && tx.payee_id !== userId) {
+      throw new BadRequestException('Not authorised to dispute this escrow');
+    }
+
+    if (tx.status !== 'held') {
+      throw new ConflictException(
+        `Cannot dispute escrow in '${tx.status}' status. Only held escrows can be disputed.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await supabase
+      .from('escrow_transactions' as never)
+      .update({
+        status: 'disputed' as EscrowStatus,
+        reason: `${tx.reason ?? ''}\n[DISPUTE by ${userId}: ${reason}]`.trim(),
+        metadata: {
+          ...(tx.metadata as Record<string, unknown> ?? {}),
+          dispute_initiator: userId,
+          dispute_filed_at: now,
+          dispute_evidence: evidence ?? null,
+        },
+      } as never)
+      .eq('id', transactionId)
+      .select('*')
+      .single();
+
+    if (updateError || !updated) {
+      this.logger.error(
+        `Failed to update escrow ${transactionId} status to disputed: ${updateError?.message ?? 'invalid data returned'}`,
+      );
+      throw new InternalServerErrorException('Failed to file dispute');
+    }
+
+    this.logger.log(`Escrow disputed: ${transactionId} by user ${userId}`);
+
+    return this.toResponse(updated);
+  }
+
+  /**
    * Retrieves an escrow transaction by ID.
    *
    * Read-through Redis caching: escrow details are cached for a short
