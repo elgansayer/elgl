@@ -5,6 +5,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { CrashReportService } from './crash-report.service';
 import { EscrowService } from './escrow.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { SupabaseService } from '../supabase/supabase.service';
