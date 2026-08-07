@@ -98,7 +98,7 @@ describe('ModerationController', () => {
 
   describe('approve', () => {
     it('should call service approveItem with dto', async () => {
-      const dto = { itemId: 'report-1', type: 'profile' };
+      const dto = { itemId: 'report-1', type: 'profile' as const };
       (moderationService.approveItem as jest.Mock).mockResolvedValue({
         success: true,
       });
@@ -112,7 +112,7 @@ describe('ModerationController', () => {
 
   describe('reject', () => {
     it('should call service rejectItem with dto', async () => {
-      const dto = { itemId: 'report-1', type: 'moment', reason: 'violation' };
+      const dto = { itemId: 'report-1', type: 'moment' as const, reason: 'violation' };
       (moderationService.rejectItem as jest.Mock).mockResolvedValue({
         success: true,
       });

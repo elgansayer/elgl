@@ -7,6 +7,7 @@ import {
   Param,
   Req,
   UseGuards,
+  UseInterceptors,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -29,6 +30,10 @@ import { ModerationItem, ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
+import {
+  CacheControlInterceptor,
+  CACHE_PRIVATE_NO_STORE,
+} from '../common/cache/cache.interceptor';
 
 @ApiTags('Moderation')
 @ApiBearerAuth('bearer')
@@ -38,6 +43,7 @@ export class ModerationController {
   constructor(private readonly moderationService: ModerationService) {}
 
   @Get('items')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({
     summary: 'List moderation queue items',
@@ -103,6 +109,7 @@ export class ModerationController {
   }
 
   @Post('report')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @HttpCode(HttpStatus.CREATED)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
@@ -138,6 +145,7 @@ export class ModerationController {
   }
 
   @Post('approve')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
@@ -163,6 +171,7 @@ export class ModerationController {
   }
 
   @Post('reject')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
@@ -188,6 +197,7 @@ export class ModerationController {
   }
 
   @Get('analyse/:userId')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary: 'Analyse user for dating behaviour risk',
