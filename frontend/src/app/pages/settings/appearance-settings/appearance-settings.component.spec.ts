@@ -31,6 +31,9 @@ describe('AppearanceSettingsComponent', () => {
     themeServiceMock = {
       currentTheme: signal<'light' | 'dark' | 'system'>('system'),
       setTheme: vi.fn(),
+      setPrimaryAccentColor: vi.fn(),
+      primaryAccentColor: signal('#4f46e5'),
+      loadFromProfile: vi.fn(),
     };
 
     fontScaleServiceMock = {
@@ -128,5 +131,15 @@ describe('AppearanceSettingsComponent', () => {
     component.isVip.set(false);
     component.setAccentColor('#e11d48');
     expect(component.primaryAccentColor()).toBe('#4f46e5');
+  });
+
+  it('should update theme service accent colour when profile loads', async () => {
+    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#4f46e5');
+  });
+
+  it('should update theme service accent colour on save', async () => {
+    component.primaryAccentColor.set('#e11d48');
+    await component.saveSettings();
+    expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#e11d48');
   });
 });

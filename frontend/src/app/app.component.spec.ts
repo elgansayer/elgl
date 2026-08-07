@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideLocationMocks } from '@angular/common/testing';
 import { DOCUMENT } from '@angular/common';
-import { vi } from 'vitest';
 import { AppComponent } from './app.component';
 import { AuthService } from './services/auth.service';
 import { AppLockService } from './services/app-lock.service';
@@ -14,6 +13,8 @@ import { ReportUserModalService } from './components/report-user-modal/report-us
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { FontScaleService } from './services/font-scale.service';
+import { ThemeService } from './services/theme.service';
+import { UserService } from './services/user.service';
 import { I18nService } from './services/i18n.service';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -77,6 +78,15 @@ describe('AppComponent', () => {
     scaleFactor: vi.fn(() => 1),
   };
 
+  const themeServiceMock = {
+    loadFromProfile: vi.fn(),
+    setPrimaryAccentColor: vi.fn(),
+  };
+
+  const userServiceMock = {
+    getMyProfile: vi.fn(() => Promise.resolve(null)),
+  };
+
   const i18nServiceMock = {
     translate: vi.fn(() => ''),
   };
@@ -105,6 +115,8 @@ describe('AppComponent', () => {
         { provide: UnreadCounterService, useValue: unreadCounterMock },
         { provide: VersionCheckService, useValue: versionCheckServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
+        { provide: ThemeService, useValue: themeServiceMock },
+        { provide: UserService, useValue: userServiceMock },
         { provide: I18nService, useValue: i18nServiceMock as unknown as I18nService },
         { provide: DOCUMENT, useValue: document },
       ],
