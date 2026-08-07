@@ -4,6 +4,7 @@ import { NotificationPreferencesService } from './notification-preferences.servi
 import { ChatNotificationListener } from './listeners/chat-notification.listener';
 import { ChatMentionNotificationListener } from './listeners/chat-mention-notification.listener';
 import { CommentNotificationListener } from './listeners/comment-notification.listener';
+import { CommentMentionNotificationListener } from './listeners/comment-mention-notification.listener';
 import { ProfileViewNotificationListener } from './listeners/profile-view-notification.listener';
 import { SupabaseModule } from '../supabase/supabase.module';
 
@@ -18,6 +19,7 @@ import { NotificationsController } from './notifications.controller';
     ChatNotificationListener,
     ChatMentionNotificationListener,
     CommentNotificationListener,
+    CommentMentionNotificationListener,
     ProfileViewNotificationListener,
   ],
   exports: [NotificationsService, NotificationPreferencesService],
