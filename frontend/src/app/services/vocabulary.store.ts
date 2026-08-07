@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SrsOfflineService } from './srs-offline.service';
+import { HtmlSanitisationService } from './html-sanitisation.service';
 
 export interface Flashcard {
   id: string;
@@ -143,6 +144,7 @@ export class VocabularyStore {
   private authService = inject(AuthService);
   private srsOffline = inject(SrsOfflineService);
   private errorHandler = inject(ErrorHandler);
+  private htmlSanitiser = inject(HtmlSanitisationService);
   private flashcardsUrl = `${environment.apiUrl}/flashcards`;
   private nlpUrl = `${environment.apiUrl}/nlp`;
 
@@ -246,10 +248,15 @@ export class VocabularyStore {
       const list = await firstValueFrom(
         this.http.get<Flashcard[]>(this.flashcardsUrl, { headers: this.getHeaders() }),
       );
+<<<<<<< HEAD
       this.allFlashcards.set(list);
       this.isOfflineMode.set(false);
+=======
+      const sanitised = this.sanitiseFlashcards(list);
+      this.allFlashcards.set(sanitised);
+>>>>>>> origin/main
       const map = new Map<string, Flashcard>();
-      list.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
+      sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
       this.flashcardMap.set(map);
 <<<<<<< HEAD
     } catch {
@@ -262,7 +269,7 @@ export class VocabularyStore {
       this.flashcardMap.set(map);
 =======
       // Cache for offline access
-      this.srsOffline.cacheFlashcards(list).catch(() => undefined);
+      this.srsOffline.cacheFlashcards(sanitised).catch(() => undefined);
     } catch (e) {
       // Report error for crash tracking
       this.reportSrsError('loadAllFlashcards', e);
@@ -270,9 +277,10 @@ export class VocabularyStore {
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedFlashcards();
         if (cached.length > 0) {
-          this.allFlashcards.set(cached);
+          const sanitised = this.sanitiseFlashcards(cached);
+          this.allFlashcards.set(sanitised);
           const map = new Map<string, Flashcard>();
-          cached.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
+          sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
           this.flashcardMap.set(map);
         }
       }
@@ -287,6 +295,7 @@ export class VocabularyStore {
       const list = await firstValueFrom(
         this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
       );
+<<<<<<< HEAD
       this.dueReviews.set(list);
 <<<<<<< HEAD
       this.isOfflineMode.set(false);
@@ -295,8 +304,12 @@ export class VocabularyStore {
       this.dueReviews.set(this.getFallbackDueReviews());
       this.isOfflineMode.set(true);
 =======
+=======
+      const sanitised = this.sanitiseFlashcards(list);
+      this.dueReviews.set(sanitised);
+>>>>>>> origin/main
       // Cache for offline access
-      this.srsOffline.cacheDueReviews(list).catch(() => undefined);
+      this.srsOffline.cacheDueReviews(sanitised).catch(() => undefined);
     } catch (e) {
       // Report error for crash tracking
       this.reportSrsError('loadDueReviews', e);
@@ -304,7 +317,7 @@ export class VocabularyStore {
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedDueReviews();
         if (cached.length > 0) {
-          this.dueReviews.set(cached);
+          this.dueReviews.set(this.sanitiseFlashcards(cached));
         }
       }
 >>>>>>> origin/main
@@ -343,6 +356,7 @@ export class VocabularyStore {
     definition?: string;
     pronunciation_url?: string;
   }): Promise<Flashcard> {
+<<<<<<< HEAD
     try {
       const fc = await firstValueFrom(
         this.http.post<Flashcard>(this.flashcardsUrl, payload, { headers: this.getHeaders() }),
@@ -424,24 +438,38 @@ export class VocabularyStore {
   }
 
   private updateCardInLocalState(fc: Flashcard): void {
+=======
+    const fc = await firstValueFrom(
+      this.http.post<Flashcard>(this.flashcardsUrl, payload, { headers: this.getHeaders() }),
+    );
+    const sanitised = this.sanitiseFlashcard(fc);
+>>>>>>> origin/main
     this.allFlashcards.update((list) => {
       const existingIdx = list.findIndex((item) => item.id === fc.id);
       if (existingIdx >= 0) {
         return list.map((item) => (item.id === fc.id ? fc : item));
       }
       const filtered = list.filter(
+<<<<<<< HEAD
         (item) => item.word_token !== fc.word_token,
+=======
+        (item) => item.id !== sanitised.id && item.word_token !== sanitised.word_token,
+>>>>>>> origin/main
       );
-      return [fc, ...filtered];
+      return [sanitised, ...filtered];
     });
     this.flashcardMap.update((map) => {
       const next = new Map(map);
-      next.set(fc.word_token.toLowerCase(), fc);
+      next.set(sanitised.word_token.toLowerCase(), sanitised);
       return next;
     });
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     return fc;
+=======
+    return sanitised;
+>>>>>>> origin/main
   }
 
   async updateSrsLevel(flashcardId: string, quality: number): Promise<Flashcard> {
@@ -457,14 +485,15 @@ export class VocabularyStore {
           { headers: this.getHeaders() },
         ),
       );
-      this.triggerHapticFeedback(fc.srs_level);
-      this.allFlashcards.update((list) => list.map((item) => (item.id === fc.id ? fc : item)));
+      const sanitised = this.sanitiseFlashcard(fc);
+      this.triggerHapticFeedback(sanitised.srs_level);
+      this.allFlashcards.update((list) => list.map((item) => (item.id === sanitised.id ? sanitised : item)));
       this.flashcardMap.update((map) => {
         const next = new Map(map);
-        next.set(fc.word_token.toLowerCase(), fc);
+        next.set(sanitised.word_token.toLowerCase(), sanitised);
         return next;
       });
-      return fc;
+      return sanitised;
     } catch {
       // Offline - queue the review and optimistically update local state
       if (!navigator.onLine) {
@@ -580,6 +609,33 @@ export class VocabularyStore {
     }
     const enriched = Object.assign(srsError, { srsOperation: operation });
     this.errorHandler.handleError(enriched);
+  }
+
+  /**
+   * Sanitises a single flashcard's text fields against XSS via DOMPurify.
+   * Only runs on the user-authored text fields (word_token, translation,
+   * definition, original_context, pronunciation_url).
+   */
+  private sanitiseFlashcard(fc: Flashcard): Flashcard {
+    return {
+      ...fc,
+      word_token: this.htmlSanitiser.sanitiseText(fc.word_token),
+      translation: this.htmlSanitiser.sanitiseText(fc.translation),
+      definition: fc.definition
+        ? this.htmlSanitiser.sanitiseText(fc.definition)
+        : fc.definition,
+      original_context: fc.original_context
+        ? this.htmlSanitiser.sanitiseText(fc.original_context)
+        : fc.original_context,
+      pronunciation_url: fc.pronunciation_url
+        ? this.htmlSanitiser.sanitiseUrl(fc.pronunciation_url)
+        : fc.pronunciation_url,
+    };
+  }
+
+  /** Sanitises an array of flashcards. */
+  private sanitiseFlashcards(list: Flashcard[]): Flashcard[] {
+    return list.map((fc) => this.sanitiseFlashcard(fc));
   }
 
   /**

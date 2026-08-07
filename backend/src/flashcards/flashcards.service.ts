@@ -14,9 +14,13 @@ import { MOCK_FLASHCARDS } from '../mock-data';
 import { MetricsService } from '../metrics/metrics.service';
 import { withRetry } from '../common/retry';
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> origin/main
 >>>>>>> origin/main
 =======
+>>>>>>> origin/main
+=======
+import { sanitiseFlashcardData } from './sanitise-flashcard.helper';
 >>>>>>> origin/main
 
 @Injectable()
@@ -127,7 +131,11 @@ export class FlashcardsService {
       'Flashcard created/updated',
     );
 
+<<<<<<< HEAD
     return response.data;
+>>>>>>> origin/main
+=======
+    return sanitiseFlashcardData(response.data);
 >>>>>>> origin/main
   }
 
@@ -302,7 +310,11 @@ export class FlashcardsService {
       'SRS review completed',
     );
 
+<<<<<<< HEAD
     return response.data;
+>>>>>>> origin/main
+=======
+    return sanitiseFlashcardData(response.data);
 >>>>>>> origin/main
   }
 
@@ -416,6 +428,10 @@ export class FlashcardsService {
 
       return fallbackCards;
     }
+<<<<<<< HEAD
+=======
+    return sanitiseFlashcardData(response.data);
+>>>>>>> origin/main
   }
 
   async getDueReviews(userId: string): Promise<Flashcard[]> {
@@ -459,5 +475,9 @@ export class FlashcardsService {
 
       return fallbackCards;
     }
+<<<<<<< HEAD
+=======
+    return sanitiseFlashcardData(response.data);
+>>>>>>> origin/main
   }
 }
