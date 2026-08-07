@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, resource, afterNextRender } from '@angular/core';
 import { Location } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
@@ -8,30 +9,28 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
 import { EscrowService } from '../../services/escrow.service';
+import { showToast } from '../../services/toast.service';
 
 type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
-type EscrowServiceType = 'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
-type StatusFilter = 'all' | EscrowStatus;
 
 interface StatusFilterOption {
   value: StatusFilter;
   label: string;
 }
 
+type StatusFilter = 'all' | EscrowStatus;
+
 @Component({
   selector: 'app-escrow-payments',
   imports: [FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
-<<<<<<< HEAD
 export class EscrowPaymentsComponent {
-=======
-export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
->>>>>>> origin/main
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
-  private readonly joyrideService = inject(JoyrideService);
+  private readonly network = inject(NetworkStatusService);
+  private readonly location = inject(Location);
   private readonly onboardingService = inject(EscrowOnboardingService);
   private readonly escrowService = inject(EscrowService);
 
@@ -69,6 +68,13 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
 
   readonly escrows = computed(() => this.escrowsResource.value() ?? []);
   readonly loading = computed(() => this.escrowsResource.isLoading());
+
+  readonly sanitisedStatusFilters = computed(() =>
+    this.statusFilters.map((f) => ({
+      ...f,
+      label: this.i18n.translate(f.label),
+    })),
+  );
 
   constructor() {
     afterNextRender(() => {
@@ -172,6 +178,7 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     if (this.onboardingService.isTourInProgress()) {
       return;
     }
+    showToast(this.i18n.translate('escrow.onboardingHint'));
     this.onboardingService.startTour();
   }
 }

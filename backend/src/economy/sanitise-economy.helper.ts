@@ -127,12 +127,14 @@ export function scrubCoinPurchasesForArchive(
   if (records === null || records === undefined) {
     return records;
   }
-  return records.map((r) => {
-    if (r !== null && typeof r === 'object') {
-      return scrubCoinPurchaseForArchive(r);
-    }
-    return record;
-  });
+  return records
+    .map((r) => {
+      if (r !== null && typeof r === 'object') {
+        const scrubbed = scrubCoinPurchaseForArchive(r);
+        return scrubbed ?? r;
+      }
+      return r;
+    });
 }
 // ---------------------------------------------------------------------------
 // GDPR data scrubbing helpers for Escrow Transactions

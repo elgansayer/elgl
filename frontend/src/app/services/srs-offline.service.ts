@@ -39,8 +39,8 @@ export class SrsOfflineService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!target || typeof target !== 'object' || !('result' in target)) return;
-        const db = target.result as IDBDatabase;
+        if (!(target instanceof IDBOpenDBRequest)) return;
+        const db = target.result;
         if (!db.objectStoreNames.contains('flashcards')) {
           db.createObjectStore('flashcards', { keyPath: 'id' });
         }

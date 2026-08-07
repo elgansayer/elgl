@@ -1,20 +1,17 @@
-<<<<<<< HEAD
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseFilters, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-=======
-import { Controller, Get, Req, UseFilters, UseGuards } from '@nestjs/common';
->>>>>>> origin/main
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
 import { RecommendedUserResponseDto } from './dto/recommendations-response.dto';
+import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 
 interface AuthenticatedRequest {
   user?: { id: string };
@@ -23,11 +20,8 @@ interface AuthenticatedRequest {
 @ApiTags('Matchmaking & Discovery')
 @Controller('recommendations')
 @UseGuards(SupabaseAuthGuard)
-<<<<<<< HEAD
 @ApiBearerAuth()
-=======
 @UseFilters(MatchmakingExceptionFilter)
->>>>>>> origin/main
 export class RecommendationsController {
   constructor(
     private readonly recommendationsService: RecommendationsService,

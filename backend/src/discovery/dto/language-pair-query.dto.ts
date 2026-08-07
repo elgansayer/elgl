@@ -7,7 +7,6 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LanguagePairQueryDto {
   @ApiPropertyOptional({

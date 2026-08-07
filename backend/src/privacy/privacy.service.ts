@@ -259,23 +259,6 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
 
-    // 10) Escrow transactions (GDPR right of access: user's payment escrow history)
-    const { data: userEscrowPayer } = await supabase
-      .from('escrow_transactions')
-      .select('*')
-      .eq('payer_id', userId)
-      .order('created_at', { ascending: false });
-
-    const { data: userEscrowPayee } = await supabase
-      .from('escrow_transactions')
-      .select('*')
-      .eq('payee_id', userId)
-      .order('created_at', { ascending: false });
-
-    const escrowTransactions = [
-      ...(userEscrowPayer ?? []),
-      ...(userEscrowPayee ?? []),
-    ];
 
     return {
       export_generated_at: new Date().toISOString(),
@@ -288,13 +271,12 @@ export class PrivacyService {
       deck_flashcards: userDeckFlashcards,
       favourites: userFavourites ?? [],
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
-      escrow_transactions: escrowTransactions ?? [],
-      gift_transactions: giftTransactions ?? [],
-      user_sticker_packs: userStickerPacks ?? [],
       escrow_transactions: scrubEscrowTransactionsForArchive(
         escrowTransactions,
         userId,
       ),
+      gift_transactions: giftTransactions ?? [],
+      user_sticker_packs: userStickerPacks ?? [],
     };
   }
 }

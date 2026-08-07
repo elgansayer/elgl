@@ -37,6 +37,7 @@ describe('ModerationService', () => {
       recordTsModerationAction: jest.fn(),
       recordTsDatingRiskScore: jest.fn(),
       setTsPendingReports: jest.fn(),
+      recordAdminReportResolution: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -51,7 +52,6 @@ describe('ModerationService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
-<<<<<<< HEAD
         },
         {
           provide: `PinoLogger:${ModerationService.name}`,
@@ -62,8 +62,6 @@ describe('ModerationService', () => {
             debug: jest.fn(),
             trace: jest.fn(),
           },
-=======
->>>>>>> origin/main
         },
       ],
     }).compile();

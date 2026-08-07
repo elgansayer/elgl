@@ -26,7 +26,7 @@ import {
   DISCOVERY_CACHE_PUBLIC_LONG,
   DISCOVERY_CACHE_PUBLIC_SHORT,
   DISCOVERY_CACHE_PRIVATE_SHORT,
-  DISCOVERY_CACHE_PRIVATE_NO_STORE,
+  DISCOVERY_CACHE_NO_STORE,
 } from './cache.interceptor';
 import {
   DiscoveryRateLimiterGuard,
@@ -250,7 +250,7 @@ export class DiscoveryController {
    */
   @Get('degradation-status')
   @UseInterceptors(
-    new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_NO_STORE),
+    new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE),
   )
   async getDegradationStatus(): Promise<{
     breakers: Record<string, unknown>;

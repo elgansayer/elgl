@@ -8,14 +8,12 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
-<<<<<<< HEAD
 import { withRetry, isRateLimitError } from '../common/retry';
 import {
   DiscoveryDegradationService,
   DegradationMarker,
 } from './discovery-degradation.service';
-=======
->>>>>>> origin/main
+import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;

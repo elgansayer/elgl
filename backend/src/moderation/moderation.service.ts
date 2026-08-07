@@ -94,11 +94,8 @@ export class ModerationService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
-<<<<<<< HEAD
     @InjectPinoLogger(ModerationService.name)
     private readonly logger: PinoLogger,
-=======
->>>>>>> origin/main
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -164,7 +161,7 @@ export class ModerationService {
         const pendingCount = status
           ? items.length
           : items.filter((item) => item.status === 'pending').length;
-        this.metrics.setTsPendingReports(pendingCount);
+        this.metricsService.setTsPendingReports(pendingCount);
       }
 
       // Batch-fetch moment content for all moment items in a single query
@@ -185,17 +182,11 @@ export class ModerationService {
             }
           }
         }
-<<<<<<< HEAD
 
         return items;
       }
 
       return items.filter((item) => item.reported_user != null);
-=======
-      }
-
-      return items;
->>>>>>> origin/main
     } catch (err) {
       this.logger.warn(
         err,
@@ -255,7 +246,7 @@ export class ModerationService {
         return { success: false, error: 'Failed to create report' };
       }
 
-      this.metrics.recordTsReportSubmitted(dto.reasonCategory);
+      this.metricsService.recordTsReportSubmitted(dto.reasonCategory);
       return { success: true };
     } catch (err) {
       this.logger.warn(err, 'Failed to create report, degraded');
@@ -274,21 +265,21 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
-        this.metrics.recordAdminReportResolution('approve', 'failure');
+        this.metricsService.recordAdminReportResolution('approve', 'failure');
         this.logger.warn(error, `Failed to approve item ${dto.itemId}`);
         return { success: false, error: 'Failed to approve item' };
       }
 
-this.metrics.recordTsModerationAction(
+this.metricsService.recordTsModerationAction(
         'approve',
         dto.type,
         (Date.now() - startTime) / 1000,
       );
-      this.metrics.recordAdminReportResolution('approve', 'success');
+      this.metricsService.recordAdminReportResolution('approve', 'success');
       return { success: true };
     } catch (err) {
-      this.metrics.recordAdminReportResolution('approve', 'failure');
-      this.metrics.recordTsModerationAction(
+      this.metricsService.recordAdminReportResolution('approve', 'failure');
+      this.metricsService.recordTsModerationAction(
         'approve',
         dto.type,
         0,
@@ -312,21 +303,21 @@ this.metrics.recordTsModerationAction(
         .eq('id', dto.itemId);
 
       if (error) {
-        this.metrics.recordAdminReportResolution('reject', 'failure');
+        this.metricsService.recordAdminReportResolution('reject', 'failure');
         this.logger.warn(error, `Failed to reject item ${dto.itemId}`);
         return { success: false, error: 'Failed to reject item' };
       }
 
-this.metrics.recordTsModerationAction(
+this.metricsService.recordTsModerationAction(
         'reject',
         dto.type,
         (Date.now() - startTime) / 1000,
       );
-      this.metrics.recordAdminReportResolution('reject', 'success');
+      this.metricsService.recordAdminReportResolution('reject', 'success');
       return { success: true };
     } catch (err) {
-      this.metrics.recordAdminReportResolution('reject', 'failure');
-      this.metrics.recordTsModerationAction(
+      this.metricsService.recordAdminReportResolution('reject', 'failure');
+      this.metricsService.recordTsModerationAction(
         'reject',
         dto.type,
         0,
@@ -410,16 +401,7 @@ this.metrics.recordTsModerationAction(
       );
 
       this.metricsService.recordTsDatingRiskScore(riskScore);
-<<<<<<< HEAD
-<<<<<<< HEAD
       return { riskScore, flags: uniqueFlags };
-=======
-      const matchedFlags: string[] = [];
-      return { riskScore, flags: matchedFlags };
->>>>>>> origin/main
-=======
-      return { riskScore, flags: uniqueFlags };
->>>>>>> origin/main
     } catch (err) {
       this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);
       return { riskScore: 0, flags: [] };

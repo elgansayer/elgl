@@ -66,7 +66,9 @@ export class OfflineEconomyService {
         resolve();
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+        const target = event.target;
+        if (!(target instanceof IDBOpenDBRequest)) return;
+        const db = target.result;
         if (!db.objectStoreNames.contains(STORE_CATALOG)) {
           db.createObjectStore(STORE_CATALOG, { keyPath: 'id' });
         }

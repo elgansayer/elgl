@@ -6,6 +6,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
+import { PinoLogger } from 'nestjs-pino';
 import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 
 jest.mock('../mock-data', () => ({
@@ -135,6 +136,16 @@ describe('DiscoveryService', () => {
         {
           provide: CloudflareCacheService,
           useValue: mockCloudflareCacheService,
+        },
+        {
+          provide: `PinoLogger:${DiscoveryService.name}`,
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+            trace: jest.fn(),
+          },
         },
       ],
     }).compile();
