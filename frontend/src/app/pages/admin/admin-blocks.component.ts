@@ -1,4 +1,4 @@
-import { Component, computed, inject, resource, signal } from '@angular/core';
+import { Component, computed, inject, resource, signal, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
@@ -7,6 +7,7 @@ import { AdminOfflineBannerComponent } from '../../components/admin-offline-bann
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
+import { CrashReportService } from '../../services/crash-report.service';
 
 @Component({
   selector: 'app-admin-blocks',
@@ -16,6 +17,8 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
 export class AdminBlocksComponent {
   private readonly adminService = inject(AdminService);
   private readonly offlineStorage = inject(OfflineAdminStorageService);
+  private readonly crashReportService = inject(CrashReportService);
+  private readonly errorHandler = inject(ErrorHandler);
   readonly isOnline = this.offlineStorage.isOnline;
 
   readonly page = signal(1);
@@ -69,10 +72,23 @@ export class AdminBlocksComponent {
           total: Math.max(0, prev.total - 1),
         };
       });
-    } catch {
+    } catch (err: unknown) {
       this.actionError.set('Failed to remove block');
+      this.reportCrash(err, 'removeBlock');
     } finally {
       this.removingId.set(null);
     }
+  }
+
+  private reportCrash(err: unknown, action: string): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    this.crashReportService.reportCrash(error, {
+      route: typeof window !== 'undefined' ? window.location.href : '/admin/blocks',
+      component: 'AdminBlocksComponent',
+      adminRole: 'admin',
+      offline: !this.isOnline(),
+      action,
+    });
+    this.errorHandler.handleError(error);
   }
 }
