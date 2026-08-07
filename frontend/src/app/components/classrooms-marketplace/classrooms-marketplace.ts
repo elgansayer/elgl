@@ -3,7 +3,6 @@ import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.sto
 import { AuthService } from '../../services/auth.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
 import { VideoClassroomOnboardingService } from '../../services/video-classroom-onboarding.service';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
@@ -17,7 +16,13 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
+  imports: [
+    TranslatePipe,
+    VideoClassroomErrorBoundaryComponent,
+    AppSkeletonLoaderComponent,
+    AppEmptyStateComponent,
+    JoyrideModule,
+  ],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })
@@ -52,9 +57,7 @@ export class ClassroomsMarketplace implements OnInit {
     return all.filter((r) => r.language_pair === lang);
   });
 
-  readonly videoRooms = computed(() =>
-    this.filteredRooms().filter((r) => r.is_video_stream),
-  );
+  readonly videoRooms = computed(() => this.filteredRooms().filter((r) => r.is_video_stream));
 
   readonly isHosting = computed(() => {
     const userId = this.authService.currentUser()?.id;
@@ -71,14 +74,10 @@ export class ClassroomsMarketplace implements OnInit {
   async loadRooms(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const list = await withRetry(
-        () =>
-          firstValueFrom(
-            this.http.get<AudioRoomRecord[]>(
-              `${this.baseUrl}/list`,
-              { headers: this.getHeaders() },
-            ),
-          ),
+      const list = await withRetry(() =>
+        firstValueFrom(
+          this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/list`, { headers: this.getHeaders() }),
+        ),
       );
       this.rooms.set(Array.isArray(list) ? list : []);
     } catch (err: unknown) {

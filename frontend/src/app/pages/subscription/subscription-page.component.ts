@@ -4,7 +4,6 @@ import { I18nService } from '../../services/i18n.service';
 
 import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
-import { AppButtonSecondaryComponent } from '../../components/primitives/button-secondary/button-secondary.component';
 import { AppPillComponent } from '../../components/primitives/pill/pill.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
 import { RestorePurchasesButtonComponent } from '../../components/restore-purchases-button/restore-purchases-button.component';
@@ -21,7 +20,6 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
-    AppButtonSecondaryComponent,
     AppPillComponent,
     AppGradientButtonComponent,
     RestorePurchasesButtonComponent,
@@ -30,7 +28,9 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
     <div class="min-h-screen bg-surface-600 py-12 px-4">
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-12">
-          <h1 class="text-4xl font-extrabold text-text-primary mb-3">{{ 'subscription.page.title' | t }}</h1>
+          <h1 class="text-4xl font-extrabold text-text-primary mb-3">
+            {{ 'subscription.page.title' | t }}
+          </h1>
           <p class="text-lg text-text-secondary max-w-2xl mx-auto">
             {{ 'subscription.page.subtitle' | t }}
           </p>
@@ -52,7 +52,9 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
             <div class="text-center py-4">
               <p class="text-red-400 font-semibold mb-2">{{ 'subscription.page.loadError' | t }}</p>
               <p class="text-text-secondary text-sm mb-4">{{ errorMessage() }}</p>
-              <app-button-primary (clicked)="loadPlans()" size="sm">{{ 'subscription.page.retry' | t }}</app-button-primary>
+              <app-button-primary (clicked)="loadPlans()" size="sm">{{
+                'subscription.page.retry' | t
+              }}</app-button-primary>
             </div>
           </app-card>
         }
@@ -66,7 +68,11 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
               >
                 @if (plan.is_popular) {
                   <div class="absolute -top-3 inset-x-0 flex justify-center">
-                    <app-pill [label]="'subscription.page.mostPopular' | t" colour="primary" size="sm" />
+                    <app-pill
+                      [label]="'subscription.page.mostPopular' | t"
+                      colour="primary"
+                      size="sm"
+                    />
                   </div>
                 }
 
@@ -108,7 +114,11 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
                         {{ 'subscription.page.redirecting' | t }}
                       </span>
                     } @else {
-                      {{ plan.interval === 'month' ? ('subscription.page.subscribeMonthly' | t) : ('subscription.page.subscribeYearly' | t) }}
+                      {{
+                        plan.interval === 'month'
+                          ? ('subscription.page.subscribeMonthly' | t)
+                          : ('subscription.page.subscribeYearly' | t)
+                      }}
                     }
                   </app-gradient-button>
                 </div>
@@ -149,7 +159,8 @@ export class SubscriptionPageComponent {
         this.plans.set(plans);
         return plans;
       } catch (err) {
-        const message = err instanceof Error ? err.message : this.i18n.translate('subscription.page.loadError');
+        const message =
+          err instanceof Error ? err.message : this.i18n.translate('subscription.page.loadError');
         this.errorMessage.set(message);
         return EMPTY_PLANS;
       } finally {

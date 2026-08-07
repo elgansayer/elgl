@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
-import { SharedLoggerModule } from '../common/logger/logger.module';
 import { MonetisationController } from './monetisation.controller';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
@@ -15,7 +14,7 @@ import { StripeService } from './services/stripe.service';
 import { VipGuard } from './guards/vip.guard';
 
 @Module({
-  imports: [HttpModule, SharedLoggerModule],
+  imports: [HttpModule],
   controllers: [
     MonetisationController,
     AppleNotificationController,
