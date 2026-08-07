@@ -1,4 +1,5 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -12,7 +13,11 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 @Component({
   selector: 'app-admin-portal',
 <<<<<<< HEAD
+<<<<<<< HEAD
   imports: [TranslatePipe, SanitiseHtmlPipe, AppCardComponent, AppPillComponent],
+=======
+  imports: [TranslatePipe, DatePipe, AppCardComponent, AppPillComponent],
+>>>>>>> origin/main
 =======
 <<<<<<< HEAD
   imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],

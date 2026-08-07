@@ -1,4 +1,10 @@
-import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -13,9 +19,13 @@ import {
   DISCOVERY_CACHE_PUBLIC_SHORT,
   DISCOVERY_CACHE_PRIVATE_SHORT,
 } from './cache.interceptor';
+import {
+  DiscoveryRateLimiterGuard,
+  DiscoveryRateLimit,
+} from './discovery-rate-limiter.guard';
 
 @Controller('discovery')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, DiscoveryRateLimiterGuard)
 export class DiscoveryController {
   constructor(
     private readonly discoveryService: DiscoveryService,
@@ -27,6 +37,7 @@ export class DiscoveryController {
    */
   @Get('partners')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
   async findPartners(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -46,6 +57,7 @@ export class DiscoveryController {
    */
   @Get('partner-of-week')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG))
+  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
   async getPartnerOfWeek(): Promise<string[]> {
     return this.discoveryService.getPartnerOfWeekIds();
   }
@@ -55,6 +67,7 @@ export class DiscoveryController {
    */
   @Get('audio-intros')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
   async getAudioIntros(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -69,6 +82,7 @@ export class DiscoveryController {
    */
   @Get('recent-native-speakers')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
   async getRecentNativeSpeakers(
     @CurrentUser() user: User | null,
   ): Promise<UserProfile[]> {
@@ -81,6 +95,7 @@ export class DiscoveryController {
    */
   @Get('spotlight')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
   async getSpotlight(@CurrentUser() user: User | null): Promise<UserProfile[]> {
     if (!user) return [];
     return this.discoveryService.getSpotlightUsers(user.id);
@@ -91,6 +106,7 @@ export class DiscoveryController {
    */
   @Get('language-pair')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
   async findByLanguagePair(
     @CurrentUser() user: User | null,
     @Query() query: LanguagePairQueryDto,
@@ -104,6 +120,7 @@ export class DiscoveryController {
    */
   @Get('search-by-location')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @DiscoveryRateLimit({ freeMaxRequests: 20, vipMaxRequests: 80, windowSeconds: 60 })
   async searchByLocation(
     @CurrentUser() user: User | null,
     @Query('country') country?: string,

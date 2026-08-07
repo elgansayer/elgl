@@ -59,17 +59,7 @@ describe('FlashcardsController', () => {
       providers: [
         {
           provide: FlashcardsService,
-<<<<<<< HEAD
           useValue: flashcardsService,
-=======
-          useValue: {
-            createOrUpdateFlashcard: jest.fn(),
-            updateSrsLevel: jest.fn(),
-            getFlashcards: jest.fn(),
-            getDueReviews: jest.fn(),
-            purgeSrsCache: jest.fn(),
-          },
->>>>>>> origin/main
         },
       ],
     })

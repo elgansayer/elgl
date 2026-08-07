@@ -1,6 +1,6 @@
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { PLATFORM_ID } from '@angular/common';
+import { PLATFORM_ID } from '@angular/core';
 import { SrsOnboardingTourService } from './srs-onboarding-tour.service';
 import { JoyrideService } from 'ngx-joyride';
 

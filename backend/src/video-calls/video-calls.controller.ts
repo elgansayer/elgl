@@ -1,7 +1,6 @@
 import { Controller, Post, Body, UseGuards, UseInterceptors, Req } from '@nestjs/common';
 import { VideoCallsService } from './video-calls.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { sanitiseVideoCallsData } from './sanitise-video-calls.helper';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import {
@@ -22,9 +21,7 @@ export class VideoCallsController {
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async startCall(@Req() req: AuthenticatedRequest) {
     const userId = req.user!.id;
-    return sanitiseVideoCallsData(
-      await this.videoCallsService.createRoom(userId),
-    );
+    return this.videoCallsService.createRoom(userId);
   }
 
   @Post('accept')
@@ -34,9 +31,6 @@ export class VideoCallsController {
     @Body('roomName') roomName: string,
   ) {
     const userId = req.user!.id;
-    const sanitisedRoomName = sanitiseVideoCallsData(roomName);
-    return sanitiseVideoCallsData(
-      this.videoCallsService.joinRoom(userId, sanitisedRoomName),
-    );
+    return this.videoCallsService.joinRoom(userId, roomName);
   }
 }
