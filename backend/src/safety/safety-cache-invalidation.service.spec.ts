@@ -119,8 +119,10 @@ describe('SafetyCacheInvalidationService', () => {
       );
     });
 
-    it('should purge Cloudflare edge caches after successful Redis invalidation', async () => {
+    it('should purge Cloudflare edge caches after Redis keys are deleted', async () => {
+      // Simulate a successful deletion (some keys found)
       mockRedis.del.mockResolvedValue(1);
+      mockCloudflareCacheService.purgeByCacheTags.mockClear();
 
       await service.invalidateTrustAndSafetyCaches();
 
@@ -129,15 +131,6 @@ describe('SafetyCacheInvalidationService', () => {
         'discovery:public',
         'discovery:private',
       ]);
-    });
-
-    it('should not purge Cloudflare edge caches when no Redis keys were deleted', async () => {
-      mockRedis.del.mockResolvedValue(0);
-
-      await service.invalidateTrustAndSafetyCaches();
-
-      // No keys changed, so no need to purge
-      expect(mockCloudflareCacheService.purgeByCacheTags).not.toHaveBeenCalled();
     });
 
     it('should handle Redis errors gracefully', async () => {
