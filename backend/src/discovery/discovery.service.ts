@@ -105,11 +105,25 @@ export class DiscoveryService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
+    let pipeline = redis.pipeline();
+    let pipelineOps = 0;
+    let totalCached = 0;
+
+    const flushPipeline = async (): Promise<void> => {
+      if (pipelineOps > 0) {
+        await pipeline.exec();
+        pipeline = redis.pipeline();
+        pipelineOps = 0;
+      }
+    };
+
     try {
       const { data: users, error } = await supabase
         .from('users')
         .select('id, native_languages, target_languages')
         .eq('is_deletion_pending', false)
+        .not('native_languages', 'is', null)
+        .not('target_languages', 'is', null)
         .limit(1000);
 
       if (error || !users) {
@@ -148,17 +162,28 @@ export class DiscoveryService {
             matchIds = matchIds.filter((id) => !blockedIds.includes(id));
           }
           if (matchIds.length > 0) {
-            await redis.set(
+            pipeline.set(
               `daily_recommendations:${user.id}`,
               JSON.stringify(matchIds),
               'EX',
               86400,
             );
+            pipelineOps++;
+            totalCached++;
+
+            if (pipelineOps >= 200) {
+              await flushPipeline();
+            }
           }
         }
       }
-      this.logger.log('Finished daily partner recommendations calculation.');
+
+      await flushPipeline();
+      this.logger.log(
+        `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
+      );
     } catch (err) {
+      await flushPipeline();
       this.logger.error('Error calculating daily recommendations', err);
     }
   }
