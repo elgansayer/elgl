@@ -51,4 +51,18 @@ export default tseslint.config(
       '@typescript-eslint/unbound-method': 'off',
     },
   },
+  {
+    files: [
+      'src/flashcards/**/*.ts',
+      'src/decks/**/*.ts',
+      'src/metrics/**/*.ts',
+    ],
+    ignores: [
+      '**/*.spec.ts',
+      '**/*.e2e-spec.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
 );

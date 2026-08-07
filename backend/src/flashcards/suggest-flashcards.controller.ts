@@ -1,6 +1,11 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SuggestFlashcardsService } from './suggest-flashcards.service';
 import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';

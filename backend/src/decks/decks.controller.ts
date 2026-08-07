@@ -22,7 +22,6 @@ import { DecksService } from './decks.service';
 import {
   AddFlashcardToDeckDto,
   CreateDeckDto,
-  RemoveFlashcardFromDeckDto,
   UpdateDeckDto,
 } from './dto/deck.dto';
 import { Deck } from './interfaces/deck.interface';
@@ -75,7 +74,10 @@ export class DecksController {
   })
   @ApiResponse({ status: 200, description: 'Deck object.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'Deck not found or does not belong to user.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Deck not found or does not belong to user.',
+  })
   async getDeck(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
@@ -87,7 +89,8 @@ export class DecksController {
   @Patch(':id')
   @ApiOperation({
     summary: 'Update a deck',
-    description: 'Partially updates the deck name, description, colour, or icon.',
+    description:
+      'Partially updates the deck name, description, colour, or icon.',
   })
   @ApiParam({
     name: 'id',
@@ -189,7 +192,8 @@ export class DecksController {
   @Get(':id/flashcards')
   @ApiOperation({
     summary: 'List flashcards in a deck',
-    description: 'Returns all flashcard IDs currently associated with this deck.',
+    description:
+      'Returns all flashcard IDs currently associated with this deck.',
   })
   @ApiParam({
     name: 'id',

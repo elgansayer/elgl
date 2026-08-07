@@ -70,17 +70,25 @@ export class DecksService {
   ): Promise<Deck> {
     const supabase = this.supabaseService.getClient();
 
+    const updateFields: Record<string, string> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (dto.name !== undefined) {
+      updateFields['name'] = dto.name;
+    }
+    if (dto.description !== undefined) {
+      updateFields['description'] = dto.description;
+    }
+    if (dto.colour !== undefined) {
+      updateFields['colour'] = dto.colour;
+    }
+    if (dto.icon !== undefined) {
+      updateFields['icon'] = dto.icon;
+    }
+
     const response = await supabase
       .from('decks')
-      .update({
-        ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.description !== undefined
-          ? { description: dto.description }
-          : {}),
-        ...(dto.colour !== undefined ? { colour: dto.colour } : {}),
-        ...(dto.icon !== undefined ? { icon: dto.icon } : {}),
-        updated_at: new Date().toISOString(),
-      } as any)
+      .update(updateFields)
       .eq('id', deckId)
       .eq('user_id', userId)
       .select()
