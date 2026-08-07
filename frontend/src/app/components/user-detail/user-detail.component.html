@@ -125,6 +125,7 @@
             <button
               (click)="playAudioIntro(profile()?.audio_intro_url)"
               class="flex items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
+              [attr.aria-label]="'profile.playAudioIntro' | t"
             >
               <span class="bg-neon-blue/20 p-2 rounded-full">▶️</span>
               {{ 'profile.playAudioIntro' | t }}

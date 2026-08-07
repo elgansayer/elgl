@@ -312,6 +312,108 @@ describe('DiscoveryService', () => {
     });
   });
 
+  describe('voice_room_active filter', () => {
+    let mockAudioRooms: { getActiveHostIds: jest.Mock };
+
+    beforeEach(async () => {
+      mockAudioRooms = {
+        getActiveHostIds: jest.fn().mockResolvedValue([]),
+      };
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          DiscoveryService,
+          {
+            provide: SupabaseService,
+            useValue: {
+              getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+              getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            },
+          },
+          {
+            provide: SafetyService,
+            useValue: {
+              getBlockedAndBlockerIds: jest.fn().mockResolvedValue([]),
+            },
+          },
+          {
+            provide: AudioRoomsService,
+            useValue: mockAudioRooms,
+          },
+        ],
+      }).compile();
+
+      service = module.get<DiscoveryService>(DiscoveryService);
+    });
+
+    it('should filter results to only show active voice room hosts when voice_room_active is true', async () => {
+      const partners = [
+        { id: 'host-1', display_name: 'Active Host' },
+        { id: 'not-a-host', display_name: 'Not Hosting' },
+        { id: 'host-2', display_name: 'Other Host' },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({ data: partners, error: null });
+      mockAudioRooms.getActiveHostIds.mockResolvedValue(['host-1', 'host-2']);
+
+      const result = await service.searchPartners('user-1', null, {
+        voice_room_active: true,
+      });
+
+      expect(mockAudioRooms.getActiveHostIds).toHaveBeenCalled();
+      expect(result.map((u) => u.id)).toEqual(['host-1', 'host-2']);
+    });
+
+    it('should return empty array when no active hosts exist and voice_room_active is true', async () => {
+      const partners = [
+        { id: 'user-a', display_name: 'User A' },
+        { id: 'user-b', display_name: 'User B' },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({ data: partners, error: null });
+      mockAudioRooms.getActiveHostIds.mockResolvedValue([]);
+
+      const result = await service.searchPartners('user-1', null, {
+        voice_room_active: true,
+      });
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should not filter by voice room active when voice_room_active is false or undefined', async () => {
+      const partners = [
+        { id: 'user-a', display_name: 'User A' },
+        { id: 'user-b', display_name: 'User B' },
+      ];
+      mockQueryBuilder.limit.mockResolvedValue({ data: partners, error: null });
+      mockAudioRooms.getActiveHostIds.mockResolvedValue(['user-a']);
+
+      const result = await service.searchPartners('user-1', null, {});
+
+      expect(mockAudioRooms.getActiveHostIds).not.toHaveBeenCalled();
+      expect(result.map((u) => u.id)).toEqual(['user-a', 'user-b']);
+    });
+
+    it('should filter RPC results by voice room active hosts', async () => {
+      const nearbyPartners = [
+        { id: 'host-1', display_name: 'Nearby Host' },
+        { id: 'not-host', display_name: 'Not Hosting Nearby' },
+      ];
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: nearbyPartners,
+        error: null,
+      });
+      mockAudioRooms.getActiveHostIds.mockResolvedValue(['host-1']);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        voice_room_active: true,
+      });
+
+      expect(mockAudioRooms.getActiveHostIds).toHaveBeenCalled();
+      expect(result.map((u) => u.id)).toEqual(['host-1']);
+    });
+  });
+
   describe('sort algorithms', () => {
     it('best_match: promotes partner-of-week first, then study streak, then correction ratio', async () => {
       mockRedisClient.get.mockResolvedValue(JSON.stringify(['partner-c']));

@@ -1179,14 +1179,18 @@ export class AudioRoomsService implements OnModuleInit {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('audio_rooms')
-      .select('host_id')
+      .select('host_id, is_private')
       .eq('is_active', true);
     if (error || !data) {
       this.logger.warn('Could not fetch active host IDs', error);
       return [];
     }
-    const rows = data as Array<{ host_id: string }>;
-    return [...new Set(rows.map((r) => r.host_id))];
+    const rows = data as Array<{ host_id: string; is_private?: boolean }>;
+    // Only return hosts of public active rooms
+    const publicHosts = rows
+      .filter((r) => !r.is_private)
+      .map((r) => r.host_id);
+    return [...new Set(publicHosts)];
   }
 
   /**

@@ -198,7 +198,7 @@ export class CoverPhotoUploaderComponent {
 
   private originalImage: HTMLImageElement | null = null;
   private canvas = document.createElement('canvas');
-  private ctx = this.canvas.getContext('2d')!;
+  private ctx = this.canvas.getContext('2d');
 
   readonly cropBox = signal<CropBox>({ x: 0, y: 0, width: 200, height: 100 });
   readonly imageWidth = signal(0);
@@ -257,7 +257,7 @@ export class CoverPhotoUploaderComponent {
   }
 
   applyCrop(): void {
-    if (!this.originalImage) return;
+    if (!this.originalImage || !this.ctx) return;
 
     const box = this.cropBox();
     this.canvas.width = box.width;
