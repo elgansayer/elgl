@@ -6,16 +6,11 @@ import { UserService } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
-<<<<<<< HEAD
-import { PrivacySettingsComponent } from '../../features/settings/components/privacy-settings/privacy-settings.component';
-=======
 import { LinkedAccountsService, LinkedAccount } from '../../services/linked-accounts.service';
 import { I18nService } from '../../services/i18n.service';
-
->>>>>>> origin/main
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, TranslatePipe, RouterModule, PrivacySettingsComponent],
+  imports: [FormsModule, TranslatePipe, RouterModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })

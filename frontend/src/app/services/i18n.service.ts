@@ -1037,7 +1037,6 @@ export class I18nService {
     'profile.hideLocation': 'Hide my location in discovery',
     'profile.hideSearch': 'Hide my profile in search',
     'profile.hideAge': 'Hide my age',
-    'profile.bioLabel': 'Bio',
     'profile.privacySettingsLabel': 'Privacy Settings',
     'profile.languageLimitHint': 'Free users: max 1 language. VIP: up to 3 languages.',
     'profile.avatarUrlPlaceholder': 'Avatar URL',
@@ -1641,7 +1640,6 @@ export class I18nService {
     'languageSettings.noResults': 'No results',
     'settings.changeLanguage': 'Change language',
     'common.selected': 'Selected',
-    'common.saving': 'Saving...',
 
     // Help & About
     'helpAbout.title': 'Help & About',
