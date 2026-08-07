@@ -11,6 +11,7 @@ import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
+import { ChatLlmService } from '../chat/chat-llm.service';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
@@ -34,11 +35,13 @@ describe('AudioRoomsService', () => {
   let centrifugoService: CentrifugoService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockGenerateTranscriptFromAudioUrl: jest.Mock;
 
   beforeEach(async () => {
     mockCreateRoom.mockClear().mockResolvedValue({});
     mockAddGrant.mockClear();
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
+    mockGenerateTranscriptFromAudioUrl = jest.fn();
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
       upsert: jest.fn().mockReturnThis(),
@@ -101,7 +104,7 @@ describe('AudioRoomsService', () => {
           useValue: {
             startEgress: jest.fn(),
             stopEgress: jest.fn(),
-            generateTranscriptFromAudioUrl: jest.fn(),
+            generateTranscriptFromAudioUrl: mockGenerateTranscriptFromAudioUrl,
           },
         },
         {
@@ -114,6 +117,17 @@ describe('AudioRoomsService', () => {
           provide: R2Service,
           useValue: {
             generateUploadUrl: jest.fn(),
+          },
+        },
+        {
+          provide: ChatLlmService,
+          useValue: {
+            chatCompletion: jest.fn().mockResolvedValue(
+              JSON.stringify({
+                summary: 'Key topics:\n- Introductions\n- Travel experiences',
+                vocabulary: ['greetings', 'holiday', 'culture'],
+              }),
+            ),
           },
         },
       ],
@@ -948,7 +962,7 @@ describe('AudioRoomsService', () => {
       );
     });
 
-    it('should archive room, set recording URL, and broadcast event', async () => {
+    it('should archive room, generate AI session summary, and broadcast event', async () => {
       const roomRow: any = {
         id: 'room-1',
         room_name: 'my-room',
@@ -959,6 +973,11 @@ describe('AudioRoomsService', () => {
         error: null,
       });
 
+      // Set up transcript egress to return a transcript to feed the AI summary
+      mockGenerateTranscriptFromAudioUrl.mockResolvedValue(
+        'Hello everyone! Welcome to the language exchange. Today we discussed travel experiences and favourite holiday destinations.',
+      );
+
       const result = await service.archiveRoom('host-1', {
         room_id: 'room-1',
         recording_url: 'https://r2.hellotalk.mock/test.webm',
@@ -968,6 +987,15 @@ describe('AudioRoomsService', () => {
         is_active: false,
         recording_url: 'https://r2.hellotalk.mock/test.webm',
       });
+      expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          room_id: 'room-1',
+          recording_url: 'https://r2.hellotalk.mock/test.webm',
+          session_summary: expect.stringContaining('Key topics'),
+          vocabulary_list: ['greetings', 'holiday', 'culture'],
+        }),
+        { onConflict: 'room_id' },
+      );
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
         type: 'room_ended',
         room_id: 'room-1',
@@ -1189,7 +1217,7 @@ describe('AudioRoomsService', () => {
         error: null,
       });
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 100 },
+        data: { coins_balance: 100, display_name: 'Alice' },
         error: null,
       });
       mockQueryBuilder.single.mockResolvedValueOnce({

@@ -38,8 +38,9 @@ export class MomentTranslateComponent {
   // Cache the translation client-side to avoid re-fetching on toggle (issue #447)
   readonly cachedTranslation = signal<string | null>(null);
 
+  /** Triggers the resource loader only when translation is requested. */
   private readonly translateRequest = computed<{ text: string; target: string } | null>(() => {
-    if (!this.showTranslation() || this.cachedTranslation() !== null) {
+    if (!this.showTranslation()) {
       return null;
     }
     return {
@@ -53,6 +54,11 @@ export class MomentTranslateComponent {
       const request = this.translateRequest();
       if (!request) {
         return Promise.resolve({});
+      }
+      // Serve from cache if already fetched (issue #446)
+      const cached = this.cachedTranslation();
+      if (cached !== null) {
+        return Promise.resolve({ translation: cached });
       }
       return fetch(`${environment.apiUrl}/nlp/translate`, {
         method: 'POST',

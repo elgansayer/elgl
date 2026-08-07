@@ -7,11 +7,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     <div
       class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-fadeIn"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'dailyLoginModal.title' | t"
     >
       <div
         class="bg-surface-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-surface-100 text-center space-y-4"
       >
-        <div class="text-6xl mb-2">🎁</div>
+        <div class="text-6xl mb-2" aria-hidden="true">🎁</div>
         <h3 class="text-2xl font-black text-text-primary">
           {{ 'dailyLoginModal.title' | t }}
         </h3>
@@ -20,7 +23,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </p>
         <button
           (click)="closed.emit()"
-          class="w-full py-3 mt-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold shadow transition-all"
+          class="w-full py-3 mt-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold shadow transition-all focus:outline-none focus:ring-2 focus:ring-primary/50"
         >
           {{ 'dailyLoginModal.cta' | t }}
         </button>
