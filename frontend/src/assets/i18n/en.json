@@ -105,6 +105,8 @@
   "admin.users.userAgent": "User Agent",
   "admin.users.vip": "Vip",
   "admin.users.yes": "Yes",
+  "admin.users.ban": "Ban",
+  "admin.users.warn": "Warn",
   "admin.viewLoginHistory": "View Login History",
   "admin.vipUpdateError": "Vip Update Error",
   "admin.warnBtn": "Warn",
