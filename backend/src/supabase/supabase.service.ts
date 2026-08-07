@@ -77,6 +77,30 @@ export type UsersRow = {
   is_deletion_pending?: boolean | null;
 };
 
+type EscrowTransactionRow = {
+  id: string;
+  payer_id: string;
+  payee_id: string;
+  amount_coins: number;
+  status: 'pending_held' | 'released' | 'refunded' | 'disputed';
+  milestone_description: string;
+  created_at: string;
+  updated_at: string;
+  released_at: string | null;
+};
+
+type EscrowDisputeRow = {
+  id: string;
+  escrow_transaction_id: string;
+  raised_by_id: string;
+  reason: string;
+  resolution: 'pending' | 'released_to_payee' | 'refunded_to_payer' | 'split';
+  resolution_notes: string;
+  resolved_by_id: string | null;
+  created_at: string;
+  resolved_at: string | null;
+};
+
 type AudioRoomsRow = {
   id: string;
   room_name: string;
@@ -1501,6 +1525,18 @@ export interface Database {
         Row: UserStickerPackRow;
         Insert: Partial<UserStickerPackRow>;
         Update: Partial<UserStickerPackRow>;
+        Relationships: [];
+      };
+      escrow_transactions: {
+        Row: EscrowTransactionRow;
+        Insert: Partial<EscrowTransactionRow>;
+        Update: Partial<EscrowTransactionRow>;
+        Relationships: [];
+      };
+      escrow_disputes: {
+        Row: EscrowDisputeRow;
+        Insert: Partial<EscrowDisputeRow>;
+        Update: Partial<EscrowDisputeRow>;
         Relationships: [];
       };
       login_history: {
