@@ -62,7 +62,7 @@
           required
         />
         <p class="text-xs text-text-muted mt-1">
-          {{ 'profile.vipLanguagesNote' | t }}
+          {{ 'profile.languageLimitHint' | t }}
         </p>
       </div>
 
@@ -80,22 +80,22 @@
 
       <!-- Privacy Settings -->
       <fieldset class="border border-base-300 rounded p-4">
-        <legend class="text-sm font-medium">{{ 'privacy.title' | t }}</legend>
+        <legend class="text-sm font-medium">{{ 'profile.privacySettingsLabel' | t }}</legend>
         <div class="form-control">
           <label class="label cursor-pointer">
-            <span class="label-text">{{ 'privacy.hideAge' | t }}</span>
+            <span class="label-text">{{ 'profile.hideAge' | t }}</span>
             <input type="checkbox" formControlName="privacy_hide_age" class="checkbox" />
           </label>
         </div>
         <div class="form-control">
           <label class="label cursor-pointer">
-            <span class="label-text">{{ 'privacy.hideLocation' | t }}</span>
+            <span class="label-text">{{ 'profile.hideLocation' | t }}</span>
             <input type="checkbox" formControlName="privacy_hide_location" class="checkbox" />
           </label>
         </div>
         <div class="form-control">
           <label class="label cursor-pointer">
-            <span class="label-text">{{ 'privacy.hideFromSearch' | t }}</span>
+            <span class="label-text">{{ 'profile.hideSearch' | t }}</span>
             <input type="checkbox" formControlName="privacy_hide_from_search" class="checkbox" />
           </label>
         </div>

@@ -24,14 +24,31 @@ jest.mock('jsdom', () => ({
 // Strict DOMPurify mock that strips ALL HTML tags (matching strict config)
 const mockSanitize = (dirty: string): string => {
   if (typeof dirty !== 'string') return dirty;
+<<<<<<< HEAD
   // Strip all HTML tags completely
   return dirty
     .replace(/<[^>]*>/g, '')
+=======
+  // Remove script/style elements and their content entirely (DOMPurify strips them)
+  let result = dirty
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
+  // Strip all remaining HTML tags
+  result = result.replace(/<[^>]*>/g, '');
+  // Decode common HTML entities
+  result = result
+>>>>>>> origin/main
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
+<<<<<<< HEAD
     .replace(/&#x27;/g, "'");
+=======
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'");
+  return result;
+>>>>>>> origin/main
 };
 
 jest.mock('dompurify', () => {
@@ -39,6 +56,7 @@ jest.mock('dompurify', () => {
     __esModule: true,
     default: jest.fn(() => ({
       sanitize: mockSanitize,
+      setConfig: jest.fn(),
     })),
   };
 });
@@ -151,7 +169,7 @@ describe('SanitiseHtmlPipe', () => {
         source: 'app.component.ts:42:10',
       },
     ]);
-    expect(result['safeField']).toBe('<b>bold text</b>');
+    expect(result['safeField']).toBe('bold text');
   });
 
   it('should exempt rawBody and signedPayload from sanitisation', () => {
