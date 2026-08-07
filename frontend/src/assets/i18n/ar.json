@@ -538,5 +538,10 @@
   "wordModal.saveLearningBtn": "🟡 حفظ للتعلم",
   "wordModal.srsStatus": "حالة التكرار المتباعد: {{status}}",
   "wordModal.title": "تعريف القاموس",
-  "wordModal.translationLabel": "الترجمة"
+  "wordModal.translationLabel": "الترجمة",
+  "lingqErrorBoundary.title": "قاطعة القراءة",
+  "lingqErrorBoundary.description": "حدث خطأ في محرك القراءة. تم الحفاظ على تقدمك.",
+  "lingqErrorBoundary.retryBtn": "حاول مرة أخرى",
+  "lingqErrorBoundary.reportBtn": "الإبلاغ عن مشكلة",
+  "lingqErrorBoundary.reportedMessage": "تم الإبلاغ عن المشكلة. شكرًا لمساعدتك!"
 }

@@ -1,8 +1,7 @@
 import { showToast } from '../../services/toast.service';
-import { Component, OnInit, inject, signal, input, output } from '@angular/core';
+import { Component, inject, signal, input, output, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
-import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-word-definition-modal',
@@ -10,8 +9,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
   templateUrl: './word-definition-modal.component.html',
   styleUrls: ['./word-definition-modal.component.scss'],
 })
-export class WordDefinitionModalComponent implements OnInit {
+export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
+  private readonly errorHandler = inject(ErrorHandler);
 
   wordToken = input.required<string>();
   contextSentence = input<string>('');
@@ -25,12 +25,30 @@ export class WordDefinitionModalComponent implements OnInit {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
-  async ngOnInit(): Promise<void> {
-    const status = this.vocabStore.getWordStatus(this.wordToken());
-    if (status.flashcard) {
-      this.existingCard.set(status.flashcard);
+  constructor() {
+    this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
+    try {
+      const status = this.vocabStore.getWordStatus(this.wordToken());
+      if (status.flashcard) {
+        this.existingCard.set(status.flashcard);
+      }
+      await this.fetchDefinition();
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      err.name = 'LingqDefinitionInitError';
+      this.errorHandler.handleError(err);
+      this.isLoading.set(false);
+      this.translationResult.set({
+        original_text: this.wordToken(),
+        translated_text: this.wordToken(),
+        detected_language: 'auto',
+        definition: 'Unable to load definition. Please try again.',
+        transliteration: this.wordToken(),
+      });
     }
-    await this.fetchDefinition();
   }
 
   async fetchDefinition(): Promise<void> {
@@ -42,8 +60,9 @@ export class WordDefinitionModalComponent implements OnInit {
       );
       this.translationResult.set(res);
     } catch (e) {
-      console.error('Failed to translate word token:', e);
-      // Fallback display
+      const err = e instanceof Error ? e : new Error(String(e));
+      err.name = 'LingqDefinitionError';
+      this.errorHandler.handleError(err);
       this.translationResult.set({
         original_text: this.wordToken(),
         translated_text: `Translation of "${this.wordToken()}"`,
@@ -60,17 +79,17 @@ export class WordDefinitionModalComponent implements OnInit {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
       const audio = new Audio(url);
-      audio.play().catch((e) => console.error('Audio playback error:', e));
+      audio.play().catch((e) => {
+        const err = e instanceof Error ? e : new Error(String(e));
+        err.name = 'LingqAudioError';
+        this.errorHandler.handleError(err);
+      });
     }
   }
 
   async setLevel(level: number): Promise<void> {
     this.isSaving.set(true);
     try {
-      // Map old srs_level to SM-2 quality (0-5 scale):
-      //   0 (reset/new) -> quality 0 (complete blackout)
-      //   1 (learning)   -> quality 3 (correct with serious difficulty)
-      //   4 (known)      -> quality 5 (perfect response)
       const qualityMap: Record<number, number> = { 0: 0, 1: 3, 4: 5 };
       const quality = qualityMap[level] ?? 3;
 
@@ -96,7 +115,9 @@ export class WordDefinitionModalComponent implements OnInit {
         }
       }
     } catch (e) {
-      console.error('Failed to update word status:', e);
+      const err = e instanceof Error ? e : new Error(String(e));
+      err.name = 'LingqSaveWordError';
+      this.errorHandler.handleError(err);
       showToast('Error updating SRS review schedule.');
     } finally {
       this.isSaving.set(false);

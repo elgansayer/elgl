@@ -1,22 +1,29 @@
-<div class="inline leading-relaxed select-text font-medium text-base">
-  @for (token of tokens(); track token.index) {
-    <span
-      (click)="onTokenClick(token)"
-      (keydown.enter)="onTokenClick(token)"
-      (keydown.space)="onTokenClick(token); $event.preventDefault()"
-      [attr.tabindex]="token.isWordLike ? 0 : null"
-      [attr.role]="token.isWordLike ? 'button' : null"
-      [class]="
-        'transition-colors rounded px-0.5 ' +
-        (token.isWordLike ? vocabStore.getWordStatus(token.segment).colorClass : '')
-      "
-    >
-      {{ token.segment }}
-    </span>
-  }
-  @if (transliteration()) {
-    <div class="transliteration mt-1 text-xs leading-snug text-slate-500" dir="ltr">
-      {{ transliteration() }}
-    </div>
-  }
-</div>
+@if (parseError()) {
+  <div class="rounded-sheet border border-amber-500/30 bg-amber-500/10 p-4 text-center">
+    <p class="text-sm text-amber-400 font-bold mb-2">&#128218;</p>
+    <p class="text-xs text-text-secondary">{{ parseError() }}</p>
+  </div>
+} @else {
+  <div class="inline leading-relaxed select-text font-medium text-base">
+    @for (token of tokens(); track token.index) {
+      <span
+        (click)="onTokenClick(token)"
+        (keydown.enter)="onTokenClick(token)"
+        (keydown.space)="onTokenClick(token); $event.preventDefault()"
+        [attr.tabindex]="token.isWordLike ? 0 : null"
+        [attr.role]="token.isWordLike ? 'button' : null"
+        [class]="
+          'transition-colors rounded px-0.5 ' +
+          (token.isWordLike ? vocabStore.getWordStatus(token.segment).colorClass : '')
+        "
+      >
+        {{ token.segment }}
+      </span>
+    }
+    @if (transliteration()) {
+      <div class="transliteration mt-1 text-xs leading-snug text-slate-500" dir="ltr">
+        {{ transliteration() }}
+      </div>
+    }
+  </div>
+}

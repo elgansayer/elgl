@@ -599,5 +599,10 @@
   "auth.resetPassword.error": "パスワードのリセットに失敗しました。トークンが無効か期限切れです。",
   "auth.resetPassword.backToHome": "ホームに戻る",
   "common.pleaseWait": "お待ちください...",
-  "common.submit": "送信"
+  "common.submit": "送信",
+  "lingqErrorBoundary.title": "読書エンジン中断",
+  "lingqErrorBoundary.description": "LingQ読書エンジンで問題が発生しました。読書の進行状況は保存されています。",
+  "lingqErrorBoundary.retryBtn": "再試行",
+  "lingqErrorBoundary.reportBtn": "問題を報告",
+  "lingqErrorBoundary.reportedMessage": "問題が報告されました。ご協力ありがとうございます！"
 }
