@@ -455,9 +455,14 @@ describe('DiscoveryService', () => {
           search_lon: -0.1278,
           radius_m: 10000,
           exclude_user_id: 'user-1',
-          filter_native: ['FR'],
+          filter_native_arr: ['FR'],
           filter_target: null,
           serious_only: false,
+          filter_level: null,
+          filter_gender: null,
+          filter_age_min: null,
+          filter_age_max: null,
+          filter_audio_intro: false,
         },
       );
       expect(result).toEqual(
@@ -524,9 +529,14 @@ describe('DiscoveryService', () => {
           search_lon: -74.006,
           radius_m: 10000,
           exclude_user_id: 'user-1',
-          filter_native: null,
+          filter_native_arr: null,
           filter_target: null,
           serious_only: false,
+          filter_level: null,
+          filter_gender: null,
+          filter_age_min: null,
+          filter_age_max: null,
+          filter_audio_intro: false,
         },
       );
     });
@@ -585,27 +595,23 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should filter RPC results by level using in-app post-filtering', async () => {
-      // When RPC returns results and level filter is requested, the code
-      // does a follow-up DB query to fetch proficiency levels.
-      // The fallback path applies level filtering directly on in-memory data.
-      mockSupabaseClient.rpc.mockResolvedValue({
-        data: null,
-        error: { message: 'PostGIS not ready' },
-      });
-      stubLimitResponse([
+    it('should pass level filter to RPC call', async () => {
+      stubRpcResponse([
         { id: 'p1', proficiency_level: 'B2' },
         { id: 'p2', proficiency_level: 'A1' },
         { id: 'p3', proficiency_level: 'B2' },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
+      await service.searchPartners('user-1', null, {
         latitude: 1,
         longitude: 2,
         level: 'B2',
       });
 
-      expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_level: 'B2' }),
+      );
     });
 
     it('should apply interests overlap filter on queryBuilder', async () => {
@@ -622,52 +628,61 @@ describe('DiscoveryService', () => {
       ]);
     });
 
-    it('should apply VIP gender filter on RPC results', async () => {
+    it('should pass VIP gender filter to RPC call', async () => {
       stubRpcResponse([
         { id: 'p1', gender: 'female' },
         { id: 'p2', gender: 'male' },
       ]);
 
-      const result = await service.searchPartners(
+      await service.searchPartners(
         'user-1',
         { is_vip: true } as any,
         { latitude: 1, longitude: 2, gender: 'female' },
       );
 
-      expect(result.map((u) => u.id)).toEqual(['p1']);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_gender: 'female' }),
+      );
     });
 
-    it('should filter RPC results by age range', async () => {
+    it('should pass age range to RPC call', async () => {
       stubRpcResponse([
         { id: 'p1', age: 18 },
         { id: 'p2', age: 30 },
         { id: 'p3', age: 50 },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
+      await service.searchPartners('user-1', null, {
         latitude: 1,
         longitude: 2,
         age_min: 20,
         age_max: 40,
       });
 
-      expect(result.map((u) => u.id)).toEqual(['p2']);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_age_min: 20, filter_age_max: 40 }),
+      );
     });
 
-    it('should filter RPC results by has_audio_intro', async () => {
+    it('should pass audio_intro filter to RPC call', async () => {
       stubRpcResponse([
         { id: 'p1', audio_intro_url: 'https://example.com/audio.mp3' },
         { id: 'p2', audio_intro_url: '' },
         { id: 'p3', audio_intro_url: null },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
+      await service.searchPartners('user-1', null, {
         latitude: 1,
         longitude: 2,
         has_audio_intro: true,
       });
 
-      expect(result.map((u) => u.id)).toEqual(['p1']);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_audio_intro: true }),
+      );
     });
 
     it('should filter blocked users from RPC results', async () => {

@@ -271,6 +271,113 @@ describe('MetricsService', () => {
     });
   });
 
+  describe('Matchmaking metrics', () => {
+    it('should record matchmaking recommendations generated', () => {
+      expect(() =>
+        service.recordMatchmakingRecommendationsGenerated(
+          'interest',
+          'getRecommendations',
+          10,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking recommendations per request', () => {
+      expect(() =>
+        service.recordMatchmakingRecommendationsPerRequest('interest', 8),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking fallback tier used', () => {
+      expect(() =>
+        service.recordMatchmakingFallbackTierUsed(
+          'interest',
+          'language_exchange',
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking empty results', () => {
+      expect(() =>
+        service.recordMatchmakingEmptyResults('getRecommendations'),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking request duration', () => {
+      expect(() =>
+        service.recordMatchmakingRequestDuration(
+          'getRecommendations',
+          'success',
+          0.35,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking request duration (error)', () => {
+      expect(() =>
+        service.recordMatchmakingRequestDuration(
+          'getDailyRecommendations',
+          'error',
+          2.1,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking daily cache miss', () => {
+      expect(() =>
+        service.recordMatchmakingDailyCacheMiss('redis_unavailable'),
+      ).not.toThrow();
+    });
+
+    it('should set matchmaking tier success rate', () => {
+      expect(() => service.setMatchmakingTierSuccessRate(0.72)).not.toThrow();
+    });
+
+    it('should include matchmaking metrics in getMetrics output', async () => {
+      service.recordMatchmakingRecommendationsGenerated(
+        'interest',
+        'getRecommendations',
+        10,
+      );
+      service.recordMatchmakingRecommendationsPerRequest('interest', 10);
+      service.recordMatchmakingFallbackTierUsed(
+        'interest',
+        'language_exchange',
+      );
+      service.recordMatchmakingEmptyResults('getRecommendations');
+      service.recordMatchmakingRequestDuration(
+        'getRecommendations',
+        'success',
+        0.5,
+      );
+      service.recordMatchmakingDailyCacheMiss('empty_cache');
+      service.setMatchmakingTierSuccessRate(0.65);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_recommendations_generated_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_recommendations_per_request',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_fallback_tier_used_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_empty_results_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_request_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_cache_misses_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_tier_success_rate',
+      );
+    });
+  });
+
   describe('Escrow metrics', () => {
     it('should record escrow created', () => {
       expect(() => service.recordEscrowCreated(100)).not.toThrow();

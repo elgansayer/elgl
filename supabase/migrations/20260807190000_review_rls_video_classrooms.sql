@@ -201,3 +201,68 @@ CREATE POLICY poll_votes_insert_own
 
 -- Users cannot update or delete votes once cast (polls are immutable).
 -- Only the service_role can remove votes if needed.
+
+-- ── 8. Admin-level access for audit / moderation ─────────────────────────
+-- Following the pattern established in
+-- 20260807110437_review_rls_admin_moderation.sql, admins need read access
+-- to all video-classroom-related tables for moderation investigation
+-- (reviewing call logs, tip flows, poll activity, and transcripts).
+
+DROP POLICY IF EXISTS audio_room_tips_select_admin ON public.audio_room_tips;
+CREATE POLICY audio_room_tips_select_admin ON public.audio_room_tips
+    FOR SELECT TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+DROP POLICY IF EXISTS call_logs_select_admin ON public.call_logs;
+CREATE POLICY call_logs_select_admin ON public.call_logs
+    FOR SELECT TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+DROP POLICY IF EXISTS quick_polls_select_admin ON public.quick_polls;
+CREATE POLICY quick_polls_select_admin ON public.quick_polls
+    FOR SELECT TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+DROP POLICY IF EXISTS poll_votes_select_admin ON public.poll_votes;
+CREATE POLICY poll_votes_select_admin ON public.poll_votes
+    FOR SELECT TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+DROP POLICY IF EXISTS audio_room_transcripts_select_admin
+    ON public.audio_room_transcripts;
+CREATE POLICY audio_room_transcripts_select_admin
+    ON public.audio_room_transcripts
+    FOR SELECT TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+DROP POLICY IF EXISTS audio_rooms_delete_admin ON public.audio_rooms;
+CREATE POLICY audio_rooms_delete_admin ON public.audio_rooms
+    FOR DELETE TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
+
+DROP POLICY IF EXISTS audio_room_captions_delete_admin
+    ON public.audio_room_captions;
+CREATE POLICY audio_room_captions_delete_admin ON public.audio_room_captions
+    FOR DELETE TO authenticated USING (
+        EXISTS (
+            SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );

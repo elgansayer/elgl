@@ -5,11 +5,17 @@ import { SafetyModule } from '../safety/safety.module';
 import { MetricsModule } from '../metrics/metrics.module';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
+import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
+<<<<<<< HEAD
   imports: [AudioRoomsModule, UsersModule, SafetyModule, MetricsModule],
+=======
+  imports: [AudioRoomsModule, UsersModule, SafetyModule, SupabaseModule],
+>>>>>>> origin/main
   controllers: [DiscoveryController],
-  providers: [DiscoveryService],
+  providers: [DiscoveryService, DiscoveryRateLimiterGuard],
   exports: [DiscoveryService],
 })
 export class DiscoveryModule {}
