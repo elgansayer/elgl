@@ -182,6 +182,11 @@ export class I18nService {
     'nav.helloTalk': '💬 HelloTalk',
     'nav.connect': '🌍 Connect',
     'nav.liveRooms': '🎙️ Live Rooms',
+    'nav.settings': '⚙️ Settings',
+    'nav.mainNav': 'Main navigation',
+
+    // Accessibility
+    'a11y.skipToContent': 'Skip to main content',
     'nav.chatRoom': '💬 Chat Room',
     'nav.lingqReader': '📚 LingQ Reader',
     'nav.favourites': '⭐ Favourites',
@@ -695,6 +700,32 @@ export class I18nService {
     'deck.noCardsAvailable': 'All flashcards are already in this deck. Save more words to add them!',
     'deck.noCardsInDeck': 'No cards in this deck yet. Add cards from the list above.',
     'deck.removeAriaLabel': 'Remove {{word}} from deck',
+    'deck.startReview': '▶ Start Review',
+
+    // Flashcard Review
+    'review.title': '🎯 Flashcard Review',
+    'review.progress': 'Card {{current}} of {{total}}',
+    'review.levelBadge': 'Level {{level}}',
+    'review.tapToFlip': 'Tap to reveal answer',
+    'review.flipAriaLabel': 'Flip flashcard to reveal answer',
+    'review.answerLabel': 'Answer',
+    'review.contextLabel': 'Context',
+    'review.playAudio': 'Play pronunciation',
+    'review.againBtn': 'Again',
+    'review.againHint': '< 1min',
+    'review.againAriaLabel': 'Rate as again - need more practice',
+    'review.goodBtn': 'Good',
+    'review.goodHint': 'Next: {{interval}}',
+    'review.goodAriaLabel': 'Rate as good',
+    'review.knownBtn': 'Known',
+    'review.knownHint': 'Mastered',
+    'review.knownAriaLabel': 'Rate as known - already mastered',
+    'review.knownCount': '✓ {{count}} known',
+    'review.goodCount': '• {{count}} good',
+    'review.againCount': '↻ {{count}} again',
+    'review.completeTitle': 'Review Complete!',
+    'review.completeDesc': 'Great job! Come back regularly to keep your vocabulary fresh.',
+    'review.restart': 'Start Again',
     'profile.playAudioIntro': 'Play Introduction',
 
     // User Detail Component
@@ -1225,6 +1256,14 @@ export class I18nService {
     'stickerStore.emptyDescription': 'Check back later for new sticker packs.',
     'stickerStore.ownedBadge': 'OWNED',
     'stickerStore.unlocked': 'Unlocked',
+    'stickerStore.animatedBadge': 'ANIMATED',
+    'stickerStore.animatedDescription': 'Animated stickers included',
+    'stickerStore.defaultStickers': 'Free Stickers',
+    'stickerStore.noUnlockedPacks': 'No sticker packs unlocked yet',
+    'stickerStore.unlockHint': 'Visit the Sticker Store to unlock packs with coins',
+    'chatRoom.stickersDrawerTitle': 'Stickers',
+    'chatRoom.stickerBtn': 'Sticker',
+    'chatRoom.stickerCaption': 'Sticker',
     // Theme Selection
     'theme.light': 'Light',
     'theme.dark': 'Dark',
@@ -1547,6 +1586,7 @@ export class I18nService {
     'pill.colour_info': 'bg-sky-500 text-white hover:bg-sky-600',
     'pill.colour_neutral': 'bg-slate-200 text-slate-800 hover:bg-slate-300',
     'card.base_classes': 'block rounded-2xl bg-surface-200 transition-all',
+    'no_network_banner.message': 'No network connection. Please check your internet.',
 
     // Daily login modal
     'daily_login_modal.title': 'Daily Login Reward',
@@ -1580,7 +1620,7 @@ export class I18nService {
 // Link Preview
     'linkPreview.openLink': 'Open link: {title}',
 
-    // Diagnostic Quiz
+// Diagnostic Quiz
     'diagnosticQuiz.title': 'Language Level Diagnostic',
     'diagnosticQuiz.loading': 'Loading your diagnostic quiz...',
     'diagnosticQuiz.errorTitle': 'Unable to load quiz',
@@ -1597,6 +1637,25 @@ export class I18nService {
     'diagnosticQuiz.scoreLabel': 'Score: {{score}} / {{maxScore}}',
     'diagnosticQuiz.levelLabel': 'Suggested Level: {{level}}',
     'diagnosticQuiz.resultAction': 'Continue to onboarding',
+
+    // My Stats Dashboard
+    'stats.myStats.title': 'My Stats',
+    'stats.myStats.loading': 'Loading your stats...',
+    'stats.myStats.error': 'Failed to load stats. Please try again.',
+    'stats.myStats.studyHours': 'Study Hours (This Week)',
+    'stats.myStats.activityBreakdown': 'Activity Breakdown',
+    'stats.myStats.summary': 'Summary',
+    'stats.myStats.messagesSent': 'Messages Sent',
+    'stats.myStats.correctionsMade': 'Corrections Made',
+    'stats.myStats.momentsPosted': 'Moments Posted',
+    'stats.myStats.hours': 'Hours',
+    'stats.dayAbbr.sun': 'Sun',
+    'stats.dayAbbr.mon': 'Mon',
+    'stats.dayAbbr.tue': 'Tue',
+    'stats.dayAbbr.wed': 'Wed',
+    'stats.dayAbbr.thu': 'Thu',
+    'stats.dayAbbr.fri': 'Fri',
+    'stats.dayAbbr.sat': 'Sat',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

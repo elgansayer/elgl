@@ -2,6 +2,6 @@
   <div class="update-card">
     <h2 id="update-title">Update Required</h2>
     <p class="update-message">{{ message }}</p>
-    <button class="update-button" (click)="handleClose()">OK</button>
+    <button class="update-button" (click)="handleClose()" [attr.aria-label]="'OK'">OK</button>
   </div>
 </div>

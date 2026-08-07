@@ -6,6 +6,7 @@
       [storeUrl]="'https://yourapp.com/update'"
     />
   }
+  <app-no-network-banner />
   @if (authService.appLocked()) {
     <div
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"
@@ -20,9 +21,9 @@
         <p class="mb-4 text-lg font-medium">{{ 'app_lock.title' | t }}</p>
         <p class="mb-6 text-sm opacity-70">{{ 'app_lock.subtitle' | t }}</p>
         <button
-          class="rounded-full bg-indigo-600 px-8 py-3 text-sm font-semibold shadow-xl hover:bg-indigo-500"
+          class="rounded-full bg-indigo-600 px-8 py-3 text-sm font-semibold shadow-xl hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600"
           (click)="authService.unlockApp()"
-        >
+         [attr.aria-label]="'app_lock.unlock_btn' | t">
           {{ 'app_lock.unlock_btn' | t }}
         </button>
       </div>
@@ -34,7 +35,7 @@
     <div class="flex items-center gap-2">
       <button
         type="button"
-        class="p-2 rounded-full hover:bg-surface-100 transition-colors"
+        class="p-2 rounded-full hover:bg-surface-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         (click)="startProductTour()"
         [attr.aria-label]="'nav.guided_tour' | t"
         [attr.title]="'nav.guided_tour' | t"
@@ -44,7 +45,7 @@
       @if (biometricControlsVisible()) {
         <button
           type="button"
-          class="p-2 rounded-full hover:bg-surface-100 transition-colors disabled:opacity-50"
+          class="p-2 rounded-full hover:bg-surface-100 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
           (click)="toggleBiometricLock()"
           [disabled]="biometricBusy()"
           [attr.aria-label]="authService.biometricLockEnabled() ? ('app_lock.disable_biometric' | t) : ('app_lock.enable_biometric' | t)"
@@ -61,12 +62,26 @@
 <!-- Global Full-Screen SVG Gift Animation Broadcast Overlay -->
   <app-gift-animation-overlay />
 
-  <!-- Main Content Area (padding-bottom to account for bottom nav) -->
-  <main class="flex-1 pb-[72px] lg:pb-0">
-    <div [@routeAnimations]="prepareRoute()">
-      <router-outlet />
-    </div>
-  </main>
+  <!-- Skip-to-content link for keyboard users -->
+  <a
+    href="#main-content"
+    class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[9999] focus:bg-primary focus:text-white focus:px-4 focus:py-2 focus:rounded-pill focus:font-bold focus:text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+  >
+    {{ 'a11y.skipToContent' | t }}
+  </a>
+
+  <!-- Desktop + Main Content Wrapper -->
+  <div class="flex flex-1">
+    <!-- Desktop Sidebar Navigation -->
+    <app-desktop-sidebar />
+
+    <!-- Main Content Area (padding-bottom to account for bottom nav) -->
+    <main id="main-content" class="flex-1 pb-[72px] lg:pb-0">
+      <div [@routeAnimations]="prepareRoute()">
+        <router-outlet />
+      </div>
+    </main>
+  </div>
 
   <!-- Mobile Bottom Navigation Bar -->
   <nav class="fixed bottom-0 inset-x-0 z-50 lg:hidden bg-surface-200 border-t border-surface-100 pb-safe">
@@ -75,7 +90,7 @@
         routerLink="/chat"
         routerLinkActive="text-primary"
         [routerLinkActiveOptions]="{ exact: false }"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.helloTalk' | t"
       >
         <div class="relative">
@@ -94,7 +109,7 @@
       <a
         routerLink="/moments"
         routerLinkActive="text-primary"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.moments' | t"
       >
         <span class="text-2xl leading-none">⭕</span>
@@ -104,7 +119,7 @@
       <a
         routerLink="/discovery"
         routerLinkActive="text-primary"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.connect' | t"
       >
         <span class="text-2xl leading-none">🌍</span>
@@ -114,7 +129,7 @@
       <a
         routerLink="/audio-rooms"
         routerLinkActive="text-primary"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.liveRooms' | t"
       >
         <span class="text-2xl leading-none">🎙️</span>
@@ -124,7 +139,7 @@
       <a
         routerLink="/profile"
         routerLinkActive="text-primary"
-        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors"
+        class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.profile' | t"
       >
         <span class="text-2xl leading-none">👤</span>

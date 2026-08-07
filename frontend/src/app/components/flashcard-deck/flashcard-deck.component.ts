@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
@@ -197,6 +198,15 @@ const DRAG_THRESHOLD_PX = 60;
               >
                 {{ 'deck.editBtn' | t }}
               </button>
+              @if (deckCards().length > 0) {
+                <button
+                  type="button"
+                  (click)="startDeckReview(deck)"
+                  class="app-button-primary ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold"
+                >
+                  {{ 'deck.startReview' | t }}
+                </button>
+              }
             </div>
 
             <div class="app-card app-padded space-y-3" [style.border-color]="deck.colour + '40'">
@@ -354,6 +364,7 @@ export class FlashcardDeckComponent {
   private deckService = inject(DeckService);
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
+  private router = inject(Router);
 
   // View state
   readonly activeView = signal<DeckView>('list');
@@ -506,6 +517,12 @@ export class FlashcardDeckComponent {
     } catch {
       // ignore
     }
+  }
+
+  startDeckReview(deck: Deck): void {
+    // Set pending review cards in the vocab store and navigate to review page
+    this.vocabStore.pendingReviewCards.set([...this.deckCards()]);
+    void this.router.navigate(['/review']);
   }
 
   toggleEditForm(): void {

@@ -21,7 +21,7 @@
           <button
             (click)="stopRecording()"
             class="bg-red-600 text-white px-3 py-1 rounded-full text-sm"
-          >
+           [attr.aria-label]="'audio_recorder.stop' | t">
             {{ 'audio_recorder.stop' | t }}
           </button>
         }
@@ -42,13 +42,13 @@
             <button
               (click)="uploadRecording()"
               class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm"
-            >
+             [attr.aria-label]="'audio_recorder.upload' | t">
               {{ 'audio_recorder.upload' | t }}
             </button>
             <button
               (click)="discardRecording()"
               class="bg-slate-600 text-white px-4 py-1.5 rounded-full text-sm"
-            >
+             [attr.aria-label]="'audio_recorder.discard' | t">
               {{ 'audio_recorder.discard' | t }}
             </button>
           </div>
@@ -64,7 +64,7 @@
       (click)="startRecording()"
       [disabled]="uploading"
       class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full"
-    >
+     [attr.aria-label]="'audio_recorder.record' | t">
       <span>{{ 'audio_recorder.record' | t }}</span>
     </button>
   }

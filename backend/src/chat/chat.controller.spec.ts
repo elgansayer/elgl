@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { CentrifugoService } from './centrifugo.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
@@ -17,6 +18,7 @@ import { LlmProxyDto } from './dto/llm-proxy.dto';
 describe('ChatController', () => {
   let controller: ChatController;
   let chatService: ChatService;
+  let centrifugoService: CentrifugoService;
   let conversationStarterService: ConversationStarterService;
   let translationService: TranslationService;
 
@@ -55,6 +57,15 @@ describe('ChatController', () => {
           },
         },
         {
+          provide: CentrifugoService,
+          useValue: {
+            checkConnectionRateLimit: jest.fn().mockResolvedValue(true),
+            generateConnectionToken: jest.fn(),
+            publish: jest.fn(),
+            signJwt: jest.fn(),
+          },
+        },
+        {
           provide: ConversationStarterService,
           useValue: {
             getSuggestions: jest.fn(),
@@ -76,6 +87,7 @@ describe('ChatController', () => {
 
     controller = module.get<ChatController>(ChatController);
     chatService = module.get<ChatService>(ChatService);
+    centrifugoService = module.get<CentrifugoService>(CentrifugoService);
     conversationStarterService = module.get<ConversationStarterService>(
       ConversationStarterService,
     );
@@ -101,17 +113,30 @@ describe('ChatController', () => {
       expect(chatService.generateConnectionToken).not.toHaveBeenCalled();
     });
 
-    it('should return connection token when user is provided', async () => {
+    it('should return connection token when user is provided and rate limit allows', async () => {
       const _mockToken = 'ws-token';
       (chatService.generateConnectionToken as jest.Mock).mockResolvedValue(
         _mockToken,
       );
 
       const result = await controller.getConnectionToken(mockUser());
+      expect(
+        centrifugoService.checkConnectionRateLimit,
+      ).toHaveBeenCalledWith('user-1');
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );
       expect(result).toEqual({ token: 'ws-token' });
+    });
+
+    it('should throw HttpException 429 when rate limit is exceeded', async () => {
+      (
+        centrifugoService.checkConnectionRateLimit as jest.Mock
+      ).mockResolvedValue(false);
+
+      await expect(
+        controller.getConnectionToken(mockUser()),
+      ).rejects.toThrow('Too many WebSocket connection attempts');
     });
   });
 

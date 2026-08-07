@@ -9,7 +9,7 @@
         class="px-4 py-2 text-sm font-bold rounded-xl transition-colors text-text-secondary"
         (click)="setTab('moment')"
         role="tab"
-      >
+       [attr.aria-label]="'moderation.moment' | t">
         {{ 'moderation.moment' | t }}
       </button>
       <button
@@ -19,7 +19,7 @@
         class="px-4 py-2 text-sm font-bold rounded-xl transition-colors text-text-secondary"
         (click)="setTab('profile')"
         role="tab"
-      >
+       [attr.aria-label]="'moderation.profile' | t">
         {{ 'moderation.profile' | t }}
       </button>
     </div>
@@ -83,14 +83,14 @@
                 class="inline-flex items-center justify-center rounded-lg bg-green-600 text-white px-3 py-2 text-sm font-bold hover:bg-green-700 transition-colors"
                 (click)="approveItem(item)"
                 [disabled]="item.status !== 'pending'"
-              >
+               [attr.aria-label]="'moderation.approve' | t">
                 {{ 'moderation.approve' | t }}
               </button>
               <button
                 class="inline-flex items-center justify-center rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-bold hover:bg-red-700 transition-colors"
                 (click)="rejectItem(item)"
                 [disabled]="item.status !== 'pending'"
-              >
+               [attr.aria-label]="'moderation.reject' | t">
                 {{ 'moderation.reject' | t }}
               </button>
             </div>
@@ -146,14 +146,14 @@
                 class="inline-flex items-center justify-center rounded-lg bg-green-600 text-white px-3 py-2 text-sm font-bold hover:bg-green-700 transition-colors"
                 (click)="approveItem(item)"
                 [disabled]="item.status !== 'pending'"
-              >
+               [attr.aria-label]="'moderation.approve' | t">
                 {{ 'moderation.approve' | t }}
               </button>
               <button
                 class="inline-flex items-center justify-center rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-bold hover:bg-red-700 transition-colors"
                 (click)="rejectItem(item)"
                 [disabled]="item.status !== 'pending'"
-              >
+               [attr.aria-label]="'moderation.reject' | t">
                 {{ 'moderation.reject' | t }}
               </button>
             </div>

@@ -521,4 +521,85 @@ describe('EconomyService', () => {
       expect(result.coins_remaining).toBe(80);
     });
   });
+
+  describe('getStickerPacks', () => {
+    it('should return packs with ownership information', async () => {
+      const mockPacks = [
+        { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50, is_animated: false, sticker_urls: ['sticker1.png'] },
+        { id: 'stk_pack_2', name: 'Rainbow Unicorns', cost_coins: 200, is_animated: true, sticker_urls: ['unicorn1.webm'] },
+      ];
+      const mockOwned = [{ pack_id: 'stk_pack_1' }];
+      const mockBalance = { id: 'user-1', coins_balance: 300 };
+
+      const selectMock = jest.fn();
+      const orderMock = jest.fn().mockResolvedValue({ data: mockPacks, error: null });
+      const eqMock = jest.fn().mockReturnValue({ select: selectMock });
+      const singleMock = jest.fn().mockResolvedValue({ data: mockBalance, error: null });
+
+      mockQueryBuilder.order = orderMock;
+      mockQueryBuilder.eq = eqMock;
+      selectMock.mockResolvedValue({ data: mockOwned, error: null });
+      mockQueryBuilder.single = singleMock;
+
+      const result = await service.getStickerPacks('user-1');
+
+      expect(result.packs).toEqual(mockPacks);
+      expect(result.owned_pack_ids).toEqual(['stk_pack_1']);
+      expect(result.user_coins).toBe(300);
+    });
+
+    it('should return default packs when DB returns empty', async () => {
+      const orderMock = jest.fn().mockResolvedValue({ data: [], error: null });
+      const selectMock = jest.fn().mockResolvedValue({ data: [], error: null });
+      const eqMock = jest.fn().mockReturnValue({ select: selectMock });
+      const singleMock = jest.fn().mockResolvedValue({ data: null, error: null });
+
+      mockQueryBuilder.order = orderMock;
+      mockQueryBuilder.eq = eqMock;
+      mockQueryBuilder.single = singleMock;
+
+      const result = await service.getStickerPacks('user-1');
+
+      expect(result.packs).toHaveLength(8);
+      expect(result.packs[1].is_animated).toBe(true); // Rainbow Unicorns
+    });
+  });
+
+  describe('unlockStickerPack', () => {
+    it('should unlock a sticker pack and deduct coins', async () => {
+      const pack = { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 };
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: pack, error: null }) // pack lookup
+        .mockResolvedValueOnce({ data: { id: 'user-1', coins_balance: 200 }, error: null }); // balance check
+
+      const result = await service.unlockStickerPack('user-1', { pack_id: 'stk_pack_1' });
+
+      expect(result.success).toBe(true);
+      expect(result.coins_remaining).toBe(150);
+      expect(result.pack).toEqual(pack);
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        user_id: 'user-1',
+        pack_id: 'stk_pack_1',
+      });
+    });
+
+    it('should throw NotFoundException when pack does not exist', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({ data: null, error: null });
+
+      await expect(
+        service.unlockStickerPack('user-1', { pack_id: 'nonexistent' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when insufficient coins', async () => {
+      const pack = { id: 'stk_pack_4', name: 'Golden Dragons', cost_coins: 500 };
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: pack, error: null }) // pack lookup
+        .mockResolvedValueOnce({ data: { id: 'user-1', coins_balance: 100 }, error: null }); // balance
+
+      await expect(
+        service.unlockStickerPack('user-1', { pack_id: 'stk_pack_4' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
 });
