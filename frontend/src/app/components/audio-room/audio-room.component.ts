@@ -75,6 +75,7 @@ export class AudioRoomComponent implements OnInit {
 
   readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
   readonly showExclusivePicker = signal<boolean>(false);
+  readonly showNotesPanel = signal<boolean>(false);
 
   /** Toggle between flat list view and language-grouped view */
   readonly viewMode = signal<'flat' | 'grouped'>('grouped');
