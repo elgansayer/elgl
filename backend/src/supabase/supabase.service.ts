@@ -564,6 +564,8 @@ type FlashcardRow = {
   definition?: string | null;
   pronunciation_url?: string | null;
   srs_level: number;
+  easiness_factor: number;
+  repetition_count: number;
   next_review_at: string;
   created_at: string;
 };
