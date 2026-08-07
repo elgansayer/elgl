@@ -216,7 +216,7 @@ export class VocabularyStore {
       return fc;
     } catch {
       // Offline - queue the review and optimistically update local state
-      if (!navigator.onLine) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         await this.srsOffline.queueSrsReview(flashcardId, quality, newLevel);
         this.triggerHapticFeedback(newLevel);
         // Optimistically update local state
