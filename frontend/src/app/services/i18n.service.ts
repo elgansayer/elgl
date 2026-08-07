@@ -1122,6 +1122,7 @@ export class I18nService {
     'doodle.clearBtn': '🗑️ Clear canvas',
     'doodle.cancelBtn': 'Cancel',
     'doodle.sendBtn': '📤 Send doodle',
+'doodle.brushSizeAria': 'Brush size {{size}}px',
 
     // Visual Diff
     'visualDiff.title': '✏️ Language Correction Diff',
