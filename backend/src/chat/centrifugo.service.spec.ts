@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { CentrifugoService } from './centrifugo.service';
+import { PinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 import Redis from 'ioredis';
 
@@ -24,8 +25,16 @@ describe('CentrifugoService', () => {
   let service: CentrifugoService;
   let configService: ConfigService;
   let redisInstance: jest.Mocked<Redis>;
+  let mockLogger: { error: jest.Mock; warn: jest.Mock; info: jest.Mock; debug: jest.Mock };
 
   beforeEach(async () => {
+    mockLogger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CentrifugoService,
@@ -40,6 +49,10 @@ describe('CentrifugoService', () => {
               return null;
             }),
           },
+        },
+        {
+          provide: `PinoLogger:${CentrifugoService.name}`,
+          useValue: mockLogger,
         },
       ],
     }).compile();
@@ -203,19 +216,15 @@ describe('CentrifugoService', () => {
     });
 
     it('should catch fetch error, log error, and return false', async () => {
-      const consoleSpy = jest
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
       fetchSpy.mockRejectedValue(new Error('Network failure'));
 
       const result = await service.publish('chat:room-1', { text: 'Hello' });
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Centrifugo publish error:',
-        expect.any(Error),
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { error: 'Network failure', channel: 'chat:room-1' },
+        'Centrifugo publish error',
       );
-      consoleSpy.mockRestore();
     });
   });
 

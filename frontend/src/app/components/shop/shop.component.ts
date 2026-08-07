@@ -29,6 +29,7 @@ interface CatalogItem {
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
+<<<<<<< HEAD
       @if (isLoading()) {
         <div class="grid grid-cols-2 gap-4">
           @for (skeleton of skeletons; track skeleton) {
@@ -75,6 +76,27 @@ interface CatalogItem {
           }
         </div>
       }
+=======
+      <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+        @for (item of items(); track item.id) {
+          <div class="rounded-xl bg-surface p-3 shadow flex flex-col">
+            <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl">
+              {{ item.imageUrl ? '' : '🎁' }}
+            </div>
+            <h2 class="font-semibold text-sm sm:text-base truncate">{{ item.name }}</h2>
+            <p class="text-xs opacity-60 line-clamp-2">{{ item.description }}</p>
+            <p class="mt-auto pt-1 font-semibold text-indigo-400 text-sm sm:text-base">
+              {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
+            </p>
+            <button
+              class="mt-2 w-full rounded-full bg-indigo-600 py-1.5 text-xs sm:text-sm font-medium hover:bg-indigo-500 transition-colors"
+              (click)="addToCart(item.id)">
+              {{ 'cart.add' | t }}
+            </button>
+          </div>
+        }
+      </div>
+>>>>>>> origin/main
     </div>
   `,
 })

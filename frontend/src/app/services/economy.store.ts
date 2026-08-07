@@ -7,6 +7,9 @@ import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
 import { GiftAnimationService, GiftAnimationType } from './gift-animation.service';
+import { OfflineEconomyService } from './offline-economy.service';
+import { NetworkStatusService } from './network-status.service';
+import { EconomyErrorHandlerService } from './economy-error-handler.service';
 
 export interface VirtualGift {
   id: string;
@@ -74,6 +77,9 @@ export class EconomyStore {
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private giftAnimationService = inject(GiftAnimationService);
+  private offlineEconomy = inject(OfflineEconomyService);
+  private networkStatus = inject(NetworkStatusService);
+  private economyErrorHandler = inject(EconomyErrorHandlerService);
   private baseUrl = `${environment.apiUrl}/economy`;
   private monetisationUrl = `${environment.apiUrl}/monetisation`;
   private safetyUrl = `${environment.apiUrl}/safety`;
@@ -101,25 +107,62 @@ export class EconomyStore {
       if (!this.authService.currentUser() || !this.authService.getAccessToken()) {
         return;
       }
-      const [cat, bal, blocked] = await Promise.all([
-        firstValueFrom(
-          this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
-        ),
-        firstValueFrom(
-          this.http.get<{ coins_balance: number }>(`${this.baseUrl}/balance`, {
-            headers: this.getHeaders(),
-          }),
-        ),
-        firstValueFrom(
-          this.http.get<string[]>(`${this.safetyUrl}/blocked-ids`, { headers: this.getHeaders() }),
-        ),
-      ]);
 
-      this.catalog.set(cat);
-      this.coinsBalance.set(bal.coins_balance);
-      this.blockedUserIds.set(new Set(blocked));
+      const isOnline = this.networkStatus.isOnline();
+
+      if (isOnline) {
+        const [cat, bal, blocked] = await Promise.all([
+          firstValueFrom(
+            this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
+          ),
+          firstValueFrom(
+            this.http.get<{ coins_balance: number }>(`${this.baseUrl}/balance`, {
+              headers: this.getHeaders(),
+            }),
+          ),
+          firstValueFrom(
+            this.http.get<string[]>(`${this.safetyUrl}/blocked-ids`, { headers: this.getHeaders() }),
+          ),
+        ]);
+
+        this.catalog.set(cat);
+        this.coinsBalance.set(bal.coins_balance);
+        this.blockedUserIds.set(new Set(blocked));
+
+        // Cache for offline use
+        await this.offlineEconomy.cacheCatalog(cat).catch(() => undefined);
+        await this.offlineEconomy.cacheBalance(bal.coins_balance).catch(() => undefined);
+      } else {
+        // Load from offline cache
+        const [cachedCatalog, cachedBalance] = await Promise.all([
+          this.offlineEconomy.getCachedCatalog(),
+          this.offlineEconomy.getCachedBalance(),
+        ]);
+
+        if (cachedCatalog.length > 0) {
+          this.catalog.set(cachedCatalog);
+        }
+        if (cachedBalance !== null) {
+          this.coinsBalance.set(cachedBalance.coinsBalance);
+        }
+      }
     } catch (e) {
-      console.error('Error loading economy/safety data:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadInitialData', coinBalance: this.coinsBalance() });
+      // Try offline fallback on error
+      try {
+        const [cachedCatalog, cachedBalance] = await Promise.all([
+          this.offlineEconomy.getCachedCatalog(),
+          this.offlineEconomy.getCachedBalance(),
+        ]);
+        if (cachedCatalog.length > 0) {
+          this.catalog.set(cachedCatalog);
+        }
+        if (cachedBalance !== null) {
+          this.coinsBalance.set(cachedBalance.coinsBalance);
+        }
+      } catch {
+        // Silently handle cascade failure
+      }
     } finally {
       this.isLoading.set(false);
     }
@@ -143,21 +186,39 @@ export class EconomyStore {
       }
       return res;
     } catch (e) {
-      console.error('Daily check-in error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'claimDailyCheckIn', coinBalance: this.coinsBalance() });
       return null;
     }
   }
 
   async loadCoinPackages(): Promise<void> {
     try {
-      const packages = await firstValueFrom(
-        this.http.get<CoinPackage[]>(`${this.baseUrl}/packages`, {
-          headers: this.getHeaders(),
-        }),
-      );
-      this.coinPackages.set(packages);
+      const isOnline = this.networkStatus.isOnline();
+      if (isOnline) {
+        const packages = await firstValueFrom(
+          this.http.get<CoinPackage[]>(`${this.baseUrl}/packages`, {
+            headers: this.getHeaders(),
+          }),
+        );
+        this.coinPackages.set(packages);
+        await this.offlineEconomy.cacheCoinPackages(packages).catch(() => undefined);
+      } else {
+        const cached = await this.offlineEconomy.getCachedCoinPackages();
+        if (cached.length > 0) {
+          this.coinPackages.set(cached);
+        }
+      }
     } catch (e) {
-      console.error('Load coin packages error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadCoinPackages' });
+      // Fallback to cache on error
+      try {
+        const cached = await this.offlineEconomy.getCachedCoinPackages();
+        if (cached.length > 0) {
+          this.coinPackages.set(cached);
+        }
+      } catch {
+        // Silently handle
+      }
     }
   }
 
@@ -182,7 +243,7 @@ export class EconomyStore {
       }
       window.location.href = res.sessionUrl;
     } catch (e) {
-      console.error('Coin checkout error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'buyCoins', coinBalance: this.coinsBalance() });
       showToast(this.i18n.translate('economy.buyCoinsError'));
     }
   }
@@ -205,13 +266,30 @@ export class EconomyStore {
       );
       return true;
     } catch (e) {
-      console.error('Coin purchase confirmation error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'confirmCoinPurchase', coinBalance: this.coinsBalance() });
       showToast(this.i18n.translate('economy.purchaseConfirmError'));
       return false;
     }
   }
 
   async sendGift(receiverId: string, giftId: string, roomId?: string): Promise<boolean> {
+    // When offline, queue the action for later sync
+    if (!this.networkStatus.isOnline()) {
+      await this.offlineEconomy.enqueuePendingAction('send_gift', {
+        receiver_id: receiverId,
+        gift_id: giftId,
+        room_id: roomId ?? '',
+      });
+      // Optimistically deduct the gift cost from cached balance
+      const gift = this.catalog().find((g) => g.id === giftId);
+      if (gift) {
+        this.coinsBalance.update((b) => Math.max(0, b - gift.cost_coins));
+        await this.offlineEconomy.cacheBalance(this.coinsBalance()).catch(() => undefined);
+      }
+      showToast(this.i18n.translate('economy.giftQueuedOffline'));
+      return true;
+    }
+
     try {
       const res = await firstValueFrom(
         this.http.post<{ success: boolean; coins_remaining: number; gift: VirtualGift }>(
@@ -221,11 +299,13 @@ export class EconomyStore {
         ),
       );
       this.coinsBalance.set(res.coins_remaining);
+      // Update offline cache with new balance
+      await this.offlineEconomy.cacheBalance(res.coins_remaining).catch(() => undefined);
       return true;
     } catch (e: unknown) {
-      console.error('Send gift error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'sendGift', coinBalance: this.coinsBalance() });
       const message = e instanceof Error ? e.message : String(e);
-      showToast(message || 'Failed to send virtual gift. Ensure you have sufficient coin balance.');
+      showToast(message || this.i18n.translate('economy.sendGiftError'));
       return false;
     }
   }
@@ -250,8 +330,8 @@ export class EconomyStore {
       }
       window.location.href = res.sessionUrl;
     } catch (e) {
-      console.error('VIP upgrade error:', e);
-      showToast('Failed to start VIP checkout. Please try again.');
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'upgradeVip', coinBalance: this.coinsBalance() });
+      showToast(this.i18n.translate('economy.vipUpgradeError'));
     }
   }
 
@@ -264,7 +344,7 @@ export class EconomyStore {
       );
       this.developerStats.set(res);
     } catch (e) {
-      console.error('Load dev analytics error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadDeveloperAnalytics' });
     }
   }
 
@@ -277,7 +357,7 @@ export class EconomyStore {
       );
       this.diagnosticLogs.set(logs.map((log) => this.mapDiagnosticLog(log)));
     } catch (e) {
-      console.error('Load diagnostic logs error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadDiagnosticLogs' });
       this.diagnosticLogs.set([]);
     }
   }
@@ -305,7 +385,7 @@ export class EconomyStore {
       const mapped = this.mapDiagnosticLog(created);
       this.diagnosticLogs.update((current) => [mapped, ...current].slice(0, 20));
     } catch (e) {
-      console.error('Create diagnostic log error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'createDiagnosticLog' });
     }
   }
 
@@ -324,11 +404,10 @@ export class EconomyStore {
       );
       return res.api_key;
     } catch (e: unknown) {
-      console.error('Generate API key error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'generateApiKey' });
       const message = e instanceof Error ? e.message : String(e);
       showToast(
-        message ||
-          'Failed to generate API key. Requires Developer Tier subscription (20 UKP / $26 USD per month).',
+        message || this.i18n.translate('economy.apiKeyGenerationError'),
       );
       return null;
     }
@@ -343,12 +422,10 @@ export class EconomyStore {
           { headers: this.getHeaders() },
         ),
       );
-      showToast(
-        '🛡️ Thank you. Your report has been submitted to our Trust & Safety moderation team for review within 24 hours.',
-      );
+      showToast(this.i18n.translate('safety.reportSubmitted'));
     } catch (e) {
-      console.error('Report user error:', e);
-      showToast('Failed to submit report.');
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'reportUser' });
+      showToast(this.i18n.translate('safety.reportError'));
     }
   }
 
@@ -364,12 +441,10 @@ export class EconomyStore {
       const set = new Set(this.blockedUserIds());
       set.add(blockedId);
       this.blockedUserIds.set(set);
-      showToast(
-        '🚫 User blocked. All posts, moments, and direct messages from this user are now hidden across the platform.',
-      );
+      showToast(this.i18n.translate('safety.userBlocked'));
     } catch (e) {
-      console.error('Block user error:', e);
-      showToast('Failed to block user.');
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'blockUser' });
+      showToast(this.i18n.translate('safety.blockError'));
     }
   }
 
@@ -422,27 +497,57 @@ export class EconomyStore {
 
   async loadStickerPacks(): Promise<void> {
     try {
-      const res = await firstValueFrom(
-        this.http.get<{
-          packs: StickerPack[];
-          owned_pack_ids: string[];
-          user_coins: number;
-        }>(`${this.baseUrl}/sticker-packs`, { headers: this.getHeaders() }),
-      );
-      this.coinsBalance.set(res.user_coins);
-      const ownedSet = new Set(res.owned_pack_ids);
-      this.stickerPacks.set(
-        res.packs.map((pack) => ({
+      const isOnline = this.networkStatus.isOnline();
+      if (isOnline) {
+        const res = await firstValueFrom(
+          this.http.get<{
+            packs: StickerPack[];
+            owned_pack_ids: string[];
+            user_coins: number;
+          }>(`${this.baseUrl}/sticker-packs`, { headers: this.getHeaders() }),
+        );
+        this.coinsBalance.set(res.user_coins);
+        const ownedSet = new Set(res.owned_pack_ids);
+        const packs = res.packs.map((pack) => ({
           ...pack,
           owned: ownedSet.has(pack.id),
-        })),
-      );
+        }));
+        this.stickerPacks.set(packs);
+
+        // Cache for offline use
+        await this.offlineEconomy.cacheStickerPacks(packs).catch(() => undefined);
+        await this.offlineEconomy.cacheBalance(res.user_coins).catch(() => undefined);
+      } else {
+        const cached = await this.offlineEconomy.getCachedStickerPacks();
+        if (cached.length > 0) {
+          this.stickerPacks.set(cached);
+        }
+      }
     } catch (e) {
-      console.error('Load sticker packs error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadStickerPacks', coinBalance: this.coinsBalance() });
+      // Fallback to cache on error
+      try {
+        const cached = await this.offlineEconomy.getCachedStickerPacks();
+        if (cached.length > 0) {
+          this.stickerPacks.set(cached);
+        }
+      } catch {
+        // Silently handle
+      }
     }
   }
 
   async unlockStickerPack(packId: string): Promise<boolean> {
+    if (!this.networkStatus.isOnline()) {
+      await this.offlineEconomy.enqueuePendingAction('unlock_sticker', { pack_id: packId });
+      // Optimistically mark as owned locally
+      this.stickerPacks.update((packs) =>
+        packs.map((p) => (p.id === packId ? { ...p, owned: true } : p)),
+      );
+      showToast(this.i18n.translate('sticker.queuedOffline'));
+      return true;
+    }
+
     try {
       const res = await firstValueFrom(
         this.http.post<{
@@ -462,6 +567,8 @@ export class EconomyStore {
             p.id === packId ? { ...p, owned: true } : p,
           ),
         );
+        await this.offlineEconomy.cacheBalance(res.coins_remaining).catch(() => undefined);
+        await this.offlineEconomy.cacheStickerPacks(this.stickerPacks()).catch(() => undefined);
         showToast(
           this.i18n.translate('sticker.purchaseSuccess', {
             name: res.pack.name,
@@ -471,17 +578,75 @@ export class EconomyStore {
       }
       return false;
     } catch (e) {
-      console.error('Unlock sticker pack error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'unlockStickerPack', coinBalance: this.coinsBalance() });
       showToast(this.i18n.translate('sticker.notEnoughCoins'));
       return false;
     }
+  }
+
+  /**
+   * Sync pending offline economy actions when connectivity is restored.
+   * Called by the AppComponent or a network status effect.
+   */
+  async syncPendingActions(): Promise<{ synced: number; failed: number }> {
+    const pending = await this.offlineEconomy.getPendingActions();
+    if (pending.length === 0) return { synced: 0, failed: 0 };
+
+    let synced = 0;
+    let failed = 0;
+
+    for (const action of pending) {
+      try {
+        switch (action.actionType) {
+          case 'send_gift': {
+            const payload = action.payload as { receiver_id: string; gift_id: string; room_id?: string };
+            await firstValueFrom(
+              this.http.post<{ success: boolean; coins_remaining: number; gift: VirtualGift }>(
+                `${this.baseUrl}/send-gift`,
+                {
+                  receiver_id: payload.receiver_id,
+                  gift_id: payload.gift_id,
+                  room_id: payload.room_id ?? '',
+                },
+                { headers: this.getHeaders() },
+              ),
+            );
+            break;
+          }
+          case 'unlock_sticker': {
+            const payload = action.payload as { pack_id: string };
+            await firstValueFrom(
+              this.http.post<{ success: boolean; coins_remaining: number; pack: StickerPack }>(
+                `${this.baseUrl}/unlock-sticker-pack`,
+                { pack_id: payload.pack_id },
+                { headers: this.getHeaders() },
+              ),
+            );
+            break;
+          }
+          default:
+            break;
+        }
+        await this.offlineEconomy.removePendingAction(action.id);
+        synced++;
+      } catch {
+        failed++;
+      }
+    }
+
+    // Reload fresh data after sync
+    if (synced > 0) {
+      await this.loadInitialData();
+    }
+
+    return { synced, failed };
   }
 
   readonly unlockedStickerUrls = computed(() => {
     return this.stickerPacks()
       .filter((pack) => pack.owned && pack.sticker_urls && pack.sticker_urls.length > 0)
       .flatMap((pack) =>
-        pack.sticker_urls.map((url) => ({
+        pack.sticker_urls!.map((url) => ({
           id: `${pack.id}_${url.split('/').pop() ?? url}`,
           url,
           pack_name: pack.name,

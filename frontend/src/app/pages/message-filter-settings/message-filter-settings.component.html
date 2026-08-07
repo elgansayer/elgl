@@ -46,7 +46,7 @@
             <input
               type="number"
               [value]="ageMin()"
-              (input)="ageMin.set($any($event.target).value ? Number($any($event.target).value) : null)"
+              (input)="ageMin.set($any($event.target).value ? +$any($event.target).value : null)"
               placeholder="0"
               min="0"
               max="150"
@@ -57,7 +57,7 @@
             <input
               type="number"
               [value]="ageMax()"
-              (input)="ageMax.set($any($event.target).value ? Number($any($event.target).value) : null)"
+              (input)="ageMax.set($any($event.target).value ? +$any($event.target).value : null)"
               placeholder="150"
               min="0"
               max="150"

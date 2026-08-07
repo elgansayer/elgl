@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { VocabularyStore, Flashcard } from './vocabulary.store';
 import { AuthService } from './auth.service';
+import { SrsOfflineService } from './srs-offline.service';
 import { environment } from '../../environments/environment';
 
 describe('VocabularyStore', () => {
@@ -24,11 +25,21 @@ describe('VocabularyStore', () => {
     created_at: new Date().toISOString(),
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.resetTestingModule();
 
     authSpy = {
       getAccessToken: vi.fn().mockReturnValue('mock-token'),
+    };
+
+    const srsOfflineMock = {
+      cacheFlashcards: vi.fn().mockResolvedValue(undefined),
+      getCachedFlashcards: vi.fn().mockResolvedValue([]),
+      cacheDueReviews: vi.fn().mockResolvedValue(undefined),
+      getCachedDueReviews: vi.fn().mockResolvedValue([]),
+      queueSrsReview: vi.fn().mockResolvedValue(undefined),
+      syncQueuedReviews: vi.fn().mockResolvedValue({ synced: 0, failed: 0 }),
+      queuedReviewCount: vi.fn().mockReturnValue(0),
     };
 
     TestBed.configureTestingModule({
@@ -37,6 +48,7 @@ describe('VocabularyStore', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AuthService, useValue: authSpy },
+        { provide: SrsOfflineService, useValue: srsOfflineMock },
       ],
     });
 

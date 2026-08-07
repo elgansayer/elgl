@@ -7,10 +7,23 @@ import {
   Patch,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_PRIVATE_MEDIUM,
+  CACHE_PRIVATE_NO_STORE,
+} from '../common/cache.interceptor';
 import { DecksService } from './decks.service';
 import {
   AddFlashcardToDeckDto,
@@ -20,12 +33,22 @@ import {
 } from './dto/deck.dto';
 import { Deck } from './interfaces/deck.interface';
 
+@ApiTags('Spaced Repetition (SRS) / Decks')
 @Controller('decks')
 @UseGuards(SupabaseAuthGuard)
+@ApiBearerAuth()
 export class DecksController {
   constructor(private readonly decksService: DecksService) {}
 
   @Post()
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @ApiOperation({
+    summary: 'Create a new flashcard deck',
+    description:
+      'Creates a new deck belonging to the authenticated user. Decks are used to organise flashcards into thematic groups (e.g. French Basics, Travel Phrases).',
+  })
+  @ApiResponse({ status: 201, description: 'Deck created successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async createDeck(
     @CurrentUser() user: User | null,
     @Body() dto: CreateDeckDto,
@@ -35,12 +58,33 @@ export class DecksController {
   }
 
   @Get()
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
+  @ApiOperation({
+    summary: 'List all decks for the authenticated user',
+    description:
+      'Returns all flashcard decks owned by the user, including card_count for each deck.',
+  })
+  @ApiResponse({ status: 200, description: 'Array of decks.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getDecks(@CurrentUser() user: User | null): Promise<Deck[]> {
     if (!user) return [];
     return await this.decksService.getDecks(user.id);
   }
 
   @Get(':id')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
+  @ApiOperation({
+    summary: 'Get a single deck by ID',
+    description: 'Returns the full deck object for the given ID.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the deck',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+  })
+  @ApiResponse({ status: 200, description: 'Deck object.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Deck not found or does not belong to user.' })
   async getDeck(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
@@ -50,6 +94,19 @@ export class DecksController {
   }
 
   @Patch(':id')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @ApiOperation({
+    summary: 'Update a deck',
+    description: 'Partially updates the deck name, description, colour, or icon.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the deck to update',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+  })
+  @ApiResponse({ status: 200, description: 'Deck updated successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Deck not found.' })
   async updateDeck(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
@@ -60,6 +117,19 @@ export class DecksController {
   }
 
   @Delete(':id')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @ApiOperation({
+    summary: 'Delete a deck',
+    description:
+      'Permanently deletes the deck and all its flashcard associations. Individual flashcards are not deleted.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the deck to delete',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+  })
+  @ApiResponse({ status: 200, description: 'Deck deleted successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async deleteDeck(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
@@ -70,6 +140,18 @@ export class DecksController {
   }
 
   @Post(':id/flashcards')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @ApiOperation({
+    summary: 'Add a flashcard to a deck',
+    description: 'Associates an existing flashcard with the specified deck.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the deck',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+  })
+  @ApiResponse({ status: 201, description: 'Flashcard added to deck.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async addFlashcard(
     @CurrentUser() user: User | null,
     @Param('id') deckId: string,
@@ -85,6 +167,24 @@ export class DecksController {
   }
 
   @Delete(':id/flashcards/:flashcardId')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  @ApiOperation({
+    summary: 'Remove a flashcard from a deck',
+    description:
+      'Removes the association between the flashcard and the deck. The flashcard itself is not deleted.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the deck',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+  })
+  @ApiParam({
+    name: 'flashcardId',
+    description: 'UUID of the flashcard to remove',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef0123456789',
+  })
+  @ApiResponse({ status: 200, description: 'Flashcard removed from deck.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async removeFlashcard(
     @CurrentUser() user: User | null,
     @Param('id') deckId: string,
@@ -100,6 +200,18 @@ export class DecksController {
   }
 
   @Get(':id/flashcards')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_MEDIUM))
+  @ApiOperation({
+    summary: 'List flashcards in a deck',
+    description: 'Returns all flashcard IDs currently associated with this deck.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the deck',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+  })
+  @ApiResponse({ status: 200, description: 'Array of flashcard IDs.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getDeckFlashcards(
     @CurrentUser() user: User | null,
     @Param('id') deckId: string,

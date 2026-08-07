@@ -38,8 +38,8 @@ function parseStackFrames(stack: string): ClientErrorStackFrame[] {
       const m = STACK_FRAME_RE.exec(line);
       if (!m) return null;
 
-      const fnName = m.groups?.functionName;
-      const rawSource = m.groups?.source ?? m.groups?.sourceOnly;
+      const fnName = m.groups?.['functionName'];
+      const rawSource = m.groups?.['source'] ?? m.groups?.['sourceOnly'];
 
       if (!rawSource) {
         return fnName ? { functionName: fnName } : null;
@@ -124,8 +124,9 @@ export class GlobalErrorHandler implements ErrorHandler {
 
     if (typeof err === 'object' && err !== null) {
       const obj = err as Record<string, unknown>;
-      message = String(obj['message'] ?? obj['toString']?.() ?? 'Unknown error object');
-      metadata = { rawType: obj.constructor?.name ?? typeof err };
+      const toStringFn = obj['toString'] as (() => string) | undefined;
+      message = String(obj['message'] ?? (typeof toStringFn === 'function' ? toStringFn.call(obj) : undefined) ?? 'Unknown error object');
+      metadata = { rawType: (obj.constructor as { name?: string })?.name ?? typeof err };
     } else {
       message = String(err);
     }
