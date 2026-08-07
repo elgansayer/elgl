@@ -23,7 +23,7 @@
         <button
           class="rounded-full bg-indigo-600 px-8 py-3 text-sm font-semibold shadow-xl hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600"
           (click)="authService.unlockApp()"
-        >
+         [attr.aria-label]="'app_lock.unlock_btn' | t">
           {{ 'app_lock.unlock_btn' | t }}
         </button>
       </div>

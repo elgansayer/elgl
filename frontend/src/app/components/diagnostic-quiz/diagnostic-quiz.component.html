@@ -70,17 +70,7 @@
               [attr.aria-label]="'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }"
               [style.background]="isSelected ? 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.1))' : 'rgba(15,15,35,0.6)'"
             >
-              <span
-                class="text-base font-medium block"
-                [class.text-purple-100]="isSelected"
-                [class.text-purple-300/70]="!isSelected"
-              >
-                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full me-3 text-sm font-bold"
-                  [class.bg-purple-500]="isSelected"
-                  [class.text-white]="isSelected"
-                  [class.bg-purple-500/10]="!isSelected"
-                  [class.text-purple-300/60]="!isSelected"
-                >{{ idx + 1 }}</span>
+              <span class="text-sm text-white font-medium">
                 {{ option.text }}
               </span>
             </button>

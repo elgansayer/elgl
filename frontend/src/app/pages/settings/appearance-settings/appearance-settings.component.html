@@ -39,7 +39,7 @@
                 [class.shadow-lg]="currentTheme() === opt"
                 [class.bg-surface-200]="currentTheme() !== opt"
                 [class.text-text-primary]="currentTheme() !== opt"
-              >
+               [attr.aria-label]="('theme.' + opt) | t">
                 @if (opt === 'light') {
                   <span class="me-1.5">☀️</span>
                 } @else if (opt === 'dark') {
@@ -122,7 +122,7 @@
             [value]="i18nService.currentLang()"
             (change)="onLanguageSelect($event)"
             class="w-full bg-surface-200 border border-surface-300 rounded-lg px-3 py-2.5 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-          >
+           [attr.aria-label]="'Select'">
             @for (lang of i18nService.availableLanguages; track lang.code) {
               <option [value]="lang.code">
                 {{ lang.flag }} {{ lang.nativeName }}
@@ -138,7 +138,7 @@
           (click)="saveSettings()"
           [disabled]="isSaving()"
           class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
-        >
+         [attr.aria-label]="'common.loading' | t">
           @if (isSaving()) {
             {{ 'common.loading' | t }}
           } @else {
