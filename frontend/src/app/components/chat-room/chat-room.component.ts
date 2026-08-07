@@ -24,6 +24,7 @@ import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { NetworkStatusService } from '../../services/network-status.service';
 
 @Component({
   selector: 'app-chat-room',
@@ -57,6 +58,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
+  readonly networkStatusService = inject(NetworkStatusService);
 
   id = input.required<string>();
 

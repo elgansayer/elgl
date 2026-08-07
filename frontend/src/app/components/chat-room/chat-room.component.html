@@ -21,6 +21,10 @@
               ? ('chatRoom.liveStatus' | t)
               : ('chatRoom.connectingStatus' | t)
           }}
+          @if (chatService.queuedCount() > 0) {
+            &middot;
+            {{ 'chatRoom.queuedMessages' | t: { count: chatService.queuedCount() } }}
+          }
         </p>
       </div>
     </div>
@@ -401,6 +405,16 @@
           (selectSticker)="sendSticker($event)"
           (close)="showStickerDrawer.set(false)"
         ></app-sticker-picker>
+      </div>
+    }
+
+    @if (!networkStatusService.isOnline()) {
+      <div class="mb-2 flex items-center gap-2 rounded-card bg-amber-500/10 border border-amber-500/30 ps-3 pe-3 pt-2 pb-2 text-xs text-amber-400">
+        <span aria-hidden="true">⚠️</span>
+        <span>{{ 'chatRoom.offlineWarning' | t }}</span>
+        @if (chatService.queuedCount() > 0) {
+          <span class="font-bold">&middot; {{ chatService.queuedCount() }} {{ 'chatRoom.queued' | t }}</span>
+        }
       </div>
     }
 

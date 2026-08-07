@@ -238,9 +238,7 @@ describe('ChatService', () => {
 
       const promise = service.sendMessage({ room_id: 'room-1', message_type: 'text', text_content: 'hi' });
 
-      const membersReq = httpMock.expectOne(`${baseUrl}/rooms/room-1/members`);
-      membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
-
+      // The offline check now happens BEFORE any HTTP requests, so no HTTP call is made.
       const queued = await promise;
       expect(queued.room_id).toBe('room-1');
       expect(queued.text_content).toBe('hi');
