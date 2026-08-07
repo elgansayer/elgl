@@ -1,9 +1,10 @@
 import { Injectable, Inject, Logger, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { lastValueFrom } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
+import { withRetry } from '../common/retry.helper';
 import { AppleReceiptValidationResponse } from './dto/monetisation.dto';
 
 interface AppleReceiptResponse {
@@ -104,15 +105,25 @@ export class AppleReceiptValidatorService {
     receiptData: string,
     excludeOldTransactions: boolean,
   ): Promise<AppleReceiptResponse> {
-    const response = await firstValueFrom(
-      this.httpService.post<AppleReceiptResponse>(url, {
-        'receipt-data': receiptData,
-        password: this.sharedSecret,
-        'exclude-old-transactions': excludeOldTransactions,
-      }),
+    const retryResult = await withRetry(
+      async () => {
+        const response = await lastValueFrom(
+          this.httpService.post<AppleReceiptResponse>(url, {
+            'receipt-data': receiptData,
+            password: this.sharedSecret,
+            'exclude-old-transactions': excludeOldTransactions,
+          }),
+        );
+        return {
+          data: response.data,
+          status: response.status,
+          headers: response.headers as Record<string, string>,
+        };
+      },
+      { initialDelayMs: 1000, maxDelayMs: 32000 },
     );
 
-    const result = response.data;
+    const result = retryResult.data;
 
     switch (result.status) {
       case 0:
