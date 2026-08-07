@@ -1,6 +1,7 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../../pipes/sanitise-html.pipe';
 import { AdminService, AdminBlockedUser } from '../../../services/admin.service';
 import { AppCardComponent } from '../../../components/primitives/card/card.component';
 import { AppEmptyStateComponent } from '../../../components/primitives/empty-state/empty-state.component';
@@ -10,6 +11,7 @@ import { AppSkeletonLoaderComponent } from '../../../components/primitives/skele
   selector: 'app-admin-blocks',
   imports: [
     TranslatePipe,
+    SanitiseHtmlPipe,
     DatePipe,
     AppCardComponent,
     AppEmptyStateComponent,

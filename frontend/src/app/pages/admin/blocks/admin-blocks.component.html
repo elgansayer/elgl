@@ -36,18 +36,18 @@
             @if (user.blocked_avatar) {
               <img
                 [src]="user.blocked_avatar"
-                [alt]="user.blocked_name ?? ''"
+                alt=""
                 class="w-10 h-10 rounded-full object-cover"
               />
             } @else {
               <div
                 class="h-10 w-10 rounded-full bg-surface-2 flex items-center justify-center text-text-secondary font-bold"
               >
-                {{ (user.blocked_name ?? '?').charAt(0) }}
+                {{ ((user.blocked_name ?? '?').charAt(0)) | sanitiseHtml }}
               </div>
             }
             <div>
-              <p class="font-medium text-text-primary">{{ user.blocked_name ?? '' }}</p>
+              <p class="font-medium text-text-primary">{{ (user.blocked_name ?? '') | sanitiseHtml }}</p>
               <p class="text-sm text-text-secondary">
                 {{ 'admin.blocks.blockedAt' | t }} {{ user.created_at | date: 'short' }}
               </p>
