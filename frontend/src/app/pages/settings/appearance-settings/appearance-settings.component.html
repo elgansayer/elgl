@@ -65,18 +65,9 @@
             <span class="text-sm">A</span>
             <span class="text-lg">A</span>
           </div>
-          <input
-            type="range"
-            min="80"
-            max="120"
-            step="5"
-            [value]="fontScale()"
-            (input)="onFontScaleChange($event)"
-            class="w-full h-2 bg-surface-300 rounded-lg appearance-none cursor-pointer accent-primary"
-            [attr.aria-label]="'settings.fontSize' | t"
-          />
+          <app-font-scale-slider />
           <div class="text-center mt-4">
-            <span class="text-sm font-medium text-text-primary">{{ fontScale() }}%</span>
+            <span class="text-sm font-medium text-text-primary">{{ fontScalePercentLabel() }}</span>
           </div>
         </div>
       </section>
