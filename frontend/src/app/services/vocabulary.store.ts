@@ -70,7 +70,7 @@ export class VocabularyStore {
   readonly pendingReviewCards = signal<Flashcard[]>([]);
 
   /** Whether the device is currently offline (used for UI indicators) */
-  readonly isOffline = computed(() => !navigator.onLine);
+  readonly isOffline = computed(() => this.srsOffline.online() === false);
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -95,7 +95,7 @@ export class VocabularyStore {
       // Report error for crash tracking
       this.reportSrsError('loadAllFlashcards', e);
       // Offline fallback - serve from local cache
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         const cached = await this.srsOffline.getCachedFlashcards();
         if (cached.length > 0) {
           this.allFlashcards.set(cached);
@@ -121,7 +121,7 @@ export class VocabularyStore {
       // Report error for crash tracking
       this.reportSrsError('loadDueReviews', e);
       // Offline fallback
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         const cached = await this.srsOffline.getCachedDueReviews();
         if (cached.length > 0) {
           this.dueReviews.set(cached);
@@ -202,7 +202,7 @@ export class VocabularyStore {
       return fc;
     } catch {
       // Offline - queue the review and optimistically update local state
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         await this.srsOffline.queueSrsReview(flashcardId, quality, newLevel);
         this.triggerHapticFeedback(newLevel);
         // Optimistically update local state

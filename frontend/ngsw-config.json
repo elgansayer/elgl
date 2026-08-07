@@ -80,6 +80,21 @@
       }
     },
     {
+      "name": "api-flashcards",
+      "urls": [
+        "/api/flashcards/**",
+        "/api/nlp/translate",
+        "/api/nlp/grammar-check",
+        "/api/nlp/pronunciation-score"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 100,
+        "maxAge": "5m",
+        "timeout": "5s"
+      }
+    },
+    {
       "name": "translations",
       "urls": [
         "/assets/i18n/**"
