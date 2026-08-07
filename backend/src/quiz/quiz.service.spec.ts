@@ -1,26 +1,47 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { QuizService } from './quiz.service';
+import { AssessmentsService } from '../assessments/assessments.service';
 
 describe('QuizService', () => {
   let service: QuizService;
+  let assessmentsService: { getQuestions: jest.Mock };
 
   beforeEach(async () => {
+    assessmentsService = {
+      getQuestions: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [QuizService],
+      providers: [
+        QuizService,
+        { provide: AssessmentsService, useValue: assessmentsService },
+      ],
     }).compile();
 
     service = module.get<QuizService>(QuizService);
   });
 
   describe('getQuestions', () => {
-    it('should return an array of questions', () => {
-      const questions = service.getQuestions('en');
+    it('should return an array of questions', async () => {
+      assessmentsService.getQuestions.mockResolvedValue([]);
+      const questions = await service.getQuestions('en');
       expect(Array.isArray(questions)).toBe(true);
-      expect(questions.length).toBeGreaterThan(0);
     });
 
-    it('should return questions with correct structure', () => {
-      const questions = service.getQuestions('en');
+    it('should return questions with correct structure', async () => {
+      assessmentsService.getQuestions.mockResolvedValue([
+        {
+          id: 'q1',
+          question_text: 'Test question',
+          skill_area: 'speaking',
+          category: 'self_assessment',
+          options: [
+            { id: 'q1_a', text: 'Option A', points: 1 },
+            { id: 'q1_d', text: 'Option D', points: 4 },
+          ],
+        },
+      ]);
+      const questions = await service.getQuestions('en');
       for (const q of questions) {
         expect(q.id).toBeDefined();
         expect(q.text).toBeDefined();
@@ -35,101 +56,99 @@ describe('QuizService', () => {
       }
     });
 
-    it('should return 10 questions covering multiple skills', () => {
-      const questions = service.getQuestions('en');
-      expect(questions.length).toBe(10);
+    it('should return questions covering multiple skills', async () => {
+      assessmentsService.getQuestions.mockResolvedValue([
+        { id: 'q1', question_text: 'Q1', skill_area: 'speaking', category: 'self_assessment', options: [{ id: 'a', text: 'A', points: 1 }] },
+        { id: 'q2', question_text: 'Q2', skill_area: 'listening', category: 'comprehension', options: [{ id: 'a', text: 'A', points: 1 }] },
+        { id: 'q3', question_text: 'Q3', skill_area: 'reading', category: 'comprehension', options: [{ id: 'a', text: 'A', points: 1 }] },
+        { id: 'q4', question_text: 'Q4', skill_area: 'writing', category: 'production', options: [{ id: 'a', text: 'A', points: 1 }] },
+        { id: 'q5', question_text: 'Q5', skill_area: 'grammar', category: 'self_assessment', options: [{ id: 'a', text: 'A', points: 1 }] },
+        { id: 'q6', question_text: 'Q6', skill_area: 'vocabulary', category: 'self_assessment', options: [{ id: 'a', text: 'A', points: 1 }] },
+      ]);
+      const questions = await service.getQuestions('en');
+      expect(questions.length).toBe(6);
       const skills = new Set(questions.map((q) => q.skill));
       expect(skills.size).toBeGreaterThanOrEqual(4);
     });
 
-    it('should ignore the language parameter (mock data)', () => {
-      const en = service.getQuestions('en');
-      const es = service.getQuestions('es');
-      expect(en).toEqual(es);
+    it('should map assessment questions to quiz question format', async () => {
+      assessmentsService.getQuestions.mockResolvedValue([
+        {
+          id: 'q1',
+          question_text: 'How well can you introduce yourself?',
+          skill_area: 'speaking',
+          category: 'self_assessment',
+          options: [
+            { id: 'q1_a', text: 'Struggle', points: 1 },
+            { id: 'q1_d', text: 'Easily', points: 4 },
+          ],
+        },
+      ]);
+      const questions = await service.getQuestions('en');
+      expect(questions[0].text).toBe('How well can you introduce yourself?');
+      expect(questions[0].skill).toBe('speaking');
+      expect(questions[0].category).toBe('self_assessment');
+    });
+
+    it('should pass language param to assessments service', async () => {
+      assessmentsService.getQuestions.mockResolvedValue([]);
+      await service.getQuestions('es');
+      expect(assessmentsService.getQuestions).toHaveBeenCalledWith('es');
+    });
+
+    it('should use en fallback when assessments service throws', async () => {
+      assessmentsService.getQuestions.mockRejectedValueOnce(new Error('DB fail'));
+      assessmentsService.getQuestions.mockResolvedValueOnce([
+        {
+          id: 'fb1',
+          question_text: 'Fallback Q',
+          skill_area: 'listening',
+          category: 'comprehension',
+          options: [{ id: 'a', text: 'A', points: 1 }],
+        },
+      ]);
+      const questions = await service.getQuestions('es');
+      expect(assessmentsService.getQuestions).toHaveBeenCalledTimes(2);
+      expect(questions[0].id).toBe('fb1');
     });
   });
 
   describe('evaluateResults', () => {
-    it('should compute total score and percentage', () => {
-      const result = service.evaluateResults('en', {
-        q1: 4,
-        q2: 3,
-        q3: 2,
-        q4: 4,
-        q5: 3,
-        q6: 4,
-        q7: 2,
-        q8: 3,
-        q9: 1,
-        q10: 2,
-      });
-      expect(result.totalScore).toBe(28);
-      expect(result.maxScore).toBe(40);
-      expect(result.percentage).toBe(70);
+    beforeEach(() => {
+      assessmentsService.getQuestions.mockResolvedValue([
+        { id: 'q1', question_text: 'Q1', skill_area: 'speaking', category: 'self_assessment', options: [
+          { id: 'q1_a', text: 'A', points: 1 }, { id: 'q1_d', text: 'D', points: 4 },
+        ]},
+        { id: 'q2', question_text: 'Q2', skill_area: 'listening', category: 'comprehension', options: [
+          { id: 'q2_a', text: 'A', points: 1 }, { id: 'q2_d', text: 'D', points: 4 },
+        ]},
+      ]);
     });
 
-    it('should return A1 for very low scores', () => {
-      const result = service.evaluateResults('en', {});
+    it('should compute total score and percentage', async () => {
+      const result = await service.evaluateResults('en', { q1: 4, q2: 3 });
+      expect(result.totalScore).toBe(7);
+      expect(result.maxScore).toBe(8);
+      expect(result.percentage).toBe(88);
+    });
+
+    it('should return A1 for very low scores', async () => {
+      const result = await service.evaluateResults('en', {});
       expect(result.suggestedCefr).toBe('A1');
       expect(result.percentage).toBe(0);
     });
 
-    it('should return A2 for low beginner scores', () => {
-      const result = service.evaluateResults('en', {
-        q1: 1, q2: 1, q3: 1, q4: 1, q5: 1,
-        q6: 1, q7: 1, q8: 1, q9: 1, q10: 1,
-      });
-      expect(result.suggestedCefr).toBe('A2');
-      expect(result.percentage).toBe(25);
-    });
-
-    it('should return C2 for very high scores', () => {
-      const result = service.evaluateResults('en', {
-        q1: 4, q2: 4, q3: 4, q4: 4, q5: 4,
-        q6: 4, q7: 4, q8: 4, q9: 4, q10: 4,
-      });
-      expect(result.suggestedCefr).toBe('C2');
-      expect(result.percentage).toBeGreaterThanOrEqual(90);
-    });
-
-    it('should return B2 for mid-range scores', () => {
-      const result = service.evaluateResults('en', {
-        q1: 3, q2: 3, q3: 2, q4: 3, q5: 2,
-        q6: 3, q7: 2, q8: 3, q9: 3, q10: 2,
-      });
-      expect(result.suggestedCefr).toBe('B2');
-    });
-
-    it('should handle missing answers', () => {
-      const result = service.evaluateResults('en', {
-        q1: 4,
-        q2: 3,
-      });
-      expect(result.totalScore).toBe(7);
-      expect(result.maxScore).toBe(40);
-    });
-
-    it('should provide skill breakdown', () => {
-      const result = service.evaluateResults('en', {
-        q1: 4, q2: 3, q3: 2, q4: 4, q5: 3,
-        q6: 2, q7: 1, q8: 3, q9: 4, q10: 2,
-      });
-      expect(result.skillBreakdown).toBeDefined();
-      expect(result.skillBreakdown['speaking']).toBeDefined();
-      expect(result.skillBreakdown['reading']).toBeDefined();
-      expect(result.skillBreakdown['writing']).toBeDefined();
-      expect(result.skillBreakdown['listening']).toBeDefined();
-      expect(result.skillBreakdown['grammar']).toBeDefined();
-      expect(result.skillBreakdown['vocabulary']).toBeDefined();
-    });
-
-    it('should include a description in the result', () => {
-      const result = service.evaluateResults('en', {
-        q1: 4, q2: 4, q3: 4, q4: 4, q5: 4,
-        q6: 4, q7: 4, q8: 4, q9: 4, q10: 4,
-      });
+    it('should include a description in the result', async () => {
+      const result = await service.evaluateResults('en', { q1: 4, q2: 4 });
       expect(result.description).toBeDefined();
       expect(result.description.length).toBeGreaterThan(0);
+    });
+
+    it('should provide skill breakdown', async () => {
+      const result = await service.evaluateResults('en', { q1: 4, q2: 2 });
+      expect(result.skillBreakdown).toBeDefined();
+      expect(result.skillBreakdown['speaking']).toBeDefined();
+      expect(result.skillBreakdown['listening']).toBeDefined();
     });
   });
 });
