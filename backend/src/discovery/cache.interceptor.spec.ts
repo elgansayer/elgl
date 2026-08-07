@@ -3,9 +3,13 @@ import {
   DiscoveryCacheInterceptor,
   DISCOVERY_CACHE_PUBLIC_LONG,
   DISCOVERY_CACHE_PUBLIC_SHORT,
-  DISCOVERY_CACHE_PRIVATE_SHORT,
+  DISCOVERY_CACHE_EDGE_MEDIUM,
   DISCOVERY_CACHE_EDGE_SHORT,
   DISCOVERY_CACHE_NO_STORE,
+  DISCOVERY_CACHE_PRIVATE_SHORT,
+  CACHE_TAG_DISCOVERY_PARTNERS,
+  CACHE_TAG_DISCOVERY_POTW,
+  CACHE_TAG_DISCOVERY_AUDIO_INTROS,
   DISCOVERY_CACHE_TAG_POTW,
   DISCOVERY_CACHE_TAG_PUBLIC,
   DISCOVERY_CACHE_TAG_PRIVATE,
@@ -13,7 +17,7 @@ import {
 
 describe('DiscoveryCacheInterceptor', () => {
   describe('cache directive constants', () => {
-    it('DISCOVERY_CACHE_PUBLIC_LONG should have public CDN cache with potw tag', () => {
+    it('DISCOVERY_CACHE_PUBLIC_LONG should have public CDN cache (no hardcoded tag)', () => {
       expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain('public');
       expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain('max-age=3600');
       expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain('s-maxage=86400');
@@ -27,10 +31,11 @@ describe('DiscoveryCacheInterceptor', () => {
       expect(DISCOVERY_CACHE_PUBLIC_LONG['CDN-Cache-Control']).toContain(
         'max-age=86400',
       );
-      expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Tag']).toBe('discovery:potw');
+      // Cache-Tag is NOT hardcoded in directives; it is set via cacheTags param
+      expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Tag']).toBeUndefined();
     });
 
-    it('DISCOVERY_CACHE_PUBLIC_SHORT should have public CDN cache with public tag', () => {
+    it('DISCOVERY_CACHE_PUBLIC_SHORT should have public CDN cache (no hardcoded tag)', () => {
       expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Control']).toContain('public');
       expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Control']).toContain('max-age=60');
       expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Control']).toContain('s-maxage=600');
@@ -38,29 +43,32 @@ describe('DiscoveryCacheInterceptor', () => {
       expect(DISCOVERY_CACHE_PUBLIC_SHORT['CDN-Cache-Control']).toContain(
         'max-age=600',
       );
-      expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Tag']).toBe('discovery:public');
+      expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Tag']).toBeUndefined();
     });
 
-    it('DISCOVERY_CACHE_EDGE_SHORT should partition by auth and tag private', () => {
+    it('DISCOVERY_CACHE_EDGE_MEDIUM should have browser-private/CDN-public with Vary', () => {
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control']).toContain('private');
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control']).toContain('max-age=0');
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control']).toContain('must-revalidate');
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain('public');
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain('max-age=120');
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain('stale-while-revalidate=300');
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Vary']).toBe('Authorization');
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Tag']).toBeUndefined();
+    });
+
+    it('DISCOVERY_CACHE_EDGE_SHORT should have browser-private/CDN-short with Vary', () => {
       expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain('private');
       expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain('max-age=0');
-      expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain(
-        'must-revalidate',
-      );
-      // CDN side: public cache partitioned by Authorization header
+      expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain('must-revalidate');
       expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain('public');
-      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain(
-        'max-age=120',
-      );
-      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain(
-        'stale-while-revalidate=120',
-      );
+      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain('max-age=30');
+      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain('stale-while-revalidate=30');
       expect(DISCOVERY_CACHE_EDGE_SHORT['Vary']).toBe('Authorization');
-      expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Tag']).toBe('discovery:private');
     });
 
-    it('DISCOVERY_CACHE_PRIVATE_SHORT should be an alias for EDGE_SHORT', () => {
-      expect(DISCOVERY_CACHE_PRIVATE_SHORT).toBe(DISCOVERY_CACHE_EDGE_SHORT);
+    it('DISCOVERY_CACHE_PRIVATE_SHORT should be a deprecated alias for EDGE_MEDIUM', () => {
+      expect(DISCOVERY_CACHE_PRIVATE_SHORT).toBe(DISCOVERY_CACHE_EDGE_MEDIUM);
     });
 
     it('DISCOVERY_CACHE_NO_STORE should never cache', () => {
@@ -70,7 +78,13 @@ describe('DiscoveryCacheInterceptor', () => {
       );
     });
 
-    it('should export named Cache-Tag constants for programmatic invalidation', () => {
+    it('should export granular Cache-Tag constants for targeted invalidation', () => {
+      expect(CACHE_TAG_DISCOVERY_PARTNERS).toBe('discovery:partners');
+      expect(CACHE_TAG_DISCOVERY_POTW).toBe('discovery:potw');
+      expect(CACHE_TAG_DISCOVERY_AUDIO_INTROS).toBe('discovery:audio-intros');
+    });
+
+    it('should export legacy Cache-Tag aliases for backwards compatibility', () => {
       expect(DISCOVERY_CACHE_TAG_POTW).toBe('discovery:potw');
       expect(DISCOVERY_CACHE_TAG_PUBLIC).toBe('discovery:public');
       expect(DISCOVERY_CACHE_TAG_PRIVATE).toBe('discovery:private');
@@ -108,16 +122,12 @@ describe('DiscoveryCacheInterceptor', () => {
         'CDN-Cache-Control',
         DISCOVERY_CACHE_PUBLIC_LONG['CDN-Cache-Control'],
       );
-      expect(setHeader).toHaveBeenCalledWith(
-        'Cache-Tag',
-        'discovery:potw',
-      );
     });
 
-    it('should set EDGE_SHORT headers with Vary for user-specific routes', async () => {
+    it('should set EDGE_MEDIUM headers with Vary for user-specific routes', async () => {
       const setHeader = jest.fn();
       const context = createCallContext(setHeader);
-      const interceptor = new DiscoveryCacheInterceptor(DISCOVERY_CACHE_EDGE_SHORT);
+      const interceptor = new DiscoveryCacheInterceptor(DISCOVERY_CACHE_EDGE_MEDIUM);
       const next = {
         handle: () => of('partner-search-results'),
       } as Parameters<typeof interceptor.intercept>[1];
@@ -126,84 +136,59 @@ describe('DiscoveryCacheInterceptor', () => {
 
       expect(setHeader).toHaveBeenCalledWith(
         'Cache-Control',
-        DISCOVERY_CACHE_EDGE_SHORT['Cache-Control'],
+        DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control'],
       );
       expect(setHeader).toHaveBeenCalledWith(
         'CDN-Cache-Control',
-        DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control'],
+        DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control'],
       );
       expect(setHeader).toHaveBeenCalledWith('Vary', 'Authorization');
-      expect(setHeader).toHaveBeenCalledWith('Cache-Tag', 'discovery:private');
     });
 
-    it('should override to no-store on error and remove Cache-Tag', async () => {
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
-      const context = createCallContext(setHeader, removeHeader);
-      const interceptor = new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG);
-      const next = {
-        handle: () => throwError(() => new Error('db unavailable')),
-      } as Parameters<typeof interceptor.intercept>[1];
-
-      const result$ = interceptor.intercept(context, next);
-      await expect(lastValueFrom(result$)).rejects.toThrow('db unavailable');
-
-      // Error path: override caching headers and strip Cache-Tag
-      expect(setHeader).toHaveBeenCalledWith(
-        'Cache-Control',
-        'private, no-store',
-      );
-      expect(setHeader).toHaveBeenCalledWith(
-        'CDN-Cache-Control',
-        'private, no-store',
-      );
-      expect(removeHeader).toHaveBeenCalledWith('Cache-Tag');
-    });
-
-    it('should handle additional cache tags from constructor', async () => {
+    it('should set Cache-Tag header when cacheTags provided', async () => {
       const setHeader = jest.fn();
       const context = createCallContext(setHeader);
       const interceptor = new DiscoveryCacheInterceptor(
-        DISCOVERY_CACHE_PUBLIC_SHORT,
-        ['discovery:public', 'discovery:extra'],
+        DISCOVERY_CACHE_EDGE_MEDIUM,
+        [CACHE_TAG_DISCOVERY_PARTNERS],
       );
       const next = {
-        handle: () => of('spotlight-data'),
+        handle: () => of('partner-data'),
       } as Parameters<typeof interceptor.intercept>[1];
 
       await lastValueFrom(interceptor.intercept(context, next));
 
       expect(setHeader).toHaveBeenCalledWith(
         'Cache-Tag',
-        'discovery:public,discovery:extra',
+        'discovery:partners',
       );
     });
 
-    it('should set Cache-Tag from directive when no additional tags provided', async () => {
+    it('should set multiple Cache-Tag headers comma-separated', async () => {
       const setHeader = jest.fn();
       const context = createCallContext(setHeader);
-      // Use DISCOVERY_CACHE_PUBLIC_SHORT which has 'Cache-Tag' in the directive
       const interceptor = new DiscoveryCacheInterceptor(
         DISCOVERY_CACHE_PUBLIC_SHORT,
+        [CACHE_TAG_DISCOVERY_POTW, 'weekly-cron'],
       );
       const next = {
-        handle: () => of('spotlight-data'),
+        handle: () => of('potw-data'),
       } as Parameters<typeof interceptor.intercept>[1];
 
       await lastValueFrom(interceptor.intercept(context, next));
 
-      // The directive itself contains Cache-Tag, so it is set via the iteration
-      expect(setHeader).toHaveBeenCalledWith('Cache-Tag', 'discovery:public');
+      expect(setHeader).toHaveBeenCalledWith(
+        'Cache-Tag',
+        'discovery:potw,weekly-cron',
+      );
     });
 
-    it('should set Cache-Tag from directive when directive has none and no extra tags', async () => {
+    it('should not set Cache-Tag when no tags provided', async () => {
       const setHeader = jest.fn();
       const context = createCallContext(setHeader);
-      // Use a directive that has NO built-in Cache-Tag
-      const directiveWithoutTag = {
-        'Cache-Control': 'public, max-age=60',
-      };
-      const interceptor = new DiscoveryCacheInterceptor(directiveWithoutTag);
+      const interceptor = new DiscoveryCacheInterceptor(
+        DISCOVERY_CACHE_PUBLIC_LONG,
+      );
       const next = {
         handle: () => of('data'),
       } as Parameters<typeof interceptor.intercept>[1];
@@ -214,6 +199,32 @@ describe('DiscoveryCacheInterceptor', () => {
         (call: [string, string]) => call[0] === 'Cache-Tag',
       );
       expect(cacheTagCalls).toHaveLength(0);
+    });
+
+    it('should override to no-store on error and remove Cache-Tag', async () => {
+      const setHeader = jest.fn();
+      const removeHeader = jest.fn();
+      const context = createCallContext(setHeader, removeHeader);
+      const interceptor = new DiscoveryCacheInterceptor(
+        DISCOVERY_CACHE_PUBLIC_LONG,
+        [CACHE_TAG_DISCOVERY_POTW],
+      );
+      const next = {
+        handle: () => throwError(() => new Error('db unavailable')),
+      } as Parameters<typeof interceptor.intercept>[1];
+
+      const result$ = interceptor.intercept(context, next);
+      await expect(lastValueFrom(result$)).rejects.toThrow('db unavailable');
+
+      expect(setHeader).toHaveBeenCalledWith(
+        'Cache-Control',
+        'private, no-store',
+      );
+      expect(setHeader).toHaveBeenCalledWith(
+        'CDN-Cache-Control',
+        'private, no-store',
+      );
+      expect(removeHeader).toHaveBeenCalledWith('Cache-Tag');
     });
 
     it('should handle custom directive with arbitrary headers', async () => {
