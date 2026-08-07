@@ -24,6 +24,8 @@ import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
+import { DraftService } from '../../services/draft.service';
 
 @Component({
   selector: 'app-chat-room',
@@ -43,6 +45,7 @@ import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card
     CulturalTipComponent,
     ReplyPreviewComponent,
     LinkPreviewCardComponent,
+    GroupParticipantDrawerComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -57,12 +60,17 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
+  private readonly draftService = inject(DraftService);
 
   id = input.required<string>();
 
   constructor() {
     effect(() => {
       const roomId = this.id();
+      // Save draft for the previous room before switching
+      if (this.roomId && this.roomId !== roomId) {
+        this.saveChatDrafts();
+      }
       this.roomId = roomId;
       void this.initializeRoom();
     });
@@ -82,6 +90,16 @@ export class ChatRoomComponent implements OnDestroy {
   readonly pendingUnlock = signal<boolean>(false);
 
   readonly participants = signal<GroupMember[]>([]);
+  readonly groupParticipants = computed<GroupParticipant[]>(() =>
+    this.participants().map((m) => ({
+      id: m.user_id,
+      display_name: m.user?.display_name ?? `User ${m.user_id.slice(0, 6)}`,
+      avatar_url: m.user?.avatar_url ?? undefined,
+      native_language: m.user?.native_language ?? '',
+      target_languages: m.user?.target_languages ?? [],
+      is_vip: m.user?.is_vip ?? false,
+    })),
+  );
   readonly blockedUserIds = signal<string[]>([]);
   readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
@@ -169,6 +187,7 @@ export class ChatRoomComponent implements OnDestroy {
   private async finishLoadingRoom(): Promise<void> {
     await this.loadBlockedUsers();
     await this.loadMessages();
+    this.restoreDraft();
     await this.setupRealTime();
     await this.loadParticipants();
     await this.resolvePartnerLanguage();
@@ -250,13 +269,58 @@ export class ChatRoomComponent implements OnDestroy {
       this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
     }
     this.typingService.disconnect();
+    this.saveChatDrafts();
   }
+
+  saveChatDrafts(): void {
+    this.draftService.saveChatDraft(this.roomId, this.textInput);
+    this.draftService.saveChatDraftV2(this.roomId, {
+      textInput: this.textInput,
+      replyToId: this.replyingTo()?.id ?? null,
+      originalText: this.originalText,
+      correctedText: this.correctedText,
+      explanationText: this.explanationText,
+    });
+  }
+
+  private restoreDraft(): void {
+    const simpleDraft = this.draftService.loadChatDraft(this.roomId);
+    if (simpleDraft) {
+      this.textInput = simpleDraft;
+    }
+
+    const v2Draft = this.draftService.loadChatDraftV2(this.roomId);
+    if (v2Draft) {
+      if (v2Draft.textInput) this.textInput = v2Draft.textInput;
+      if (v2Draft.originalText) this.originalText = v2Draft.originalText;
+      if (v2Draft.correctedText) this.correctedText = v2Draft.correctedText;
+      if (v2Draft.explanationText) this.explanationText = v2Draft.explanationText;
+      if (v2Draft.replyToId) {
+        this._restoredReplyToId = v2Draft.replyToId;
+      }
+    }
+  }
+
+  private clearChatDrafts(): void {
+    this.draftService.clearChatDraft(this.roomId);
+    this.draftService.clearChatDraftV2(this.roomId);
+  }
+
+  private _restoredReplyToId: string | null = null;
 
   async loadMessages(): Promise<void> {
     this.isLoading.set(true);
     try {
       const data = await this.chatService.getMessages(this.roomId, this.searchQuery);
       this.messages.set(data);
+      // Restore reply-to target from the persisted draft once messages are available
+      if (this._restoredReplyToId) {
+        const target = data.find((m) => m.id === this._restoredReplyToId);
+        if (target) {
+          this.replyingTo.set(target);
+        }
+        this._restoredReplyToId = null;
+      }
     } catch (e) {
       console.error('Failed to load chat history:', e);
     } finally {
@@ -303,6 +367,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.mentionQuery.set(null);
     }
     this.typingService.sendTyping(target.value.length > 0);
+    this.saveChatDrafts();
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
@@ -345,6 +410,7 @@ export class ChatRoomComponent implements OnDestroy {
       mentionText +
       this.textInput.slice(this.mentionRangeEnd);
     this.mentionQuery.set(null);
+    this.saveChatDrafts();
   }
 
   async sendTextMessage(): Promise<void> {
@@ -354,6 +420,7 @@ export class ChatRoomComponent implements OnDestroy {
     this.textInput = '';
     this.mentionQuery.set(null);
     this.typingService.sendTyping(false);
+    this.clearChatDrafts();
 
     try {
       const sent = await this.chatService.sendMessage({
@@ -387,6 +454,7 @@ export class ChatRoomComponent implements OnDestroy {
       this.correctedText = '';
       this.explanationText = '';
       this.showCorrectionForm.set(false);
+      this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send correction:', e);
     }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -18,6 +19,7 @@ import { ToggleVipDto } from './dto/toggle-vip.dto';
 import {
   AdminUserListResult,
   AdminUserSummary,
+  AdminBlocksListResult,
   LoginHistoryEntry,
 } from './interfaces/admin-user.interface';
 
@@ -68,5 +70,23 @@ export class AdminController {
     const adminUserId = req.user.sub;
     await this.adminService.warnUser(id, adminUserId);
     return { message: 'User warned' };
+  }
+
+  @Get('blocks')
+  async listAllBlocks(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ): Promise<AdminBlocksListResult> {
+    return this.adminService.listAllBlocks(
+      page ? parseInt(page, 10) : 1,
+      pageSize ? parseInt(pageSize, 10) : 20,
+    );
+  }
+
+  @Delete('blocks/:blockId')
+  async removeBlock(
+    @Param('blockId') blockId: string,
+  ): Promise<{ success: boolean }> {
+    return this.adminService.removeBlock(blockId);
   }
 }

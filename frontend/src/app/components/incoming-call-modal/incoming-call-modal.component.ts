@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { Component, input, output, effect, OnDestroy, viewChild, ElementRef } from '@angular/core';
+=======
+import { Component, input, output, effect, viewChild, ElementRef, inject, DestroyRef } from '@angular/core';
+>>>>>>> origin/main
 import { TranslatePipe } from '../../services/translate.pipe';
 
 export interface IncomingCallData {
@@ -38,7 +42,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
               @if (data.callerAvatarUrl) {
                 <img
                   [src]="data.callerAvatarUrl"
-                  [alt]="data.callerName"
+                  [alt]="'voip.callerAvatar' | t: { name: data.callerName }"
                   class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-500/50"
                 />
               } @else {
@@ -57,7 +61,11 @@ function getAudioContextClass(): typeof AudioContext | undefined {
             <div class="text-center">
               <h2 class="text-2xl font-bold text-white">{{ data.callerName }}</h2>
               <p class="text-text-muted mt-1">
-                {{ data.isVideoCall ? 'Incoming video call...' : 'Incoming voice call...' }}
+                @if (data.isVideoCall) {
+                  {{ 'voip.incomingVideoCall' | t }}
+                } @else {
+                  {{ 'voip.incomingVoiceCall' | t }}
+                }
               </p>
             </div>
           </div>
@@ -68,7 +76,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
             <button
               (click)="onDecline()"
               class="flex flex-col items-center gap-2 group"
-              aria-label="Decline call"
+              [attr.aria-label]="'voip.decline' | t"
             >
               <div
                 class="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center group-hover:bg-red-500/40 transition-colors duration-150"
@@ -87,14 +95,18 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
               </div>
+<<<<<<< HEAD
               <span class="text-sm text-text-muted group-hover:text-slate-300">{{ 'components.incoming-call-modal.decline' | t }}</span>
+=======
+              <span class="text-sm text-text-muted group-hover:text-slate-300">{{ 'voip.decline' | t }}</span>
+>>>>>>> origin/main
             </button>
 
             <!-- Accept Button -->
             <button
               (click)="onAccept()"
               class="flex flex-col items-center gap-2 group"
-              aria-label="Accept call"
+              [attr.aria-label]="'voip.accept' | t"
             >
               <div
                 class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/40 transition-colors duration-150 animate-pulse"
@@ -130,7 +142,11 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   </svg>
                 }
               </div>
+<<<<<<< HEAD
               <span class="text-sm text-green-400 group-hover:text-green-300">{{ 'components.incoming-call-modal.accept' | t }}</span>
+=======
+              <span class="text-sm text-green-400 group-hover:text-green-300">{{ 'voip.accept' | t }}</span>
+>>>>>>> origin/main
             </button>
           </div>
         </div>
@@ -160,12 +176,12 @@ function getAudioContextClass(): typeof AudioContext | undefined {
     `,
   ],
 })
-export class IncomingCallModalComponent implements OnDestroy {
+export class IncomingCallModalComponent {
   /** Input: The incoming call invitation data */
   callData = input<IncomingCallData | null>(null);
 
   /** Input: URL to a ringtone audio file (optional, defaults to a built-in beep) */
-  ringtoneUrl = input<string>('/assets/audio/ringtone.mp3');
+  ringtoneUrl = input<string>('/assets/audio/ringtone.wav');
 
   /** Emits when user accepts the call */
   acceptCall = output<IncomingCallData>();
@@ -176,6 +192,7 @@ export class IncomingCallModalComponent implements OnDestroy {
   /** Reference to the audio element in the template */
   private ringtoneAudioRef = viewChild<ElementRef<HTMLAudioElement>>('ringtoneAudio');
 
+  private destroyRef = inject(DestroyRef);
   private audioContext: AudioContext | null = null;
   private oscillator: OscillatorNode | null = null;
   private gainNode: GainNode | null = null;
@@ -189,6 +206,11 @@ export class IncomingCallModalComponent implements OnDestroy {
       } else {
         this.stopRingtone();
       }
+    });
+
+    // Ensure ringtone is stopped when component is destroyed
+    this.destroyRef.onDestroy(() => {
+      this.stopRingtone();
     });
   }
 
@@ -279,9 +301,5 @@ export class IncomingCallModalComponent implements OnDestroy {
       this.stopRingtone();
       this.declineCall.emit(data);
     }
-  }
-
-  ngOnDestroy(): void {
-    this.stopRingtone();
   }
 }

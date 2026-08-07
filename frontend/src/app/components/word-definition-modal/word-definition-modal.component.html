@@ -7,15 +7,19 @@
         <span
           class="text-xs font-bold uppercase tracking-wider bg-surface-200/20 px-2 py-0.5 rounded-full"
         >
+<<<<<<< HEAD
           {{ 'components.word-definition-modal.lingqInteractiveReader' | t }}
+=======
+          {{ 'wordDef.lingqTitle' | t }}
+>>>>>>> origin/main
         </span>
         <h3 class="text-2xl font-extrabold mt-1 flex items-center gap-2.5">
           <span>{{ wordToken() }}</span>
           @if (translationResult()?.pronunciation_url) {
-            <button aria-label="Play audio"
+            <button [attr.aria-label]="'wordDef.pronunciationAria' | t"
               (click)="playAudio()"
               class="text-xl hover:scale-125 transition-transform bg-surface-200/20 p-1.5 rounded-full"
-              title="Listen to pronunciation"
+              [title]="'wordDef.pronunciationAria' | t"
             >
               🔊
             </button>
@@ -41,7 +45,11 @@
         <div class="space-y-3">
           <div class="bg-surface-300 p-4 rounded-card border border-surface-100">
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider block mb-1"
+<<<<<<< HEAD
               >{{ 'components.word-definition-modal.translation' | t }}</span
+=======
+              >{{ 'wordDef.translationLabel' | t }}</span
+>>>>>>> origin/main
             >
             <p class="text-lg font-bold text-text-primary">
               {{ trans.translated_text }}
@@ -50,7 +58,11 @@
           @if (trans.definition) {
             <div class="bg-surface-300 p-4 rounded-card border border-surface-100">
               <span class="text-xs font-bold text-text-muted uppercase tracking-wider block mb-1"
+<<<<<<< HEAD
                 >{{ 'components.word-definition-modal.dictionaryDefinition' | t }}</span
+=======
+                >{{ 'wordDef.dictionaryLabel' | t }}</span
+>>>>>>> origin/main
               >
               <p class="text-sm text-text-primary leading-relaxed">
                 {{ trans.definition }}
@@ -72,8 +84,8 @@
         <span
           class="text-xs font-bold text-text-secondary uppercase tracking-wider block text-center"
         >
-          Spaced repetition status:
-          {{ existingCard() ? 'Level ' + existingCard()!.srs_level : 'New (Blue)' }}
+          {{ 'wordDef.spacedRepetition' | t }}:
+          {{ existingCard() ? 'Level ' + existingCard()!.srs_level : ('wordDef.newBlue' | t) }}
         </span>
 
         <div class="grid grid-cols-2 gap-2">
@@ -81,16 +93,16 @@
             [disabled]="isSaving()"
             (click)="setLevel(1)"
             class="py-2.5 px-3 bg-amber-400 hover:bg-amber-500 text-amber-950 rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
-          >
-            <span>🟡 Save to learning</span>
+           [attr.aria-label]="'wordDef.saveLearning' | t">
+            <span>{{ 'wordDef.saveLearning' | t }}</span>
           </button>
 
           <button
             [disabled]="isSaving()"
             (click)="setLevel(4)"
             class="py-2.5 px-3 bg-surface-100 hover:bg-surface-200 text-text-primary rounded-app font-bold text-sm shadow transition-all flex items-center justify-center gap-1"
-          >
-            <span>⚪ Mark known</span>
+           [attr.aria-label]="'wordDef.markKnown' | t">
+            <span>{{ 'wordDef.markKnown' | t }}</span>
           </button>
         </div>
 
@@ -99,8 +111,8 @@
             [disabled]="isSaving()"
             (click)="setLevel(0)"
             class="w-full py-2 bg-blue-500/20 hover:bg-blue-200 text-blue-400 rounded-app font-semibold text-xs transition-colors"
-          >
-            Reset to new (Level 0 / Blue)
+           [attr.aria-label]="'wordDef.resetNew' | t">
+            {{ 'wordDef.resetNew' | t }}
           </button>
         }
       </div>

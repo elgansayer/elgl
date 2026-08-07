@@ -62,13 +62,21 @@
           required
         />
         <p class="text-xs text-text-muted mt-1">
+<<<<<<< HEAD
           {{ 'components.profile-edit.freeUsersMax1LanguageVipU' | t }}
+=======
+          {{ 'profile.languageLimitHint' | t }}
+>>>>>>> origin/main
         </p>
       </div>
 
       <!-- Bio -->
       <div>
+<<<<<<< HEAD
         <label for="bio_text" class="block text-sm font-medium mb-1">{{ 'components.profile-edit.bio' | t }}</label>
+=======
+        <label for="bio_text" class="block text-sm font-medium mb-1">{{ 'profile.bioLabel' | t }}</label>
+>>>>>>> origin/main
         <textarea
           id="bio_text"
           formControlName="bio_text"
@@ -80,22 +88,37 @@
 
       <!-- Privacy Settings -->
       <fieldset class="border border-base-300 rounded p-4">
+<<<<<<< HEAD
         <legend class="text-sm font-medium">{{ 'components.profile-edit.privacySettings' | t }}</legend>
         <div class="form-control">
           <label class="label cursor-pointer">
             <span class="label-text">{{ 'components.profile-edit.hideAge' | t }}</span>
+=======
+        <legend class="text-sm font-medium">{{ 'profile.privacySettingsLabel' | t }}</legend>
+        <div class="form-control">
+          <label class="label cursor-pointer">
+            <span class="label-text">{{ 'profile.hideAge' | t }}</span>
+>>>>>>> origin/main
             <input type="checkbox" formControlName="privacy_hide_age" class="checkbox" />
           </label>
         </div>
         <div class="form-control">
           <label class="label cursor-pointer">
+<<<<<<< HEAD
             <span class="label-text">{{ 'components.profile-edit.hideLocation' | t }}</span>
+=======
+            <span class="label-text">{{ 'profile.hideLocation' | t }}</span>
+>>>>>>> origin/main
             <input type="checkbox" formControlName="privacy_hide_location" class="checkbox" />
           </label>
         </div>
         <div class="form-control">
           <label class="label cursor-pointer">
+<<<<<<< HEAD
             <span class="label-text">{{ 'components.profile-edit.hideFromSearch' | t }}</span>
+=======
+            <span class="label-text">{{ 'profile.hideSearch' | t }}</span>
+>>>>>>> origin/main
             <input type="checkbox" formControlName="privacy_hide_from_search" class="checkbox" />
           </label>
         </div>
@@ -103,11 +126,11 @@
 
       <!-- Submit -->
       <div class="flex justify-end">
-        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading()">
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading()" [attr.aria-label]="'profile.saveChangesBtn' | t">
           @if (loading()) {
             <span class="loading loading-spinner"></span>
           }
-          Save Changes
+          {{ 'profile.saveChangesBtn' | t }}
         </button>
       </div>
     </form>

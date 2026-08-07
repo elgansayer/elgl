@@ -2,6 +2,7 @@ import { Component, inject, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -71,7 +72,7 @@ export class LeaderboardComponent {
   readonly correctorsResource = resource({
     loader: () =>
       firstValueFrom(
-        this.http.get<Corrector[]>('/api/leaderboard/top-correctors?limit=20'),
+        this.http.get<Corrector[]>(`${environment.apiUrl}/leaderboard/top-correctors?limit=20`),
       ),
   });
 
