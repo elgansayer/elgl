@@ -75,6 +75,23 @@ export class MetricsService {
   readonly coinFraudAttemptsTotal: Counter<string>;
   readonly coinTransactionLatency: Histogram<string>;
 
+  // Discovery Map metrics
+  readonly discoverySearchRequests: Counter<string>;
+  readonly discoverySearchDuration: Histogram<string>;
+  readonly discoverySearchResultCount: Histogram<string>;
+  readonly discoveryFallbackToMock: Counter<string>;
+  readonly discoveryPostgisQueries: Counter<string>;
+  readonly discoveryPostgisQueryDuration: Histogram<string>;
+  readonly discoveryDailyRecsDuration: Histogram<string>;
+  readonly discoveryDailyRecsProcessed: Gauge<string>;
+  readonly discoveryPartnerOfWeekCalcDuration: Histogram<string>;
+  readonly discoveryAudioIntroRequests: Counter<string>;
+  readonly discoveryRecentNativeSpeakerRequests: Counter<string>;
+  readonly discoverySpotlightRequests: Counter<string>;
+  readonly discoveryLanguagePairRequests: Counter<string>;
+  readonly discoveryLocationSearchRequests: Counter<string>;
+  readonly discoveryErrorRate: Gauge<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -456,6 +473,110 @@ export class MetricsService {
       registers: [this.register],
       buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
     });
+
+    // --- Discovery Map Metrics ---
+
+    this.discoverySearchRequests = new Counter({
+      name: 'hellotalk_discovery_search_requests_total',
+      help: 'Total number of discovery search requests',
+      labelNames: ['endpoint', 'has_location'],
+      registers: [this.register],
+    });
+
+    this.discoverySearchDuration = new Histogram({
+      name: 'hellotalk_discovery_search_duration_seconds',
+      help: 'Duration of discovery search operations',
+      labelNames: ['endpoint', 'has_location'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+    });
+
+    this.discoverySearchResultCount = new Histogram({
+      name: 'hellotalk_discovery_search_result_count',
+      help: 'Number of results returned per discovery search',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+      buckets: [0, 1, 5, 10, 25, 50, 100],
+    });
+
+    this.discoveryFallbackToMock = new Counter({
+      name: 'hellotalk_discovery_fallback_to_mock_total',
+      help: 'Total number of times discovery fell back to mock data',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+    });
+
+    this.discoveryPostgisQueries = new Counter({
+      name: 'hellotalk_discovery_postgis_queries_total',
+      help: 'Total number of PostGIS-based discovery searches',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.discoveryPostgisQueryDuration = new Histogram({
+      name: 'hellotalk_discovery_postgis_query_duration_seconds',
+      help: 'Duration of PostGIS spatial queries',
+      labelNames: ['status'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+    });
+
+    this.discoveryDailyRecsDuration = new Histogram({
+      name: 'hellotalk_discovery_daily_recs_duration_seconds',
+      help: 'Duration of daily recommendation calculation',
+      registers: [this.register],
+      buckets: [1, 5, 10, 30, 60, 120, 300, 600],
+    });
+
+    this.discoveryDailyRecsProcessed = new Gauge({
+      name: 'hellotalk_discovery_daily_recs_users_processed',
+      help: 'Number of users processed in the last daily recommendation run',
+      registers: [this.register],
+    });
+
+    this.discoveryPartnerOfWeekCalcDuration = new Histogram({
+      name: 'hellotalk_discovery_partner_of_week_calc_duration_seconds',
+      help: 'Duration of Partner of the Week calculation',
+      registers: [this.register],
+      buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
+    });
+
+    this.discoveryAudioIntroRequests = new Counter({
+      name: 'hellotalk_discovery_audio_intro_requests_total',
+      help: 'Total number of audio intro discovery requests',
+      registers: [this.register],
+    });
+
+    this.discoveryRecentNativeSpeakerRequests = new Counter({
+      name: 'hellotalk_discovery_recent_native_speaker_requests_total',
+      help: 'Total number of recent native speaker discovery requests',
+      registers: [this.register],
+    });
+
+    this.discoverySpotlightRequests = new Counter({
+      name: 'hellotalk_discovery_spotlight_requests_total',
+      help: 'Total number of spotlight discovery requests',
+      registers: [this.register],
+    });
+
+    this.discoveryLanguagePairRequests = new Counter({
+      name: 'hellotalk_discovery_language_pair_requests_total',
+      help: 'Total number of language pair discovery requests',
+      registers: [this.register],
+    });
+
+    this.discoveryLocationSearchRequests = new Counter({
+      name: 'hellotalk_discovery_location_search_requests_total',
+      help: 'Total number of location-based discovery search requests',
+      labelNames: ['has_country', 'has_city'],
+      registers: [this.register],
+    });
+
+    this.discoveryErrorRate = new Gauge({
+      name: 'hellotalk_discovery_error_rate',
+      help: 'Rolling error rate for discovery operations (0-1), updated per cron run',
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -700,6 +821,71 @@ export class MetricsService {
 
   setEscrowStaleHeldCount(count: number): void {
     this.escrowStaleHeldCount.set(count);
+  }
+
+  // --- Discovery Map metric helpers ---
+
+  recordDiscoverySearch(
+    endpoint: string,
+    hasLocation: boolean,
+    durationSeconds: number,
+    resultCount: number,
+  ): void {
+    const labels = { endpoint, has_location: String(hasLocation) };
+    this.discoverySearchRequests.inc(labels);
+    this.discoverySearchDuration.observe(labels, durationSeconds);
+    this.discoverySearchResultCount.observe({ endpoint }, resultCount);
+  }
+
+  recordDiscoveryFallbackToMock(endpoint: string): void {
+    this.discoveryFallbackToMock.inc({ endpoint });
+  }
+
+  recordDiscoveryPostgisQuery(
+    status: 'success' | 'error',
+    durationSeconds: number,
+  ): void {
+    this.discoveryPostgisQueries.inc({ status });
+    this.discoveryPostgisQueryDuration.observe({ status }, durationSeconds);
+  }
+
+  recordDiscoveryDailyRecs(
+    durationSeconds: number,
+    usersProcessed: number,
+  ): void {
+    this.discoveryDailyRecsDuration.observe(durationSeconds);
+    this.discoveryDailyRecsProcessed.set(usersProcessed);
+  }
+
+  recordDiscoveryPartnerOfWeekCalc(durationSeconds: number): void {
+    this.discoveryPartnerOfWeekCalcDuration.observe(durationSeconds);
+  }
+
+  recordDiscoveryAudioIntroRequest(): void {
+    this.discoveryAudioIntroRequests.inc();
+  }
+
+  recordDiscoveryRecentNativeSpeakerRequest(): void {
+    this.discoveryRecentNativeSpeakerRequests.inc();
+  }
+
+  recordDiscoverySpotlightRequest(): void {
+    this.discoverySpotlightRequests.inc();
+  }
+
+  recordDiscoveryLanguagePairRequest(): void {
+    this.discoveryLanguagePairRequests.inc();
+  }
+
+  recordDiscoveryLocationSearchRequest(hasCountry: boolean, hasCity: boolean): void {
+    this.discoveryLocationSearchRequests.inc({
+      has_country: String(hasCountry),
+      has_city: String(hasCity),
+    });
+  }
+
+  setDiscoveryErrorRate(rate: number): void {
+    this.discoveryErrorRate.set(rate);
   }
 
   getRegister(): Registry {

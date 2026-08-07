@@ -330,4 +330,99 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
     });
   });
+
+  describe('Discovery Map metrics', () => {
+    it('should record discovery search', () => {
+      expect(() =>
+        service.recordDiscoverySearch('partners', true, 0.5, 25),
+      ).not.toThrow();
+    });
+
+    it('should record discovery fallback to mock', () => {
+      expect(() => service.recordDiscoveryFallbackToMock('partners')).not.toThrow();
+    });
+
+    it('should record PostGIS query (success)', () => {
+      expect(() =>
+        service.recordDiscoveryPostgisQuery('success', 0.2),
+      ).not.toThrow();
+    });
+
+    it('should record PostGIS query (error)', () => {
+      expect(() =>
+        service.recordDiscoveryPostgisQuery('error', 0.5),
+      ).not.toThrow();
+    });
+
+    it('should record daily recs', () => {
+      expect(() =>
+        service.recordDiscoveryDailyRecs(120, 500),
+      ).not.toThrow();
+    });
+
+    it('should record Partner of the Week calc', () => {
+      expect(() =>
+        service.recordDiscoveryPartnerOfWeekCalc(1.5),
+      ).not.toThrow();
+    });
+
+    it('should record audio intro request', () => {
+      expect(() => service.recordDiscoveryAudioIntroRequest()).not.toThrow();
+    });
+
+    it('should record recent native speaker request', () => {
+      expect(() =>
+        service.recordDiscoveryRecentNativeSpeakerRequest(),
+      ).not.toThrow();
+    });
+
+    it('should record spotlight request', () => {
+      expect(() => service.recordDiscoverySpotlightRequest()).not.toThrow();
+    });
+
+    it('should record language pair request', () => {
+      expect(() => service.recordDiscoveryLanguagePairRequest()).not.toThrow();
+    });
+
+    it('should record location search request', () => {
+      expect(() =>
+        service.recordDiscoveryLocationSearchRequest(true, false),
+      ).not.toThrow();
+    });
+
+    it('should set discovery error rate', () => {
+      expect(() => service.setDiscoveryErrorRate(0.05)).not.toThrow();
+    });
+
+    it('should include discovery metrics in getMetrics output', async () => {
+      service.recordDiscoverySearch('partners', true, 0.3, 15);
+      service.recordDiscoveryFallbackToMock('partners');
+      service.recordDiscoveryPostgisQuery('success', 0.15);
+      service.recordDiscoveryDailyRecs(60, 1000);
+      service.recordDiscoveryPartnerOfWeekCalc(2.0);
+      service.recordDiscoveryAudioIntroRequest();
+      service.recordDiscoveryRecentNativeSpeakerRequest();
+      service.recordDiscoverySpotlightRequest();
+      service.recordDiscoveryLanguagePairRequest();
+      service.recordDiscoveryLocationSearchRequest(true, true);
+      service.setDiscoveryErrorRate(0.02);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_discovery_search_requests_total');
+      expect(metrics).toContain('hellotalk_discovery_search_duration_seconds');
+      expect(metrics).toContain('hellotalk_discovery_search_result_count');
+      expect(metrics).toContain('hellotalk_discovery_fallback_to_mock_total');
+      expect(metrics).toContain('hellotalk_discovery_postgis_queries_total');
+      expect(metrics).toContain('hellotalk_discovery_postgis_query_duration_seconds');
+      expect(metrics).toContain('hellotalk_discovery_daily_recs_duration_seconds');
+      expect(metrics).toContain('hellotalk_discovery_daily_recs_users_processed');
+      expect(metrics).toContain('hellotalk_discovery_partner_of_week_calc_duration_seconds');
+      expect(metrics).toContain('hellotalk_discovery_audio_intro_requests_total');
+      expect(metrics).toContain('hellotalk_discovery_recent_native_speaker_requests_total');
+      expect(metrics).toContain('hellotalk_discovery_spotlight_requests_total');
+      expect(metrics).toContain('hellotalk_discovery_language_pair_requests_total');
+      expect(metrics).toContain('hellotalk_discovery_location_search_requests_total');
+      expect(metrics).toContain('hellotalk_discovery_error_rate');
+    });
+  });
 });

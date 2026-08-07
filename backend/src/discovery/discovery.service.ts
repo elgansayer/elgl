@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
@@ -36,11 +37,13 @@ export class DiscoveryService {
     private readonly audioRoomsService: AudioRoomsService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
+    const startTime = Date.now();
     this.logger.log('Starting Partner of the Week calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
@@ -59,6 +62,8 @@ export class DiscoveryService {
           'No users qualified for Partner of the Week',
           error?.message,
         );
+        const duration = (Date.now() - startTime) / 1000;
+        this.metricsService.recordDiscoveryPartnerOfWeekCalc(duration);
         return;
       }
 
@@ -69,15 +74,20 @@ export class DiscoveryService {
         'EX',
         604800,
       );
+      const duration = (Date.now() - startTime) / 1000;
+      this.metricsService.recordDiscoveryPartnerOfWeekCalc(duration);
       this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
+      const duration = (Date.now() - startTime) / 1000;
+      this.metricsService.recordDiscoveryPartnerOfWeekCalc(duration);
     }
   }
 
   // Daily calculation (existing functionality)
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations() {
+    const startTime = Date.now();
     this.logger.log('Starting daily partner recommendations calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
@@ -90,6 +100,8 @@ export class DiscoveryService {
 
       if (error || !users) {
         this.logger.error('Failed to fetch users for recommendations', error);
+        const duration = (Date.now() - startTime) / 1000;
+        this.metricsService.recordDiscoveryDailyRecs(duration, 0);
         return;
       }
 
@@ -98,6 +110,8 @@ export class DiscoveryService {
         native_languages: string[];
         target_languages: string[];
       }>;
+
+      let usersMatched = 0;
 
       for (const user of typedUsers) {
         if (!user.native_languages?.length || !user.target_languages?.length) {
@@ -129,12 +143,19 @@ export class DiscoveryService {
               'EX',
               86400,
             );
+            usersMatched++;
           }
         }
       }
-      this.logger.log('Finished daily partner recommendations calculation.');
+      const duration = (Date.now() - startTime) / 1000;
+      this.metricsService.recordDiscoveryDailyRecs(duration, typedUsers.length);
+      this.logger.log(
+        `Finished daily partner recommendations. Processed ${typedUsers.length} users, matched ${usersMatched}.`,
+      );
     } catch (err) {
       this.logger.error('Error calculating daily recommendations', err);
+      const duration = (Date.now() - startTime) / 1000;
+      this.metricsService.recordDiscoveryDailyRecs(duration, 0);
     }
   }
 
@@ -282,6 +303,7 @@ export class DiscoveryService {
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
+      const postgisStart = Date.now();
       const response = (await supabase.rpc('search_nearby_users', {
         search_lat: searchLat,
         search_lon: searchLon,
@@ -294,6 +316,11 @@ export class DiscoveryService {
         data: unknown[] | null;
         error: { message?: string } | null;
       };
+      const postgisDuration = (Date.now() - postgisStart) / 1000;
+      this.metricsService.recordDiscoveryPostgisQuery(
+        response.error ? 'error' : 'success',
+        postgisDuration,
+      );
 
       if (response.error || !response.data || response.data.length === 0) {
         const fallbackRes = await queryBuilder.limit(50);
@@ -302,6 +329,7 @@ export class DiscoveryService {
           !fallbackRes.data ||
           fallbackRes.data.length === 0
         ) {
+          this.metricsService.recordDiscoveryFallbackToMock('partners');
           const mockData = this.getMockDiscoveryData(query, blockedIds);
           const filtered = await this.filterByVoiceRoomActive(
             mockData,

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
 import { UsersService } from '../users/users.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('DiscoveryController', () => {
@@ -32,6 +33,17 @@ describe('DiscoveryController', () => {
           provide: UsersService,
           useValue: {
             getProfile: jest.fn(),
+          },
+        },
+        {
+          provide: MetricsService,
+          useValue: {
+            recordDiscoverySearch: jest.fn(),
+            recordDiscoveryAudioIntroRequest: jest.fn(),
+            recordDiscoveryRecentNativeSpeakerRequest: jest.fn(),
+            recordDiscoverySpotlightRequest: jest.fn(),
+            recordDiscoveryLanguagePairRequest: jest.fn(),
+            recordDiscoveryLocationSearchRequest: jest.fn(),
           },
         },
       ],
