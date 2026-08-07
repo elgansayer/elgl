@@ -312,7 +312,7 @@ export class CoinEconomyHealthService {
   }
 
   private async withTimeout<T>(
-    promise: Promise<T>,
+    promise: PromiseLike<T>,
     ms: number,
   ): Promise<T> {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;

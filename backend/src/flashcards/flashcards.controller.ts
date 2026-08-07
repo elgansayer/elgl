@@ -19,7 +19,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -33,6 +33,8 @@ import {
 } from '../common/cache.interceptor';
 import { FlashcardsService } from './flashcards.service';
 import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
+import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
+import { Flashcard } from './interfaces/flashcard.interface';
 
 @ApiTags('Spaced Repetition (SRS)')
 @Controller('flashcards')
@@ -51,6 +53,7 @@ export class FlashcardsController {
     status: 200,
     description: 'SRS health status.',
   })
+  getHealthStatus() {
     return this.flashcardsService.getHealthStatus();
   }
 
@@ -121,6 +124,7 @@ export class FlashcardsController {
   async updateSrs(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
+    @Body() dto: UpdateSrsDto,
     @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard | null> {
     if (!user) return null;
@@ -176,7 +180,7 @@ export class FlashcardsController {
     const lvlNum = level !== undefined ? parseInt(level, 10) : undefined;
     const limitNum = limit !== undefined ? parseInt(limit, 10) : undefined;
     const offsetNum = offset !== undefined ? parseInt(offset, 10) : undefined;
-    const result = await this.flashcardsService.getFlashcards(user.id, lvlNum, limitNum, offsetNum);
+    const result = await this.flashcardsService.getFlashcards(user.id, lvlNum);
     if (result.some((c) => c.degraded) && res) {
       res.header('X-SRS-Degraded', 'true');
     }

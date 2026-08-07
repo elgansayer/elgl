@@ -127,8 +127,8 @@ export class ReadingEngineController {
   })
   async tokenise(
     @Param('id') id: string,
-    @Query('lang') lang?: string,
     @Req() req: AuthenticatedRequest,
+    @Query('lang') lang?: string,
   ): Promise<ReadingTokenBreakdown> {
     return this.readingService.tokenise(this.getUserId(req), id, lang);
   }
