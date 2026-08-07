@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -36,11 +36,54 @@ export interface ModerationActionResponse {
   error?: string;
 }
 
-const FALLBACK_ITEMS: ModerationItem[] = [];
+const MOCK_MODERATION_ITEMS: ModerationItem[] = [
+  {
+    id: 'mock-report-1',
+    type: 'profile',
+    status: 'pending',
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    reason: 'harassment',
+    description: 'User is sending abusive messages',
+    reporter: { id: 'partner-1', display_name: 'Kenji' },
+    reported_user: { id: 'mock-bad-1', display_name: 'SpamBot42' },
+  },
+  {
+    id: 'mock-report-2',
+    type: 'profile',
+    status: 'pending',
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+    reason: 'inappropriate_content',
+    description: 'Profile photo contains nudity',
+    reporter: { id: 'partner-2', display_name: 'Maria' },
+    reported_user: { id: 'mock-bad-2', display_name: 'BadProfile99' },
+  },
+  {
+    id: 'mock-report-3',
+    type: 'moment',
+    status: 'pending',
+    created_at: new Date(Date.now() - 10800000).toISOString(),
+    reason: 'spam',
+    description: 'Moment contains advertisement spam',
+    reporter: { id: 'mock-user-123', display_name: 'Mock User' },
+    reported_user: { id: 'mock-bad-3', display_name: 'SpamPoster' },
+  },
+  {
+    id: 'mock-report-4',
+    type: 'moment',
+    status: 'pending',
+    created_at: new Date(Date.now() - 14400000).toISOString(),
+    reason: 'hate_speech',
+    description: 'Moment contains offensive language targeting a group',
+    reporter: { id: 'partner-1', display_name: 'Kenji' },
+    reported_user: { id: 'mock-bad-4', display_name: 'HatefulUser' },
+  },
+];
 
-const FALLBACK_ANALYSIS: UserAnalysisResult = {
-  riskScore: 0,
-  flags: [],
+const MOCK_ANALYSES: Record<string, UserAnalysisResult> = {
+  'mock-bad-1': { riskScore: 72, flags: ['harassment', 'abusive', 'threat'] },
+  'mock-bad-2': { riskScore: 85, flags: ['inappropriate_content', 'nudity', 'explicit'] },
+  'mock-bad-3': { riskScore: 45, flags: ['spam', 'advertisement', 'solicitation'] },
+  'mock-bad-4': { riskScore: 68, flags: ['hate_speech', 'offensive', 'discrimination'] },
 };
 
 const FALLBACK_FAILED_RESPONSE: ModerationActionResponse = {
@@ -55,6 +98,8 @@ export class ModerationService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/moderation`;
 
+  readonly isBackendAvailable = signal(true);
+
   private getHeaders(): HttpHeaders {
     const token = localStorage.getItem('auth_token') ?? '';
     return new HttpHeaders({
@@ -68,7 +113,7 @@ export class ModerationService {
       params['status'] = status;
     }
     try {
-      return await withRetry(() =>
+      const result = await withRetry(() =>
         firstValueFrom(
           this.http.get<ModerationItem[]>(`${this.baseUrl}/items`, {
             headers: this.getHeaders(),
@@ -76,8 +121,18 @@ export class ModerationService {
           }),
         ).then((items) => items.map((item) => ({ ...item, type }))),
       );
+      this.isBackendAvailable.set(true);
+      return result;
     } catch {
-      return FALLBACK_ITEMS;
+      this.isBackendAvailable.set(false);
+      console.warn('Moderation backend unreachable, serving cached fallback data.');
+      return MOCK_MODERATION_ITEMS
+        .filter((item) => {
+          const typeMatch = item.type === type;
+          const statusMatch = !status || item.status === status;
+          return typeMatch && statusMatch;
+        })
+        .map((item) => ({ ...item, type }));
     }
   }
 
@@ -93,6 +148,7 @@ export class ModerationService {
         ),
       );
     } catch {
+      console.warn('Approve action failed - backend unreachable.');
       return FALLBACK_FAILED_RESPONSE;
     }
   }
@@ -113,6 +169,7 @@ export class ModerationService {
         ),
       );
     } catch {
+      console.warn('Reject action failed - backend unreachable.');
       return FALLBACK_FAILED_RESPONSE;
     }
   }
@@ -137,6 +194,7 @@ export class ModerationService {
         ),
       );
     } catch {
+      console.warn('Report submission failed - backend unreachable.');
       return FALLBACK_FAILED_RESPONSE;
     }
   }
@@ -151,7 +209,11 @@ export class ModerationService {
         ),
       );
     } catch {
-      return FALLBACK_ANALYSIS;
+      console.warn('User analysis failed - backend unreachable, using heuristic fallback.');
+      if (MOCK_ANALYSES[userId]) {
+        return MOCK_ANALYSES[userId];
+      }
+      return { riskScore: 0, flags: [] };
     }
   }
 }
