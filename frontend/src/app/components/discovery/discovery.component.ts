@@ -8,6 +8,7 @@ import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -27,6 +28,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
   imports: [
     FormsModule,
     TranslatePipe,
+    SanitiseHtmlPipe,
     ScrollablePillsComponent,
     FluencyIndicatorComponent,
     AppGradientButtonComponent,
