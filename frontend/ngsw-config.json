@@ -95,6 +95,19 @@
       }
     },
     {
+      "name": "admin-api",
+      "urls": [
+        "/api/admin/**",
+        "/api/moderation/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 200,
+        "maxAge": "5m",
+        "timeout": "10s"
+      }
+    },
+    {
       "name": "translations",
       "urls": [
         "/assets/i18n/**"
