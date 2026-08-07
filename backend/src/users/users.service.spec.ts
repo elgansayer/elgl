@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { DataExportWorker } from './data-export.worker';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 
@@ -50,6 +51,20 @@ describe('UsersService', () => {
           useValue: {
             getTotalXp: jest.fn().mockResolvedValue(0),
             awardXpForActivity: jest.fn(),
+          },
+        },
+        {
+          provide: DataExportWorker,
+          useValue: {
+            exportUserData: jest.fn().mockResolvedValue({
+              profile: {},
+              moments: [],
+              comments: [],
+              messages: [],
+              flashcards: [],
+              favourites: [],
+              exported_at: new Date().toISOString(),
+            }),
           },
         },
       ],

@@ -83,7 +83,7 @@ export class DistanceSliderComponent {
   /** Emits new distance (km) when the thumb is moved */
   distanceChanged = output<number>();
 
-  protected currentDistanceKm = signal(50);
+  readonly currentDistanceKm = signal(50);
 
   constructor() {
     effect(() => {

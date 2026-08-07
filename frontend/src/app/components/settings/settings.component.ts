@@ -1,17 +1,14 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { I18nService } from '../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
 import { UserService, LinkedAccount } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
-import { LanguageSelectorComponent } from '../language-selector/language-selector.component';
-
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, TranslatePipe, LanguageSelectorComponent, RouterModule],
+  imports: [FormsModule, TranslatePipe, RouterModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
@@ -21,10 +18,6 @@ export class SettingsComponent implements OnInit {
   private location = inject(Location);
   private router = inject(Router);
   private chatSettingsService = inject(ChatSettingsService);
-  private i18nService = inject(I18nService);
-
-  readonly availableLanguages = this.i18nService.availableLanguages;
-  readonly uiLanguage = computed(() => this.i18nService.currentLang());
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -44,11 +37,13 @@ export class SettingsComponent implements OnInit {
   privacyHideExactLocation = false;
   privacyHideOnlineStatus = false;
   privacyHideVipStatus = false;
+  profileVisibility: 'everyone' | 'vips_only' | 'hidden' = 'everyone';
   autoPlayVoiceNotes = false;
   soundEffectsEnabled = false;
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
+  readonly linkedCount = computed(() => this.linkedAccounts().filter(a => a.active).length);
   readonly autoDownloadMedia = signal(false);
   readonly autoDownloadPreference = signal<'wifi' | 'cellular'>('wifi');
   protected chatEnterToSend = signal(false);
@@ -70,6 +65,7 @@ export class SettingsComponent implements OnInit {
         this.privacyHideExactLocation = Boolean(profile.privacy_hide_exact_location);
         this.privacyHideOnlineStatus = Boolean(profile.privacy_hide_online_status);
         this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
+        this.profileVisibility = this.sanitizeProfileVisibility(profile.profile_visibility);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
         this.autoDownloadMedia.set(Boolean(profile.auto_download_media));
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
@@ -151,12 +147,17 @@ export class SettingsComponent implements OnInit {
     return this.linkedAccounts().find((a) => a.provider === provider);
   }
 
-  goBack(): void {
-    this.location.back();
+  private sanitizeProfileVisibility(
+    value: string | undefined,
+  ): 'everyone' | 'vips_only' | 'hidden' {
+    if (value === 'everyone' || value === 'vips_only' || value === 'hidden') {
+      return value;
+    }
+    return 'everyone';
   }
 
-  changeUiLanguage(lang: string): void {
-    this.i18nService.setLanguage(lang);
+  goBack(): void {
+    this.location.back();
   }
 
   goToMySubscription(): void {
@@ -164,15 +165,13 @@ export class SettingsComponent implements OnInit {
   }
 
   toggleInterest(interest: string): void {
-    this.interests.update(arr =>
-      arr.includes(interest)
-        ? arr.filter((x) => x !== interest)
-        : [...arr, interest],
+    this.interests.update((arr) =>
+      arr.includes(interest) ? arr.filter((x) => x !== interest) : [...arr, interest],
     );
   }
 
   removeInterest(index: number): void {
-    this.interests.update(arr => arr.filter((_, i) => i !== index));
+    this.interests.update((arr) => arr.filter((_, i) => i !== index));
   }
 
   toggleSoundEffects(): void {
@@ -206,19 +205,18 @@ export class SettingsComponent implements OnInit {
         privacy_hide_exact_location: this.privacyHideExactLocation,
         privacy_hide_online_status: this.privacyHideOnlineStatus,
         privacy_hide_vip_status: this.privacyHideVipStatus,
+        profile_visibility: this.profileVisibility,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
         auto_download_media: this.autoDownloadMedia(),
         sound_effects_enabled: this.soundEffectsEnabled,
         vibration_enabled: this.vibrationEnabled,
         auto_download_preference: this.autoDownloadPreference(),
-        auto_download_wifi_only: this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
+        auto_download_wifi_only:
+          this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
         interests: this.interests(),
       });
 
-      await this.chatSettingsService.updateSetting(
-        'enterToSend',
-        this.chatEnterToSend(),
-      );
+      await this.chatSettingsService.updateSetting('enterToSend', this.chatEnterToSend());
       await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());
 
       this.successMessage.set('Settings saved successfully');

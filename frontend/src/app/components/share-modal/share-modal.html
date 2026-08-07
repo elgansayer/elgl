@@ -8,7 +8,7 @@
       <!-- Header -->
       <div class="p-4 border-b border-surface-100 flex justify-between items-center">
         <h2 class="text-lg font-bold text-text-primary">{{ 'share.title' | t }}</h2>
-        <button class="p-2 text-text-secondary hover:bg-surface-300 rounded-full" (click)="closed.emit()">
+        <button class="p-2 text-text-secondary hover:bg-surface-300 rounded-full" (click)="closed.emit()" [attr.aria-label]="'common.close' | t">
           ✕
         </button>
       </div>
@@ -35,14 +35,14 @@
       <!-- Share Targets -->
       <div class="px-4 pb-4">
         <div class="grid grid-cols-4 gap-2 mb-4">
-          <button class="flex flex-col items-center gap-1 group" (click)="shareToDirectMessage()">
+          <button class="flex flex-col items-center gap-1 group" (click)="shareToDirectMessage()" [attr.aria-label]="'share.dm' | t">
             <div class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center text-xl group-hover:scale-105 transition-transform shadow">
               💬
             </div>
             <span class="text-[10px] font-bold text-text-secondary text-center">{{ 'share.dm' | t }}</span>
           </button>
           
-          <button class="flex flex-col items-center gap-1 group" (click)="shareToFeed()">
+          <button class="flex flex-col items-center gap-1 group" (click)="shareToFeed()" [attr.aria-label]="'share.moments' | t">
             <div class="w-12 h-12 bg-amber-500 text-white rounded-full flex items-center justify-center text-xl group-hover:scale-105 transition-transform shadow">
               ⭕
             </div>

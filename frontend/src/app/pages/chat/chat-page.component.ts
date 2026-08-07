@@ -221,9 +221,32 @@ interface AiChatMessage {
                       }
                     </div>
 
-                    <!-- timestamp -->
-                    <p class="text-[10px] text-text-muted mt-1 text-end">
+                    <!-- timestamp + read receipts -->
+                    <p class="text-[10px] text-text-muted mt-1 text-end flex items-center justify-end gap-0.5">
                       {{ msg.created_at | date:'shortTime' }}
+                      @if (msg.sender_id === currentUserId()) {
+                        <span class="inline-flex items-center">
+                          @if (msg.delivery_status === 'read') {
+                            <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg class="w-3 h-3 -ms-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          } @else if (msg.delivery_status === 'delivered') {
+                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg class="w-3 h-3 -ms-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          } @else if (msg.delivery_status === 'sent') {
+                            <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          }
+                        </span>
+                      }
                     </p>
                   </div>
                 </div>
@@ -386,6 +409,18 @@ export class ChatPageComponent implements OnInit {
     try {
       const messages = await this.chatService.getMessages(room.id);
       this.messages.set(messages);
+
+      // Auto-mark messages from others as delivered and then read
+      const currentUserId = this.authService.currentUser()?.id;
+      if (currentUserId) {
+        const messagesFromOthers = messages.filter(
+          (m) => m.sender_id !== currentUserId && !m.delivery_status,
+        );
+        for (const msg of messagesFromOthers) {
+          this.chatService.markMessageStatus(msg.id, 'delivered').catch(() => {});
+          this.chatService.markMessageStatus(msg.id, 'read').catch(() => {});
+        }
+      }
     } catch (error) {
       console.error('Failed to load messages', error);
     }

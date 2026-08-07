@@ -1,0 +1,16 @@
+{
+  "name": "hellotalk-load-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Artillery load-testing suite for HelloTalk Trust & Safety endpoints",
+  "scripts": {
+    "test:trust-safety": "artillery run trust-and-safety.load.yml",
+    "test:trust-safety:report": "artillery run --output ./reports/trust-safety-report.json trust-and-safety.load.yml && artillery report ./reports/trust-safety-report.json",
+    "test:spam-detection": "artillery run spam-detection.load.yml",
+    "test:spam-detection:report": "artillery run --output ./reports/spam-detection-report.json spam-detection.load.yml && artillery report ./reports/spam-detection-report.json",
+    "test:all": "npm run test:trust-safety && npm run test:spam-detection"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.0"
+  }
+}

@@ -24,7 +24,11 @@ import { DeleteMessageDto } from './dto/delete-message.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
+<<<<<<< HEAD
 import { SendTypingDto } from './dto/send-typing.dto';
+=======
+import { UpdateMessageStatusDto } from './dto/update-message-status.dto';
+>>>>>>> origin/main
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -244,6 +248,17 @@ export class ChatController {
       dto.correctedText,
       dto.explanation,
     );
+  }
+
+  @Patch('messages/:messageId/status')
+  async updateMessageStatus(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: UpdateMessageStatusDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.updateMessageStatus(user.id, messageId, dto.status);
+    return { success: true };
   }
 
   @Post('messages/:messageId/view')
