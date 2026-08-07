@@ -6,6 +6,7 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -17,6 +18,11 @@ import {
   ReleaseEscrowDto,
   RefundEscrowDto,
 } from './dto/escrow.dto';
+import {
+  EscrowCacheInterceptor,
+  ESCROW_CACHE_PRIVATE_SHORT,
+  ESCROW_CACHE_PRIVATE_NO_STORE,
+} from './cache.interceptor';
 
 @Controller('escrow')
 @UseGuards(SupabaseAuthGuard)
@@ -27,9 +33,11 @@ export class EscrowController {
    * POST /escrow/create
    * Create a new escrow transaction, holding coins from the payer.
    * Rate limited to 5 requests per minute.
+   * Caching: no-store. This is a mutation.
    */
   @Post('create')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE))
   async create(
     @Req() req: { user?: { id?: string } },
     @Body() dto: CreateEscrowDto,
@@ -45,9 +53,11 @@ export class EscrowController {
    * POST /escrow/release
    * Release escrowed coins to the payee.
    * Rate limited to 5 requests per minute.
+   * Caching: no-store. This is a mutation.
    */
   @Post('release')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE))
   async release(
     @Req() req: { user?: { id?: string } },
     @Body() dto: ReleaseEscrowDto,
@@ -63,9 +73,11 @@ export class EscrowController {
    * POST /escrow/refund
    * Refund escrowed coins back to the payer.
    * Rate limited to 5 requests per minute.
+   * Caching: no-store. This is a mutation.
    */
   @Post('refund')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE))
   async refund(
     @Req() req: { user?: { id?: string } },
     @Body() dto: RefundEscrowDto,
@@ -81,9 +93,14 @@ export class EscrowController {
    * GET /escrow/list
    * List escrow transactions for the authenticated user.
    * Rate limited to 20 requests per minute.
+   *
+   * Caching: private short-lived. Each user sees their own escrows and
+   * statuses can change rapidly, but a short cache reduces DB pressure
+   * during repeated reads by the frontend polling loop.
    */
   @Get('list')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT))
   async list(
     @Req() req: { user?: { id?: string } },
     @Query('limit') limit?: string,
@@ -104,9 +121,13 @@ export class EscrowController {
    * GET /escrow/:id
    * Get a single escrow transaction by ID.
    * Rate limited to 30 requests per minute.
+   *
+   * Caching: private short-lived. User-specific escrow details benefit
+   * from short-term Cloudflare edge caching while keeping freshness.
    */
   @Get(':id')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT))
   async getById(
     @Req() req: { user?: { id?: string } },
     @Param('id') id: string,

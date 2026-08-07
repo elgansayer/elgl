@@ -1949,6 +1949,49 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      escrow_payments: {
+        Row: {
+          id: string;
+          sender_id: string;
+          recipient_id: string;
+          amount: number;
+          currency: string;
+          status: string;
+          stripe_payment_intent_id: string | null;
+          description: string | null;
+          metadata: string | null;
+          created_at: string;
+          updated_at: string;
+          released_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          sender_id: string;
+          recipient_id: string;
+          amount: number;
+          currency: string;
+          status?: string;
+          stripe_payment_intent_id?: string | null;
+          description?: string | null;
+          metadata?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+        }>;
+        Update: Partial<{
+          sender_id?: string;
+          recipient_id?: string;
+          amount?: number;
+          currency?: string;
+          status?: string;
+          stripe_payment_intent_id?: string | null;
+          description?: string | null;
+          metadata?: string | null;
+          updated_at?: string;
+          released_at?: string | null;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

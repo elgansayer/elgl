@@ -75,6 +75,7 @@ import { PronunciationScoringService } from './pronunciation-scoring/pronunciati
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { EscrowModule } from './escrow/escrow.module';
 
 @Module({
   imports: [
@@ -166,6 +167,7 @@ import { MetricsModule } from './metrics/metrics.module';
     AssessmentsModule,
     AnalyticsModule,
     MetricsModule,
+    EscrowModule,
   ],
   controllers: [AppController],
   providers: [
