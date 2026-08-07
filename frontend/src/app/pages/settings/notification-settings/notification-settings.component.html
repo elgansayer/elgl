@@ -1,106 +1,70 @@
-<div class="app-screen bg-surface-50">
-  <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
-      <span class="text-xl">&#8592;</span>
-    </button>
-    <h1 class="app-header-title">{{ 'notification_settings.title' | t }}</h1>
-    <div class="w-10"></div>
-  </header>
+<div class="max-w-md mx-auto ps-4 pe-4 pt-6 pb-10">
+  <h1 class="text-2xl font-semibold text-slate-200 mb-2">
+    {{ 'notification_settings.title' | t }}
+  </h1>
+  <p class="text-slate-400 mb-6">
+    {{ 'notification_settings.subtitle' | t }}
+  </p>
 
-  <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
-    @if (loading()) {
-      <div class="app-empty-state">{{ 'common.loading' | t }}</div>
-    } @else {
-      @if (error()) {
-        <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-          {{ error() }}
+  @if (loadError()) {
+    <div class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400 mb-6">
+      {{ loadError() | t }}
+    </div>
+  }
+
+  @if (error()) {
+    <div class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400 mb-6">
+      {{ error() | t }}
+    </div>
+  }
+
+  <div class="rounded-2xl bg-slate-800/50 border border-slate-700 overflow-hidden shadow-sm mb-6">
+    <div class="bg-slate-800/80 px-4 py-3 border-b border-slate-700">
+      <div class="flex">
+        <div class="flex-1">
+          <span class="text-sm font-semibold text-slate-200">{{ 'notification_settings.toggle_header' | t }}</span>
         </div>
-      }
-
-      <section class="space-y-4">
-        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
-          {{ 'notification_settings.section_title' | t }}
-        </h2>
-        <p class="text-xs text-text-secondary">
-          {{ 'notification_settings.section_description' | t }}
-        </p>
-
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
-          @for (item of settings(); track item.category) {
-            <div class="p-4 space-y-4">
-              <div class="flex items-center gap-3">
-                <span class="text-lg" aria-hidden="true">
-                  @switch (item.icon) {
-                    @case ('direct-message') { &#128172; }
-                    @case ('heart') { &#10084;&#65039; }
-                    @case ('microphone') { &#127908; }
-                    @case ('person-add') { &#128100; }
-                    @case ('phone') { &#128222; }
-                    @case ('comment') { &#128488;&#65039; }
-                    @case ('edit') { &#9999;&#65039; }
-                    @case ('gift') { &#127873; }
-                    @case ('eye') { &#128065;&#65039; }
-                    @case ('book') { &#128218; }
-                    @case ('handshake') { &#129309; }
-                    @default { &#128276; }
-                  }
-                </span>
-                <span class="text-sm font-medium text-text-primary flex-1">
-                  {{ item.labelKey | t }}
-                </span>
-              </div>
-
-              <div class="flex items-center gap-6">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    class="form-checkbox h-4 w-4 rounded accent-indigo-500"
-                    [checked]="item.push"
-                    (change)="togglePush(item)"
-                  />
-                  <span class="text-xs text-text-secondary">
-                    {{ 'notification_settings.push_alerts' | t }}
-                  </span>
-                </label>
-
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    class="form-checkbox h-4 w-4 rounded accent-indigo-500"
-                    [checked]="item.badges"
-                    (change)="toggleBadges(item)"
-                  />
-                  <span class="text-xs text-text-secondary">
-                    {{ 'notification_settings.badges' | t }}
-                  </span>
-                </label>
-              </div>
-            </div>
-          }
-        </div>
-      </section>
-
-      <div class="pt-4">
-        @if (saved()) {
-          <p class="mb-3 text-green-400 text-sm">
-            {{ 'notification_settings.saved_message' | t }}
-          </p>
+        @for (ch of channels; track ch) {
+          <div class="w-16 text-center">
+            <span class="text-xs font-medium text-slate-400">{{ channelLabel(ch) | t }}</span>
+          </div>
         }
+      </div>
+    </div>
 
-        <button
-          type="button"
-          class="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
-          [disabled]="saving()"
-          (click)="savePreferences()"
-          [attr.aria-label]="'common.save' | t"
-        >
-          @if (saving()) {
-            {{ 'common.saving' | t }}
-          } @else {
-            {{ 'common.save' | t }}
-          }
-        </button>
+    @for (cat of categories; track cat.key) {
+      <div class="flex items-center px-4 py-3 border-b border-slate-700/50 last:border-b-0 hover:bg-slate-800/30 transition-colors">
+        <div class="flex-1 flex items-center gap-3">
+          <span class="text-lg" role="img" [attr.aria-label]="cat.labelKey | t">{{ cat.icon }}</span>
+          <span class="text-sm text-slate-200">{{ cat.labelKey | t }}</span>
+        </div>
+        @for (ch of channels; track ch) {
+          <div class="w-16 flex justify-center">
+            <button
+              type="button"
+              role="switch"
+              [attr.aria-checked]="toggleValue(cat.key, ch)"
+              [attr.aria-label]="(cat.labelKey | t) + ' ' + (channelLabel(ch) | t)"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+              [class.bg-indigo-600]="toggleValue(cat.key, ch)"
+              [class.bg-slate-600]="!toggleValue(cat.key, ch)"
+              (click)="toggle(cat.key, ch)"
+            >
+              <span
+                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                [class.translate-x-6]="toggleValue(cat.key, ch)"
+                [class.translate-x-1]="!toggleValue(cat.key, ch)"
+              ></span>
+            </button>
+          </div>
+        }
       </div>
     }
-  </main>
+  </div>
+
+  @if (saved()) {
+    <p class="text-sm text-emerald-400 animate-pulse">
+      {{ 'notification_settings.saved_message' | t }}
+    </p>
+  }
 </div>

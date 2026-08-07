@@ -7,7 +7,6 @@ export interface CategoryPreference {
   push: boolean;
   email: boolean;
   in_app: boolean;
-  badges: boolean;
 }
 
 export interface NotificationPreferences {
@@ -42,14 +41,37 @@ export type NotificationCategory = keyof Omit<
   | 'vibrationPattern'
 >;
 
-export type NotificationChannel = 'push' | 'email' | 'in_app' | 'badges';
+export type NotificationChannel = 'push' | 'email' | 'in_app';
+
+export interface LegacyChannelPreference {
+  push: boolean;
+  badge: boolean;
+}
+
+export interface LegacyNotificationPreferences {
+  userId: string;
+  direct_messages: LegacyChannelPreference;
+  groups: LegacyChannelPreference;
+  likes: LegacyChannelPreference;
+  voice_rooms: LegacyChannelPreference;
+  do_not_disturb: boolean;
+  updatedAt: string;
+}
+
+export type LegacyCategory = keyof Omit<
+  LegacyNotificationPreferences,
+  'userId' | 'updatedAt' | 'do_not_disturb'
+>;
+
+export type LegacyChannel = 'push' | 'badge';
 
 @Injectable({
   providedIn: 'root',
 })
 export class NotificationPreferencesService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiUrl}/notification-preferences`;
+  private readonly baseUrl = '/api/notification-preferences';
+  private readonly notificationsUrl = '/api/notifications';
 
   getPreferences(): Promise<NotificationPreferences> {
     return firstValueFrom(this.http.get<NotificationPreferences>(this.baseUrl));
@@ -57,6 +79,23 @@ export class NotificationPreferencesService {
 
   updatePreferences(dto: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
     return firstValueFrom(this.http.put<NotificationPreferences>(this.baseUrl, dto));
+  }
+
+  getLegacyPreferences(): Promise<LegacyNotificationPreferences> {
+    return firstValueFrom(
+      this.http.get<LegacyNotificationPreferences>(`${this.notificationsUrl}/preferences`),
+    );
+  }
+
+  updateLegacyPreferences(
+    dto: Partial<LegacyNotificationPreferences>,
+  ): Promise<{ success: boolean; preferences: LegacyNotificationPreferences }> {
+    return firstValueFrom(
+      this.http.put<{ success: boolean; preferences: LegacyNotificationPreferences }>(
+        `${this.notificationsUrl}/preferences`,
+        dto,
+      ),
+    );
   }
 
   updateCustomizationPreferences(

@@ -1,54 +1,52 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { NotificationSettingsComponent } from './notification-settings.component';
 import { NotificationPreferencesService } from '../../../services/notification-preferences.service';
 import { I18nService } from '../../../services/i18n.service';
-
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
 
 describe('NotificationSettingsComponent', () => {
-  let fixture: ComponentFixture<NotificationSettingsComponent>;
   let component: NotificationSettingsComponent;
-  let prefsService: jasmine.SpyObj<NotificationPreferencesService>;
+  let fixture: ComponentFixture<NotificationSettingsComponent>;
+  let getLegacyPrefsSpy: ReturnType<typeof vi.fn>;
+  let updateLegacyPrefsSpy: ReturnType<typeof vi.fn>;
 
-  const mockPreferences = {
+  const mockLegacyPrefs = {
     userId: 'user-1',
-    new_message: { push: true, email: false, in_app: true, badges: true },
-    call_invite: { push: true, email: false, in_app: true, badges: false },
-    moment_like: { push: false, email: false, in_app: true, badges: true },
-    moment_comment: { push: true, email: false, in_app: true, badges: true },
-    correction: { push: true, email: false, in_app: true, badges: true },
-    gift: { push: true, email: false, in_app: true, badges: true },
-    profile_view: { push: false, email: false, in_app: true, badges: false },
-    study_reminder: { push: true, email: true, in_app: true, badges: true },
-    friend_request: { push: true, email: false, in_app: true, badges: true },
-    audio_room_invite: { push: true, email: false, in_app: true, badges: true },
-    new_follower: { push: true, email: false, in_app: true, badges: false },
+    direct_messages: { push: true, badge: true },
+    groups: { push: true, badge: false },
+    likes: { push: false, badge: true },
+    voice_rooms: { push: false, badge: false },
     do_not_disturb: false,
-    updatedAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: new Date().toISOString(),
+  };
+
+  const mockI18nService = {
+    translate: vi.fn((key: string) => key),
+    currentLang: signal('en-GB'),
+    direction: signal('ltr'),
   };
 
   beforeEach(async () => {
-    prefsService = jasmine.createSpyObj<NotificationPreferencesService>(
-      'NotificationPreferencesService',
-      ['getPreferences', 'updatePreferences'],
-    );
-    prefsService.getPreferences.and.resolveTo(mockPreferences);
-    prefsService.updatePreferences.and.callFake(
-      (dto: Partial<typeof mockPreferences>) =>
-        Promise.resolve({ ...mockPreferences, ...dto, updatedAt: new Date().toISOString() }),
-    );
+    getLegacyPrefsSpy = vi.fn().mockResolvedValue(mockLegacyPrefs);
+    updateLegacyPrefsSpy = vi.fn().mockResolvedValue({
+      success: true,
+      preferences: mockLegacyPrefs,
+    });
 
     await TestBed.configureTestingModule({
       imports: [NotificationSettingsComponent],
       providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        { provide: NotificationPreferencesService, useValue: prefsService },
         {
-          provide: I18nService,
-          useValue: jasmine.createSpyObj('I18nService', ['translate']),
+          provide: NotificationPreferencesService,
+          useValue: {
+            getLegacyPreferences: getLegacyPrefsSpy,
+            updateLegacyPreferences: updateLegacyPrefsSpy,
+            getPreferences: vi.fn(),
+            updatePreferences: vi.fn(),
+          },
         },
+        { provide: I18nService, useValue: mockI18nService },
       ],
     }).compileComponents();
 
@@ -57,48 +55,67 @@ describe('NotificationSettingsComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
+  it('should create the component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load preferences on init', () => {
-    expect(prefsService.getPreferences).toHaveBeenCalled();
-    expect(component.settings().length).toBe(4);
+  it('should load legacy preferences on init', async () => {
+    await fixture.whenStable();
+    expect(getLegacyPrefsSpy).toHaveBeenCalled();
+    expect(component.prefs()).toEqual(mockLegacyPrefs);
   });
 
-  it('should toggle push for an item', () => {
-    const item = component.settings()[0];
-    const initialPush = item.push;
-    component.togglePush(item);
-    expect(item.push).toBe(!initialPush);
+  it('should return correct toggle value for a category and channel', async () => {
+    await fixture.whenStable();
+    expect(component.toggleValue('direct_messages', 'push')).toBe(true);
+    expect(component.toggleValue('direct_messages', 'badge')).toBe(true);
+    expect(component.toggleValue('groups', 'push')).toBe(true);
+    expect(component.toggleValue('groups', 'badge')).toBe(false);
+    expect(component.toggleValue('likes', 'push')).toBe(false);
+    expect(component.toggleValue('likes', 'badge')).toBe(true);
+    expect(component.toggleValue('voice_rooms', 'push')).toBe(false);
+    expect(component.toggleValue('voice_rooms', 'badge')).toBe(false);
   });
 
-  it('should toggle badges for an item', () => {
-    const item = component.settings()[0];
-    const initialBadges = item.badges;
-    component.toggleBadges(item);
-    expect(item.badges).toBe(!initialBadges);
-  });
+  it('should toggle a channel and call updateLegacyPreferences', async () => {
+    await fixture.whenStable();
+    const updatedPrefs = {
+      ...mockLegacyPrefs,
+      direct_messages: { push: false, badge: true },
+    };
+    updateLegacyPrefsSpy.mockResolvedValue({
+      success: true,
+      preferences: updatedPrefs,
+    });
 
-  it('should save preferences', async () => {
-    const item = component.settings()[0];
-    component.togglePush(item);
-    await component.savePreferences();
-    expect(prefsService.updatePreferences).toHaveBeenCalled();
+    await component.toggle('direct_messages', 'push');
+    expect(updateLegacyPrefsSpy).toHaveBeenCalledWith({
+      direct_messages: { push: false, badge: true },
+    });
+    expect(component.prefs()!.direct_messages.push).toBe(false);
     expect(component.saved()).toBe(true);
   });
 
-  it('should handle save error gracefully', async () => {
-    prefsService.updatePreferences.and.rejectWith(new Error('Failed'));
-    await component.savePreferences();
-    expect(component.error()).toBeTruthy();
+  it('should display load error when getLegacyPreferences fails', async () => {
+    getLegacyPrefsSpy.mockRejectedValue(new Error('Network error'));
+
+    fixture = TestBed.createComponent(NotificationSettingsComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(component.loadError()).toBeTruthy();
   });
 
-  it('should load preferences on error gracefully', async () => {
-    prefsService.getPreferences.and.rejectWith(new Error('Failed'));
-    const fixture2 = TestBed.createComponent(NotificationSettingsComponent);
-    const comp2 = fixture2.componentInstance;
-    fixture2.detectChanges();
-    expect(comp2.error()).toBeTruthy();
+  it('should return correct channel label', () => {
+    expect(component.channelLabel('push')).toBe('notification_settings.channel.push');
+    expect(component.channelLabel('badge')).toBe('notification_settings.channel.badge');
+  });
+
+  it('should render all four category rows', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const rows = element.querySelectorAll('[role="switch"]');
+    expect(rows.length).toBe(8); // 4 categories * 2 channels
   });
 });

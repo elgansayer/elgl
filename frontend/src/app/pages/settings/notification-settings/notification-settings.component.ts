@@ -1,157 +1,88 @@
-import { Component, inject, signal } from '@angular/core';
-import { Location } from '@angular/common';
+import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
+import { I18nService } from '../../../services/i18n.service';
 import {
   NotificationPreferencesService,
-  NotificationPreferences,
-  NotificationCategory,
+  LegacyCategory,
+  LegacyChannel,
+  LegacyNotificationPreferences,
 } from '../../../services/notification-preferences.service';
-import { I18nService } from '../../../services/i18n.service';
 
-interface NotificationSettingItem {
-  category: NotificationCategory;
+interface CategoryToggle {
+  key: LegacyCategory;
   labelKey: string;
   icon: string;
-  push: boolean;
-  badges: boolean;
 }
 
 @Component({
-  standalone: true,
   selector: 'app-notification-settings',
-  templateUrl: './notification-settings.component.html',
+  standalone: true,
   imports: [TranslatePipe],
+  templateUrl: './notification-settings.component.html',
 })
 export class NotificationSettingsComponent {
   private readonly prefsService = inject(NotificationPreferencesService);
   private readonly i18n = inject(I18nService);
-  private readonly location = inject(Location);
 
-  readonly loading = signal(true);
-  readonly saving = signal(false);
-  readonly error = signal('');
-  readonly saved = signal(false);
-
-  readonly categories: NotificationCategory[] = [
-    'new_message',
-    'moment_like',
-    'audio_room_invite',
-    'new_follower',
+  readonly categories: CategoryToggle[] = [
+    { key: 'direct_messages', labelKey: 'notification_settings.category.direct_messages', icon: '💬' },
+    { key: 'groups', labelKey: 'notification_settings.category.groups', icon: '👥' },
+    { key: 'likes', labelKey: 'notification_settings.category.likes', icon: '❤️' },
+    { key: 'voice_rooms', labelKey: 'notification_settings.category.voice_rooms', icon: '🎤' },
   ];
 
-  readonly settings = signal<NotificationSettingItem[]>([]);
+  readonly channels: LegacyChannel[] = ['push', 'badge'];
 
-  private prefs = signal<NotificationPreferences | null>(null);
+  readonly prefs = signal<LegacyNotificationPreferences | null>(null);
+  readonly saving = signal(false);
+  readonly saved = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly loadError = signal<string | null>(null);
+
+  private readonly prefsResource = resource({
+    loader: async () => {
+      this.loadError.set(null);
+      try {
+        const prefs = await this.prefsService.getLegacyPreferences();
+        this.prefs.set(prefs);
+        return prefs;
+      } catch {
+        this.loadError.set(this.i18n.translate('common.error_generic'));
+        return null;
+      }
+    },
+  });
 
   constructor() {
-    void this.loadPreferences();
+    this.prefsResource.reload();
   }
 
-  private async loadPreferences(): Promise<void> {
-    this.loading.set(true);
-    try {
-      const prefs = await this.prefsService.getPreferences();
-      this.prefs.set(prefs);
-      this.settings.set(this.buildSettings(prefs));
-    } catch {
-      this.error.set(this.i18n.translate('common.error_generic'));
-    } finally {
-      this.loading.set(false);
-    }
+  toggleValue(cat: LegacyCategory, ch: LegacyChannel): boolean {
+    const p = this.prefs();
+    if (!p) return false;
+    return p[cat][ch];
   }
 
-  private buildSettings(prefs: NotificationPreferences): NotificationSettingItem[] {
-    return this.categories.map((cat) => {
-      const cp = this.getCategoryPref(prefs, cat);
-      return {
-        category: cat,
-        labelKey: `notification_settings.category.${cat}`,
-        icon: this.categoryIcon(cat),
-        push: cp.push,
-        badges: cp.badges,
-      };
-    });
+  channelLabel(ch: LegacyChannel): string {
+    return `notification_settings.channel.${ch}`;
   }
 
-  private getCategoryPref(
-    prefs: NotificationPreferences,
-    cat: NotificationCategory,
-  ): { push: boolean; badges: boolean } {
-    switch (cat) {
-      case 'new_message':
-        return { push: prefs.new_message.push, badges: prefs.new_message.badges };
-      case 'moment_like':
-        return { push: prefs.moment_like.push, badges: prefs.moment_like.badges };
-      case 'audio_room_invite':
-        return { push: prefs.audio_room_invite.push, badges: prefs.audio_room_invite.badges };
-      case 'new_follower':
-        return { push: prefs.new_follower.push, badges: prefs.new_follower.badges };
-      default:
-        return { push: true, badges: true };
-    }
-  }
-
-  private categoryIcon(cat: NotificationCategory): string {
-    const icons: Record<string, string> = {
-      new_message: 'direct-message',
-      moment_like: 'heart',
-      audio_room_invite: 'microphone',
-      new_follower: 'person-add',
-      call_invite: 'phone',
-      moment_comment: 'comment',
-      correction: 'edit',
-      gift: 'gift',
-      profile_view: 'eye',
-      study_reminder: 'book',
-      friend_request: 'handshake',
+  async toggle(cat: LegacyCategory, ch: LegacyChannel): Promise<void> {
+    const p = this.prefs();
+    if (!p) return;
+    const current = p[cat][ch];
+    const update = {
+      [cat]: {
+        push: ch === 'push' ? !current : p[cat].push,
+        badge: ch === 'badge' ? !current : p[cat].badge,
+      },
     };
-    return icons[cat] ?? 'bell';
-  }
-
-  togglePush(item: NotificationSettingItem): void {
-    item.push = !item.push;
-  }
-
-  toggleBadges(item: NotificationSettingItem): void {
-    item.badges = !item.badges;
-  }
-
-  async savePreferences(): Promise<void> {
-    this.saving.set(true);
-    this.error.set('');
-    this.saved.set(false);
-
-    const currentPrefs = this.prefs();
-    if (!currentPrefs) {
-      this.error.set(this.i18n.translate('common.error_generic'));
-      this.saving.set(false);
-      return;
-    }
-
-    const update: Partial<NotificationPreferences> = {};
-
-    for (const item of this.settings()) {
-      update[item.category] = {
-        push: item.push,
-        email: currentPrefs[item.category].email,
-        in_app: currentPrefs[item.category].in_app,
-        badges: item.badges,
-      };
-    }
-
     try {
-      const updated = await this.prefsService.updatePreferences(update);
-      this.prefs.set(updated);
-      this.settings.set(this.buildSettings(updated));
+      const result = await this.prefsService.updateLegacyPreferences(update);
+      this.prefs.set(result.preferences);
       this.saved.set(true);
     } catch {
       this.error.set(this.i18n.translate('common.error_generic'));
-    } finally {
-      this.saving.set(false);
     }
-  }
-
-  goBack(): void {
-    this.location.back();
   }
 }

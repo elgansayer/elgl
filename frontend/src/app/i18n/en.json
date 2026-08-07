@@ -9,7 +9,10 @@
   },
   "common": {
     "loading": "Loading...",
-    "back": "Back"
+    "back": "Back",
+    "save": "Save",
+    "error_generic": "Something went wrong. Please try again.",
+    "reset": "Reset"
   },
   "settings": {
     "linkBtn": "Link",
@@ -34,6 +37,22 @@
       "linkFailed": "Failed to link account. Please try again.",
       "unlinkFailed": "Failed to unlink account. Please try again."
     }
+  },
+  "notification_settings": {
+    "title": "Notification Settings",
+    "subtitle": "Choose which push alerts and badge notifications you would like to receive.",
+    "toggle_header": "Push Alerts & Badges",
+    "channel": {
+      "push": "Push",
+      "badge": "Badge"
+    },
+    "category": {
+      "direct_messages": "Direct Messages",
+      "groups": "Groups",
+      "likes": "Likes",
+      "voice_rooms": "Voicerooms"
+    },
+    "saved_message": "Notification preferences saved."
   },
   "admin": {
     "blocks": {
