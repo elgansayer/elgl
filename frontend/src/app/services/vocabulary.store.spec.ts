@@ -526,21 +526,13 @@ describe('VocabularyStore', () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
 
-      // Ensure navigator.onLine is true so we test the server error path, not offline fallback
-      const originalOnLine = navigator.onLine;
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
-
       const promise = store.updateSrsLevel('1', 2);
       httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(
         { message: 'Not found' },
         { status: 404, statusText: 'Not Found' },
       );
 
-      try {
-        await expect(promise).rejects.toThrow();
-      } finally {
-        Object.defineProperty(navigator, 'onLine', { value: originalOnLine, configurable: true });
-      }
+      await expect(promise).rejects.toThrow();
       expect(store.allFlashcards()[0].srs_level).toBe(1);
       expect(store.flashcardMap().get('hello')?.srs_level).toBe(1);
     });

@@ -1,16 +1,15 @@
-import { Component, inject, signal, resource, afterNextRender } from '@angular/core';
+import { Component, inject, signal, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { JoyrideDirective } from 'ngx-joyride';
 import {
   ModerationService,
   ModerationItem,
+  ModerationActionResponse,
   UserAnalysisResult,
 } from '../services/moderation.service';
 import { TranslatePipe } from '../services/translate.pipe';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
-import { ModerationOnboardingService } from './moderation-onboarding.service';
 
 @Component({
   selector: 'app-moderation-queue',
@@ -21,13 +20,11 @@ import { ModerationOnboardingService } from './moderation-onboarding.service';
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
     AppCardComponent,
-    JoyrideDirective,
   ],
   templateUrl: './moderation-queue.component.html',
 })
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
-  private onboardingService = inject(ModerationOnboardingService);
 
   readonly type = signal<'moment' | 'profile'>('profile');
   readonly status = signal<string | undefined>(undefined);
@@ -48,24 +45,8 @@ export class ModerationQueueComponent {
 
   readonly analysisResult = signal<UserAnalysisResult | null>(null);
   readonly analysisLoading = signal(false);
-
-  constructor() {
-    afterNextRender(() => {
-      const hasSeenOnboarding = globalThis.localStorage?.getItem('moderationOnboardingSeen');
-      if (!hasSeenOnboarding) {
-        this.startOnboarding();
-      }
-    });
-  }
-
-  startOnboarding(): void {
-    this.onboardingService.startTour();
-    try {
-      globalThis.localStorage?.setItem('moderationOnboardingSeen', '1');
-    } catch {
-      // localStorage may be unavailable
-    }
-  }
+  readonly actionInProgress = signal<string | null>(null);
+  readonly actionError = signal<string | null>(null);
 
   setType(type: 'moment' | 'profile'): void {
     this.type.set(type);
@@ -77,13 +58,43 @@ export class ModerationQueueComponent {
   }
 
   async approve(item: ModerationItem): Promise<void> {
-    await this.moderationService.approveItem(item.id, item.type);
-    this.items.reload();
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
+    try {
+      const result: ModerationActionResponse = await this.moderationService.approveItem(
+        item.id,
+        item.type,
+      );
+      if (result.success) {
+        this.items.reload();
+      } else {
+        this.actionError.set(result.error ?? 'Failed to approve item');
+      }
+    } catch {
+      this.actionError.set('Service temporarily unavailable');
+    } finally {
+      this.actionInProgress.set(null);
+    }
   }
 
   async reject(item: ModerationItem): Promise<void> {
-    await this.moderationService.rejectItem(item.id, item.type);
-    this.items.reload();
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
+    try {
+      const result: ModerationActionResponse = await this.moderationService.rejectItem(
+        item.id,
+        item.type,
+      );
+      if (result.success) {
+        this.items.reload();
+      } else {
+        this.actionError.set(result.error ?? 'Failed to reject item');
+      }
+    } catch {
+      this.actionError.set('Service temporarily unavailable');
+    } finally {
+      this.actionInProgress.set(null);
+    }
   }
 
   async analyse(item: ModerationItem): Promise<void> {
@@ -97,6 +108,8 @@ export class ModerationQueueComponent {
       this.analysisResult.set(
         await this.moderationService.getUserRiskAnalysis(userId),
       );
+    } catch {
+      this.actionError.set('Failed to analyse user');
     } finally {
       this.analysisLoading.set(false);
     }
