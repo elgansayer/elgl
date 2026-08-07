@@ -1392,6 +1392,7 @@ export class I18nService {
     'chatRoom.stickersDrawerTitle': 'Stickers',
     'chatRoom.stickerBtn': 'Sticker',
     'chatRoom.stickerCaption': 'Sticker',
+    'stickerStore.unlocking': 'Unlocking...',
     // Theme Selection
     'theme.light': 'Light',
     'theme.dark': 'Dark',
