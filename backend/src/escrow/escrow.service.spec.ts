@@ -69,6 +69,15 @@ describe('EscrowService', () => {
         CircuitBreakerService,
         { provide: SupabaseService, useValue: mockSupabaseService },
         { provide: ConfigService, useValue: mockConfigService },
+        {
+          provide: CrashReportService,
+          useValue: {
+            reportCrash: jest.fn().mockResolvedValue(null),
+            listUnresolved: jest.fn().mockResolvedValue([]),
+            acknowledgeReport: jest.fn().mockResolvedValue(true),
+            resolveReport: jest.fn().mockResolvedValue(true),
+          },
+        },
       ],
     }).compile();
 

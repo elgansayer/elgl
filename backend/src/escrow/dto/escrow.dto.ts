@@ -107,3 +107,26 @@ export interface CircuitBreakerStatusResponse {
   totalFailures: number;
   totalSuccesses: number;
 }
+
+export class AcknowledgeCrashReportDto {
+  @ApiProperty({
+    description: 'UUID of the crash report to acknowledge',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
+  @IsString()
+  report_id!: string;
+}
+
+export interface CrashReportResponse {
+  id: string;
+  operation: string;
+  escrow_id?: string;
+  user_id?: string;
+  error_type: string;
+  error_message: string;
+  stack_trace?: string;
+  context?: Record<string, unknown>;
+  created_at: string;
+  acknowledged: boolean;
+  resolved_at?: string | null;
+}
