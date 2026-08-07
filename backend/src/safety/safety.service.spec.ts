@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 import { Logger } from '@nestjs/common';
 
 describe('SafetyService', () => {
@@ -9,6 +10,11 @@ describe('SafetyService', () => {
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let mockMetricsService: any;
+  let mockCacheInvalidationService: {
+    invalidateTrustAndSafetyCaches: jest.Mock;
+    invalidateUserPairCaches: jest.Mock;
+    invalidateUserCaches: jest.Mock;
+  };
 
   beforeEach(async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
@@ -37,6 +43,12 @@ describe('SafetyService', () => {
       recordTsDatingRiskScore: jest.fn(),
     };
 
+    mockCacheInvalidationService = {
+      invalidateTrustAndSafetyCaches: jest.fn().mockResolvedValue(undefined),
+      invalidateUserPairCaches: jest.fn().mockResolvedValue(undefined),
+      invalidateUserCaches: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SafetyService,
@@ -49,6 +61,10 @@ describe('SafetyService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+        },
+        {
+          provide: SafetyCacheInvalidationService,
+          useValue: mockCacheInvalidationService,
         },
       ],
     }).compile();
@@ -106,6 +122,12 @@ describe('SafetyService', () => {
         dto.reason_category,
       );
       expect(result).toEqual({ id: 'report-id' });
+      expect(
+        mockCacheInvalidationService.invalidateUserCaches,
+      ).toHaveBeenCalledWith('reported-1');
+      expect(
+        mockCacheInvalidationService.invalidateTrustAndSafetyCaches,
+      ).toHaveBeenCalled();
       logSpy.mockRestore();
     });
 
@@ -217,6 +239,12 @@ describe('SafetyService', () => {
       });
       expect(logSpy).toHaveBeenCalledWith('User user-1 blocked blocked-user');
       expect(result).toEqual({ success: true, blocked_id: 'blocked-user' });
+      expect(
+        mockCacheInvalidationService.invalidateUserPairCaches,
+      ).toHaveBeenCalledWith('user-1', 'blocked-user');
+      expect(
+        mockCacheInvalidationService.invalidateTrustAndSafetyCaches,
+      ).toHaveBeenCalled();
       logSpy.mockRestore();
     });
 
@@ -275,6 +303,10 @@ describe('SafetyService', () => {
     it('should unblock a user', async () => {
       mockQueryBuilder._response = { error: null };
 
+      const logSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation(() => {});
+
       const result = await service.unblockUser('user-1', 'blocked-user');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
@@ -285,6 +317,13 @@ describe('SafetyService', () => {
         'blocked-user',
       );
       expect(result).toEqual({ success: true });
+      expect(
+        mockCacheInvalidationService.invalidateUserPairCaches,
+      ).toHaveBeenCalledWith('user-1', 'blocked-user');
+      expect(
+        mockCacheInvalidationService.invalidateTrustAndSafetyCaches,
+      ).toHaveBeenCalled();
+      logSpy.mockRestore();
     });
 
     it('should throw when delete fails', async () => {

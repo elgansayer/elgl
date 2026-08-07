@@ -7,6 +7,7 @@ import {
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
@@ -50,6 +51,7 @@ export class SafetyService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
+    private readonly cacheInvalidationService: SafetyCacheInvalidationService,
   ) {}
 
   getCategories() {
@@ -112,6 +114,10 @@ export class SafetyService {
       `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
     );
 
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserCaches(dto.reported_id);
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+
     return { id: data.id };
   }
 
@@ -160,6 +166,14 @@ export class SafetyService {
     this.metricsService.recordTsBlockCreated();
 
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
+
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserPairCaches(
+      blockerId,
+      dto.blocked_id,
+    );
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+
     return { success: true, blocked_id: dto.blocked_id };
   }
 
@@ -181,6 +195,14 @@ export class SafetyService {
     this.metricsService.recordTsBlockRemoved();
 
     this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
+
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserPairCaches(
+      blockerId,
+      blockedId,
+    );
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+
     return { success: true };
   }
 
