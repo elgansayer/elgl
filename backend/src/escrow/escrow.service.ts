@@ -11,7 +11,6 @@ import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { MetricsService } from '../metrics/metrics.service';
-import Redis from 'ioredis';
 import {
   EscrowTransaction,
   EscrowStatus,
@@ -19,7 +18,7 @@ import {
   EscrowReleaseResult,
 } from './interfaces/escrow-transaction.interface';
 import {
-  CreateEscrowDto,
+  CreateEscrowHoldDto as CreateEscrowDto,
   EscrowTransactionResponse,
 } from './dto/escrow.dto';
 import { sanitiseEscrowData } from './sanitise-escrow.helper';
@@ -439,7 +438,7 @@ export class EscrowService {
       payer_id: '',
       payee_id: '',
       amount_coins: 0,
-          status: 'held' as EscrowStatus,
+      status: 'held' as EscrowStatus,
       reason: 'Processing delayed - queued for retry',
       metadata: {},
       held_at: now,
@@ -550,7 +549,10 @@ export class EscrowService {
         );
 
         // Record metric for Datadog alerting (#2381)
-        this.metricsService.recordEscrowRefunded(tx.amount_coins, reason || 'manual');
+        this.metricsService.recordEscrowRefunded(
+          tx.amount_coins,
+          reason || 'manual',
+        );
 
         return updated;
       },
@@ -578,7 +580,7 @@ export class EscrowService {
           payer_id: '',
           payee_id: '',
           amount_coins: 0,
-          status: 'held' as EscrowStatus,
+          status: 'held',
           reason: 'Refund delayed - queued for retry',
           metadata: {},
           held_at: now,
@@ -596,7 +598,7 @@ export class EscrowService {
       degradedMarker,
     );
 
-    const tx = result as EscrowTransaction;
+    const tx = result;
 
     if (!degradedMarker.degraded && tx.payer_id && tx.payee_id) {
       this.invalidateEscrowCaches(transactionId, tx.payer_id, tx.payee_id);
@@ -728,7 +730,7 @@ export class EscrowService {
         status: 'disputed' as EscrowStatus,
         reason: `${tx.reason ?? ''}\n[DISPUTE by ${userId}: ${reason}]`.trim(),
         metadata: {
-          ...(tx.metadata as Record<string, unknown> ?? {}),
+          ...(tx.metadata ?? {}),
           dispute_initiator: userId,
           dispute_filed_at: now,
           dispute_evidence: evidence ?? null,
@@ -806,12 +808,7 @@ export class EscrowService {
       throw new BadRequestException('Not authorised to view this escrow');
     }
 
-    void redis.set(
-      cacheKey,
-      JSON.stringify(tx),
-      'EX',
-      ESCROW_DETAIL_TTL,
-    );
+    void redis.set(cacheKey, JSON.stringify(tx), 'EX', ESCROW_DETAIL_TTL);
 
     return this.toResponse(tx);
   }
@@ -868,9 +865,16 @@ export class EscrowService {
       return [];
     }
 
-    const result = (data as EscrowTransaction[]).map((tx) => this.toResponse(tx));
+    const result = (data as EscrowTransaction[]).map((tx) =>
+      this.toResponse(tx),
+    );
 
-    void redis.set(cacheKey, JSON.stringify(result), 'EX', ESCROW_USER_LIST_TTL);
+    void redis.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      ESCROW_USER_LIST_TTL,
+    );
 
     return result;
   }

@@ -54,7 +54,7 @@ describe('AccountDeletionCron', () => {
     it('should log when no accounts are pending', async () => {
       mockReturns.mockResolvedValue({ data: [], error: null });
       const logSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
+        (cron as unknown as Record<string, unknown>).logger as {
           log: (msg: string) => void;
         },
         'log',
@@ -72,7 +72,7 @@ describe('AccountDeletionCron', () => {
       const fetchError = { message: 'DB error' };
       mockReturns.mockResolvedValue({ data: null, error: fetchError });
       const errorSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
+        (cron as unknown as Record<string, unknown>).logger as {
           error: (msg: string) => void;
         },
         'error',
@@ -92,7 +92,7 @@ describe('AccountDeletionCron', () => {
         undefined,
       );
       const logSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
+        (cron as unknown as Record<string, unknown>).logger as {
           log: (msg: string) => void;
         },
         'log',
@@ -120,7 +120,7 @@ describe('AccountDeletionCron', () => {
         new Error('Deletion failed'),
       );
       const errorSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
+        (cron as unknown as Record<string, unknown>).logger as {
           error: (msg: string) => void;
         },
         'error',
@@ -136,7 +136,7 @@ describe('AccountDeletionCron', () => {
         throw new Error('Unexpected error');
       });
       const errorSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
+        (cron as unknown as Record<string, unknown>).logger as {
           error: (msg: string) => void;
         },
         'error',

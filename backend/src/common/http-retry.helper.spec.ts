@@ -4,7 +4,7 @@ import { withExponentialBackoff } from './http-retry.helper';
 function createHttp429Error(
   message = 'Too Many Requests',
 ): Record<string, unknown> {
-  const error = new Error(message) as Record<string, unknown>;
+  const error = new Error(message) as unknown as Record<string, unknown>;
   error.response = { status: 429, data: { message } };
   error.status = 429;
   return error;

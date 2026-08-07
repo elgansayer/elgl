@@ -3,7 +3,8 @@ import { EscrowController } from './escrow.controller';
 import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
 import { CrashReportService } from './crash-report.service';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { SupabaseService } from '../supabase/supabase.service';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
 jest.mock('./sanitise-escrow.helper', () => ({
@@ -20,7 +21,7 @@ describe('EscrowController', () => {
   const mockTransactionId = '99999999-9999-9999-9999-999999999999';
 
   const mockRequest = {
-    user: { id: mockUserId },
+    user: { sub: mockUserId },
   };
 
   beforeEach(async () => {
@@ -78,6 +79,10 @@ describe('EscrowController', () => {
           provide: CrashReportService,
           useValue: mockCrashReportService,
         },
+        {
+          provide: SupabaseService,
+          useValue: { getClient: jest.fn(), getCacheClient: jest.fn(), getRedisClient: jest.fn() },
+        },
         EscrowExceptionFilter,
       ],
     })
@@ -104,7 +109,7 @@ describe('EscrowController', () => {
         reason: 'Test',
       };
 
-      const result = await controller.create(mockRequest, dto);
+      const result = await controller.holdCoins(mockRequest, dto);
       expect(mockEscrowService.holdCoins).toHaveBeenCalledWith(mockUserId, dto);
       expect(result.success).toBe(true);
       expect(result.transaction_id).toBe(mockTransactionId);
@@ -114,7 +119,7 @@ describe('EscrowController', () => {
   describe('release (releaseCoins)', () => {
     it('should call service.releaseCoins with correct params', async () => {
       const dto = { transaction_id: mockTransactionId };
-      const result = await controller.release(mockRequest, dto);
+      const result = await controller.releaseCoins(mockRequest, dto);
       expect(mockEscrowService.releaseCoins).toHaveBeenCalledWith(
         mockTransactionId,
         mockUserId,
@@ -126,7 +131,7 @@ describe('EscrowController', () => {
   describe('refund (refundCoins)', () => {
     it('should call service.refundCoins with correct params', async () => {
       const dto = { transaction_id: mockTransactionId, reason: 'Changed mind' };
-      const result = await controller.refund(mockRequest, dto);
+      const result = await controller.refundCoins(mockRequest, dto);
       expect(mockEscrowService.refundCoins).toHaveBeenCalledWith(
         mockTransactionId,
         mockUserId,
@@ -138,7 +143,7 @@ describe('EscrowController', () => {
 
   describe('list (listTransactions)', () => {
     it('should call service.listTransactions with defaults', async () => {
-      await controller.list(mockRequest);
+      await controller.listTransactions(mockRequest);
       expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
         mockUserId,
         undefined,
@@ -148,7 +153,7 @@ describe('EscrowController', () => {
     });
 
     it('should parse limit and offset query params', async () => {
-      await controller.list(mockRequest, '10', '5');
+      await controller.listTransactions(mockRequest, '10', '5');
       expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
         mockUserId,
         undefined,
@@ -160,7 +165,7 @@ describe('EscrowController', () => {
 
   describe('getById (getTransaction)', () => {
     it('should call service.getTransaction with correct params', async () => {
-      const result = await controller.getById(
+      const result = await controller.getTransaction(
         mockRequest,
         mockTransactionId,
       );
@@ -215,7 +220,7 @@ describe('EscrowController', () => {
       mockEscrowService.holdCoins.mockRejectedValue(error);
 
       await expect(
-        controller.create(mockRequest, {
+        controller.holdCoins(mockRequest, {
           payee_id: mockPayeeId,
           amount_coins: 50,
           reason: 'Test',
@@ -228,7 +233,7 @@ describe('EscrowController', () => {
       mockEscrowService.releaseCoins.mockRejectedValue(error);
 
       await expect(
-        controller.release(mockRequest, {
+        controller.releaseCoins(mockRequest, {
           transaction_id: mockTransactionId,
         }),
       ).rejects.toThrow('Release error');
@@ -239,7 +244,7 @@ describe('EscrowController', () => {
       mockEscrowService.refundCoins.mockRejectedValue(error);
 
       await expect(
-        controller.refund(mockRequest, {
+        controller.refundCoins(mockRequest, {
           transaction_id: mockTransactionId,
         }),
       ).rejects.toThrow('Refund error');
@@ -250,7 +255,7 @@ describe('EscrowController', () => {
       mockEscrowService.getTransaction.mockRejectedValue(error);
 
       await expect(
-        controller.getById(mockRequest, mockTransactionId),
+        controller.getTransaction(mockRequest, mockTransactionId),
       ).rejects.toThrow('Get error');
     });
 
@@ -258,7 +263,7 @@ describe('EscrowController', () => {
       const error = new Error('List error');
       mockEscrowService.listTransactions.mockRejectedValue(error);
 
-      await expect(controller.list(mockRequest)).rejects.toThrow(
+      await expect(controller.listTransactions(mockRequest)).rejects.toThrow(
         'List error',
       );
     });

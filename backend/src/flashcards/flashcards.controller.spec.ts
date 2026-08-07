@@ -91,7 +91,7 @@ describe('FlashcardsController', () => {
       };
       flashcardsService.getHealthStatus = jest.fn().mockReturnValue(health);
 
-      const result = controller.getHealth();
+      const result = controller.getHealthStatus();
       expect(result).toEqual(health);
       expect(flashcardsService.getHealthStatus).toHaveBeenCalled();
     });
@@ -207,9 +207,11 @@ describe('FlashcardsController', () => {
       const result = await controller.getFlashcards(
         mockUser(),
         '3',
+        undefined,
+        undefined,
         res as Response,
       );
-      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3);
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3, undefined, undefined);
       expect(result).toEqual(cards);
     });
 
@@ -221,7 +223,7 @@ describe('FlashcardsController', () => {
       flashcardsService.getFlashcards = jest.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
-      await controller.getFlashcards(mockUser(), undefined, res as Response);
+      await controller.getFlashcards(mockUser(), undefined, undefined, undefined, res as Response);
       expect(res.header).toHaveBeenCalledWith('X-SRS-Degraded', 'true');
     });
   });

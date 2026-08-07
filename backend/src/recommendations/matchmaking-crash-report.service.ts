@@ -10,11 +10,19 @@ export interface MatchmakingCrashReportPayload {
   stack_trace?: string;
   context?: Record<string, unknown>;
   circuit_breaker_open?: boolean;
-  degraded_tier?: string;
+  degraded_tier?: string | null;
 }
 
-export interface MatchmakingCrashReport extends MatchmakingCrashReportPayload {
+export interface MatchmakingCrashReport {
   id: string;
+  operation: string;
+  user_id?: string;
+  error_type: string;
+  error_message: string;
+  stack_trace?: string;
+  context?: Record<string, unknown>;
+  circuit_breaker_open?: boolean;
+  degraded_tier?: string | null;
   created_at: string;
   acknowledged: boolean;
   resolved_at?: string | null;
@@ -44,8 +52,9 @@ export class MatchmakingCrashReportService {
     try {
       const supabase = this.supabaseService.getClient();
 
-      const { data, error } = await supabase
-        .from('matchmaking_crash_reports')
+      // eslint-disable-next-line @typescript-eslint/await-thenable
+      const { data, error } = await (supabase
+        .from('matchmaking_crash_reports' as never)
         .insert({
           operation: payload.operation,
           user_id: payload.user_id ?? null,
@@ -56,9 +65,12 @@ export class MatchmakingCrashReportService {
           circuit_breaker_open: payload.circuit_breaker_open ?? false,
           degraded_tier: payload.degraded_tier ?? null,
           acknowledged: false,
-        })
+        } as never)
         .select('*')
-        .single();
+        .single() as unknown as {
+        data: MatchmakingCrashReport | null;
+        error: unknown;
+      });
 
       if (error || !data) {
         this.logger.error(
@@ -95,12 +107,15 @@ export class MatchmakingCrashReportService {
     try {
       const supabase = this.supabaseService.getClient();
 
-      const { data, error } = await supabase
-        .from('matchmaking_crash_reports')
+      const { data, error } = await (supabase
+        .from('matchmaking_crash_reports' as never)
         .select('*')
         .is('resolved_at', null)
         .order('created_at', { ascending: false })
-        .limit(limit);
+        .limit(limit) as unknown as {
+        data: unknown[] | null;
+        error: unknown;
+      });
 
       if (error || !data) {
         this.logger.error(
@@ -110,7 +125,7 @@ export class MatchmakingCrashReportService {
         return [];
       }
 
-      return (data as unknown[]).map((row: unknown) => {
+      return data.map((row: unknown) => {
         const r = row as Record<string, unknown>;
 
         const id = r['id'];
@@ -188,10 +203,10 @@ export class MatchmakingCrashReportService {
     try {
       const supabase = this.supabaseService.getClient();
 
-      const { error } = await supabase
-        .from('matchmaking_crash_reports')
-        .update({ acknowledged: true })
-        .eq('id', reportId);
+      const { error } = await (supabase
+        .from('matchmaking_crash_reports' as never)
+        .update({ acknowledged: true } as never)
+        .eq('id', reportId) as unknown as { error: unknown });
 
       if (error) {
         this.logger.error(
@@ -215,10 +230,10 @@ export class MatchmakingCrashReportService {
     try {
       const supabase = this.supabaseService.getClient();
 
-      const { error } = await supabase
-        .from('matchmaking_crash_reports')
-        .update({ resolved_at: new Date().toISOString() })
-        .eq('id', reportId);
+      const { error } = await (supabase
+        .from('matchmaking_crash_reports' as never)
+        .update({ resolved_at: new Date().toISOString() } as never)
+        .eq('id', reportId) as unknown as { error: unknown });
 
       if (error) {
         this.logger.error(
@@ -247,9 +262,12 @@ export class MatchmakingCrashReportService {
     try {
       const supabase = this.supabaseService.getClient();
 
-      const { data, error } = await supabase
-        .from('matchmaking_crash_reports')
-        .select('*');
+      const { data, error } = await (supabase
+        .from('matchmaking_crash_reports' as never)
+        .select('*') as unknown as {
+        data: unknown[] | null;
+        error: unknown;
+      });
 
       if (error || !data) {
         return {
@@ -260,7 +278,7 @@ export class MatchmakingCrashReportService {
         };
       }
 
-      const rows = data as unknown[] as Record<string, unknown>[];
+      const rows = data as Record<string, unknown>[];
       const unresolved = rows.filter((r) => r['resolved_at'] == null).length;
 
       const byTier: Record<string, number> = {};

@@ -32,6 +32,7 @@ describe('ModerationService', () => {
       recordTsReportSubmitted: jest.fn(),
       recordTsModerationAction: jest.fn(),
       recordTsDatingRiskScore: jest.fn(),
+      recordAdminReportResolution: jest.fn(),
       setTsPendingReports: jest.fn(),
     };
 

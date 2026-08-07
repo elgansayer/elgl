@@ -5,6 +5,7 @@ import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { withRetry } from '../common/retry';
 
 /**
  * Service responsible for flashcard CRUD and SRS (SM-2) scheduling with
@@ -70,6 +71,7 @@ export class FlashcardsService {
     ) {
       return true;
     }
+    return false;
   }
 
   async createOrUpdateFlashcard(
@@ -350,7 +352,12 @@ export class FlashcardsService {
     };
   }
 
-  async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+  async getFlashcards(
+    userId: string,
+    level?: number,
+    limit?: number,
+    offset?: number,
+  ): Promise<Flashcard[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('flashcards')
@@ -360,6 +367,13 @@ export class FlashcardsService {
 
     if (level !== undefined && !isNaN(level)) {
       query = query.eq('srs_level', level);
+    }
+
+    if (limit !== undefined && !isNaN(limit) && limit > 0) {
+      query = query.limit(Math.min(limit, 100));
+    }
+    if (offset !== undefined && !isNaN(offset) && offset > 0) {
+      query = query.range(offset, offset + (limit || 50) - 1);
     }
 
     try {

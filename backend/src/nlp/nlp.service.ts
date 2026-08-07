@@ -35,14 +35,18 @@ export class NlpService {
   /** Creates an AbortSignal that fires after the given timeout in milliseconds. */
   private static createTimeoutSignal(ms: number): AbortSignal {
     const controller = new AbortController();
-    setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), ms);
+    setTimeout(
+      () =>
+        controller.abort(new DOMException('Request timed out', 'TimeoutError')),
+      ms,
+    );
     return controller.signal;
   }
 
   /** fetch wrapper that enforces a configurable timeout. */
   private static async fetchWithTimeout(
     url: string,
-    init: RequestInit,
+    init: RequestInit = {},
     timeoutMs = NlpService.EXTERNAL_API_TIMEOUT_MS,
   ): Promise<Response> {
     const signal = NlpService.createTimeoutSignal(timeoutMs);
@@ -50,7 +54,7 @@ export class NlpService {
     const combinedSignal = init.signal
       ? (() => {
           const c = new AbortController();
-          init.signal!.addEventListener('abort', () => c.abort());
+          init.signal.addEventListener('abort', () => c.abort());
           signal.addEventListener('abort', () => c.abort());
           return c.signal;
         })()
@@ -101,26 +105,30 @@ export class NlpService {
     await this.checkRateLimit(userId, isVip);
 
     const cleanWord = dto.text.trim();
-    const detected = dto.source_language || this.detectLanguage(cleanWord).language;
+    const detected =
+      dto.source_language || this.detectLanguage(cleanWord).language;
 
     const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
 
     // Try DeepL first, fall back to local NLP.js-based transliteration
     if (deepLKey) {
       try {
-        const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
-          method: 'POST',
-          headers: {
-            Authorization: `DeepL-Auth-Key ${deepLKey}`,
-            'Content-Type': 'application/json',
+        const res = await NlpService.fetchWithTimeout(
+          'https://api-free.deepl.com/v2/translate',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `DeepL-Auth-Key ${deepLKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: [cleanWord],
+              target_lang: dto.target_language.toUpperCase(),
+              source_lang: detected.toUpperCase(),
+              tag_handling: 'xml',
+            }),
           },
-          body: JSON.stringify({
-            text: [cleanWord],
-            target_lang: dto.target_language.toUpperCase(),
-            source_lang: detected.toUpperCase(),
-            tag_handling: 'xml',
-          }),
-        });
+        );
 
         if (res.ok) {
           const jsonResponse = (await res.json()) as unknown as {
@@ -254,7 +262,9 @@ export class NlpService {
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify([
-                    { Text: `Grammar correction: "${orig}" → "${correctedText}"` },
+                    {
+                      Text: `Grammar correction: "${orig}" → "${correctedText}"`,
+                    },
                   ]),
                 },
               );
@@ -263,7 +273,8 @@ export class NlpService {
                   translations: Array<{ text: string }>;
                 }>;
                 explanation =
-                  explainData[0]?.translations[0]?.text || 'Corrected via Azure AI';
+                  explainData[0]?.translations[0]?.text ||
+                  'Corrected via Azure AI';
               }
             } catch {
               explanation = 'Corrected via Azure AI';
@@ -287,7 +298,8 @@ export class NlpService {
     return {
       original: orig,
       corrected: orig,
-      explanation: 'Grammar checking service is temporarily unavailable. Your text appears correct.',
+      explanation:
+        'Grammar checking service is temporarily unavailable. Your text appears correct.',
       errors_found: 0,
     };
   }
@@ -305,17 +317,20 @@ export class NlpService {
     }
 
     const prompt = `Explain the grammar difference between the original sentence and the corrected sentence. Original: "${dto.original}" Corrected: "${dto.corrected}". Provide a brief explanation in English.`;
-    const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await NlpService.fetchWithTimeout(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: [prompt],
+          target_lang: 'EN',
+        }),
       },
-      body: JSON.stringify({
-        text: [prompt],
-        target_lang: 'EN',
-      }),
-    });
+    );
     if (!res.ok) {
       const errorBody = await res.text();
       throw new BadRequestException(
@@ -387,7 +402,9 @@ export class NlpService {
               const overallScore = Math.round(
                 nBest.PronunciationAssessment?.AccuracyScore || 85,
               );
-              const words = dto.target_text.split(/\s+/).filter((w) => w.length > 0);
+              const words = dto.target_text
+                .split(/\s+/)
+                .filter((w) => w.length > 0);
 
               const breakdown: WordBreakdownItem[] = words.map((w, index) => {
                 const wordResult = nBest.Words?.[index];
@@ -434,7 +451,8 @@ export class NlpService {
     return {
       overall_score: 85,
       breakdown,
-      feedback_summary: 'Pronunciation scoring service is temporarily unavailable. Keep practising!',
+      feedback_summary:
+        'Pronunciation scoring service is temporarily unavailable. Keep practising!',
     };
   }
 
@@ -520,18 +538,21 @@ export class NlpService {
 
     const detected = this.detectLanguage(text).language;
 
-    const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await NlpService.fetchWithTimeout(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: [text],
+          target_lang: 'EN',
+          source_lang: detected.toUpperCase(),
+        }),
       },
-      body: JSON.stringify({
-        text: [text],
-        target_lang: 'EN',
-        source_lang: detected.toUpperCase(),
-      }),
-    });
+    );
 
     if (!res.ok) {
       const errorBody = await res.text();
@@ -588,17 +609,20 @@ export class NlpService {
     const keys = Object.keys(dto.dictionary);
     const values = keys.map((key) => dto.dictionary[key]);
 
-    const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await NlpService.fetchWithTimeout(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: values,
+          target_lang: targetLang.toUpperCase(),
+        }),
       },
-      body: JSON.stringify({
-        text: values,
-        target_lang: targetLang.toUpperCase(),
-      }),
-    });
+    );
 
     if (!res.ok) {
       const errorBody = await res.text();
@@ -698,19 +722,22 @@ export class NlpService {
     }
 
     // Translate the original text via DeepL
-    const res = await NlpService.fetchWithTimeout('https://api-free.deepl.com/v2/translate', {
-      method: 'POST',
-      headers: {
-        Authorization: `DeepL-Auth-Key ${deepLKey}`,
-        'Content-Type': 'application/json',
+    const res = await NlpService.fetchWithTimeout(
+      'https://api-free.deepl.com/v2/translate',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `DeepL-Auth-Key ${deepLKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: [cleanWord],
+          target_lang: dto.target_language.toUpperCase(),
+          source_lang: detected.toUpperCase(),
+          tag_handling: 'xml',
+        }),
       },
-      body: JSON.stringify({
-        text: [cleanWord],
-        target_lang: dto.target_language.toUpperCase(),
-        source_lang: detected.toUpperCase(),
-        tag_handling: 'xml',
-      }),
-    });
+    );
 
     if (!res.ok) {
       const errorBody = await res.text();
