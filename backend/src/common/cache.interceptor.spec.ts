@@ -38,34 +38,31 @@ describe('CacheControlInterceptor', () => {
       );
     });
 
-    it('CACHE_PRIVATE_SHORT should have private CDN cache with short max-age', () => {
+    it('CACHE_PRIVATE_SHORT should be an alias for CACHE_EDGE_SHORT', () => {
       expect(CACHE_PRIVATE_SHORT['Cache-Control']).toContain('private');
-      expect(CACHE_PRIVATE_SHORT['Cache-Control']).toContain('max-age=300');
-      expect(CACHE_PRIVATE_SHORT['Cache-Control']).toContain('s-maxage=1800');
-      expect(CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain('private');
-      expect(CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain('max-age=1800');
+      expect(CACHE_PRIVATE_SHORT['Cache-Control']).toContain('max-age=0');
+      expect(CACHE_PRIVATE_SHORT['Cache-Control']).toContain('must-revalidate');
+      expect(CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain('public');
+      expect(CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain('max-age=60');
       expect(CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain(
-        'stale-while-revalidate=600',
+        'stale-while-revalidate=60',
       );
     });
 
-    it('CACHE_PRIVATE_MEDIUM should have private CDN cache with medium max-age', () => {
+    it('CACHE_PRIVATE_MEDIUM should be an alias for CACHE_EDGE_MEDIUM', () => {
       expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain('private');
-      expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain('max-age=60');
-      expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain('s-maxage=300');
-      expect(CACHE_PRIVATE_MEDIUM['CDN-Cache-Control']).toContain('private');
+      expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain('max-age=0');
+      expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain('must-revalidate');
+      expect(CACHE_PRIVATE_MEDIUM['CDN-Cache-Control']).toContain('public');
       expect(CACHE_PRIVATE_MEDIUM['CDN-Cache-Control']).toContain('max-age=300');
       expect(CACHE_PRIVATE_MEDIUM['CDN-Cache-Control']).toContain(
         'stale-while-revalidate=120',
       );
     });
 
-    it('CACHE_PRIVATE_NO_STORE should prohibit all caching', () => {
-      expect(CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain('private');
-      expect(CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain('no-store');
-      expect(CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain('no-cache');
-      expect(CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain(
-        'must-revalidate',
+    it('CACHE_PRIVATE_NO_STORE should be an alias for CACHE_NO_STORE', () => {
+      expect(CACHE_PRIVATE_NO_STORE['Cache-Control']).toBe(
+        'private, no-store',
       );
       expect(CACHE_PRIVATE_NO_STORE['CDN-Cache-Control']).toBe(
         'private, no-store',
@@ -103,7 +100,7 @@ describe('CacheControlInterceptor', () => {
         'CDN-Cache-Control',
         CACHE_PUBLIC_LONG['CDN-Cache-Control'],
       );
-      expect(setHeader).toHaveBeenCalledTimes(2);
+      expect(setHeader).toHaveBeenCalledTimes(3);
     });
 
     it('should override to no-store on error', async () => {

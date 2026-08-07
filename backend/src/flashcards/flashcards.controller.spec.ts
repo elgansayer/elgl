@@ -71,6 +71,7 @@ describe('FlashcardsController', () => {
             updateSrsLevel: jest.fn(),
             getFlashcards: jest.fn(),
             getDueReviews: jest.fn(),
+            purgeSrsCache: jest.fn(),
           },
         },
       ],
@@ -122,6 +123,7 @@ describe('FlashcardsController', () => {
         'user-1',
         dto,
       );
+      expect(flashcardsService.purgeSrsCache).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(card);
     });
   });
