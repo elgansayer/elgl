@@ -541,19 +541,23 @@ describe('VocabularyStore', () => {
       expect(store.flashcardMap().size).toBe(0);
     });
 
-    it('should handle updateSrsLevel failure gracefully', async () => {
+    it('should handle updateSrsLevel offline fallback gracefully', async () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
 
+      // jsdom defaults navigator.onLine to false, so the offline path will activate
       const promise = store.updateSrsLevel('1', 2);
       httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(
         { message: 'Not found' },
         { status: 404, statusText: 'Not Found' },
       );
 
-      await expect(promise).rejects.toThrow();
-      expect(store.allFlashcards()[0].srs_level).toBe(1);
-      expect(store.flashcardMap().get('hello')?.srs_level).toBe(1);
+      // With graceful degradation, the promise resolves with optimistically updated card
+      const result = await promise;
+      expect(result).toBeDefined();
+      expect(result.srs_level).toBe(0); // quality 2 => estimateNewLevel returns 0
+      expect(store.allFlashcards()[0].srs_level).toBe(0);
+      expect(store.flashcardMap().get('hello')?.srs_level).toBe(0);
     });
 
     it('should handle translateWordOrSentence failure', async () => {

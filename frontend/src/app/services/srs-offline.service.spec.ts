@@ -1,278 +1,374 @@
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
-import { SrsOfflineService } from './srs-offline.service';
+import { TestBed } from '@angular/core/testing';
+import {
+  SrsOfflineService,
+  QueuedSrsReview,
+} from './srs-offline.service';
 import { Flashcard } from './vocabulary.store';
-
-const mockFlashcard: Flashcard = {
-  id: '1',
-  user_id: 'user1',
-  word_token: 'hello',
-  translation: 'hola',
-  srs_level: 1,
-  easiness_factor: 2.5,
-  repetitions: 1,
-  interval_days: 1,
-  next_review_at: new Date().toISOString(),
-  created_at: new Date().toISOString(),
-};
+import { NetworkStatusService } from './network-status.service';
 
 describe('SrsOfflineService', () => {
   let service: SrsOfflineService;
+  let storeData: Map<string, Map<string, unknown>>;
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  const mockFlashcard: Flashcard = {
+    id: 'fc-1',
+    user_id: 'user-1',
+    word_token: 'bonjour',
+    translation: 'hello',
+    srs_level: 2,
+    easiness_factor: 2.5,
+    repetitions: 2,
+    interval_days: 6,
+    next_review_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  };
 
-  describe('initial state (no IndexedDB)', () => {
-    beforeEach(() => {
-      vi.stubGlobal('indexedDB', undefined);
+  const mockFlashcard2: Flashcard = {
+    id: 'fc-2',
+    user_id: 'user-1',
+    word_token: 'merci',
+    translation: 'thank you',
+    srs_level: 1,
+    easiness_factor: 2.5,
+    repetitions: 1,
+    interval_days: 1,
+    next_review_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  };
+
+  function createSyncRequest(result?: unknown) {
+    const req: Record<string, unknown> = {
+      result: result ?? null,
+      error: null as DOMException | null,
+      _onsuccess: null as (() => void) | null,
+      _onerror: null as (() => void) | null,
+    };
+    Object.defineProperty(req, 'onsuccess', {
+      get(this: Record<string, unknown>) { return this._onsuccess; },
+      set(this: Record<string, unknown>, fn: () => void) {
+        this._onsuccess = fn;
+        // Fire synchronously so the IDB promise resolves immediately
+        setTimeout(() => fn(), 0);
+      },
+    });
+    Object.defineProperty(req, 'onerror', {
+      get(this: Record<string, unknown>) { return this._onerror; },
+      set(this: Record<string, unknown>, fn: () => void) { this._onerror = fn; },
+    });
+    return req;
+  }
+
+  function createMockDB(storeMap: Map<string, Map<string, unknown>>) {
+    return {
+      objectStoreNames: {
+        contains: (_name: string) => true,
+      },
+      transaction: (_storeName: string, _mode: string): Record<string, unknown> => {
+        const store = storeMap.get(_storeName) ?? new Map();
+        const txDeferred: (() => void)[] = [];
+        const txObj = {
+          _oncomplete: null as (() => void) | null,
+          _onerror: null as (() => void) | null,
+          error: null,
+          objectStore: () => ({
+            put: (entry: Record<string, unknown>) => {
+              const id = entry.id ?? entry.flashcardId;
+              store.set(id as string, entry);
+              return createSyncRequest();
+            },
+            getAll: () => {
+              const r = createSyncRequest();
+              r.result = Array.from(store.values());
+              return r;
+            },
+            delete: (id: string) => {
+              store.delete(id);
+              return createSyncRequest();
+            },
+            clear: () => {
+              store.clear();
+              return createSyncRequest();
+            },
+            index: (indexName: string) => ({
+              getAll: () => {
+                const r = createSyncRequest();
+                const values = Array.from(store.values());
+                // Sort by queuedAt ascending
+                values.sort((a, b) => {
+                  const aVal = (a as Record<string, unknown>)[indexName] as number ?? 0;
+                  const bVal = (b as Record<string, unknown>)[indexName] as number ?? 0;
+                  return aVal - bVal;
+                });
+                r.result = values;
+                return r;
+              },
+            }),
+          }),
+        };
+        Object.defineProperty(txObj, 'oncomplete', {
+          get(this: Record<string, unknown>) { return this._oncomplete; },
+          set(this: Record<string, unknown>, fn: () => void) {
+            this._oncomplete = fn;
+            setTimeout(() => fn(), 0);
+          },
+        });
+        Object.defineProperty(txObj, 'onerror', {
+          get(this: Record<string, unknown>) { return this._onerror; },
+          set(this: Record<string, unknown>, fn: () => void) { this._onerror = fn; },
+        });
+        return txObj;
+      },
+    };
+  }
+
+  beforeEach(() => {
+    storeData = new Map([
+      ['flashcards', new Map()],
+      ['due_reviews', new Map()],
+      ['review_queue', new Map()],
+    ]);
+
+    vi.stubGlobal('indexedDB', {
+      open: () => {
+        const req = createSyncRequest();
+        req.result = createMockDB(storeData);
+        return req;
+      },
     });
 
-    it('should create', () => {
-      service = new SrsOfflineService();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        SrsOfflineService,
+        { provide: NetworkStatusService, useValue: new NetworkStatusService() },
+      ],
+    });
+    service = TestBed.inject(SrsOfflineService);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  describe('creation', () => {
+    it('should be created', () => {
       expect(service).toBeTruthy();
     });
 
-    it('should initialise queuedReviewCount as 0', () => {
-      service = new SrsOfflineService();
-      expect(service.queuedReviewCount()).toBe(0);
+    it('should initialise with zero pending reviews', () => {
+      expect(service.pendingReviewCount()).toBe(0);
     });
   });
 
-  describe('SSR guard (no IndexedDB)', () => {
-    beforeEach(() => {
-      vi.stubGlobal('indexedDB', undefined);
-      service = new SrsOfflineService();
-    });
-
-    it('should return empty array for getCachedFlashcards when no IndexedDB', async () => {
-      const result = await service.getCachedFlashcards();
-      expect(result).toEqual([]);
-    });
-
-    it('should return empty array for getCachedDueReviews when no IndexedDB', async () => {
-      const result = await service.getCachedDueReviews();
-      expect(result).toEqual([]);
-    });
-
-    it('should not throw when cacheFlashcards called without IndexedDB', async () => {
-      await expect(service.cacheFlashcards([mockFlashcard])).resolves.toBeUndefined();
-    });
-
-    it('should not throw when cacheDueReviews called without IndexedDB', async () => {
-      await expect(service.cacheDueReviews([mockFlashcard])).resolves.toBeUndefined();
-    });
-
-    it('should not throw when queueSrsReview called without IndexedDB', async () => {
-      await expect(service.queueSrsReview('1', 4, 2)).resolves.toBeUndefined();
-    });
-
-    it('should return zeros from syncQueuedReviews without IndexedDB', async () => {
-      const result = await service.syncQueuedReviews(async () => {
-        // noop
-      });
-      expect(result).toEqual({ synced: 0, failed: 0 });
-    });
-
-    it('should handle multiple parallel operations without IndexedDB', async () => {
-      const results = await Promise.all([
-        service.getCachedFlashcards(),
-        service.getCachedDueReviews(),
-        service.cacheFlashcards([mockFlashcard]),
-        service.cacheDueReviews([mockFlashcard]),
-        service.queueSrsReview('1', 3, 1),
-        service.syncQueuedReviews(vi.fn()),
-      ]);
-
-      expect(results[0]).toEqual([]);
-      expect(results[1]).toEqual([]);
-      expect(results[5]).toEqual({ synced: 0, failed: 0 });
-    });
-  });
-
-  describe('with IndexedDB available', () => {
-    let mockStores: Map<string, Map<string, unknown>>;
-    let openCallbacks: {
-      onsuccess: (() => void) | null;
-      onerror: (() => void) | null;
-      onupgradeneeded: ((event: unknown) => void) | null;
-    };
-
-    function createMockOpenRequest() {
-      openCallbacks = { onsuccess: null, onerror: null, onupgradeneeded: null };
-      return {
-        get onsuccess() { return openCallbacks.onsuccess; },
-        set onsuccess(fn: (() => void) | null) { openCallbacks.onsuccess = fn; },
-        get onerror() { return openCallbacks.onerror; },
-        set onerror(fn: (() => void) | null) { openCallbacks.onerror = fn; },
-        get onupgradeneeded() { return openCallbacks.onupgradeneeded; },
-        set onupgradeneeded(fn: ((event: unknown) => void) | null) { openCallbacks.onupgradeneeded = fn; },
-        result: null as unknown,
-        error: null as unknown,
-      };
-    }
-
-    function createMockDB(): Record<string, unknown> {
-      mockStores = new Map();
-      mockStores.set('flashcards', new Map<string, unknown>());
-      mockStores.set('due_reviews', new Map<string, unknown>());
-      mockStores.set('review_queue', new Map<string, unknown>());
-
-      return {
-        objectStoreNames: {
-          contains: (name: string) => mockStores.has(name),
-        },
-        createObjectStore: (name: string, opts: { keyPath?: string }) => {
-          const store = new Map<string, unknown>();
-          mockStores.set(name, store);
-          // Attach metadata
-          (store as Map<string, unknown> & { _keyPath?: string })._keyPath = opts?.keyPath;
-          return {
-            createIndex: () => undefined,
-          };
-        },
-        transaction: (storeNames: string | string[], mode: string) => {
-          const names = Array.isArray(storeNames) ? storeNames : [storeNames];
-          let oncompleteFn: (() => void) | null = null;
-          let onerrorFn: (() => void) | null = null;
-
-          const tx = {
-            get oncomplete() { return oncompleteFn; },
-            set oncomplete(fn: (() => void) | null) { oncompleteFn = fn; },
-            get onerror() { return onerrorFn; },
-            set onerror(fn: (() => void) | null) { onerrorFn = fn; },
-            objectStore: (name: string) => {
-              const storeData = mockStores.get(name)!;
-              const store = {
-                put: (value: unknown) => {
-                  const record = value as Record<string, unknown>;
-                  if (record && 'id' in record) {
-                    storeData.set(String(record.id), value);
-                  } else if (record && 'flashcardId' in record) {
-                    storeData.set(String(record.flashcardId), value);
-                  }
-                  const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
-                  setTimeout(() => {
-                    if (req.onsuccess) req.onsuccess();
-                    if (oncompleteFn) oncompleteFn();
-                  }, 0);
-                  return req;
-                },
-                getAll: () => {
-                  const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null, result: [] as unknown[] };
-                  req.result = Array.from(storeData.values());
-                  setTimeout(() => {
-                    if (req.onsuccess) req.onsuccess();
-                    if (oncompleteFn) oncompleteFn();
-                  }, 0);
-                  return req;
-                },
-                count: () => {
-                  const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null, result: 0 };
-                  req.result = storeData.size;
-                  setTimeout(() => {
-                    if (req.onsuccess) req.onsuccess();
-                  }, 0);
-                  return req;
-                },
-                clear: () => {
-                  storeData.clear();
-                  if (oncompleteFn) setTimeout(() => oncompleteFn(), 0);
-                },
-                delete: (key: string) => {
-                  storeData.delete(key);
-                },
-                index: (indexName: string) => ({
-                  getAll: () => {
-                    const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null, result: [] as unknown[] };
-                    req.result = Array.from(storeData.values());
-                    setTimeout(() => {
-                      if (req.onsuccess) req.onsuccess();
-                      if (oncompleteFn) oncompleteFn();
-                    }, 0);
-                    return req;
-                  },
-                }),
-              };
-              return store;
-            },
-          };
-          return tx;
-        },
-      };
-    }
-
-    beforeEach(() => {
-      mockStores = new Map();
-      const mockOpenRequest = createMockOpenRequest();
-      const mockDB = createMockDB();
-
-      vi.stubGlobal('indexedDB', {
-        open: vi.fn(() => {
-          // Trigger onupgradeneeded and onsuccess
-          setTimeout(() => {
-            if (openCallbacks.onupgradeneeded) {
-              openCallbacks.onupgradeneeded({ target: { result: mockDB } });
-            }
-            mockOpenRequest.result = mockDB;
-            if (openCallbacks.onsuccess) {
-              openCallbacks.onsuccess();
-            }
-          }, 0);
-          return mockOpenRequest;
-        }),
-        deleteDatabase: vi.fn(),
-      });
-    });
-
-    it('should initialise DB and refresh queue count', async () => {
-      service = new SrsOfflineService();
-      // Wait for DB init
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(service.queuedReviewCount()).toBe(0);
-    });
-
+  describe('flashcard cache', () => {
     it('should cache and retrieve flashcards', async () => {
-      service = new SrsOfflineService();
-      await new Promise((r) => setTimeout(r, 10));
+      await service.cacheFlashcards([mockFlashcard, mockFlashcard2]);
+      const cached = await service.getCachedFlashcards();
+      expect(cached.length).toBe(2);
+      expect(cached.find((c) => c.id === 'fc-1')).toEqual(mockFlashcard);
+      expect(cached.find((c) => c.id === 'fc-2')).toEqual(mockFlashcard2);
+    });
 
+    it('should overwrite cache on subsequent cacheFlashcards calls', async () => {
       await service.cacheFlashcards([mockFlashcard]);
-      const result = await service.getCachedFlashcards();
-
-      expect(result.length).toBe(1);
-      expect(result[0].word_token).toBe('hello');
+      await service.cacheFlashcards([mockFlashcard2]);
+      const cached = await service.getCachedFlashcards();
+      expect(cached.length).toBe(1);
+      expect(cached[0].id).toBe('fc-2');
     });
 
+    it('should return empty array when no flashcards cached', async () => {
+      const cached = await service.getCachedFlashcards();
+      expect(cached).toEqual([]);
+    });
+  });
+
+  describe('due reviews cache', () => {
     it('should cache and retrieve due reviews', async () => {
-      service = new SrsOfflineService();
-      await new Promise((r) => setTimeout(r, 10));
-
       await service.cacheDueReviews([mockFlashcard]);
-      const result = await service.getCachedDueReviews();
-
-      expect(result.length).toBe(1);
-      expect(result[0].word_token).toBe('hello');
+      const cached = await service.getCachedDueReviews();
+      expect(cached.length).toBe(1);
+      expect(cached[0]).toEqual(mockFlashcard);
     });
 
-    it('should queue a review and increment counter', async () => {
-      service = new SrsOfflineService();
-      await new Promise((r) => setTimeout(r, 10));
-
-      // Override refreshQueueCount since it uses private method
-      await service.queueSrsReview('card1', 4, 2);
-      expect(service.queuedReviewCount()).toBe(1);
+    it('should overwrite on subsequent cacheDueReviews calls', async () => {
+      await service.cacheDueReviews([mockFlashcard]);
+      await service.cacheDueReviews([mockFlashcard2, mockFlashcard]);
+      const cached = await service.getCachedDueReviews();
+      expect(cached.length).toBe(2);
     });
 
-    it('should sync queued reviews without error', async () => {
-      service = new SrsOfflineService();
+    it('should return empty array when no due reviews cached', async () => {
+      const cached = await service.getCachedDueReviews();
+      expect(cached).toEqual([]);
+    });
+  });
+
+  describe('review queue', () => {
+    it('should queue, list, and remove a review', async () => {
+      await service.queueSrsReview('fc-1', 4, 3);
+      // Wait for IDB async operations to complete
+      await new Promise((r) => setTimeout(r, 50));
+      expect(service.pendingReviewCount()).toBe(1);
+
+      const queued = await service.getQueuedReviews();
+      expect(queued.length).toBe(1);
+      expect(queued[0].flashcardId).toBe('fc-1');
+      expect(queued[0].quality).toBe(4);
+      expect(queued[0].newLevel).toBe(3);
+      expect(queued[0].queuedAt).toBeGreaterThan(0);
+
+      await service.removeQueuedReview('fc-1');
+      await new Promise((r) => setTimeout(r, 50));
+      expect(service.pendingReviewCount()).toBe(0);
+      const after = await service.getQueuedReviews();
+      expect(after.length).toBe(0);
+    });
+
+    it('should queue multiple reviews and order by queuedAt', async () => {
+      await service.queueSrsReview('fc-1', 4, 3);
       await new Promise((r) => setTimeout(r, 10));
+      await service.queueSrsReview('fc-2', 2, 0);
+      await new Promise((r) => setTimeout(r, 50));
 
-      // Sync with empty queue should return zeros
-      const syncFn = vi.fn().mockResolvedValue(undefined);
-      const result = await service.syncQueuedReviews(syncFn);
+      const queued = await service.getQueuedReviews();
+      expect(queued.length).toBe(2);
+      // Should be ordered ascending by queuedAt
+      expect(queued[0].flashcardId).toBe('fc-1');
+      expect(queued[1].flashcardId).toBe('fc-2');
+    });
 
-      // With empty DB, should return 0 synced, 0 failed
+    it('should not go below zero on extra removes', async () => {
+      await service.queueSrsReview('fc-1', 4, 3);
+      await new Promise((r) => setTimeout(r, 50));
+      await service.removeQueuedReview('fc-1');
+      await new Promise((r) => setTimeout(r, 50));
+      await service.removeQueuedReview('fc-1'); // double remove
+      expect(service.pendingReviewCount()).toBe(0);
+    });
+
+    it('should clear all queued reviews', async () => {
+      await service.queueSrsReview('fc-1', 4, 3);
+      await service.queueSrsReview('fc-2', 2, 0);
+      await new Promise((r) => setTimeout(r, 50));
+      expect(service.pendingReviewCount()).toBe(2);
+
+      await service.clearAllQueuedReviews();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(service.pendingReviewCount()).toBe(0);
+      const queued = await service.getQueuedReviews();
+      expect(queued.length).toBe(0);
+    });
+
+    it('should deduplicate by flashcardId (upsert)', async () => {
+      await service.queueSrsReview('fc-1', 4, 3);
+      await new Promise((r) => setTimeout(r, 10));
+      await service.queueSrsReview('fc-1', 2, 0);
+      await new Promise((r) => setTimeout(r, 50));
+
+      const queued = await service.getQueuedReviews();
+      expect(queued.length).toBe(1);
+      expect(queued[0].quality).toBe(2); // latest wins
+      expect(service.pendingReviewCount()).toBe(1);
+    });
+  });
+
+  describe('syncQueuedReviews', () => {
+    it('should sync all queued reviews and clear the queue', async () => {
+      await service.queueSrsReview('fc-1', 4, 3);
+      await service.queueSrsReview('fc-2', 5, 4);
+      await new Promise((r) => setTimeout(r, 50));
+
+      const sent: QueuedSrsReview[] = [];
+      const sendReview = vi.fn(async (entry: QueuedSrsReview) => {
+        sent.push(entry);
+      });
+
+      const result = await service.syncQueuedReviews(sendReview);
+      expect(result.synced).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(sendReview).toHaveBeenCalledTimes(2);
+      expect(sent[0].flashcardId).toBe('fc-1');
+      expect(sent[1].flashcardId).toBe('fc-2');
+
+      await new Promise((r) => setTimeout(r, 50));
+      expect(service.pendingReviewCount()).toBe(0);
+      const queued = await service.getQueuedReviews();
+      expect(queued.length).toBe(0);
+    });
+
+    it('should handle partial failures and keep failed in queue', async () => {
+      await service.queueSrsReview('fc-1', 4, 3);
+      await service.queueSrsReview('fc-2', 5, 4);
+      await new Promise((r) => setTimeout(r, 50));
+
+      const sendReview = vi.fn(async (entry: QueuedSrsReview) => {
+        if (entry.flashcardId === 'fc-1') {
+          throw new Error('Network error');
+        }
+      });
+
+      const result = await service.syncQueuedReviews(sendReview);
+      expect(result.synced).toBe(1);
+      expect(result.failed).toBe(1);
+
+      await new Promise((r) => setTimeout(r, 50));
+      expect(service.pendingReviewCount()).toBe(1);
+
+      const queued = await service.getQueuedReviews();
+      expect(queued.length).toBe(1);
+      expect(queued[0].flashcardId).toBe('fc-1');
+    });
+
+    it('should return zero synced for empty queue', async () => {
+      const sendReview = vi.fn();
+      const result = await service.syncQueuedReviews(sendReview);
       expect(result).toEqual({ synced: 0, failed: 0 });
-    }, 10000);
+      expect(sendReview).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('degradation when IndexedDB unavailable', () => {
+    it('should return empty array from getCachedFlashcards when IDB is unavailable', async () => {
+      vi.unstubAllGlobals();
+      vi.stubGlobal('indexedDB', undefined);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          SrsOfflineService,
+          { provide: NetworkStatusService, useValue: new NetworkStatusService() },
+        ],
+      });
+      const degradedService = TestBed.inject(SrsOfflineService);
+
+      // These should not throw
+      await degradedService.cacheFlashcards([mockFlashcard]);
+      await degradedService.cacheDueReviews([mockFlashcard]);
+      await degradedService.queueSrsReview('fc-1', 4, 3);
+
+      expect(await degradedService.getCachedFlashcards()).toEqual([]);
+      expect(await degradedService.getCachedDueReviews()).toEqual([]);
+      expect(await degradedService.getQueuedReviews()).toEqual([]);
+      expect(degradedService.pendingReviewCount()).toBe(0);
+    });
+
+    it('should not throw when window is undefined (SSR)', () => {
+      const originalWindow = globalThis.window;
+      // @ts-expect-error - simulating SSR
+      delete globalThis.window;
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          SrsOfflineService,
+          { provide: NetworkStatusService, useValue: new NetworkStatusService() },
+        ],
+      });
+      const ssrService = TestBed.inject(SrsOfflineService);
+      expect(ssrService).toBeTruthy();
+
+      globalThis.window = originalWindow;
+    });
   });
 });
