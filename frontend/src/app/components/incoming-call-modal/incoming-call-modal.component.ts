@@ -1,4 +1,5 @@
 import { Component, input, output, effect, OnDestroy, viewChild, ElementRef } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 export interface IncomingCallData {
   callerId: string;
@@ -24,7 +25,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 
 @Component({
   selector: 'app-incoming-call-modal',
-  imports: [],
+  imports: [TranslatePipe],
   template: `
     @if (callData(); as data) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -86,7 +87,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
               </div>
-              <span class="text-sm text-text-muted group-hover:text-slate-300">Decline</span>
+              <span class="text-sm text-text-muted group-hover:text-slate-300">{{ 'components.incoming-call-modal.decline' | t }}</span>
             </button>
 
             <!-- Accept Button -->
@@ -129,7 +130,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   </svg>
                 }
               </div>
-              <span class="text-sm text-green-400 group-hover:text-green-300">Accept</span>
+              <span class="text-sm text-green-400 group-hover:text-green-300">{{ 'components.incoming-call-modal.accept' | t }}</span>
             </button>
           </div>
         </div>

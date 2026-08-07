@@ -10,21 +10,21 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { RestorePurchasesButtonComponent } from '../restore-purchases-button/restore-purchases-button.component';
 import { environment } from '../../../environments/environment';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-subscription-plans',
   imports: [
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
-    RestorePurchasesButtonComponent,
-  ],
+    RestorePurchasesButtonComponent, TranslatePipe],
   template: `
     <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-12 px-4">
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-12">
-          <h1 class="text-4xl font-bold text-white mb-4">Choose Your Plan</h1>
+          <h1 class="text-4xl font-bold text-white mb-4">{{ 'components.subscription-plans.chooseYourPlan' | t }}</h1>
           <p class="text-slate-300 text-lg">
-            Unlock premium features to accelerate your language learning
+            {{ 'components.subscription-plans.unlockPremiumFeaturesToAc' | t }}
           </p>
         </div>
 
@@ -39,7 +39,7 @@ import { environment } from '../../../environments/environment';
               "
               class="px-6 py-2 rounded-full font-medium transition-all duration-200"
             >
-              Monthly
+              {{ 'components.subscription-plans.monthly' | t }}
             </button>
             <button
               (click)="billingInterval.set('year')"
@@ -50,7 +50,7 @@ import { environment } from '../../../environments/environment';
               "
               class="px-6 py-2 rounded-full font-medium transition-all duration-200"
             >
-              Yearly
+              {{ 'components.subscription-plans.yearly' | t }}
               <span class="text-xs ms-1 text-green-400">Save 48%</span>
             </button>
           </div>
@@ -110,7 +110,7 @@ import { environment } from '../../../environments/environment';
 
                 @if (plan.price_usd === 0) {
                   <app-button-secondary [disabled]="true" customClass="w-full">
-                    Current Plan
+                    {{ 'components.subscription-plans.currentPlan' | t }}
                   </app-button-secondary>
                 } @else {
                   <app-button-primary
@@ -132,7 +132,7 @@ import { environment } from '../../../environments/environment';
       </div>
       <div class="mt-6 text-center">
         <p class="text-xs text-slate-400 mb-2">
-          Already purchased? Restore your previous purchases below.
+          {{ 'components.subscription-plans.alreadyPurchasedRestoreYo' | t }}
         </p>
         <app-restore-purchases-button />
       </div>

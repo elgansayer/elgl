@@ -3,15 +3,16 @@ import { Component, inject, computed } from '@angular/core';
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
 import { FlashcardService } from '../../services/flashcard.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 
 @Component({
   selector: 'app-vocabulary-display',
-  imports: [],
+  imports: [TranslatePipe],
   template: `
     <div class="space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-lg font-bold text-slate-200">Vocabulary from your interests</h3>
+        <h3 class="text-lg font-bold text-slate-200">{{ 'components.vocabulary-display.vocabularyFromYourInteres' | t }}</h3>
         <button
           (click)="refreshVocabulary()"
           class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
@@ -30,7 +31,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
           class="p-8 text-center text-text-muted bg-surface-800/30 rounded-xl border border-dashed border-slate-700"
         >
           <p class="text-lg mb-2">📚</p>
-          <p>No vocabulary yet. Select some hobbies to get started!</p>
+          <p>{{ 'components.vocabulary-display.noVocabularyYetSelectSome' | t }}</p>
         </div>
       }
 

@@ -1,9 +1,10 @@
 import { Component, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-sticker-picker',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     <!-- Backdrop -->
     @if (isOpen()) {
@@ -38,7 +39,7 @@ import { CommonModule } from '@angular/common';
       <div
         class="px-4 pb-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center"
       >
-        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">Stickers</h3>
+        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">{{ 'components.sticker-picker.stickers' | t }}</h3>
       </div>
 
       <!-- Sticker Grid -->

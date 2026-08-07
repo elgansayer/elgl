@@ -21,7 +21,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         tabindex="0"
         role="button"
       >
-        <h3 class="text-lg font-semibold text-white mb-4">Crop Cover Photo</h3>
+        <h3 class="text-lg font-semibold text-white mb-4">{{ 'components.cover-photo-cropper.cropCoverPhoto' | t }}</h3>
 
         <div class="relative max-h-64 overflow-hidden rounded-lg mb-4">
           <image-cropper
@@ -48,7 +48,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             [disabled]="!croppedBlob()"
             class="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
-            Save Cover Photo
+            {{ 'components.cover-photo-cropper.saveCoverPhoto' | t }}
           </button>
         </div>
       </div>

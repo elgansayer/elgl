@@ -1,7 +1,7 @@
 <div class="update-overlay" role="dialog" aria-modal="true" aria-labelledby="update-title">
   <div class="update-card">
-    <h2 id="update-title">Update Required</h2>
+    <h2 id="update-title">{{ 'components.update-modal.updateRequired' | t }}</h2>
     <p class="update-message">{{ message }}</p>
-    <button class="update-button" (click)="handleClose()">OK</button>
+    <button class="update-button" (click)="handleClose()">{{ 'components.update-modal.ok' | t }}</button>
   </div>
 </div>

@@ -1,12 +1,14 @@
 import { Component, input, inject } from '@angular/core';
 import { AdminService } from '../../services/admin.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  imports: [TranslatePipe],
   selector: 'app-admin-user-actions',
   template: `
     <div class="flex gap-2">
-      <button (click)="handleBan()" class="btn btn-danger">Ban</button>
-      <button (click)="handleWarn()" class="btn btn-warning">Warn</button>
+      <button (click)="handleBan()" class="btn btn-danger">{{ 'components.admin-user-actions.ban' | t }}</button>
+      <button (click)="handleWarn()" class="btn btn-warning">{{ 'components.admin-user-actions.warn' | t }}</button>
     </div>
   `,
 })

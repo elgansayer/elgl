@@ -1,13 +1,15 @@
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { EventsService, Event } from '../../services/events.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  imports: [TranslatePipe],
   standalone: true,
   template: `
     <div class="min-h-screen bg-[#121212] text-white p-4">
       <div class="max-w-2xl mx-auto">
-        <h1 class="text-2xl font-bold mb-4">Event Calendar</h1>
+        <h1 class="text-2xl font-bold mb-4">{{ 'components.events-calendar.eventCalendar' | t }}</h1>
         <div class="flex items-center justify-between mb-6">
           <button
             class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600"

@@ -62,13 +62,13 @@
           required
         />
         <p class="text-xs text-text-muted mt-1">
-          Free users: max 1 language. VIP: up to 3 languages.
+          {{ 'components.profile-edit.freeUsersMax1LanguageVipU' | t }}
         </p>
       </div>
 
       <!-- Bio -->
       <div>
-        <label for="bio_text" class="block text-sm font-medium mb-1">Bio</label>
+        <label for="bio_text" class="block text-sm font-medium mb-1">{{ 'components.profile-edit.bio' | t }}</label>
         <textarea
           id="bio_text"
           formControlName="bio_text"
@@ -80,22 +80,22 @@
 
       <!-- Privacy Settings -->
       <fieldset class="border border-base-300 rounded p-4">
-        <legend class="text-sm font-medium">Privacy Settings</legend>
+        <legend class="text-sm font-medium">{{ 'components.profile-edit.privacySettings' | t }}</legend>
         <div class="form-control">
           <label class="label cursor-pointer">
-            <span class="label-text">Hide Age</span>
+            <span class="label-text">{{ 'components.profile-edit.hideAge' | t }}</span>
             <input type="checkbox" formControlName="privacy_hide_age" class="checkbox" />
           </label>
         </div>
         <div class="form-control">
           <label class="label cursor-pointer">
-            <span class="label-text">Hide Location</span>
+            <span class="label-text">{{ 'components.profile-edit.hideLocation' | t }}</span>
             <input type="checkbox" formControlName="privacy_hide_location" class="checkbox" />
           </label>
         </div>
         <div class="form-control">
           <label class="label cursor-pointer">
-            <span class="label-text">Hide from Search</span>
+            <span class="label-text">{{ 'components.profile-edit.hideFromSearch' | t }}</span>
             <input type="checkbox" formControlName="privacy_hide_from_search" class="checkbox" />
           </label>
         </div>

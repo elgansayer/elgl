@@ -2,18 +2,20 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  imports: [TranslatePipe],
   selector: 'app-admin-actions',
   template: `
     <div class="admin-actions">
-      <h2>One‑click moderation</h2>
+      <h2>{{ 'components.admin-actions.oneclickModeration' | t }}</h2>
       <ul>
         @for (user of users(); track user.id) {
           <li>
             <span>{{ user.display_name ?? user.id }}</span>
-            <button (click)="ban(user.id)">Ban</button>
-            <button (click)="warn(user.id)">Warn</button>
+            <button (click)="ban(user.id)">{{ 'components.admin-actions.ban' | t }}</button>
+            <button (click)="warn(user.id)">{{ 'components.admin-actions.warn' | t }}</button>
           </li>
         }
       </ul>

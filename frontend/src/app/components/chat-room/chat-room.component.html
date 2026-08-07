@@ -30,7 +30,7 @@
           (click)="showAdminPanel.set(!showAdminPanel())"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
         >
-          Admin
+          {{ 'components.chat-room.admin' | t }}
         </button>
       }
       <button
@@ -70,7 +70,7 @@
     <div
       class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
     >
-      <h3 class="text-sm font-bold text-text-primary">Group Admin Settings</h3>
+      <h3 class="text-sm font-bold text-text-primary">{{ 'components.chat-room.groupAdminSettings' | t }}</h3>
       <div class="flex gap-2">
         <input
           type="text"
@@ -79,7 +79,7 @@
           class="app-input flex-1 pt-2 pb-2 text-xs"
         />
         <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-          Rename
+          {{ 'components.chat-room.rename' | t }}
         </button>
       </div>
       <div class="flex gap-2">
@@ -90,7 +90,7 @@
           class="app-input flex-1 pt-2 pb-2 text-xs"
         />
         <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-          Add Member
+          {{ 'components.chat-room.addMember' | t }}
         </button>
       </div>
       <div class="flex gap-2">
@@ -104,7 +104,7 @@
           (click)="removeMember()"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
         >
-          Remove Member
+          {{ 'components.chat-room.removeMember' | t }}
         </button>
       </div>
     </div>

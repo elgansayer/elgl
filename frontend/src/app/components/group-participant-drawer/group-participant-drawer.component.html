@@ -51,7 +51,7 @@
                 <span
                   class="px-1.5 py-0.5 text-[10px] font-extrabold bg-vip/20 text-vip rounded-md uppercase tracking-wider"
                 >
-                  VIP
+                  {{ 'components.group-participant-drawer.vip' | t }}
                 </span>
               }
             </div>
@@ -69,7 +69,7 @@
           </div>
         </div>
       } @empty {
-        <div class="text-center text-text-muted py-8 text-sm">No participants found.</div>
+        <div class="text-center text-text-muted py-8 text-sm">{{ 'components.group-participant-drawer.noParticipantsFound' | t }}</div>
       }
     </div>
   </div>

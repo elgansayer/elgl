@@ -142,14 +142,14 @@ interface CropBox {
                 (click)="startCropping()"
                 class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-surface-100 transition-colors text-sm"
               >
-                Crop
+                {{ 'components.cover-photo-uploader.crop' | t }}
               </button>
             } @else {
               <button
                 (click)="applyCrop()"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm"
               >
-                Apply Crop
+                {{ 'components.cover-photo-uploader.applyCrop' | t }}
               </button>
               <button
                 (click)="cancelCrop()"

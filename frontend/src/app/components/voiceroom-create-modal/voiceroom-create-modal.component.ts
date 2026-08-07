@@ -60,10 +60,10 @@ export interface VoiceroomCreatePayload {
               [(ngModel)]="languagePair"
               class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all appearance-none"
             >
-              <option value="en-es">English ↔ Spanish</option>
-              <option value="en-fr">English ↔ French</option>
-              <option value="en-ja">English ↔ Japanese</option>
-              <option value="ar-en">Arabic ↔ English</option>
+              <option value="en-es">{{ 'components.voiceroom-create-modal.englishSpanish' | t }}</option>
+              <option value="en-fr">{{ 'components.voiceroom-create-modal.englishFrench' | t }}</option>
+              <option value="en-ja">{{ 'components.voiceroom-create-modal.englishJapanese' | t }}</option>
+              <option value="ar-en">{{ 'components.voiceroom-create-modal.arabicEnglish' | t }}</option>
             </select>
           </div>
 

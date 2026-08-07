@@ -2,8 +2,10 @@ import { Component, inject } from '@angular/core';
 import { from } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { UserService } from '../../services/user.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  imports: [TranslatePipe],
   standalone: true,
   selector: 'app-study-streak-counter',
   template: `
@@ -15,7 +17,7 @@ import { UserService } from '../../services/user.service';
       </div>
     } @else {
       <div class="flex items-center gap-2 ps-3 pe-3 py-2">
-        <span class="text-sm text-muted-foreground">Loading...</span>
+        <span class="text-sm text-muted-foreground">{{ 'components.study-streak-counter.loading' | t }}</span>
       </div>
     }
   `,

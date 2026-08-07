@@ -3,17 +3,18 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { UserService, UserProfile } from '../../services/user.service';
 import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-cropper.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-edit',
-  imports: [FormsModule, CoverPhotoCropperComponent],
+  imports: [FormsModule, CoverPhotoCropperComponent, TranslatePipe],
   template: `
     <div class="max-w-2xl mx-auto p-6">
-      <h2 class="text-2xl font-bold text-white mb-6">Edit Profile</h2>
+      <h2 class="text-2xl font-bold text-white mb-6">{{ 'components.profile-edit.editProfile' | t }}</h2>
 
       <!-- Cover Photo Section -->
       <div class="mb-8">
-        <span class="block text-sm font-medium text-text-secondary mb-2">Cover Photo</span>
+        <span class="block text-sm font-medium text-text-secondary mb-2">{{ 'components.profile-edit.coverPhoto' | t }}</span>
         <div class="relative h-48 bg-surface-200 rounded-xl overflow-hidden">
           @if (coverPhotoPreview()) {
             <img
@@ -44,7 +45,7 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
             (click)="fileInput.click()"
             class="absolute bottom-3 end-3 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
           >
-            Change Cover
+            {{ 'components.profile-edit.changeCover' | t }}
           </button>
           <input
             #fileInput
@@ -60,7 +61,7 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
       <div class="space-y-4">
         <div>
           <label for="displayNameInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >Display Name</label
+            >{{ 'components.profile-edit.displayName' | t }}</label
           >
           <input
             id="displayNameInput"
@@ -70,24 +71,24 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
         </div>
         <div>
           <label for="genderSelect" class="block text-sm font-medium text-text-secondary mb-1"
-            >Gender</label
+            >{{ 'components.profile-edit.gender' | t }}</label
           >
           <select
             id="genderSelect"
             [(ngModel)]="gender"
             class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >
-            <option value="">Prefer not to say</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
+            <option value="">{{ 'components.profile-edit.preferNotToSay' | t }}</option>
+            <option value="male">{{ 'components.profile-edit.male' | t }}</option>
+            <option value="female">{{ 'components.profile-edit.female' | t }}</option>
+            <option value="other">{{ 'components.profile-edit.other' | t }}</option>
           </select>
         </div>
 
         <!-- Business profile fields -->
         <div>
           <label for="businessNameInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >Business Name</label
+            >{{ 'components.profile-edit.businessName' | t }}</label
           >
           <input
             id="businessNameInput"
@@ -97,7 +98,7 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
         </div>
         <div>
           <label for="businessHoursInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >Business Hours</label
+            >{{ 'components.profile-edit.businessHours' | t }}</label
           >
           <input
             id="businessHoursInput"
@@ -107,7 +108,7 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
         </div>
         <div>
           <label for="websiteUrlInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >Website URL</label
+            >{{ 'components.profile-edit.websiteUrl' | t }}</label
           >
           <input
             id="websiteUrlInput"
@@ -121,7 +122,7 @@ import { CoverPhotoCropperComponent } from '../cover-photo-cropper/cover-photo-c
         (click)="saveProfile()"
         class="mt-6 w-full py-3 text-white bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
       >
-        Save Profile
+        {{ 'components.profile-edit.saveProfile' | t }}
       </button>
     </div>
 

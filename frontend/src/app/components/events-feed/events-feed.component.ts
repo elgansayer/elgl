@@ -31,16 +31,16 @@ import { firstValueFrom } from 'rxjs';
         class="bg-surface border border-border rounded px-2 py-1 text-sm"
       >
         <option value="">{{ 'events.all_languages' | t }}</option>
-        <option value="en-es">English ↔ Spanish</option>
-        <option value="en-ja">English ↔ Japanese</option>
-        <option value="en-ko">English ↔ Korean</option>
-        <option value="en-zh">English ↔ Chinese</option>
-        <option value="en-fr">English ↔ French</option>
-        <option value="en-de">English ↔ German</option>
-        <option value="en-ar">English ↔ Arabic</option>
-        <option value="en-pt">English ↔ Portuguese</option>
-        <option value="en-ru">English ↔ Russian</option>
-        <option value="en-it">English ↔ Italian</option>
+        <option value="en-es">{{ 'components.events-feed.englishSpanish' | t }}</option>
+        <option value="en-ja">{{ 'components.events-feed.englishJapanese' | t }}</option>
+        <option value="en-ko">{{ 'components.events-feed.englishKorean' | t }}</option>
+        <option value="en-zh">{{ 'components.events-feed.englishChinese' | t }}</option>
+        <option value="en-fr">{{ 'components.events-feed.englishFrench' | t }}</option>
+        <option value="en-de">{{ 'components.events-feed.englishGerman' | t }}</option>
+        <option value="en-ar">{{ 'components.events-feed.englishArabic' | t }}</option>
+        <option value="en-pt">{{ 'components.events-feed.englishPortuguese' | t }}</option>
+        <option value="en-ru">{{ 'components.events-feed.englishRussian' | t }}</option>
+        <option value="en-it">{{ 'components.events-feed.englishItalian' | t }}</option>
       </select>
     </div>
 

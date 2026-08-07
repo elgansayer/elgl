@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-room-chat',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div
       class="bg-surface-200 rounded-3xl shadow-xl border border-surface-100 flex flex-col h-96 overflow-hidden"
@@ -37,7 +38,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
         @if (activeTab() === 'chat') {
           @if (store.roomMessages().length === 0) {
             <div class="text-center py-12 text-text-muted">
-              No messages in this live room yet. Say hello to the stage speakers!
+              {{ 'components.room-chat.noMessagesInThisLiveRoomY' | t }}
             </div>
           }
           @for (msg of store.roomMessages(); track msg.id) {
@@ -58,8 +59,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
         @if (activeTab() === 'subtitles') {
           @if (store.captions().length === 0) {
             <div class="text-center py-12 text-text-muted">
-              No live subtitles yet. When speakers talk on stage or use speech-to-text, closed
-              captions broadcast here!
+              {{ 'components.room-chat.noLiveSubtitlesYetWhenSpe' | t }}
             </div>
           }
           @for (cap of store.captions(); track cap.id) {
@@ -88,7 +88,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
             (click)="send()"
             class="px-4 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-xs shadow"
           >
-            Send
+            {{ 'components.room-chat.send' | t }}
           </button>
         </div>
       }
@@ -106,13 +106,13 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
             (click)="sendSubtitle()"
             class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow"
           >
-            Broadcast caption
+            {{ 'components.room-chat.broadcastCaption' | t }}
           </button>
           <button
             (click)="broadcastAICaption()"
             class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow"
           >
-            Broadcast AI Caption
+            {{ 'components.room-chat.broadcastAiCaption' | t }}
           </button>
         </div>
       }

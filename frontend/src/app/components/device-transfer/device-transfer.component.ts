@@ -4,13 +4,15 @@ import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { SupabaseService } from '../../services/supabase.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
+  imports: [TranslatePipe],
   selector: 'app-device-transfer',
   standalone: true,
   template: `
     <div class="flex flex-col items-center justify-center min-h-screen p-8 bg-surface text-on-surface">
-      <h1 class="text-2xl font-bold mb-4">Device Transfer</h1>
+      <h1 class="text-2xl font-bold mb-4">{{ 'components.device-transfer.deviceTransfer' | t }}</h1>
 
       @if (status() === 'generating') {
         <p>Generating device link…</p>
@@ -23,13 +25,13 @@ import { SupabaseService } from '../../services/supabase.service';
           class="mt-4 px-6 py-2 bg-accent text-white rounded-full"
           (click)="copyLink()"
         >
-          Copy Link
+          {{ 'components.device-transfer.copyLink' | t }}
         </button>
-        <p class="mt-2 text-sm opacity-70">Link expires in 5 minutes.</p>
+        <p class="mt-2 text-sm opacity-70">{{ 'components.device-transfer.linkExpiresIn5Minutes' | t }}</p>
       } @else if (status() === 'consuming') {
         <p>Transferring session…</p>
       } @else if (status() === 'done') {
-        <p class="text-green-500">Account transferred successfully!</p>
+        <p class="text-green-500">{{ 'components.device-transfer.accountTransferredSuccess' | t }}</p>
       } @else if (status() === 'error') {
         <p class="text-red-500">{{ errorMessage() }}</p>
       }

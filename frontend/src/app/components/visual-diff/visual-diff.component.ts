@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 interface DiffSegment {
   type: 'unchanged' | 'removed' | 'added';
@@ -7,6 +8,7 @@ interface DiffSegment {
 }
 
 @Component({
+  imports: [TranslatePipe],
   selector: 'app-visual-diff',
   template: `
     <div class="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
