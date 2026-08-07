@@ -52,30 +52,27 @@ export class SuggestFlashcardsComponent {
   private authService = inject(AuthService);
 
   /** Optional external message to auto‑suggest (e.g., from chat) */
-  externalMessage = input<string>('');
-  externalUserId = input<string | undefined>(undefined);
-  externalTargetLanguage = input<string | undefined>(undefined);
+  readonly externalMessage = input<string>('');
+  readonly externalUserId = input<string | undefined>(undefined);
+  readonly externalTargetLanguage = input<string | undefined>(undefined);
 
-  messageInput = signal<string>('');
-  suggestions = signal<string[]>([]);
-  loading = signal<boolean>(false);
-  error = signal<string | null>(null);
+  readonly messageInput = signal<string>('');
+  readonly suggestions = signal<string[]>([]);
+  readonly loading = signal<boolean>(false);
+  readonly error = signal<string | null>(null);
 
-  constructor() {
-    effect(() => {
-      const msg = this.externalMessage();
-      if (msg && msg.trim()) {
-        // Auto‑suggest when a parent provides a new message
-        this.runSuggest(msg, this.externalUserId(), this.externalTargetLanguage());
-      }
-    });
-  }
+  private readonly autoSuggestEffect = effect(() => {
+    const msg = this.externalMessage();
+    if (msg && msg.trim()) {
+      void this.runSuggest(msg, this.externalUserId(), this.externalTargetLanguage());
+    }
+  });
 
   /** Called when the user clicks the button */
   async manualSuggest(): Promise<void> {
     const msg = this.messageInput().trim();
     if (!msg) return;
-    this.runSuggest(msg);
+    void this.runSuggest(msg);
   }
 
   private async runSuggest(
