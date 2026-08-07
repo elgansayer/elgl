@@ -2,7 +2,26 @@
   <h1 class="text-2xl font-bold mb-6 text-start">{{ 'admin.userManagement.title' | t }}</h1>
 
   @if (isLoading()) {
-    <div class="text-start text-gray-500">{{ 'admin.userManagement.loading' | t }}</div>
+    <div class="space-y-3" aria-busy="true">
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <div class="flex items-center gap-3 p-3 rounded-lg bg-surface-300 border border-surface-100">
+          <app-skeleton-loader [height]="'40px'" [width]="'40px'" [variant]="'circle'" />
+          <div class="flex-1 min-w-0 space-y-2">
+            <app-skeleton-loader [height]="'14px'" [width]="'60%'" [variant]="'text'" />
+            <app-skeleton-loader [height]="'10px'" [width]="'25%'" [variant]="'text'" />
+          </div>
+          <div class="flex gap-2">
+            <app-skeleton-loader [height]="'28px'" [width]="'64px'" [borderRadius]="'8px'" />
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (users().length === 0) {
+    <app-empty-state
+      icon="&#x1F464;"
+      [title]="'admin.userManagement.emptyTitle' | t"
+      [description]="'admin.userManagement.emptyDesc' | t"
+    />
   } @else {
     <div class="overflow-x-auto rounded-lg shadow">
       <table class="min-w-full divide-y divide-surface-100">

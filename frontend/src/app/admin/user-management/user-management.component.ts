@@ -3,10 +3,12 @@ import { CommonModule } from '@angular/common';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-user-management',
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe],
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   templateUrl: './user-management.component.html',
 })
 export class UserManagementComponent implements OnInit {
