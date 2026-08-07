@@ -2,10 +2,12 @@ import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService, AdminBlockEntry } from '../../services/admin.service';
+import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-blocks.component.html',
 })
 export class AdminBlocksComponent {
@@ -15,10 +17,12 @@ export class AdminBlocksComponent {
   readonly pageSize = signal(20);
   readonly removingId = signal<string | null>(null);
   readonly actionError = signal('');
+  private readonly refreshToken = signal(0);
 
   readonly request = computed(() => ({
     page: this.page(),
     pageSize: this.pageSize(),
+    refresh: this.refreshToken(),
   }));
 
   private readonly blocksResource = resource({
@@ -35,6 +39,10 @@ export class AdminBlocksComponent {
   readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.total() / this.pageSize())),
   );
+
+  retry(): void {
+    this.refreshToken.update((v) => v + 1);
+  }
 
   async changePage(delta: number): Promise<void> {
     const next = this.page() + delta;

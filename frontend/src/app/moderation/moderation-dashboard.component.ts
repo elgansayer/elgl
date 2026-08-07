@@ -2,11 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
 import { ModerationItem, ModerationService } from './moderation.service';
+import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
+import { AppCardComponent } from '../components/primitives/card/card.component';
 
 @Component({
   selector: 'app-moderation-dashboard',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4" role="main" aria-labelledby="moderation-title">
       <h2 id="moderation-title" class="text-2xl font-bold mb-4">{{ 'moderation.title' | t }}</h2>
@@ -47,9 +50,30 @@ import { ModerationItem, ModerationService } from './moderation.service';
 
       <div aria-live="polite">
         @if (items.isLoading()) {
-          <p class="text-slate-500" aria-busy="true">{{ 'moderation.loading' | t }}</p>
+          <div class="space-y-3">
+            @for (i of [1, 2, 3]; track i) {
+              <app-card customClass="p-4 space-y-3">
+                <div class="flex items-center gap-2">
+                  <app-skeleton-loader [height]="'14px'" [width]="'40%'" [variant]="'text'" />
+                  <app-skeleton-loader [height]="'14px'" [width]="'25%'" [variant]="'text'" />
+                </div>
+                <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
+                <div class="flex gap-2 pt-1">
+                  <app-skeleton-loader [height]="'32px'" [width]="'80px'" [borderRadius]="'8px'" />
+                  <app-skeleton-loader [height]="'32px'" [width]="'80px'" [borderRadius]="'8px'" />
+                  <app-skeleton-loader [height]="'32px'" [width]="'80px'" [borderRadius]="'8px'" />
+                </div>
+              </app-card>
+            }
+          </div>
         } @else if (items.error()) {
-          <p class="text-red-500" role="alert">{{ 'moderation.error' | t }}</p>
+          <app-empty-state
+            icon="\u26a0\ufe0f"
+            [title]="'safety.moderation.loadError' | t"
+            [description]="'safety.moderation.loadErrorDesc' | t"
+            [actionLabel]="'common.retry' | t"
+            (actionClicked)="items.reload()"
+          />
         } @else {
           <div role="tabpanel" [attr.aria-label]="type() === 'profile' ? ('moderation.profile' | t) : ('moderation.moment' | t)">
           @for (item of items.value(); track item.id) {
@@ -115,7 +139,11 @@ import { ModerationItem, ModerationService } from './moderation.service';
             </div>
           </div>
           } @empty {
-            <p class="text-slate-500">{{ 'moderation.empty' | t }}</p>
+            <app-empty-state
+              icon="\ud83d\udee1\ufe0f"
+              [title]="'safety.moderation.emptyTitle' | t"
+              [description]="'safety.moderation.emptyDesc' | t"
+            />
           }
         </div>
         }
