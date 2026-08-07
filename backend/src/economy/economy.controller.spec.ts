@@ -40,10 +40,13 @@ describe('EconomyController', () => {
           useValue: {
             getCatalog: jest.fn(),
             getBalance: jest.fn(),
+            getPackages: jest.fn().mockReturnValue([]),
             purchaseCoins: jest.fn(),
             sendGift: jest.fn(),
             getStickerPacks: jest.fn(),
             unlockStickerPack: jest.fn(),
+            claimDailyCheckIn: jest.fn(),
+            createCheckoutSession: jest.fn(),
           },
         },
       ],
@@ -109,6 +112,68 @@ describe('EconomyController', () => {
         dto,
       );
       expect(economyService.purchaseCoins).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('getPackages', () => {
+    it('should return coin packages from service', () => {
+      const packages = [{ id: 'coins_small', coins: 100 }];
+      (economyService.getPackages as jest.Mock).mockReturnValue(packages);
+
+      const result = controller.getPackages();
+      expect(economyService.getPackages).toHaveBeenCalled();
+      expect(result).toEqual(packages);
+    });
+  });
+
+  describe('claimDailyCheckIn', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.claimDailyCheckIn(null);
+      expect(result).toBeNull();
+      expect(economyService.claimDailyCheckIn).not.toHaveBeenCalled();
+    });
+
+    it('should call service claimDailyCheckIn when user is provided', async () => {
+      const response = { claimed: true, coins_rewarded: 7, new_balance: 107 };
+      (economyService.claimDailyCheckIn as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.claimDailyCheckIn({
+        id: 'user-1',
+      } as any);
+      expect(economyService.claimDailyCheckIn).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('createCheckoutSession', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.createCheckoutSession(null, {
+        package_id: 'coins_small',
+      });
+      expect(result).toBeNull();
+      expect(economyService.createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it('should call service createCheckoutSession when user is provided', async () => {
+      const response = {
+        sessionUrl: 'https://checkout.stripe.com/test',
+        sessionId: 'sess_123',
+      };
+      (economyService.createCheckoutSession as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.createCheckoutSession(
+        { id: 'user-1' } as any,
+        { package_id: 'coins_medium' },
+      );
+      expect(economyService.createCheckoutSession).toHaveBeenCalledWith(
+        'user-1',
+        'coins_medium',
+      );
       expect(result).toEqual(response);
     });
   });
