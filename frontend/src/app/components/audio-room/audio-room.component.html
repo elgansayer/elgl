@@ -121,7 +121,7 @@
                   <!-- Circular avatar -->
                   <div class="relative mx-auto inline-block">
                     @if (participant.avatar_url) {
-                      <img
+                      <img loading="lazy"
                         [src]="participant.avatar_url"
                         [alt]="participant.display_name"
                         class="mx-auto h-14 w-14 rounded-full object-cover border-2"
