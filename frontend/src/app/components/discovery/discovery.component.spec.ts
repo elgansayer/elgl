@@ -214,13 +214,14 @@ describe('DiscoveryComponent', () => {
     expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(2);
   });
 
-  it('should set isLoading false and log when search fails', async () => {
+  it('should set isLoading false, set hasError true and log when search fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mockDiscoveryService.findPartners.mockRejectedValue(new Error('search failed'));
 
     await init();
 
     expect(component.isLoading()).toBe(false);
+    expect(component.hasError()).toBe(true);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
@@ -729,6 +730,61 @@ describe('DiscoveryComponent', () => {
       await flush();
 
       expect(button.getAttribute('aria-pressed')).toBe('true');
+    });
+  });
+
+  describe('skeleton and empty states', () => {
+    it('should render skeleton cards while loading', async () => {
+      mockDiscoveryService.findPartners.mockImplementation(
+        () => new Promise(() => undefined),
+      );
+      await init();
+
+      const skeletons = fixture.nativeElement.querySelectorAll('app-discovery-skeleton-card');
+      expect(skeletons.length).toBe(6);
+    });
+
+    it('should render error empty state with retry action when search fails', async () => {
+      mockDiscoveryService.findPartners.mockRejectedValue(new Error('search failed'));
+      await init();
+
+      expect(component.hasError()).toBe(true);
+
+      const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyState).toBeTruthy();
+
+      const title = fixture.nativeElement.textContent || '';
+      expect(title).toContain('Something went wrong');
+    });
+
+    it('should render empty state with reset action when no partners found', async () => {
+      mockDiscoveryService.findPartners.mockResolvedValue([]);
+      await init();
+
+      expect(component.partners().length).toBe(0);
+
+      const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyState).toBeTruthy();
+    });
+
+    it('should have hasError false on successful search', async () => {
+      mockDiscoveryService.findPartners.mockResolvedValue([makePartner()]);
+      await init();
+
+      expect(component.hasError()).toBe(false);
+      expect(component.isLoading()).toBe(false);
+    });
+
+    it('should clear hasError when retrying after failure', async () => {
+      mockDiscoveryService.findPartners
+        .mockRejectedValueOnce(new Error('search failed'))
+        .mockResolvedValueOnce([]);
+
+      await init();
+      expect(component.hasError()).toBe(true);
+
+      await component.searchPartners();
+      expect(component.hasError()).toBe(false);
     });
   });
 });

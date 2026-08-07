@@ -1,7 +1,6 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
-import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
@@ -9,8 +8,6 @@ import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
-import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -24,15 +21,13 @@ import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
 
 @Component({
   selector: 'app-discovery',
   imports: [
     FormsModule,
-    JoyrideModule,
     TranslatePipe,
-    SanitiseHtmlPipe,
     ScrollablePillsComponent,
     FluencyIndicatorComponent,
     AppGradientButtonComponent,
@@ -42,7 +37,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
     AgeRangeSliderComponent,
     DistanceSliderComponent,
     AppEmptyStateComponent,
-    AppSkeletonLoaderComponent,
+    DiscoverySkeletonCardComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -55,7 +50,6 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
-  private readonly discoveryOnboardingService = inject(DiscoveryOnboardingService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
@@ -74,7 +68,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     })[]
   >([]);
   readonly isLoading = signal<boolean>(true);
-  readonly skeletonCount = Array.from({ length: 5 }, (_, i) => i);
+  readonly hasError = signal<boolean>(false);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 
@@ -106,21 +100,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly ageRangeMin = signal<number>(18);
   readonly ageRangeMax = signal<number>(100);
 
-  readonly filtersExpanded = signal<boolean>(true);
   readonly voiceRoomActive = signal<boolean>(false);
-
-  readonly activeFilterCount = computed(() => {
-    let count = 0;
-    if (this.selectedTargetLanguage()) count++;
-    if (this.selectedGender()) count++;
-    if (this.selectedFilter() !== 'all') count++;
-    if (this.selectedSort() !== 'best_match') count++;
-    if (this.ageRangeMin() !== 18 || this.ageRangeMax() !== 100) count++;
-    if (this.selectedDistanceKm() !== 50) count++;
-    if (this.seriousLearnerMode()) count++;
-    if (this.voiceRoomActive()) count++;
-    return count;
-  });
   readonly selectedSort = signal<string>('best_match');
   readonly sortOptions = computed(() => {
     this.i18n.translations();
@@ -209,6 +189,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
   async searchPartners(): Promise<void> {
     this.isLoading.set(true);
+    this.hasError.set(false);
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
@@ -247,13 +228,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       this.partners.set(mapped);
     } catch (e) {
       console.error('Partner search failed:', e);
+      this.hasError.set(true);
     } finally {
       this.isLoading.set(false);
     }
-  }
-
-  toggleFiltersExpanded(): void {
-    this.filtersExpanded.update((v) => !v);
   }
 
   toggleVoiceRoomActive(): void {
@@ -298,28 +276,18 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.stopAudioIntro();
 
     const audio = new Audio(audioIntroUrl);
-    audio.addEventListener('ended', this.onAudioEnded);
-    audio.addEventListener('error', this.onAudioError);
+    audio.addEventListener('ended', () => this.stopAudioIntro());
+    audio.addEventListener('error', () => this.stopAudioIntro());
     this.currentAudio = audio;
     this.playingPartnerId.set(partnerId);
 
     void audio.play().catch(() => this.stopAudioIntro());
   }
 
-  private onAudioEnded = (): void => {
-    this.stopAudioIntro();
-  };
-
-  private onAudioError = (): void => {
-    this.stopAudioIntro();
-  };
-
   private stopAudioIntro(): void {
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
-      this.currentAudio.removeEventListener('ended', this.onAudioEnded);
-      this.currentAudio.removeEventListener('error', this.onAudioError);
       this.currentAudio = null;
     }
     this.playingPartnerId.set(null);
@@ -380,9 +348,5 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
     void this.searchPartners();
-  }
-
-  startDiscoveryTour(): void {
-    this.discoveryOnboardingService.startTour();
   }
 }

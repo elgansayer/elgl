@@ -82,7 +82,14 @@
   "discovery": {
     "title": "Find partners",
     "offlineBanner": "You are offline",
-    "offlineCachedData": "\u2013 viewing cached data"
+    "offlineCachedData": "\u2013 viewing cached data",
+    "loadingPartners": "Searching for language partners...",
+    "noResultsTitle": "No partners match your search",
+    "noResultsDescription": "Try adjusting your filters or widening your search area to discover more language partners.",
+    "noResultsAction": "Reset Filters",
+    "searchErrorTitle": "Something went wrong",
+    "searchErrorDescription": "We couldn't load partner results. Please check your connection and try again.",
+    "searchErrorAction": "Try Again"
   },
   "aiConversation": {
     "chooseScenario": "Choose a role-play scenario",
