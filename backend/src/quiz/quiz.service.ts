@@ -25,7 +25,11 @@ export class QuizService {
       category: 'speaking',
       options: [
         { id: 'o1', text: 'I struggle to understand and reply.', points: 1 },
-        { id: 'o2', text: 'I can do it with simple phrases if the other person speaks slowly.', points: 2 },
+        {
+          id: 'o2',
+          text: 'I can do it with simple phrases if the other person speaks slowly.',
+          points: 2,
+        },
         { id: 'o3', text: 'I can do it easily and confidently.', points: 3 },
         { id: 'o4', text: 'I can speak extensively on any topic with native fluency.', points: 4 },
       ],
@@ -36,10 +40,28 @@ export class QuizService {
       skill: 'listening',
       category: 'listening',
       options: [
+<<<<<<< HEAD
         { id: 'o1', text: 'No, I need translation for most things.', points: 1 },
         { id: 'o2', text: 'Yes, if the topic is very familiar to me.', points: 2 },
         { id: 'o3', text: 'Yes, I understand almost everything clearly.', points: 3 },
         { id: 'o4', text: 'I understand native-level speech effortlessly.', points: 4 },
+=======
+        {
+          id: 'o1',
+          text: 'No, I need translation for most things.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'Yes, if the topic is very familiar to me.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'Yes, I understand almost everything clearly.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
     {
@@ -49,9 +71,22 @@ export class QuizService {
       category: 'writing',
       options: [
         { id: 'o1', text: 'I cannot do this yet.', points: 1 },
+<<<<<<< HEAD
         { id: 'o2', text: 'I can give brief reasons and explanations.', points: 2 },
         { id: 'o3', text: 'I can express myself fluently and spontaneously.', points: 3 },
         { id: 'o4', text: 'I can craft persuasive arguments with nuanced reasoning.', points: 4 },
+=======
+        {
+          id: 'o2',
+          text: 'I can give brief reasons and explanations.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I can express myself fluently and spontaneously.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
     {
@@ -60,10 +95,28 @@ export class QuizService {
       skill: 'listening',
       category: 'listening',
       options: [
+<<<<<<< HEAD
         { id: 'o1', text: 'I can only follow if spoken slowly and clearly.', points: 1 },
         { id: 'o2', text: 'I understand most of the main ideas even on unfamiliar topics.', points: 2 },
         { id: 'o3', text: 'I understand complex arguments and nuanced meanings easily.', points: 3 },
         { id: 'o4', text: 'I can follow any lecture or debate without difficulty.', points: 4 },
+=======
+        {
+          id: 'o1',
+          text: 'I can only follow if spoken slowly and clearly.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I understand most of the main ideas even on unfamiliar topics.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I understand complex arguments and nuanced meanings easily.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
     {
@@ -72,10 +125,28 @@ export class QuizService {
       skill: 'writing',
       category: 'writing',
       options: [
+<<<<<<< HEAD
         { id: 'o1', text: 'I can only write simple isolated phrases and sentences.', points: 1 },
         { id: 'o2', text: 'I can write connected text on familiar topics with reasonable clarity.', points: 2 },
         { id: 'o3', text: 'I can write well-structured text expressing nuanced points of view.', points: 3 },
         { id: 'o4', text: 'I can write professional-quality text in any domain.', points: 4 },
+=======
+        {
+          id: 'o1',
+          text: 'I can only write simple isolated phrases and sentences.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I can write connected text on familiar topics with reasonable clarity.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I can write well-structured text expressing nuanced points of view.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
     {
@@ -84,10 +155,28 @@ export class QuizService {
       skill: 'speaking',
       category: 'speaking',
       options: [
+<<<<<<< HEAD
         { id: 'o1', text: 'I struggle to keep up and need them to adapt for me.', points: 1 },
         { id: 'o2', text: 'I can handle most situations with some pauses to think.', points: 2 },
         { id: 'o3', text: 'I interact fluently and spontaneously without strain for either party.', points: 3 },
         { id: 'o4', text: 'I can effortlessly participate in any conversation.', points: 4 },
+=======
+        {
+          id: 'o1',
+          text: 'I struggle to keep up and need them to adapt for me.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I can handle most situations with some pauses to think.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I interact fluently and spontaneously without strain for either party.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
     {
@@ -96,10 +185,28 @@ export class QuizService {
       skill: 'reading',
       category: 'reading',
       options: [
+<<<<<<< HEAD
         { id: 'o1', text: 'I can only understand very short, simple texts.', points: 1 },
         { id: 'o2', text: 'I understand contemporary prose and articles with occasional dictionary use.', points: 2 },
         { id: 'o3', text: 'I read complex literary and technical texts with ease.', points: 3 },
         { id: 'o4', text: 'I can critically analyse any written material.', points: 4 },
+=======
+        {
+          id: 'o1',
+          text: 'I can only understand very short, simple texts.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I understand contemporary prose and articles with occasional dictionary use.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I read complex literary and technical texts with ease.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
     {
@@ -108,10 +215,28 @@ export class QuizService {
       skill: 'grammar',
       category: 'grammar',
       options: [
+<<<<<<< HEAD
         { id: 'o1', text: 'I make frequent basic errors that sometimes cause misunderstanding.', points: 1 },
         { id: 'o2', text: 'I am generally accurate with occasional errors that do not cause misunderstanding.', points: 2 },
         { id: 'o3', text: 'I use grammar accurately and appropriately, even in complex structures.', points: 3 },
         { id: 'o4', text: 'I have near-perfect grammatical accuracy.', points: 4 },
+=======
+        {
+          id: 'o1',
+          text: 'I make frequent basic errors that sometimes cause misunderstanding.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I am generally accurate with occasional errors that do not cause misunderstanding.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I use grammar accurately and appropriately, even in complex structures.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
     {
@@ -120,10 +245,28 @@ export class QuizService {
       skill: 'vocabulary',
       category: 'vocabulary',
       options: [
+<<<<<<< HEAD
         { id: 'o1', text: 'I rely on a limited set of basic words and phrases.', points: 1 },
         { id: 'o2', text: 'I have enough vocabulary to express myself on most everyday topics.', points: 2 },
         { id: 'o3', text: 'I have a broad vocabulary and can use idiomatic expressions naturally.', points: 3 },
         { id: 'o4', text: 'I have an extensive vocabulary comparable to a native speaker.', points: 4 },
+=======
+        {
+          id: 'o1',
+          text: 'I rely on a limited set of basic words and phrases.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I have enough vocabulary to express myself on most everyday topics.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I have a broad vocabulary and can use idiomatic expressions naturally.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
     {
@@ -132,10 +275,28 @@ export class QuizService {
       skill: 'reading',
       category: 'reading',
       options: [
+<<<<<<< HEAD
         { id: 'o1', text: 'I find summarising very difficult and miss key points.', points: 1 },
         { id: 'o2', text: 'I can summarise the main points from simple sources.', points: 2 },
         { id: 'o3', text: 'I can reconstruct arguments and accounts coherently from multiple sources.', points: 3 },
         { id: 'o4', text: 'I can produce sophisticated syntheses across diverse sources.', points: 4 },
+=======
+        {
+          id: 'o1',
+          text: 'I find summarising very difficult and miss key points.',
+          points: 1,
+        },
+        {
+          id: 'o2',
+          text: 'I can summarise the main points from simple sources.',
+          points: 2,
+        },
+        {
+          id: 'o3',
+          text: 'I can reconstruct arguments and accounts coherently from multiple sources.',
+          points: 3,
+        },
+>>>>>>> origin/main
       ],
     },
   ];
