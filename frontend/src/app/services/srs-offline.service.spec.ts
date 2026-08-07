@@ -138,7 +138,7 @@ describe('SrsOfflineService', () => {
               return {
                 put: (value: unknown) => {
                   const record = value as Record<string, unknown>;
-                  const key = record.id;
+                  const key = record['id'];
                   if (key) storeData.set(String(key), value);
                   const req = makeRequest(value);
                   if (oncompleteFn) {
@@ -229,7 +229,7 @@ describe('SrsOfflineService', () => {
       const result = await service.getCachedFlashcards();
 
       expect(result.length).toBe(1);
-      const first = result[0] as Record<string, unknown>;
+      const first = result[0] as unknown as Record<string, unknown>;
       expect(first['word_token']).toBe('hello');
     });
 
@@ -241,7 +241,7 @@ describe('SrsOfflineService', () => {
       const result = await service.getCachedDueReviews();
 
       expect(result.length).toBe(1);
-      const first = result[0] as Record<string, unknown>;
+      const first = result[0] as unknown as Record<string, unknown>;
       expect(first['word_token']).toBe('hello');
     });
 

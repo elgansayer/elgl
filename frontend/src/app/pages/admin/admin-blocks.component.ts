@@ -2,6 +2,7 @@ import { Component, computed, inject, resource, signal, ErrorHandler } from '@an
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
 import { AdminService, AdminBlockEntry } from '../../services/admin.service';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
@@ -10,7 +11,7 @@ import { CrashReportService } from '../../services/crash-report.service';
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
 
   templateUrl: './admin-blocks.component.html',
 })
