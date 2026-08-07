@@ -540,5 +540,10 @@
   "wordModal.title": "تعريف القاموس",
   "wordModal.translationLabel": "الترجمة",
   "economy.offlinePurchaseUnavailable": "المشتريات غير متاحة بدون اتصال بالإنترنت. يرجى التحقق من اتصالك.",
-  "economy.offlineGiftQueued": "تم وضع الهدية في قائمة الانتظار وسيتم إرسالها عند استعادة الاتصال."
+  "economy.offlineGiftQueued": "تم وضع الهدية في قائمة الانتظار وسيتم إرسالها عند استعادة الاتصال.",
+  "safety.tabListLabel": "إجراءات الأمان",
+  "safety.submitReportAria": "تقديم بلاغ ضد {{name}}",
+  "safety.confirmBlockAria": "تأكيد حظر {{name}}",
+  "safety.categoriesLoading": "جارٍ تحميل فئات البلاغات",
+  "safety.blockManagement.unblockAria": "إلغاء حظر {{name}}"
 }
