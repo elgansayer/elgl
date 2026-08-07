@@ -49,12 +49,8 @@ export type LegacyChannel = 'push' | 'badge';
 })
 export class NotificationPreferencesService {
   private readonly http = inject(HttpClient);
-<<<<<<< HEAD
-  private readonly baseUrl = `${environment.apiUrl}/notifications/preferences`;
-=======
   private readonly baseUrl = '/api/notification-preferences';
   private readonly notificationsUrl = '/api/notifications';
->>>>>>> origin/main
 
   async getPreferences(): Promise<NotificationPreferences> {
     return firstValueFrom(this.http.get<NotificationPreferences>(this.baseUrl));

@@ -69,11 +69,7 @@ export class NotificationPreferencesComponent {
   private service = inject(NotificationPreferencesService);
   private i18n = inject(I18nService);
 
-<<<<<<< HEAD
-  readonly channels: NotificationChannel[] = ['push', 'badge'];
-=======
   readonly channels: NotificationChannel[] = ['push', 'email', 'in_app', 'badges'];
->>>>>>> origin/main
 
   private prefs = signal<NotificationPreferences | null>(null);
   readonly loading = signal(true);

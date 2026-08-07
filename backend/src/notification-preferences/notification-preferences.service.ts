@@ -8,7 +8,7 @@ export class NotificationPreferencesService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getPreferences(userId: string): Promise<any> {
+  async getPreferences(userId: string): Promise<unknown> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
@@ -28,11 +28,11 @@ export class NotificationPreferencesService {
   async updatePreferences(
     userId: string,
     dto: UpdateNotificationPreferencesDto,
-  ): Promise<any> {
+  ): Promise<unknown> {
     return this.upsertPreferences(userId, dto);
   }
 
-  async resetToDefaults(userId: string): Promise<any> {
+  async resetToDefaults(userId: string): Promise<unknown> {
     const defaults = this.getDefaultPreferences(userId);
     return this.upsertPreferences(userId, defaults);
   }
@@ -40,7 +40,7 @@ export class NotificationPreferencesService {
   private async upsertPreferences(
     userId: string,
     changes: object,
-  ): Promise<any> {
+  ): Promise<unknown> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
@@ -55,20 +55,12 @@ export class NotificationPreferencesService {
   }
 
   private getDefaultPreferences(userId: string) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-    const defaultCategory = { push: true, email: false, in_app: true, badges: true };
-=======
-    const defaultCategory = { push: false, email: false, in_app: true, badges: true };
->>>>>>> origin/main
-=======
     const defaultCategory = {
       push: false,
       email: false,
       in_app: true,
       badges: true,
     };
->>>>>>> origin/main
     return {
       user_id: userId,
       direct_message: { ...defaultCategory },

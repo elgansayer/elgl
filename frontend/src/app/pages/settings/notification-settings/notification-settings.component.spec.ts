@@ -1,26 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-<<<<<<< HEAD
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { NotificationSettingsComponent } from './notification-settings.component';
-=======
 import { NotificationSettingsComponent } from './notification-settings.component';
 import { NotificationPreferencesService } from '../../../services/notification-preferences.service';
 import { I18nService } from '../../../services/i18n.service';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
->>>>>>> origin/main
 
 describe('NotificationSettingsComponent', () => {
   let component: NotificationSettingsComponent;
   let fixture: ComponentFixture<NotificationSettingsComponent>;
-<<<<<<< HEAD
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [NotificationSettingsComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
-=======
   let getLegacyPrefsSpy: ReturnType<typeof vi.fn>;
   let updateLegacyPrefsSpy: ReturnType<typeof vi.fn>;
 
@@ -61,47 +48,10 @@ describe('NotificationSettingsComponent', () => {
         },
         { provide: I18nService, useValue: mockI18nService },
       ],
->>>>>>> origin/main
     }).compileComponents();
 
     fixture = TestBed.createComponent(NotificationSettingsComponent);
     component = fixture.componentInstance;
-<<<<<<< HEAD
-    await fixture.whenStable();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should have 4 setting rows', () => {
-    expect(component.rows.length).toBe(4);
-  });
-
-  it('should start in loading state', () => {
-    expect(component.loading()).toBe(true);
-  });
-
-  it('should have push enabled return false when prefs not loaded', () => {
-    expect(component.pushEnabled('direct_messages')).toBe(false);
-    expect(component.pushEnabled('groups')).toBe(false);
-    expect(component.pushEnabled('likes')).toBe(false);
-    expect(component.pushEnabled('voice_rooms')).toBe(false);
-  });
-
-  it('should have badges enabled return false when prefs not loaded', () => {
-    expect(component.badgesEnabled('direct_messages')).toBe(false);
-    expect(component.badgesEnabled('groups')).toBe(false);
-    expect(component.badgesEnabled('likes')).toBe(false);
-    expect(component.badgesEnabled('voice_rooms')).toBe(false);
-  });
-
-  it('should return label key for each row', () => {
-    for (const row of component.rows) {
-      const key = component.rowLabelKey(row);
-      expect(key).toBe(row.labelKey);
-    }
-=======
     fixture.detectChanges();
   });
 
@@ -167,6 +117,5 @@ describe('NotificationSettingsComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     const rows = element.querySelectorAll('[role="switch"]');
     expect(rows.length).toBe(8); // 4 categories * 2 channels
->>>>>>> origin/main
   });
 });
