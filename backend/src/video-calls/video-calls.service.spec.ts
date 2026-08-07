@@ -26,8 +26,24 @@ jest.mock('crypto', () => ({
 
 describe('VideoCallsService', () => {
   let service: VideoCallsService;
+  let mockLogger: { info: jest.Mock; warn: jest.Mock; error: jest.Mock; debug: jest.Mock };
+
+  beforeAll(() => {
+    jest.spyOn(global.console, 'error').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    (global.console.error as jest.Mock).mockRestore();
+  });
 
   beforeEach(async () => {
+    mockLogger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    };
+
     mockCreateRoom.mockClear().mockResolvedValue({});
     mockAddGrant.mockClear();
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
@@ -36,6 +52,10 @@ describe('VideoCallsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VideoCallsService,
+        {
+          provide: 'PinoLogger:VideoCallsService',
+          useValue: mockLogger,
+        },
         {
           provide: ConfigService,
           useValue: {
@@ -96,7 +116,19 @@ describe('VideoCallsService', () => {
       });
     });
 
-    it('should propagate errors from LiveKit createRoom', async () => {
+    it('should log room creation at info level', async () => {
+      await service.createRoom('user-123');
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: 'Video room created',
+          userId: 'user-123',
+          roomName: 'video_mock-uuid-0',
+        }),
+      );
+    });
+
+    it('should propagate errors from LiveKit createRoom and log at error level', async () => {
       mockCreateRoom.mockRejectedValueOnce(
         new Error('LiveKit connection refused'),
       );
@@ -104,13 +136,32 @@ describe('VideoCallsService', () => {
       await expect(service.createRoom('user-456')).rejects.toThrow(
         'LiveKit connection refused',
       );
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: 'Failed to create video room',
+          userId: 'user-456',
+          error: 'LiveKit connection refused',
+        }),
+      );
     });
 
-    it('should propagate errors from token generation', async () => {
+    it('should propagate and log errors from token generation after room creation', async () => {
       mockToJwt.mockRejectedValueOnce(new Error('JWT signing failed'));
 
       await expect(service.createRoom('user-789')).rejects.toThrow(
         'JWT signing failed',
+      );
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ msg: 'Video room created' }),
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: 'Failed to generate token for created room',
+          userId: 'user-789',
+          error: 'JWT signing failed',
+        }),
       );
     });
   });
@@ -144,6 +195,18 @@ describe('VideoCallsService', () => {
       });
     });
 
+    it('should log join at info level', async () => {
+      await service.joinRoom('user-456', 'video-abc');
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: 'User joined video room',
+          userId: 'user-456',
+          roomName: 'video-abc',
+        }),
+      );
+    });
+
     it('should not call createRoom when joining', async () => {
       await service.joinRoom('user-1', 'existing-room');
 
@@ -153,12 +216,21 @@ describe('VideoCallsService', () => {
       );
     });
 
-    it('should propagate errors from token generation', async () => {
+    it('should propagate and log errors from token generation', async () => {
       mockToJwt.mockRejectedValueOnce(new Error('JWT signing failed'));
 
       await expect(
         service.joinRoom('user-999', 'some-room'),
       ).rejects.toThrow('JWT signing failed');
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: 'Failed to join video room',
+          userId: 'user-999',
+          roomName: 'some-room',
+          error: 'JWT signing failed',
+        }),
+      );
     });
   });
 });
