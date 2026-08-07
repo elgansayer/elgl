@@ -29,8 +29,8 @@
         <button
           (click)="showAdminPanel.set(!showAdminPanel())"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'Admin'">
-          Admin
+         [attr.aria-label]="'chatRoom.adminBtn' | t">
+          {{ 'chatRoom.adminBtn' | t }}
         </button>
       }
       <button
@@ -70,33 +70,50 @@
     <div
       class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
     >
-      <h3 class="text-sm font-bold text-text-primary">Group Admin Settings</h3>
+      <h3 class="text-sm font-bold text-text-primary">{{ 'chatRoom.adminPanelTitle' | t }}</h3>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newGroupName"
+<<<<<<< HEAD
           [placeholder]="'chat.newGroupName' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
          [attr.aria-label]="'chat.newGroupName' | t"/>
         <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chat.rename' | t">
           {{ 'chat.rename' | t }}
+=======
+          [placeholder]="'chatRoom.newGroupPlaceholder' | t"
+          class="app-input flex-1 pt-2 pb-2 text-xs"
+         [attr.aria-label]="'chatRoom.newGroupPlaceholder' | t"/>
+        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.renameBtn' | t">
+          {{ 'chatRoom.renameBtn' | t }}
+>>>>>>> origin/main
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newMemberId"
+<<<<<<< HEAD
           [placeholder]="'chat.userIdToAdd' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
          [attr.aria-label]="'chat.userIdToAdd' | t"/>
         <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chat.addMember' | t">
           {{ 'chat.addMember' | t }}
+=======
+          [placeholder]="'chatRoom.userIdAddPlaceholder' | t"
+          class="app-input flex-1 pt-2 pb-2 text-xs"
+         [attr.aria-label]="'chatRoom.userIdAddPlaceholder' | t"/>
+        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.addMemberBtn' | t">
+          {{ 'chatRoom.addMemberBtn' | t }}
+>>>>>>> origin/main
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="memberToRemoveId"
+<<<<<<< HEAD
           [placeholder]="'chat.userIdToRemove' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
          [attr.aria-label]="'chat.userIdToRemove' | t"/>
@@ -105,6 +122,16 @@
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
          [attr.aria-label]="'chat.removeMember' | t">
           {{ 'chat.removeMember' | t }}
+=======
+          [placeholder]="'chatRoom.userIdRemovePlaceholder' | t"
+          class="app-input flex-1 pt-2 pb-2 text-xs"
+         [attr.aria-label]="'chatRoom.userIdRemovePlaceholder' | t"/>
+        <button
+          (click)="removeMember()"
+          class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
+         [attr.aria-label]="'chatRoom.removeMemberBtn' | t">
+          {{ 'chatRoom.removeMemberBtn' | t }}
+>>>>>>> origin/main
         </button>
       </div>
     </div>

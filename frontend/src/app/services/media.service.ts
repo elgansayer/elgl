@@ -9,6 +9,10 @@ export interface AvatarUploadResponse {
   avatarUrl: string;
 }
 
+export interface VoiceNoteUploadResponse {
+  url: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -26,6 +30,20 @@ export class MediaService {
 
     return firstValueFrom(
       this.http.post<AvatarUploadResponse>(`${this.baseUrl}/avatar/upload`, formData),
+    );
+  }
+
+  async uploadVoiceNote(
+    blob: Blob,
+    format: 'ogg' | 'm4a' = 'ogg',
+  ): Promise<VoiceNoteUploadResponse> {
+    const formData = new FormData();
+    const filename = `voice_${Date.now()}.webm`;
+    formData.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }));
+    formData.append('format', format);
+
+    return firstValueFrom(
+      this.http.post<VoiceNoteUploadResponse>(`${this.baseUrl}/voice-note`, formData),
     );
   }
 
