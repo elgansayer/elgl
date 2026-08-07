@@ -1584,8 +1584,14 @@
   "settings.enterToSend": "Enter To Send",
   "settings.fontScale": "Font scale",
   "settings.fontSize": "Font Size",
+<<<<<<< HEAD
   "settings.gdprHub": "Personal Data & GDPR",
   "settings.gdprHubDesc": "Request your data archive or manage account deletion.",
+=======
+  "settings.languageChangeDescription": "Select the application interface language. This does not affect your learning languages.",
+  "settings.themeDescription": "Choose between light, dark, or follow your system settings.",
+  "settings.themeLabel": "Theme",
+>>>>>>> origin/main
   "settings.hideAge": "Hide my age",
   "settings.hideExactLocation": "Hide Exact Location",
   "settings.hideGender": "Hide my gender",
@@ -1646,6 +1652,7 @@
   "settings.off": "Off",
   "settings.on": "On",
   "settings.privacySection": "Privacy settings",
+  "settings.saved": "Settings saved successfully.",
   "settings.saveBtn": "Save settings",
   "settings.soundEffects": "Sound Effects",
   "settings.soundVibrationSection": "Sound Vibration Section",
