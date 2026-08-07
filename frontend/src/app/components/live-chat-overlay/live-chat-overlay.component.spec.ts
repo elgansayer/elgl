@@ -154,7 +154,7 @@ describe('LiveChatOverlayComponent', () => {
     expect(overlayComponent).toBeTruthy();
     if (overlayComponent) {
       overlayComponent.messages.set(
-        Array.from({ length: 50 }, (_, i) => ({
+        Array.from({ length: 50 }, (_, _i) => ({
           id: `msg-\x24{i}`,
           senderId: 'u1',
           senderName: 'Test',
