@@ -60,7 +60,7 @@ import { AuthService } from '../../services/auth.service';
                     class="h-12 w-12 rounded-full bg-surface-100 flex items-center justify-center overflow-hidden flex-shrink-0"
                   >
                     @if (user.avatar_url) {
-                      <img [src]="user.avatar_url" alt="" class="h-full w-full object-cover" />
+                      <img [src]="user.avatar_url" alt="" class="h-full w-full object-cover"  loading="lazy" />
                     } @else {
                       <span class="text-lg font-bold text-text-secondary">{{
                         (user.display_name || '?').charAt(0)
