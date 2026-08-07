@@ -132,10 +132,7 @@ export class FlashcardsService {
     const q = Math.max(0, Math.min(5, quality));
 
     // Update easiness factor
-    const newEf = Math.max(
-      1.3,
-      ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)),
-    );
+    const newEf = Math.max(1.3, ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
 
     let newRepetitions: number;
     let newInterval: number;

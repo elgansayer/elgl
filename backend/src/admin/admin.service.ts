@@ -146,20 +146,28 @@ export class AdminService {
       return { blocks: [], total: 0, page, pageSize };
     }
 
-    const blocks: AdminBlockEntry[] = (data ?? []).map((row: Record<string, unknown>) => {
-      const blocker = row.blocker as { display_name?: string; avatar_url?: string } | null;
-      const blocked = row.blocked as { display_name?: string; avatar_url?: string } | null;
-      return {
-        id: row.id as string,
-        blocker_id: row.blocker_id as string,
-        blocked_id: row.blocked_id as string,
-        blocker_name: blocker?.display_name ?? null,
-        blocked_name: blocked?.display_name ?? null,
-        blocker_avatar: blocker?.avatar_url ?? null,
-        blocked_avatar: blocked?.avatar_url ?? null,
-        created_at: row.created_at as string,
-      };
-    });
+    const blocks: AdminBlockEntry[] = (data ?? []).map(
+      (row: Record<string, unknown>) => {
+        const blocker = row.blocker as {
+          display_name?: string;
+          avatar_url?: string;
+        } | null;
+        const blocked = row.blocked as {
+          display_name?: string;
+          avatar_url?: string;
+        } | null;
+        return {
+          id: row.id as string,
+          blocker_id: row.blocker_id as string,
+          blocked_id: row.blocked_id as string,
+          blocker_name: blocker?.display_name ?? null,
+          blocked_name: blocked?.display_name ?? null,
+          blocker_avatar: blocker?.avatar_url ?? null,
+          blocked_avatar: blocked?.avatar_url ?? null,
+          created_at: row.created_at as string,
+        };
+      },
+    );
 
     return { blocks, total: count ?? 0, page, pageSize };
   }
@@ -167,10 +175,7 @@ export class AdminService {
   async removeBlock(blockId: string): Promise<{ success: boolean }> {
     const supabase = this.supabaseService.getClient();
 
-    const { error } = await supabase
-      .from('blocks')
-      .delete()
-      .eq('id', blockId);
+    const { error } = await supabase.from('blocks').delete().eq('id', blockId);
 
     if (error) {
       this.logger.error(`Failed to remove block ${blockId}: ${error.message}`);
