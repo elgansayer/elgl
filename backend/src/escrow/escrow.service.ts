@@ -911,8 +911,8 @@ export class EscrowService {
     const { data, error } = await query;
 
     if (error || !data) {
-      this.logger.warn(
-        `Failed to list escrow transactions for ${userId}: ${error?.message}`,
+      this.logger.error(
+        `Failed to list escrow transactions for ${userId}: ${error?.message ?? 'no data returned'}`,
       );
       return [];
     }
