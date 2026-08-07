@@ -21,28 +21,28 @@ jest.mock('jsdom', () => ({
   })),
 }));
 
-// Simple DOMPurify mock that strips dangerous HTML
+// Simple DOMPurify mock that strips ALL HTML tags (strict sanitisation)
+// In strict mode with ALLOWED_TAGS = [], KEEP_CONTENT = true:
+// - All HTML tags are stripped
+// - Text content of standard elements is preserved
+// - Script and style elements have their content removed entirely for security
 const mockSanitize = (dirty: string): string => {
   if (typeof dirty !== 'string') return dirty;
-  return dirty
+  // First remove script and style elements entirely (with their content)
+  let result = dirty
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/\s+href\s*=\s*"[^"]*"/gi, (match) => {
-      if (/javascript\s*:/i.test(match)) return '';
-      return match;
-    })
-    .replace(/\s+href\s*=\s*'[^']*'/gi, (match) => {
-      if (/javascript\s*:/i.test(match)) return '';
-      return match;
-    })
-    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/on\w+\s*=\s*'[^']*'/gi, '');
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  // Then strip all remaining HTML tags, preserving text content
+  result = result.replace(/<[^>]*>/g, '');
+  return result;
 };
 
 jest.mock('dompurify', () => {
   return {
     __esModule: true,
     default: jest.fn(() => ({
-      sanitize: mockSanitize,
+      sanitize: (dirty: string, _config?: Record<string, unknown>) =>
+        mockSanitize(dirty),
     })),
   };
 });
@@ -61,7 +61,7 @@ describe('SanitiseHtmlPipe', () => {
     expect(pipe).toBeDefined();
   });
 
-  it('should sanitize simple string', () => {
+  it('should sanitize simple string (strip all HTML, preserve text)', () => {
     expect(pipe.transform('<script>alert("xss")</script>', mockMetadata)).toBe(
       '',
     );
@@ -73,7 +73,7 @@ describe('SanitiseHtmlPipe', () => {
     ).toEqual(['', 'safe']);
   });
 
-  it('should sanitize nested objects', () => {
+  it('should sanitize nested objects (strip all tags, preserve text)', () => {
     expect(
       pipe.transform(
         {
@@ -84,8 +84,26 @@ describe('SanitiseHtmlPipe', () => {
       ),
     ).toEqual({
       a: '',
-      b: { c: '<a>link</a>' },
+      b: { c: 'link' },
     });
+  });
+
+  it('should strip benign HTML tags as well (strict mode)', () => {
+    expect(
+      pipe.transform('<b>bold</b> and <i>italic</i>', mockMetadata),
+    ).toBe('bold and italic');
+    expect(
+      pipe.transform('<p>paragraph</p> with <br> line breaks', mockMetadata),
+    ).toBe('paragraph with  line breaks');
+  });
+
+  it('should strip all attributes from any tags', () => {
+    expect(
+      pipe.transform('<span class="test" data-x="y">text</span>', mockMetadata),
+    ).toBe('text');
+    expect(
+      pipe.transform('<img src="x" onerror="alert(1)">', mockMetadata),
+    ).toBe('');
   });
 
   it('should ignore numbers, null, and undefined', () => {
@@ -118,9 +136,19 @@ describe('SanitiseHtmlPipe', () => {
     };
     const result = pipe.transform(input, mockMetadata);
     expect(result).toEqual({
+      // Strict: script tag and its content are fully removed
       username: 'user',
       password: 'my<secret>password',
       confirmPassword: 'my<secret>password',
     });
+  });
+
+  it('should strip complex nested HTML preserving inner text', () => {
+    expect(
+      pipe.transform(
+        '<div><p>Hello <b>world</b></p><script>evil()</script></div>',
+        mockMetadata,
+      ),
+    ).toBe('Hello world');
   });
 });

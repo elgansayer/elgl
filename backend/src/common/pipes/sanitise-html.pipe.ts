@@ -5,6 +5,22 @@ import { JSDOM } from 'jsdom';
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
+/**
+ * Strict DOMPurify configuration: strip ALL HTML tags and attributes.
+ * All user-submitted text must be plain text only.
+ *
+ * ALLOWED_TAGS: [] -- no HTML tags are permitted.
+ * ALLOWED_ATTR: [] -- no HTML attributes are permitted.
+ * ALLOW_DATA_ATTRS: false -- no data-* attributes.
+ * KEEP_CONTENT: true -- preserve text content, only remove tags/attributes.
+ */
+const STRICT_SANITISE_CONFIG: DOMPurify.Config = {
+  ALLOWED_TAGS: [],
+  ALLOWED_ATTR: [],
+  ALLOW_DATA_ATTR: false,
+  KEEP_CONTENT: true,
+};
+
 @Injectable()
 export class SanitiseHtmlPipe implements PipeTransform {
   transform(value: unknown, _metadata: ArgumentMetadata): unknown {
@@ -25,7 +41,7 @@ export class SanitiseHtmlPipe implements PipeTransform {
       if (keyName && keyName.toLowerCase().includes('password')) {
         return value;
       }
-      return purify.sanitize(value);
+      return purify.sanitize(value, STRICT_SANITISE_CONFIG);
     }
 
     if (Array.isArray(value)) {
