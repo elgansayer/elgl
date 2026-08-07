@@ -45,10 +45,10 @@ describe('ModerationService', () => {
           },
         },
         {
-<<<<<<< HEAD
           provide: MetricsService,
           useValue: mockMetricsService,
-=======
+        },
+        {
           provide: `PinoLogger:${ModerationService.name}`,
           useValue: {
             info: jest.fn(),
@@ -57,7 +57,6 @@ describe('ModerationService', () => {
             debug: jest.fn(),
             trace: jest.fn(),
           },
->>>>>>> origin/main
         },
       ],
     }).compile();

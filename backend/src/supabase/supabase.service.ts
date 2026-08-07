@@ -78,8 +78,6 @@ export type UsersRow = {
   deletion_requested_at?: string | null;
   deletion_grace_days?: number | null;
   is_deletion_pending?: boolean | null;
-  is_deleted?: boolean | null;
-  deleted_at?: string | null;
 };
 
 type AudioRoomsRow = {
@@ -2027,6 +2025,46 @@ export interface Database {
           metadata?: string | null;
           updated_at?: string;
           released_at?: string | null;
+        }>;
+        Relationships: [];
+      };
+      escrow_crash_reports: {
+        Row: {
+          id: string;
+          operation: string;
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at?: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          operation: string;
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+          created_at?: string;
+        }>;
+        Update: Partial<{
+          operation?: string;
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type?: string;
+          error_message?: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
         }>;
         Relationships: [];
       };
