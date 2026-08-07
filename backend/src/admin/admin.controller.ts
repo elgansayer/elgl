@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { AdminService } from './admin.service';
@@ -33,6 +34,7 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('users')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async listUsers(
     @Query() query: AdminUserQueryDto,
   ): Promise<AdminUserListResult> {
@@ -40,6 +42,7 @@ export class AdminController {
   }
 
   @Patch('users/:id/vip')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async setVipStatus(
     @Param('id') id: string,
     @Body() dto: ToggleVipDto,
@@ -48,11 +51,13 @@ export class AdminController {
   }
 
   @Get('users/:id/login-history')
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   async getLoginHistory(@Param('id') id: string): Promise<LoginHistoryEntry[]> {
     return this.adminService.getLoginHistory(id);
   }
 
   @Post('users/:id/ban')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async banUser(
     @Param('id') id: string,
     @Req() req: AuthRequest,
@@ -63,6 +68,7 @@ export class AdminController {
   }
 
   @Post('users/:id/warn')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async warnUser(
     @Param('id') id: string,
     @Req() req: AuthRequest,
@@ -73,6 +79,7 @@ export class AdminController {
   }
 
   @Get('blocks')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   async listAllBlocks(
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
@@ -84,6 +91,7 @@ export class AdminController {
   }
 
   @Delete('blocks/:blockId')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async removeBlock(
     @Param('blockId') blockId: string,
   ): Promise<{ success: boolean }> {
