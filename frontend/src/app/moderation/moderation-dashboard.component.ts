@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, effect, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
-import { showToast } from '../services/toast.service';
 import { ModerationItem, ModerationService } from './moderation.service';
 import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 
@@ -12,20 +11,6 @@ import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4" role="main" aria-labelledby="moderation-title">
       <h2 id="moderation-title" class="text-2xl font-bold mb-4">{{ 'moderation.title' | t }}</h2>
-
-      <!-- Offline banner -->
-      @if (!isBackendAvailable()) {
-        <div class="mb-3 p-3 rounded bg-amber-50 border border-amber-300 flex items-center justify-between" role="alert">
-          <span class="text-sm text-amber-900">{{ 'moderation.offlineBanner' | t }}</span>
-          <button
-            type="button"
-            class="rounded bg-amber-600 px-3 py-1 text-white text-sm font-bold hover:bg-amber-700"
-            (click)="retry()"
-          >
-            {{ 'common.retry' | t }}
-          </button>
-        </div>
-      }
 
       <div class="flex gap-2 mb-4" role="tablist" [attr.aria-label]="'moderation.filterAria' | t">
         <button
@@ -145,7 +130,6 @@ export class ModerationDashboardComponent {
   readonly type = signal<'moment' | 'profile'>('profile');
 
   readonly items = this.moderationService.getItemsResource(this.type);
-  readonly isBackendAvailable = this.moderationService.isBackendAvailable;
 
   readonly analysis = signal<{
     riskScore: number;
@@ -170,7 +154,6 @@ export class ModerationDashboardComponent {
     try {
       const result = await this.moderationService.approveItem(item.id, item.type);
       if (result.success) {
-        showToast('moderation.approveSuccess', 'success');
         this.items.reload();
       } else {
         this.actionError.set(result.error ?? 'Failed to approve item');
@@ -188,7 +171,6 @@ export class ModerationDashboardComponent {
     try {
       const result = await this.moderationService.rejectItem(item.id, item.type);
       if (result.success) {
-        showToast('moderation.rejectSuccess', 'success');
         this.items.reload();
       } else {
         this.actionError.set(result.error ?? 'Failed to reject item');
@@ -217,11 +199,5 @@ export class ModerationDashboardComponent {
     } finally {
       this.actionInProgress.set(null);
     }
-  }
-
-  retry(): void {
-    this.actionError.set(null);
-    this.moderationService.isBackendAvailable.set(true);
-    this.items.reload();
   }
 }
