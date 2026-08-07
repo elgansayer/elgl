@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 
 /**
@@ -14,7 +15,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class DataRetentionService {
   private readonly logger = new Logger(DataRetentionService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Purge login history older than 180 days.
@@ -180,6 +184,23 @@ export class DataRetentionService {
       .from('notifications')
       .delete()
       .eq('recipient_id', userId);
+
+    // LingQ Reading Engine: reading progress and authored resources
+    await supabase
+      .from('reading_progress')
+      .delete()
+      .eq('user_id', userId);
+    await supabase
+      .from('reading_resources')
+      .delete()
+      .eq('created_by', userId);
+
+    // Invalidate reading-engine Redis caches for this user
+    try {
+      this.eventEmitter.emit('reading.user_data_cleared', { userId });
+    } catch {
+      // Non-critical: cache invalidation failure should not block deletion
+    }
 
     // --- Virtual Coin Economy ---
     // Coin purchases (receipt tokens, transaction IDs -- PII under GDPR)

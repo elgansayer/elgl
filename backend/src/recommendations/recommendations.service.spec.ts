@@ -47,6 +47,7 @@ const makeQueryChain = (): QueryChainMock => {
     'select',
     'eq',
     'neq',
+    'not',
     'in',
     'contains',
     'order',
@@ -71,7 +72,8 @@ const makeQueryChain = (): QueryChainMock => {
 
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
-  let mockRedis: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
+  let mockRedis: { get: jest.Mock; set: jest.Mock; del: jest.Mock; pipeline: jest.Mock };
+  let mockPipeline: { set: jest.Mock; exec: jest.Mock };
   let mockFrom: jest.Mock;
   let mockMetricsService: {
     recordMatchmakingRecommendationsGenerated: jest.Mock;
@@ -84,10 +86,16 @@ describe('RecommendationsService', () => {
   };
 
   beforeEach(async () => {
+    mockPipeline = {
+      set: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue(undefined),
+    };
+
     mockRedis = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue('OK'),
       del: jest.fn().mockResolvedValue(1),
+      pipeline: jest.fn().mockReturnValue(mockPipeline),
     };
 
     mockFrom = jest.fn();
@@ -200,18 +208,19 @@ describe('RecommendationsService', () => {
 
       await service.calculateDailyRecommendations();
 
-      expect(mockRedis.set).toHaveBeenCalledTimes(1);
-      expect(mockRedis.set.mock.calls[0][0]).toBe(
+      expect(mockPipeline.set).toHaveBeenCalledTimes(1);
+      expect(mockPipeline.set.mock.calls[0][0]).toBe(
         'recommendations:daily:user-a',
       );
 
       const parsed: RecommendedUserDto[] = JSON.parse(
-        mockRedis.set.mock.calls[0][1],
+        mockPipeline.set.mock.calls[0][1],
       );
       expect(parsed).toHaveLength(2);
       expect(parsed[0].id).toBe('partner-1');
       expect(parsed[0].displayName).toBe('Partner 1');
       expect(parsed[1].id).toBe('partner-2');
+      expect(mockPipeline.exec).toHaveBeenCalled();
     });
 
     it('should handle empty users gracefully', async () => {
@@ -220,7 +229,7 @@ describe('RecommendationsService', () => {
       mockFrom.mockReturnValueOnce(chain);
 
       await service.calculateDailyRecommendations();
-      expect(mockRedis.set).not.toHaveBeenCalled();
+      expect(mockPipeline.set).not.toHaveBeenCalled();
     });
 
     it('should handle Supabase error gracefully', async () => {
@@ -229,7 +238,7 @@ describe('RecommendationsService', () => {
       mockFrom.mockReturnValueOnce(chain);
 
       await service.calculateDailyRecommendations();
-      expect(mockRedis.set).not.toHaveBeenCalled();
+      expect(mockPipeline.set).not.toHaveBeenCalled();
     });
 
     it('should skip users without target languages', async () => {
@@ -244,7 +253,7 @@ describe('RecommendationsService', () => {
       mockFrom.mockReturnValueOnce(chain);
 
       await service.calculateDailyRecommendations();
-      expect(mockRedis.set).not.toHaveBeenCalled();
+      expect(mockPipeline.set).not.toHaveBeenCalled();
     });
   });
 

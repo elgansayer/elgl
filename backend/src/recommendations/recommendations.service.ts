@@ -31,6 +31,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const DAILY_REDIS_TTL = 86400; // 24 hours
 const DAILY_LIMIT = 10;
 const FALLBACK_LIMIT = 20;
+const CRON_USERS_LIMIT = 5000;
+const REDIS_PIPELINE_BATCH = 200;
 
 /**
  * GDPR base filter conditions shared across all matchmaking tiers.
@@ -77,6 +79,18 @@ export class RecommendationsService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
+    let pipeline = redis.pipeline();
+    let pipelineOps = 0;
+    let totalCached = 0;
+
+    const flushPipeline = async (): Promise<void> => {
+      if (pipelineOps > 0) {
+        await pipeline.exec();
+        pipeline = redis.pipeline();
+        pipelineOps = 0;
+      }
+    };
+
     try {
 <<<<<<< HEAD
       const { data: users, error } = await withRetry(
@@ -90,12 +104,20 @@ export class RecommendationsService {
       const { data: users, error } = await supabase
         .from('users')
         .select('id, native_language, target_languages')
+<<<<<<< HEAD
         .match(GDPR_MATCHMAKING_FILTERS);
+>>>>>>> origin/main
+=======
+        .match(GDPR_MATCHMAKING_FILTERS)
+        .not('target_languages', 'is', null)
+        .limit(CRON_USERS_LIMIT);
 >>>>>>> origin/main
 
       if (error || !users) {
         throw new Error(`Failed to fetch users: ${error?.message}`);
       }
+
+      this.logger.log(`Computing recommendations for ${users.length} users...`);
 
       for (const user of users) {
         const targetLanguages = user.target_languages as string[] | null;
@@ -103,6 +125,7 @@ export class RecommendationsService {
 
         const nativeLang = user.native_language as string | null;
 
+<<<<<<< HEAD
         // Find language exchange partners: native in user's target AND learning user's native
 <<<<<<< HEAD
         const { data: matches } = await withRetry(
@@ -120,6 +143,8 @@ export class RecommendationsService {
               .limit(DAILY_LIMIT),
         );
 =======
+=======
+>>>>>>> origin/main
         const { data: matches } = await supabase
           .from('users')
           .select(
@@ -148,20 +173,27 @@ export class RecommendationsService {
             }),
           );
 
-          // Cache the full top 10 recommendations in Redis for 24 hours
-          await redis.set(
+          pipeline.set(
             `recommendations:daily:${user.id}`,
             JSON.stringify(dtos),
             'EX',
             DAILY_REDIS_TTL,
           );
+          pipelineOps++;
+          totalCached++;
+
+          if (pipelineOps >= REDIS_PIPELINE_BATCH) {
+            await flushPipeline();
+          }
         }
       }
 
+      await flushPipeline();
       this.logger.log(
-        'Successfully calculated and cached daily recommendations.',
+        `Successfully calculated and cached ${totalCached} daily recommendation sets.`,
       );
     } catch (error) {
+      await flushPipeline();
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
       const errorType =
