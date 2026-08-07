@@ -328,6 +328,18 @@ export class AudioRoomsStore {
           }
           showToast(this.i18n.translate('audioRoom.speakerDemotedToast'));
         }
+      } else if (p.type === 'force_mute' && p.target_user_id) {
+        if (p.target_user_id === this.authService.currentUser()?.id) {
+          if (this.livekitRoom) {
+            void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          }
+          showToast(this.i18n.translate('audioRoom.forceMuteToast'));
+        }
+      } else if (p.type === 'force_kick' && p.target_user_id) {
+        if (p.target_user_id === this.authService.currentUser()?.id) {
+          showToast(this.i18n.translate('audioRoom.kickedToast'));
+          this.leaveRoom();
+        }
       } else if (p.type === 'co_host_invited' && p.target_user_id) {
         this.currentRoom.update((r) => {
           if (!r) return r;
@@ -515,6 +527,29 @@ export class AudioRoomsStore {
       this.currentRoom.set(updated);
     } catch (e) {
       console.error('Mute speaker error:', e);
+    }
+  }
+
+  async kickSpeaker(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    try {
+      const updated = await firstValueFrom(
+        this.http.post<AudioRoomRecord>(
+          `${this.baseUrl}/kick-speaker`,
+          {
+            room_id: room.id,
+            target_user_id: targetUserId,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+      this.currentRoom.set(updated);
+      this.stageParticipants.update((list) =>
+        list.filter((p) => p.user_id !== targetUserId),
+      );
+    } catch (e) {
+      console.error('Kick speaker error:', e);
     }
   }
 

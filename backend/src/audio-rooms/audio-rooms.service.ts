@@ -803,12 +803,129 @@ export class AudioRoomsService implements OnModuleInit {
       throw new ForbiddenException('Only the host can mute a speaker.');
     }
 
+    if (room.host_id === dto.target_user_id) {
+      throw new ForbiddenException('The host cannot be muted.');
+    }
+
+    // Attempt to mute the speaker's microphone via LiveKit
+    if (this.roomServiceClient && !this.livekitUrl.includes('mock')) {
+      try {
+        const profile = await this.usersService.getProfile(
+          dto.target_user_id,
+        );
+        const identity = profile?.display_name
+          ? `${profile.display_name}_${dto.target_user_id.slice(0, 6)}`
+          : dto.target_user_id;
+        const participants = await this.roomServiceClient.listParticipants(
+          room.room_name,
+        );
+        const targetParticipant = participants.find(
+          (p) => p.identity === identity || p.identity.startsWith(identity),
+        );
+        if (targetParticipant) {
+          for (const track of targetParticipant.tracks ?? []) {
+            if (track.type === 0 /* TrackType.AUDIO */) {
+              await this.roomServiceClient.mutePublishedTrack(
+                room.room_name,
+                targetParticipant.identity,
+                track.sid,
+                true,
+              );
+            }
+          }
+        }
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        this.logger.warn(
+          `LiveKit mute speaker warning (${msg}). Falling back to Centrifugo notification.`,
+        );
+      }
+    }
+
     // Notify user via Centrifugo to mute their microphone locally
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'force_mute',
       target_user_id: dto.target_user_id,
       room_id: room.id,
     });
+
+    return this.getRoom(room.id);
+  }
+
+  async kickSpeaker(
+    hostId: string,
+    dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException(
+        'Only the host can kick a speaker off stage.',
+      );
+    }
+
+    if (room.host_id === dto.target_user_id) {
+      throw new ForbiddenException('The host cannot kick themselves.');
+    }
+
+    const updatedSpeakers = room.speakers.filter(
+      (id) => id !== dto.target_user_id,
+    );
+
+    const updatedCoHostId =
+      room.co_host_id === dto.target_user_id ? null : room.co_host_id;
+
+    await supabase
+      .from('audio_rooms')
+      .update({
+        speakers: updatedSpeakers,
+        co_host_id: updatedCoHostId,
+      })
+      .eq('id', room.id);
+
+    // Attempt to remove participant from LiveKit room
+    if (this.roomServiceClient && !this.livekitUrl.includes('mock')) {
+      try {
+        const profile = await this.usersService.getProfile(
+          dto.target_user_id,
+        );
+        const identity = profile?.display_name
+          ? `${profile.display_name}_${dto.target_user_id.slice(0, 6)}`
+          : dto.target_user_id;
+        await this.roomServiceClient.removeParticipant(
+          room.room_name,
+          identity,
+        );
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        this.logger.warn(
+          `LiveKit removeParticipant warning (${msg}). Falling back to Centrifugo notification.`,
+        );
+      }
+    }
+
+    // Notify kicked user via Centrifugo to leave the room
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'force_kick',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
+
+    // If we removed a co-host, also emit co_host_removed event
+    if (room.co_host_id === dto.target_user_id) {
+      void this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_removed',
+        target_user_id: dto.target_user_id,
+        room_id: room.id,
+      });
+    }
 
     return this.getRoom(room.id);
   }
