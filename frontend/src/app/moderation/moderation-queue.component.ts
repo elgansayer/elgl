@@ -1,4 +1,4 @@
-import { Component, inject, signal, resource } from '@angular/core';
+import { Component, inject, signal, resource, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ModerationService,
@@ -6,6 +6,8 @@ import {
   UserAnalysisResult,
 } from '../services/moderation.service';
 import { TranslatePipe } from '../services/translate.pipe';
+
+const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-moderation-queue',
@@ -63,11 +65,11 @@ import { TranslatePipe } from '../services/translate.pipe';
         <p>{{ 'moderation.loading' | t }}</p>
       } @else if (items.error()) {
         <p>{{ 'moderation.error' | t }}</p>
-      } @else if (items.value()?.length === 0) {
+      } @else if (items.value()?.items?.length === 0) {
         <p>{{ 'moderation.noItems' | t }}</p>
       } @else {
         <ul class="space-y-4">
-          @for (item of items.value(); track item.id) {
+          @for (item of items.value()?.items ?? []; track item.id) {
             <li class="rounded bg-elevated p-4">
               <div class="flex items-center justify-between">
                 <span class="font-semibold">{{ 'moderation.reason' | t }}: {{ item.reason }}</span>
@@ -104,6 +106,28 @@ import { TranslatePipe } from '../services/translate.pipe';
             </li>
           }
         </ul>
+
+        @if (totalPages() > 1) {
+          <nav class="mt-4 flex items-center justify-between">
+            <button
+              class="rounded px-3 py-1 border"
+              [disabled]="page() <= 1"
+              (click)="goToPage(-1)"
+            >
+              {{ 'admin.prevPage' | t }}
+            </button>
+            <span class="text-sm text-muted">
+              {{ 'admin.pageIndicator' | t: { page: page(), totalPages: totalPages() } }}
+            </span>
+            <button
+              class="rounded px-3 py-1 border"
+              [disabled]="page() >= totalPages()"
+              (click)="goToPage(1)"
+            >
+              {{ 'admin.nextPage' | t }}
+            </button>
+          </nav>
+        }
       }
 
       @if (analysisResult()) {
@@ -129,18 +153,20 @@ export class ModerationQueueComponent {
 
   readonly type = signal<'moment' | 'profile'>('profile');
   readonly status = signal<string | undefined>(undefined);
+  readonly page = signal<number>(1);
+
+  readonly totalPages = computed(() => {
+    const result = items.value();
+    if (!result) return 1;
+    return Math.max(1, Math.ceil(result.total / result.pageSize));
+  });
 
   readonly items = resource({
-    params: () => ({ type: this.type(), status: this.status() }),
-    loader: (param: {
-      request?: { type?: string; status?: string };
-      params?: { type?: string; status?: string };
-    }) => {
-      const request = param.request ?? param.params;
-      if (!request) return this.moderationService.getItems('profile');
+    params: () => ({ type: this.type(), status: this.status(), page: this.page() }),
+    loader: ({ params }) => {
       const type =
-        request.type === 'moment' || request.type === 'profile' ? request.type : 'profile';
-      return this.moderationService.getItems(type, request.status);
+        params.type === 'moment' || params.type === 'profile' ? params.type : 'profile';
+      return this.moderationService.getItems(type, params.status, params.page, PAGE_SIZE);
     },
   });
 
@@ -149,11 +175,19 @@ export class ModerationQueueComponent {
 
   setType(type: 'moment' | 'profile'): void {
     this.type.set(type);
+    this.page.set(1);
     this.analysisResult.set(null);
   }
 
   setStatus(status: string): void {
     this.status.set(status || undefined);
+    this.page.set(1);
+  }
+
+  goToPage(delta: number): void {
+    const nextPage = this.page() + delta;
+    if (nextPage < 1 || nextPage > this.totalPages()) return;
+    this.page.set(nextPage);
   }
 
   async approve(item: ModerationItem): Promise<void> {

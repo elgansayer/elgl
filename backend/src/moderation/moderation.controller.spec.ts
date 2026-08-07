@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationController } from './moderation.controller';
-import { ModerationService } from './moderation.service';
+import { ModerationItemsResult, ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { ModerationQueryDto } from './dto/moderation-query.dto';
 
 describe('ModerationController', () => {
   let controller: ModerationController;
@@ -40,39 +41,49 @@ describe('ModerationController', () => {
   });
 
   describe('getItems', () => {
-    it('should call service getItems with type and status', async () => {
-      const items = [
-        {
-          id: 'r1',
-          status: 'pending',
-          reason: 'spam',
-          created_at: '2026-01-01',
-          description: 'Bad',
-          reporter: { id: 'r1', display_name: 'Reporter' },
-          reported_user: { id: 'b1', display_name: 'Bad User' },
-          reportedMomentId: null,
-        },
-      ];
-      (moderationService.getItems as jest.Mock).mockResolvedValue(items);
+    it('should call service getItems with query dto', async () => {
+      const result: ModerationItemsResult = {
+        items: [
+          {
+            id: 'r1',
+            status: 'pending',
+            reason: 'spam',
+            created_at: '2026-01-01',
+            description: 'Bad',
+            reporter: { id: 'r1', display_name: 'Reporter' },
+            reported_user: { id: 'b1', display_name: 'Bad User' },
+            reportedMomentId: null,
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      };
+      (moderationService.getItems as jest.Mock).mockResolvedValue(result);
 
-      const result = await controller.getItems('profile', 'pending');
+      const query: ModerationQueryDto = { type: 'profile', status: 'pending' };
+      const response = await controller.getItems(query);
 
-      expect(moderationService.getItems).toHaveBeenCalledWith(
-        'profile',
-        'pending',
-      );
-      expect(result).toEqual(items);
+      expect(moderationService.getItems).toHaveBeenCalledWith(query);
+      expect(response).toEqual(result);
     });
 
-    it('should call service with type only when status is undefined', async () => {
-      (moderationService.getItems as jest.Mock).mockResolvedValue([]);
+    it('should pass pagination params', async () => {
+      (moderationService.getItems as jest.Mock).mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 2,
+        pageSize: 10,
+      });
 
-      await controller.getItems('moment');
+      const query: ModerationQueryDto = {
+        type: 'moment',
+        page: 2,
+        pageSize: 10,
+      };
+      await controller.getItems(query);
 
-      expect(moderationService.getItems).toHaveBeenCalledWith(
-        'moment',
-        undefined,
-      );
+      expect(moderationService.getItems).toHaveBeenCalledWith(query);
     });
   });
 

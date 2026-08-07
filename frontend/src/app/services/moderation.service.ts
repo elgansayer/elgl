@@ -30,6 +30,13 @@ export interface UserAnalysisResult {
   flags: string[];
 }
 
+export interface ModerationItemsResult {
+  items: ModerationItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -44,17 +51,32 @@ export class ModerationService {
     });
   }
 
-  async getItems(type: 'moment' | 'profile', status?: string): Promise<ModerationItem[]> {
-    const params: Record<string, string> = { type };
+  async getItems(
+    type: 'moment' | 'profile',
+    status?: string,
+    page?: number,
+    pageSize?: number,
+  ): Promise<ModerationItemsResult> {
+    const params: Record<string, string | number> = { type };
     if (status) {
       params['status'] = status;
     }
-    return firstValueFrom(
-      this.http.get<ModerationItem[]>(`${this.baseUrl}/items`, {
+    if (page) {
+      params['page'] = page;
+    }
+    if (pageSize) {
+      params['pageSize'] = pageSize;
+    }
+    const result = await firstValueFrom(
+      this.http.get<ModerationItemsResult>(`${this.baseUrl}/items`, {
         headers: this.getHeaders(),
-        params,
+        params: params as Record<string, string>,
       }),
-    ).then((items) => items.map((item) => ({ ...item, type })));
+    );
+    return {
+      ...result,
+      items: result.items.map((item) => ({ ...item, type })),
+    };
   }
 
   async approveItem(itemId: string, type: string): Promise<unknown> {

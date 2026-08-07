@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
+import { ModerationQueryDto } from './dto/moderation-query.dto';
 
 export interface Reporter {
   id: string;
@@ -21,6 +22,34 @@ export interface ModerationItem {
   momentAuthorName?: string | null;
 }
 
+export interface ModerationItemsResult {
+  items: ModerationItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Maximum content length to avoid oversized payloads */
+const MAX_MOMENT_CONTENT_LENGTH = 500;
+
+/** Pre-compiled dating keyword regex (built once at module load) */
+const DATING_KEYWORDS = [
+  'dating', 'date', 'relationship', 'boyfriend', 'girlfriend',
+  'love', 'marry', 'marriage', 'romance', 'romantic',
+  'sex', 'hookup', 'flirt', 'hot', 'sexy',
+  'single', 'looking for', 'meetup', 'in a relationship', 'partner',
+  'romantically', 'kiss', 'kissing', 'date me',
+  'looking for a man', 'looking for a woman', 'man for me', 'woman for me',
+  'marry me', 'fwb', 'friends with benefits', 'casual sex', 'affair',
+  'dinner', 'coffee', 'drinks', 'hang out', 'meet up',
+  'hook up', 'one night', 'sexting', 'daddy', 'mommy', 'horny',
+];
+
+const DATING_REGEXES = DATING_KEYWORDS.map((kw) => {
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { keyword: kw, regex: new RegExp(`\\b${escaped}\\b`, 'i') };
+});
+
 @Injectable()
 export class ModerationService {
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
@@ -29,11 +58,16 @@ export class ModerationService {
     this.supabase = this.supabaseService.getClient();
   }
 
-  async getItems(
-    type: 'moment' | 'profile',
-    status?: string,
-  ): Promise<ModerationItem[]> {
-    let query = this.supabase
+  async getItems(query: ModerationQueryDto): Promise<ModerationItemsResult> {
+    const type = query.type ?? 'profile';
+    const status = query.status;
+    const page = query.page ?? 1;
+    const pageSize = Math.min(query.pageSize ?? 20, 50);
+
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let dbQuery = this.supabase
       .from('reports')
       .select(
         `
@@ -48,23 +82,30 @@ export class ModerationService {
         reporter:reporter_id ( id, display_name ),
         reported_user:reported_user_id ( id, display_name )
       `,
+        { count: 'exact' },
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (status) {
-      query = query.eq('status', status);
+      dbQuery = dbQuery.eq('status', status);
     }
 
-    const { data, error } = await query;
+    if (type === 'profile') {
+      dbQuery = dbQuery.not('reported_user_id', 'is', null);
+    } else {
+      dbQuery = dbQuery.not('reported_moment_id', 'is', null);
+    }
+
+    const { data, error, count } = await dbQuery;
 
     if (error) {
       throw new NotFoundException('Failed to fetch moderation items.');
     }
 
     const rows = (data ?? []) as unknown[];
-
     const items: ModerationItem[] = rows.map((row) => {
-      const obj = row as { [key: string]: unknown };
+      const obj = row as Record<string, unknown>;
       return {
         id: obj.id as string,
         status: obj.status as string,
@@ -77,52 +118,64 @@ export class ModerationService {
       };
     });
 
-    if (type === 'profile') {
-      return items.filter((item) => item.reported_user != null);
-    }
+    // Batch-hydrate moment content for moment-type items
+    if (type === 'moment') {
+      const momentIds = items
+        .filter((item) => item.reportedMomentId != null)
+        .map((item) => item.reportedMomentId as string);
 
-    // For moment reports, fetch the attached moment content
-    const momentItems = items.filter((item) => item.reportedMomentId != null);
+      const momentContentMap = await this.batchGetMomentContent(momentIds);
 
-    const hydrated: ModerationItem[] = [];
-    for (const item of momentItems) {
-      const moment = await this.getMomentContent(
-        item.reportedMomentId as string,
-      );
-      if (moment) {
-        hydrated.push({
-          ...item,
-          moment_content: moment.content_text,
-          momentAuthorName: moment.authorName,
-        });
+      for (const item of items) {
+        if (item.reportedMomentId) {
+          const content = momentContentMap.get(item.reportedMomentId);
+          if (content) {
+            item.moment_content = content.content_text;
+            item.momentAuthorName = content.authorName;
+          }
+        }
       }
     }
 
-    return hydrated;
+    return {
+      items,
+      total: count ?? 0,
+      page,
+      pageSize,
+    };
   }
 
-  private async getMomentContent(
-    momentId: string,
-  ): Promise<{ content_text: string; authorName: string | null } | null> {
+  /**
+   * Batch-fetch moment content in one query (fixes N+1).
+   */
+  private async batchGetMomentContent(
+    momentIds: string[],
+  ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
+    const result = new Map<string, { content_text: string; authorName: string | null }>();
+
+    if (momentIds.length === 0) return result;
+
     const { data, error } = await this.supabase
       .from('moments')
-      .select('content_text, author_id, author:author_id ( display_name )')
-      .eq('id', momentId)
-      .maybeSingle();
+      .select('id, content_text, author:author_id ( display_name )')
+      .in('id', momentIds);
 
-    if (error || !data) {
-      return null;
+    if (error || !data) return result;
+
+    for (const row of data as unknown[]) {
+      const r = row as {
+        id: string;
+        content_text?: string;
+        author?: { display_name?: string } | null;
+      };
+      const text = (r.content_text ?? '').substring(0, MAX_MOMENT_CONTENT_LENGTH);
+      result.set(r.id, {
+        content_text: text,
+        authorName: r.author?.display_name ?? null,
+      });
     }
 
-    const row = data as {
-      content_text: string;
-      author: { display_name?: string } | null;
-    };
-
-    return {
-      content_text: row.content_text ?? '',
-      authorName: row.author?.display_name ?? null,
-    };
+    return result;
   }
 
   async reportUser(reporterId: string, dto: ReportUserDto) {
@@ -195,14 +248,16 @@ export class ModerationService {
       away_message?: string;
     };
 
-    const combinedText = [
-      u.display_name ?? '',
-      u.bio_text ?? '',
-      u.native_language ?? '',
-      (u.target_languages ?? []).join(' '),
-      u.status_text ?? '',
-      u.greeting_message ?? '',
-      u.away_message ?? '',
+    // Only fetch essential fields, limit text size
+    const MAX_BIO_LENGTH = 2000;
+    const MAX_MOMENT_ANALYSIS_COUNT = 10;
+    const MAX_MOMENT_ANALYSIS_TEXT = 1000;
+
+    const profileText = [
+      (u.bio_text ?? '').substring(0, MAX_BIO_LENGTH),
+      (u.status_text ?? ''),
+      (u.greeting_message ?? ''),
+      (u.away_message ?? ''),
     ].join(' ');
 
     const { data: moments } = await this.supabase
@@ -210,86 +265,39 @@ export class ModerationService {
       .select('content_text')
       .eq('author_id', userId)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(MAX_MOMENT_ANALYSIS_COUNT);
 
     const momentRows = (moments ?? []) as unknown[];
     const momentText = momentRows
       .map((row) => {
         const obj = row as { content_text?: string };
-        return obj.content_text ?? '';
+        return (obj.content_text ?? '').substring(0, MAX_MOMENT_ANALYSIS_TEXT);
       })
       .join(' ');
 
-    const fullText = (combinedText + ' ' + momentText).toLowerCase();
+    const fullText = (profileText + ' ' + momentText).toLowerCase();
 
-    const datingFlags = [
-      'dating',
-      'date',
-      'relationship',
-      'boyfriend',
-      'girlfriend',
-      'love',
-      'marry',
-      'marriage',
-      'romance',
-      'romantic',
-      'sex',
-      'hookup',
-      'flirt',
-      'hot',
-      'sexy',
-      'single',
-      'looking for',
-      'meetup',
-      'in a relationship',
-      'partner',
-      'romantically',
-      'kiss',
-      'kissing',
-      'date me',
-      'looking for a man',
-      'looking for a woman',
-      'man for me',
-      'woman for me',
-      'marry me',
-      'fwb',
-      'friends with benefits',
-      'casual sex',
-      'affair',
-      'dinner',
-      'coffee',
-      'drinks',
-      'hang out',
-      'meet up',
-      'hook up',
-      'one night',
-      'sexting',
-      'daddy',
-      'mommy',
-      'horny',
-    ];
-
+    // Use pre-compiled module-level regexes
     const flags: string[] = [];
-    const regexFlags = [...new Set(datingFlags)];
-
-    for (const flag of regexFlags) {
-      const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    for (const { keyword, regex } of DATING_REGEXES) {
       if (regex.test(fullText)) {
-        flags.push(flag);
+        flags.push(keyword);
       }
     }
 
     const uniqueFlags = [...new Set(flags)];
-    const hitRatio = uniqueFlags.length / regexFlags.length;
-    const riskScore = Math.min(
-      100,
-      Math.round(
-        hitRatio * 100 +
-          (uniqueFlags.length > 5 ? 20 : 0) +
-          (uniqueFlags.length > 10 ? 10 : 0),
-      ),
-    );
+    if (uniqueFlags.length === 0) {
+      return { riskScore: 0, flags: [] };
+    }
+
+    const totalKeywords = DATING_KEYWORDS.length;
+    const hitRatio = uniqueFlags.length / totalKeywords;
+    const bonus = (() => {
+      if (uniqueFlags.length > 10) return 10;
+      if (uniqueFlags.length > 5) return 20;
+      return 0;
+    })();
+    const riskScore = Math.min(100, Math.round(hitRatio * 100 + bonus));
 
     return { riskScore, flags: uniqueFlags };
   }

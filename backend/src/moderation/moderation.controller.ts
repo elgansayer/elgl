@@ -11,10 +11,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { ModerationItem, ModerationService } from './moderation.service';
+import { ModerationItemsResult, ModerationService } from './moderation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
+import { ModerationQueryDto } from './dto/moderation-query.dto';
 
 @Controller('moderation')
 @UseGuards(SupabaseAuthGuard)
@@ -24,10 +25,9 @@ export class ModerationController {
   @Get('items')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   async getItems(
-    @Query('type') type: 'moment' | 'profile',
-    @Query('status') status?: string,
-  ): Promise<ModerationItem[]> {
-    return this.moderationService.getItems(type, status);
+    @Query() query: ModerationQueryDto,
+  ): Promise<ModerationItemsResult> {
+    return this.moderationService.getItems(query);
   }
 
   @Post('report')
