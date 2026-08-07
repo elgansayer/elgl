@@ -211,7 +211,7 @@
             <div class="flex items-center gap-3 min-w-0">
               <!-- Avatar -->
               <div class="relative shrink-0" [routerLink]="['/profile/user', partner.id]">
-                <img loading="lazy"
+                <img
                   [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
                   alt="avatar"
                   class="h-14 w-14 rounded-full object-cover"
