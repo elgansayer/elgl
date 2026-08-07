@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -18,13 +19,19 @@ import {
   ResolveDisputeDto,
 } from './dto/escrow.dto';
 import { EscrowService } from './escrow.service';
+import {
+  EscrowRateLimit,
+  EscrowRateLimiterGuard,
+} from './escrow-rate-limiter.guard';
 
 @Controller('escrow')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, EscrowRateLimiterGuard)
 export class EscrowController {
   constructor(private readonly escrowService: EscrowService) {}
 
   @Post('create')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @EscrowRateLimit({ maxRequests: 5, windowSeconds: 60 })
   async createEscrow(
     @CurrentUser() user: User | null,
     @Body() dto: CreateEscrowDto,
@@ -34,6 +41,8 @@ export class EscrowController {
   }
 
   @Post('release')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @EscrowRateLimit({ maxRequests: 5, windowSeconds: 60 })
   async releaseEscrow(
     @CurrentUser() user: User | null,
     @Body() dto: ReleaseEscrowDto,
@@ -43,6 +52,8 @@ export class EscrowController {
   }
 
   @Post('refund')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @EscrowRateLimit({ maxRequests: 5, windowSeconds: 60 })
   async refundEscrow(
     @CurrentUser() user: User | null,
     @Body() dto: RefundEscrowDto,
@@ -52,6 +63,8 @@ export class EscrowController {
   }
 
   @Post('dispute')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @EscrowRateLimit({ maxRequests: 5, windowSeconds: 60 })
   async disputeEscrow(
     @CurrentUser() user: User | null,
     @Body() dto: DisputeEscrowDto,
@@ -61,6 +74,8 @@ export class EscrowController {
   }
 
   @Post('resolve-dispute')
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
+  @EscrowRateLimit({ maxRequests: 15, windowSeconds: 60 })
   async resolveDispute(
     @CurrentUser() user: User | null,
     @Body() dto: ResolveDisputeDto,
@@ -70,12 +85,14 @@ export class EscrowController {
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async getEscrow(@CurrentUser() user: User | null, @Param('id') id: string) {
     if (!user) return null;
     return this.escrowService.getEscrow(id);
   }
 
   @Get()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async listEscrows(
     @CurrentUser() user: User | null,
     @Query('status') status?: string,

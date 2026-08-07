@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EscrowController } from './escrow.controller';
 import { EscrowService } from './escrow.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { EscrowRateLimiterGuard } from './escrow-rate-limiter.guard';
 
 describe('EscrowController', () => {
   let controller: EscrowController;
@@ -26,6 +27,8 @@ describe('EscrowController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(EscrowRateLimiterGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
