@@ -125,7 +125,7 @@ jobs:
           prompt: >
             Review PR #${{ github.event.pull_request.number }}.
 
-            MANDATORY: lint + build + test both backend and frontend. Fix all failures.
+            MANDATORY: run \`npm run lint\`, build, and test both backend and frontend. Fix all failures.
             Remove conflict markers. Only merge when green.
             timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
             gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
@@ -142,7 +142,7 @@ jobs:
           openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
-            Review PR #${{ github.event.pull_request.number }}. Lint, build, test, fix, merge.
+            Review PR #${{ github.event.pull_request.number }}. Run \`npm run lint\`, build, test, fix, merge.
             timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
             gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
           cli_args: '--max-iterations 40'

@@ -86,8 +86,8 @@ jobs:
             Pull Request #${{ github.event.pull_request.number }}.
 
             MANDATORY before merging:
-            1. Review code. 2. Run backend: cd backend && npm run build && npm test
-            3. Run frontend: cd frontend && npx ng build && npm test -- --watch=false
+            1. Review code. 2. Run backend: cd backend && npm run lint && npm run build && npm test
+            3. Run frontend: cd frontend && npm run lint && npx ng build && npm test -- --watch=false
             4. Fix any failures, re-run until all pass.
             5. Remove all conflict markers. Resolve merge conflicts properly.
             6. Only when ALL pass: timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
@@ -107,8 +107,8 @@ jobs:
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             PR #${{ github.event.pull_request.number }}. MANDATORY:
-            1. Review code. 2. cd backend && npm run build && npm test
-            3. cd frontend && npx ng build && npm test -- --watch=false
+            1. Review code. 2. cd backend && npm run lint && npm run build && npm test
+            3. cd frontend && npm run lint && npx ng build && npm test -- --watch=false
             4. Fix all failures, remove conflict markers.
             5. timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
             6. gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch

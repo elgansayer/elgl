@@ -116,3 +116,16 @@ jobs:
           cli_args: '--max-iterations 40'
           openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
+
+      - name: Cleanup stuck swarm-active label
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          ISSUE="${{ github.event.issue.number }}"
+          if [ -z "$ISSUE" ] || [ "$ISSUE" = "null" ]; then exit 0; fi
+          COUNT=$(gh pr list --repo ${{ github.repository }} --search "Fixes #${ISSUE} in:body" --state open --json number -q 'length' 2>/dev/null || echo "0")
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No open PR found for issue #$ISSUE. Removing swarm-active label to allow retry."
+            gh issue edit "$ISSUE" --remove-label "swarm-active" --repo ${{ github.repository }} || true
+          fi
