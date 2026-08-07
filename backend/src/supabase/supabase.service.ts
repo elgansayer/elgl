@@ -75,6 +75,8 @@ export type UsersRow = {
   deletion_requested_at?: string | null;
   deletion_grace_days?: number | null;
   is_deletion_pending?: boolean | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
 };
 
 type AudioRoomsRow = {
@@ -569,6 +571,8 @@ type FlashcardRow = {
   srs_level: number;
   easiness_factor: number;
   repetition_count: number;
+  repetitions: number;
+  interval_days: number;
   next_review_at: string;
   created_at: string;
 };
