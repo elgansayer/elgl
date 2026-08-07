@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { AudioIntroRecorderComponent } from './audio-intro-recorder.component';
 import { UserService } from '../../services/user.service';
-import { Subscription } from 'rxjs';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
