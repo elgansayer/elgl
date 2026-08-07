@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import {
   AccessToken,
   RoomServiceClient,
@@ -11,7 +12,11 @@ import { randomUUID as uuidv4 } from 'crypto';
 export class VideoCallsService {
   private roomService: RoomServiceClient;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    @InjectPinoLogger(VideoCallsService.name)
+    private readonly logger: PinoLogger,
+    private configService: ConfigService,
+  ) {
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
       this.configService.get<string>('LIVEKIT_API_KEY'),
@@ -30,19 +35,64 @@ export class VideoCallsService {
       maxParticipants: 2,
     };
 
-    await this.roomService.createRoom(createOptions);
+    try {
+      await this.roomService.createRoom(createOptions);
+      this.logger.info({
+        msg: 'Video room created',
+        roomName,
+        userId,
+      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown LiveKit error';
+      this.logger.error({
+        msg: 'Failed to create video room',
+        roomName,
+        userId,
+        error: message,
+      });
+      throw error;
+    }
 
-    const token = await this.generateToken(userId, roomName, true);
-
-    return { token, roomName };
+    try {
+      const token = await this.generateToken(userId, roomName, true);
+      return { token, roomName };
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown token generation error';
+      this.logger.error({
+        msg: 'Failed to generate token for created room',
+        roomName,
+        userId,
+        error: message,
+      });
+      throw error;
+    }
   }
 
   async joinRoom(
     userId: string,
     roomName: string,
   ): Promise<{ token: string; roomName: string }> {
-    const token = await this.generateToken(userId, roomName, true);
-    return { token, roomName };
+    try {
+      const token = await this.generateToken(userId, roomName, true);
+      this.logger.info({
+        msg: 'User joined video room',
+        roomName,
+        userId,
+      });
+      return { token, roomName };
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown join error';
+      this.logger.error({
+        msg: 'Failed to join video room',
+        roomName,
+        userId,
+        error: message,
+      });
+      throw error;
+    }
   }
 
   private async generateToken(
