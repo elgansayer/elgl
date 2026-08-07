@@ -1539,8 +1539,26 @@ export class I18nService {
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
 
-    // Link Preview
+// Link Preview
     'linkPreview.openLink': 'Open link: {title}',
+
+    // Diagnostic Quiz
+    'diagnosticQuiz.title': 'Language Level Diagnostic',
+    'diagnosticQuiz.loading': 'Loading your diagnostic quiz...',
+    'diagnosticQuiz.errorTitle': 'Unable to load quiz',
+    'diagnosticQuiz.errorDescription': 'Please check your connection and try again.',
+    'diagnosticQuiz.retry': 'Try again',
+    'diagnosticQuiz.previous': 'Previous',
+    'diagnosticQuiz.next': 'Next',
+    'diagnosticQuiz.submit': 'Finish',
+    'diagnosticQuiz.submitError': 'Could not save quiz results.',
+    'diagnosticQuiz.empty': 'No questions available for this language yet.',
+    'diagnosticQuiz.questionCounter': 'Question {{current}} of {{total}}',
+    'diagnosticQuiz.optionLabel': 'Option {{number}}: {{text}}',
+    'diagnosticQuiz.resultTitle': 'Your Diagnostic Result',
+    'diagnosticQuiz.scoreLabel': 'Score: {{score}} / {{maxScore}}',
+    'diagnosticQuiz.levelLabel': 'Suggested Level: {{level}}',
+    'diagnosticQuiz.resultAction': 'Continue to onboarding',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
