@@ -284,6 +284,10 @@ If ANY step fails, the AI fixes the code and restarts from step 1. Only proceeds
 12. **Label creation**: Guardian and on-failure create `guardian-alert` label before using
 13. **Missing timeout**: Added `timeout-minutes: 60` to `openhands.yml`
 14. **Missing permissions**: Added `permissions: issues: write` to `on-failure.yml`
+15. **Stuck Label Cleanup**: Added `always()` step to `openhands.yml` and `resolver-fast.yml` to remove `swarm-active` if the resolver fails without creating a PR.
+16. **Strict Dispatcher Isolation**: Added `-label:guardian-alert` to dispatcher search queries to prevent the batch dispatcher from picking up informational alerts.
+17. **Automated Conflict Resolution**: `fix-rejected-prs.sh` now automatically pushes an empty commit using `PAT_TOKEN` to trigger `pull_request:synchronize` and wake up the AI Reviewer when it encounters a rebase conflict.
+18. **Reviewer Lint Coverage**: Enforced `npm run lint` across all Tiers (2 and 3) of `pr-reviewer.yml` and `reviewer-fast.yml`.
 
 ---
 
