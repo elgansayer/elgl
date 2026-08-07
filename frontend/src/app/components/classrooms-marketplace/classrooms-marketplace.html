@@ -1,5 +1,19 @@
 <app-video-classroom-error-boundary>
   <div class="p-4 sm:p-6 space-y-6">
+    @if (isShowingCachedData()) {
+      <div
+        class="flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 text-sm font-semibold rounded-xl shadow-md"
+        role="alert"
+        aria-live="assertive"
+      >
+        <span class="text-base leading-none" aria-hidden="true">&#9888;&#65039;</span>
+        <span>{{ 'classroomsMarketplace.offlineBanner' | t }}</span>
+        <span class="text-white/80">
+          {{ 'classroomsMarketplace.offlineCachedData' | t }}
+        </span>
+      </div>
+    }
+
     <!-- Header -->
     <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>

@@ -9,6 +9,7 @@ import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.sto
 import { AuthService } from '../../services/auth.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
+import { OfflineClassroomsCacheService } from '../../services/offline-classrooms-cache.service';
 
 describe('ClassroomsMarketplace', () => {
   let component: ClassroomsMarketplace;
@@ -42,6 +43,16 @@ describe('ClassroomsMarketplace', () => {
     createRoom: vi.fn().mockResolvedValue(baseRoom),
   };
 
+  const mockOfflineCache = {
+    isOnline: signal(true),
+    cachedDataAvailable: signal(false),
+    cacheRooms: vi.fn().mockResolvedValue(undefined),
+    getAllCachedRooms: vi.fn().mockResolvedValue([]),
+    cacheLanguageGroups: vi.fn().mockResolvedValue(undefined),
+    getAllCachedLanguageGroups: vi.fn().mockResolvedValue([]),
+    clearAll: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ClassroomsMarketplace],
@@ -50,6 +61,7 @@ describe('ClassroomsMarketplace', () => {
         provideHttpClientTesting(),
         { provide: AuthService, useValue: mockAuthService },
         { provide: AudioRoomsStore, useValue: mockStore },
+        { provide: OfflineClassroomsCacheService, useValue: mockOfflineCache },
         { provide: ErrorHandler, useClass: GlobalErrorHandler },
         VideoClassroomErrorHandlerService,
       ],

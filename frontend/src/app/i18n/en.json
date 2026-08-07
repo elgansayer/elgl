@@ -74,7 +74,7 @@
     },
     "offline": {
       "banner": "You are offline",
-      "cachedDataAvailable": "\u2013 viewing cached data",
+      "cachedDataAvailable": "– viewing cached data",
       "actionsDisabled": "Moderation actions are unavailable while offline",
       "cachedDataNote": "Cached data"
     }
@@ -82,7 +82,25 @@
   "discovery": {
     "title": "Find partners",
     "offlineBanner": "You are offline",
-    "offlineCachedData": "\u2013 viewing cached data"
+    "offlineCachedData": "– viewing cached data"
+  },
+  "classroomsMarketplace": {
+    "title": "Video Classrooms",
+    "subtitle": "Join live video language exchanges",
+    "hostingBadge": "Hosting",
+    "filterAll": "All",
+    "loadErrorTitle": "Failed to load classrooms",
+    "loadErrorDescription": "Please check your connection and try again.",
+    "retryLoadBtn": "Retry",
+    "emptyTitle": "No classrooms available",
+    "emptyDescription": "Be the first to create a video classroom!",
+    "liveBadge": "LIVE",
+    "watching": "watching",
+    "speakersLabel": "{count} speakers",
+    "createdAt": "Created {date}",
+    "joinBtn": "Join Classroom",
+    "offlineBanner": "You are offline",
+    "offlineCachedData": "– viewing cached classrooms"
   },
   "aiConversation": {
     "chooseScenario": "Choose a role-play scenario",

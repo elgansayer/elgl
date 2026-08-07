@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angula
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
+import { OfflineClassroomsCacheService } from '../../services/offline-classrooms-cache.service';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
@@ -24,12 +25,18 @@ export class ClassroomsMarketplace implements OnInit {
   private http = inject(HttpClient);
   private errorHandler = inject(VideoClassroomErrorHandlerService);
   private destroyRef = inject(DestroyRef);
+  private offlineCache = inject(OfflineClassroomsCacheService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly rooms = signal<AudioRoomRecord[]>([]);
   readonly isLoading = signal(true);
   readonly selectedLanguage = signal<string | null>(null);
   readonly errorMessage = signal<string>('');
+
+  /** True when displaying data from the offline cache */
+  readonly isShowingCachedData = signal(false);
+  readonly isOnline = this.offlineCache.isOnline;
+  readonly cachedDataAvailable = this.offlineCache.cachedDataAvailable;
 
   readonly languagePairOptions = computed(() => {
     const pairs = new Set<string>();
@@ -66,6 +73,8 @@ export class ClassroomsMarketplace implements OnInit {
 
   async loadRooms(): Promise<void> {
     this.isLoading.set(true);
+    this.isShowingCachedData.set(false);
+    this.errorMessage.set('');
     try {
       const list = await firstValueFrom(
         this.http.get<AudioRoomRecord[]>(
@@ -73,9 +82,27 @@ export class ClassroomsMarketplace implements OnInit {
           { headers: this.getHeaders() },
         ),
       );
-      this.rooms.set(Array.isArray(list) ? list : []);
+      const rooms = Array.isArray(list) ? list : [];
+      this.rooms.set(rooms);
+
+      // Cache fetched rooms for offline fallback
+      if (rooms.length > 0) {
+        void this.offlineCache.cacheRooms(rooms);
+      }
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
+
+      // Attempt offline fallback: serve cached rooms
+      if (!this.isOnline()) {
+        const cached = await this.offlineCache.getAllCachedRooms();
+        if (cached.length > 0) {
+          this.rooms.set(cached);
+          this.isShowingCachedData.set(true);
+          this.isLoading.set(false);
+          return;
+        }
+      }
+
       this.errorMessage.set(error.message);
       this.errorHandler.reportVideoClassroomCrash(error, {
         action: 'loadClassrooms',
