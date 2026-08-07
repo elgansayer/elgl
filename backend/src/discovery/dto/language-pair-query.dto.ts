@@ -5,12 +5,12 @@ import {
   Min,
   IsBoolean,
 } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type, Transform } from 'class-transformer';
 
 export class LanguagePairQueryDto {
   @ApiPropertyOptional({
-    description: 'Native language ISO code (e.g. en, ja, es)',
+    description: 'ISO 639-1 code of the native language to match',
     example: 'en',
   })
   @IsOptional()
@@ -18,8 +18,8 @@ export class LanguagePairQueryDto {
   native_language?: string;
 
   @ApiPropertyOptional({
-    description: 'Target language ISO code (e.g. ja, en, fr)',
-    example: 'ja',
+    description: 'ISO 639-1 code of the target language to match',
+    example: 'es',
   })
   @IsOptional()
   @IsString()
@@ -27,9 +27,9 @@ export class LanguagePairQueryDto {
 
   @ApiPropertyOptional({
     description: 'Zero-based page number for pagination',
+    example: 0,
     minimum: 0,
     default: 0,
-    example: 0,
   })
   @IsOptional()
   @Type(() => Number)
@@ -39,9 +39,9 @@ export class LanguagePairQueryDto {
 
   @ApiPropertyOptional({
     description: 'Number of results per page',
+    example: 50,
     minimum: 1,
     default: 50,
-    example: 20,
   })
   @IsOptional()
   @Type(() => Number)
@@ -50,7 +50,7 @@ export class LanguagePairQueryDto {
   limit?: number = 50;
 
   @ApiPropertyOptional({
-    description: 'Sort order (e.g. best_match, newest). Default: best_match',
+    description: 'Sort order: best_match (ranked by streak and correction ratio) or newest',
     example: 'best_match',
     default: 'best_match',
   })
@@ -59,15 +59,15 @@ export class LanguagePairQueryDto {
   sort?: string = 'best_match';
 
   @ApiPropertyOptional({
-    description: 'Filter by proficiency level',
-    example: 'Intermediate',
+    description: 'Proficiency level filter',
+    example: 'beginner',
   })
   @IsOptional()
   @IsString()
   level?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter to users with audio introductions',
+    description: 'Filter to only show users with audio introductions',
     example: true,
   })
   @IsOptional()
@@ -78,31 +78,31 @@ export class LanguagePairQueryDto {
   has_audio_intro?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by country name',
-    example: 'Japan',
+    description: 'Country filter (case-insensitive partial match)',
+    example: 'Mexico',
   })
   @IsOptional()
   @IsString()
   country?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by city name',
-    example: 'Tokyo',
+    description: 'City filter (case-insensitive partial match)',
+    example: 'Mexico City',
   })
   @IsOptional()
   @IsString()
   city?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by learning goals',
-    example: 'fluency',
+    description: 'Comma-separated list of learning goals to match',
+    example: 'fluency,conversation',
   })
   @IsOptional()
   @IsString()
   learning_goals?: string;
 
   @ApiPropertyOptional({
-    description: 'Learning goals matching mode (e.g. any, all)',
+    description: 'Learning goals matching mode',
     example: 'any',
   })
   @IsOptional()
@@ -110,7 +110,7 @@ export class LanguagePairQueryDto {
   learning_goals_mode?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by morning availability',
+    description: 'Filter users available in the morning',
     example: true,
   })
   @IsOptional()
@@ -121,8 +121,8 @@ export class LanguagePairQueryDto {
   availability_morning?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by afternoon availability',
-    example: false,
+    description: 'Filter users available in the afternoon',
+    example: true,
   })
   @IsOptional()
   @Transform(
@@ -132,8 +132,8 @@ export class LanguagePairQueryDto {
   availability_afternoon?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by evening availability',
-    example: false,
+    description: 'Filter users available in the evening',
+    example: true,
   })
   @IsOptional()
   @Transform(
@@ -143,8 +143,8 @@ export class LanguagePairQueryDto {
   availability_evening?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter to users currently active in an audio room',
-    example: false,
+    description: 'Filter to only show users currently hosting voice rooms',
+    example: true,
   })
   @IsOptional()
   @Transform(
