@@ -5,6 +5,7 @@ on:
     types: [synchronize]
   schedule:
     - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 concurrency:
   group: fast-reviewer-${{ github.event.pull_request.number || github.run_id }}
