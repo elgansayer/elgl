@@ -48,7 +48,7 @@ export type NotificationChannel = 'push' | 'email' | 'in_app';
 })
 export class NotificationPreferencesService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/notification-preferences';
+  private readonly baseUrl = `${environment.apiUrl}/notification-preferences`;
 
   getPreferences(): Promise<NotificationPreferences> {
     return firstValueFrom(this.http.get<NotificationPreferences>(this.baseUrl));
