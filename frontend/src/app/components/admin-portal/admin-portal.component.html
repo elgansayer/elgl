@@ -32,7 +32,7 @@
           <div class="flex flex-wrap items-center gap-3" role="row">
             <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden">
               @if (user.avatar_url) {
-                <img [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
+                <img loading="lazy" [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
               } @else {
                 <div
                   class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
