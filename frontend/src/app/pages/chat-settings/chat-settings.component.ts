@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 import {
   Component,
   inject,
   OnInit,
 } from '@angular/core';
+=======
+import { Component, inject } from '@angular/core';
+>>>>>>> origin/main
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 
@@ -11,6 +15,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
   standalone: true,
   imports: [TranslatePipe],
   template: `
+<<<<<<< HEAD
     <div class="p-4 max-w-md mx-auto space-y-6">
       <h2 class="text-xl font-semibold">{{ 'chat_settings.title' | t }}</h2>
 
@@ -27,6 +32,28 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
         >
           <span
             class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+=======
+    <div class="p-4 max-w-md mx-auto space-y-6 bg-[#121212] min-h-screen">
+      <h2 class="text-xl font-semibold text-white">{{ 'chat_settings.title' | t }}</h2>
+
+      <!-- Auto-Translate -->
+      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.auto_translate' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.auto_translate_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="autoTranslate()"
+          [attr.aria-label]="'chat_settings.auto_translate' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="autoTranslate()"
+          [class.bg-gray-600]="!autoTranslate()"
+          (click)="toggleAutoTranslate()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all"
+>>>>>>> origin/main
             [class.translate-x-6]="autoTranslate()"
             [class.translate-x-1]="!autoTranslate()"
           ></span>
@@ -34,6 +61,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
       </div>
 
       <!-- Read Receipts -->
+<<<<<<< HEAD
       <div class="flex items-center justify-between">
         <span>{{ 'chat_settings.read_receipts' | t }}</span>
         <button aria-label="Toggle read receipts"
@@ -46,6 +74,24 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
         >
           <span
             class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+=======
+      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.read_receipts' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.read_receipts_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="readReceipts()"
+          [attr.aria-label]="'chat_settings.read_receipts' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="readReceipts()"
+          [class.bg-gray-600]="!readReceipts()"
+          (click)="toggleReadReceipts()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all"
+>>>>>>> origin/main
             [class.translate-x-6]="readReceipts()"
             [class.translate-x-1]="!readReceipts()"
           ></span>
@@ -53,6 +99,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
       </div>
 
       <!-- Enter-to-Send -->
+<<<<<<< HEAD
       <div class="flex items-center justify-between">
         <span>{{ 'chat_settings.enter_to_send' | t }}</span>
         <button aria-label="Toggle enter to send"
@@ -65,15 +112,46 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
         >
           <span
             class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+=======
+      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.enter_to_send' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.enter_to_send_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="enterToSend()"
+          [attr.aria-label]="'chat_settings.enter_to_send' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="enterToSend()"
+          [class.bg-gray-600]="!enterToSend()"
+          (click)="toggleEnterToSend()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all"
+>>>>>>> origin/main
             [class.translate-x-6]="enterToSend()"
             [class.translate-x-1]="!enterToSend()"
           ></span>
         </button>
       </div>
+<<<<<<< HEAD
+=======
+
+      <!-- Reset to defaults -->
+      <div class="mt-8 text-center">
+        <button
+          class="text-[#00bcd4] text-sm underline decoration-[#00bcd4]"
+          (click)="resetToDefaults()"
+        >
+          {{ 'chat_settings.reset_defaults' | t }}
+        </button>
+      </div>
+>>>>>>> origin/main
     </div>
   `,
 })
-export class ChatSettingsComponent implements OnInit {
+export class ChatSettingsComponent {
   private settingsService = inject(ChatSettingsService);
 
   readonly autoTranslate = this.settingsService.autoTranslate;
@@ -81,7 +159,7 @@ export class ChatSettingsComponent implements OnInit {
   readonly enterToSend = this.settingsService.enterToSend;
   readonly loaded = this.settingsService.loaded;
 
-  ngOnInit(): void {
+  constructor() {
     this.settingsService.loadSettings();
   }
 
@@ -95,5 +173,9 @@ export class ChatSettingsComponent implements OnInit {
 
   toggleEnterToSend(): void {
     this.settingsService.updateSetting('enterToSend', !this.enterToSend());
+  }
+
+  resetToDefaults(): void {
+    this.settingsService.resetToDefaults();
   }
 }

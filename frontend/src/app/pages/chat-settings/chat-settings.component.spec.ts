@@ -22,6 +22,10 @@ describe('ChatSettingsComponent', () => {
     loaded: ReturnType<typeof signal<boolean>>;
     loadSettings: ReturnType<typeof vi.fn>;
     updateSetting: ReturnType<typeof vi.fn>;
+<<<<<<< HEAD
+=======
+    resetToDefaults: ReturnType<typeof vi.fn>;
+>>>>>>> origin/main
   };
 
   beforeEach(async () => {
@@ -32,6 +36,10 @@ describe('ChatSettingsComponent', () => {
       loaded: signal<boolean>(false),
       loadSettings: vi.fn(),
       updateSetting: vi.fn(),
+<<<<<<< HEAD
+=======
+      resetToDefaults: vi.fn(),
+>>>>>>> origin/main
     };
 
     await TestBed.configureTestingModule({
@@ -54,12 +62,25 @@ describe('ChatSettingsComponent', () => {
     expect(component).toBeTruthy();
   });
 
+<<<<<<< HEAD
   it('should call loadSettings on init', () => {
     expect(mockService.loadSettings).not.toHaveBeenCalled();
     fixture.detectChanges();
     expect(mockService.loadSettings).toHaveBeenCalledTimes(1);
   });
 
+=======
+  it('should call loadSettings on construction', () => {
+    expect(mockService.loadSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not call loadSettings more than once on detectChanges', () => {
+    mockService.loadSettings.mockClear();
+    fixture.detectChanges();
+    expect(mockService.loadSettings).not.toHaveBeenCalled();
+  });
+
+>>>>>>> origin/main
   it('should display the title', () => {
     mockService.loaded.set(true);
     fixture.detectChanges();
@@ -122,4 +143,32 @@ describe('ChatSettingsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('chat_settings.read_receipts');
     expect(fixture.nativeElement.textContent).toContain('chat_settings.enter_to_send');
   });
+<<<<<<< HEAD
 });
+=======
+
+  it('should display description subtitles', () => {
+    mockService.loaded.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.auto_translate_desc');
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.read_receipts_desc');
+    expect(fixture.nativeElement.textContent).toContain('chat_settings.enter_to_send_desc');
+  });
+
+  it('should render a reset to defaults button', () => {
+    mockService.loaded.set(true);
+    fixture.detectChanges();
+    const resetBtn = fixture.nativeElement.querySelector('button.text-\\[\\#00bcd4\\]');
+    expect(resetBtn).toBeTruthy();
+    expect(resetBtn.textContent).toContain('chat_settings.reset_defaults');
+  });
+
+  it('should call resetToDefaults on service when reset button clicked', () => {
+    mockService.loaded.set(true);
+    fixture.detectChanges();
+    const resetBtn = fixture.nativeElement.querySelector('button.text-\\[\\#00bcd4\\]');
+    resetBtn.click();
+    expect(mockService.resetToDefaults).toHaveBeenCalledTimes(1);
+  });
+});
+>>>>>>> origin/main
