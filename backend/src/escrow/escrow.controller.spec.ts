@@ -1,6 +1,8 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { EscrowController } from './escrow.controller';
+import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
@@ -69,6 +71,16 @@ describe('EscrowController', () => {
           provide: EscrowService,
           useValue: mockEscrowService,
         },
+        {
+          provide: CrashReportService,
+          useValue: {
+            reportCrash: jest.fn(),
+            listUnresolved: jest.fn(),
+            acknowledgeReport: jest.fn(),
+            resolveReport: jest.fn(),
+          },
+        },
+        EscrowExceptionFilter,
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
