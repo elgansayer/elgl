@@ -76,63 +76,9 @@ describe('LiveChatOverlayComponent', () => {
   });
 
 <<<<<<< HEAD
-  it('should send message via centrifugo', () => {
-    const appChatOverlay = fixture.debugElement.query(
-      (d) => d.componentInstance instanceof LiveChatOverlayComponent,
-    );
-    const overlayComponent = appChatOverlay?.componentInstance as LiveChatOverlayComponent | undefined;
-    expect(overlayComponent).toBeTruthy();
-    if (overlayComponent) {
-      overlayComponent.inputText.set('Hello world');
-      overlayComponent.sendMessage();
-    }
-    expect(mockCentrifugo.publish).toHaveBeenCalledWith('room_test-room', {
-      type: 'text',
-      content: 'Hello world',
-      senderName: 'TestUser',
-      sender_id: 'user-1',
-      id: expect.any(String),
-    });
-  });
 
-  it('should not send empty message', () => {
-    const appChatOverlay = fixture.debugElement.query(
-      (d) => d.componentInstance instanceof LiveChatOverlayComponent,
-    );
-    const overlayComponent = appChatOverlay?.componentInstance as LiveChatOverlayComponent | undefined;
-    expect(overlayComponent).toBeTruthy();
-    if (overlayComponent) {
-      overlayComponent.inputText.set('   ');
-      overlayComponent.sendMessage();
-    }
-    expect(mockCentrifugo.publish).not.toHaveBeenCalled();
-  });
-
-  it('should cap messages at 50', () => {
-    const appChatOverlay = fixture.debugElement.query(
-      (d) => d.componentInstance instanceof LiveChatOverlayComponent,
-    );
-    const overlayComponent = appChatOverlay?.componentInstance as LiveChatOverlayComponent | undefined;
-    expect(overlayComponent).toBeTruthy();
-    if (overlayComponent) {
-      overlayComponent.messages.set(
-        Array.from({ length: 50 }, (_, _i) => ({
-          id: `msg-\x24{i}`,
-          senderId: 'u1',
-          senderName: 'Test',
-          text: `Text \x24{i}`,
-          timestamp: Date.now(),
-        })),
-      );
-      const overlayAny = overlayComponent as unknown as Record<string, unknown>;
-      const addMsg = overlayAny['addMessage'] as (msg: Record<string, unknown>) => void;
-      addMsg({
-        id: 'overflow',
-        senderId: 'u1',
-        senderName: 'X',
-        text: 'overflow',
-        timestamp: Date.now(),
 =======
+>>>>>>> origin/main
   it('should cap messages at 50 via the messages signal cap', async () => {
     await setup('test-room');
     // Push 60 messages, shifting the oldest off when > 50
@@ -141,6 +87,9 @@ describe('LiveChatOverlayComponent', () => {
         const next = [...msgs, { id: `msg-${i}`, senderName: 'Test', text: `Text ${i}`, timestamp: Date.now() }];
         while (next.length > 50) next.shift();
         return next;
+<<<<<<< HEAD
+
+=======
 >>>>>>> origin/main
       });
     }
