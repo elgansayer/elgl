@@ -105,6 +105,7 @@ describe('LiveChatOverlayComponent', () => {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   it('should send message via centrifugo', () => {
     const appChatOverlay = fixture.debugElement.query(
       (d) => d.componentInstance instanceof LiveChatOverlayComponent,
@@ -174,6 +175,10 @@ describe('LiveChatOverlayComponent', () => {
         text: 'overflow',
         timestamp: Date.now(),
 =======
+
+>>>>>>> origin/main
+=======
+>>>>>>> origin/main
   it('should cap messages at 50 via the messages signal cap', async () => {
     await setup('test-room');
     // Push 60 messages, shifting the oldest off when > 50
@@ -182,6 +187,9 @@ describe('LiveChatOverlayComponent', () => {
         const next = [...msgs, { id: `msg-${i}`, senderName: 'Test', text: `Text ${i}`, timestamp: Date.now() }];
         while (next.length > 50) next.shift();
         return next;
+<<<<<<< HEAD
+
+=======
 >>>>>>> origin/main
       });
     }

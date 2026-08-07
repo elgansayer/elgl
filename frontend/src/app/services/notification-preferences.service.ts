@@ -3,45 +3,24 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface CategoryPreference {
+export interface PreferenceChannel {
   push: boolean;
-  email: boolean;
-  in_app: boolean;
+  badge: boolean;
 }
 
 export interface NotificationPreferences {
   userId: string;
-  new_message: CategoryPreference;
-  call_invite: CategoryPreference;
-  moment_like: CategoryPreference;
-  moment_comment: CategoryPreference;
-  correction: CategoryPreference;
-  gift: CategoryPreference;
-  profile_view: CategoryPreference;
-  study_reminder: CategoryPreference;
-  friend_request: CategoryPreference;
-  audio_room_invite: CategoryPreference;
-  new_follower: CategoryPreference;
-  quiet_hours_start?: string;
-  quiet_hours_end?: string;
+  direct_messages: PreferenceChannel;
+  groups: PreferenceChannel;
+  likes: PreferenceChannel;
+  voice_rooms: PreferenceChannel;
   do_not_disturb: boolean;
-  customToneUrl?: string;
-  vibrationPattern?: string;
   updatedAt: string;
 }
 
-export type NotificationCategory = keyof Omit<
-  NotificationPreferences,
-  | 'userId'
-  | 'updatedAt'
-  | 'quiet_hours_start'
-  | 'quiet_hours_end'
-  | 'do_not_disturb'
-  | 'customToneUrl'
-  | 'vibrationPattern'
->;
+export type NotificationCategory = 'direct_messages' | 'groups' | 'likes' | 'voice_rooms';
 
-export type NotificationChannel = 'push' | 'email' | 'in_app';
+export type NotificationChannel = 'push' | 'badge';
 
 export interface LegacyChannelPreference {
   push: boolean;
@@ -73,12 +52,42 @@ export class NotificationPreferencesService {
   private readonly baseUrl = '/api/notification-preferences';
   private readonly notificationsUrl = '/api/notifications';
 
-  getPreferences(): Promise<NotificationPreferences> {
+  async getPreferences(): Promise<NotificationPreferences> {
     return firstValueFrom(this.http.get<NotificationPreferences>(this.baseUrl));
   }
 
-  updatePreferences(dto: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
-    return firstValueFrom(this.http.put<NotificationPreferences>(this.baseUrl, dto));
+  async updatePreferences(dto: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    const response = await firstValueFrom(
+      this.http.put<{ success: boolean; preferences: NotificationPreferences }>(
+        this.baseUrl,
+        dto,
+      ),
+    );
+    return response.preferences;
+  }
+
+  async toggleCategoryChannel(
+    category: NotificationCategory,
+    channel: NotificationChannel,
+    enabled: boolean,
+    currentPrefs: NotificationPreferences,
+  ): Promise<NotificationPreferences> {
+    const update: Partial<NotificationPreferences> = {
+      [category]: {
+        ...currentPrefs[category],
+        [channel]: enabled,
+      },
+    };
+    return this.updatePreferences(update);
+  }
+
+  resetToDefaults(): Promise<NotificationPreferences> {
+    return this.updatePreferences({
+      direct_messages: { push: true, badge: true },
+      groups: { push: true, badge: true },
+      likes: { push: true, badge: true },
+      voice_rooms: { push: true, badge: true },
+    });
   }
 
   getLegacyPreferences(): Promise<LegacyNotificationPreferences> {
@@ -119,40 +128,9 @@ export class NotificationPreferencesService {
         `${environment.apiUrl}/users/me/notification-preferences`,
       ),
     );
-    const result: { customToneUrl?: string; vibrationPattern?: number[] } = {
+    return {
       customToneUrl: raw.custom_tone_url,
       vibrationPattern: raw.vibration_pattern,
     };
-    return result;
-  }
-
-  resetToDefaults(): Promise<NotificationPreferences> {
-    return firstValueFrom(this.http.post<NotificationPreferences>(`${this.baseUrl}/reset`, {}));
-  }
-
-  toggleCategoryChannel(
-    category: NotificationCategory,
-    channel: NotificationChannel,
-    enabled: boolean,
-    currentPrefs: NotificationPreferences,
-  ): Promise<NotificationPreferences> {
-    const update: Partial<NotificationPreferences> = {
-      [category]: {
-        ...currentPrefs[category],
-        [channel]: enabled,
-      },
-    };
-    return this.updatePreferences(update);
-  }
-
-  toggleDoNotDisturb(
-    enabled: boolean,
-    start?: string,
-    end?: string,
-  ): Promise<NotificationPreferences> {
-    const update: Partial<NotificationPreferences> = { do_not_disturb: enabled };
-    if (start !== undefined) update.quiet_hours_start = start;
-    if (end !== undefined) update.quiet_hours_end = end;
-    return this.updatePreferences(update);
   }
 }
