@@ -1,0 +1,213 @@
+import os
+import sys
+
+def fix_ts():
+    path = "frontend/src/app/pages/chat-settings/chat-settings.component.ts"
+    with open(path, "r") as f:
+        content = f.read()
+
+    # Block 1
+    c1 = """<<<<<<< HEAD
+import {
+  Component,
+  inject,
+  OnInit,
+} from '@angular/core';
+=======
+import { Component, inject } from '@angular/core';
+>>>>>>> origin/main"""
+    content = content.replace(c1, "import { Component, inject } from '@angular/core';")
+
+    # Block 2
+    c2 = """<<<<<<< HEAD
+    <div class="p-4 max-w-md mx-auto space-y-6">
+      <h2 class="text-xl font-semibold">{{ 'chat_settings.title' | t }}</h2>
+
+      <!-- Auto-Translate -->
+      <div class="flex items-center justify-between">
+        <span>{{ 'chat_settings.auto_translate' | t }}</span>
+        <button aria-label="Toggle auto translate"
+          class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+          [class.bg-blue-500]="autoTranslate()"
+          [class.bg-gray-600]="!autoTranslate()"
+          (click)="toggleAutoTranslate()"
+          role="switch"
+          [attr.aria-checked]="autoTranslate()"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+=======
+    <div class="p-4 max-w-md mx-auto space-y-6 bg-[#121212] min-h-screen">
+      <h2 class="text-xl font-semibold text-white">{{ 'chat_settings.title' | t }}</h2>
+
+      <!-- Auto-Translate -->
+      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.auto_translate' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.auto_translate_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="autoTranslate()"
+          [attr.aria-label]="'chat_settings.auto_translate' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="autoTranslate()"
+          [class.bg-gray-600]="!autoTranslate()"
+          (click)="toggleAutoTranslate()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all"
+>>>>>>> origin/main"""
+    
+    r2 = """    <div class="p-4 max-w-md mx-auto space-y-6 bg-[#121212] min-h-screen">
+      <h2 class="text-xl font-semibold text-white">{{ 'chat_settings.title' | t }}</h2>
+
+      <!-- Auto-Translate -->
+      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.auto_translate' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.auto_translate_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="autoTranslate()"
+          [attr.aria-label]="'chat_settings.auto_translate' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="autoTranslate()"
+          [class.bg-gray-600]="!autoTranslate()"
+          (click)="toggleAutoTranslate()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all" """
+    content = content.replace(c2, r2.strip('\n'))
+    
+    # Block 3
+    c3 = """<<<<<<< HEAD
+      <div class="flex items-center justify-between">
+        <span>{{ 'chat_settings.read_receipts' | t }}</span>
+        <button aria-label="Toggle read receipts"
+          class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+          [class.bg-blue-500]="readReceipts()"
+          [class.bg-gray-600]="!readReceipts()"
+          (click)="toggleReadReceipts()"
+          role="switch"
+          [attr.aria-checked]="readReceipts()"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+=======
+      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.read_receipts' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.read_receipts_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="readReceipts()"
+          [attr.aria-label]="'chat_settings.read_receipts' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="readReceipts()"
+          [class.bg-gray-600]="!readReceipts()"
+          (click)="toggleReadReceipts()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all"
+>>>>>>> origin/main"""
+    r3 = """      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.read_receipts' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.read_receipts_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="readReceipts()"
+          [attr.aria-label]="'chat_settings.read_receipts' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="readReceipts()"
+          [class.bg-gray-600]="!readReceipts()"
+          (click)="toggleReadReceipts()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all" """
+    content = content.replace(c3, r3.strip('\n'))
+
+    # Block 4
+    c4 = """<<<<<<< HEAD
+      <div class="flex items-center justify-between">
+        <span>{{ 'chat_settings.enter_to_send' | t }}</span>
+        <button aria-label="Toggle enter to send"
+          class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+          [class.bg-blue-500]="enterToSend()"
+          [class.bg-gray-600]="!enterToSend()"
+          (click)="toggleEnterToSend()"
+          role="switch"
+          [attr.aria-checked]="enterToSend()"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white transition"
+=======
+      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.enter_to_send' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.enter_to_send_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="enterToSend()"
+          [attr.aria-label]="'chat_settings.enter_to_send' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="enterToSend()"
+          [class.bg-gray-600]="!enterToSend()"
+          (click)="toggleEnterToSend()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all"
+>>>>>>> origin/main"""
+    r4 = """      <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-white text-base">{{ 'chat_settings.enter_to_send' | t }}</span>
+          <span class="text-gray-400 text-sm">{{ 'chat_settings.enter_to_send_desc' | t }}</span>
+        </div>
+        <button
+          role="switch"
+          [attr.aria-checked]="enterToSend()"
+          [attr.aria-label]="'chat_settings.enter_to_send' | t"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0"
+          [class.bg-[#00bcd4]]="enterToSend()"
+          [class.bg-gray-600]="!enterToSend()"
+          (click)="toggleEnterToSend()"
+        >
+          <span
+            class="inline-block h-5 w-5 rounded-full bg-white shadow transition-all" """
+    content = content.replace(c4, r4.strip('\n'))
+
+    # Block 5
+    c5 = """<<<<<<< HEAD
+=======
+
+      <!-- Reset to defaults -->
+      <div class="mt-8 text-center">
+        <button
+          class="text-[#00bcd4] text-sm underline decoration-[#00bcd4]"
+          (click)="resetToDefaults()"
+        >
+          {{ 'chat_settings.reset_defaults' | t }}
+        </button>
+      </div>
+>>>>>>> origin/main"""
+    r5 = """
+      <!-- Reset to defaults -->
+      <div class="mt-8 text-center">
+        <button
+          class="text-[#00bcd4] text-sm underline decoration-[#00bcd4]"
+          (click)="resetToDefaults()"
+        >
+          {{ 'chat_settings.reset_defaults' | t }}
+        </button>
+      </div>"""
+    content = content.replace(c5, r5.strip('\n'))
+
+    with open(path, "w") as f:
+        f.write(content)
+        
+fix_ts()
