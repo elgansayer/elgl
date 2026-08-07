@@ -1,67 +1,89 @@
-import { Component, inject, signal, computed, AfterViewInit, OnInit } from '@angular/core';
+<<<<<<< HEAD
+import { Component, inject, signal, computed } from '@angular/core';
+=======
+import { Component, inject, signal, computed, resource, afterNextRender, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+>>>>>>> origin/main
 import { firstValueFrom } from 'rxjs';
-import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
+import { EscrowService } from '../../services/escrow.service';
+import { NetworkStatusService } from '../../services/network-status.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
+import type { EscrowRow, EscrowStatus, EscrowServiceType } from '../../services/escrow-offline.service';
 
-type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
-type EscrowServiceType = 'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
 type StatusFilter = 'all' | EscrowStatus;
 
-interface EscrowRow {
-  id: string;
-  sender_id: string;
-  receiver_id: string;
-  amount: number;
-  status: EscrowStatus;
-  description: string;
-  service_type: EscrowServiceType;
-  dispute_reason?: string | null;
-  dispute_evidence?: string | null;
-  admin_note?: string | null;
-  created_at: string;
-  updated_at: string;
+interface StatusFilterItem {
+  value: StatusFilter;
+  label: string;
 }
 
 @Component({
   selector: 'app-escrow-payments',
-  standalone: true,
-  imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
+  imports: [DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
+<<<<<<< HEAD
+export class EscrowPaymentsComponent {
+  private readonly i18n = inject(I18nService);
+  private readonly router = inject(Router);
+  private readonly escrowService = inject(EscrowService);
+  private readonly network = inject(NetworkStatusService);
+  private readonly onboardingService = inject(EscrowOnboardingService);
+
+  readonly isOnline = this.network.isOnline;
+  readonly escrows = this.escrowService.escrows;
+  readonly loading = this.escrowService.loading;
+  readonly pendingOperationCount = this.escrowService.pendingOperationCount;
+
+=======
+<<<<<<< HEAD
+export class EscrowPaymentsComponent {
+=======
 export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
+>>>>>>> origin/main
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
   private readonly joyrideService = inject(JoyrideService);
   private readonly onboardingService = inject(EscrowOnboardingService);
 
+  /** Signal to trigger transaction list resource reload after mutations. */
+  private readonly refreshTrigger = signal(0);
+
   readonly transactions = signal<EscrowRow[]>([]);
   readonly loading = signal(false);
+>>>>>>> origin/main
   readonly error = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
-  readonly statusFilter = signal<StatusFilter>('all');
-  readonly showCreateForm = signal(false);
-  readonly showDisputeForm = signal<string | null>(null);
+  readonly selectedStatus = signal<StatusFilter>('all');
+  readonly actionInProgress = signal(false);
 
-  readonly createForm = signal<{
-    partner_id: string;
-    amount: number;
-    description: string;
-    service_type: EscrowServiceType;
-  }>({
-    partner_id: '',
-    amount: 0,
-    description: '',
-    service_type: 'other',
+  readonly statusFilters: StatusFilterItem[] = [
+    { value: 'all', label: 'escrow.filter.all' },
+    { value: 'pending', label: 'escrow.filter.pending' },
+    { value: 'released', label: 'escrow.filter.released' },
+    { value: 'refunded', label: 'escrow.filter.refunded' },
+    { value: 'disputed', label: 'escrow.filter.disputed' },
+    { value: 'cancelled', label: 'escrow.filter.cancelled' },
+  ];
+
+  readonly filteredEscrows = computed(() => {
+    const filter = this.selectedStatus();
+    const txs = this.escrows();
+    if (filter === 'all') return txs;
+    return txs.filter((tx) => tx.status === filter);
   });
 
+<<<<<<< HEAD
+  async loadEscrows(): Promise<void> {
+    await this.escrowService.listUserEscrows();
+=======
   readonly disputeReason = signal('');
   readonly disputeEvidence = signal('');
   readonly refundReason = signal('');
@@ -90,24 +112,39 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     this.transactions().filter((tx) => tx.status === 'pending').length,
   );
 
-  async loadTransactions(status?: string): Promise<void> {
-    this.loading.set(true);
-    this.error.set(null);
-    const token = this.auth.getAccessToken();
-    try {
-      const params = status ? `?status=${status}` : '';
+  /** Resource-based data loading: auto-fetches transactions and reloads on mutations. */
+  private readonly transactionsResource = resource({
+    request: () => this.refreshTrigger(),
+    loader: async ({ request: _ }) => {
+      const token = this.auth.getAccessToken();
       const result = await firstValueFrom(
         this.http.get<EscrowRow[]>(
-          `${environment.apiUrl}/escrow${params}`,
+          `${environment.apiUrl}/escrow`,
           { headers: { Authorization: `Bearer ${token ?? ''}` } },
         ),
       );
-      this.transactions.set(result ?? []);
-    } catch {
-      this.error.set(this.i18n.translate('escrow.loadError'));
-    } finally {
-      this.loading.set(false);
-    }
+      return result ?? [];
+    },
+  });
+
+  /** Sync resource data into the transactions signal and start onboarding tour. */
+  constructor() {
+    effect(() => {
+      const data = this.transactionsResource.value();
+      if (data !== undefined) {
+        this.transactions.set(data);
+      }
+    });
+
+    // Third-party lib (Joyride) requires DOM-ready state; afterNextRender is the
+    // mandated replacement for ngAfterViewInit per Section 5.3.
+    afterNextRender(() => {
+      this.maybeStartTour();
+    });
+  }
+
+  refreshTransactions(): void {
+    this.refreshTrigger.update((v) => v + 1);
   }
 
   async createPayment(): Promise<void> {
@@ -133,7 +170,7 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
       this.successMessage.set(this.i18n.translate('escrow.createSuccess'));
       this.showCreateForm.set(false);
       this.createForm.set({ partner_id: '', amount: 0, description: '', service_type: 'other' });
-      await this.loadTransactions();
+      this.refreshTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.createError'));
     } finally {
@@ -154,7 +191,7 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
         ),
       );
       this.successMessage.set(this.i18n.translate('escrow.releaseSuccess'));
-      await this.loadTransactions();
+      this.refreshTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.releaseError'));
     } finally {
@@ -176,7 +213,7 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
       );
       this.successMessage.set(this.i18n.translate('escrow.refundSuccess'));
       this.refundReason.set('');
-      await this.loadTransactions();
+      this.refreshTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.refundError'));
     } finally {
@@ -207,23 +244,58 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
       this.showDisputeForm.set(null);
       this.disputeReason.set('');
       this.disputeEvidence.set('');
-      await this.loadTransactions();
+      this.refreshTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.disputeError'));
     } finally {
       this.loading.set(false);
     }
+>>>>>>> origin/main
   }
 
   setStatusFilter(filter: StatusFilter): void {
-    this.statusFilter.set(filter);
+    this.selectedStatus.set(filter);
   }
 
-  getStatusLabel(status: EscrowStatus): string {
-    return this.i18n.translate(`escrow.status.${status}`);
+  async handleRelease(escrowId: string): Promise<void> {
+    await this.escrowService.releaseEscrow(escrowId);
+    this.successMessage.set(this.i18n.translate('escrow.releaseSuccess'));
   }
 
-  getStatusClass(status: EscrowStatus): string {
+  async handleRefund(escrowId: string): Promise<void> {
+    await this.escrowService.refundEscrow(escrowId);
+    this.successMessage.set(this.i18n.translate('escrow.refundSuccess'));
+  }
+
+  async handleDispute(escrowId: string): Promise<void> {
+    await this.escrowService.disputeEscrow(escrowId, 'Reason: ');
+    this.successMessage.set(this.i18n.translate('escrow.disputeSuccess'));
+  }
+
+  async handleSync(): Promise<void> {
+    this.actionInProgress.set(true);
+    try {
+      await this.escrowService.syncOfflineOperations();
+    } finally {
+      this.actionInProgress.set(false);
+    }
+  }
+
+  goBack(): void {
+    this.router.navigate(['/']);
+  }
+
+  startOnboardingTour(): void {
+    if (this.onboardingService.isCompleted()) return;
+    this.onboardingService.isTourInProgress.set(true);
+
+    setTimeout(() => {
+      this.onboardingService.isTourInProgress.set(false);
+      this.onboardingService.markComplete();
+    }, 500);
+  }
+
+  statusBadgeClass(status: EscrowStatus): string {
     switch (status) {
       case 'pending':
         return 'bg-amber-500/20 text-amber-400';
@@ -240,23 +312,14 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     }
   }
 
-  getServiceTypeLabel(type: EscrowServiceType): string {
-    return this.i18n.translate(`escrow.serviceType.${type}`);
-  }
-
   clearMessages(): void {
     this.error.set(null);
     this.successMessage.set(null);
   }
+<<<<<<< HEAD
+=======
 
-  ngOnInit(): void {
-    this.loadTransactions();
-  }
-
-  ngAfterViewInit(): void {
-    this.maybeStartTour();
-  }
-
+  /** Start onboarding tour using firstValueFrom to avoid unmanaged subscription. */
   private maybeStartTour(): void {
     if (this.onboardingService.isCompleted()) {
       return;
@@ -266,25 +329,24 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     }
     this.onboardingService.isTourInProgress.set(true);
 
-    setTimeout(() => {
-      const options: JoyrideOptions = {
-        steps: this.onboardingService.stepNames,
-        startWith: 'escrowStepTitle',
-        waitingTime: 100,
-        stepDefaultPosition: 'bottom',
-        themeColor: '#6366f1',
-        showCounter: true,
-        showPrevButton: true,
-      };
+    const options: JoyrideOptions = {
+      steps: this.onboardingService.stepNames,
+      startWith: 'escrowStepTitle',
+      waitingTime: 100,
+      stepDefaultPosition: 'bottom',
+      themeColor: '#6366f1',
+      showCounter: true,
+      showPrevButton: true,
+    };
 
-      this.joyrideService.startTour(options).subscribe({
-        error: () => {
-          this.onboardingService.isTourInProgress.set(false);
-        },
-        complete: () => {
-          this.onboardingService.markComplete();
-        },
+    // JoyrideService.startTour returns an Observable; convert to Promise for clean teardown.
+    firstValueFrom(this.joyrideService.startTour(options))
+      .then(() => {
+        this.onboardingService.markComplete();
+      })
+      .catch(() => {
+        this.onboardingService.isTourInProgress.set(false);
       });
-    }, 500);
   }
+>>>>>>> origin/main
 }

@@ -1,12 +1,16 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
+import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -20,12 +24,15 @@ import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-discovery',
   imports: [
     FormsModule,
+    JoyrideModule,
     TranslatePipe,
+    SanitiseHtmlPipe,
     ScrollablePillsComponent,
     FluencyIndicatorComponent,
     AppGradientButtonComponent,
@@ -35,18 +42,27 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     AgeRangeSliderComponent,
     DistanceSliderComponent,
     AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
 })
 export class DiscoveryComponent implements OnInit, OnDestroy {
+  // NOTE: ngOnInit/ngOnDestroy permitted here per AGENTS.md 5.3 exception -
+  // audio playback uses imperative HTMLAudioElement API requiring manual teardown.
   private readonly discoveryService = inject(DiscoveryService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+  private readonly offlineCache = inject(OfflineDiscoveryCacheService);
+  private readonly discoveryOnboardingService = inject(DiscoveryOnboardingService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
+
+  /** Whether currently offline and serving cached data */
+  readonly isOffline = computed(() => !this.offlineCache.isOnline());
+  readonly isUsingCachedData = computed(() => this.isOffline() && this.offlineCache.cachedDataAvailable());
 
   readonly partners = signal<
     (UserProfile & {
@@ -58,6 +74,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     })[]
   >([]);
   readonly isLoading = signal<boolean>(true);
+  readonly skeletonCount = Array.from({ length: 5 }, (_, i) => i);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 
@@ -335,5 +352,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
     void this.searchPartners();
+  }
+
+  startDiscoveryTour(): void {
+    this.discoveryOnboardingService.startTour();
   }
 }

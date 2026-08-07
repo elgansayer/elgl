@@ -4,10 +4,23 @@ import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
+import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
+
+jest.mock('../common/retry', () => {
+  const actual = jest.requireActual('../common/retry');
+  return {
+    ...actual,
+    withRetry: jest.fn().mockImplementation((op: () => unknown) => op()),
+    isRateLimitError: actual.isRateLimitError,
+  };
+});
+
+import { withRetry } from '../common/retry';
 
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
@@ -17,6 +30,7 @@ describe('DiscoveryService', () => {
   let mockRedisSet: jest.Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
+  let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
 
   function createMockQueryBuilder() {
     const builder: any = {};
@@ -73,6 +87,10 @@ describe('DiscoveryService', () => {
       getActiveHostIds: jest.fn().mockResolvedValue([]),
     };
 
+    mockCloudflareCacheService = {
+      purgeByCacheTags: jest.fn().mockResolvedValue(true),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
@@ -90,6 +108,10 @@ describe('DiscoveryService', () => {
         {
           provide: AudioRoomsService,
           useValue: mockAudioRoomsService,
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: mockCloudflareCacheService,
         },
       ],
     }).compile();
@@ -181,6 +203,34 @@ describe('DiscoveryService', () => {
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
+    });
+
+    it('should purge Cloudflare edge cache for POTW after recalculation', async () => {
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
+        data: [{ id: 'u1' }],
+        error: null,
+      });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockCloudflareCacheService.purgeByCacheTags).toHaveBeenCalledWith([
+        DISCOVERY_CACHE_TAG_POTW,
+      ]);
+    });
+
+    it('should not purge Cloudflare cache when no users qualify', async () => {
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockCloudflareCacheService.purgeByCacheTags).not.toHaveBeenCalled();
     });
   });
 
@@ -435,9 +485,14 @@ describe('DiscoveryService', () => {
           search_lon: -0.1278,
           radius_m: 10000,
           exclude_user_id: 'user-1',
-          filter_native: ['FR'],
+          filter_native_arr: ['FR'],
           filter_target: null,
           serious_only: false,
+          filter_level: null,
+          filter_gender: null,
+          filter_age_min: null,
+          filter_age_max: null,
+          filter_audio_intro: false,
         },
       );
       expect(result).toEqual(
@@ -504,9 +559,14 @@ describe('DiscoveryService', () => {
           search_lon: -74.006,
           radius_m: 10000,
           exclude_user_id: 'user-1',
-          filter_native: null,
+          filter_native_arr: null,
           filter_target: null,
           serious_only: false,
+          filter_level: null,
+          filter_gender: null,
+          filter_age_min: null,
+          filter_age_max: null,
+          filter_audio_intro: false,
         },
       );
     });
@@ -565,27 +625,23 @@ describe('DiscoveryService', () => {
       );
     });
 
-    it('should filter RPC results by level using in-app post-filtering', async () => {
-      // When RPC returns results and level filter is requested, the code
-      // does a follow-up DB query to fetch proficiency levels.
-      // The fallback path applies level filtering directly on in-memory data.
-      mockSupabaseClient.rpc.mockResolvedValue({
-        data: null,
-        error: { message: 'PostGIS not ready' },
-      });
-      stubLimitResponse([
+    it('should pass level filter to RPC call', async () => {
+      stubRpcResponse([
         { id: 'p1', proficiency_level: 'B2' },
         { id: 'p2', proficiency_level: 'A1' },
         { id: 'p3', proficiency_level: 'B2' },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
+      await service.searchPartners('user-1', null, {
         latitude: 1,
         longitude: 2,
         level: 'B2',
       });
 
-      expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_level: 'B2' }),
+      );
     });
 
     it('should apply interests overlap filter on queryBuilder', async () => {
@@ -602,52 +658,61 @@ describe('DiscoveryService', () => {
       ]);
     });
 
-    it('should apply VIP gender filter on RPC results', async () => {
+    it('should pass VIP gender filter to RPC call', async () => {
       stubRpcResponse([
         { id: 'p1', gender: 'female' },
         { id: 'p2', gender: 'male' },
       ]);
 
-      const result = await service.searchPartners(
+      await service.searchPartners(
         'user-1',
         { is_vip: true } as any,
         { latitude: 1, longitude: 2, gender: 'female' },
       );
 
-      expect(result.map((u) => u.id)).toEqual(['p1']);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_gender: 'female' }),
+      );
     });
 
-    it('should filter RPC results by age range', async () => {
+    it('should pass age range to RPC call', async () => {
       stubRpcResponse([
         { id: 'p1', age: 18 },
         { id: 'p2', age: 30 },
         { id: 'p3', age: 50 },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
+      await service.searchPartners('user-1', null, {
         latitude: 1,
         longitude: 2,
         age_min: 20,
         age_max: 40,
       });
 
-      expect(result.map((u) => u.id)).toEqual(['p2']);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_age_min: 20, filter_age_max: 40 }),
+      );
     });
 
-    it('should filter RPC results by has_audio_intro', async () => {
+    it('should pass audio_intro filter to RPC call', async () => {
       stubRpcResponse([
         { id: 'p1', audio_intro_url: 'https://example.com/audio.mp3' },
         { id: 'p2', audio_intro_url: '' },
         { id: 'p3', audio_intro_url: null },
       ]);
 
-      const result = await service.searchPartners('user-1', null, {
+      await service.searchPartners('user-1', null, {
         latitude: 1,
         longitude: 2,
         has_audio_intro: true,
       });
 
-      expect(result.map((u) => u.id)).toEqual(['p1']);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_audio_intro: true }),
+      );
     });
 
     it('should filter blocked users from RPC results', async () => {
@@ -1160,6 +1225,86 @@ describe('DiscoveryService', () => {
 
       const result = await service.searchByCountryCity('user-1', {});
       expect(result).toEqual([]);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Exponential backoff retry (HTTP 429) coverage
+  // ---------------------------------------------------------------------------
+  describe('retry integration', () => {
+    beforeEach(() => {
+      (withRetry as jest.Mock).mockClear();
+    });
+
+    it('should wrap searchPartners query with withRetry', async () => {
+      stubLimitResponse([{ id: 'p1' }]);
+
+      await service.searchPartners('user-1', null, {});
+
+      expect(withRetry).toHaveBeenCalled();
+    });
+
+    it('should retry on Supabase 429 error and return empty after exhaustion', async () => {
+      const supabase429Error = { code: '429', message: 'Too Many Requests' };
+      (withRetry as jest.Mock).mockImplementationOnce(async (op: () => unknown) => {
+        try {
+          return await op();
+        } catch {
+          return { data: null, error: supabase429Error };
+        }
+      });
+
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: null,
+        error: supabase429Error,
+      });
+
+      const result = await service.searchPartners('user-1', null, {});
+      expect(result).toEqual([]);
+    });
+
+    it('should wrap getAudioIntros with withRetry', async () => {
+      stubLimitResponse([{ id: 'p1' }]);
+
+      await service.getAudioIntros('user-1', null, {});
+
+      expect(withRetry).toHaveBeenCalled();
+    });
+
+    it('should wrap getRecentNativeSpeakers with withRetry', async () => {
+      stubLimitResponse([{ id: 'p1' }]);
+
+      await service.getRecentNativeSpeakers('user-1');
+
+      expect(withRetry).toHaveBeenCalled();
+    });
+
+    it('should wrap getSpotlightUsers with withRetry', async () => {
+      stubLimitResponse([{ id: 'p1' }]);
+
+      await service.getSpotlightUsers('user-1');
+
+      expect(withRetry).toHaveBeenCalled();
+    });
+
+    it('should wrap findByLanguagePair with withRetry', async () => {
+      mockQueryBuilder.range = jest.fn().mockReturnThis();
+      Object.assign(mockQueryBuilder, {
+        data: [{ id: 'lp1' }],
+        error: null,
+      });
+
+      await service.findByLanguagePair('user-1', { native_language: 'EN' });
+
+      expect(withRetry).toHaveBeenCalled();
+    });
+
+    it('should wrap searchByCountryCity with withRetry', async () => {
+      stubLimitResponse([{ id: 'p1' }]);
+
+      await service.searchByCountryCity('user-1', { country: 'JP' });
+
+      expect(withRetry).toHaveBeenCalled();
     });
   });
 });

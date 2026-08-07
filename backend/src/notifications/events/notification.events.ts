@@ -51,3 +51,10 @@ export class LikeEvent {
     public readonly targetId?: string,
   ) {}
 }
+
+export class ProfileUpdatedEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly changedFields: string[],
+  ) {}
+}

@@ -358,6 +358,19 @@ export class I18nService {
     'discovery.genderMale': 'Male',
     'discovery.genderFemale': 'Female',
     'discovery.genderVipRequired': 'VIP required to filter by gender',
+    'discovery.startTour': 'Tour',
+    'discovery.tour.filterPillsText': 'Use these filter pills to quickly switch between All Users, Serious Learners, Nearby partners, and Paid Practice.',
+    'discovery.tour.languagePillsText': 'Tap a language chip to filter partners by target language, or use the language picker to search for more languages.',
+    'discovery.tour.sortGenderText': 'Sort results by best match, online status, or distance. VIP users can also filter by gender.',
+    'discovery.tour.ageDistanceText': 'Adjust the age range and distance radius to narrow down your partner search. VIP users can fine-tune distance control.',
+    'discovery.tour.globalSearchText': 'Use the global search bar to search partners by name, native language, target language, or proficiency level.',
+    'discovery.tour.partnerCardsText': 'Browse partner cards showing display names, VIP badges, personality types, fluency indicators, and shared interests. Tap a card to start a chat.',
+    'tour.prev': 'Previous',
+    'tour.next': 'Next',
+    'tour.done': 'Done',
+    'tour.close': 'Close',
+    'discovery.offlineBanner': 'You are offline',
+    'discovery.offlineCachedData': '\u2013 viewing cached data',
 
     // Moments Feed Component
     'moments.title': 'Moments',
@@ -584,6 +597,36 @@ export class I18nService {
     'videoRoom.waitingForCoHost': 'Waiting for co-host to join...',
     'videoRoom.removeCoHostAria': 'Remove co-host from split screen',
     'videoRoom.noEligibleSpeakers': 'Approve a stage speaker before inviting a co-host.',
+    'videoRoom.hostVideoAria': 'Host video stream',
+    'videoRoom.coHostVideoAria': 'Co-host video stream',
+    'videoRoom.inviteCoHostAria': 'Invite co-host to split screen',
+    'videoRoom.inviteCoHostExpanded': 'Invite co-host picker expanded',
+    'videoRoom.inviteCoHostCollapsed': 'Invite co-host picker collapsed',
+    'videoRoom.speakerPickerAria': 'Select speaker to invite as co-host',
+    'videoRoom.speakerOptionAria': 'Invite {{id}} as co-host',
+
+    // Video Classrooms Marketplace
+    'classroomsMarketplace.title': '&#127979;&#65039; Video Classrooms',
+    'classroomsMarketplace.subtitle': 'Join live video language-learning sessions hosted by the community',
+    'classroomsMarketplace.hostingBadge': 'You are hosting',
+    'classroomsMarketplace.filterAll': 'All Languages',
+    'classroomsMarketplace.liveBadge': 'LIVE',
+    'classroomsMarketplace.watching': 'watching',
+    'classroomsMarketplace.speakersLabel': '{{count}} speakers',
+    'classroomsMarketplace.createdAt': 'Started {{date}}',
+    'classroomsMarketplace.joinBtn': 'Join Classroom',
+    'classroomsMarketplace.loadErrorTitle': 'Failed to load classrooms',
+    'classroomsMarketplace.loadErrorDescription': 'We could not load the classroom list. Please check your connection and try again.',
+    'classroomsMarketplace.retryLoadBtn': 'Try Again',
+    'classroomsMarketplace.emptyTitle': 'No Video Classrooms Available',
+    'classroomsMarketplace.emptyDescription': 'No live video classrooms match your filters. Start one or check back later!',
+
+    // Video Classroom Error Boundary
+    'videoClassroomErrorBoundary.title': 'Video Classroom Error',
+    'videoClassroomErrorBoundary.description': 'An unexpected error occurred while loading this video classroom. Your connection has been preserved.',
+    'videoClassroomErrorBoundary.retryBtn': 'Try Again',
+    'videoClassroomErrorBoundary.reportBtn': 'Report Crash',
+    'videoClassroomErrorBoundary.reportedMessage': 'Crash reported. Thank you for helping us improve!',
 
     // 1:1 Video Call Component
     'video_call.waiting_for': 'Waiting for {{name}}...',
@@ -598,6 +641,22 @@ export class I18nService {
     'video_call.enter_pip_aria': 'Enter picture-in-picture',
     'video_call.exit_pip_aria': 'Exit picture-in-picture',
     'video_call.end_call_aria': 'End call',
+    'video_call.remote_video_aria': 'Remote participant video',
+    'video_call.local_video_aria': 'Your camera preview',
+    'video_call.remote_camera_aria': 'Remote camera picture-in-picture',
+    'video_call.remote_avatar_aria': '{{initials}}, waiting for video',
+    'video_call.call_duration_aria': 'Call duration',
+    'video_call.controls_toolbar_aria': 'Call controls',
+    'video_call.presenting_badge_aria': 'You are presenting your screen',
+
+    // Split Screen Video Component
+    'splitScreen.hostVideoAria': 'Host video',
+    'splitScreen.coHostVideoAria': 'Co-host video',
+    'splitScreen.inviteCoHostAria': 'Invite a co-host to split screen',
+
+    // Live Chat Overlay Component
+    'liveChat.overlayAria': 'Live chat messages',
+    'liveChat.liveRegionAria': 'New messages appearing',
 
     // Chat Room Component
     'chatRoom.liveNow': 'Live now',
@@ -1259,8 +1318,12 @@ export class I18nService {
     'safety.submitReportBtn': 'Submit report',
     'safety.confirmBlockBtn': 'Confirm block',
     'safety.closeBtn': 'Close',
+    'safety.tabListLabel': 'Safety actions',
+    'safety.submitReportAria': 'Submit report against {{name}}',
+    'safety.confirmBlockAria': 'Confirm blocking {{name}}',
     'safety.blockManagement.title': '🛡️ Blocked Users',
     'safety.blockManagement.unblock': 'Unblock',
+    'safety.blockManagement.unblockAria': 'Unblock {{name}}',
     'safety.blockManagement.emptyTitle': 'No blocked users',
     'safety.blockManagement.emptyDesc': 'When you block someone, they will appear here. Blocked users cannot message you or see your activity.',
     'safety.blockManagement.loadError': 'Failed to load blocked users',
@@ -1270,7 +1333,7 @@ export class I18nService {
     'safety.moderation.emptyDesc': 'There are no reports to review at this time.',
     'safety.moderation.loadError': 'Failed to load moderation items',
     'safety.moderation.loadErrorDesc': 'Please try again or contact support if the issue persists.',
-    'safety.categoriesLoading': 'Loading categories...',
+    'safety.categoriesLoading': 'Loading report categories',
     'safety.categoriesError': 'Could not load report categories',
 
     'common.retry': 'Retry',
