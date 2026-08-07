@@ -307,7 +307,7 @@
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 mb-1 flex-wrap">
                   <p class="truncate text-base font-black text-text-primary">
-                    {{ partner.display_name || ('discovery.partnerFallback' | t) }}
+                    {{ (partner.display_name || ('discovery.partnerFallback' | t)) | sanitiseHtml }}
                   </p>
                   @if (partner.is_vip) {
                     <span
@@ -324,7 +324,7 @@
                   @if (partner.mbti_personality_type) {
                     <span
                       class="rounded bg-surface-200 px-1.5 py-0.5 text-[9px] font-bold text-text-secondary"
-                      >{{ partner.mbti_personality_type }}</span
+                      >{{ partner.mbti_personality_type | sanitiseHtml }}</span
                     >
                   }
                   @if (partner.audio_intro_url) {
@@ -359,7 +359,7 @@
                 <!-- Active status and distance -->
                 <div class="flex items-center gap-2 mb-1">
                   <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px] lg:max-w-[280px]">
-                    {{ partner.bio_text || ('discovery.partnerBioFallback' | t) }}
+                    {{ (partner.bio_text || ('discovery.partnerBioFallback' | t)) | sanitiseHtml }}
                   </p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
@@ -380,7 +380,7 @@
                       <span
                         class="px-1.5 py-0.5 rounded-full bg-surface-200 text-[10px] text-text-secondary font-medium"
                       >
-                        {{ interest }}
+                        {{ interest | sanitiseHtml }}
                       </span>
                     }
                     @if (partner.interests.length > 5) {
@@ -396,8 +396,9 @@
                   <div class="mt-1">
                     <span class="text-[10px] text-accent-500 font-semibold">
                       {{
-                        'discovery.sharedInterests'
-                          | t: { interests: partner.shared_interests.slice(0, 2).join(', ') }
+                        ('discovery.sharedInterests'
+                          | t: { interests: partner.shared_interests.slice(0, 2).join(', ') })
+                          | sanitiseHtml
                       }}
                     </span>
                   </div>

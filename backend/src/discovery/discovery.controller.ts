@@ -26,6 +26,7 @@ import {
   DiscoveryRateLimiterGuard,
   DiscoveryRateLimit,
 } from './discovery-rate-limiter.guard';
+import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
 
 @ApiTags('Discovery Map')
 @ApiTags('Discovery - Partners')
@@ -117,7 +118,9 @@ export class DiscoveryController {
     if (profile?.is_serious_learner === true) {
       query.serious_learner_mode = true;
     }
-    return this.discoveryService.searchPartners(user.id, profile, query);
+    return sanitiseDiscoveryData(
+      await this.discoveryService.searchPartners(user.id, profile, query),
+    );
   }
 
   /**
@@ -171,7 +174,8 @@ export class DiscoveryController {
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
-    return this.discoveryService.getAudioIntros(user.id, profile, query);
+    const result = await this.discoveryService.getAudioIntros(user.id, profile, query);
+    return sanitiseDiscoveryData(result);
   }
 
   /**
@@ -195,7 +199,8 @@ export class DiscoveryController {
     @CurrentUser() user: User | null,
   ): Promise<UserProfile[]> {
     if (!user) return [];
-    return this.discoveryService.getRecentNativeSpeakers(user.id);
+    const result = await this.discoveryService.getRecentNativeSpeakers(user.id);
+    return sanitiseDiscoveryData(result);
   }
 
   /**
@@ -218,7 +223,8 @@ export class DiscoveryController {
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded. Free: 60/min, VIP: 300/min.' })
   async getSpotlight(@CurrentUser() user: User | null): Promise<UserProfile[]> {
     if (!user) return [];
-    return this.discoveryService.getSpotlightUsers(user.id);
+    const result = await this.discoveryService.getSpotlightUsers(user.id);
+    return sanitiseDiscoveryData(result);
   }
 
   /**
@@ -259,7 +265,8 @@ export class DiscoveryController {
     @Query() query: LanguagePairQueryDto,
   ): Promise<UserProfile[]> {
     if (!user) return [];
-    return this.discoveryService.findByLanguagePair(user.id, query);
+    const result = await this.discoveryService.findByLanguagePair(user.id, query);
+    return sanitiseDiscoveryData(result);
   }
 
   /**
@@ -287,9 +294,10 @@ export class DiscoveryController {
     @Query('city') city?: string,
   ): Promise<UserProfile[]> {
     if (!user) return [];
-    return this.discoveryService.searchByCountryCity(user.id, {
+    const result = await this.discoveryService.searchByCountryCity(user.id, {
       country,
       city,
     });
+    return sanitiseDiscoveryData(result);
   }
 }

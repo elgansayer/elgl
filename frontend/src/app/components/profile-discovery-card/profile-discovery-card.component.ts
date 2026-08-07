@@ -1,6 +1,7 @@
 import { Component, computed, input } from '@angular/core';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { UserProfile } from '../../services/user.service';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 @Component({
   selector: 'app-profile-discovery-card',

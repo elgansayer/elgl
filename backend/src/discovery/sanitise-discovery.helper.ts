@@ -4,14 +4,11 @@ import { JSDOM } from 'jsdom';
 const window = new JSDOM('').window;
 
 /**
- * Strict DOMPurify instance for the Matchmaking / Discovery Algorithm.
+ * Strict DOMPurify instance for Discovery Map user data.
  *
- * ALLOWED_TAGS and ALLOWED_ATTR are empty so that only plain-text content
- * survives sanitisation. Discovery results (display_name, bio_text, interests,
- * learning_goals, etc.) contain user-authored data and must never expose raw
- * HTML to API consumers. Stripping everything ensures that even if a row is
- * poisoned via a compromised admin panel or SQL injection, the client
- * receives only clean values.
+ * ALLOWED_TAGS and ALLOWED_ATTR are empty: only plain-text content survives
+ * sanitisation. Discovery partner data (display_name, bio_text, interests,
+ * MBTI types, etc.) is user-authored and must never contain rich HTML.
  */
 const strictPurify = DOMPurify(window);
 strictPurify.setConfig({
@@ -30,14 +27,10 @@ strictPurify.setConfig({
 /**
  * Deeply sanitise a value using the strict discovery DOMPurify config.
  *
- * Rules:
- * - Strings are run through DOMPurify (stripping all HTML).
- * - Plain objects and arrays are recursed into.
- * - Primitives (number, boolean, null, undefined) and class instances
- *   (Date, Buffer, etc.) are returned unchanged.
- *
- * The generic signature preserves the caller's type without requiring
- * type assertions at the call site.
+ * Strings are run through DOMPurify (stripping all HTML).
+ * Plain objects and arrays are recursed into.
+ * Primitives (number, boolean, null, undefined) and class instances
+ * (Date, Buffer, etc.) are returned unchanged.
  */
 export function sanitiseDiscoveryData<T>(value: T): T {
   if (typeof value === 'string') {
@@ -49,7 +42,6 @@ export function sanitiseDiscoveryData<T>(value: T): T {
   }
 
   if (value !== null && typeof value === 'object') {
-    // Do not traverse class instances (Date, custom types, etc.)
     const proto = Object.getPrototypeOf(value);
     if (proto !== Object.prototype && proto !== null) {
       return value;

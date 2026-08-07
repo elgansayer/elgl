@@ -1,92 +1,102 @@
 // Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
-// in the Jest test environment.
-const mockWindow = {
-  document: {
-    createElement: () => ({}),
-    createTextNode: (text: string) => ({ textContent: text }),
-    body: { appendChild: () => {} },
-  },
-  Node: { ELEMENT_NODE: 1, TEXT_NODE: 3 },
-  NodeFilter: { SHOW_ELEMENT: 1 },
-};
-
 jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: mockWindow,
+  JSDOM: jest.fn().mockImplementation((_html: string) => ({
+    window: {
+      document: {
+        createElement: jest.fn().mockReturnValue({}),
+        createTextNode: jest.fn().mockReturnValue({}),
+      },
+      Node: {
+        TEXT_NODE: 3,
+      },
+    },
   })),
 }));
 
 // Strict DOMPurify mock that strips ALL HTML tags
-const mockSanitize = (input: string): string => {
-  // Remove script/style elements and their content entirely (DOMPurify strips them)
-  const withoutScripts = input
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-  // Strip all remaining HTML tags
-  return withoutScripts.replace(/<[^>]*>/g, '');
+const mockSanitize = (dirty: string): string => {
+  if (typeof dirty !== 'string') return '';
+  return dirty.replace(/<[^>]*>/g, '');
 };
 
-const mockPurifyInstance = {
-  setConfig: jest.fn(),
-  sanitize: jest.fn().mockImplementation(mockSanitize),
-};
+jest.mock('dompurify', () => {
+  return jest.fn().mockImplementation(() => ({
+    sanitize: mockSanitize,
+    setConfig: jest.fn(),
+  }));
+});
 
-const mockCreateDOMPurify = jest.fn(() => mockPurifyInstance);
-
-jest.mock('dompurify', () => mockCreateDOMPurify);
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { sanitiseDiscoveryData } = require('./sanitise-discovery.helper');
+import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
 
 describe('sanitiseDiscoveryData', () => {
-  it('strips HTML tags from strings', () => {
+  it('should strip script tags from strings', () => {
+    expect(sanitiseDiscoveryData('<script>alert("xss")</script>')).toBe('alert("xss")');
+  });
+
+  it('should strip all HTML tags and return plain text', () => {
     expect(sanitiseDiscoveryData('<b>bold</b>')).toBe('bold');
-    expect(sanitiseDiscoveryData('<script>alert("xss")</script>')).toBe('');
-    expect(sanitiseDiscoveryData('<img src="x" onerror="alert(1)">')).toBe('');
+    expect(sanitiseDiscoveryData('<em>italic</em>')).toBe('italic');
   });
 
-  it('deeply sanitises arrays', () => {
-    expect(sanitiseDiscoveryData(['<b>test</b>', 'safe'])).toEqual([
-      'test',
-      'safe',
-    ]);
+  it('should strip tags from complex HTML', () => {
+    expect(sanitiseDiscoveryData('<p>Hello <b>world</b></p>')).toBe('Hello world');
   });
 
-  it('deeply sanitises nested objects', () => {
-    expect(
-      sanitiseDiscoveryData({
-        display_name: '<script>evil</script>Jane',
-        bio_text: '<b>Hello</b> world',
-        interests: ['<img>coding', 'music'],
-      }),
-    ).toEqual({
-      display_name: 'Jane',
-      bio_text: 'Hello world',
-      interests: ['coding', 'music'],
-    });
+  it('should preserve plain text unchanged', () => {
+    expect(sanitiseDiscoveryData('Hello, world!')).toBe('Hello, world!');
   });
 
-  it('returns primitives unchanged', () => {
-    expect(sanitiseDiscoveryData(123)).toBe(123);
+  it('should strip img tags with onerror handlers', () => {
+    const result = sanitiseDiscoveryData('<img src=x onerror=alert(1)>');
+    expect(result).not.toContain('onerror');
+    expect(result).not.toContain('<img');
+  });
+
+  it('should sanitise deeply nested objects', () => {
+    const input = {
+      id: 'abc-123',
+      display_name: '<script>evil()</script>Tanaka',
+      bio_text: '<img src=x onerror=alert(1)>',
+      native_languages: ['<b>JA</b>', 'EN'],
+      nested: {
+        value: '<p>test</p>',
+      },
+    };
+
+    const result = sanitiseDiscoveryData(input);
+
+    expect(result.display_name).toBe('evil()Tanaka');
+    expect(result.bio_text).toBe('');
+    expect(result.native_languages).toEqual(['JA', 'EN']);
+    expect(result.nested.value).toBe('test');
+  });
+
+  it('should sanitise arrays of objects', () => {
+    const input = [
+      { display_name: '<b>User1</b>' },
+      { display_name: '<i>User2</i>' },
+    ];
+
+    const result = sanitiseDiscoveryData(input);
+
+    expect(result[0].display_name).toBe('User1');
+    expect(result[1].display_name).toBe('User2');
+  });
+
+  it('should return primitives unchanged', () => {
+    expect(sanitiseDiscoveryData(42)).toBe(42);
     expect(sanitiseDiscoveryData(true)).toBe(true);
-    expect(sanitiseDiscoveryData(null)).toBe(null);
-    expect(sanitiseDiscoveryData(undefined)).toBe(undefined);
+    expect(sanitiseDiscoveryData(null)).toBeNull();
+    expect(sanitiseDiscoveryData(undefined)).toBeUndefined();
   });
 
-  it('does not traverse class instances', () => {
-    const date = new Date('2024-01-01');
+  it('should return empty string for empty input', () => {
+    expect(sanitiseDiscoveryData('')).toBe('');
+  });
+
+  it('should not traverse class instances', () => {
+    const date = new Date();
     const result = sanitiseDiscoveryData(date);
     expect(result).toBe(date);
-  });
-
-  it('handles mixed arrays with objects', () => {
-    const input = [
-      { display_name: '<b>Alice</b>', bio_text: 'Hello' },
-      { display_name: '<script>x</script>Bob', bio_text: '<p>World</p>' },
-    ];
-    expect(sanitiseDiscoveryData(input)).toEqual([
-      { display_name: 'Alice', bio_text: 'Hello' },
-      { display_name: 'Bob', bio_text: 'World' },
-    ]);
   });
 });

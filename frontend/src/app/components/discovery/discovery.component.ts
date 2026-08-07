@@ -22,6 +22,7 @@ import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 /** Milliseconds to debounce partner search calls triggered by interaction changes. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -41,6 +42,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     DistanceSliderComponent,
     AppEmptyStateComponent,
     DiscoverySkeletonCardComponent,
+    SanitiseHtmlPipe,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
