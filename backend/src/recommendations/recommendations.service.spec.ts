@@ -3,6 +3,8 @@ import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
+import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
+import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
 
@@ -16,6 +18,7 @@ type QueryChainMock = {
   limit: jest.Mock;
   single: jest.Mock;
   maybeSingle: jest.Mock;
+  match: jest.Mock;
   _setResolve: (data: unknown, error?: { message: string } | null) => void;
   then: (resolve: (value: unknown) => void) => undefined;
 };
@@ -43,6 +46,7 @@ const makeQueryChain = (): QueryChainMock => {
     'limit',
     'single',
     'maybeSingle',
+    'match',
   ];
   methodNames.forEach((m) => {
     (chain as Record<string, unknown>)[m] = jest.fn().mockReturnValue(chain);
@@ -60,7 +64,7 @@ const makeQueryChain = (): QueryChainMock => {
 
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
-  let mockRedis: { get: jest.Mock; set: jest.Mock };
+  let mockRedis: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
   let mockFrom: jest.Mock;
   let mockMetricsService: {
     recordMatchmakingRecommendationsGenerated: jest.Mock;
@@ -76,6 +80,7 @@ describe('RecommendationsService', () => {
     mockRedis = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn().mockResolvedValue(1),
     };
 
     mockFrom = jest.fn();
@@ -105,6 +110,33 @@ describe('RecommendationsService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+        },
+        {
+          provide: CircuitBreakerService,
+          useValue: {
+            isAvailable: jest.fn().mockReturnValue(true),
+            recordSuccess: jest.fn(),
+            recordFailure: jest.fn(),
+            getState: jest.fn().mockReturnValue({
+              isOpen: false,
+              failureCount: 0,
+              lastFailure: 0,
+              cooldownUntil: 0,
+              totalFailures: 0,
+              totalSuccesses: 0,
+            }),
+            executeWithBreaker: jest
+              .fn()
+              .mockImplementation((_svc: string, op: () => Promise<unknown>) =>
+                op(),
+              ),
+          },
+        },
+        {
+          provide: MatchmakingCrashReportService,
+          useValue: {
+            reportCrash: jest.fn().mockResolvedValue({}),
+          },
         },
       ],
     }).compile();
@@ -286,9 +318,7 @@ describe('RecommendationsService', () => {
         },
       ]);
 
-      mockFrom
-        .mockReturnValueOnce(userChain)
-        .mockReturnValueOnce(matchesChain);
+      mockFrom.mockReturnValueOnce(userChain).mockReturnValueOnce(matchesChain);
 
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);
@@ -859,6 +889,25 @@ describe('RecommendationsService', () => {
         correctionRatio: 0.92,
         matchTier: 'language_exchange',
       });
+    });
+  });
+
+  describe('purgeRecommendationsCache (GDPR erasure)', () => {
+    it('should delete the user recommendation cache key from Redis', async () => {
+      await service.purgeRecommendationsCache('user-to-delete');
+
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'recommendations:daily:user-to-delete',
+      );
+    });
+
+    it('should handle Redis errors gracefully', async () => {
+      mockRedis.del.mockRejectedValue(new Error('Connection lost'));
+
+      // Should not throw
+      await expect(
+        service.purgeRecommendationsCache('user-to-delete'),
+      ).resolves.toBeUndefined();
     });
   });
 });

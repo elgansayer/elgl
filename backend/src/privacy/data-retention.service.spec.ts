@@ -6,6 +6,7 @@ describe('DataRetentionService', () => {
   let service: DataRetentionService;
   let mockSupabaseClient: Record<string, jest.Mock>;
   let mockQueryBuilder: Record<string, jest.Mock>;
+  let mockRedis: { del: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -23,6 +24,10 @@ describe('DataRetentionService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    mockRedis = {
+      del: jest.fn().mockResolvedValue(1),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DataRetentionService,
@@ -30,6 +35,7 @@ describe('DataRetentionService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: jest.fn().mockReturnValue(mockRedis),
           },
         },
       ],
@@ -150,6 +156,30 @@ describe('DataRetentionService', () => {
       expect(calledTables).toContain('gift_transactions');
       expect(calledTables).toContain('user_sticker_packs');
       expect(calledTables).toContain('user_statistics');
+    });
+
+    it('purges Redis recommendation cache during account deletion', async () => {
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: [{ id: 'user-abc-123' }],
+        error: null,
+      });
+      const mockDeleteBuilder = {
+        delete: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return mockQueryBuilder;
+        }
+        return mockDeleteBuilder;
+      });
+
+      await service.finaliseAccountDeletions();
+
+      // Verify the recommendation cache was purged (GDPR erasure)
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'recommendations:daily:user-abc-123',
+      );
     });
 
     it('handles error when querying users to delete', async () => {

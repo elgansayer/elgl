@@ -5,7 +5,6 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
@@ -20,7 +19,6 @@ import { Optional } from '@nestjs/common';
 import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
-import { ProfileUpdatedEvent } from '../notifications/events/notification.events';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
@@ -32,7 +30,6 @@ export class UsersService {
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     private readonly dataExportWorker: DataExportWorker,
-    @Optional() private readonly eventEmitter?: EventEmitter2,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
@@ -383,6 +380,7 @@ export class UsersService {
       privacy_hide_age: false,
       privacy_hide_location: false,
       privacy_hide_from_search: false,
+      matchmaking_consent: false,
       privacy_hide_gender: false,
       privacy_hide_exact_location: false,
       privacy_hide_online_status: false,
@@ -467,6 +465,8 @@ export class UsersService {
       updatePayload.privacy_hide_location = dto.privacy_hide_location;
     if (dto.privacy_hide_from_search !== undefined)
       updatePayload.privacy_hide_from_search = dto.privacy_hide_from_search;
+    if (dto.matchmaking_consent !== undefined)
+      updatePayload.matchmaking_consent = dto.matchmaking_consent;
     if (dto.privacy_hide_gender !== undefined)
       updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
     if (dto.privacy_hide_exact_location !== undefined)
@@ -542,15 +542,6 @@ export class UsersService {
       );
     }
     const profile = await this.getProfile(userId);
-
-    // Emit profile.updated event for cache invalidation listeners
-    if (this.eventEmitter) {
-      this.eventEmitter.emit(
-        'profile.updated',
-        new ProfileUpdatedEvent(userId, Object.keys(updatePayload)),
-      );
-    }
-
     return { ...profile, ...updatePayload };
   }
 

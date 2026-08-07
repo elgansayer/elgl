@@ -9,7 +9,6 @@ import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 import { MOCK_USERS } from '../mock-data';
-import { withRetry, isRateLimitError } from '../common/retry';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -42,36 +41,6 @@ export class DiscoveryService {
     private readonly safetyService: SafetyService,
   ) {}
 
-  /**
-   * Executes a Supabase query with exponential backoff retry for HTTP 429 errors.
-   * The operation function should return a Supabase `{ data, error }` result.
-   * On 429 rate-limit errors, the error is thrown so withRetry can catch and backoff.
-   * On other errors, the result is returned as-is for the caller to handle.
-   */
-  private async executeWithRetry<T>(
-    operation: () => PromiseLike<{ data: T | null; error: { message?: string; code?: string; status?: number } | null }>,
-    context: string,
-  ): Promise<{ data: T | null; error: { message?: string; code?: string; status?: number } | null }> {
-    return withRetry(
-      async () => {
-        const result = await operation();
-        if (result.error && isRateLimitError(result.error)) {
-          throw result.error;
-        }
-        return result;
-      },
-    ).catch((err: unknown) => {
-      const supabaseErr = err as { code?: string; message?: string; status?: number };
-      if (isRateLimitError(err)) {
-        this.logger.warn(
-          `Supabase 429 rate limit exhausted retries for ${context}: ${supabaseErr.message ?? String(err)}`,
-        );
-        return { data: null, error: supabaseErr };
-      }
-      throw err;
-    });
-  }
-
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
@@ -80,18 +49,14 @@ export class DiscoveryService {
     const redis = this.supabaseService.getRedisClient();
 
     try {
-      const { data: topUsers, error } = await this.executeWithRetry(
-        () =>
-          supabase
-            .from('users')
-            .select('id')
-            .eq('is_deletion_pending', false)
-            .gt('correction_ratio', 0.5)
-            .order('correction_ratio', { ascending: false })
-            .order('study_streak_days', { ascending: false })
-            .limit(10),
-        'calculatePartnerOfWeek',
-      );
+      const { data: topUsers, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('is_deletion_pending', false)
+        .gt('correction_ratio', 0.5)
+        .order('correction_ratio', { ascending: false })
+        .order('study_streak_days', { ascending: false })
+        .limit(10);
 
       if (error || !topUsers || topUsers.length === 0) {
         this.logger.warn(
@@ -127,15 +92,11 @@ export class DiscoveryService {
     const redis = this.supabaseService.getRedisClient();
 
     try {
-      const { data: users, error } = await this.executeWithRetry(
-        () =>
-          supabase
-            .from('users')
-            .select('id, native_languages, target_languages')
-            .eq('is_deletion_pending', false)
-            .limit(1000),
-        'calculateDailyRecommendations:fetchAll',
-      );
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, native_languages, target_languages')
+        .eq('is_deletion_pending', false)
+        .limit(1000);
 
       if (error || !users) {
         this.logger.error('Failed to fetch users for recommendations', error);
@@ -153,20 +114,16 @@ export class DiscoveryService {
           continue;
         }
 
-        const { data: matches } = await this.executeWithRetry(
-          () =>
-            supabase
-              .from('users')
-              .select('id')
-              .neq('id', user.id)
-              .eq('privacy_hide_from_search', false)
-              .eq('is_deletion_pending', false)
-              .contains('native_languages', [user.target_languages[0]])
-              .contains('target_languages', [user.native_languages[0]])
-              .order('study_streak_days', { ascending: false })
-              .limit(10),
-          'calculateDailyRecommendations:findMatches',
-        );
+        const { data: matches } = await supabase
+          .from('users')
+          .select('id')
+          .neq('id', user.id)
+          .eq('privacy_hide_from_search', false)
+          .eq('is_deletion_pending', false)
+          .contains('native_languages', [user.target_languages[0]])
+          .contains('target_languages', [user.native_languages[0]])
+          .order('study_streak_days', { ascending: false })
+          .limit(10);
 
         if (matches && matches.length > 0) {
           let matchIds = (matches as Array<{ id: string }>).map((m) => m.id);
@@ -351,33 +308,26 @@ export class DiscoveryService {
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
-      const response = (await this.executeWithRetry(
-        () =>
-          supabase.rpc('search_nearby_users', {
-            search_lat: searchLat,
-            search_lon: searchLon,
-            radius_m: query.radius_metres || 50000,
-            exclude_user_id: currentUserId,
-            filter_native_arr: query.native_languages ? [query.native_languages] : null,
-            filter_target: query.target_language || null,
-            serious_only: Boolean(query.serious_learner_only),
-            filter_level: query.level || null,
-            filter_gender: _currentUserProfile?.is_vip && query.gender ? query.gender : null,
-            filter_age_min: query.age_min ?? null,
-            filter_age_max: query.age_max ?? null,
-            filter_audio_intro: query.has_audio_intro === true,
-          }),
-        'searchPartners:RPC',
-      )) as unknown as {
+      const response = (await supabase.rpc('search_nearby_users', {
+        search_lat: searchLat,
+        search_lon: searchLon,
+        radius_m: query.radius_metres || 50000,
+        exclude_user_id: currentUserId,
+        filter_native_arr: query.native_languages ? [query.native_languages] : null,
+        filter_target: query.target_language || null,
+        serious_only: Boolean(query.serious_learner_only),
+        filter_level: query.level || null,
+        filter_gender: _currentUserProfile?.is_vip && query.gender ? query.gender : null,
+        filter_age_min: query.age_min ?? null,
+        filter_age_max: query.age_max ?? null,
+        filter_audio_intro: query.has_audio_intro === true,
+      })) as unknown as {
         data: unknown[] | null;
         error: { message?: string } | null;
       };
 
       if (response.error || !response.data || response.data.length === 0) {
-        const fallbackRes = await this.executeWithRetry(
-          () => queryBuilder.limit(50),
-          'searchPartners:fallback',
-        );
+        const fallbackRes = await queryBuilder.limit(50);
         if (
           fallbackRes.error ||
           !fallbackRes.data ||
@@ -443,10 +393,7 @@ export class DiscoveryService {
       return enrich(filtered);
     }
 
-    const response = await this.executeWithRetry(
-      () => queryBuilder.limit(50),
-      'searchPartners:nonRPC',
-    );
+    const response = await queryBuilder.limit(50);
     if (response.error || !response.data || response.data.length === 0) {
       const mockData = this.getMockDiscoveryData(query, blockedIds);
       const filtered = await this.filterByVoiceRoomActive(
@@ -553,10 +500,7 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.ilike('city', `%${query.city}%`);
     }
 
-    const response = await this.executeWithRetry(
-      () => queryBuilder.limit(50),
-      'getAudioIntros',
-    );
+    const response = await queryBuilder.limit(50);
     if (response.error || !response.data) {
       return [];
     }
@@ -580,22 +524,18 @@ export class DiscoveryService {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const { data, error } = await this.executeWithRetry(
-      () =>
-        supabase
-          .from('users')
-          .select(
-            'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
-          )
-          .gt('created_at', sevenDaysAgo.toISOString())
-          .neq('id', currentUserId)
-          .eq('privacy_hide_from_search', false)
-          .eq('is_deletion_pending', false)
-          .not('native_languages', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(10),
-      'getRecentNativeSpeakers',
-    );
+    const { data, error } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+      )
+      .gt('created_at', sevenDaysAgo.toISOString())
+      .neq('id', currentUserId)
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .not('native_languages', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(10);
 
     if (error || !data) {
       return [];
@@ -624,21 +564,17 @@ export class DiscoveryService {
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
 
-    const { data, error } = await this.executeWithRetry(
-      () =>
-        supabase
-          .from('users')
-          .select(
-            'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
-          )
-          .neq('id', currentUserId)
-          .eq('privacy_hide_from_search', false)
-          .eq('is_deletion_pending', false)
-          .not('native_languages', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(5),
-      'getSpotlightUsers',
-    );
+    const { data, error } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
+      )
+      .neq('id', currentUserId)
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
+      .not('native_languages', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(5);
 
     if (error || !data) {
       return [];
@@ -736,10 +672,7 @@ export class DiscoveryService {
 
     queryBuilder = queryBuilder.range(offset, offset + limit - 1);
 
-    const response = await this.executeWithRetry(
-      () => queryBuilder,
-      'findByLanguagePair',
-    );
+    const response = await queryBuilder;
     if (response.error || !response.data) {
       // Fallback to mock data if query fails
       const mockSearch: Partial<SearchQueryDto> = {
@@ -1012,10 +945,7 @@ export class DiscoveryService {
     if (query.city) {
       qb = qb.ilike('city', `%${query.city}%`);
     }
-    const { data, error } = await this.executeWithRetry(
-      () => qb.limit(50),
-      'searchByCountryCity',
-    );
+    const { data, error } = await qb.limit(50);
     if (error || !data) {
       return [];
     }

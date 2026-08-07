@@ -207,6 +207,24 @@ export class DataRetentionService {
       .delete()
       .eq('user_id', userId);
 
+    // Purge recommendation cache (GDPR "right to erasure")
+    // The Redis cache contains PII (display names, avatar URLs) and must be
+    // purged immediately.  Other users' caches containing this user will
+    // expire naturally within 24 hours (DAILY_REDIS_TTL).
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      const ownKey = `recommendations:daily:${userId}`;
+      await redis.del(ownKey);
+      this.logger.log(
+        `Purged recommendation cache for user ${userId} (GDPR erasure)`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to purge recommendation cache for user ${userId}`,
+        err,
+      );
+    }
+
     this.logger.log(`Wiped personal data for user ${userId}`);
   }
 }
