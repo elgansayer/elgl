@@ -20,6 +20,7 @@ import { LongPressContextMenuComponent } from '../long-press-context-menu/long-p
 import { StickerPickerComponent } from '../sticker-picker/sticker-picker.component';
 import { ChatSystemBubbleComponent } from '../chat-system-bubble/chat-system-bubble.component';
 import { SafetyService } from '../../services/safety.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
@@ -56,6 +57,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly tts = inject(TextToSpeechService);
 
   id = input.required<string>();
@@ -453,6 +455,30 @@ export class ChatRoomComponent implements OnDestroy {
     this.correctedText = '';
     this.explanationText = '';
     this.showCorrectionForm.set(true);
+  }
+
+  onCopyMessage(event: { messageId: string; content: string }): void {
+    if (event.content) {
+      navigator.clipboard.writeText(event.content).catch(console.error);
+      showToast(this.i18n.translate('context_menu.copy') || 'Message copied');
+    }
+  }
+
+  async onReportMessage(event: { messageId: string; senderId: string }): Promise<void> {
+    const confirmed = await this.confirmService.confirm(
+      this.i18n.translate('report.confirmMessage'),
+    );
+    if (!confirmed) return;
+    this.safetyService
+      .reportUser({
+        reported_id: event.senderId,
+        reason_category: 'other',
+        description: 'Reported from message context menu',
+        context_url: window.location.href,
+      })
+      .catch((err: unknown) => {
+        console.error('Report failed', err);
+      });
   }
 
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {

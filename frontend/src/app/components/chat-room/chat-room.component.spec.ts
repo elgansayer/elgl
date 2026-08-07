@@ -7,6 +7,7 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
+import { ConfirmService } from '../../services/confirm.service';
 import { TypingService } from '../../services/typing.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
@@ -44,6 +45,17 @@ describe('ChatRoomComponent (threaded replies)', () => {
     unlockApp: ReturnType<typeof vi.fn>;
     appLocked: ReturnType<typeof signal>;
   };
+  let mockSafetyService: {
+    getBlockedIdsAsync: ReturnType<typeof vi.fn>;
+    getBlockedAndBlockerIds: ReturnType<typeof vi.fn>;
+    blockedUserIdsSignal: ReturnType<typeof signal>;
+    reportUser: ReturnType<typeof vi.fn>;
+    blockUser: ReturnType<typeof vi.fn>;
+    unblockUser: ReturnType<typeof vi.fn>;
+  };
+  let mockConfirmService: {
+    confirm: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockChatService = {
@@ -71,10 +83,17 @@ describe('ChatRoomComponent (threaded replies)', () => {
       appLocked: signal(false),
     };
 
-    const mockSafetyService = {
+    mockSafetyService = {
       getBlockedIdsAsync: vi.fn().mockResolvedValue([]),
       getBlockedAndBlockerIds: vi.fn().mockResolvedValue([]),
       blockedUserIdsSignal: signal(new Set<string>()),
+      reportUser: vi.fn().mockResolvedValue(undefined),
+      blockUser: vi.fn().mockResolvedValue(undefined),
+      unblockUser: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mockConfirmService = {
+      confirm: vi.fn().mockResolvedValue(true),
     };
 
     const mockUserService = {
@@ -102,6 +121,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: CentrifugeService, useValue: mockCentrifugeService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: SafetyService, useValue: mockSafetyService },
+        { provide: ConfirmService, useValue: mockConfirmService },
         { provide: UserService, useValue: mockUserService },
         { provide: TypingService, useValue: mockTypingService },
         { provide: VocabularyStore, useValue: mockVocabularyStore },
@@ -430,6 +450,37 @@ describe('ChatRoomComponent (threaded replies)', () => {
       await component.toggleLock();
       expect(mockChatService.unlockChat).toHaveBeenCalledWith('room-1');
       expect(component.isLocked()).toBe(false);
+    });
+  });
+
+  describe('context menu actions', () => {
+    it('onCopyMessage copies content to clipboard', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { clipboard: { writeText } });
+
+      component.onCopyMessage({ messageId: 'm1', content: 'Hello' });
+
+      expect(writeText).toHaveBeenCalledWith('Hello');
+    });
+
+    it('onReportMessage calls safety service after confirmation', async () => {
+      await component.onReportMessage({ messageId: 'm1', senderId: 'user-bad' });
+
+      expect(mockConfirmService.confirm).toHaveBeenCalled();
+      expect(mockSafetyService.reportUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reported_id: 'user-bad',
+          reason_category: 'other',
+        }),
+      );
+    });
+
+    it('onReportMessage does not call safety service when confirmation is cancelled', async () => {
+      mockConfirmService.confirm.mockResolvedValue(false);
+
+      await component.onReportMessage({ messageId: 'm1', senderId: 'user-bad' });
+
+      expect(mockSafetyService.reportUser).not.toHaveBeenCalled();
     });
   });
 });
