@@ -143,4 +143,35 @@ describe('AppearanceSettingsComponent', () => {
     component.setAccentColor('#e11d48');
     expect(component.primaryAccentColor()).toBe('#4f46e5');
   });
+
+  it('should set custom colour from color input when VIP', () => {
+    component.isVip.set(true);
+    const input = document.createElement('input');
+    input.value = '#ff6b6b';
+    Object.defineProperty(input, 'value', { value: '#ff6b6b' });
+    const event = { target: input } as unknown as Event;
+    component.onCustomColorChange(event);
+    expect(component.primaryAccentColor()).toBe('#ff6b6b');
+  });
+
+  it('should set custom colour from text input when VIP', () => {
+    component.isVip.set(true);
+    const input = document.createElement('input');
+    input.value = '#c0ffee';
+    Object.defineProperty(input, 'value', { value: '#c0ffee' });
+    const event = { target: input } as unknown as Event;
+    component.onCustomColorChange(event);
+    expect(component.primaryAccentColor()).toBe('#c0ffee');
+  });
+
+  it('should not set custom colour when not VIP', () => {
+    component.isVip.set(false);
+    component.primaryAccentColor.set('#4f46e5');
+    const input = document.createElement('input');
+    input.value = '#badbad';
+    Object.defineProperty(input, 'value', { value: '#badbad' });
+    const event = { target: input } as unknown as Event;
+    component.onCustomColorChange(event);
+    expect(component.primaryAccentColor()).toBe('#4f46e5');
+  });
 });
