@@ -71,11 +71,7 @@
             <tr class="hover:bg-slate-50">
               <td class="px-3 py-2">
                 @if (user.avatar_url) {
-                  <img
-                    [src]="user.avatar_url"
-                    alt=""
-                    class="h-8 w-8 rounded-full object-cover"
-                  />
+                  <img [src]="user.avatar_url" alt="" class="h-8 w-8 rounded-full object-cover" />
                 } @else {
                   <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
                 }
@@ -84,10 +80,7 @@
               <td class="px-3 py-2">{{ user.native_languages.join(', ') }}</td>
               <td class="px-3 py-2">{{ user.target_languages.join(', ') }}</td>
               <td class="px-3 py-2">
-                <span
-                  [class.text-green-600]="user.is_vip"
-                  [class.text-slate-400]="!user.is_vip"
-                >
+                <span [class.text-green-600]="user.is_vip" [class.text-slate-400]="!user.is_vip">
                   {{ user.is_vip ? ('admin.users.yes' | t) : ('admin.users.no' | t) }}
                 </span>
               </td>
@@ -97,6 +90,22 @@
                 {{ user.last_active_at ? (user.last_active_at | date: 'medium') : '-' }}
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
+                <button
+                  type="button"
+                  (click)="banUser(user)"
+                  [disabled]="isBanning() === user.id"
+                  class="btn btn-sm rounded border border-red-400 text-red-600 px-3 py-1 me-2 hover:bg-red-50 disabled:opacity-50"
+                >
+                  {{ 'admin.ban' | t }}
+                </button>
+                <button
+                  type="button"
+                  (click)="warnUser(user)"
+                  [disabled]="isWarning() === user.id"
+                  class="btn btn-sm rounded border border-amber-400 text-amber-600 px-3 py-1 me-2 hover:bg-amber-50 disabled:opacity-50"
+                >
+                  {{ 'admin.warn' | t }}
+                </button>
                 <button
                   type="button"
                   (click)="openHistory(user)"

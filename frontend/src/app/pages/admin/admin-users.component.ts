@@ -39,6 +39,8 @@ export class AdminUsersComponent {
   readonly selectedUserId = signal<string | null>(null);
   readonly showHistory = signal(false);
   readonly isVipUpdating = signal<string | null>(null);
+  readonly isBanning = signal<string | null>(null);
+  readonly isWarning = signal<string | null>(null);
 
   private readonly historyResource = resource({
     params: () => this.selectedUserId(),
@@ -91,6 +93,30 @@ export class AdminUsersComponent {
     } finally {
       this.isVipUpdating.set(null);
       this.refreshToken.update((v) => v + 1);
+    }
+  }
+
+  async banUser(user: AdminUserSummary): Promise<void> {
+    if (this.isBanning()) {
+      return;
+    }
+    this.isBanning.set(user.id);
+    try {
+      await this.adminService.banUser(user.id);
+    } finally {
+      this.isBanning.set(null);
+    }
+  }
+
+  async warnUser(user: AdminUserSummary): Promise<void> {
+    if (this.isWarning()) {
+      return;
+    }
+    this.isWarning.set(user.id);
+    try {
+      await this.adminService.warnUser(user.id);
+    } finally {
+      this.isWarning.set(null);
     }
   }
 
