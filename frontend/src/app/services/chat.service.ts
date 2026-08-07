@@ -14,6 +14,20 @@ export interface CorrectionPayload {
   explanation?: string;
 }
 
+export interface ReadReceiptUser {
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  readAt: string;
+}
+
+export interface MessageReceiptStatus {
+  messageId: string;
+  deliveryStatus: 'sent' | 'delivered' | 'read';
+  readBy: ReadReceiptUser[];
+  totalMembers: number;
+}
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -40,7 +54,6 @@ export interface ChatMessage {
     [param: string]: unknown;
   };
   is_read: boolean;
-  delivery_status?: 'sent' | 'delivered' | 'read';
   created_at: string;
   sender?: {
     id: string;
@@ -71,6 +84,9 @@ export interface ChatMessage {
 
   /** True when the message has been soft‑deleted for all users */
   is_deleted?: boolean;
+
+  /** Delivery status for read receipts */
+  delivery_status?: 'sent' | 'delivered' | 'read';
 }
 
 export interface FavouriteRecord {
@@ -723,15 +739,32 @@ export class ChatService {
     );
   }
 
-  /**
-   * Updates the delivery status of a message (delivered / read).
-   * Called by the recipient of a message.
-   */
-  async markMessageStatus(messageId: string, status: 'delivered' | 'read'): Promise<void> {
+  // -- Read Receipts --
+
+  async markAsRead(messageId: string, roomId: string): Promise<void> {
     await firstValueFrom(
-      this.http.patch(
-        `${this.baseUrl}/messages/${messageId}/status`,
-        { status },
+      this.http.post(
+        `${this.baseUrl}/messages/${messageId}/read`,
+        { roomId },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async markAllAsRead(roomId: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post(
+        `${this.baseUrl}/rooms/${roomId}/read-all`,
+        {},
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
+    return firstValueFrom(
+      this.http.get<MessageReceiptStatus>(
+        `${this.baseUrl}/messages/${messageId}/receipts`,
         { headers: this.getHeaders() },
       ),
     );

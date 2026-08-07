@@ -31,6 +31,10 @@ import {
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
+import {
+  ReadReceiptsService,
+  MessageReceiptStatus,
+} from './read-receipts.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 
@@ -39,6 +43,7 @@ import { TranslationService } from './translation.service';
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
+    private readonly readReceiptsService: ReadReceiptsService,
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
   ) {}
@@ -400,5 +405,37 @@ export class ChatController {
     if (!user) return null;
     const wallpaperUrl = await this.chatService.getWallpaper(roomId);
     return { wallpaperUrl };
+  }
+
+  // -- Read Receipt endpoints --
+
+  @Post('messages/:messageId/read')
+  async markAsRead(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: { roomId: string },
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.readReceiptsService.markAsRead(messageId, dto.roomId, user.id);
+    return { success: true };
+  }
+
+  @Post('rooms/:roomId/read-all')
+  async markAllAsRead(
+    @CurrentUser() user: User | null,
+    @Param('roomId') roomId: string,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.readReceiptsService.markAllAsRead(roomId, user.id);
+    return { success: true };
+  }
+
+  @Get('messages/:messageId/receipts')
+  async getMessageReceipts(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+  ): Promise<MessageReceiptStatus | null> {
+    if (!user) return null;
+    return this.readReceiptsService.getReceiptStatus(messageId);
   }
 }

@@ -5,6 +5,7 @@ import { SpamDetectionModule } from '../spam-detection/spam-detection.module';
 import { XpModule } from '../xp/xp.module';
 import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { CentrifugoService } from './centrifugo.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
@@ -36,6 +37,7 @@ import { QuickRepliesService } from './quick-replies/quick-replies.service';
   ],
   providers: [
     CentrifugoService,
+    ReadReceiptsService,
     TranslationService,
     ChatLlmService,
     ChatLlmProxyService,
@@ -49,6 +51,7 @@ import { QuickRepliesService } from './quick-replies/quick-replies.service';
   ],
   exports: [
     CentrifugoService,
+    ReadReceiptsService,
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,

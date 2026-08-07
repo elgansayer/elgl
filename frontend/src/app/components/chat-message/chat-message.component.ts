@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
+import { ReadReceiptComponent } from '../read-receipt/read-receipt.component';
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 import { ConfirmService } from '../../services/confirm.service';
@@ -13,7 +14,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent],
+  imports: [CommonModule, LongPressContextMenuComponent, ReadReceiptComponent, TranslatePipe, CulturalTipComponent],
   template: `
     @if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
@@ -25,11 +26,9 @@ import { environment } from '../../../environments/environment';
         [messageType]="message().message_type"
         [senderId]="message().sender_id"
         [roomId]="message().room_id"
-        [isBlocked]="isBlocked()"
         (copyMessage)="onCopy($event)"
         (favourite)="onFavourite($event)"
         (report)="onReport($event)"
-        (block)="onBlockToggle($event)"
       >
         <div
           class="flex"
@@ -129,37 +128,17 @@ import { environment } from '../../../environments/environment';
               />
             }
 
-            <p class="text-xs mt-1 opacity-60 text-end flex items-center justify-end gap-1">
-              {{ message().created_at | date: 'shortTime' }}
-              @if (isOwnMessage() && (message().delivery_status || message().is_read)) {
-                <span class="inline-flex items-center">
-                  @if (message().delivery_status === 'sent' || (!message().delivery_status && message().is_read)) {
-                    <!-- Single check: sent -->
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                  }
-                  @if (message().delivery_status === 'delivered') {
-                    <!-- Double check: delivered (gray) -->
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <svg class="w-3.5 h-3.5 -ms-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                  }
-                  @if (message().delivery_status === 'read') {
-                    <!-- Double check: read (blue) -->
-                    <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <svg class="w-3.5 h-3.5 -ms-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                  }
-                </span>
+            <div class="flex items-center justify-end gap-1 mt-1">
+              @if (isOwnMessage()) {
+                <app-read-receipt
+                  [messageId]="message().id"
+                  [deliveryStatus]="message().delivery_status ?? undefined"
+                />
               }
-            </p>
+              <span class="text-xs opacity-60">
+                {{ message().created_at | date: 'shortTime' }}
+              </span>
+            </div>
           </div>
         </div>
       </app-long-press-context-menu>
@@ -319,18 +298,6 @@ export class ChatMessageComponent {
 
   onFavourite(event: { messageId: string; content: string; messageType: string }): void {
     this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
-  }
-
-  onBlockToggle(event: { senderId: string; blocked: boolean }): void {
-    if (event.blocked) {
-      this.safetyService.blockUser(event.senderId).catch(console.error);
-    } else {
-      this.safetyService.unblockUser(event.senderId).catch(console.error);
-    }
-    this.isBlocked.set(event.blocked);
-    if (event.blocked) {
-      this.messageBlocked.emit(event.senderId);
-    }
   }
 
   async onReport(event: { messageId: string; senderId: string }): Promise<void> {

@@ -1493,6 +1493,23 @@ export class I18nService {
     'home.dailyTip.title': 'Daily learning tip',
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
+
+    // Read Receipts
+    'readReceipts.sending': 'Sending',
+    'readReceipts.sent': 'Sent',
+    'readReceipts.sentTitle': 'Sent',
+    'readReceipts.delivered': 'Delivered',
+    'readReceipts.deliveredTitle': 'Delivered',
+    'readReceipts.read': 'Read',
+    'readReceipts.readTitle': 'Read by',
+    'readReceipts.readByCount': 'Read by {{read}} of {{total}}',
+    'readReceipts.more': 'more',
+
+    // Time helpers
+    'time.justNow': 'just now',
+    'time.minutesAgo': '{{count}}m ago',
+    'time.hoursAgo': '{{count}}h ago',
+    'time.daysAgo': '{{count}}d ago',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });
