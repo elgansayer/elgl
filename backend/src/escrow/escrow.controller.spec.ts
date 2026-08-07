@@ -1,6 +1,8 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { EscrowController } from './escrow.controller';
+import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -29,6 +31,11 @@ import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { UnauthorizedException } from '@nestjs/common';
 =======
 >>>>>>> origin/main
+
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
+jest.mock('./sanitise-escrow.helper', () => ({
+  sanitiseEscrowData: <T>(value: T): T => value,
+}));
 
 describe('EscrowController', () => {
   let controller: EscrowController;
@@ -109,6 +116,16 @@ describe('EscrowController', () => {
           useValue: mockEscrowService,
 >>>>>>> origin/main
         },
+        {
+          provide: CrashReportService,
+          useValue: {
+            reportCrash: jest.fn(),
+            listUnresolved: jest.fn(),
+            acknowledgeReport: jest.fn(),
+            resolveReport: jest.fn(),
+          },
+        },
+        EscrowExceptionFilter,
       ],
     })
       .overrideGuard(SupabaseAuthGuard)

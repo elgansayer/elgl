@@ -59,6 +59,7 @@ import {
   CreateEscrowHoldDto,
   EscrowTransactionResponse,
 } from './dto/escrow.dto';
+import { sanitiseEscrowData } from './sanitise-escrow.helper';
 
 const RETRY_CONFIG = {
   maxRetries: 5,
@@ -193,7 +194,7 @@ export class EscrowService {
     degraded = false,
     fallbackReason?: string,
   ): EscrowTransactionResponse {
-    return {
+    return sanitiseEscrowData({
       id: row.id,
       payer_id: row.payer_id,
       payee_id: row.payee_id,
@@ -211,7 +212,7 @@ export class EscrowService {
       updated_at: row.updated_at,
       degraded,
       fallback_reason: fallbackReason,
-    };
+    });
   }
 
   /**
@@ -242,7 +243,7 @@ export class EscrowService {
       degradedMarker,
     );
 
-    return {
+    return sanitiseEscrowData({
       success: true,
       transaction_id:
         typeof result === 'object' && result !== null && 'id' in result
@@ -250,7 +251,7 @@ export class EscrowService {
           : '',
       degraded: degradedMarker.degraded,
       fallback_reason: degradedMarker.reason,
-    };
+    });
   }
 
   private async performHold(
@@ -409,12 +410,12 @@ export class EscrowService {
       degradedMarker,
     );
 
-    return {
+    return sanitiseEscrowData({
       success: true,
       transaction_id: result.id,
       degraded: degradedMarker.degraded,
       fallback_reason: degradedMarker.reason,
-    };
+    });
   }
 
   private async performRelease(
@@ -463,6 +464,9 @@ export class EscrowService {
       .eq('id', tx.payee_id);
 
     if (creditError) {
+      this.logger.error(
+        `Failed to credit payee ${tx.payee_id} for escrow ${transactionId}: ${creditError.message}`,
+      );
       throw new InternalServerErrorException('Failed to credit payee');
     }
 
@@ -479,6 +483,9 @@ export class EscrowService {
       .single();
 
     if (updateError || !updated) {
+      this.logger.error(
+        `Failed to update escrow ${transactionId} status to released: ${updateError?.message ?? 'invalid data returned'}`,
+      );
       throw new InternalServerErrorException('Failed to update escrow status');
     }
 
@@ -588,6 +595,9 @@ export class EscrowService {
           .eq('id', tx.payer_id);
 
         if (refundError) {
+          this.logger.error(
+            `Failed to refund payer ${tx.payer_id} for escrow ${transactionId}: ${refundError.message}`,
+          );
           throw new InternalServerErrorException('Failed to refund payer');
         }
 
@@ -607,6 +617,9 @@ export class EscrowService {
           .single();
 
         if (updateError || !updated) {
+          this.logger.error(
+            `Failed to update escrow ${transactionId} status to refunded: ${updateError?.message ?? 'invalid data returned'}`,
+          );
           throw new InternalServerErrorException(
             'Failed to update escrow status',
           );
@@ -707,10 +720,16 @@ export class EscrowService {
       if (payerRow) {
         const payerBalance = (payerRow as { coins_balance: number })
           .coins_balance;
-        await supabase
+        const { error: refundError } = await supabase
           .from('users')
           .update({ coins_balance: payerBalance + tx.amount_coins })
           .eq('id', tx.payer_id);
+
+        if (refundError) {
+          this.logger.warn(
+            `Failed to refund payer ${tx.payer_id} during cancel of escrow ${transactionId}: ${refundError.message}`,
+          );
+        }
       }
     }
 
@@ -726,6 +745,9 @@ export class EscrowService {
       .single();
 
     if (updateError || !updated) {
+      this.logger.error(
+        `Failed to update escrow ${transactionId} status to cancelled: ${updateError?.message ?? 'invalid data returned'}`,
+      );
       throw new InternalServerErrorException('Failed to cancel escrow');
     }
 
@@ -1308,7 +1330,7 @@ export class EscrowService {
       );
     }
 
-    return { processed, failed };
+    return sanitiseEscrowData({ processed, failed });
   }
 <<<<<<< HEAD
 }
