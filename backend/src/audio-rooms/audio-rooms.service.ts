@@ -19,6 +19,7 @@ import { UsersService } from '../users/users.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
+import { ChatLlmService } from '../chat/chat-llm.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -119,6 +120,7 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly transcriptEgress: TranscriptEgressService,
     private readonly nlpService: NlpService,
     private readonly r2Service: R2Service,
+    private readonly chatLlmService: ChatLlmService,
   ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
@@ -172,6 +174,28 @@ export class AudioRoomsService implements OnModuleInit {
       .from('audio_rooms')
       .update({ recording_url: r2RecordingUrl, is_active: false })
       .eq('id', room.id);
+
+    // Generate transcript from audio recording for session summary
+    const transcriptText =
+      await this.transcriptEgress.generateTranscriptFromAudioUrl(
+        r2RecordingUrl,
+      );
+
+    // Generate AI-powered session summary
+    const sessionSummary = await this.generateAiSessionSummary(transcriptText);
+
+    if (sessionSummary.summary || sessionSummary.vocabulary.length > 0) {
+      await supabase.from('audio_room_transcripts').upsert(
+        {
+          room_id: room.id,
+          recording_url: r2RecordingUrl,
+          transcript_text: transcriptText,
+          session_summary: sessionSummary.summary,
+          vocabulary_list: sessionSummary.vocabulary,
+        },
+        { onConflict: 'room_id' },
+      );
+    }
 
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'room_archived',
@@ -1071,7 +1095,11 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const sessionSummary = transcriptText
+<<<<<<< HEAD
       ? await this.nlpService.generateSessionSummary(transcriptText)
+=======
+      ? await this.generateAiSessionSummary(transcriptText)
+>>>>>>> origin/main
       : { summary: 'No transcript available.', vocabulary: [] };
 
     await supabase
@@ -1717,5 +1745,66 @@ export class AudioRoomsService implements OnModuleInit {
       receiver_id: room.host_id,
       receiver_new_balance: newReceiverBalance,
     };
+  }
+
+  /**
+   * Generates an AI-powered session summary listing key topics and vocabulary discussed.
+   * Uses the configured LLM for intelligent summarisation, falling back to the NLP
+   * heuristic if the LLM is unavailable.
+   */
+  private async generateAiSessionSummary(
+    transcriptText: string | null,
+  ): Promise<{ summary: string; vocabulary: string[] }> {
+    if (!transcriptText || transcriptText.trim().length === 0) {
+      return { summary: '', vocabulary: [] };
+    }
+
+    const prompt = `Please analyse the following transcript of a language exchange audio room session. 
+
+Provide a concise summary of the key topics discussed (2-4 bullet points) and a list of 5-10 key vocabulary words or phrases that were important in the conversation. 
+
+Format your response as a JSON object with exactly two fields:
+- "summary": a string containing bullet-point topics separated by newlines
+- "vocabulary": an array of strings, each being a key word or phrase
+
+Transcript:
+${transcriptText.substring(0, 4000)}`;
+
+    try {
+      const llmResponse = await this.chatLlmService.chatCompletion(
+        [
+          {
+            role: 'system',
+            content:
+              'You are a language learning assistant. Analyse conversation transcripts and extract key topics and vocabulary into the requested JSON format. Respond ONLY with valid JSON.',
+          },
+          { role: 'user', content: prompt },
+        ],
+        { temperature: 0.3, maxTokens: 1024 },
+      );
+
+      // Try to parse JSON from LLM response
+      const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as {
+          summary?: string;
+          vocabulary?: string[];
+        };
+        return {
+          summary: parsed.summary ?? '',
+          vocabulary: Array.isArray(parsed.vocabulary)
+            ? parsed.vocabulary
+            : [],
+        };
+      }
+    } catch (error) {
+      this.logger.warn(
+        'AI session summary generation failed, falling back to NLP heuristic',
+        error,
+      );
+    }
+
+    // Fallback to NLP heuristic
+    return this.nlpService.generateSessionSummary(transcriptText);
   }
 }
