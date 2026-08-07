@@ -899,6 +899,229 @@ describe('RecommendationsService', () => {
         matchTier: 'language_exchange',
       });
     });
+
+    it('should handle interest tier with tags but no shared users', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([{ tag: 'sports' }, { tag: 'obscure-hobby' }]);
+
+      const sharedChain = makeQueryChain();
+      sharedChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['es'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'lang-match',
+          display_name: 'Lang Match',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 25,
+          correction_ratio: 0.88,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(sharedChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].matchTier).toBe('language_exchange');
+    });
+
+    it('should handle getRecommendations when interest shared query succeeds but no users match', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([{ tag: 'sports' }]);
+
+      const sharedChain = makeQueryChain();
+      sharedChain._setResolve([{ user_id: 'other-user', tag: 'sports' }]);
+
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['es'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'lang-partner',
+          display_name: 'Lang Partner',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: false,
+          study_streak_days: 7,
+          correction_ratio: 0.6,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(sharedChain)
+        .mockReturnValueOnce(usersChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain);
+
+      const result = await service.getRecommendations('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('lang-partner');
+    });
+
+    it('should handle calculateDailyRecommendations with multiple users and diverse language pairs', async () => {
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        { id: 'user-a', native_language: 'en', target_languages: ['es'] },
+        { id: 'user-b', native_language: 'ja', target_languages: ['en', 'ko'] },
+        { id: 'user-c', native_language: 'es', target_languages: ['en'] },
+        { id: 'user-d', native_language: 'en', target_languages: null },
+      ]);
+
+      const matchesForA = makeQueryChain();
+      matchesForA._setResolve([
+        {
+          id: 'user-c',
+          display_name: 'User C',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 20,
+          correction_ratio: 0.9,
+        },
+      ]);
+
+      const matchesForB = makeQueryChain();
+      matchesForB._setResolve([]);
+
+      const matchesForC = makeQueryChain();
+      matchesForC._setResolve([
+        {
+          id: 'user-a',
+          display_name: 'User A',
+          avatar_url: null,
+          native_language: 'en',
+          target_languages: ['es'],
+          is_serious_learner: true,
+          study_streak_days: 30,
+          correction_ratio: 0.95,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(usersChain)
+        .mockReturnValueOnce(matchesForA)
+        .mockReturnValueOnce(matchesForB)
+        .mockReturnValueOnce(matchesForC);
+
+      await service.calculateDailyRecommendations();
+
+      expect(mockRedis.set).toHaveBeenCalledTimes(2);
+      expect(mockRedis.set.mock.calls[0][0]).toBe('recommendations:daily:user-a');
+      const firstCache: RecommendedUserDto[] = JSON.parse(
+        mockRedis.set.mock.calls[0][1],
+      );
+      expect(firstCache).toHaveLength(1);
+      expect(firstCache[0].id).toBe('user-c');
+      expect(mockRedis.set.mock.calls[1][0]).toBe('recommendations:daily:user-c');
+    });
+
+    it('should handle calculateDailyRecommendations with Redis set failure gracefully', async () => {
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        { id: 'user-a', native_language: 'en', target_languages: ['es'] },
+      ]);
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'partner-1',
+          display_name: 'Partner 1',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: false,
+          study_streak_days: 5,
+          correction_ratio: 0.7,
+        },
+      ]);
+
+      mockRedis.set.mockRejectedValueOnce(new Error('Redis write failed'));
+
+      mockFrom
+        .mockReturnValueOnce(usersChain)
+        .mockReturnValueOnce(matchesChain);
+
+      await service.calculateDailyRecommendations();
+      expect(mockRedis.set).toHaveBeenCalledTimes(1);
+    });
+
+    it('should prefer interest tier over language exchange when both succeed', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([{ tag: 'music' }]);
+
+      const sharedChain = makeQueryChain();
+      sharedChain._setResolve([{ user_id: 'best-match', tag: 'music' }]);
+
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        {
+          id: 'best-match',
+          display_name: 'Best Match',
+          avatar_url: null,
+          native_language: 'fr',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 50,
+          correction_ratio: 0.99,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(sharedChain)
+        .mockReturnValueOnce(usersChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].matchTier).toBe('interest');
+      expect(result[0].id).toBe('best-match');
+    });
+
+    it('should skip mock data user filtering when userId not in MOCK_USERS', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve(null, { message: 'Interests offline' });
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'Users offline' });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve(null, { message: 'Users offline' });
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendationsWithFallback('some-completely-random-id');
+      expect(result.length).toBeLessThanOrEqual(20);
+      expect(result.every((r) => r.id !== 'some-completely-random-id')).toBe(true);
+      expect(result.every((r) => r.matchTier === 'mock')).toBe(true);
+    });
   });
 
   describe('purgeRecommendationsCache (GDPR erasure)', () => {
