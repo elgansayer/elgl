@@ -15,6 +15,7 @@ import {
   ReadingTokenBreakdown,
   ReadingSession,
 } from './interfaces/reading.interface';
+import { sanitiseReadingEngineData } from './sanitise-reading-engine.helper';
 
 @Injectable()
 export class ReadingEngineService {
@@ -38,15 +39,16 @@ export class ReadingEngineService {
     userId: string,
     dto: CreateReadingResourceDto,
   ): Promise<ReadingResource> {
+    const sanitised = sanitiseReadingEngineData(dto);
     const { data, error } = await this.db
       .from('reading_resources')
       .insert({
-        title: dto.title,
-        content: dto.content,
-        language: dto.language,
-        difficulty: dto.difficulty ?? null,
-        topic: dto.topic ?? null,
-        source_url: dto.sourceUrl ?? null,
+        title: sanitised.title,
+        content: sanitised.content,
+        language: sanitised.language,
+        difficulty: sanitised.difficulty ?? null,
+        topic: sanitised.topic ?? null,
+        source_url: sanitised.sourceUrl ?? null,
         created_by: userId,
       })
       .select()
@@ -63,13 +65,14 @@ export class ReadingEngineService {
     resourceId: string,
     dto: UpdateReadingResourceDto,
   ): Promise<ReadingResource> {
+    const sanitised = sanitiseReadingEngineData(dto);
     const update: Partial<ReadingResourceRow> = {};
-    if (dto.title !== undefined) update.title = dto.title;
-    if (dto.content !== undefined) update.content = dto.content;
-    if (dto.language !== undefined) update.language = dto.language;
-    if (dto.difficulty !== undefined) update.difficulty = dto.difficulty;
-    if (dto.topic !== undefined) update.topic = dto.topic;
-    if (dto.sourceUrl !== undefined) update.source_url = dto.sourceUrl;
+    if (sanitised.title !== undefined) update.title = sanitised.title;
+    if (sanitised.content !== undefined) update.content = sanitised.content;
+    if (sanitised.language !== undefined) update.language = sanitised.language;
+    if (sanitised.difficulty !== undefined) update.difficulty = sanitised.difficulty;
+    if (sanitised.topic !== undefined) update.topic = sanitised.topic;
+    if (sanitised.sourceUrl !== undefined) update.source_url = sanitised.sourceUrl;
 
     const { data, error } = await this.db
       .from('reading_resources')
