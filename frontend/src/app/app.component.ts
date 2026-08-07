@@ -162,7 +162,7 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale and base rem sizing are handled globally by FontScaleService.
     // Block the app immediately if the installed version is deprecated.
-    this.versionCheckService.checkVersion();
+    await this.versionCheckService.checkVersion();
 
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
