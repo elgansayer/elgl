@@ -186,6 +186,7 @@ export class I18nService {
     'nav.lingqReader': '📚 LingQ Reader',
     'nav.favourites': '⭐ Favourites',
     'nav.developerApi': '⚡ Developer API',
+    'nav.leaderboard': '🏆 Top Correctors',
     'nav.profile': '👤 Me',
     'common.coinsBalance': '{{coins}} Coins',
     'common.vipDevLabel': '20 UKP / $26 USD Dev VIP',
