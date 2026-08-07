@@ -12,6 +12,11 @@
   RTL-safe logical properties used throughout (ps-, pe-, ms-, me-, text-start).
 -->
 
+<app-srs-error-boundary
+  [context]="errorContext()"
+  [showReportButton]="true"
+  (retry)="handleRetry()"
+>
 <main class="mx-auto max-w-3xl p-4" aria-labelledby="escrow-heading">
   <h1 id="escrow-heading" class="text-xl font-bold mb-4"
       joyrideStep="escrowStepTitle"
@@ -356,3 +361,4 @@
     </div>
   }
 </main>
+</app-srs-error-boundary>

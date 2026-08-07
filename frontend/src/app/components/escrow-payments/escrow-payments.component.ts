@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, AfterViewInit, ErrorHandler } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -9,10 +9,26 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
+import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 
 type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
 type EscrowServiceType = 'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
 type StatusFilter = 'all' | EscrowStatus;
+
+class EscrowPaymentsError extends Error {
+  override name = 'EscrowPaymentsError';
+  constructor(
+    message: string,
+    readonly escrowOperation: string,
+    readonly escrowId?: string,
+    stack?: string,
+  ) {
+    super(message);
+    if (stack) {
+      this.stack = stack;
+    }
+  }
+}
 
 interface EscrowRow {
   id: string;
@@ -32,7 +48,7 @@ interface EscrowRow {
 @Component({
   selector: 'app-escrow-payments',
   standalone: true,
-  imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
+  imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule, SrsErrorBoundaryComponent],
   templateUrl: './escrow-payments.component.html',
 })
 export class EscrowPaymentsComponent implements AfterViewInit {
@@ -41,6 +57,7 @@ export class EscrowPaymentsComponent implements AfterViewInit {
   private i18n = inject(I18nService);
   private readonly joyrideService = inject(JoyrideService);
   private readonly onboardingService = inject(EscrowOnboardingService);
+  private errorHandler = inject(ErrorHandler);
 
   readonly transactions = signal<EscrowRow[]>([]);
   readonly loading = signal(false);
@@ -85,6 +102,27 @@ export class EscrowPaymentsComponent implements AfterViewInit {
     this.transactions().filter((tx) => tx.status === 'pending').length,
   );
 
+  readonly errorContext = computed<SrsErrorContext>(() => ({
+    component: 'escrow-payments',
+    operation: 'payment-management',
+  }));
+
+  handleRetry(): void {
+    this.clearMessages();
+    void this.loadTransactions();
+  }
+
+  private reportEscrowError(operation: string, escrowId?: string, err?: unknown): void {
+    const message = err instanceof Error ? err.message : String(err ?? 'Unknown error');
+    const escrowError = new EscrowPaymentsError(
+      `[Escrow:${operation}] ${message}`,
+      operation,
+      escrowId,
+      err instanceof Error ? err.stack : undefined,
+    );
+    this.errorHandler.handleError(escrowError);
+  }
+
   async loadTransactions(status?: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
@@ -98,7 +136,8 @@ export class EscrowPaymentsComponent implements AfterViewInit {
         ),
       );
       this.transactions.set(result ?? []);
-    } catch {
+    } catch (err: unknown) {
+      this.reportEscrowError('loadTransactions', undefined, err);
       this.error.set(this.i18n.translate('escrow.loadError'));
     } finally {
       this.loading.set(false);
@@ -129,7 +168,8 @@ export class EscrowPaymentsComponent implements AfterViewInit {
       this.showCreateForm.set(false);
       this.createForm.set({ partner_id: '', amount: 0, description: '', service_type: 'other' });
       await this.loadTransactions();
-    } catch {
+    } catch (err: unknown) {
+      this.reportEscrowError('createPayment', undefined, err);
       this.error.set(this.i18n.translate('escrow.createError'));
     } finally {
       this.loading.set(false);
@@ -150,7 +190,8 @@ export class EscrowPaymentsComponent implements AfterViewInit {
       );
       this.successMessage.set(this.i18n.translate('escrow.releaseSuccess'));
       await this.loadTransactions();
-    } catch {
+    } catch (err: unknown) {
+      this.reportEscrowError('releasePayment', escrowId, err);
       this.error.set(this.i18n.translate('escrow.releaseError'));
     } finally {
       this.loading.set(false);
@@ -172,7 +213,8 @@ export class EscrowPaymentsComponent implements AfterViewInit {
       this.successMessage.set(this.i18n.translate('escrow.refundSuccess'));
       this.refundReason.set('');
       await this.loadTransactions();
-    } catch {
+    } catch (err: unknown) {
+      this.reportEscrowError('refundPayment', escrowId, err);
       this.error.set(this.i18n.translate('escrow.refundError'));
     } finally {
       this.loading.set(false);
@@ -203,7 +245,8 @@ export class EscrowPaymentsComponent implements AfterViewInit {
       this.disputeReason.set('');
       this.disputeEvidence.set('');
       await this.loadTransactions();
-    } catch {
+    } catch (err: unknown) {
+      this.reportEscrowError('submitDispute', txId, err);
       this.error.set(this.i18n.translate('escrow.disputeError'));
     } finally {
       this.loading.set(false);
