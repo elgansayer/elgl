@@ -154,6 +154,10 @@ export class UpdateProfileDto {
   privacy_hide_from_search?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  matchmaking_consent?: boolean;
+
+  @IsOptional()
   @IsString()
   @MaxLength(20)
   gender?: string;

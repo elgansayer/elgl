@@ -45,38 +45,82 @@
       </nav>
     }
 
-    <!-- Loading state -->
+    <!-- Loading state: Skeleton Loaders -->
     @if (isLoading()) {
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-          <div class="rounded-2xl bg-slate-800/60 animate-pulse h-48"></div>
+          <div class="rounded-2xl bg-surface-200 border border-slate-700 overflow-hidden">
+            <app-skeleton-loader
+              [height]="'140px'"
+              [width]="'100%'"
+              [borderRadius]="'0'"
+            />
+            <div class="p-4 space-y-3">
+              <app-skeleton-loader
+                [height]="'16px'"
+                [width]="'75%'"
+                [variant]="'text'"
+              />
+              <div class="flex gap-2">
+                <app-skeleton-loader
+                  [height]="'20px'"
+                  [width]="'55px'"
+                  [borderRadius]="'999px'"
+                />
+                <app-skeleton-loader
+                  [height]="'20px'"
+                  [width]="'45px'"
+                  [borderRadius]="'999px'"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <app-skeleton-loader
+                  [height]="'12px'"
+                  [width]="'60px'"
+                  [variant]="'text'"
+                />
+                <app-skeleton-loader
+                  [height]="'12px'"
+                  [width]="'8px'"
+                  [variant]="'text'"
+                />
+                <app-skeleton-loader
+                  [height]="'12px'"
+                  [width]="'80px'"
+                  [variant]="'text'"
+                />
+              </div>
+              <app-skeleton-loader
+                [height]="'36px'"
+                [width]="'100%'"
+                [borderRadius]="'999px'"
+              />
+            </div>
+          </div>
         }
       </div>
     }
 
     <!-- Error state -->
     @if (errorMessage()) {
-      <div class="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-center space-y-3" role="alert">
-        <p class="text-4xl" aria-hidden="true">&#9888;&#65039;</p>
-        <h3 class="text-lg font-bold text-rose-400">{{ 'classroomsMarketplace.loadErrorTitle' | t }}</h3>
-        <p class="text-sm text-text-secondary">{{ 'classroomsMarketplace.loadErrorDescription' | t }}</p>
-        <button
-          type="button"
-          (click)="loadRooms()"
-          class="app-button-primary rounded-full px-6 py-2 text-sm font-bold"
-        >
-          {{ 'classroomsMarketplace.retryLoadBtn' | t }}
-        </button>
-      </div>
+      <app-empty-state
+        [icon]="'&#9888;&#65039;'"
+        [title]="'classroomsMarketplace.loadErrorTitle' | t"
+        [description]="'classroomsMarketplace.loadErrorDescription' | t"
+        [actionLabel]="'classroomsMarketplace.retryLoadBtn' | t"
+        (actionClicked)="loadRooms()"
+        [customClass]="'border-rose-500/30 bg-rose-500/10 mt-4'"
+      />
     }
 
     <!-- Empty state -->
     @if (!isLoading() && !errorMessage() && videoRooms().length === 0) {
-      <div class="rounded-2xl bg-surface-200 p-10 text-center space-y-4">
-        <p class="text-5xl" aria-hidden="true">&#127979;&#65039;</p>
-        <h3 class="text-lg font-bold text-white">{{ 'classroomsMarketplace.emptyTitle' | t }}</h3>
-        <p class="text-sm text-slate-400">{{ 'classroomsMarketplace.emptyDescription' | t }}</p>
-      </div>
+      <app-empty-state
+        icon="🏫"
+        [title]="'classroomsMarketplace.emptyTitle' | t"
+        [description]="'classroomsMarketplace.emptyDescription' | t"
+        [customClass]="'mt-4'"
+      />
     }
 
     <!-- Room Grid -->
