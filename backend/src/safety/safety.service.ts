@@ -9,6 +9,14 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
+interface BlockedUserRow {
+  id: string;
+  display_name?: string;
+  avatar_url?: string;
+  native_language?: string;
+  target_languages?: string[];
+}
+
 export const SAFETY_CATEGORIES = [
   {
     value: 'harassment',
@@ -260,7 +268,7 @@ export class SafetyService {
       return [];
     }
 
-    return (data as any[]).map((u) => ({
+    return (data as BlockedUserRow[]).map((u) => ({
       id: u.id,
       display_name: u.display_name,
       avatar_url: u.avatar_url,

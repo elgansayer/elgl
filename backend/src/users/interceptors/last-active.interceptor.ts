@@ -25,7 +25,7 @@ export class LastActiveInterceptor implements NestInterceptor {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const userId = request.user?.id;
 
