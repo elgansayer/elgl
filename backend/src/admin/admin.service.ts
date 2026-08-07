@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import Redis from 'ioredis';
 import { SupabaseService, type UsersRow } from '../supabase/supabase.service';
+import { DataScrubbingService } from '../privacy/data-scrubbing.service';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { ToggleVipDto } from './dto/toggle-vip.dto';
 import {
@@ -26,7 +27,10 @@ const CACHE_PREFIX_LOGIN_HISTORY = 'admin:login-history:';
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly scrubbingService: DataScrubbingService,
+  ) {}
 
   private getRedis(): Redis {
     return this.supabaseService.getRedisClient();
@@ -209,6 +213,9 @@ export class AdminService {
     }
 
     const result = data ?? [];
+
+    // GDPR: scrub IP addresses before returning to the admin dashboard
+    this.scrubbingService.scrubLoginHistory(result as Array<{ ip_address?: string | null }>);
 
     try {
       const redis = this.getRedis();
