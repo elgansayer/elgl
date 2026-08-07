@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
+import { MonitoringService } from '../monitoring/monitoring.service';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -71,6 +72,15 @@ describe('AdminService', () => {
         {
           provide: DataScrubbingService,
           useValue: mockScrubbingService,
+        },
+        {
+          provide: MonitoringService,
+          useValue: {
+            recordAdminAction: jest.fn(),
+            recordLoginHistoryAccess: jest.fn(),
+            collectModerationQueueMetrics: jest.fn(),
+            collectAdminDashboardMetrics: jest.fn(),
+          },
         },
       ],
     }).compile();

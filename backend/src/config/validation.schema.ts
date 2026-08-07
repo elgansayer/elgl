@@ -136,4 +136,14 @@ export const validationSchema = Joi.object({
   LLM_BASE_URL: Joi.string().uri().optional(),
   LLM_MODEL: Joi.string().optional(),
   ANTHROPIC_VERSION: Joi.string().default('2023-06-01'),
+
+  // Datadog
+  DD_API_KEY: Joi.string().optional().allow(''),
+  DD_APP_KEY: Joi.string().optional().allow(''),
+  DD_SITE: Joi.string().default('datadoghq.com'),
+  DD_ENV: Joi.string().default('development'),
+  DD_SERVICE: Joi.string().default('hellotalk-backend'),
+  DD_VERSION: Joi.string().default('0.0.1'),
+  DD_AGENT_HOST: Joi.string().default('localhost'),
+  DD_DOGSTATSD_PORT: Joi.string().default('8125'),
 }).unknown(true);
