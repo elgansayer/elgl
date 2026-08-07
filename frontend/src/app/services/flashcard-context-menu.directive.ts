@@ -1,4 +1,4 @@
-import { Directive, inject, input, ElementRef } from '@angular/core';
+import { Directive, inject, input, ElementRef, OnDestroy } from '@angular/core';
 import { FlashcardService } from './flashcard.service';
 
 @Directive({
@@ -9,7 +9,7 @@ import { FlashcardService } from './flashcard.service';
     '(touchstart)': 'onTouchStart($event)',
   },
 })
-export class FlashcardContextMenuDirective {
+export class FlashcardContextMenuDirective implements OnDestroy {
   /** Source language of the selected text (could be read from a data attribute or input). */
   readonly sourceLanguage = input<string>('en');
 
@@ -17,6 +17,7 @@ export class FlashcardContextMenuDirective {
   private elRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
   private overlay: HTMLElement | null = null;
+  private clickOffHandler: ((e: MouseEvent) => void) | null = null;
 
   onContextMenu(event: MouseEvent): void {
     event.preventDefault();
@@ -41,6 +42,10 @@ export class FlashcardContextMenuDirective {
     /* long-press detection could be added later */
   }
 
+  ngOnDestroy(): void {
+    this.removeOverlay();
+  }
+
   private showOverlay(x: number, y: number, word: string, context: string, lang: string): void {
     const div = document.createElement('div');
     div.className = 'fixed bg-surface text-on-surface shadow-lg rounded-lg px-4 py-2 z-50 cursor-pointer hover:bg-surface-hover transition-colors';
@@ -55,10 +60,8 @@ export class FlashcardContextMenuDirective {
           sourceLanguage: lang,
           contextSentence: context,
         });
-        // Notify user with a toast if implemented
-      } catch (err) {
-        console.error('Failed to create flashcard', err);
-        // Show error toast
+      } catch {
+        // Failed to create flashcard - silently handled
       }
       this.removeOverlay();
     });
@@ -66,25 +69,35 @@ export class FlashcardContextMenuDirective {
     this.overlay = div;
     document.body.appendChild(div);
 
-    const closeHandler: EventListener = (e: Event) => {
+    // Clean up previous handler before adding a new one
+    if (this.clickOffHandler) {
+      document.removeEventListener('click', this.clickOffHandler);
+    }
+
+    this.clickOffHandler = (e: MouseEvent) => {
       const target = e.target;
       if (!target || !(target instanceof Node)) {
         return;
       }
       if (!div.contains(target)) {
-        document.removeEventListener('click', closeHandler);
         this.removeOverlay();
       }
     };
 
-    // Delay to avoid immediate close from the context menu event itself
-    setTimeout(() => {
-      document.addEventListener('click', closeHandler);
-    }, 0);
+    // Delay attachment to avoid immediate close from the current contextmenu event
+    requestAnimationFrame(() => {
+      if (this.clickOffHandler) {
+        document.addEventListener('click', this.clickOffHandler);
+      }
+    });
   }
 
   private removeOverlay(): void {
-    if (this.overlay && this.overlay.parentNode) {
+    if (this.clickOffHandler) {
+      document.removeEventListener('click', this.clickOffHandler);
+      this.clickOffHandler = null;
+    }
+    if (this.overlay?.parentNode) {
       this.overlay.parentNode.removeChild(this.overlay);
     }
     this.overlay = null;
