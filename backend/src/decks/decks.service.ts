@@ -23,7 +23,9 @@ export class DecksService {
       .single();
 
     if (response.error || !response.data) {
-      throw new Error(`Failed to create deck: ${response.error?.message ?? 'Unknown error'}`);
+      throw new Error(
+        `Failed to create deck: ${response.error?.message ?? 'Unknown error'}`,
+      );
     }
     return response.data;
   }
@@ -57,14 +59,20 @@ export class DecksService {
     return response.data;
   }
 
-  async updateDeck(userId: string, deckId: string, dto: UpdateDeckDto): Promise<Deck> {
+  async updateDeck(
+    userId: string,
+    deckId: string,
+    dto: UpdateDeckDto,
+  ): Promise<Deck> {
     const supabase = this.supabaseService.getClient();
 
     const response = await supabase
       .from('decks')
       .update({
         ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.description !== undefined
+          ? { description: dto.description }
+          : {}),
         ...(dto.colour !== undefined ? { colour: dto.colour } : {}),
         ...(dto.icon !== undefined ? { icon: dto.icon } : {}),
         updated_at: new Date().toISOString(),
@@ -75,7 +83,9 @@ export class DecksService {
       .single();
 
     if (response.error || !response.data) {
-      throw new Error(`Failed to update deck: ${response.error?.message ?? 'Unknown error'}`);
+      throw new Error(
+        `Failed to update deck: ${response.error?.message ?? 'Unknown error'}`,
+      );
     }
     return response.data;
   }
@@ -107,12 +117,17 @@ export class DecksService {
     // Insert junction record
     const response = await supabase
       .from('deck_flashcards')
-      .upsert({ deck_id: deckId, flashcard_id: flashcardId }, { onConflict: 'deck_id, flashcard_id' })
+      .upsert(
+        { deck_id: deckId, flashcard_id: flashcardId },
+        { onConflict: 'deck_id, flashcard_id' },
+      )
       .select()
       .single();
 
     if (response.error) {
-      throw new Error(`Failed to add flashcard to deck: ${response.error.message}`);
+      throw new Error(
+        `Failed to add flashcard to deck: ${response.error.message}`,
+      );
     }
 
     // Update card count
@@ -136,13 +151,18 @@ export class DecksService {
       .eq('flashcard_id', flashcardId);
 
     if (response.error) {
-      throw new Error(`Failed to remove flashcard from deck: ${response.error.message}`);
+      throw new Error(
+        `Failed to remove flashcard from deck: ${response.error.message}`,
+      );
     }
 
     await this.recalculateCardCount(supabase, deckId);
   }
 
-  async getDeckFlashcards(userId: string, deckId: string): Promise<{ id: string }[]> {
+  async getDeckFlashcards(
+    userId: string,
+    deckId: string,
+  ): Promise<{ id: string }[]> {
     const supabase = this.supabaseService.getClient();
 
     const deck = await this.getDeck(userId, deckId);

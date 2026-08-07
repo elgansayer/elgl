@@ -369,51 +369,55 @@ describe('ChatService', () => {
 
       const originalFrom = mockSupabaseClient.from;
       let callCounter = 0;
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'chat_room_members') {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            neq: jest.fn().mockResolvedValue({
-              data: [{ user_id: 'receiver-1' }],
-              error: null,
-            }),
-          };
-        }
-        if (table === 'chat_messages') {
-          callCounter++;
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            then: jest.fn((resolve: any) => resolve({ count: 0, error: null })),
-          };
-        }
-        if (table === 'users') {
-          if (callCounter === 1) {
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: {
-                  message_filters: {
-                    allowed_native_languages: ['ja'],
-                  },
-                },
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
                 error: null,
               }),
             };
           }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: { native_languages: ['en'], age: 25, gender: 'male' },
-              error: null,
-            }),
-          };
-        }
-        return mockQueryBuilder;
-      });
+          if (table === 'chat_messages') {
+            callCounter++;
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 0, error: null }),
+              ),
+            };
+          }
+          if (table === 'users') {
+            if (callCounter === 1) {
+              return {
+                select: jest.fn().mockReturnThis(),
+                eq: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({
+                  data: {
+                    message_filters: {
+                      allowed_native_languages: ['ja'],
+                    },
+                  },
+                  error: null,
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { native_languages: ['en'], age: 25, gender: 'male' },
+                error: null,
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
 
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'You cannot send the first message to this user due to their native language filter settings.',
@@ -431,49 +435,53 @@ describe('ChatService', () => {
 
       let callCounter = 0;
       const originalFrom = mockSupabaseClient.from;
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'chat_room_members') {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            neq: jest.fn().mockResolvedValue({
-              data: [{ user_id: 'receiver-1' }],
-              error: null,
-            }),
-          };
-        }
-        if (table === 'chat_messages') {
-          callCounter++;
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            then: jest.fn((resolve: any) => resolve({ count: 0, error: null })),
-          };
-        }
-        if (table === 'users') {
-          if (callCounter === 1) {
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: {
-                  message_filters: { age_min: 30 },
-                },
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
                 error: null,
               }),
             };
           }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: { native_languages: ['en'], age: 25, gender: 'male' },
-              error: null,
-            }),
-          };
-        }
-        return mockQueryBuilder;
-      });
+          if (table === 'chat_messages') {
+            callCounter++;
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 0, error: null }),
+              ),
+            };
+          }
+          if (table === 'users') {
+            if (callCounter === 1) {
+              return {
+                select: jest.fn().mockReturnThis(),
+                eq: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({
+                  data: {
+                    message_filters: { age_min: 30 },
+                  },
+                  error: null,
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { native_languages: ['en'], age: 25, gender: 'male' },
+                error: null,
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
 
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'You cannot send the first message to this user due to their age filter settings.',
@@ -491,49 +499,53 @@ describe('ChatService', () => {
 
       let callCounter = 0;
       const originalFrom = mockSupabaseClient.from;
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'chat_room_members') {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            neq: jest.fn().mockResolvedValue({
-              data: [{ user_id: 'receiver-1' }],
-              error: null,
-            }),
-          };
-        }
-        if (table === 'chat_messages') {
-          callCounter++;
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            then: jest.fn((resolve: any) => resolve({ count: 0, error: null })),
-          };
-        }
-        if (table === 'users') {
-          if (callCounter === 1) {
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: {
-                  message_filters: { age_max: 40 },
-                },
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
                 error: null,
               }),
             };
           }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: { native_languages: ['en'], age: 55, gender: 'male' },
-              error: null,
-            }),
-          };
-        }
-        return mockQueryBuilder;
-      });
+          if (table === 'chat_messages') {
+            callCounter++;
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 0, error: null }),
+              ),
+            };
+          }
+          if (table === 'users') {
+            if (callCounter === 1) {
+              return {
+                select: jest.fn().mockReturnThis(),
+                eq: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({
+                  data: {
+                    message_filters: { age_max: 40 },
+                  },
+                  error: null,
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { native_languages: ['en'], age: 55, gender: 'male' },
+                error: null,
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
 
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'You cannot send the first message to this user due to their age filter settings.',
@@ -551,49 +563,53 @@ describe('ChatService', () => {
 
       let callCounter = 0;
       const originalFrom = mockSupabaseClient.from;
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'chat_room_members') {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            neq: jest.fn().mockResolvedValue({
-              data: [{ user_id: 'receiver-1' }],
-              error: null,
-            }),
-          };
-        }
-        if (table === 'chat_messages') {
-          callCounter++;
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            then: jest.fn((resolve: any) => resolve({ count: 0, error: null })),
-          };
-        }
-        if (table === 'users') {
-          if (callCounter === 1) {
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: {
-                  message_filters: { allowed_genders: ['female'] },
-                },
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
                 error: null,
               }),
             };
           }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data: { native_languages: ['en'], age: 25, gender: 'male' },
-              error: null,
-            }),
-          };
-        }
-        return mockQueryBuilder;
-      });
+          if (table === 'chat_messages') {
+            callCounter++;
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 0, error: null }),
+              ),
+            };
+          }
+          if (table === 'users') {
+            if (callCounter === 1) {
+              return {
+                select: jest.fn().mockReturnThis(),
+                eq: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({
+                  data: {
+                    message_filters: { allowed_genders: ['female'] },
+                  },
+                  error: null,
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { native_languages: ['en'], age: 25, gender: 'male' },
+                error: null,
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
 
       await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
         'You cannot send the first message to this user due to their gender filter settings.',
@@ -619,33 +635,37 @@ describe('ChatService', () => {
 
       let callCounter = 0;
       const originalFrom = mockSupabaseClient.from;
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'chat_room_members') {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            neq: jest.fn().mockResolvedValue({
-              data: [{ user_id: 'receiver-1' }],
-              error: null,
-            }),
-          };
-        }
-        if (table === 'chat_messages') {
-          callCounter++;
-          // First call to chat_messages is count query - return count > 0
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            then: jest.fn((resolve: any) => resolve({ count: 5, error: null })),
-            single: jest.fn().mockResolvedValue({
-              data: savedMessage,
-              error: null,
-            }),
-            insert: jest.fn().mockReturnThis(),
-          };
-        }
-        return mockQueryBuilder;
-      });
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
+                error: null,
+              }),
+            };
+          }
+          if (table === 'chat_messages') {
+            callCounter++;
+            // First call to chat_messages is count query - return count > 0
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 5, error: null }),
+              ),
+              single: jest.fn().mockResolvedValue({
+                data: savedMessage,
+                error: null,
+              }),
+              insert: jest.fn().mockReturnThis(),
+            };
+          }
+          return mockQueryBuilder;
+        });
 
       // Should NOT throw - subsequent messages bypass filters
       const result = await service.sendMessage('sender-1', dto);

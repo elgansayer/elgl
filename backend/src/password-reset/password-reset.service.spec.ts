@@ -3,14 +3,14 @@ import { PasswordResetService } from './password-reset.service';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../email/email.service';
-import {
-  UnauthorizedException,
-  BadRequestException,
-} from '@nestjs/common';
+import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
-  let mockSupabaseClient: { from: jest.Mock; auth: { admin: { listUsers: jest.Mock; updateUserById: jest.Mock } } };
+  let mockSupabaseClient: {
+    from: jest.Mock;
+    auth: { admin: { listUsers: jest.Mock; updateUserById: jest.Mock } };
+  };
   let mockEmailService: { sendPasswordResetEmail: jest.Mock };
 
   beforeEach(async () => {
@@ -34,7 +34,9 @@ describe('PasswordResetService', () => {
         { provide: ConfigService, useValue: { get: jest.fn() } },
         {
           provide: SupabaseService,
-          useValue: { getClient: jest.fn().mockReturnValue(mockSupabaseClient) },
+          useValue: {
+            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
         },
         { provide: EmailService, useValue: mockEmailService },
       ],
@@ -62,9 +64,7 @@ describe('PasswordResetService', () => {
     it('should create a reset token and send email for a valid user', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
         data: {
-          users: [
-            { id: 'user-abc', email: 'user@example.com' },
-          ],
+          users: [{ id: 'user-abc', email: 'user@example.com' }],
         },
         error: null,
       });
@@ -121,15 +121,15 @@ describe('PasswordResetService', () => {
     it('should throw BadRequestException when token insert fails', async () => {
       mockSupabaseClient.auth.admin.listUsers.mockResolvedValue({
         data: {
-          users: [
-            { id: 'user-abc', email: 'user@example.com' },
-          ],
+          users: [{ id: 'user-abc', email: 'user@example.com' }],
         },
         error: null,
       });
 
       const insertChain = {
-        insert: jest.fn().mockResolvedValue({ error: new Error('insert failed') }),
+        insert: jest
+          .fn()
+          .mockResolvedValue({ error: new Error('insert failed') }),
       };
       mockSupabaseClient.from.mockReturnValue(insertChain);
 
