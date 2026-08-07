@@ -6,7 +6,7 @@
     @if (messages().length === 0) {
       <p class="text-sm text-slate-400">{{ 'rooms.roomChat.empty' | t }}</p>
     } @else {
-      @for (msg of messages(); track (msg.id ?? msg.sender_id ?? $index)) {
+      @for (msg of messages(); track msg.id ?? msg.sender_id ?? $index) {
         <div class="mb-3 flex ps-2">
           <div class="max-w-[80%] rounded-lg bg-white/10 px-3 py-2">
             <p class="text-sm whitespace-pre-wrap">{{ msg.content }}</p>
@@ -22,12 +22,14 @@
       (input)="onInput($event)"
       placeholder="{{ 'rooms.roomChat.placeholder' | t }}"
       class="flex-1 rounded-full bg-white/10 px-4 py-2 text-sm outline-none focus:bg-white/20"
-     [attr.aria-label]=\"'rooms.roomChat.send' | t\"/>
+      [attr.aria-label]="'rooms.roomChat.send' | t"
+    />
     <button
       type="submit"
       class="rounded-full bg-purple-500 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
       [disabled]="!inputText().trim()"
-     [attr.aria-label]="'rooms.roomChat.send' | t">
+      [attr.aria-label]="'rooms.roomChat.send' | t"
+    >
       {{ 'rooms.roomChat.send' | t }}
     </button>
   </form>

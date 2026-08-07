@@ -1,4 +1,5 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { AdminService, AdminBlockedUser } from '../../../services/admin.service';
 import { AppCardComponent } from '../../../components/primitives/card/card.component';
@@ -7,7 +8,13 @@ import { AppSkeletonLoaderComponent } from '../../../components/primitives/skele
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [TranslatePipe, AppCardComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [
+    TranslatePipe,
+    DatePipe,
+    AppCardComponent,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+  ],
   templateUrl: './admin-blocks.component.html',
   styles: [],
 })
@@ -17,7 +24,7 @@ export class AdminBlocksComponent {
   private readonly refreshToken = signal(0);
 
   private readonly blocksResource = resource({
-    request: () => this.refreshToken(),
+    params: () => this.refreshToken(),
     loader: () => this.adminService.listBlockedUsers(),
   });
 

@@ -51,7 +51,8 @@ export class MessageFilterSettingsComponent implements OnInit {
       if (filters.age_min != null) this.ageMin.set(filters.age_min);
       if (filters.age_max != null) this.ageMax.set(filters.age_max);
       if (filters.allowed_genders) this.allowedGenders.set([...filters.allowed_genders]);
-      if (filters.allowed_native_languages) this.allowedNativeLanguages.set([...filters.allowed_native_languages]);
+      if (filters.allowed_native_languages)
+        this.allowedNativeLanguages.set([...filters.allowed_native_languages]);
     } catch {
       // Use defaults
     }
@@ -87,9 +88,7 @@ export class MessageFilterSettingsComponent implements OnInit {
         age_max: this.ageMax() ?? undefined,
         allowed_genders: this.allowedGenders().length > 0 ? this.allowedGenders() : undefined,
         allowed_native_languages:
-          this.allowedNativeLanguages().length > 0
-            ? this.allowedNativeLanguages()
-            : undefined,
+          this.allowedNativeLanguages().length > 0 ? this.allowedNativeLanguages() : undefined,
       });
       this.saved.set(true);
     } catch (err: unknown) {
@@ -110,5 +109,11 @@ export class MessageFilterSettingsComponent implements OnInit {
     this.ageMax.set(null);
     this.allowedGenders.set([]);
     this.allowedNativeLanguages.set([]);
+  }
+
+  protected coerceNumber(value: unknown): number | null {
+    if (value == null || value === '') return null;
+    const n = Number(value);
+    return Number.isNaN(n) ? null : n;
   }
 }

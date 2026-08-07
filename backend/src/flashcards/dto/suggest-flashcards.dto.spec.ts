@@ -38,17 +38,17 @@ describe('SuggestFlashcardsDto', () => {
   });
 
   it('should fail when message is not a string', async () => {
-    const dto = new SuggestFlashcardsDto();
-    (dto as any).message = 12345;
+    const dto = Object.assign(new SuggestFlashcardsDto(), { message: 12345 });
 
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
   });
 
   it('should fail when exclude_known is not a boolean', async () => {
-    const dto = new SuggestFlashcardsDto();
-    dto.message = 'Hello';
-    (dto as any).exclude_known = 'yes';
+    const dto = Object.assign(new SuggestFlashcardsDto(), {
+      message: 'Hello',
+      exclude_known: 'yes',
+    });
 
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
