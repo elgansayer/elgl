@@ -40,6 +40,7 @@ import { HttpService } from '@nestjs/axios';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { of } from 'rxjs';
 import type Stripe from 'stripe';
 
@@ -50,6 +51,26 @@ describe('EconomyService', () => {
   let mockQueryBuilder: any;
   let module: TestingModule;
   let mockRedisClient: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
+  let mockMetricsService: any;
+
+  const createMockMetricsService = () => ({
+    recordEconomyCoinPurchase: jest.fn(),
+    recordEconomyCoinRevenue: jest.fn(),
+    recordEconomyPurchaseError: jest.fn(),
+    recordEconomyGiftSend: jest.fn(),
+    recordEconomyGiftRevenue: jest.fn(),
+    recordEconomyDailyCheckIn: jest.fn(),
+    recordEconomyDailyCheckInReward: jest.fn(),
+    recordEconomyStickerPackUnlock: jest.fn(),
+    recordEconomyStickerPackRevenue: jest.fn(),
+    recordEconomyBalanceQuery: jest.fn(),
+    recordEconomyCheckoutSession: jest.fn(),
+    recordEconomyPurchaseDuration: jest.fn(),
+    recordEconomyGiftDuration: jest.fn(),
+    setEconomyUserBalance: jest.fn(),
+    incrementEconomyActivePurchases: jest.fn(),
+    decrementEconomyActivePurchases: jest.fn(),
+  });
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -71,6 +92,8 @@ describe('EconomyService', () => {
       set: jest.fn().mockResolvedValue('OK'),
       del: jest.fn().mockResolvedValue(1),
     };
+
+    mockMetricsService = createMockMetricsService();
 
     module = await Test.createTestingModule({
       providers: [
@@ -131,6 +154,10 @@ describe('EconomyService', () => {
             post: jest.fn(),
             get: jest.fn(),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();

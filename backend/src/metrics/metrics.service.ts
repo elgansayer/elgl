@@ -26,6 +26,23 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
+  // Virtual Coin Economy metrics
+  readonly economyCoinPurchases: Counter<string>;
+  readonly economyCoinRevenue: Counter<string>;
+  readonly economyPurchaseErrors: Counter<string>;
+  readonly economyGiftSends: Counter<string>;
+  readonly economyGiftRevenue: Counter<string>;
+  readonly economyDailyCheckIns: Counter<string>;
+  readonly economyDailyCheckInRewards: Counter<string>;
+  readonly economyStickerPackUnlocks: Counter<string>;
+  readonly economyStickerPackRevenue: Counter<string>;
+  readonly economyBalanceQueries: Counter<string>;
+  readonly economyCheckoutSessions: Counter<string>;
+  readonly economyPurchaseDuration: Histogram<string>;
+  readonly economyGiftDuration: Histogram<string>;
+  readonly economyUserBalance: Gauge<string>;
+  readonly economyActivePurchases: Gauge<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -121,6 +138,110 @@ export class MetricsService {
       help: 'Total number of decks created',
       registers: [this.register],
     });
+
+    // --- Virtual Coin Economy Metrics ---
+
+    this.economyCoinPurchases = new Counter({
+      name: 'hellotalk_economy_coin_purchases_total',
+      help: 'Total number of coin purchase transactions completed',
+      labelNames: ['platform', 'package_id', 'status'],
+      registers: [this.register],
+    });
+
+    this.economyCoinRevenue = new Counter({
+      name: 'hellotalk_economy_coin_revenue_total',
+      help: 'Total revenue from coin purchases in minor currency units (cents)',
+      labelNames: ['platform', 'currency'],
+      registers: [this.register],
+    });
+
+    this.economyPurchaseErrors = new Counter({
+      name: 'hellotalk_economy_purchase_errors_total',
+      help: 'Total number of coin purchase errors',
+      labelNames: ['platform', 'error_type'],
+      registers: [this.register],
+    });
+
+    this.economyGiftSends = new Counter({
+      name: 'hellotalk_economy_gift_sends_total',
+      help: 'Total number of virtual gifts sent',
+      labelNames: ['gift_id', 'gift_name'],
+      registers: [this.register],
+    });
+
+    this.economyGiftRevenue = new Counter({
+      name: 'hellotalk_economy_gift_revenue_coins_total',
+      help: 'Total coins spent on virtual gifts',
+      labelNames: ['gift_id'],
+      registers: [this.register],
+    });
+
+    this.economyDailyCheckIns = new Counter({
+      name: 'hellotalk_economy_daily_check_ins_total',
+      help: 'Total number of daily check-in claims',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.economyDailyCheckInRewards = new Counter({
+      name: 'hellotalk_economy_daily_check_in_rewards_total',
+      help: 'Total coins rewarded from daily check-ins',
+      registers: [this.register],
+    });
+
+    this.economyStickerPackUnlocks = new Counter({
+      name: 'hellotalk_economy_sticker_pack_unlocks_total',
+      help: 'Total number of sticker packs unlocked',
+      labelNames: ['pack_id'],
+      registers: [this.register],
+    });
+
+    this.economyStickerPackRevenue = new Counter({
+      name: 'hellotalk_economy_sticker_pack_revenue_coins_total',
+      help: 'Total coins spent on sticker pack unlocks',
+      labelNames: ['pack_id'],
+      registers: [this.register],
+    });
+
+    this.economyBalanceQueries = new Counter({
+      name: 'hellotalk_economy_balance_queries_total',
+      help: 'Total number of coin balance queries',
+      registers: [this.register],
+    });
+
+    this.economyCheckoutSessions = new Counter({
+      name: 'hellotalk_economy_checkout_sessions_total',
+      help: 'Total number of Stripe checkout sessions created',
+      labelNames: ['package_id'],
+      registers: [this.register],
+    });
+
+    this.economyPurchaseDuration = new Histogram({
+      name: 'hellotalk_economy_purchase_duration_seconds',
+      help: 'Duration of coin purchase operations from receipt to balance credit',
+      labelNames: ['platform'],
+      registers: [this.register],
+      buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
+    });
+
+    this.economyGiftDuration = new Histogram({
+      name: 'hellotalk_economy_gift_duration_seconds',
+      help: 'Duration of gift-send operations',
+      registers: [this.register],
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+    });
+
+    this.economyUserBalance = new Gauge({
+      name: 'hellotalk_economy_balance_sample_coins',
+      help: 'Sampled user coin balance from the most recent balance query',
+      registers: [this.register],
+    });
+
+    this.economyActivePurchases = new Gauge({
+      name: 'hellotalk_economy_active_purchases',
+      help: 'Number of coin purchase operations currently in flight',
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -186,6 +307,83 @@ export class MetricsService {
 
   recordSrsDeckCreated(): void {
     this.srsDecksCreated.inc();
+  }
+
+  // --- Virtual Coin Economy metric helpers ---
+
+  recordEconomyCoinPurchase(
+    platform: string,
+    packageId: string,
+    status: 'completed' | 'failed' = 'completed',
+  ): void {
+    this.economyCoinPurchases.inc({ platform, package_id: packageId, status });
+  }
+
+  recordEconomyCoinRevenue(
+    platform: string,
+    currency: string,
+    amountMinorUnits: number,
+  ): void {
+    this.economyCoinRevenue.inc({ platform, currency }, amountMinorUnits);
+  }
+
+  recordEconomyPurchaseError(platform: string, errorType: string): void {
+    this.economyPurchaseErrors.inc({ platform, error_type: errorType });
+  }
+
+  recordEconomyGiftSend(giftId: string, giftName: string): void {
+    this.economyGiftSends.inc({ gift_id: giftId, gift_name: giftName });
+  }
+
+  recordEconomyGiftRevenue(giftId: string, coinsSpent: number): void {
+    this.economyGiftRevenue.inc({ gift_id: giftId }, coinsSpent);
+  }
+
+  recordEconomyDailyCheckIn(status: 'claimed' | 'already_claimed'): void {
+    this.economyDailyCheckIns.inc({ status });
+  }
+
+  recordEconomyDailyCheckInReward(coinsRewarded: number): void {
+    this.economyDailyCheckInRewards.inc(coinsRewarded);
+  }
+
+  recordEconomyStickerPackUnlock(packId: string): void {
+    this.economyStickerPackUnlocks.inc({ pack_id: packId });
+  }
+
+  recordEconomyStickerPackRevenue(packId: string, coinsSpent: number): void {
+    this.economyStickerPackRevenue.inc({ pack_id: packId }, coinsSpent);
+  }
+
+  recordEconomyBalanceQuery(): void {
+    this.economyBalanceQueries.inc();
+  }
+
+  recordEconomyCheckoutSession(packageId: string): void {
+    this.economyCheckoutSessions.inc({ package_id: packageId });
+  }
+
+  recordEconomyPurchaseDuration(
+    platform: string,
+    durationSeconds: number,
+  ): void {
+    this.economyPurchaseDuration.observe({ platform }, durationSeconds);
+  }
+
+  recordEconomyGiftDuration(durationSeconds: number): void {
+    this.economyGiftDuration.observe(durationSeconds);
+  }
+
+  setEconomyUserBalance(balance: number): void {
+    this.economyUserBalance.set(balance);
+  }
+
+  incrementEconomyActivePurchases(): void {
+    this.economyActivePurchases.inc();
+  }
+
+  decrementEconomyActivePurchases(): void {
+    this.economyActivePurchases.dec();
   }
 
   getRegister(): Registry {

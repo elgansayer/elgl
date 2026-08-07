@@ -122,4 +122,138 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_srs_decks_total');
     });
   });
+
+  describe('Virtual Coin Economy metrics', () => {
+    it('should record economy coin purchase', () => {
+      expect(() =>
+        service.recordEconomyCoinPurchase('web', 'coins_small', 'completed'),
+      ).not.toThrow();
+    });
+
+    it('should record economy coin purchase failed', () => {
+      expect(() =>
+        service.recordEconomyCoinPurchase('ios', 'coins_medium', 'failed'),
+      ).not.toThrow();
+    });
+
+    it('should record economy coin revenue', () => {
+      expect(() =>
+        service.recordEconomyCoinRevenue('android', 'usd', 1999),
+      ).not.toThrow();
+    });
+
+    it('should record economy purchase error', () => {
+      expect(() =>
+        service.recordEconomyPurchaseError('web', 'receipt_verification_failed'),
+      ).not.toThrow();
+    });
+
+    it('should record economy gift send', () => {
+      expect(() =>
+        service.recordEconomyGiftSend('gift_rose', 'Rose'),
+      ).not.toThrow();
+    });
+
+    it('should record economy gift revenue', () => {
+      expect(() =>
+        service.recordEconomyGiftRevenue('gift_heart', 20),
+      ).not.toThrow();
+    });
+
+    it('should record economy daily check-in claimed', () => {
+      expect(() =>
+        service.recordEconomyDailyCheckIn('claimed'),
+      ).not.toThrow();
+    });
+
+    it('should record economy daily check-in already claimed', () => {
+      expect(() =>
+        service.recordEconomyDailyCheckIn('already_claimed'),
+      ).not.toThrow();
+    });
+
+    it('should record economy daily check-in reward', () => {
+      expect(() =>
+        service.recordEconomyDailyCheckInReward(7),
+      ).not.toThrow();
+    });
+
+    it('should record economy sticker pack unlock', () => {
+      expect(() =>
+        service.recordEconomyStickerPackUnlock('stk_pack_1'),
+      ).not.toThrow();
+    });
+
+    it('should record economy sticker pack revenue', () => {
+      expect(() =>
+        service.recordEconomyStickerPackRevenue('stk_pack_1', 50),
+      ).not.toThrow();
+    });
+
+    it('should record economy balance query', () => {
+      expect(() => service.recordEconomyBalanceQuery()).not.toThrow();
+    });
+
+    it('should record economy checkout session', () => {
+      expect(() =>
+        service.recordEconomyCheckoutSession('coins_large'),
+      ).not.toThrow();
+    });
+
+    it('should record economy purchase duration', () => {
+      expect(() =>
+        service.recordEconomyPurchaseDuration('web', 1.5),
+      ).not.toThrow();
+    });
+
+    it('should record economy gift duration', () => {
+      expect(() =>
+        service.recordEconomyGiftDuration(0.3),
+      ).not.toThrow();
+    });
+
+    it('should set economy user balance', () => {
+      expect(() =>
+        service.setEconomyUserBalance(150),
+      ).not.toThrow();
+    });
+
+    it('should increment active purchases', () => {
+      expect(() => service.incrementEconomyActivePurchases()).not.toThrow();
+    });
+
+    it('should decrement active purchases', () => {
+      service.incrementEconomyActivePurchases();
+      expect(() => service.decrementEconomyActivePurchases()).not.toThrow();
+    });
+
+    it('should include economy metrics in getMetrics output', async () => {
+      service.recordEconomyCoinPurchase('web', 'coins_small', 'completed');
+      service.recordEconomyCoinRevenue('web', 'usd', 499);
+      service.recordEconomyGiftSend('gift_rose', 'Rose');
+      service.recordEconomyDailyCheckIn('claimed');
+      service.recordEconomyBalanceQuery();
+      service.recordEconomyCheckoutSession('coins_mega');
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_economy_coin_purchases_total');
+      expect(metrics).toContain('hellotalk_economy_coin_revenue_total');
+      expect(metrics).toContain('hellotalk_economy_gift_sends_total');
+      expect(metrics).toContain('hellotalk_economy_daily_check_ins_total');
+      expect(metrics).toContain('hellotalk_economy_balance_queries_total');
+      expect(metrics).toContain('hellotalk_economy_checkout_sessions_total');
+      expect(metrics).toContain('hellotalk_economy_purchase_errors_total');
+      expect(metrics).toContain('hellotalk_economy_gift_revenue_coins_total');
+      expect(metrics).toContain(
+        'hellotalk_economy_daily_check_in_rewards_total',
+      );
+      expect(metrics).toContain('hellotalk_economy_sticker_pack_unlocks_total');
+      expect(metrics).toContain(
+        'hellotalk_economy_sticker_pack_revenue_coins_total',
+      );
+      expect(metrics).toContain('hellotalk_economy_purchase_duration_seconds');
+      expect(metrics).toContain('hellotalk_economy_gift_duration_seconds');
+      expect(metrics).toContain('hellotalk_economy_balance_sample_coins');
+      expect(metrics).toContain('hellotalk_economy_active_purchases');
+    });
+  });
 });

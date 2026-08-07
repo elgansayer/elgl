@@ -13,6 +13,7 @@ import Stripe from 'stripe';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { MetricsService } from '../metrics/metrics.service';
 import {
   PurchaseCoinsDto,
   SendGiftDto,
@@ -225,6 +226,7 @@ export class EconomyService {
     private readonly centrifugoService: CentrifugoService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly metricsService: MetricsService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY') || '',
@@ -387,6 +389,8 @@ export class EconomyService {
       );
     }
 
+    this.metricsService.recordEconomyCheckoutSession(coinPackage.id);
+
     return {
       sessionUrl: session.url || '',
       sessionId: session.id,
@@ -400,15 +404,20 @@ export class EconomyService {
       .select('coins_balance')
       .eq('id', userId)
       .single();
+    let balance: number;
     if (response.error || !response.data) {
       const profile = await this.usersService.getProfile(userId);
-      return { coins_balance: profile.coins_balance ?? 50 };
+      balance = profile.coins_balance ?? 50;
+    } else {
+      const row = response.data;
+      if (!isCoinBalanceRow(row)) {
+        throw new BadRequestException('Invalid user coin balance');
+      }
+      balance = row.coins_balance;
     }
-    const row = response.data;
-    if (!isCoinBalanceRow(row)) {
-      throw new BadRequestException('Invalid user coin balance');
-    }
-    return { coins_balance: row.coins_balance };
+    this.metricsService.recordEconomyBalanceQuery();
+    this.metricsService.setEconomyUserBalance(balance);
+    return { coins_balance: balance };
   }
 
   async claimDailyCheckIn(userId: string): Promise<{
@@ -422,6 +431,7 @@ export class EconomyService {
 
     const alreadyClaimed = await redis.get(key);
     if (alreadyClaimed) {
+      this.metricsService.recordEconomyDailyCheckIn('already_claimed');
       const { coins_balance } = await this.getBalance(userId);
       return { claimed: false, coins_rewarded: 0, new_balance: coins_balance };
     }
@@ -450,6 +460,9 @@ export class EconomyService {
       `User ${userId} claimed daily check-in reward of ${reward} coins.`,
     );
 
+    this.metricsService.recordEconomyDailyCheckIn('claimed');
+    this.metricsService.recordEconomyDailyCheckInReward(reward);
+
     this.invalidateUserEconomyCaches(userId);
 
     return { claimed: true, coins_rewarded: reward, new_balance: newBalance };
@@ -469,11 +482,13 @@ export class EconomyService {
     userId: string,
     dto: PurchaseCoinsDto,
   ): Promise<{ coins: number; new_balance: number }> {
+    const startTime = Date.now();
     const supabase = this.supabaseService.getClient();
 
     const platform = this.detectPlatform(dto.receipt_token);
 
     if (dto.platform && dto.platform !== platform) {
+      this.metricsService.recordEconomyPurchaseError(platform, 'platform_mismatch');
       throw new BadRequestException(
         `Receipt platform (${platform}) does not match provided platform (${dto.platform})`,
       );
@@ -485,6 +500,7 @@ export class EconomyService {
     });
 
     if (!isReceiptValid) {
+      this.metricsService.recordEconomyPurchaseError(platform, 'invalid_receipt');
       throw new BadRequestException('Invalid purchase receipt');
     }
 
@@ -529,6 +545,7 @@ export class EconomyService {
     );
 
     if (!verifiedReceipt.valid) {
+      this.metricsService.recordEconomyPurchaseError(platform, 'receipt_verification_failed');
       throw new BadRequestException('Receipt verification failed');
     }
 
@@ -542,6 +559,7 @@ export class EconomyService {
         pkg.platform_product_id.web === productId,
     );
     if (!coinPackage) {
+      this.metricsService.recordEconomyPurchaseError(platform, 'unknown_product_id');
       throw new BadRequestException(`Unknown product ID: ${productId}.`);
     }
 
@@ -679,6 +697,11 @@ export class EconomyService {
     );
 
     this.invalidateUserEconomyCaches(userId);
+
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    this.metricsService.recordEconomyCoinPurchase(platform, coinPackage.id, 'completed');
+    this.metricsService.recordEconomyCoinRevenue(platform, 'usd', coinPackage.price);
+    this.metricsService.recordEconomyPurchaseDuration(platform, durationSeconds);
 
     return {
       coins: coinPackage.coins,
@@ -931,6 +954,8 @@ export class EconomyService {
     coins_remaining: number;
     gift: VirtualGiftRow;
   }> {
+    const startTime = Date.now();
+
     if (senderId === dto.receiver_id) {
       throw new BadRequestException('You cannot send a gift to yourself');
     }
@@ -1062,6 +1087,11 @@ export class EconomyService {
     this.invalidateUserEconomyCaches(senderId);
     this.invalidateUserEconomyCaches(dto.receiver_id);
 
+    const giftDurationSeconds = (Date.now() - startTime) / 1000;
+    this.metricsService.recordEconomyGiftSend(gift.id, gift.name);
+    this.metricsService.recordEconomyGiftRevenue(gift.id, gift.cost_coins);
+    this.metricsService.recordEconomyGiftDuration(giftDurationSeconds);
+
     return sanitiseEconomyData({
       success: true,
       coins_remaining: newSenderBalance,
@@ -1130,6 +1160,9 @@ export class EconomyService {
     }
 
     this.invalidateUserEconomyCaches(userId);
+
+    this.metricsService.recordEconomyStickerPackUnlock(pack.id);
+    this.metricsService.recordEconomyStickerPackRevenue(pack.id, pack.cost_coins);
 
     return sanitiseEconomyData({
       success: true,
