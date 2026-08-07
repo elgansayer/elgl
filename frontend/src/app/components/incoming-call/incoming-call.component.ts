@@ -51,15 +51,15 @@ function getAudioContextClass(): typeof AudioContext | undefined {
   template: `
     @if (showCallModal()) {
       <div
-        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-3 sm:px-4"
       >
         <div
-          class="bg-surface-200 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-slide-up"
+          class="bg-surface-200 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up"
         >
           <!-- Caller Info -->
-          <div class="flex flex-col items-center pt-8 pb-6 px-6">
+          <div class="flex flex-col items-center pt-6 sm:pt-8 pb-4 sm:pb-6 px-4 sm:px-6">
             <div
-              class="w-20 h-20 rounded-full bg-surface-100 flex items-center justify-center text-3xl mb-4 overflow-hidden"
+              class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-surface-100 flex items-center justify-center text-2xl sm:text-3xl mb-3 sm:mb-4 overflow-hidden"
             >
               @if (callInfo()?.callerAvatar) {
                 <img
@@ -69,13 +69,13 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   loading="lazy"
                 />
               } @else {
-                <span class="text-4xl">{{ 'voip.avatarPlaceholder' | t }}</span>
+                <span class="text-3xl sm:text-4xl">{{ 'voip.avatarPlaceholder' | t }}</span>
               }
             </div>
-            <h2 class="text-xl font-bold text-text-primary mb-1">
+            <h2 class="text-lg sm:text-xl font-bold text-text-primary mb-1">
               {{ callInfo()?.callerName || ('common.unknownCaller' | t) }}
             </h2>
-            <p class="text-sm text-text-secondary">
+            <p class="text-xs sm:text-sm text-text-secondary">
               {{
                 callInfo()?.isVideo
                   ? ('voip.incomingVideoCall' | t)
@@ -90,26 +90,26 @@ function getAudioContextClass(): typeof AudioContext | undefined {
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex justify-center gap-6 pb-8 px-6">
+          <div class="flex justify-center gap-4 sm:gap-6 pb-6 sm:pb-8 px-4 sm:px-6">
             <app-button-secondary
               size="lg"
-              customClass="!rounded-full !w-16 !h-16 !p-0 !bg-red-500 !border-red-500 hover:!bg-red-600"
+              customClass="!rounded-full !w-14 !h-14 sm:!w-16 sm:!h-16 !p-0 !bg-red-500 !border-red-500 hover:!bg-red-600"
               (clicked)="rejectCall()"
             >
-              <span class="text-2xl">{{ 'voip.rejectIcon' | t }}</span>
+              <span class="text-xl sm:text-2xl">{{ 'voip.rejectIcon' | t }}</span>
             </app-button-secondary>
 
             <app-button-primary
               size="lg"
-              customClass="!rounded-full !w-16 !h-16 !p-0 !bg-green-500 hover:!bg-green-600"
+              customClass="!rounded-full !w-14 !h-14 sm:!w-16 sm:!h-16 !p-0 !bg-green-500 hover:!bg-green-600"
               (clicked)="acceptCall()"
             >
-              <span class="text-2xl">{{ 'voip.acceptIcon' | t }}</span>
+              <span class="text-xl sm:text-2xl">{{ 'voip.acceptIcon' | t }}</span>
             </app-button-primary>
           </div>
 
           <!-- Ringing indicator -->
-          <div class="text-center pb-6">
+          <div class="text-center pb-4 sm:pb-6">
             <span class="text-xs text-text-muted animate-pulse">
               {{ 'voip.ringing' | t }}
             </span>

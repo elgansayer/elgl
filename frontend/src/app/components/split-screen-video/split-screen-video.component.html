@@ -1,6 +1,6 @@
-<div class="flex w-full h-full gap-2 flex-col md:flex-row" role="group" aria-label="Split screen video">
+<div class="flex w-full h-full gap-2 sm:gap-3 flex-col md:flex-row" role="group" aria-label="Split screen video">
   <!-- Host Video -->
-  <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg" role="region" [attr.aria-label]="'splitScreen.hostVideoAria' | t">
+  <div class="relative flex-1 bg-black rounded-lg sm:rounded-xl overflow-hidden shadow-lg min-h-0" role="region" [attr.aria-label]="'splitScreen.hostVideoAria' | t">
     <video
       [src]="hostVideoUrl()"
       autoplay
@@ -10,7 +10,7 @@
       [attr.aria-label]="'splitScreen.hostVideoAria' | t"
     ></video>
     <div
-      class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md"
+      class="absolute bottom-2 sm:bottom-4 start-2 sm:start-4 bg-black/60 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-md"
       role="status"
     >
       {{ hostName() }} (Host)
@@ -19,7 +19,7 @@
 
   <!-- Co-Host Video or Invite Placeholder -->
   @if (hasCoHost()) {
-    <div class="relative flex-1 bg-black rounded-xl overflow-hidden shadow-lg" role="region" [attr.aria-label]="'splitScreen.coHostVideoAria' | t">
+    <div class="relative flex-1 bg-black rounded-lg sm:rounded-xl overflow-hidden shadow-lg min-h-0" role="region" [attr.aria-label]="'splitScreen.coHostVideoAria' | t">
       <video
         [src]="coHostVideoUrl()"
         autoplay
@@ -28,7 +28,7 @@
         [attr.aria-label]="'splitScreen.coHostVideoAria' | t"
       ></video>
       <div
-        class="absolute bottom-4 start-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md"
+        class="absolute bottom-2 sm:bottom-4 start-2 sm:start-4 bg-black/60 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-md"
         role="status"
       >
         {{ coHostName() }} (Co-Host)
@@ -36,16 +36,16 @@
     </div>
   } @else {
     <div
-      class="relative flex-1 bg-slate-900 rounded-xl overflow-hidden shadow-lg border-2 border-dashed border-slate-700 flex items-center justify-center"
+      class="relative flex-1 bg-slate-900 rounded-lg sm:rounded-xl overflow-hidden shadow-lg border-2 border-dashed border-slate-700 flex items-center justify-center min-h-0"
     >
       <button
         (click)="onInviteClick()"
-        class="flex flex-col items-center text-slate-400 hover:text-white transition-colors p-6 rounded-xl hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-white"
+        class="flex flex-col items-center text-slate-400 hover:text-white transition-colors p-4 sm:p-6 rounded-xl hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-white"
         [attr.aria-label]="'splitScreen.inviteCoHostAria' | t"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="h-12 w-12 mb-3"
+          class="h-8 w-8 sm:h-12 sm:w-12 mb-2 sm:mb-3"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -54,7 +54,7 @@
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
         </svg>
-        <span class="text-lg font-semibold">Invite Co-Host</span>
+        <span class="text-sm sm:text-lg font-semibold">Invite Co-Host</span>
       </button>
     </div>
   }
