@@ -3,7 +3,12 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
+import { PaginatedResponse } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
+
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 200;
+const KNOWN_WORDS_QUERY_LIMIT = 2000;
 
 @Injectable()
 export class FlashcardsService {
@@ -207,38 +212,143 @@ export class FlashcardsService {
     };
   }
 
-  async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+  async getFlashcards(
+    userId: string,
+    level?: number,
+    limit?: number,
+    offset?: number,
+  ): Promise<PaginatedResponse<Flashcard>> {
     const supabase = this.supabaseService.getClient();
-    let query = supabase
+    const clampedLimit = Math.min(
+      Math.max(1, limit ?? DEFAULT_PAGE_LIMIT),
+      MAX_PAGE_LIMIT,
+    );
+    const safeOffset = Math.max(0, offset ?? 0);
+
+    let countQuery = supabase
+      .from('flashcards')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (level !== undefined && !isNaN(level)) {
+      countQuery = countQuery.eq('srs_level', level);
+    }
+
+    let dataQuery = supabase
       .from('flashcards')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (level !== undefined && !isNaN(level)) {
-      query = query.eq('srs_level', level);
+      dataQuery = dataQuery.eq('srs_level', level);
     }
 
-    const response = await query;
-    if (response.error || !response.data) {
-      return [];
+    dataQuery = dataQuery.range(safeOffset, safeOffset + clampedLimit - 1);
+
+    const [countResult, dataResult] = await Promise.all([
+      countQuery,
+      dataQuery,
+    ]);
+
+    const total = countResult.count ?? 0;
+
+    if (dataResult.error) {
+      this.logger.warn(
+        { userId, error: dataResult.error.message },
+        'Failed to fetch flashcards',
+      );
+      return { data: [], total, limit: clampedLimit, offset: safeOffset };
     }
-    return response.data;
+
+    return {
+      data: dataResult.data ?? [],
+      total,
+      limit: clampedLimit,
+      offset: safeOffset,
+    };
   }
 
-  async getDueReviews(userId: string): Promise<Flashcard[]> {
+  async getDueReviews(
+    userId: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<PaginatedResponse<Flashcard>> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
+    const clampedLimit = Math.min(
+      Math.max(1, limit ?? DEFAULT_PAGE_LIMIT),
+      MAX_PAGE_LIMIT,
+    );
+    const safeOffset = Math.max(0, offset ?? 0);
+    const now = new Date().toISOString();
+
+    let countQuery = supabase
+      .from('flashcards')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .lt('srs_level', 4)
+      .lte('next_review_at', now);
+
+    let dataQuery = supabase
       .from('flashcards')
       .select('*')
       .eq('user_id', userId)
       .lt('srs_level', 4)
-      .lte('next_review_at', new Date().toISOString())
-      .order('next_review_at', { ascending: true });
+      .lte('next_review_at', now)
+      .order('next_review_at', { ascending: true })
+      .range(safeOffset, safeOffset + clampedLimit - 1);
 
-    if (response.error || !response.data) {
-      return [];
+    const [countResult, dataResult] = await Promise.all([
+      countQuery,
+      dataQuery,
+    ]);
+
+    const total = countResult.count ?? 0;
+
+    if (dataResult.error) {
+      this.logger.warn(
+        { userId, error: dataResult.error.message },
+        'Failed to fetch due reviews',
+      );
+      return { data: [], total, limit: clampedLimit, offset: safeOffset };
     }
-    return response.data;
+
+    return {
+      data: dataResult.data ?? [],
+      total,
+      limit: clampedLimit,
+      offset: safeOffset,
+    };
+  }
+
+  async getKnownWordsCount(
+    userId: string,
+    wordTokens: string[],
+  ): Promise<Set<string>> {
+    if (wordTokens.length === 0) return new Set();
+
+    const supabase = this.supabaseService.getClient();
+    const knownWords: Set<string> = new Set();
+
+    // Batch queries if word list is large
+    const batchSize = 200;
+    for (let i = 0; i < wordTokens.length; i += batchSize) {
+      const batch = wordTokens.slice(i, i + batchSize);
+      const { data } = await supabase
+        .from('flashcards')
+        .select('word_token')
+        .eq('user_id', userId)
+        .eq('srs_level', 4)
+        .in('word_token', batch)
+        .limit(KNOWN_WORDS_QUERY_LIMIT);
+
+      if (data) {
+        for (const row of data) {
+          knownWords.add(row.word_token.toLowerCase());
+        }
+      }
+    }
+
+    return knownWords;
   }
 }

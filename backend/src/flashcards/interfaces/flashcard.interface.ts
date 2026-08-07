@@ -13,3 +13,10 @@ export interface Flashcard {
   next_review_at: string;
   created_at: string;
 }
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}

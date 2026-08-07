@@ -2,9 +2,13 @@ import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { VocabularyStore, Flashcard } from './vocabulary.store';
+import { VocabularyStore, Flashcard, PaginatedResponse } from './vocabulary.store';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
+
+function makePage<T>(data: T[], total?: number): PaginatedResponse<T> {
+  return { data, total: total ?? data.length, limit: 50, offset: 0 };
+}
 
 describe('VocabularyStore', () => {
   let store: VocabularyStore;
@@ -69,6 +73,11 @@ describe('VocabularyStore', () => {
     it('should initialise isLoading as false', () => {
       expect(store.isLoading()).toBe(false);
     });
+
+    it('should initialise pagination totals as 0', () => {
+      expect(store.totalFlashcards()).toBe(0);
+      expect(store.totalDueReviews()).toBe(0);
+    });
   });
 
   describe('loadAllFlashcards', () => {
@@ -76,7 +85,7 @@ describe('VocabularyStore', () => {
       const promise = store.loadAllFlashcards();
       expect(store.isLoading()).toBe(true);
 
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([mockFlashcard]);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(makePage([mockFlashcard]));
       await promise;
 
       expect(store.isLoading()).toBe(false);
@@ -89,19 +98,20 @@ describe('VocabularyStore', () => {
       expect(req.request.method).toBe('GET');
       expect(req.request.headers.get('Authorization')).toBe('Bearer mock-token');
 
-      req.flush([mockFlashcard]);
+      req.flush(makePage([mockFlashcard]));
       await promise;
 
       expect(store.allFlashcards().length).toBe(1);
       expect(store.allFlashcards()[0]).toEqual(mockFlashcard);
       expect(store.flashcardMap().get('hello')).toEqual(mockFlashcard);
+      expect(store.totalFlashcards()).toBe(1);
     });
 
     it('should lower-case word tokens when building flashcardMap', async () => {
       const upperCard = { ...mockFlashcard, word_token: 'HELLO' };
       const promise = store.loadAllFlashcards();
 
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([upperCard]);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(makePage([upperCard]));
       await promise;
 
       expect(store.flashcardMap().get('hello')).toEqual(upperCard);
@@ -130,11 +140,12 @@ describe('VocabularyStore', () => {
       const req = httpMock.expectOne(`${environment.apiUrl}/flashcards/due`);
       expect(req.request.method).toBe('GET');
 
-      req.flush([mockFlashcard]);
+      req.flush(makePage([mockFlashcard]));
       await promise;
 
       expect(store.dueReviews().length).toBe(1);
       expect(store.dueReviews()[0]).toEqual(mockFlashcard);
+      expect(store.totalDueReviews()).toBe(1);
     });
 
     it('should handle error gracefully', async () => {
@@ -414,7 +425,7 @@ describe('VocabularyStore', () => {
       const req = httpMock.expectOne(`${environment.apiUrl}/flashcards`);
       expect(req.request.headers.get('Authorization')).toBe('Bearer ');
 
-      req.flush([]);
+      req.flush(makePage([]));
       await promise;
     });
   });
@@ -426,7 +437,7 @@ describe('VocabularyStore', () => {
         { ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' },
       ];
       const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(cards);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(makePage(cards));
       await promise;
 
       expect(store.allFlashcards().length).toBe(2);
@@ -502,7 +513,7 @@ describe('VocabularyStore', () => {
 
     it('should handle empty due reviews response', async () => {
       const promise = store.loadDueReviews();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush([]);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush(makePage([]));
       await promise;
 
       expect(store.dueReviews()).toEqual([]);
@@ -575,7 +586,7 @@ describe('VocabularyStore', () => {
 
       expect(store.isLoading()).toBe(true);
 
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([]);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(makePage([]));
       await promise;
 
       expect(store.isLoading()).toBe(false);
@@ -609,7 +620,7 @@ describe('VocabularyStore', () => {
   describe('loadAllFlashcards signal edge cases', () => {
     it('should handle empty array response', async () => {
       const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([]);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(makePage([]));
       await promise;
 
       expect(store.allFlashcards()).toEqual([]);
@@ -624,7 +635,7 @@ describe('VocabularyStore', () => {
         { ...mockFlashcard, id: '2', word_token: 'world', translation: 'mundo' },
       ];
       const promise = store.loadAllFlashcards();
-      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(newCards);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(makePage(newCards));
       await promise;
 
       expect(store.allFlashcards().length).toBe(1);

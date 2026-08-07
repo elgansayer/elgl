@@ -12,7 +12,7 @@ import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
-import { Flashcard } from './interfaces/flashcard.interface';
+import { Flashcard, PaginatedResponse } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
 
 @Controller('flashcards')
@@ -43,15 +43,25 @@ export class FlashcardsController {
   async getFlashcards(
     @CurrentUser() user: User | null,
     @Query('level') level?: string,
-  ): Promise<Flashcard[]> {
-    if (!user) return [];
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<PaginatedResponse<Flashcard>> {
+    if (!user) return { data: [], total: 0, limit: 50, offset: 0 };
     const lvlNum = level !== undefined ? parseInt(level, 10) : undefined;
-    return await this.flashcardsService.getFlashcards(user.id, lvlNum);
+    const limitNum = limit !== undefined ? parseInt(limit, 10) : undefined;
+    const offsetNum = offset !== undefined ? parseInt(offset, 10) : undefined;
+    return await this.flashcardsService.getFlashcards(user.id, lvlNum, limitNum, offsetNum);
   }
 
   @Get('due')
-  async getDueReviews(@CurrentUser() user: User | null): Promise<Flashcard[]> {
-    if (!user) return [];
-    return await this.flashcardsService.getDueReviews(user.id);
+  async getDueReviews(
+    @CurrentUser() user: User | null,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<PaginatedResponse<Flashcard>> {
+    if (!user) return { data: [], total: 0, limit: 50, offset: 0 };
+    const limitNum = limit !== undefined ? parseInt(limit, 10) : undefined;
+    const offsetNum = offset !== undefined ? parseInt(offset, 10) : undefined;
+    return await this.flashcardsService.getDueReviews(user.id, limitNum, offsetNum);
   }
 }

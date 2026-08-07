@@ -2,10 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsController } from './flashcards.controller';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { PaginatedResponse } from './interfaces/flashcard.interface';
 
 describe('FlashcardsController', () => {
   let controller: FlashcardsController;
   let flashcardsService: FlashcardsService;
+
+  const emptyPaginated: PaginatedResponse<unknown> = {
+    data: [],
+    total: 0,
+    limit: 50,
+    offset: 0,
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -91,51 +99,103 @@ describe('FlashcardsController', () => {
   });
 
   describe('getFlashcards', () => {
-    it('should return empty array if user is not provided', async () => {
+    it('should return empty paginated response if user is not provided', async () => {
       const result = await controller.getFlashcards(null);
-      expect(result).toEqual([]);
+      expect(result).toEqual(emptyPaginated);
       expect(flashcardsService.getFlashcards).not.toHaveBeenCalled();
     });
 
-    it('should call service getFlashcards with parsed integer level', async () => {
+    it('should call service getFlashcards with parsed params', async () => {
       const cards: any[] = [{ id: 'card-1' }];
-      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
+      const paged: PaginatedResponse<unknown> = {
+        data: cards,
+        total: 1,
+        limit: 50,
+        offset: 0,
+      };
+      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(paged);
 
       const result = await controller.getFlashcards(
         { id: 'user-1' } as any,
         '3',
+        '25',
+        '10',
       );
-      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3);
-      expect(result).toEqual(cards);
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
+        'user-1',
+        3,
+        25,
+        10,
+      );
+      expect(result).toEqual(paged);
     });
 
-    it('should call service getFlashcards with undefined level when not provided', async () => {
-      const cards: any[] = [{ id: 'card-1' }];
-      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
+    it('should call service getFlashcards with undefined optional params', async () => {
+      const paged: PaginatedResponse<unknown> = {
+        data: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+      };
+      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(paged);
 
       const result = await controller.getFlashcards({ id: 'user-1' } as any);
       expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
         'user-1',
         undefined,
+        undefined,
+        undefined,
       );
-      expect(result).toEqual(cards);
+      expect(result).toEqual(paged);
     });
   });
 
   describe('getDueReviews', () => {
-    it('should return empty array if user is not provided', async () => {
+    it('should return empty paginated response if user is not provided', async () => {
       const result = await controller.getDueReviews(null);
-      expect(result).toEqual([]);
+      expect(result).toEqual(emptyPaginated);
       expect(flashcardsService.getDueReviews).not.toHaveBeenCalled();
     });
 
-    it('should call service getDueReviews when user is provided', async () => {
+    it('should call service getDueReviews with pagination when user is provided', async () => {
       const cards: any[] = [{ id: 'card-due' }];
-      (flashcardsService.getDueReviews as jest.Mock).mockResolvedValue(cards);
+      const paged: PaginatedResponse<unknown> = {
+        data: cards,
+        total: 1,
+        limit: 50,
+        offset: 0,
+      };
+      (flashcardsService.getDueReviews as jest.Mock).mockResolvedValue(paged);
+
+      const result = await controller.getDueReviews(
+        { id: 'user-1' } as any,
+        '30',
+        '0',
+      );
+      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith(
+        'user-1',
+        30,
+        0,
+      );
+      expect(result).toEqual(paged);
+    });
+
+    it('should call service getDueReviews with undefined pagination when not provided', async () => {
+      const paged: PaginatedResponse<unknown> = {
+        data: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+      };
+      (flashcardsService.getDueReviews as jest.Mock).mockResolvedValue(paged);
 
       const result = await controller.getDueReviews({ id: 'user-1' } as any);
-      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1');
-      expect(result).toEqual(cards);
+      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith(
+        'user-1',
+        undefined,
+        undefined,
+      );
+      expect(result).toEqual(paged);
     });
   });
 });

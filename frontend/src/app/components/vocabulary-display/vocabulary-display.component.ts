@@ -104,8 +104,7 @@ export class VocabularyDisplayComponent {
         translation: item.translation
       });
       showToast('Added to flashcards successfully', 'success');
-    } catch (error) {
-      console.error('Failed to add to flashcards:', error);
+    } catch {
       showErrorToast('Failed to add to flashcards');
     }
   }

@@ -20,6 +20,13 @@ export interface Flashcard {
   created_at: string;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface TranslationResult {
   original_text: string;
   translated_text: string;
@@ -63,6 +70,11 @@ export class VocabularyStore {
   readonly dueReviews = signal<Flashcard[]>([]);
   readonly isLoading = signal<boolean>(false);
 
+  /** Total count from last paginated fetch */
+  readonly totalFlashcards = signal<number>(0);
+  /** Total due count from last paginated fetch */
+  readonly totalDueReviews = signal<number>(0);
+
   /** Cards queued for a deck-specific review session */
   readonly pendingReviewCards = signal<Flashcard[]>([]);
 
@@ -73,31 +85,59 @@ export class VocabularyStore {
     };
   }
 
-  async loadAllFlashcards(): Promise<void> {
+  /**
+   * Load flashcards with pagination. Best for large collections.
+   * @param limit Page size (default 50)
+   * @param offset Page offset (default 0)
+   * @param level Optional SRS level filter
+   */
+  async loadAllFlashcards(limit?: number, offset?: number, level?: number): Promise<void> {
     this.isLoading.set(true);
     try {
-      const list = await firstValueFrom(
-        this.http.get<Flashcard[]>(this.flashcardsUrl, { headers: this.getHeaders() }),
+      let url = this.flashcardsUrl;
+      const params = new URLSearchParams();
+      if (limit !== undefined) params.set('limit', String(limit));
+      if (offset !== undefined) params.set('offset', String(offset));
+      if (level !== undefined) params.set('level', String(level));
+      const qs = params.toString();
+      if (qs) url = `${url}?${qs}`;
+
+      const result = await firstValueFrom(
+        this.http.get<PaginatedResponse<Flashcard>>(url, { headers: this.getHeaders() }),
       );
-      this.allFlashcards.set(list);
+      this.allFlashcards.set(result.data);
+      this.totalFlashcards.set(result.total);
       const map = new Map<string, Flashcard>();
-      list.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
+      result.data.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
       this.flashcardMap.set(map);
     } catch (e) {
-      console.error('Failed to load flashcards:', e);
+      console.warn('Failed to load flashcards:', e);
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  async loadDueReviews(): Promise<void> {
+  /**
+   * Load due reviews with pagination.
+   * @param limit Page size (default 50)
+   * @param offset Page offset (default 0)
+   */
+  async loadDueReviews(limit?: number, offset?: number): Promise<void> {
     try {
-      const list = await firstValueFrom(
-        this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
+      let url = `${this.flashcardsUrl}/due`;
+      const params = new URLSearchParams();
+      if (limit !== undefined) params.set('limit', String(limit));
+      if (offset !== undefined) params.set('offset', String(offset));
+      const qs = params.toString();
+      if (qs) url = `${url}?${qs}`;
+
+      const result = await firstValueFrom(
+        this.http.get<PaginatedResponse<Flashcard>>(url, { headers: this.getHeaders() }),
       );
-      this.dueReviews.set(list);
+      this.dueReviews.set(result.data);
+      this.totalDueReviews.set(result.total);
     } catch (e) {
-      console.error('Failed to load due reviews:', e);
+      console.warn('Failed to load due reviews:', e);
     }
   }
 

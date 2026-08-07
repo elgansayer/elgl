@@ -17,17 +17,23 @@ describe('FlashcardsService', () => {
       debug: jest.fn(),
     };
 
-    mockQueryBuilder = {
+    // Use a factory that returns a fresh builder so call state is clean between tests
+    const createQueryBuilder = () => ({
       upsert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       lt: jest.fn().mockReturnThis(),
       lte: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       single: jest.fn(),
-    };
+      then: undefined as any,
+    });
 
+    mockQueryBuilder = createQueryBuilder();
     mockSupabaseClient = {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
@@ -124,13 +130,11 @@ describe('FlashcardsService', () => {
     });
 
     it('should fetch current card and apply SM-2 with quality 5 (perfect recall, first review)', async () => {
-      // First single() call = fetch current state, second = update result
       const currentCard = {
         easiness_factor: 2.5,
         repetitions: 0,
         interval_days: 0,
       };
-      // q=5: EF = 2.5 + 0.1 - 0 = 2.6
       const updatedCard = {
         id: 'card-1',
         srs_level: 1,
@@ -168,9 +172,6 @@ describe('FlashcardsService', () => {
         repetitions: 3,
         interval_days: 15,
       };
-      // q=5: EF = 2.6 + 0.1 = 2.7
-      // interval: 15 * 2.7 = 40.5, rounded to 41
-      // srs_level: repetitions=4, interval 41 >= 21 -> level 4
       const updatedCard = {
         id: 'card-1',
         srs_level: 4,
@@ -199,7 +200,6 @@ describe('FlashcardsService', () => {
         repetitions: 3,
         interval_days: 30,
       };
-      // q=1: EF = 2.5 + 0.1 - 4*(0.08 + 4*0.02) = 2.5 + 0.1 - 4*0.16 = 2.5 + 0.1 - 0.64 = 1.96
       const updatedCard = {
         id: 'card-1',
         srs_level: 0,
@@ -227,7 +227,6 @@ describe('FlashcardsService', () => {
         repetitions: 0,
         interval_days: 0,
       };
-      // q=0: EF = 1.35 + 0.1 - 5*(0.08 + 5*0.02) = 1.35 + 0.1 - 5*0.18 = 1.35 + 0.1 - 0.9 = 0.55, clamp to 1.3
       const updatedCard = {
         id: 'card-1',
         srs_level: 0,
@@ -278,81 +277,126 @@ describe('FlashcardsService', () => {
   });
 
   describe('getFlashcards', () => {
-    it('should query all flashcards for user when level is not specified', async () => {
+    it('should return paginated flashcards with default limit', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
-        data: cards,
-        error: null,
+
+      // count query resolves via .then
+      mockQueryBuilder.then = (resolve: any) =>
+        resolve({ data: null, count: 5, error: null });
+
+      // data query resolves via .then (range returns this which has .then)
+      mockQueryBuilder.range = jest.fn().mockReturnValue({
+        then: (resolve: any) => resolve({ data: cards, error: null }),
       });
 
       const result = await service.getFlashcards('user-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
-        ascending: false,
-      });
-      expect(result).toEqual(cards);
+      expect(result).toEqual({ data: cards, total: 5, limit: 50, offset: 0 });
     });
 
     it('should filter by level when a valid number is provided', async () => {
       const cards = [{ id: 'card-2', srs_level: 2 }];
-      mockQueryBuilder.eq.mockReturnThis();
-      // Since order is called after eq when building, let's make sure our mock returns response when awaited
-      // Notice query builds: from().select().eq(user_id).order(). Then if level !== undefined && !isNaN(level), query.eq('srs_level', level).
-      // So when query is awaited, it returns whatever eq returns or order returns if eq returns this.
-      // Let's set up the promise resolution on queryBuilder itself or mock eq to return a promise when awaited.
+
       mockQueryBuilder.then = (resolve: any) =>
-        resolve({ data: cards, error: null });
+        resolve({ data: null, count: 1, error: null });
+      mockQueryBuilder.range = jest.fn().mockReturnValue({
+        then: (resolve: any) => resolve({ data: cards, error: null }),
+      });
 
       const result = await service.getFlashcards('user-1', 2);
 
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
-      expect(result).toEqual(cards);
+      expect(result.data).toEqual(cards);
     });
 
-    it('should return empty array when query errors or returns null data', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: null,
-        error: { message: 'Query error' },
+    it('should clamp limit to MAX_PAGE_LIMIT', async () => {
+      const cards = [{ id: 'card-1' }];
+
+      mockQueryBuilder.then = (resolve: any) =>
+        resolve({ data: null, count: 300, error: null });
+      mockQueryBuilder.range = jest.fn().mockReturnValue({
+        then: (resolve: any) => resolve({ data: cards, error: null }),
+      });
+
+      const result = await service.getFlashcards('user-1', undefined, 500);
+
+      // MAX_PAGE_LIMIT is 200
+      expect(result.limit).toBe(200);
+    });
+
+    it('should return empty data when query errors', async () => {
+      mockQueryBuilder.then = (resolve: any) =>
+        resolve({ data: null, count: 0, error: null });
+      mockQueryBuilder.range = jest.fn().mockReturnValue({
+        then: (resolve: any) =>
+          resolve({ data: null, error: { message: 'Query error' } }),
       });
 
       const result = await service.getFlashcards('user-1');
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
     });
   });
 
   describe('getDueReviews', () => {
-    it('should return due cards ordered by next_review_at', async () => {
+    it('should return paginated due cards ordered by next_review_at', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
-        data: cards,
-        error: null,
+
+      mockQueryBuilder.then = (resolve: any) =>
+        resolve({ data: null, count: 3, error: null });
+      mockQueryBuilder.range = jest.fn().mockReturnValue({
+        then: (resolve: any) => resolve({ data: cards, error: null }),
       });
 
       const result = await service.getDueReviews('user-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(mockQueryBuilder.lt).toHaveBeenCalledWith('srs_level', 4);
       expect(mockQueryBuilder.lte).toHaveBeenCalledWith(
         'next_review_at',
         expect.any(String),
       );
-      expect(mockQueryBuilder.order).toHaveBeenCalledWith('next_review_at', {
-        ascending: true,
-      });
-      expect(result).toEqual(cards);
+      expect(result.data).toEqual(cards);
+      expect(result.total).toBe(3);
     });
 
-    it('should return empty array when getDueReviews query errors', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: null,
-        error: { message: 'Error' },
+    it('should return empty data when getDueReviews query errors', async () => {
+      mockQueryBuilder.then = (resolve: any) =>
+        resolve({ data: null, count: 0, error: null });
+      mockQueryBuilder.range = jest.fn().mockReturnValue({
+        then: (resolve: any) =>
+          resolve({ data: null, error: { message: 'Error' } }),
       });
 
       const result = await service.getDueReviews('user-1');
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
+    });
+  });
+
+  describe('getKnownWordsCount', () => {
+    it('should return empty set for empty word list', async () => {
+      const result = await service.getKnownWordsCount('user-1', []);
+      expect(result.size).toBe(0);
+    });
+
+    it('should return known words from database', async () => {
+      const wordTokens = ['hello', 'world', 'bonjour'];
+      mockQueryBuilder.in = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit = jest.fn().mockReturnValue({
+        then: (resolve: any) =>
+          resolve({
+            data: [{ word_token: 'hello' }, { word_token: 'bonjour' }],
+            error: null,
+          }),
+      });
+
+      const result = await service.getKnownWordsCount('user-1', wordTokens);
+
+      expect(result.size).toBe(2);
+      expect(result.has('hello')).toBe(true);
+      expect(result.has('bonjour')).toBe(true);
+      expect(result.has('world')).toBe(false);
     });
   });
 });

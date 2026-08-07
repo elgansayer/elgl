@@ -301,6 +301,9 @@ export class FlashcardReviewComponent {
   readonly sessionStats = signal<Record<ReviewGrade, number>>({ again: 0, good: 0, known: 0 });
   readonly isSaving = signal(false);
 
+  /** Track the currently playing Audio element so it can be released. */
+  private activeAudio: HTMLAudioElement | null = null;
+
   readonly currentCard = computed(() => this.reviewCards()[this.currentIndex()] ?? null);
   readonly isComplete = computed(
     () => this.reviewCards().length === 0 || this.currentIndex() >= this.reviewCards().length,
@@ -351,6 +354,7 @@ export class FlashcardReviewComponent {
       this.isSaving.set(false);
     }
 
+    this.releaseAudio();
     this.isFlipped.set(false);
 
     if (this.currentIndex() < this.reviewCards().length - 1) {
@@ -361,6 +365,7 @@ export class FlashcardReviewComponent {
   }
 
   restart(): void {
+    this.releaseAudio();
     this.currentIndex.set(0);
     this.isFlipped.set(false);
     this.sessionStats.set({ again: 0, good: 0, known: 0 });
@@ -368,10 +373,29 @@ export class FlashcardReviewComponent {
 
   playAudio(url: string, event: MouseEvent): void {
     event.stopPropagation();
+
+    // Release any previously playing audio before creating a new one
+    this.releaseAudio();
+
     const audio = new Audio(url);
+    this.activeAudio = audio;
+
     audio.play().catch(() => {
       // Audio playback failed silently
     });
+
+    // Clean up reference once playback ends
+    audio.addEventListener('ended', () => this.releaseAudio(), { once: true });
+    audio.addEventListener('error', () => this.releaseAudio(), { once: true });
+  }
+
+  private releaseAudio(): void {
+    if (this.activeAudio) {
+      this.activeAudio.pause();
+      this.activeAudio.removeAttribute('src');
+      this.activeAudio.load();
+      this.activeAudio = null;
+    }
   }
 
   private computeNewLevel(currentLevel: number, grade: ReviewGrade): number {
