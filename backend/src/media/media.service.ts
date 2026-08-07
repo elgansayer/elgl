@@ -95,11 +95,16 @@ export class MediaService implements OnModuleInit {
     format: 'ogg' | 'm4a' = 'ogg',
   ): Promise<{ url: string }> {
     const tempDir = os.tmpdir();
+<<<<<<< HEAD
     const extension = format === 'm4a' ? 'm4a' : 'ogg';
     const contentMimeType = format === 'm4a' ? 'audio/mp4' : 'audio/ogg';
+=======
+    const safeExt = path.extname(file.originalname).replace(/[^a-zA-Z0-9.]/g, '');
+    const randomName = crypto.randomBytes(8).toString('hex');
+>>>>>>> origin/main
     const inputPath = path.join(
       tempDir,
-      `${Date.now()}-input-${file.originalname}`,
+      `${Date.now()}-input-${randomName}${safeExt}`,
     );
     const outputPath = path.join(tempDir, `${Date.now()}-output.${extension}`);
 

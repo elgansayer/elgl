@@ -192,14 +192,16 @@
   <!-- Content States -->
   <main class="p-0">
     @if (isLoading()) {
-      <div class="p-8 text-center text-text-secondary font-bold">
-        {{ 'discovery.searching' | t }}
-      </div>
+      <app-empty-state
+        [title]="'discovery.searching' | t"
+        [customClass]="'py-16'">
+      </app-empty-state>
     } @else if (partners().length === 0) {
-      <div class="p-8 text-center">
-        <p class="font-bold text-text-primary text-lg">{{ 'discovery.noMatches' | t }}</p>
-        <p class="mt-2 text-text-secondary text-sm">{{ 'discovery.tryBroadening' | t }}</p>
-      </div>
+      <app-empty-state
+        [illustration]="'/assets/illustrations/no-users-nearby.svg'"
+        [title]="'discovery.noUsersNearby' | t"
+        [description]="'discovery.noUsersHint' | t">
+      </app-empty-state>
     } @else {
       <!-- User List -->
       <div class="divide-y divide-surface-200">

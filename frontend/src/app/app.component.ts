@@ -164,7 +164,7 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale and base rem sizing are handled globally by FontScaleService.
     // Block the app immediately if the installed version is deprecated.
-    this.versionCheckService.checkVersion();
+    await this.versionCheckService.checkVersion();
 
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
@@ -232,6 +232,23 @@ export class AppComponent implements OnInit {
             roomName,
             isVideoCall,
           });
+        }
+
+        // Update unread counters for real-time chat messages
+        if (eventType === 'new_message') {
+          this.unreadCounter.incrementChatUnread();
+        }
+
+        // Update unread counters for real-time notifications
+        if (
+          eventType === 'follow' ||
+          eventType === 'like_profile' ||
+          eventType === 'like_moment' ||
+          eventType === 'comment_moment' ||
+          eventType === 'profile_visit' ||
+          eventType === 'system'
+        ) {
+          this.unreadCounter.incrementNotificationUnread();
         }
       });
 

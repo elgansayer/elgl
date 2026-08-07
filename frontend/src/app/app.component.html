@@ -33,6 +33,21 @@
   <div class="flex items-center justify-between ps-4 pe-4 py-2 bg-surface-200 border-b border-surface-100">
     <app-app-language-selector />
     <div class="flex items-center gap-2">
+      <a
+        routerLink="/notifications"
+        class="relative p-2 rounded-full hover:bg-surface-100 transition-colors"
+        [attr.aria-label]="'nav.notifications' | t"
+        [attr.title]="'nav.notifications' | t"
+      >
+        <span class="text-xl leading-none">🔔</span>
+        @if (unreadCounter.notificationUnread() > 0) {
+          <span
+            class="absolute -top-0.5 -end-0.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+          >
+            {{ unreadCounter.notificationUnread() > 99 ? '99+' : unreadCounter.notificationUnread() }}
+          </span>
+        }
+      </a>
       <button
         type="button"
         class="p-2 rounded-full hover:bg-surface-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
@@ -95,11 +110,11 @@
       >
         <div class="relative">
           <span class="text-2xl leading-none">💬</span>
-          @if (unreadCounter.totalUnread() > 0) {
+          @if (unreadCounter.tabCount('chat') > 0) {
             <span
               class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
+              {{ unreadCounter.tabCount('chat') > 99 ? '99+' : unreadCounter.tabCount('chat') }}
             </span>
           }
         </div>
@@ -112,7 +127,16 @@
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.moments' | t"
       >
-        <span class="text-2xl leading-none">⭕</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">⭕</span>
+          @if (unreadCounter.tabCount('moments') > 0) {
+            <span
+              class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{ unreadCounter.tabCount('moments') > 99 ? '99+' : unreadCounter.tabCount('moments') }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.moments' | t }}</span>
       </a>
 
@@ -122,7 +146,16 @@
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.connect' | t"
       >
-        <span class="text-2xl leading-none">🌍</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">🌍</span>
+          @if (unreadCounter.tabCount('discovery') > 0) {
+            <span
+              class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{ unreadCounter.tabCount('discovery') > 99 ? '99+' : unreadCounter.tabCount('discovery') }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.connect' | t }}</span>
       </a>
 
@@ -132,7 +165,16 @@
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.liveRooms' | t"
       >
-        <span class="text-2xl leading-none">🎙️</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">🎙️</span>
+          @if (unreadCounter.tabCount('audioRooms') > 0) {
+            <span
+              class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{ unreadCounter.tabCount('audioRooms') > 99 ? '99+' : unreadCounter.tabCount('audioRooms') }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.liveRooms' | t }}</span>
       </a>
 
@@ -142,7 +184,16 @@
         class="flex flex-col items-center gap-1 w-16 text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
         [attr.aria-label]="'nav.profile' | t"
       >
-        <span class="text-2xl leading-none">👤</span>
+        <div class="relative">
+          <span class="text-2xl leading-none">👤</span>
+          @if (unreadCounter.tabCount('profile') > 0) {
+            <span
+              class="absolute -top-1 -end-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{ unreadCounter.tabCount('profile') > 99 ? '99+' : unreadCounter.tabCount('profile') }}
+            </span>
+          }
+        </div>
         <span class="text-[10px] font-bold">{{ 'nav.profile' | t }}</span>
       </a>
     </div>

@@ -34,6 +34,24 @@ export interface LoginHistoryEntry {
   created_at: string;
 }
 
+export interface AdminBlockEntry {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  blocker_name?: string | null;
+  blocked_name?: string | null;
+  blocker_avatar?: string | null;
+  blocked_avatar?: string | null;
+  created_at: string;
+}
+
+export interface AdminBlocksListResult {
+  blocks: AdminBlockEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 const MOCK_ADMIN_USERS: AdminUserSummary[] = [
   {
     id: 'partner-1',
@@ -195,6 +213,34 @@ export class AdminService {
       this.http.post<{ message: string }>(
         `${this.baseUrl}/users/${userId}/warn`,
         {},
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+
+    return firstValueFrom(
+      this.http
+        .get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(
+          catchError(() =>
+            of({ blocks: [], total: 0, page, pageSize }),
+          ),
+        ),
+    );
+  }
+
+  async removeBlock(blockId: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.delete<{ success: boolean }>(
+        `${this.baseUrl}/blocks/${blockId}`,
         { headers: this.getHeaders() },
       ),
     );

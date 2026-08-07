@@ -21,21 +21,24 @@ jest.mock('jsdom', () => ({
   })),
 }));
 
-// Simple DOMPurify mock that strips dangerous HTML
+// Strict DOMPurify mock that strips ALL HTML tags (matching strict config)
 const mockSanitize = (dirty: string): string => {
   if (typeof dirty !== 'string') return dirty;
-  return dirty
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/\s+href\s*=\s*"[^"]*"/gi, (match) => {
-      if (/javascript\s*:/i.test(match)) return '';
-      return match;
-    })
-    .replace(/\s+href\s*=\s*'[^']*'/gi, (match) => {
-      if (/javascript\s*:/i.test(match)) return '';
-      return match;
-    })
-    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/on\w+\s*=\s*'[^']*'/gi, '');
+  // Remove script/style elements and their content entirely (DOMPurify strips them)
+  let result = dirty
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
+  // Strip all remaining HTML tags
+  result = result.replace(/<[^>]*>/g, '');
+  // Decode common HTML entities
+  result = result
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'");
+  return result;
 };
 
 jest.mock('dompurify', () => {
@@ -43,6 +46,7 @@ jest.mock('dompurify', () => {
     __esModule: true,
     default: jest.fn(() => ({
       sanitize: mockSanitize,
+      setConfig: jest.fn(),
     })),
   };
 });
@@ -67,6 +71,12 @@ describe('SanitiseHtmlPipe', () => {
     );
   });
 
+  it('should strip all HTML tags from strings', () => {
+    expect(pipe.transform('<b>bold</b>', mockMetadata)).toBe('bold');
+    expect(pipe.transform('<em>italic</em>', mockMetadata)).toBe('italic');
+    expect(pipe.transform('<img src="x" onerror="alert(1)">', mockMetadata)).toBe('');
+  });
+
   it('should sanitize array of strings', () => {
     expect(
       pipe.transform(['<script>alert("xss")</script>', 'safe'], mockMetadata),
@@ -84,7 +94,7 @@ describe('SanitiseHtmlPipe', () => {
       ),
     ).toEqual({
       a: '',
-      b: { c: '<a>link</a>' },
+      b: { c: 'link' },
     });
   });
 
@@ -122,5 +132,53 @@ describe('SanitiseHtmlPipe', () => {
       password: 'my<secret>password',
       confirmPassword: 'my<secret>password',
     });
+  });
+
+  it('should skip sanitisation for stack trace fields preserving angle brackets', () => {
+    const input = {
+      message: '<script>alert("xss")</script>user',
+      stack: 'TypeError: foo\n    at <anonymous> (app.ts:10:5)',
+      componentStack: '<anonymous>\n    at AppComponent',
+      stackFrames: [
+        {
+          functionName: '<anonymous>',
+          fileName: 'app.component.ts',
+          source: 'app.component.ts:42:10',
+        },
+      ],
+      safeField: '<b>bold text</b>',
+    };
+    const result = pipe.transform(input, mockMetadata) as Record<
+      string,
+      unknown
+    >;
+    expect(result['message']).toBe('user');
+    expect(result['stack']).toBe(
+      'TypeError: foo\n    at <anonymous> (app.ts:10:5)',
+    );
+    expect(result['componentStack']).toBe('<anonymous>\n    at AppComponent');
+    expect(result['stackFrames']).toEqual([
+      {
+        functionName: '<anonymous>',
+        fileName: 'app.component.ts',
+        source: 'app.component.ts:42:10',
+      },
+    ]);
+    expect(result['safeField']).toBe('bold text');
+  });
+
+  it('should exempt rawBody and signedPayload from sanitisation', () => {
+    const input = {
+      message: '<script>alert("xss")</script>',
+      rawBody: '{"data":"<event>payload</event>"}',
+      signedPayload: '<sig>abc123</sig>',
+    };
+    const result = pipe.transform(input, mockMetadata) as Record<
+      string,
+      unknown
+    >;
+    expect(result['message']).toBe('');
+    expect(result['rawBody']).toBe('{"data":"<event>payload</event>"}');
+    expect(result['signedPayload']).toBe('<sig>abc123</sig>');
   });
 });

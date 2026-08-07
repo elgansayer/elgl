@@ -2,14 +2,28 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { CentrifugoService } from './centrifugo.service';
 import * as jwt from 'jsonwebtoken';
+import Redis from 'ioredis';
 
 jest.mock('jsonwebtoken', () => ({
   sign: jest.fn(),
 }));
 
+jest.mock('ioredis', () => {
+  const mockRedis = {
+    multi: jest.fn(),
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+  };
+  return {
+    default: jest.fn(() => mockRedis),
+    Redis: jest.fn(() => mockRedis),
+  };
+});
+
 describe('CentrifugoService', () => {
   let service: CentrifugoService;
   let configService: ConfigService;
+  let redisInstance: jest.Mocked<Redis>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,6 +36,7 @@ describe('CentrifugoService', () => {
               if (key === 'CENTRIFUGO_URL') return 'http://localhost:8000';
               if (key === 'CENTRIFUGO_API_KEY') return 'test-api-key';
               if (key === 'CENTRIFUGO_SECRET') return 'test-secret';
+              if (key === 'REDIS_URL') return 'redis://localhost:6379';
               return null;
             }),
           },
@@ -32,6 +47,7 @@ describe('CentrifugoService', () => {
     service = module.get<CentrifugoService>(CentrifugoService);
     configService = module.get<ConfigService>(ConfigService);
     service.onModuleInit();
+    redisInstance = (service as unknown as { redis: jest.Mocked<Redis> }).redis as jest.Mocked<Redis>;
   });
 
   afterEach(() => {
@@ -47,6 +63,66 @@ describe('CentrifugoService', () => {
       expect(configService.get).toHaveBeenCalledWith('CENTRIFUGO_URL');
       expect(configService.get).toHaveBeenCalledWith('CENTRIFUGO_API_KEY');
       expect(configService.get).toHaveBeenCalledWith('CENTRIFUGO_SECRET');
+    });
+  });
+
+  describe('checkConnectionRateLimit', () => {
+    it('should return true when Redis is unavailable', async () => {
+      // Simulate Redis not initialised
+      const svc = service as unknown as { redis: Redis | null };
+      svc.redis = null;
+
+      const result = await service.checkConnectionRateLimit('user-1');
+      expect(result).toBe(true);
+    });
+
+    it('should return true when under rate limit', async () => {
+      const mockMulti = {
+        zremrangebyscore: jest.fn().mockReturnThis(),
+        zcard: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([
+          [null, 1],
+          [null, 2], // 2 existing connections under limit of 5
+        ]),
+      };
+      const mockZadd = jest.fn().mockResolvedValue('OK');
+      const mockExpire = jest.fn().mockResolvedValue(1);
+
+      const svc = service as unknown as {
+        redis: { multi: jest.Mock; zadd: jest.Mock; expire: jest.Mock };
+      };
+      svc.redis = {
+        multi: jest.fn(() => mockMulti),
+        zadd: mockZadd,
+        expire: mockExpire,
+      } as unknown as jest.Mocked<Redis>;
+
+      const result = await service.checkConnectionRateLimit('user-1');
+      expect(result).toBe(true);
+      expect(mockMulti.zremrangebyscore).toHaveBeenCalled();
+      expect(mockMulti.zcard).toHaveBeenCalled();
+      expect(mockZadd).toHaveBeenCalled();
+    });
+
+    it('should return false when rate limit exceeded', async () => {
+      const mockMulti = {
+        zremrangebyscore: jest.fn().mockReturnThis(),
+        zcard: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([
+          [null, 1],
+          [null, 5], // 5 connections = at limit
+        ]),
+      };
+
+      const svc = service as unknown as {
+        redis: { multi: jest.Mock };
+      };
+      svc.redis = {
+        multi: jest.fn(() => mockMulti),
+      } as unknown as jest.Mocked<Redis>;
+
+      const result = await service.checkConnectionRateLimit('user-1');
+      expect(result).toBe(false);
     });
   });
 

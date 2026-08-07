@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
+import { CentrifugoService } from '../../services/centrifugo.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AiConversationService } from './ai-conversation.service';
@@ -39,7 +40,7 @@ interface AiChatMessage {
               [class.bg-blue-500/10]="selectedRoom()?.id === room.id"
             >
               <div class="flex items-center gap-3">
-                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="" />
+                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt=""  loading="lazy" />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate">{{ room.title }}</p>
                   <p class="text-sm text-text-muted truncate">{{ room.subtitle }}</p>
@@ -77,7 +78,7 @@ interface AiChatMessage {
                     [src]="msg.role === 'ai' ? '/assets/ai-partner.svg' : '/assets/default-avatar.svg'"
                     class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
                     alt=""
-                  />
+                   loading="lazy" />
                   <div
                     class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed"
                     [class.bg-blue-600/20]="msg.role === 'user'"
@@ -126,7 +127,7 @@ interface AiChatMessage {
             <!-- Header -->
             <div class="p-4 border-b border-surface-100 ">
               <div class="flex items-center gap-3">
-                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="" />
+                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt=""  loading="lazy" />
                 <div>
                   <h3 class="font-semibold">{{ room.title }}</h3>
                   <p class="text-sm text-text-muted">{{ room.subtitle }}</p>
@@ -152,7 +153,7 @@ interface AiChatMessage {
                     [src]="msg.sender?.avatar_url ?? '/assets/default-avatar.svg'"
                     class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
                     alt=""
-                  />
+                   loading="lazy" />
                   <div
                     class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed "
                     [class.bg-blue-600/20]="msg.sender_id === currentUserId()"
@@ -191,7 +192,7 @@ interface AiChatMessage {
 
                     <!-- media -->
                     @if (msg.media_url && !msg.is_view_once) {
-                      <img [src]="msg.media_url" class="mt-1 rounded-lg max-h-60 object-contain" alt="" />
+                      <img [src]="msg.media_url" class="mt-1 rounded-lg max-h-60 object-contain" alt=""  loading="lazy" />
                     }
                     @if (msg.is_view_once && !msg.viewed_at) {
                       <button
@@ -368,12 +369,15 @@ export class ChatPageComponent implements OnInit {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private aiConversationService = inject(AiConversationService);
+  private centrifugoService = inject(CentrifugoService);
   private i18n = inject(I18nService);
+  private destroyRef = inject(DestroyRef);
 
   rooms = signal<ChatRoom[]>([]);
   selectedRoom = signal<ChatRoom | null>(null);
   messages = signal<ChatMessage[]>([]);
   newMessageText = signal('');
+  private subscribedRoomId: string | null = null;
 
   // correction state
   correctionTargetMessage = signal<ChatMessage | null>(null);
@@ -401,28 +405,94 @@ export class ChatPageComponent implements OnInit {
     } catch (error) {
       console.error('Failed to load rooms', error);
     }
+
+    this.destroyRef.onDestroy(() => {
+      if (this.subscribedRoomId) {
+        this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      }
+    });
   }
 
   async selectRoom(room: ChatRoom) {
+    // Unsubscribe previous room
+    if (this.subscribedRoomId && this.subscribedRoomId !== room.id) {
+      this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      this.subscribedRoomId = null;
+    }
+
     this.selectedRoom.set(room);
     this.correctionTargetMessage.set(null);
     try {
       const messages = await this.chatService.getMessages(room.id);
       this.messages.set(messages);
 
+      // Subscribe to real-time updates for this room (status updates, new messages, deletions)
+      if (this.subscribedRoomId !== room.id) {
+        this.subscribedRoomId = room.id;
+        this.centrifugoService.subscribe(`chat:${room.id}`, (data: unknown) => {
+          this.handleCentrifugoEvent(data as Record<string, unknown>);
+        });
+      }
+
       // Auto-mark messages from others as delivered and then read
       const currentUserId = this.authService.currentUser()?.id;
       if (currentUserId) {
         const messagesFromOthers = messages.filter(
-          (m) => m.sender_id !== currentUserId && !m.delivery_status,
+          (m) => m.sender_id !== currentUserId && m.delivery_status !== 'delivered' && m.delivery_status !== 'read',
         );
         for (const msg of messagesFromOthers) {
-          this.chatService.markMessageStatus(msg.id, 'delivered').catch(() => {});
-          this.chatService.markMessageStatus(msg.id, 'read').catch(() => {});
+          void this.chatService.markMessageStatus(msg.id, 'delivered');
+          void this.chatService.markMessageStatus(msg.id, 'read');
         }
       }
     } catch (error) {
       console.error('Failed to load messages', error);
+    }
+  }
+
+  private handleCentrifugoEvent(data: Record<string, unknown>): void {
+    // Handle status update events
+    if (data['status_update']) {
+      const update = data['status_update'] as Record<string, unknown>;
+      const messageId = update['message_id'] as string;
+      const deliveryStatus = update['delivery_status'] as string;
+      if (messageId && deliveryStatus) {
+        this.messages.update((msgs) =>
+          msgs.map((m) =>
+            m.id === messageId
+              ? { ...m, delivery_status: deliveryStatus as ChatMessage['delivery_status'] }
+              : m,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Handle incoming new messages
+    if (data['message']) {
+      const msg = data['message'] as ChatMessage;
+      if (msg && msg.id && msg.room_id) {
+        this.messages.update((msgs) => {
+          // Avoid duplicates
+          if (msgs.some((m) => m.id === msg.id)) return msgs;
+          return [...msgs, msg];
+        });
+      }
+      return;
+    }
+
+    // Handle message deletion events
+    if (data['type'] === 'message_deleted') {
+      const deletedId = data['message_id'] as string;
+      const deletedFor = data['deleted_for'] as string;
+      if (deletedId) {
+        this.messages.update((msgs) => {
+          if (deletedFor === 'everyone') {
+            return msgs.filter((m) => m.id !== deletedId);
+          }
+          return msgs.filter((m) => m.id !== deletedId);
+        });
+      }
     }
   }
 
