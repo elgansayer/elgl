@@ -159,6 +159,7 @@ export class I18nService {
     'common.vipStdLabel': '8 UKP / $10 USD VIP',
     'common.signOut': 'Sign out',
     'common.demoActive': 'Demo / Mock Auth Active',
+    'gift.broadcastAnnouncement': '{{sender}} sent a {{giftName}} gift',
     'gift.broadcastTitle': '{{giftName}} Broadcast!',
     'gift.broadcastDesc': '🎉 {{sender}} gifted {{receiver}} a {{giftName}}! (🪙 {{cost}} Coins)',
 
@@ -856,6 +857,7 @@ export class I18nService {
     'profile.saveChangesBtn': 'Save changes',
     'profile.updateSuccess': 'Profile updated successfully.',
     'profile.visibilityLabel': 'Who can see my profile',
+    'profile.visibilityDescription': 'Control who can view your profile on HelloTalk.',
     'profile.visibility.everyone': 'Everyone',
     'profile.visibility.vipsOnly': 'VIPs only',
     'profile.visibility.hidden': 'Hidden',
