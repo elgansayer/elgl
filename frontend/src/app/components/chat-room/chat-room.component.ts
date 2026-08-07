@@ -21,6 +21,7 @@ import { SafetyService } from '../../services/safety.service';
 import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
+import { GroupParticipantDrawerComponent } from '../group-participant-drawer/group-participant-drawer.component';
 
 @Component({
   selector: 'app-chat-room',
@@ -38,6 +39,7 @@ import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.
     ChatSystemBubbleComponent,
     CulturalTipComponent,
     ReplyPreviewComponent,
+    GroupParticipantDrawerComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],

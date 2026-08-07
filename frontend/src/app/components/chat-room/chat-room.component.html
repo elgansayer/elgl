@@ -25,6 +25,13 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
+      <button
+        (click)="toggleParticipantDrawer()"
+        class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
+        [attr.aria-label]="'group.participants' | t"
+      >
+        {{ 'group.participants' | t }}
+      </button>
       @if (isAdmin) {
         <button
           (click)="showAdminPanel.set(!showAdminPanel())"
@@ -447,4 +454,10 @@
     </div>
   </div>
   }
+
+  <app-group-participant-drawer
+    [isOpen]="showParticipantDrawer()"
+    [participants]="participants()"
+    (closed)="showParticipantDrawer.set(false)"
+  />
 </div>
