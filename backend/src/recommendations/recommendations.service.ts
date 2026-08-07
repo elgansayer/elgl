@@ -161,8 +161,9 @@ export class RecommendationsService {
 
     // Tier 2: language exchange matchmaking
     try {
-      const languageMatches =
-        await this.recommendationsByLanguageExchange(userId);
+      const languageMatches = await this.recommendationsByLanguageExchange(
+        userId,
+      );
       if (languageMatches.length > 0) return languageMatches;
     } catch (error) {
       this.logger.warn(
@@ -209,8 +210,9 @@ export class RecommendationsService {
 
     // Tier 2: Language exchange
     try {
-      const languageResults =
-        await this.recommendationsByLanguageExchange(userId);
+      const languageResults = await this.recommendationsByLanguageExchange(
+        userId,
+      );
       if (languageResults.length > 0) {
         return languageResults.map((r) => ({
           ...r,
@@ -359,7 +361,11 @@ export class RecommendationsService {
     const nativeLang = user['native_language'] as string | null;
     const targetLanguages = user['target_languages'] as string[] | null;
 
-    if (!nativeLang || !targetLanguages || targetLanguages.length === 0) {
+    if (
+      !nativeLang ||
+      !targetLanguages ||
+      targetLanguages.length === 0
+    ) {
       return [];
     }
 
@@ -434,8 +440,12 @@ export class RecommendationsService {
   }
 
   /** Tier 4: Ultimate fallback using in-memory mock data. */
-  private recommendationsFromMock(userId: string): RecommendedUserDto[] {
-    this.logger.log(`Using mock data as ultimate fallback for user ${userId}`);
+  private recommendationsFromMock(
+    userId: string,
+  ): RecommendedUserDto[] {
+    this.logger.log(
+      `Using mock data as ultimate fallback for user ${userId}`,
+    );
 
     const mockUsers = MOCK_USERS as Array<{
       id: string;

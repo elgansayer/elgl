@@ -1,21 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { PinoLogger } from 'nestjs-pino';
+import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
+import { Logger } from '@nestjs/common';
 
 describe('SafetyService', () => {
   let service: SafetyService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
-  let mockPinoLogger: Record<'info' | 'error' | 'warn' | 'debug', jest.Mock>;
+  let mockCacheInvalidationService: {
+    invalidateTrustAndSafetyCaches: jest.Mock;
+    invalidateUserPairCaches: jest.Mock;
+    invalidateUserCaches: jest.Mock;
+  };
 
   beforeEach(async () => {
-    mockPinoLogger = {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-    };
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
 
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
@@ -31,6 +31,12 @@ describe('SafetyService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    mockCacheInvalidationService = {
+      invalidateTrustAndSafetyCaches: jest.fn().mockResolvedValue(undefined),
+      invalidateUserPairCaches: jest.fn().mockResolvedValue(undefined),
+      invalidateUserCaches: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SafetyService,
@@ -41,8 +47,8 @@ describe('SafetyService', () => {
           },
         },
         {
-          provide: 'PinoLogger:SafetyService',
-          useValue: mockPinoLogger,
+          provide: SafetyCacheInvalidationService,
+          useValue: mockCacheInvalidationService,
         },
       ],
     }).compile();
@@ -51,7 +57,7 @@ describe('SafetyService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -80,6 +86,10 @@ describe('SafetyService', () => {
       });
       mockQueryBuilder._response = { error: null, data: { id: 'report-id' } };
 
+      const logSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation(() => {});
+
       const result = await service.reportUser('user-1', dto);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
@@ -93,9 +103,13 @@ describe('SafetyService', () => {
         status: 'pending',
       });
       expect(result).toEqual({ id: 'report-id' });
-      expect(mockPinoLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Report submitted'),
-      );
+      expect(
+        mockCacheInvalidationService.invalidateUserCaches,
+      ).toHaveBeenCalledWith('reported-1');
+      expect(
+        mockCacheInvalidationService.invalidateTrustAndSafetyCaches,
+      ).toHaveBeenCalled();
+      logSpy.mockRestore();
     });
 
     it('should throw when reporting self', async () => {
@@ -184,6 +198,10 @@ describe('SafetyService', () => {
       // insert succeeds
       mockQueryBuilder._response = { error: null };
 
+      const logSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation(() => {});
+
       const result = await service.blockUser('user-1', {
         blocked_id: 'blocked-user',
       });
@@ -200,10 +218,15 @@ describe('SafetyService', () => {
         blocker_id: 'user-1',
         blocked_id: 'blocked-user',
       });
-      expect(mockPinoLogger.info).toHaveBeenCalledWith(
-        'User user-1 blocked blocked-user',
-      );
+      expect(logSpy).toHaveBeenCalledWith('User user-1 blocked blocked-user');
       expect(result).toEqual({ success: true, blocked_id: 'blocked-user' });
+      expect(
+        mockCacheInvalidationService.invalidateUserPairCaches,
+      ).toHaveBeenCalledWith('user-1', 'blocked-user');
+      expect(
+        mockCacheInvalidationService.invalidateTrustAndSafetyCaches,
+      ).toHaveBeenCalled();
+      logSpy.mockRestore();
     });
 
     it('should throw when blocking self', async () => {
@@ -261,6 +284,10 @@ describe('SafetyService', () => {
     it('should unblock a user', async () => {
       mockQueryBuilder._response = { error: null };
 
+      const logSpy = jest
+        .spyOn((service as any).logger, 'log')
+        .mockImplementation(() => {});
+
       const result = await service.unblockUser('user-1', 'blocked-user');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
@@ -271,6 +298,13 @@ describe('SafetyService', () => {
         'blocked-user',
       );
       expect(result).toEqual({ success: true });
+      expect(
+        mockCacheInvalidationService.invalidateUserPairCaches,
+      ).toHaveBeenCalledWith('user-1', 'blocked-user');
+      expect(
+        mockCacheInvalidationService.invalidateTrustAndSafetyCaches,
+      ).toHaveBeenCalled();
+      logSpy.mockRestore();
     });
 
     it('should throw when delete fails', async () => {

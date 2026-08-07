@@ -1,23 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
-interface BlockedRow {
-  blocked_id: string;
-}
-
-export interface BlockedUser {
-  id: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  native_language: string | null;
-  target_languages: string[] | null;
-}
-
 @Injectable()
 export class BlocksService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getBlockedUsers(requestUserId: string): Promise<BlockedUser[]> {
+  async getBlockedUsers(requestUserId: string): Promise<any[]> {
     const client = this.supabaseService.getClient();
 
     const { data: blockedRows, error: blockError } = await client
@@ -29,9 +17,7 @@ export class BlocksService {
       throw new Error(`Failed to fetch blocked users: ${blockError.message}`);
     }
 
-    const blockedIds: string[] = (blockedRows as BlockedRow[]).map(
-      (row) => row.blocked_id,
-    );
+    const blockedIds: string[] = blockedRows.map((row: any) => row.blocked_id);
 
     if (blockedIds.length === 0) {
       return [];
@@ -46,7 +32,7 @@ export class BlocksService {
       throw new Error(`Failed to fetch user details: ${userError.message}`);
     }
 
-    return (users as BlockedUser[]) ?? [];
+    return users ?? [];
   }
 
   async unblockUser(

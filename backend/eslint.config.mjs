@@ -43,7 +43,6 @@ export default tseslint.config(
   {
     files: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -75,20 +74,6 @@ export default tseslint.config(
   },
   {
     files: ['src/flashcards/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
-    },
-  },
-  {
-    files: [
-      'src/discovery/**/*.ts',
-      'src/recommendations/**/*.ts',
-      'src/study-buddies/**/*.ts',
-      'src/location/**/*.ts',
-      'src/blocks/**/*.ts',
-      'src/safety/**/*.ts',
-    ],
-    ignores: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
     },

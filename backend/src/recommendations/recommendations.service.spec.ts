@@ -250,7 +250,9 @@ describe('RecommendationsService', () => {
         },
       ]);
 
-      mockFrom.mockReturnValueOnce(userChain).mockReturnValueOnce(matchesChain);
+      mockFrom
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain);
 
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);

@@ -1,6 +1,6 @@
 import { ApplicationConfig, ErrorHandler, inject, isDevMode, APP_INITIALIZER, importProvidersFrom } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { provideHttpClient, withFetch, withInterceptors, HttpClient } from '@angular/common/http';
+import { provideHttpClient, withFetch, HttpClient } from '@angular/common/http';
 import { provideClientHydration } from '@angular/platform-browser';
 import { DOCUMENT } from '@angular/common';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -11,7 +11,6 @@ import { JoyrideModule } from 'ngx-joyride';
 import { routes } from './app.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
-import { httpRetryInterceptor } from './interceptors/http-retry.interceptor';
 
 export function createTranslateLoader(http: HttpClient): TranslateHttpLoader {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
@@ -43,7 +42,7 @@ function initialiseDeepLinks(): () => void {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withFetch(), withInterceptors([httpRetryInterceptor])),
+    provideHttpClient(withFetch()),
     provideClientHydration(),
     provideAnimations(),
     provideServiceWorker('ngsw-worker.js', {
