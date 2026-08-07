@@ -344,7 +344,138 @@ export class EscrowService {
     }
 
     this.logger.warn(
+<<<<<<< HEAD
       `Escrow ${dto.escrow_id} disputed by ${callerId}: ${dto.reason}`,
+=======
+      `Degraded escrow hold queued: ${dto.amount_coins} coins from ${payerId} to ${dto.payee_id}`,
+    );
+
+    const now = new Date().toISOString();
+    return {
+      id,
+      payer_id: payerId,
+      payee_id: dto.payee_id,
+      amount_coins: dto.amount_coins,
+      status: 'pending',
+      reason: dto.reason,
+      metadata: dto.metadata || {},
+      held_at: null,
+      released_at: null,
+      refunded_at: null,
+      cancelled_at: null,
+      retry_count: 0,
+      last_error: null,
+      next_retry_at: now,
+      created_at: now,
+      updated_at: now,
+    };
+  }
+
+  /**
+   * Releases held escrow coins to the payee.
+   */
+  async releaseCoins(
+    transactionId: string,
+    userId: string,
+  ): Promise<EscrowReleaseResult> {
+    const degradedMarker = {
+      degraded: false,
+      reason: undefined as string | undefined,
+    };
+
+    const result = await this.circuitBreaker.executeWithBreaker(
+      SERVICE_NAME,
+      async () => {
+        return await this.performRelease(transactionId, userId);
+      },
+      async () => {
+        return await this.performDegradedRelease(transactionId, userId);
+      },
+      degradedMarker,
+    );
+
+    return sanitiseEscrowData({
+      success: true,
+      transaction_id: result.id,
+      degraded: degradedMarker.degraded,
+      fallback_reason: degradedMarker.reason,
+    });
+  }
+
+  private async performRelease(
+    transactionId: string,
+    userId: string,
+  ): Promise<EscrowTransaction> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: txRow, error: txError } = await supabase
+      .from('escrow_transactions' as never)
+      .select('*')
+      .eq('id', transactionId)
+      .single();
+
+    if (txError || !txRow) {
+      throw new NotFoundException('Escrow transaction not found');
+    }
+
+    const tx = txRow as EscrowTransaction;
+
+    if (tx.status !== 'held') {
+      throw new ConflictException(
+        `Cannot release escrow with status "${tx.status}"`,
+      );
+    }
+
+    if (tx.payer_id !== userId) {
+      throw new BadRequestException('Only the payer can release escrow funds');
+    }
+
+    // Credit coins to payee
+    const { data: payeeRow, error: payeeError } = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', tx.payee_id)
+      .single();
+
+    if (payeeError || !payeeRow) {
+      throw new NotFoundException('Payee not found');
+    }
+
+    const payeeBalance = (payeeRow as { coins_balance: number }).coins_balance;
+    const { error: creditError } = await supabase
+      .from('users')
+      .update({ coins_balance: payeeBalance + tx.amount_coins })
+      .eq('id', tx.payee_id);
+
+    if (creditError) {
+      this.logger.error(
+        `Failed to credit payee ${tx.payee_id} for escrow ${transactionId}: ${creditError.message}`,
+      );
+      throw new InternalServerErrorException('Failed to credit payee');
+    }
+
+    // Mark transaction as released
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await supabase
+      .from('escrow_transactions' as never)
+      .update({
+        status: 'released' as EscrowStatus,
+        released_at: now,
+      } as never)
+      .eq('id', transactionId)
+      .select('*')
+      .single();
+
+    if (updateError || !updated) {
+      this.logger.error(
+        `Failed to update escrow ${transactionId} status to released: ${updateError?.message ?? 'invalid data returned'}`,
+      );
+      throw new InternalServerErrorException('Failed to update escrow status');
+    }
+
+    this.logger.log(
+      `Escrow released: ${transactionId} - ${tx.amount_coins} coins to ${tx.payee_id}`,
+>>>>>>> origin/main
     );
 
     return updated;
@@ -390,9 +521,18 @@ export class EscrowService {
           .eq('id', escrowData.receiver_id),
       );
 
+<<<<<<< HEAD
       if (creditError) {
         throw new InternalServerErrorException('Failed to credit receiver.');
       }
+=======
+        if (refundError) {
+          this.logger.error(
+            `Failed to refund payer ${tx.payer_id} for escrow ${transactionId}: ${refundError.message}`,
+          );
+          throw new InternalServerErrorException('Failed to refund payer');
+        }
+>>>>>>> origin/main
 
       const { error: updateError } = await this.withRetry(() =>
         supabase
@@ -404,9 +544,23 @@ export class EscrowService {
           .eq('id', dto.escrow_id),
       );
 
+<<<<<<< HEAD
       if (updateError) {
         throw new InternalServerErrorException(
           'Failed to update escrow resolution status.',
+=======
+        if (updateError || !updated) {
+          this.logger.error(
+            `Failed to update escrow ${transactionId} status to refunded: ${updateError?.message ?? 'invalid data returned'}`,
+          );
+          throw new InternalServerErrorException(
+            'Failed to update escrow status',
+          );
+        }
+
+        this.logger.log(
+          `Escrow refunded: ${transactionId} - ${tx.amount_coins} coins to ${tx.payer_id}`,
+>>>>>>> origin/main
         );
       }
 
@@ -431,6 +585,7 @@ export class EscrowService {
         .single(),
     );
 
+<<<<<<< HEAD
     const senderBalance = senderData?.coins_balance ?? 0;
     const newSenderBalance = senderBalance + escrowData.amount;
 
@@ -443,6 +598,22 @@ export class EscrowService {
 
     if (refundError) {
       throw new InternalServerErrorException('Failed to refund sender.');
+=======
+      if (payerRow) {
+        const payerBalance = (payerRow as { coins_balance: number })
+          .coins_balance;
+        const { error: refundError } = await supabase
+          .from('users')
+          .update({ coins_balance: payerBalance + tx.amount_coins })
+          .eq('id', tx.payer_id);
+
+        if (refundError) {
+          this.logger.warn(
+            `Failed to refund payer ${tx.payer_id} during cancel of escrow ${transactionId}: ${refundError.message}`,
+          );
+        }
+      }
+>>>>>>> origin/main
     }
 
     const { error: updateError } = await this.withRetry(() =>
@@ -455,10 +626,18 @@ export class EscrowService {
         .eq('id', dto.escrow_id),
     );
 
+<<<<<<< HEAD
     if (updateError) {
       throw new InternalServerErrorException(
         'Failed to update escrow resolution status.',
       );
+=======
+    if (updateError || !updated) {
+      this.logger.error(
+        `Failed to update escrow ${transactionId} status to cancelled: ${updateError?.message ?? 'invalid data returned'}`,
+      );
+      throw new InternalServerErrorException('Failed to cancel escrow');
+>>>>>>> origin/main
     }
 
     this.logger.info(
