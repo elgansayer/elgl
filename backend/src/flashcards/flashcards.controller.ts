@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -28,15 +29,18 @@ import {
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
+import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
 @ApiTags('Spaced Repetition (SRS)')
 @Controller('flashcards')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, SrsRateLimiterGuard)
 @ApiBearerAuth()
 export class FlashcardsController {
   constructor(private readonly flashcardsService: FlashcardsService) {}
 
   @Post()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @SrsRateLimit({ maxRequests: 30, windowSeconds: 60 })
   @ApiOperation({
     summary: 'Create or update a flashcard',
     description:
@@ -57,6 +61,8 @@ export class FlashcardsController {
   }
 
   @Patch(':id/srs')
+  @Throttle({ default: { limit: 120, ttl: 60000 } })
+  @SrsRateLimit({ maxRequests: 120, windowSeconds: 60 })
   @ApiOperation({
     summary: 'Submit an SRS review for a flashcard',
     description:
@@ -84,6 +90,8 @@ export class FlashcardsController {
   }
 
   @Get()
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @SrsRateLimit({ maxRequests: 30, windowSeconds: 60 })
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
@@ -108,6 +116,8 @@ export class FlashcardsController {
   }
 
   @Get('due')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @SrsRateLimit({ maxRequests: 60, windowSeconds: 60 })
   @ApiOperation({
     summary: 'Get flashcards due for review',
     description:
