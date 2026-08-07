@@ -65,8 +65,15 @@ export class WordDefinitionModalComponent implements OnInit {
   async setLevel(level: number): Promise<void> {
     this.isSaving.set(true);
     try {
+      // Map old srs_level to SM-2 quality (0-5 scale):
+      //   0 (reset/new) -> quality 0 (complete blackout)
+      //   1 (learning)   -> quality 3 (correct with serious difficulty)
+      //   4 (known)      -> quality 5 (perfect response)
+      const qualityMap: Record<number, number> = { 0: 0, 1: 3, 4: 5 };
+      const quality = qualityMap[level] ?? 3;
+
       if (this.existingCard()) {
-        const updated = await this.vocabStore.updateSrsLevel(this.existingCard()!.id, level);
+        const updated = await this.vocabStore.updateSrsLevel(this.existingCard()!.id, quality);
         this.existingCard.set(updated);
         this.statusChanged.emit(updated);
       } else {
@@ -78,7 +85,7 @@ export class WordDefinitionModalComponent implements OnInit {
           pronunciation_url: this.translationResult()?.pronunciation_url,
         });
         if (level !== 0) {
-          const updated = await this.vocabStore.updateSrsLevel(created.id, level);
+          const updated = await this.vocabStore.updateSrsLevel(created.id, quality);
           this.existingCard.set(updated);
           this.statusChanged.emit(updated);
         } else {
