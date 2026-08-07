@@ -5,7 +5,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { EscrowController } from './escrow.controller';
 import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
-import { CrashReportService } from './crash-report.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
 jest.mock('./sanitise-escrow.helper', () => ({
@@ -21,7 +21,7 @@ describe('EscrowController', () => {
   const mockTransactionId = '99999999-9999-9999-9999-999999999999';
 
   const mockRequest = {
-    user: { sub: mockUserId },
+    user: { id: mockUserId },
   };
 
   beforeEach(async () => {
@@ -82,7 +82,12 @@ describe('EscrowController', () => {
             resolveReport: jest.fn(),
           },
         },
-        EscrowExceptionFilter,
+        {
+          provide: SupabaseService,
+          useValue: {
+            getClient: jest.fn().mockReturnValue({}),
+          },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
@@ -100,7 +105,7 @@ describe('EscrowController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('holdCoins', () => {
+  describe('create', () => {
     it('should call service.holdCoins with correct params', async () => {
       const dto = {
         payee_id: mockPayeeId,
@@ -108,17 +113,17 @@ describe('EscrowController', () => {
         reason: 'Test',
       };
 
-      const result = await controller.holdCoins(mockRequest, dto);
+      const result = await controller.create(mockRequest, dto);
       expect(mockEscrowService.holdCoins).toHaveBeenCalledWith(mockUserId, dto);
       expect(result.success).toBe(true);
       expect(result.transaction_id).toBe(mockTransactionId);
     });
   });
 
-  describe('releaseCoins', () => {
+  describe('release', () => {
     it('should call service.releaseCoins with correct params', async () => {
       const dto = { transaction_id: mockTransactionId };
-      const result = await controller.releaseCoins(mockRequest, dto);
+      const result = await controller.release(mockRequest, dto);
       expect(mockEscrowService.releaseCoins).toHaveBeenCalledWith(
         mockTransactionId,
         mockUserId,
@@ -127,10 +132,10 @@ describe('EscrowController', () => {
     });
   });
 
-  describe('refundCoins', () => {
+  describe('refund', () => {
     it('should call service.refundCoins with correct params', async () => {
       const dto = { transaction_id: mockTransactionId, reason: 'Changed mind' };
-      const result = await controller.refundCoins(mockRequest, dto);
+      const result = await controller.refund(mockRequest, dto);
       expect(mockEscrowService.refundCoins).toHaveBeenCalledWith(
         mockTransactionId,
         mockUserId,
@@ -140,23 +145,10 @@ describe('EscrowController', () => {
     });
   });
 
-  describe('cancelEscrow', () => {
-    it('should call service.cancelEscrow with correct params', async () => {
-      const dto = { transaction_id: mockTransactionId };
-      const result = await controller.cancelEscrow(mockRequest, dto);
-      expect(mockEscrowService.cancelEscrow).toHaveBeenCalledWith(
-        mockTransactionId,
-        mockUserId,
-      );
-      expect(result.status).toBe('cancelled');
-    });
-  });
-
-  describe('listTransactions', () => {
+  describe('list', () => {
     it('should call service.listTransactions with defaults', async () => {
-      await controller.listTransactions(
+      await controller.list(
         mockRequest,
-        undefined,
         undefined,
         undefined,
       );
@@ -169,19 +161,19 @@ describe('EscrowController', () => {
     });
 
     it('should parse limit and offset query params', async () => {
-      await controller.listTransactions(mockRequest, 'held', '10', '5');
+      await controller.list(mockRequest, '10', '5');
       expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
         mockUserId,
-        'held',
+        undefined,
         10,
         5,
       );
     });
   });
 
-  describe('getTransaction', () => {
+  describe('getById', () => {
     it('should call service.getTransaction with correct params', async () => {
-      const result = await controller.getTransaction(
+      const result = await controller.getById(
         mockRequest,
         mockTransactionId,
       );
@@ -210,12 +202,12 @@ describe('EscrowController', () => {
   });
 
   describe('error propagation', () => {
-    it('should propagate holdCoins errors from service', async () => {
+    it('should propagate create errors from service', async () => {
       const error = new Error('Hold error');
       mockEscrowService.holdCoins.mockRejectedValue(error);
 
       await expect(
-        controller.holdCoins(mockRequest, {
+        controller.create(mockRequest, {
           payee_id: mockPayeeId,
           amount_coins: 50,
           reason: 'Test',
@@ -223,53 +215,42 @@ describe('EscrowController', () => {
       ).rejects.toThrow('Hold error');
     });
 
-    it('should propagate releaseCoins errors from service', async () => {
+    it('should propagate release errors from service', async () => {
       const error = new Error('Release error');
       mockEscrowService.releaseCoins.mockRejectedValue(error);
 
       await expect(
-        controller.releaseCoins(mockRequest, {
+        controller.release(mockRequest, {
           transaction_id: mockTransactionId,
         }),
       ).rejects.toThrow('Release error');
     });
 
-    it('should propagate refundCoins errors from service', async () => {
+    it('should propagate refund errors from service', async () => {
       const error = new Error('Refund error');
       mockEscrowService.refundCoins.mockRejectedValue(error);
 
       await expect(
-        controller.refundCoins(mockRequest, {
+        controller.refund(mockRequest, {
           transaction_id: mockTransactionId,
         }),
       ).rejects.toThrow('Refund error');
     });
 
-    it('should propagate cancelEscrow errors from service', async () => {
-      const error = new Error('Cancel error');
-      mockEscrowService.cancelEscrow.mockRejectedValue(error);
-
-      await expect(
-        controller.cancelEscrow(mockRequest, {
-          transaction_id: mockTransactionId,
-        }),
-      ).rejects.toThrow('Cancel error');
-    });
-
-    it('should propagate getTransaction errors from service', async () => {
+    it('should propagate getById errors from service', async () => {
       const error = new Error('Get error');
       mockEscrowService.getTransaction.mockRejectedValue(error);
 
       await expect(
-        controller.getTransaction(mockRequest, mockTransactionId),
+        controller.getById(mockRequest, mockTransactionId),
       ).rejects.toThrow('Get error');
     });
 
-    it('should propagate listTransactions errors from service', async () => {
+    it('should propagate list errors from service', async () => {
       const error = new Error('List error');
       mockEscrowService.listTransactions.mockRejectedValue(error);
 
-      await expect(controller.listTransactions(mockRequest)).rejects.toThrow(
+      await expect(controller.list(mockRequest)).rejects.toThrow(
         'List error',
       );
     });

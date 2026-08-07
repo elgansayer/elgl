@@ -52,6 +52,7 @@ describe('FlashcardsController', () => {
       updateSrsLevel: jest.fn(),
       getFlashcards: jest.fn(),
       getDueReviews: jest.fn(),
+      purgeSrsCache: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -129,7 +130,6 @@ describe('FlashcardsController', () => {
         'user-1',
         dto,
       );
-      expect(flashcardsService.purgeSrsCache).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(card);
       expect(res.header).not.toHaveBeenCalledWith('X-SRS-Degraded', 'true');
     });

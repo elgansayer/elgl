@@ -3,10 +3,6 @@ import { VideoCallsController } from './video-calls.controller';
 import { VideoCallsService } from './video-calls.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
-jest.mock('./sanitise-video-calls.helper', () => ({
-  sanitiseVideoCallsData: jest.fn((value: unknown) => value),
-}));
-
 describe('VideoCallsController', () => {
   let controller: VideoCallsController;
   let videoCallsService: VideoCallsService;
