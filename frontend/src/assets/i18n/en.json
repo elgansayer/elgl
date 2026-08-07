@@ -1841,6 +1841,7 @@
   "resource_library.type_tip": "Type tip",
   "resource_library.url_placeholder": "Url placeholder",
   "restore_purchases": "Restore purchases",
+  "restore_purchases_description": "Already purchased? Restore your previous purchases below.",
   "restoring": "Restoring",
   "roomChat.broadcastBtn": "Broadcast caption",
   "roomChat.empty": "No messages in this live room yet. Say hello to the stage speakers!",
