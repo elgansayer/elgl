@@ -94,12 +94,12 @@ describe('GiftPickerComponent', () => {
     const modal = fixture.nativeElement.querySelector('.max-w-lg');
     expect(modal).toBeTruthy();
     const html = modal.outerHTML;
-    expect(html).not.toMatch(/pl-\d/);
-    expect(html).not.toMatch(/pr-\d/);
-    expect(html).not.toMatch(/ml-\d/);
-    expect(html).not.toMatch(/mr-\d/);
-    expect(html).not.toMatch(/border-l/);
-    expect(html).not.toMatch(/border-r/);
+    expect(html).not.toMatch(/\bpl-\d/);
+    expect(html).not.toMatch(/\bpr-\d/);
+    expect(html).not.toMatch(/\bml-\d/);
+    expect(html).not.toMatch(/\bmr-\d/);
+    expect(html).not.toMatch(/\bborder-l\b/);
+    expect(html).not.toMatch(/\bborder-r\b/);
   });
 
   it('should display the receiver name in select prompt', () => {
@@ -138,7 +138,7 @@ describe('GiftPickerComponent', () => {
     fixture.detectChanges();
 
     // Should show the selected gift confirmation row
-    const selectedRow = fixture.debugElement.query(By.css('.bg-primary\/5'));
+    const selectedRow = fixture.debugElement.query(By.css('.bg-primary/5'));
     expect(selectedRow).not.toBeNull();
     expect(selectedRow.nativeElement.textContent).toContain('Rose');
   });
@@ -161,7 +161,7 @@ describe('GiftPickerComponent', () => {
     fixture.detectChanges();
 
     // Clear it - the clear button is inside the selected gift row
-    const selectedRow = fixture.debugElement.query(By.css('.bg-primary\/5'));
+    const selectedRow = fixture.debugElement.query(By.css('.bg-primary/5'));
     const clearBtn = selectedRow?.query(By.css('button'));
     if (clearBtn) {
       clearBtn.triggerEventHandler('click', null);
@@ -189,7 +189,6 @@ describe('GiftPickerComponent', () => {
     expect(component.showCoinPackages()).toBe(false);
 
     // Find buy coins button in the balance bar
-    const buyCoinsBtn = fixture.debugElement.query(By.css('.bg-amber-500\/10 button.bg-amber-500, .bg-amber-500\/10 button.hover\:bg-amber-600'));
     // Fallback: find all buttons in balance section
     const balanceRegion = fixture.debugElement.query(By.css('[role="region"][aria-label="giftModal.balanceLabel"]'));
     const buttons = balanceRegion?.queryAll(By.css('button'));
