@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { MOCK_USERS } from '../mock-data';
 
 export interface RecommendedUserDto {
@@ -42,7 +43,10 @@ interface UserRow {
 export class RecommendationsService {
   private readonly logger = new Logger(RecommendationsService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations(): Promise<void> {
@@ -115,26 +119,62 @@ export class RecommendationsService {
   /** Returns cached top 10 language partner recommendations for a user.
    *  Gracefully degrades: Redis cache -> compute live -> empty array. */
   async getDailyRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    const startTime = Date.now();
+
     try {
       const redis = this.supabaseService.getRedisClient();
       const cached = await redis.get(`recommendations:daily:${userId}`);
       if (cached) {
         const parsed: unknown = JSON.parse(cached);
         if (Array.isArray(parsed)) {
-          return parsed as RecommendedUserDto[];
+          const results = parsed as RecommendedUserDto[];
+          this.metricsService.recordMatchmakingRecommendationsGenerated(
+            'cached',
+            'getDailyRecommendations',
+            results.length,
+          );
+          this.metricsService.recordMatchmakingRecommendationsPerRequest(
+            'cached',
+            results.length,
+          );
+          this.metricsService.recordMatchmakingRequestDuration(
+            'getDailyRecommendations',
+            'success',
+            (Date.now() - startTime) / 1000,
+          );
+          return results;
         }
       }
+      this.metricsService.recordMatchmakingDailyCacheMiss('empty_cache');
     } catch (error) {
       this.logger.warn(
         `Redis unavailable for daily recommendations (user ${userId}), falling back to live computation`,
         error,
       );
+      this.metricsService.recordMatchmakingDailyCacheMiss('redis_unavailable');
       // Fall through to live computation
     }
 
     // Tier 2: compute language-exchange recommendations on the fly
     try {
-      return await this.recommendationsByLanguageExchange(userId);
+      const liveResults = await this.recommendationsByLanguageExchange(userId);
+      if (liveResults.length > 0) {
+        this.metricsService.recordMatchmakingRecommendationsGenerated(
+          'live_language_exchange',
+          'getDailyRecommendations',
+          liveResults.length,
+        );
+        this.metricsService.recordMatchmakingRecommendationsPerRequest(
+          'live_language_exchange',
+          liveResults.length,
+        );
+        this.metricsService.recordMatchmakingRequestDuration(
+          'getDailyRecommendations',
+          'success',
+          (Date.now() - startTime) / 1000,
+        );
+        return liveResults;
+      }
     } catch (error) {
       this.logger.warn(
         `Live language-exchange fallback failed for user ${userId}`,
@@ -142,16 +182,32 @@ export class RecommendationsService {
       );
     }
 
+    this.metricsService.recordMatchmakingEmptyResults('getDailyRecommendations');
+    this.metricsService.recordMatchmakingRequestDuration(
+      'getDailyRecommendations',
+      'empty',
+      (Date.now() - startTime) / 1000,
+    );
     return [];
   }
 
   /** Interest-based recommendations. Falls back gracefully through tiers
    *  when any tier returns empty or throws. */
   async getRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    const startTime = Date.now();
+
     // Tier 1: Interest-based
     try {
       const interestResults = await this.recommendationsByInterests(userId);
-      if (interestResults.length > 0) return interestResults;
+      if (interestResults.length > 0) {
+        this.recordMatchmakingSuccess(
+          'getRecommendations',
+          'interest',
+          interestResults.length,
+          startTime,
+        );
+        return interestResults;
+      }
     } catch (error) {
       this.logger.warn(
         `Interest-based recommendations failed for user ${userId}, falling back to language exchange`,
@@ -164,7 +220,15 @@ export class RecommendationsService {
       const languageMatches = await this.recommendationsByLanguageExchange(
         userId,
       );
-      if (languageMatches.length > 0) return languageMatches;
+      if (languageMatches.length > 0) {
+        this.recordMatchmakingSuccess(
+          'getRecommendations',
+          'language_exchange',
+          languageMatches.length,
+          startTime,
+        );
+        return languageMatches;
+      }
     } catch (error) {
       this.logger.warn(
         `Language exchange fallback failed for user ${userId}`,
@@ -175,7 +239,15 @@ export class RecommendationsService {
     // Tier 3: most active users
     try {
       const activeUsers = await this.recommendationsByActiveUsers(userId);
-      if (activeUsers.length > 0) return activeUsers;
+      if (activeUsers.length > 0) {
+        this.recordMatchmakingSuccess(
+          'getRecommendations',
+          'active_users',
+          activeUsers.length,
+          startTime,
+        );
+        return activeUsers;
+      }
     } catch (error) {
       this.logger.error(
         `Active users fallback failed for user ${userId}`,
@@ -184,7 +256,14 @@ export class RecommendationsService {
     }
 
     // Tier 4: mock data as ultimate fallback
-    return this.recommendationsFromMock(userId);
+    const mockResults = this.recommendationsFromMock(userId);
+    this.recordMatchmakingSuccess(
+      'getRecommendations',
+      'mock',
+      mockResults.length,
+      startTime,
+    );
+    return mockResults;
   }
 
   /** Orchestrates multi-tier recommendations with graceful degradation.
@@ -192,19 +271,35 @@ export class RecommendationsService {
   async getRecommendationsWithFallback(
     userId: string,
   ): Promise<RecommendedUserDto[]> {
+    const startTime = Date.now();
+    let lastTier: string = 'none';
+
     // Tier 1: Interest-based (highest quality)
     try {
       const interestResults = await this.recommendationsByInterests(userId);
       if (interestResults.length > 0) {
-        return interestResults.map((r) => ({
+        const results = interestResults.map((r) => ({
           ...r,
           matchTier: 'interest' as const,
         }));
+        this.recordMatchmakingSuccess(
+          'getRecommendationsWithFallback',
+          'interest',
+          results.length,
+          startTime,
+        );
+        return results;
       }
+      lastTier = 'interest';
     } catch (error) {
       this.logger.warn(
         `Tier 1 (interest) unavailable for user ${userId}, degrading`,
         error,
+      );
+      lastTier = 'interest';
+      this.metricsService.recordMatchmakingFallbackTierUsed(
+        'interest',
+        'language_exchange',
       );
     }
 
@@ -214,36 +309,83 @@ export class RecommendationsService {
         userId,
       );
       if (languageResults.length > 0) {
-        return languageResults.map((r) => ({
+        const results = languageResults.map((r) => ({
           ...r,
           matchTier: 'language_exchange' as const,
         }));
+        this.recordMatchmakingSuccess(
+          'getRecommendationsWithFallback',
+          'language_exchange',
+          results.length,
+          startTime,
+        );
+        return results;
       }
+      if (lastTier !== 'language_exchange') {
+        this.metricsService.recordMatchmakingFallbackTierUsed(
+          lastTier,
+          'language_exchange',
+        );
+      }
+      lastTier = 'language_exchange';
     } catch (error) {
       this.logger.warn(
         `Tier 2 (language exchange) unavailable for user ${userId}, degrading`,
         error,
       );
+      this.metricsService.recordMatchmakingFallbackTierUsed(
+        lastTier,
+        'active_users',
+      );
+      lastTier = 'language_exchange';
     }
 
     // Tier 3: Most active users
     try {
       const activeResults = await this.recommendationsByActiveUsers(userId);
       if (activeResults.length > 0) {
-        return activeResults.map((r) => ({
+        const results = activeResults.map((r) => ({
           ...r,
           matchTier: 'active_users' as const,
         }));
+        this.recordMatchmakingSuccess(
+          'getRecommendationsWithFallback',
+          'active_users',
+          results.length,
+          startTime,
+        );
+        return results;
       }
+      this.metricsService.recordMatchmakingFallbackTierUsed(
+        lastTier,
+        'active_users',
+      );
+      lastTier = 'active_users';
     } catch (error) {
       this.logger.error(
         `Tier 3 (active users) unavailable for user ${userId}, degrading to mock data`,
         error,
       );
+      this.metricsService.recordMatchmakingFallbackTierUsed(
+        lastTier,
+        'mock',
+      );
+      lastTier = 'active_users';
     }
 
     // Tier 4: Mock data (always available)
-    return this.recommendationsFromMock(userId);
+    const mockResults = this.recommendationsFromMock(userId);
+    this.metricsService.recordMatchmakingFallbackTierUsed(
+      lastTier,
+      'mock',
+    );
+    this.recordMatchmakingSuccess(
+      'getRecommendationsWithFallback',
+      'mock',
+      mockResults.length,
+      startTime,
+    );
+    return mockResults;
   }
 
   // ---- Private fallback tier methods ----
@@ -473,5 +615,29 @@ export class RecommendationsService {
         correctionRatio: u.correction_ratio,
         matchTier: 'mock' as const,
       }));
+  }
+
+  /** Records matchmaking success metrics in a single call. */
+  private recordMatchmakingSuccess(
+    endpoint: string,
+    tier: string,
+    resultCount: number,
+    startTime: number,
+  ): void {
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    this.metricsService.recordMatchmakingRecommendationsGenerated(
+      tier,
+      endpoint,
+      resultCount,
+    );
+    this.metricsService.recordMatchmakingRecommendationsPerRequest(
+      tier,
+      resultCount,
+    );
+    this.metricsService.recordMatchmakingRequestDuration(
+      endpoint,
+      'success',
+      durationSeconds,
+    );
   }
 }

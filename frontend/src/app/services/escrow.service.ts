@@ -76,9 +76,11 @@ export class EscrowService {
     }
 
     const token = this.auth.getAccessToken();
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const options = token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : {};
     const result = await firstValueFrom(
-      this.http.post<EscrowCreateResult>(`${this.baseUrl}/create`, dto, { headers }),
+      this.http.post<EscrowCreateResult>(`${this.baseUrl}/create`, dto, options),
     );
     return result;
   }
@@ -107,9 +109,11 @@ export class EscrowService {
     }
 
     const token = this.auth.getAccessToken();
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const options = token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : {};
     return firstValueFrom(
-      this.http.post<EscrowReleaseResult>(`${this.baseUrl}/release`, { escrow_id: escrowId }, { headers }),
+      this.http.post<EscrowReleaseResult>(`${this.baseUrl}/release`, { escrow_id: escrowId }, options),
     );
   }
 
@@ -137,9 +141,11 @@ export class EscrowService {
     }
 
     const token = this.auth.getAccessToken();
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const options = token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : {};
     return firstValueFrom(
-      this.http.post<EscrowRefundResult>(`${this.baseUrl}/refund`, { escrow_id: escrowId, reason }, { headers }),
+      this.http.post<EscrowRefundResult>(`${this.baseUrl}/refund`, { escrow_id: escrowId, reason }, options),
     );
   }
 
@@ -177,9 +183,11 @@ export class EscrowService {
     }
 
     const token = this.auth.getAccessToken();
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const options = token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : {};
     return firstValueFrom(
-      this.http.post<EscrowRow>(`${this.baseUrl}/dispute`, { escrow_id: escrowId, reason, evidence }, { headers }),
+      this.http.post<EscrowRow>(`${this.baseUrl}/dispute`, { escrow_id: escrowId, reason, evidence }, options),
     );
   }
 
@@ -192,9 +200,11 @@ export class EscrowService {
     }
 
     const token = this.auth.getAccessToken();
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const options = token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : {};
     const result = await firstValueFrom(
-      this.http.get<EscrowRow>(`${this.baseUrl}/${escrowId}`, { headers }),
+      this.http.get<EscrowRow>(`${this.baseUrl}/${escrowId}`, options),
     );
     await this.offlineStore.cacheEscrows([result]);
     return result;
@@ -211,10 +221,12 @@ export class EscrowService {
       }
 
       const token = this.auth.getAccessToken();
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const authHeaders: Record<string, string> = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
       const params = status ? { status } : undefined;
       const result = await firstValueFrom(
-        this.http.get<EscrowRow[]>(this.baseUrl, { headers, params }),
+        this.http.get<EscrowRow[]>(this.baseUrl, { headers: authHeaders, params }),
       );
       await this.offlineStore.cacheEscrows(result);
       this.escrows.set(result);
