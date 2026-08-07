@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { VirtualGiftModalComponent } from './virtual-gift-modal.component';
 import { EconomyStore, VirtualGift, CoinPackage } from '../../services/economy.store';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -33,11 +34,13 @@ function createMockStore(overrides: Partial<{
   coinsBalance: number;
   catalog: VirtualGift[];
   coinPackages: CoinPackage[];
+  isLoading: boolean;
 }> = {}) {
   return {
     coinsBalance: signal(overrides.coinsBalance ?? 50),
     catalog: signal(overrides.catalog ?? MOCK_CATALOG),
     coinPackages: signal(overrides.coinPackages ?? MOCK_PACKAGES),
+    isLoading: signal(overrides.isLoading ?? false),
     loadInitialData: vi.fn().mockResolvedValue(undefined),
     loadCoinPackages: vi.fn().mockResolvedValue(undefined),
     buyCoins: vi.fn().mockResolvedValue(undefined),

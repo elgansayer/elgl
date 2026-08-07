@@ -64,8 +64,12 @@ export class I18nService {
     'app.title': 'HelloTalk',
     'shop.title': 'Shop',
     'shop.subtitle': 'Browse virtual gifts and premium items',
+    'shop.emptyTitle': 'No items available',
+    'shop.emptyDescription': 'The shop catalogue is currently empty. Check back soon for new items.',
     'cart.title': 'Shopping Cart',
     'cart.empty': 'Your cart is empty',
+    'cart.emptyTitle': 'Your cart is empty',
+    'cart.emptyDescription': 'Browse the shop and add items to your cart to get started.',
     'cart.checkout': 'Checkout',
     'app.badgeOpenCore': 'Community clone',
     'notifications.title': 'Notifications',
@@ -1229,6 +1233,10 @@ export class I18nService {
     'giftModal.sendingBtn': 'Sending...',
     'giftModal.sendBtnText': '🎁 Send {{icon}} ({{cost}} coins)',
     'giftModal.selectGift': 'Select a gift',
+    'giftModal.noCatalogTitle': 'No virtual gifts available',
+    'giftModal.noCatalogDescription': 'The gift catalogue is currently empty. Check back later for new gifts.',
+    'giftModal.noPackagesTitle': 'No coin packages available',
+    'giftModal.noPackagesDescription': 'Coin packages are currently unavailable. Please try again later.',
 
     // Coin Purchase Success / Cancel
     'coinsSuccess.title': '🎉 Coins added!',
@@ -1247,6 +1255,18 @@ export class I18nService {
       '🎉 Successfully purchased {{coins}} coins! Your new balance is {{newBalance}} coins.',
     'economy.purchaseConfirmError':
       'Could not confirm coin purchase. Please contact support if you were charged.',
+
+    // Quests
+    'quests.title': 'Daily Quests',
+    'quests.emptyTitle': 'No quests available',
+    'quests.emptyDescription': 'Check back later for new daily quests and earn coins by completing them.',
+    'quests.reward': 'Reward',
+
+    // Host Dashboard
+    'host_dashboard.viewer_count': 'Viewers',
+    'host_dashboard.coins_earned': 'Coins earned',
+    'host_dashboard.uptime': 'Uptime',
+    'host_dashboard.coinIcon': '🪙',
 
     // Room Chat
     'rooms.roomChat.title': '💬 Synchronised room chat and subtitles',

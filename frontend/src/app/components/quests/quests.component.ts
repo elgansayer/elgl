@@ -1,17 +1,35 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { QuestStore } from '../../services/quests.store';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-quests',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `
     <div class="p-4 bg-surface text-start">
       <h2 class="text-xl font-bold mb-4">{{ 'quests.title' | t }}</h2>
       @if (store.loading()) {
-        <p>{{ 'quests.loading' | t }}</p>
+        <div class="space-y-3" aria-hidden="true">
+          @for (sk of skeletonCount; track sk) {
+            <div class="p-3 rounded-lg bg-surface-alt">
+              <div class="flex justify-between items-center">
+                <app-skeleton-loader height="16px" width="60%" borderRadius="4px" />
+                <app-skeleton-loader height="14px" width="50px" borderRadius="4px" variant="text" />
+              </div>
+              <app-skeleton-loader height="8px" width="100%" borderRadius="9999px" customClass="mt-2" />
+              <app-skeleton-loader height="12px" width="30%" borderRadius="4px" variant="text" customClass="mt-1" />
+            </div>
+          }
+        </div>
+      } @else if (store.quests().length === 0) {
+        <app-empty-state
+          icon="&#x1F3AF;"
+          [title]="'quests.emptyTitle' | t"
+          [description]="'quests.emptyDescription' | t"
+        />
       } @else {
         <ul class="space-y-3">
           @for (quest of store.quests(); track quest.id) {
@@ -36,18 +54,17 @@ import { QuestStore } from '../../services/quests.store';
                 {{ 'quests.reward' | t }}: {{ quest.reward_coins }} {{ 'coins' | t }}
               </div>
             </li>
-          } @empty {
-            <p>{{ 'quests.empty' | t }}</p>
           }
         </ul>
       }
     </div>
   `,
 })
-export class QuestsComponent implements OnInit {
+export class QuestsComponent {
   store = inject(QuestStore);
+  readonly skeletonCount = Array.from({ length: 3 }, (_, i) => i);
 
-  ngOnInit(): void {
+  constructor() {
     this.store.fetchQuests();
   }
 }

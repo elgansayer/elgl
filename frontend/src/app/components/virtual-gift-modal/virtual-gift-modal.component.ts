@@ -1,11 +1,13 @@
-import { Component, input, output, inject, signal } from '@angular/core';
+import { Component, input, output, inject, signal, computed } from '@angular/core';
 
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-virtual-gift-modal',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
@@ -56,32 +58,40 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.bundlePrompt' | t
             }}</span>
-            <div class="grid grid-cols-1 gap-2.5">
-              @for (pkg of economyStore.coinPackages(); track pkg.id) {
-                <div
-                  class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
-                >
-                  <div class="flex items-center gap-3">
-                    <span class="text-2xl">🪙</span>
-                    <div>
-                      <span class="font-black text-sm text-text-primary">{{
-                        'giftModal.package.' + pkg.id + '.title'
-                          | t: { coins: pkg.coins, name: pkg.name }
-                      }}</span>
-                      <span class="text-xs text-text-secondary block">{{
-                        'giftModal.package.' + pkg.id + '.desc' | t
-                      }}</span>
-                    </div>
-                  </div>
-                  <button
-                    (click)="buyCoins(pkg.id)"
-                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
+            @if (economyStore.coinPackages().length === 0) {
+              <app-empty-state
+                icon="&#x1FA99;"
+                [title]="'giftModal.noPackagesTitle' | t"
+                [description]="'giftModal.noPackagesDescription' | t"
+              />
+            } @else {
+              <div class="grid grid-cols-1 gap-2.5">
+                @for (pkg of economyStore.coinPackages(); track pkg.id) {
+                  <div
+                    class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
                   >
-                    {{ 'giftModal.priceLabel' | t: { ukp: pkg.price_ukp, usd: pkg.price_usd } }}
-                  </button>
-                </div>
-              }
-            </div>
+                    <div class="flex items-center gap-3">
+                      <span class="text-2xl">🪙</span>
+                      <div>
+                        <span class="font-black text-sm text-text-primary">{{
+                          'giftModal.package.' + pkg.id + '.title'
+                            | t: { coins: pkg.coins, name: pkg.name }
+                        }}</span>
+                        <span class="text-xs text-text-secondary block">{{
+                          'giftModal.package.' + pkg.id + '.desc' | t
+                        }}</span>
+                      </div>
+                    </div>
+                    <button
+                      (click)="buyCoins(pkg.id)"
+                      class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
+                    >
+                      {{ 'giftModal.priceLabel' | t: { ukp: pkg.price_ukp, usd: pkg.price_usd } }}
+                    </button>
+                  </div>
+                }
+              </div>
+            }
           </div>
         }
 
@@ -90,31 +100,49 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.selectPrompt' | t: { name: receiverName() }
             }}</span>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              @for (gift of economyStore.catalog(); track gift.id) {
-                <button
-                  type="button"
-                  (click)="selectGift(gift)"
-                  [disabled]="gift.cost_coins > effectiveBalance()"
-                  [class]="
-                    'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
-                    (selectedGift?.id === gift.id
-                      ? 'border-primary bg-primary/5 shadow-md scale-105'
-                      : gift.cost_coins > effectiveBalance()
-                        ? 'border-surface-100 bg-surface-300 opacity-40 cursor-not-allowed'
-                        : 'border-surface-100 hover:border-primary/50 bg-surface-300 cursor-pointer')
-                  "
-                >
-                  <span class="text-3xl block">{{ gift.icon }}</span>
-                  <span class="font-bold text-xs text-text-primary block truncate w-full">{{
-                    gift.name
-                  }}</span>
-                  <span class="text-[11px] font-extrabold text-amber-600">{{
-                    'giftModal.giftCost' | t: { cost: gift.cost_coins }
-                  }}</span>
-                </button>
-              }
-            </div>
+            @if (isCatalogLoading()) {
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" aria-hidden="true">
+                @for (sk of skeletonCount(); track sk) {
+                  <div class="p-3 rounded-2xl flex flex-col items-center text-center space-y-1.5">
+                    <app-skeleton-loader height="36px" width="36px" borderRadius="50%" variant="circle" />
+                    <app-skeleton-loader height="12px" width="80%" borderRadius="4px" variant="text" />
+                    <app-skeleton-loader height="10px" width="60%" borderRadius="4px" variant="text" />
+                  </div>
+                }
+              </div>
+            } @else if (economyStore.catalog().length === 0) {
+              <app-empty-state
+                icon="&#x1F381;"
+                [title]="'giftModal.noCatalogTitle' | t"
+                [description]="'giftModal.noCatalogDescription' | t"
+              />
+            } @else {
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                @for (gift of economyStore.catalog(); track gift.id) {
+                  <button
+                    type="button"
+                    (click)="selectGift(gift)"
+                    [disabled]="gift.cost_coins > effectiveBalance()"
+                    [class]="
+                      'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
+                      (selectedGift?.id === gift.id
+                        ? 'border-primary bg-primary/5 shadow-md scale-105'
+                        : gift.cost_coins > effectiveBalance()
+                          ? 'border-surface-100 bg-surface-300 opacity-40 cursor-not-allowed'
+                          : 'border-surface-100 hover:border-primary/50 bg-surface-300 cursor-pointer')
+                    "
+                  >
+                    <span class="text-3xl block">{{ gift.icon }}</span>
+                    <span class="font-bold text-xs text-text-primary block truncate w-full">{{
+                      gift.name
+                    }}</span>
+                    <span class="text-[11px] font-extrabold text-amber-600">{{
+                      'giftModal.giftCost' | t: { cost: gift.cost_coins }
+                    }}</span>
+                  </button>
+                }
+              </div>
+            }
           </div>
         }
 
@@ -157,6 +185,9 @@ export class VirtualGiftModalComponent {
   showCoinPackages = false;
   isSending = false;
   deductedAmount = signal(0);
+
+  readonly isCatalogLoading = computed(() => this.economyStore.isLoading());
+  readonly skeletonCount = computed(() => Array.from({ length: 6 }, (_, i) => i));
 
   effectiveBalance = (): number => this.economyStore.coinsBalance() - this.deductedAmount();
 

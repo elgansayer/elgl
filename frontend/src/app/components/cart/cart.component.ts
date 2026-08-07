@@ -5,6 +5,8 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 interface CartItem {
   itemId: string;
@@ -15,15 +17,31 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
-      @if (items().length === 0) {
-        <p class="text-sm opacity-60">{{ 'cart.empty' | t }}</p>
+      @if (isLoading()) {
+        <div class="space-y-3" aria-hidden="true">
+          @for (sk of skeletonCount(); track sk) {
+            <div class="flex items-center justify-between rounded-xl bg-surface p-3">
+              <div class="space-y-1.5">
+                <app-skeleton-loader height="16px" width="120px" borderRadius="4px" />
+                <app-skeleton-loader height="12px" width="60px" borderRadius="4px" variant="text" />
+              </div>
+              <app-skeleton-loader height="30px" width="70px" borderRadius="9999px" />
+            </div>
+          }
+        </div>
+      } @else if (items().length === 0) {
+        <app-empty-state
+          icon="&#x1F6D2;"
+          [title]="'cart.emptyTitle' | t"
+          [description]="'cart.emptyDescription' | t"
+        />
       } @else {
         <ul class="space-y-3">
           @for (item of items(); track item.itemId) {
@@ -77,6 +95,8 @@ export class CartComponent {
     },
   });
 
+  readonly isLoading = computed(() => this.cartResource.isLoading());
+  readonly skeletonCount = computed(() => Array.from({ length: 3 }, (_, i) => i));
   items = computed<CartItem[]>(() => this.cartResource.value() ?? []);
 
   totalCoins = computed(() =>

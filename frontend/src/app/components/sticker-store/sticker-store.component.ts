@@ -3,9 +3,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { EconomyStore, StickerPack } from '../../services/economy.store';
 import { AppCardComponent } from '../primitives/card/card.component';
-
 import { AppPillComponent } from '../primitives/pill/pill.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-sticker-store',
@@ -14,6 +14,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     AppCardComponent,
     AppPillComponent,
     AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
   ],
   template: `<div class="min-h-screen bg-[#121212]">
   <!-- Header -->
@@ -50,9 +51,17 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
   <!-- Loading -->
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-20">
-      <div class="h-8 w-8 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent"></div>
-      <span class="ms-3 text-neutral-400">{{ 'common.loading' | t }}</span>
+    <div class="px-4 pb-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" aria-hidden="true">
+      @for (sk of skeletonCount(); track sk) {
+        <app-card variant="elevated" padding="md" class="flex flex-col">
+          <div class="relative mb-3 flex h-28 items-center justify-center rounded-xl">
+            <app-skeleton-loader height="100%" width="100%" borderRadius="12px" />
+          </div>
+          <app-skeleton-loader height="16px" width="70%" borderRadius="4px" customClass="mb-1" />
+          <app-skeleton-loader height="12px" width="50%" borderRadius="4px" variant="text" customClass="mb-3" />
+          <app-skeleton-loader height="36px" width="100%" borderRadius="9999px" />
+        </app-card>
+      }
     </div>
   }
 
@@ -141,6 +150,7 @@ export class StickerStoreComponent {
   private readonly i18n = inject(I18nService);
 
   readonly isLoading = signal<boolean>(true);
+  readonly skeletonCount = computed(() => Array.from({ length: 4 }, (_, i) => i));
   readonly purchasingId = signal<string | null>(null);
 
   private packsResource = resource<

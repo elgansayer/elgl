@@ -6,6 +6,8 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 interface CatalogItem {
   id: string;
@@ -18,7 +20,7 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [TranslatePipe, RouterLink],
+  imports: [TranslatePipe, RouterLink, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
@@ -27,25 +29,47 @@ interface CatalogItem {
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
-      <div class="grid grid-cols-2 gap-4">
-        @for (item of items(); track item.id) {
-          <div class="rounded-xl bg-surface p-3 shadow">
-            <div class="h-20 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl">
-              {{ item.imageUrl ? '' : '🎁' }}
+      @if (isLoading()) {
+        <div class="grid grid-cols-2 gap-4" aria-hidden="true">
+          @for (sk of skeletonCount(); track sk) {
+            <div class="rounded-xl bg-surface p-3 shadow">
+              <app-skeleton-loader height="80px" width="100%" borderRadius="8px" />
+              <div class="mt-2 space-y-1.5">
+                <app-skeleton-loader height="16px" width="70%" borderRadius="4px" />
+                <app-skeleton-loader height="12px" width="90%" borderRadius="4px" variant="text" />
+                <app-skeleton-loader height="12px" width="40%" borderRadius="4px" variant="text" />
+              </div>
+              <app-skeleton-loader height="32px" width="100%" borderRadius="9999px" customClass="mt-2" />
             </div>
-            <h2 class="font-semibold">{{ item.name }}</h2>
-            <p class="text-xs opacity-60">{{ item.description }}</p>
-            <p class="mt-1 font-semibold text-indigo-400">
-              {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
-            </p>
-            <button
-              class="mt-2 w-full rounded-full bg-indigo-600 py-1 text-sm font-medium hover:bg-indigo-500"
-              (click)="addToCart(item.id)">
-              {{ 'cart.add' | t }}
-            </button>
-          </div>
-        }
-      </div>
+          }
+        </div>
+      } @else if (items().length === 0) {
+        <app-empty-state
+          icon="&#x1F6CD;"
+          [title]="'shop.emptyTitle' | t"
+          [description]="'shop.emptyDescription' | t"
+        />
+      } @else {
+        <div class="grid grid-cols-2 gap-4">
+          @for (item of items(); track item.id) {
+            <div class="rounded-xl bg-surface p-3 shadow">
+              <div class="h-20 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl">
+                {{ item.imageUrl ? '' : '🎁' }}
+              </div>
+              <h2 class="font-semibold">{{ item.name }}</h2>
+              <p class="text-xs opacity-60">{{ item.description }}</p>
+              <p class="mt-1 font-semibold text-indigo-400">
+                {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
+              </p>
+              <button
+                class="mt-2 w-full rounded-full bg-indigo-600 py-1 text-sm font-medium hover:bg-indigo-500"
+                (click)="addToCart(item.id)">
+                {{ 'cart.add' | t }}
+              </button>
+            </div>
+          }
+        </div>
+      }
     </div>
   `,
 })
@@ -79,6 +103,8 @@ export class ShopComponent {
     },
   });
 
+  readonly isLoading = computed(() => this.catalogResource.isLoading());
+  readonly skeletonCount = computed(() => Array.from({ length: 4 }, (_, i) => i));
   items = computed(() => this.catalogResource.value() ?? []);
 
   async addToCart(itemId: string) {
