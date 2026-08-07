@@ -4,7 +4,6 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 import { TranslatePipe } from '../../services/translate.pipe';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
@@ -30,7 +29,6 @@ import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.comp
   selector: 'app-audio-room',
   imports: [
     TranslatePipe,
-    SanitiseHtmlPipe,
     RoomChatComponent,
     VideoRoomComponent,
     VirtualGiftModalComponent,
