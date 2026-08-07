@@ -9,7 +9,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { NotificationDto } from './dto/notification.dto';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FirebaseAdmin = any;
 
 interface CentrifugoServiceLike {
