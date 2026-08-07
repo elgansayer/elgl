@@ -8,6 +8,7 @@ export class StatsService {
   async getStats(userId: string): Promise<{
     translations_count: number;
     corrections_count: number;
+    messages_count: number;
     moments_count: number;
   }> {
     const client = this.supabaseService.getClient();
@@ -31,12 +32,22 @@ export class StatsService {
       throw new Error(corrErr.message);
     }
 
+    // messages count
+    const { count: messagesCount, error: msgErr } = await client
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_id', userId);
+    if (msgErr) {
+      throw new Error(msgErr.message);
+    }
+
     // translations count – placeholder (table may not exist yet)
     const translationsCount = 0;
 
     return {
       translations_count: translationsCount,
       corrections_count: correctionsCount ?? 0,
+      messages_count: messagesCount ?? 0,
       moments_count: momentsCount ?? 0,
     };
   }
