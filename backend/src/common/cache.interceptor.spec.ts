@@ -52,18 +52,20 @@ describe('CacheControlInterceptor', () => {
     it('CACHE_PRIVATE_MEDIUM should be an alias for CACHE_EDGE_MEDIUM', () => {
       expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain('private');
       expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain('max-age=0');
-      expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain('must-revalidate');
+      expect(CACHE_PRIVATE_MEDIUM['Cache-Control']).toContain(
+        'must-revalidate',
+      );
       expect(CACHE_PRIVATE_MEDIUM['CDN-Cache-Control']).toContain('public');
-      expect(CACHE_PRIVATE_MEDIUM['CDN-Cache-Control']).toContain('max-age=300');
+      expect(CACHE_PRIVATE_MEDIUM['CDN-Cache-Control']).toContain(
+        'max-age=300',
+      );
       expect(CACHE_PRIVATE_MEDIUM['CDN-Cache-Control']).toContain(
         'stale-while-revalidate=120',
       );
     });
 
     it('CACHE_PRIVATE_NO_STORE should be an alias for CACHE_NO_STORE', () => {
-      expect(CACHE_PRIVATE_NO_STORE['Cache-Control']).toBe(
-        'private, no-store',
-      );
+      expect(CACHE_PRIVATE_NO_STORE['Cache-Control']).toBe('private, no-store');
       expect(CACHE_PRIVATE_NO_STORE['CDN-Cache-Control']).toBe(
         'private, no-store',
       );
