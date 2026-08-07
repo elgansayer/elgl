@@ -5,22 +5,6 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
-export interface TargetVocabularyItem {
-  word: string;
-  translation: string;
-  language: string;
-}
-
-export interface VocabularyResultItem {
-  id: string;
-  word: string;
-  translation: string;
-  hobbyTagName: string;
-  difficulty: string;
-  context_sentence?: string;
-  hobby_tag: { icon: string; name: string };
-}
-
 @Injectable()
 export class HobbyTagsService {
   constructor(private readonly supabaseService: SupabaseService) {}
@@ -165,56 +149,5 @@ export class HobbyTagsService {
     if (!updateResponse.data)
       throw new NotFoundException('User hobby tag not found');
     return updateResponse.data;
-  }
-
-  async getVocabularyForUser(
-    userId: string,
-    language: string,
-  ): Promise<VocabularyResultItem[]> {
-    const supabase = this.supabaseService.getClient();
-    const { data: userHobbyTags, error } = await supabase
-      .from('user_hobby_tags')
-      .select(
-        `
-        *,
-        hobby_tag:hobby_tags(*)
-      `,
-      )
-      .eq('user_id', userId);
-
-    if (error) throw error;
-    if (!userHobbyTags || userHobbyTags.length === 0) return [];
-
-    const results: VocabularyResultItem[] = [];
-
-    for (const uht of userHobbyTags) {
-      const hobbyTag = uht.hobby_tag;
-      if (!hobbyTag) continue;
-
-      const targetVocab: TargetVocabularyItem[] = Array.isArray(hobbyTag.target_vocabulary)
-        ? hobbyTag.target_vocabulary
-        : [];
-
-      const filteredVocab = targetVocab.filter(
-        (v) => v.language === language,
-      );
-
-      for (const vocabItem of filteredVocab) {
-        results.push({
-          id: `${uht.id}-${vocabItem.word}`,
-          word: vocabItem.word,
-          translation: vocabItem.translation,
-          hobbyTagName: hobbyTag.name,
-          difficulty: 'beginner',
-          context_sentence: undefined,
-          hobby_tag: {
-            icon: hobbyTag.icon || '🎯',
-            name: hobbyTag.name,
-          },
-        });
-      }
-    }
-
-    return results;
   }
 }

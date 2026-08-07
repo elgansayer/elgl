@@ -25,11 +25,9 @@ import { environment } from '../../../environments/environment';
         [messageType]="message().message_type"
         [senderId]="message().sender_id"
         [roomId]="message().room_id"
-        [isBlocked]="isBlocked()"
         (copyMessage)="onCopy($event)"
         (favourite)="onFavourite($event)"
         (report)="onReport($event)"
-        (block)="onBlockToggle($event)"
       >
         <div
           class="flex"
@@ -291,18 +289,6 @@ export class ChatMessageComponent {
 
   onFavourite(event: { messageId: string; content: string; messageType: string }): void {
     this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
-  }
-
-  onBlockToggle(event: { senderId: string; blocked: boolean }): void {
-    if (event.blocked) {
-      this.safetyService.blockUser(event.senderId).catch(console.error);
-    } else {
-      this.safetyService.unblockUser(event.senderId).catch(console.error);
-    }
-    this.isBlocked.set(event.blocked);
-    if (event.blocked) {
-      this.messageBlocked.emit(event.senderId);
-    }
   }
 
   async onReport(event: { messageId: string; senderId: string }): Promise<void> {
