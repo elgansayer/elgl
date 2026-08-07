@@ -482,8 +482,7 @@ export class MonetisationService {
     receiptData?: string,
   ): Promise<{ received: boolean; status: string }> {
     if (platform === 'stripe') {
-      const subscription =
-        await this.findActiveStripeSubscription(userId);
+      const subscription = await this.findActiveStripeSubscription(userId);
       if (subscription) {
         const tier =
           subscription.metadata?.tier ??
@@ -605,7 +604,11 @@ export class MonetisationService {
       }
 
       // No matching tier but active subscription exists -- restore as consumer VIP
-      await this.updateVipStatusFromWebhook(userId, true, 'consumer_8_ukp_10_usd');
+      await this.updateVipStatusFromWebhook(
+        userId,
+        true,
+        'consumer_8_ukp_10_usd',
+      );
       return { received: true, status: 'restored' };
     }
   }
