@@ -26,6 +26,17 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
+  // Trust & Safety metrics
+  readonly tsReportsSubmitted: Counter<string>;
+  readonly tsBlocksCreated: Counter<string>;
+  readonly tsBlocksRemoved: Counter<string>;
+  readonly tsPendingReports: Gauge<string>;
+  readonly tsActiveBlocksTotal: Gauge<string>;
+  readonly tsModerationActions: Counter<string>;
+  readonly tsDatingRiskScore: Histogram<string>;
+  readonly tsReportsByCategory: Counter<string>;
+  readonly tsModerationQueueLatency: Histogram<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -121,6 +132,68 @@ export class MetricsService {
       help: 'Total number of decks created',
       registers: [this.register],
     });
+
+    // --- Trust & Safety Metrics ---
+
+    this.tsReportsSubmitted = new Counter({
+      name: 'hellotalk_ts_reports_submitted_total',
+      help: 'Total number of user reports submitted',
+      labelNames: ['reason_category'],
+      registers: [this.register],
+    });
+
+    this.tsBlocksCreated = new Counter({
+      name: 'hellotalk_ts_blocks_created_total',
+      help: 'Total number of user blocks created',
+      registers: [this.register],
+    });
+
+    this.tsBlocksRemoved = new Counter({
+      name: 'hellotalk_ts_blocks_removed_total',
+      help: 'Total number of user blocks removed (unblocks)',
+      registers: [this.register],
+    });
+
+    this.tsPendingReports = new Gauge({
+      name: 'hellotalk_ts_pending_reports',
+      help: 'Number of reports currently in pending status',
+      registers: [this.register],
+    });
+
+    this.tsActiveBlocksTotal = new Gauge({
+      name: 'hellotalk_ts_active_blocks_total',
+      help: 'Total number of active blocks across all users',
+      registers: [this.register],
+    });
+
+    this.tsModerationActions = new Counter({
+      name: 'hellotalk_ts_moderation_actions_total',
+      help: 'Total number of moderation actions (approve/reject)',
+      labelNames: ['action', 'type'],
+      registers: [this.register],
+    });
+
+    this.tsDatingRiskScore = new Histogram({
+      name: 'hellotalk_ts_dating_risk_score',
+      help: 'Distribution of dating behaviour risk scores from user analysis',
+      buckets: [0, 10, 25, 50, 75, 90, 100],
+      registers: [this.register],
+    });
+
+    this.tsReportsByCategory = new Counter({
+      name: 'hellotalk_ts_reports_by_category_total',
+      help: 'Total number of reports grouped by reason category',
+      labelNames: ['category'],
+      registers: [this.register],
+    });
+
+    this.tsModerationQueueLatency = new Histogram({
+      name: 'hellotalk_ts_moderation_queue_latency_seconds',
+      help: 'Time taken for moderation actions (approve/reject) to complete',
+      labelNames: ['action'],
+      buckets: [0.1, 0.5, 1, 2, 5, 10],
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -148,7 +221,10 @@ export class MetricsService {
     sourceLanguage: string = 'unknown',
     targetLanguage: string = 'unknown',
   ): void {
-    this.srsFlashcardsCreated.inc({ source_language: sourceLanguage, target_language: targetLanguage });
+    this.srsFlashcardsCreated.inc({
+      source_language: sourceLanguage,
+      target_language: targetLanguage,
+    });
   }
 
   recordSrsReviewCompleted(
@@ -186,6 +262,42 @@ export class MetricsService {
 
   recordSrsDeckCreated(): void {
     this.srsDecksCreated.inc();
+  }
+
+  // --- Trust & Safety metric helpers ---
+
+  recordTsReportSubmitted(reasonCategory: string = 'unknown'): void {
+    this.tsReportsSubmitted.inc({ reason_category: reasonCategory });
+    this.tsReportsByCategory.inc({ category: reasonCategory });
+  }
+
+  recordTsBlockCreated(): void {
+    this.tsBlocksCreated.inc();
+  }
+
+  recordTsBlockRemoved(): void {
+    this.tsBlocksRemoved.inc();
+  }
+
+  setTsPendingReports(count: number): void {
+    this.tsPendingReports.set(count);
+  }
+
+  setTsActiveBlocksTotal(count: number): void {
+    this.tsActiveBlocksTotal.set(count);
+  }
+
+  recordTsModerationAction(
+    action: 'approve' | 'reject',
+    type: string,
+    latencySeconds: number = 0,
+  ): void {
+    this.tsModerationActions.inc({ action, type });
+    this.tsModerationQueueLatency.observe({ action }, latencySeconds);
+  }
+
+  recordTsDatingRiskScore(score: number): void {
+    this.tsDatingRiskScore.observe(score);
   }
 
   getRegister(): Registry {

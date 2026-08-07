@@ -9,22 +9,34 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateEscrowHoldDto {
-  @ApiProperty({ description: 'ID of the user receiving the payment' })
+  @ApiProperty({
+    description: 'UUID of the user receiving the payment (payee)',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
   @IsString()
   payee_id!: string;
 
-  @ApiProperty({ description: 'Amount of coins to hold in escrow', minimum: 1 })
+  @ApiProperty({
+    description: 'Amount of coins to hold in escrow',
+    minimum: 1,
+    example: 100,
+  })
   @IsInt()
   @Min(1)
   amount_coins!: number;
 
-  @ApiProperty({ description: 'Reason for the escrow hold', maxLength: 500 })
+  @ApiProperty({
+    description: 'Description of the service being paid for via the escrow hold',
+    maxLength: 500,
+    example: 'Payment for 30-minute Spanish lesson',
+  })
   @IsString()
   @MaxLength(500)
   reason!: string;
 
   @ApiPropertyOptional({
-    description: 'Additional metadata for the transaction',
+    description: 'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
+    example: { service_type: 'lesson', lesson_id: 'abc-123' },
   })
   @IsOptional()
   @IsObject()
@@ -32,17 +44,26 @@ export class CreateEscrowHoldDto {
 }
 
 export class ReleaseEscrowDto {
-  @ApiProperty({ description: 'ID of the escrow transaction to release' })
+  @ApiProperty({
+    description: 'UUID of the escrow transaction to release',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
   @IsString()
   transaction_id!: string;
 }
 
 export class RefundEscrowDto {
-  @ApiProperty({ description: 'ID of the escrow transaction to refund' })
+  @ApiProperty({
+    description: 'UUID of the escrow transaction to refund',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
   @IsString()
   transaction_id!: string;
 
-  @ApiPropertyOptional({ description: 'Reason for the refund' })
+  @ApiPropertyOptional({
+    description: 'Reason for the refund',
+    example: 'Service was not delivered as agreed',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)
@@ -50,7 +71,10 @@ export class RefundEscrowDto {
 }
 
 export class CancelEscrowDto {
-  @ApiProperty({ description: 'ID of the escrow transaction to cancel' })
+  @ApiProperty({
+    description: 'UUID of the escrow transaction to cancel',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
   @IsString()
   transaction_id!: string;
 }

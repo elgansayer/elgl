@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 import { Logger } from '@nestjs/common';
 
@@ -9,8 +10,12 @@ describe('SafetyService', () => {
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 <<<<<<< HEAD
+<<<<<<< HEAD
   let mockRedisClient: { del: jest.Mock };
 =======
+=======
+  let mockMetricsService: any;
+>>>>>>> origin/main
   let mockCacheInvalidationService: {
     invalidateTrustAndSafetyCaches: jest.Mock;
     invalidateUserPairCaches: jest.Mock;
@@ -40,6 +45,16 @@ describe('SafetyService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    mockMetricsService = {
+      recordTsReportSubmitted: jest.fn(),
+      recordTsBlockCreated: jest.fn(),
+      recordTsBlockRemoved: jest.fn(),
+      setTsPendingReports: jest.fn(),
+      setTsActiveBlocksTotal: jest.fn(),
+      recordTsModerationAction: jest.fn(),
+      recordTsDatingRiskScore: jest.fn(),
+    };
+
     mockCacheInvalidationService = {
       invalidateTrustAndSafetyCaches: jest.fn().mockResolvedValue(undefined),
       invalidateUserPairCaches: jest.fn().mockResolvedValue(undefined),
@@ -55,6 +70,10 @@ describe('SafetyService', () => {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
             getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
         {
           provide: SafetyCacheInvalidationService,
@@ -112,6 +131,9 @@ describe('SafetyService', () => {
         context_url: dto.context_url,
         status: 'pending',
       });
+      expect(mockMetricsService.recordTsReportSubmitted).toHaveBeenCalledWith(
+        dto.reason_category,
+      );
       expect(result).toEqual({ id: 'report-id' });
       expect(
         mockCacheInvalidationService.invalidateUserCaches,

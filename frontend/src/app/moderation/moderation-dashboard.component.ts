@@ -2,11 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, effect, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
 import { ModerationItem, ModerationService } from './moderation.service';
+import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 
 @Component({
   selector: 'app-moderation-dashboard',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe],
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4" role="main" aria-labelledby="moderation-title">
       <h2 id="moderation-title" class="text-2xl font-bold mb-4">{{ 'moderation.title' | t }}</h2>
@@ -55,13 +56,13 @@ import { ModerationItem, ModerationService } from './moderation.service';
           @for (item of items.value(); track item.id) {
             <div class="border border-slate-200 rounded-lg p-4 mb-2" [attr.aria-label]="'moderation.reportItemAria' | t: { id: item.id }">
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reporter' | t }}: </span>{{ item.reporter?.display_name }}
+                <span class="sr-only">{{ 'moderation.reporter' | t }}: </span>{{ item.reporter?.display_name | sanitiseHtml }}
               </p>
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ item.reported_user?.display_name }}
+                <span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ item.reported_user?.display_name | sanitiseHtml }}
               </p>
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason }}
+                <span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason | sanitiseHtml }}
               </p>
 
               @if (analysis()?.userId === item.reported_user?.id) {
