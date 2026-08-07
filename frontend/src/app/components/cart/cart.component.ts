@@ -18,9 +18,9 @@ interface CartItem {
   selector: 'app-cart',
   imports: [JoyrideDirective, TranslatePipe],
   template: `
-    <div class="p-4">
+    <div class="max-w-2xl mx-auto p-4">
       <span joyrideStep="economyTour@cartLink" [text]="'tour.cartLinkDesc' | t" stepPosition="bottom">
-        <h1 class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
+        <h1 class="text-xl sm:text-2xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
       </span>
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>

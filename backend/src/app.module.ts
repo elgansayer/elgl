@@ -23,6 +23,7 @@ import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
+import { EscrowModule } from './escrow/escrow.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { InterestsModule } from './interests/interests.module';
@@ -75,7 +76,11 @@ import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.s
 import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
+<<<<<<< HEAD
 import { EscrowModule } from './escrow/escrow.module';
+=======
+import { CloudflareModule } from './cloudflare/cloudflare.module';
+>>>>>>> origin/main
 
 @Module({
   imports: [
@@ -168,6 +173,7 @@ import { EscrowModule } from './escrow/escrow.module';
     AnalyticsModule,
     MetricsModule,
     ReadingEngineModule,
+    CloudflareModule,
   ],
   controllers: [AppController],
   providers: [

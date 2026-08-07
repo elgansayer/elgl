@@ -88,6 +88,19 @@ export const CACHE_EDGE_SHORT = {
 } as const;
 
 /**
+ * Very short-lived edge cache for rapidly-changing user data.
+ *
+ * Browsers: never cache. Cloudflare edge: 30s max with 15s SWR.
+ * Used for GET /flashcards/due to reduce DB pressure during active
+ * review sessions while maintaining acceptable freshness.
+ */
+export const CACHE_EDGE_VERY_SHORT = {
+  'Cache-Control': 'private, max-age=0, must-revalidate',
+  'CDN-Cache-Control': 'public, max-age=30, stale-while-revalidate=15',
+  ...VARY_HEADER,
+} as const;
+
+/**
  * No-store for mutations and dynamic data that must never be cached.
  *
  * Used by: all mutation endpoints (POST, PATCH, DELETE)
@@ -96,6 +109,15 @@ export const CACHE_NO_STORE = {
   'Cache-Control': 'private, no-store',
   'CDN-Cache-Control': 'private, no-store',
 } as const;
+
+// ---------------------------------------------------------------------------
+// Cache-Tag constants for targeted Cloudflare edge invalidation
+// ---------------------------------------------------------------------------
+
+export const CACHE_TAG_FLASHCARDS = 'flashcards';
+export const CACHE_TAG_DUE_REVIEWS = 'flashcards:due';
+export const CACHE_TAG_DECKS = 'decks';
+export const CACHE_TAG_SUGGESTIONS = 'flashcards:suggest';
 
 // ---------------------------------------------------------------------------
 // Legacy aliases (kept for backwards compatibility)
@@ -110,7 +132,10 @@ export const CACHE_PRIVATE_NO_STORE = CACHE_NO_STORE;
 
 @Injectable()
 export class CacheControlInterceptor implements NestInterceptor {
-  constructor(private readonly directive: Record<string, string>) {}
+  constructor(
+    private readonly directive: Record<string, string>,
+    private readonly cacheTags?: string[],
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const response = context.switchToHttp().getResponse<Response>();
@@ -119,12 +144,20 @@ export class CacheControlInterceptor implements NestInterceptor {
       response.setHeader(header, value);
     }
 
+    // Set Cache-Tag header for targeted Cloudflare purging.
+    // Cloudflare aggregates multiple Cache-Tag values via comma-separated list.
+    if (this.cacheTags && this.cacheTags.length > 0) {
+      response.setHeader('Cache-Tag', this.cacheTags.join(','));
+    }
+
     return next.handle().pipe(
       tap({
         error: () => {
           // On error, override caching headers to prevent storing broken responses
           response.setHeader('Cache-Control', 'private, no-store');
           response.setHeader('CDN-Cache-Control', 'private, no-store');
+          // Remove Cache-Tag on error so broken response is not tagged
+          response.removeHeader('Cache-Tag');
         },
       }),
     );

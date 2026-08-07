@@ -21,7 +21,7 @@ interface CatalogItem {
   standalone: true,
   imports: [JoyrideDirective, TranslatePipe, RouterLink],
   template: `
-    <div class="p-4">
+    <div class="max-w-6xl mx-auto p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
       <p class="mb-6 text-sm opacity-70">{{ 'shop.subtitle' | t }}</p>
       <span joyrideStep="economyTour@shopLink" [text]="'tour.shopLinkDesc' | t" stepPosition="bottom">
@@ -30,7 +30,7 @@ interface CatalogItem {
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
-      <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         @for (item of items(); track item.id) {
           <div class="rounded-xl bg-surface p-3 shadow flex flex-col">
             <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl">

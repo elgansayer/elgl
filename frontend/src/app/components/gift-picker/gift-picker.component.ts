@@ -7,9 +7,9 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
   selector: 'app-gift-picker',
   imports: [TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4">
       <div
-        class="bg-surface-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
+        class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-4 sm:space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto"
       >
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
@@ -59,7 +59,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.bundlePrompt' | t
             }}</span>
-            <div class="grid grid-cols-1 gap-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               @for (pkg of economyStore.coinPackages(); track pkg.id) {
                 <div
                   class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
@@ -113,7 +113,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
               </div>
             }
             @if (!selectedGift()) {
-              <div class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto">
+              <div class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto">
                 @for (gift of economyStore.catalog(); track gift.id) {
                   <button
                     type="button"
