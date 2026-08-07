@@ -4,7 +4,15 @@ import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
+import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
+import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
+import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
+jest.mock('./sanitise-recommendations.helper', () => ({
+  sanitiseRecommendationsData: <T>(value: T): T => value,
+}));
 
 describe('RecommendationsController', () => {
   let controller: RecommendationsController;
@@ -26,6 +34,19 @@ describe('RecommendationsController', () => {
           provide: RecommendationsService,
           useValue: mockService,
         },
+        {
+          provide: MatchmakingCrashReportService,
+          useValue: {
+            reportCrash: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: CircuitBreakerService,
+          useValue: {
+            isAvailable: jest.fn().mockReturnValue(true),
+          },
+        },
+        MatchmakingExceptionFilter,
       ],
     })
       .overrideGuard(SupabaseAuthGuard)

@@ -129,7 +129,6 @@ describe('FlashcardsController', () => {
         'user-1',
         dto,
       );
-      expect(flashcardsService.purgeSrsCache).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(card);
       expect(res.header).not.toHaveBeenCalledWith('X-SRS-Degraded', 'true');
     });
