@@ -60,7 +60,12 @@ export class ReadingEngineExceptionFilter implements ExceptionFilter {
       path: request.url,
       method: request.method,
       timestamp: new Date().toISOString(),
-      resourceId: request.params?.id ?? undefined,
+      resourceId:
+        typeof request.params?.id === 'string'
+          ? request.params.id
+          : Array.isArray(request.params?.id)
+            ? request.params.id[0]
+            : undefined,
     };
 
     this.logger.error(
