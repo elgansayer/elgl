@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { NotificationService, InAppNotification } from '../../services/notification.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 
 export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system';
@@ -16,6 +17,7 @@ export type NotificationTab = 'all' | 'likes' | 'comments' | 'follows' | 'system
 })
 export class NotificationsInboxComponent implements OnInit {
   private notificationService = inject(NotificationService);
+  private unreadCounter = inject(UnreadCounterService);
   private location = inject(Location);
   private router = inject(Router);
   private readonly i18n = inject(I18nService);
@@ -58,6 +60,7 @@ export class NotificationsInboxComponent implements OnInit {
       ]);
       this.notifications.set(list);
       this.unreadCount.set(unread);
+      this.unreadCounter.set('profile', unread);
     } catch (err) {
       console.error('Failed to load notifications:', err);
     } finally {
@@ -68,6 +71,7 @@ export class NotificationsInboxComponent implements OnInit {
   async markAllAsRead(): Promise<void> {
     await this.notificationService.markAllAsRead();
     this.unreadCount.set(0);
+    this.unreadCounter.set('profile', 0);
     this.notifications.update((list) => list.map((item) => ({ ...item, is_read: true })));
   }
 
@@ -75,6 +79,7 @@ export class NotificationsInboxComponent implements OnInit {
     if (!notif.is_read) {
       notif.is_read = true;
       this.unreadCount.update((c) => Math.max(0, c - 1));
+      this.unreadCounter.decrement('profile');
       void this.notificationService.markAsRead(notif.id);
     }
 

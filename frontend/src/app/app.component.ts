@@ -233,6 +233,23 @@ export class AppComponent implements OnInit {
             isVideoCall,
           });
         }
+
+        // Update unread counters for real-time chat messages
+        if (eventType === 'new_message') {
+          this.unreadCounter.incrementChatUnread();
+        }
+
+        // Update unread counters for real-time notifications
+        if (
+          eventType === 'follow' ||
+          eventType === 'like_profile' ||
+          eventType === 'like_moment' ||
+          eventType === 'comment_moment' ||
+          eventType === 'profile_visit' ||
+          eventType === 'system'
+        ) {
+          this.unreadCounter.incrementNotificationUnread();
+        }
       });
 
       // Request notification permission after user is authenticated

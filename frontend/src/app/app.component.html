@@ -33,6 +33,21 @@
   <div class="flex items-center justify-between ps-4 pe-4 py-2 bg-surface-200 border-b border-surface-100">
     <app-app-language-selector />
     <div class="flex items-center gap-2">
+      <a
+        routerLink="/notifications"
+        class="relative p-2 rounded-full hover:bg-surface-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+        [attr.aria-label]="'nav.notifications' | t"
+        [attr.title]="'nav.notifications' | t"
+      >
+        <span class="text-xl leading-none">🔔</span>
+        @if (unreadCounter.notificationUnread() > 0) {
+          <span
+            class="absolute -top-0.5 -end-0.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+          >
+            {{ unreadCounter.notificationUnread() > 99 ? '99+' : unreadCounter.notificationUnread() }}
+          </span>
+        }
+      </a>
       <button
         type="button"
         class="p-2 rounded-full hover:bg-surface-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
