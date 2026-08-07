@@ -24,7 +24,7 @@
           [class.bg-surface-200]="selectedTargetLanguage() === lang.code"
           [class.bg-surface-300]="selectedTargetLanguage() !== lang.code"
           class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
-         [attr.aria-label]=\"lang.labelKey | t\">
+         [attr.aria-label]="lang.labelKey | t">
           <span>{{ lang.flag }}</span> {{ lang.labelKey | t }}
         </button>
       }
