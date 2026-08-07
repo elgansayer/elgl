@@ -9,7 +9,6 @@ import {
   Post,
   Put,
   Query,
-  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -23,7 +22,6 @@ import {
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { ReadingEngineService } from './reading-engine.service';
-import { ReadingEngineExceptionFilter } from './reading-engine-exception.filter';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
 import { ReadingResource, ReadingProgress, ReadingTokenBreakdown } from './interfaces/reading.interface';
@@ -31,7 +29,6 @@ import { ReadingResource, ReadingProgress, ReadingTokenBreakdown } from './inter
 @ApiTags('LingQ Reading Engine')
 @Controller('reading')
 @UseGuards(SupabaseAuthGuard)
-@UseFilters(ReadingEngineExceptionFilter)
 @ApiBearerAuth()
 export class ReadingEngineController {
   constructor(private readonly readingService: ReadingEngineService) {}
