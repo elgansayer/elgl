@@ -324,7 +324,6 @@ describe('FlashcardsService', () => {
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(mockQueryBuilder.lt).toHaveBeenCalledWith('srs_level', 4);
       expect(mockQueryBuilder.lte).toHaveBeenCalledWith(
         'next_review_at',
         expect.any(String),

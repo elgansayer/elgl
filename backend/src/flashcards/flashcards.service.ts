@@ -203,7 +203,6 @@ export class FlashcardsService {
       .from('flashcards')
       .select('*')
       .eq('user_id', userId)
-      .lt('srs_level', 4)
       .lte('next_review_at', new Date().toISOString())
       .order('next_review_at', { ascending: true });
 
