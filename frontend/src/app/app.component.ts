@@ -40,6 +40,8 @@ import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
+import { NetworkStatusService } from './services/network-status.service';
+import { showToast } from './services/toast.service';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -93,6 +95,7 @@ export class AppComponent implements OnInit {
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
   private platformId = inject(PLATFORM_ID);
+  private readonly networkStatus = inject(NetworkStatusService);
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -144,6 +147,14 @@ export class AppComponent implements OnInit {
       this.destroyRef.onDestroy(() =>
         doc.removeEventListener('visibilitychange', handleVisibility),
       );
+    });
+
+    // Sync offline economy actions when connectivity is restored
+    effect(() => {
+      const isOnline = this.networkStatus.isOnline();
+      if (isOnline && this.authService.isAuthenticated()) {
+        this.economyStore.syncPendingActions().catch(() => undefined);
+      }
     });
 
     // Font scale is applied globally by FontScaleService via effect()

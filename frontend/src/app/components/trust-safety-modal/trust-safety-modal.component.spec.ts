@@ -47,9 +47,14 @@ describe('TrustSafetyModalComponent', () => {
     it('should use i18n translate pipe for user-facing strings', () => {
       const keys = [
         'safety.title', 'safety.subtitle', 'safety.closeBtn',
+<<<<<<< HEAD
         'safety.tabReport', 'safety.tabBlock', 'safety.tabGroupLabel',
         'safety.reasonLabel',
         'safety.detailsLabel', 'safety.detailsPlaceholder',
+=======
+        'safety.tabReport', 'safety.tabBlock',
+        'safety.reasonLabel', 'safety.detailsLabel', 'safety.detailsPlaceholder',
+>>>>>>> origin/main
         'safety.blockWarning', 'safety.blockList1', 'safety.blockList2', 'safety.blockList3',
         'safety.cancelBtn', 'safety.submitReportBtn', 'safety.confirmBlockBtn',
       ];
