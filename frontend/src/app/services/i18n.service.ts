@@ -1237,17 +1237,18 @@ export class I18nService {
       'Could not confirm coin purchase. Please contact support if you were charged.',
 
     // Room Chat
-    'roomChat.title': '💬 Synchronised room chat and subtitles',
-    'roomChat.showChatBtn': '💬 Show chat',
-    'roomChat.showSubtitlesBtn': '🎙️ Show AI subtitles ({{count}})',
-    'roomChat.emptyChat': 'No messages in this live room yet. Say hello to the stage speakers!',
-    'roomChat.emptySubtitles':
+    'rooms.roomChat.title': '💬 Synchronised room chat and subtitles',
+    'rooms.roomChat.showChatBtn': '💬 Show chat',
+    'rooms.roomChat.showSubtitlesBtn': '🎙️ Show AI subtitles ({{count}})',
+    'rooms.roomChat.emptyChat': 'No messages in this live room yet. Say hello to the stage speakers!',
+    'rooms.roomChat.emptySubtitles':
       'No live subtitles yet. When speakers talk on stage or use speech-to-text, closed captions broadcast here!',
-    'roomChat.speakerCaptionPrefix': '🎙️ {{name}} (Live AI caption):',
-    'roomChat.inputPlaceholder': 'Send a chat message to the room...',
-    'roomChat.sendBtn': 'Send',
-    'roomChat.subtitlePlaceholder': 'Simulate speech-to-text live subtitle broadcast...',
-    'roomChat.broadcastBtn': 'Broadcast caption',
+    'rooms.roomChat.speakerCaptionPrefix': '🎙️ {{name}} (Live AI caption):',
+    'rooms.roomChat.inputPlaceholder': 'Send a chat message to the room...',
+    'rooms.roomChat.sendBtn': 'Send',
+    'rooms.roomChat.subtitlePlaceholder': 'Simulate speech-to-text live subtitle broadcast...',
+    'rooms.roomChat.broadcastBtn': 'Broadcast caption',
+    'rooms.roomChat.broadcastAiBtn': 'Broadcast AI Caption',
 
     // Text to Speech
     'tts.speaking': '🔊 Speaking...',
