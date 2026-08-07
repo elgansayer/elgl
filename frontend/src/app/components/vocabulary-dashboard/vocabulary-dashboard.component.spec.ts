@@ -29,7 +29,7 @@ describe('VocabularyDashboardComponent', () => {
               }
               return text;
             },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
           } as any,
         },
         { provide: ErrorHandler, useValue: mockErrorHandler },

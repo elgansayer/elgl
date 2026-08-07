@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ReadingEngineComponent } from './reading-engine.component';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
 class I18nStub {
   translate(key: string): string {
@@ -15,11 +16,13 @@ class I18nStub {
 describe('ReadingEngineComponent', () => {
   let component: ReadingEngineComponent;
   let fixture: ComponentFixture<ReadingEngineComponent>;
+  let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     const mockVocabStore: Partial<VocabularyStore> = {
       allFlashcards: signal<Flashcard[]>([]),
       flashcardMap: signal(new Map()),
+      hasMoreFlashcards: signal(true) as ReturnType<typeof signal>,
       getWordStatus: () => ({
         level: 0,
         colorClass: 'bg-blue-500/20 text-blue-900',
@@ -32,6 +35,7 @@ describe('ReadingEngineComponent', () => {
       providers: [
         { provide: VocabularyStore, useValue: mockVocabStore },
         { provide: I18nService, useClass: I18nStub },
+        HtmlSanitisationService,
       ],
     })
       .overrideComponent(ReadingEngineComponent, {
@@ -41,7 +45,12 @@ describe('ReadingEngineComponent', () => {
 
     fixture = TestBed.createComponent(ReadingEngineComponent);
     component = fixture.componentInstance;
+    httpMock = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    httpMock.verify();
   });
 
   it('should create', () => {

@@ -4,6 +4,8 @@ import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
+import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -15,8 +17,11 @@ describe('DiscoveryService', () => {
   let mockQueryBuilder: any;
   let mockRedisClient: any;
   let mockRedisSet: jest.Mock;
+  let mockPipelineSet: jest.Mock;
+  let mockPipelineExec: jest.Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
+  let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
 
   function createMockQueryBuilder() {
     const builder: any = {};
@@ -60,9 +65,15 @@ describe('DiscoveryService', () => {
     };
 
     mockRedisSet = jest.fn();
+    mockPipelineSet = jest.fn().mockReturnThis();
+    mockPipelineExec = jest.fn().mockResolvedValue(undefined);
     mockRedisClient = {
       get: jest.fn().mockResolvedValue(null),
       set: mockRedisSet,
+      pipeline: jest.fn().mockReturnValue({
+        set: mockPipelineSet,
+        exec: mockPipelineExec,
+      }),
     };
 
     mockSafetyService = {
@@ -71,6 +82,10 @@ describe('DiscoveryService', () => {
 
     mockAudioRoomsService = {
       getActiveHostIds: jest.fn().mockResolvedValue([]),
+    };
+
+    mockCloudflareCacheService = {
+      purgeByCacheTags: jest.fn().mockResolvedValue(true),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -90,6 +105,10 @@ describe('DiscoveryService', () => {
         {
           provide: AudioRoomsService,
           useValue: mockAudioRoomsService,
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: mockCloudflareCacheService,
         },
       ],
     }).compile();
@@ -182,13 +201,41 @@ describe('DiscoveryService', () => {
 
       expect(mockRedisSet).not.toHaveBeenCalled();
     });
+
+    it('should purge Cloudflare edge cache for POTW after recalculation', async () => {
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
+        data: [{ id: 'u1' }],
+        error: null,
+      });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockCloudflareCacheService.purgeByCacheTags).toHaveBeenCalledWith([
+        DISCOVERY_CACHE_TAG_POTW,
+      ]);
+    });
+
+    it('should not purge Cloudflare cache when no users qualify', async () => {
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockCloudflareCacheService.purgeByCacheTags).not.toHaveBeenCalled();
+    });
   });
 
   // ---------------------------------------------------------------------------
   // calculateDailyRecommendations
   // ---------------------------------------------------------------------------
   describe('calculateDailyRecommendations', () => {
-    it('should store daily recommendations for matching users', async () => {
+    it('should store daily recommendations for matching users via pipeline', async () => {
       const allUsers = [
         { id: 'u1', native_languages: ['en'], target_languages: ['ja'] },
       ];
@@ -198,12 +245,13 @@ describe('DiscoveryService', () => {
 
       await service.calculateDailyRecommendations();
 
-      expect(mockRedisSet).toHaveBeenCalledWith(
+      expect(mockPipelineSet).toHaveBeenCalledWith(
         'daily_recommendations:u1',
         '["u2"]',
         'EX',
         86400,
       );
+      expect(mockPipelineExec).toHaveBeenCalled();
     });
 
     it('should skip users with empty native_languages', async () => {
@@ -218,7 +266,7 @@ describe('DiscoveryService', () => {
       await service.calculateDailyRecommendations();
 
       expect(mockQueryBuilder.limit).toHaveBeenCalledTimes(1);
-      expect(mockRedisSet).not.toHaveBeenCalled();
+      expect(mockPipelineSet).not.toHaveBeenCalled();
     });
 
     it('should filter out blocked users from recommendations', async () => {
@@ -235,7 +283,7 @@ describe('DiscoveryService', () => {
 
       await service.calculateDailyRecommendations();
 
-      expect(mockRedisSet).toHaveBeenCalledWith(
+      expect(mockPipelineSet).toHaveBeenCalledWith(
         'daily_recommendations:u1',
         '["u3"]',
         'EX',
@@ -251,7 +299,7 @@ describe('DiscoveryService', () => {
 
       await service.calculateDailyRecommendations();
 
-      expect(mockRedisSet).not.toHaveBeenCalled();
+      expect(mockPipelineSet).not.toHaveBeenCalled();
     });
   });
 
