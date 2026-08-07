@@ -369,6 +369,9 @@ export class ChatService {
       );
     }
 
+    // Emit message.sent event for achievements evaluation
+    this.eventEmitter.emit('message.sent', { userId: senderId });
+
     // ---------- Parse @mentions and emit notifications ----------
     if (dto.message_type === 'text' && dto.text_content) {
       const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
@@ -944,6 +947,9 @@ export class ChatService {
         ),
       );
     }
+
+    // Emit message.sent event for achievements evaluation
+    this.eventEmitter.emit('message.sent', { userId: senderId });
 
     return savedMessage;
   }
