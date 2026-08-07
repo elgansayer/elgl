@@ -16,19 +16,24 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { User } from '@supabase/supabase-js';
-import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CacheControlInterceptor,
   CACHE_PUBLIC_LONG,
-  CACHE_PUBLIC_SHORT,
   CACHE_PRIVATE_NO_STORE,
 } from '../common/cache.interceptor';
 import { CuratedContentService } from './curated-content.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { CreateDialogueDto } from './dto/create-dialogue.dto';
 
+/**
+ * LingQ-style curated reading content (articles and dialogues).
+ *
+ * Cache strategy:
+ *  - Reading content changes rarely -- articles and dialogues use
+ *    long-lived public CDN caches (24h CDN, 1 week stale-while-revalidate).
+ *  - Mutation endpoints (POST) use no-store to prevent stale writes.
+ */
 @ApiTags('LingQ Reading Engine / Curated Content')
 @Controller('curated-content')
 export class CuratedContentController {
@@ -65,7 +70,7 @@ export class CuratedContentController {
   }
 
   @Get('articles/:id')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   @ApiOperation({
     summary: 'Get a single curated article by ID',
     description:
@@ -134,7 +139,7 @@ export class CuratedContentController {
   }
 
   @Get('dialogues/:id')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
   @ApiOperation({
     summary: 'Get a single curated dialogue by ID',
     description:
