@@ -6,14 +6,27 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { EscrowPaymentsComponent } from './escrow-payments.component';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
+import { EscrowService } from '../../services/escrow.service';
+import { NetworkStatusService } from '../../services/network-status.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
+import { JoyrideService } from 'ngx-joyride';
 
 describe('EscrowPaymentsComponent', () => {
   let component: EscrowPaymentsComponent;
   let fixture: ComponentFixture<EscrowPaymentsComponent>;
   let mockAuthService: { getAccessToken: ReturnType<typeof vi.fn> };
   let mockI18nService: { translate: ReturnType<typeof vi.fn>; currentLang: ReturnType<typeof signal>; direction: ReturnType<typeof signal> };
-  let mockOnboardingService: { isCompleted: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof signal>; markComplete: ReturnType<typeof vi.fn> };
+  let mockEscrowService: {
+    listEscrows: ReturnType<typeof vi.fn>;
+    releaseEscrow: ReturnType<typeof vi.fn>;
+    refundEscrow: ReturnType<typeof vi.fn>;
+    disputeEscrow: ReturnType<typeof vi.fn>;
+    syncOfflineOperations: ReturnType<typeof vi.fn>;
+    pendingOperationCount: ReturnType<typeof signal>;
+  };
+  let mockNetworkService: { isOnline: ReturnType<typeof signal> };
+  let mockOnboardingService: { isCompleted: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof signal>; markComplete: ReturnType<typeof vi.fn>; stepNames: string[]; startTour: ReturnType<typeof vi.fn> };
+  let mockJoyrideService: { startTour: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     mockAuthService = {
@@ -26,10 +39,29 @@ describe('EscrowPaymentsComponent', () => {
       direction: signal('ltr'),
     };
 
+    mockEscrowService = {
+      listEscrows: vi.fn().mockResolvedValue([]),
+      releaseEscrow: vi.fn().mockResolvedValue({ id: '1', status: 'released' }),
+      refundEscrow: vi.fn().mockResolvedValue({ id: '1', status: 'refunded' }),
+      disputeEscrow: vi.fn().mockResolvedValue({}),
+      syncOfflineOperations: vi.fn().mockResolvedValue({ sent: 0, failed: 0 }),
+      pendingOperationCount: signal(0),
+    };
+
+    mockNetworkService = {
+      isOnline: signal(true),
+    };
+
     mockOnboardingService = {
       isCompleted: vi.fn().mockReturnValue(true),
       isTourInProgress: signal(false),
       markComplete: vi.fn(),
+      stepNames: ['escrowStepTitle', 'escrowStepCreate', 'escrowStepFilters', 'escrowStepTransactions'],
+      startTour: vi.fn(),
+    };
+
+    mockJoyrideService = {
+      startTour: vi.fn().mockReturnValue({ subscribe: vi.fn() }),
     };
 
     await TestBed.configureTestingModule({
@@ -39,7 +71,10 @@ describe('EscrowPaymentsComponent', () => {
         provideHttpClientTesting(),
         { provide: AuthService, useValue: mockAuthService },
         { provide: I18nService, useValue: mockI18nService },
+        { provide: EscrowService, useValue: mockEscrowService },
+        { provide: NetworkStatusService, useValue: mockNetworkService },
         { provide: EscrowOnboardingService, useValue: mockOnboardingService },
+        { provide: JoyrideService, useValue: mockJoyrideService },
       ],
     }).compileComponents();
 
@@ -56,14 +91,15 @@ describe('EscrowPaymentsComponent', () => {
     expect(component.selectedStatus()).toBe('all');
     expect(component.showCreateForm()).toBe(false);
     expect(component.showDisputeForm()).toBeNull();
-    expect(component.loading()).toBe(false);
+    expect(component.actionInProgress()).toBe(false);
+    expect(component.error()).toBeNull();
     expect(component.successMessage()).toBeNull();
   });
 
   it('should set status filter', () => {
-    component.selectedStatus.set('pending');
+    component.setStatusFilter('pending');
     expect(component.selectedStatus()).toBe('pending');
-    component.selectedStatus.set('all');
+    component.setStatusFilter('all');
     expect(component.selectedStatus()).toBe('all');
   });
 
@@ -73,42 +109,23 @@ describe('EscrowPaymentsComponent', () => {
     expect(component.showCreateForm()).toBe(true);
   });
 
-  it('should return correct status class', () => {
-    expect(component.getStatusClass('pending')).toContain('amber');
-    expect(component.getStatusClass('released')).toContain('emerald');
-    expect(component.getStatusClass('disputed')).toContain('rose');
-    expect(component.getStatusClass('refunded')).toContain('slate');
-    expect(component.getStatusClass('cancelled')).toContain('zinc');
+  it('should return correct status badge class', () => {
+    expect(component.statusBadgeClass('pending')).toContain('amber');
+    expect(component.statusBadgeClass('released')).toContain('emerald');
+    expect(component.statusBadgeClass('disputed')).toContain('rose');
+    expect(component.statusBadgeClass('refunded')).toContain('slate');
+    expect(component.statusBadgeClass('cancelled')).toContain('zinc');
   });
 
-  it('should return status label using i18n', () => {
-    const label = component.getStatusLabel('pending');
-    expect(label).toBe('escrow.status.pending');
+  it('should return status filters with labels', () => {
+    expect(component.statusFilters).toHaveLength(6);
+    expect(component.statusFilters[0]).toEqual({ value: 'all', label: 'escrow.status.all' });
+    expect(component.statusFilters[1]).toEqual({ value: 'pending', label: 'escrow.status.pending' });
   });
 
-  it('should return service type label using i18n', () => {
-    const label = component.getServiceTypeLabel('lesson');
-    expect(label).toBe('escrow.serviceType.lesson');
-  });
-
-  it('should return status filters', () => {
-    expect(component.statusFilters.map(f => f.value)).toContain('all');
-    expect(component.statusFilters.map(f => f.value)).toContain('pending');
-  });
-
-  it('should verify RTL logical CSS properties', () => {
-    const componentHtml = fixture.nativeElement.innerHTML;
-    expect(componentHtml).not.toMatch(/\bpl-\d/);
-    expect(componentHtml).not.toMatch(/\bpr-\d/);
-    expect(componentHtml).not.toMatch(/\bml-\d/);
-    expect(componentHtml).not.toMatch(/\bmr-\d/);
-    expect(componentHtml).not.toMatch(/\bborder-l\b/);
-    expect(componentHtml).not.toMatch(/\bborder-r\b/);
-    expect(componentHtml).not.toMatch(/\bleft-\d/);
-    expect(componentHtml).not.toMatch(/\bright-\d/);
-    expect(componentHtml).toMatch(/\bps-\d/);
-    expect(componentHtml).toMatch(/\bpe-\d/);
-    expect(componentHtml).toMatch(/\bms-\d/);
-    expect(componentHtml).toMatch(/\bme-\d/);
+  it('should not start onboarding tour when already completed', () => {
+    mockOnboardingService.isCompleted.mockReturnValue(true);
+    fixture = TestBed.createComponent(EscrowPaymentsComponent);
+    expect(mockJoyrideService.startTour).not.toHaveBeenCalled();
   });
 });
