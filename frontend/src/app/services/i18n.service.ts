@@ -99,11 +99,15 @@ export class I18nService {
     'common.loading': 'Loading...',
     'common.cancel': 'Cancel',
     'common.save': 'Save',
+    'common.ok': 'OK',
     'common.upload': 'Upload',
     'common.uploading': 'Uploading...',
     'common.crop': 'Crop',
     'common.applyCrop': 'Apply Crop',
     'common.preview': 'Preview:',
+
+    // Application
+    'app.updateRequired': 'Update Required',
 
     // Cover Photo
     'coverPhoto.changeCover': 'Change Cover Photo',
@@ -349,7 +353,6 @@ export class I18nService {
     'moments.quotedTextAlert': 'Quoted sentence in comment.',
     'moments.correctionSentAlert': 'Correction published to timeline.',
     'common.optional': 'optional',
-    'common.cancel': 'Cancel',
     'common.confirm': 'Confirm',
     'common.close': 'Close',
     'common.back': 'Back',
@@ -938,6 +941,8 @@ export class I18nService {
     'profile.nativePlaceholder': 'Native language (ISO)',
     'profile.targetPlaceholder': 'Target languages (comma separated)',
     'profile.bioPlaceholder': 'Bio and learning goals',
+    'profile.bioLabel': 'Bio',
+    'profile.vipLanguagesNote': 'Free users: max 1 language. VIP: up to 3 languages.',
     'profile.hideLocation': 'Hide my location in discovery',
     'profile.hideSearch': 'Hide my profile in search',
     'profile.hideAge': 'Hide my age',
@@ -1205,6 +1210,7 @@ export class I18nService {
     'chat.unblock_user': 'Unblock user',
     'chat.unknown_user': 'Unknown user',
     'chat.cancel_reply': 'Cancel',
+    'chat.groupAdminSettings': 'Group Admin Settings',
 
     // Chat System Messages (real-time bubbles published over Centrifugo)
     'system.profileUpdated': '{{name}} updated their profile.',
