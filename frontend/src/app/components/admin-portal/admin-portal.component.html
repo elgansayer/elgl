@@ -148,8 +148,9 @@
       <button
         type="button"
         class="app-pill border border-surface-100"
-        [disabled]="page()  [attr.aria-label]="'admin.nextPage' | t">= totalPages()"
+        [disabled]="page() >= totalPages()"
         (click)="goToPage(1)"
+        [attr.aria-label]="'admin.nextPage' | t"
       >
         {{ 'admin.nextPage' | t }}
       </button>
