@@ -1649,6 +1649,7 @@ export class I18nService {
     'diagnosticQuiz.scoreLabel': 'Score: {{score}} / {{maxScore}}',
     'diagnosticQuiz.levelLabel': 'Suggested Level: {{level}}',
     'diagnosticQuiz.resultAction': 'Continue to onboarding',
+    'diagnosticQuiz.resultContinue': 'Continue',
 
     // My Stats Dashboard
     'stats.myStats.title': 'My Stats',
