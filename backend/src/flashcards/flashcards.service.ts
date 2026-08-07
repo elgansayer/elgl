@@ -4,6 +4,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
+import { sanitiseFlashcardsData } from './sanitise-flashcards.helper';
 
 @Injectable()
 export class FlashcardsService {
@@ -54,7 +55,7 @@ export class FlashcardsService {
       'Flashcard created/updated',
     );
 
-    return response.data;
+    return sanitiseFlashcardsData(response.data);
   }
 
   async updateSrsLevel(
@@ -131,7 +132,7 @@ export class FlashcardsService {
       'SRS review completed',
     );
 
-    return response.data;
+    return sanitiseFlashcardsData(response.data);
   }
 
   /**
@@ -223,7 +224,7 @@ export class FlashcardsService {
     if (response.error || !response.data) {
       return [];
     }
-    return response.data;
+    return sanitiseFlashcardsData(response.data);
   }
 
   async getDueReviews(userId: string): Promise<Flashcard[]> {
@@ -239,6 +240,6 @@ export class FlashcardsService {
     if (response.error || !response.data) {
       return [];
     }
-    return response.data;
+    return sanitiseFlashcardsData(response.data);
   }
 }

@@ -3,6 +3,7 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { SuggestFlashcardsDto } from './dto/suggest-flashcards.dto';
+import { sanitiseFlashcardsData } from './sanitise-flashcards.helper';
 
 @Injectable()
 export class SuggestFlashcardsService {
@@ -56,6 +57,6 @@ export class SuggestFlashcardsService {
       'Flashcard suggestions generated from message',
     );
 
-    return { suggestions: filteredWords };
+    return sanitiseFlashcardsData({ suggestions: filteredWords });
   }
 }

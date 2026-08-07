@@ -1,3 +1,44 @@
+// Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation((_html: string) => ({
+    window: {
+      document: {
+        createElement: jest.fn(),
+        createDocumentFragment: jest.fn(),
+      },
+      Node: {
+        ELEMENT_NODE: 1,
+        TEXT_NODE: 3,
+        DOCUMENT_FRAGMENT_NODE: 11,
+      },
+      NodeFilter: {
+        SHOW_ELEMENT: 1,
+        SHOW_TEXT: 4,
+      },
+    },
+  })),
+}));
+
+jest.mock('dompurify', () => {
+  const mockStrictSanitize = (dirty: string): string => {
+    if (typeof dirty !== 'string') return dirty;
+    return dirty
+      .replace(/<[^>]*>/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'");
+  };
+  return {
+    __esModule: true,
+    default: jest.fn(() => ({
+      sanitize: mockStrictSanitize,
+      setConfig: jest.fn(),
+    })),
+  };
+});
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsController } from './flashcards.controller';
 import { FlashcardsService } from './flashcards.service';
