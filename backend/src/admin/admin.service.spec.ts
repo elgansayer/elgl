@@ -72,6 +72,16 @@ describe('AdminService', () => {
           provide: DataScrubbingService,
           useValue: mockScrubbingService,
         },
+        {
+          provide: `PinoLogger:${AdminService.name}`,
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+            trace: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
