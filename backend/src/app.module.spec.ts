@@ -63,7 +63,11 @@ const EXPECTED_MODULE_NAMES = [
   'WordOfTheDayModule',
   'SpamDetectionModule',
   'UserStatisticsModule',
+<<<<<<< HEAD
   'BlocksModule',
+=======
+  'MetricsModule',
+>>>>>>> origin/main
 ];
 
 function findProvider(

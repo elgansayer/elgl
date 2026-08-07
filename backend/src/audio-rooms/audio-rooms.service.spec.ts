@@ -1189,7 +1189,7 @@ describe('AudioRoomsService', () => {
         error: null,
       });
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 100 },
+        data: { coins_balance: 100, display_name: 'Alice' },
         error: null,
       });
       mockQueryBuilder.single.mockResolvedValueOnce({
