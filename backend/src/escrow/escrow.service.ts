@@ -11,6 +11,9 @@ import { UsersService } from '../users/users.service';
 import {
   CreateEscrowDto,
   DisputeEscrowDto,
+  EscrowSummaryRow,
+  ListEscrowDto,
+  PaginatedEscrowResponse,
   RefundEscrowDto,
   ReleaseEscrowDto,
   ResolveDisputeDto,
@@ -21,6 +24,15 @@ import {
   EscrowReleaseResult,
   EscrowRefundResult,
 } from './interfaces/escrow.interface';
+
+const DEFAULT_PAGE_SIZE = 20;
+const VALID_ESCROW_STATUSES = [
+  'pending',
+  'released',
+  'refunded',
+  'disputed',
+  'cancelled',
+] as const;
 
 function isEscrowRow(value: unknown): value is EscrowRow {
   if (typeof value !== 'object' || value === null) return false;
@@ -33,12 +45,26 @@ function isEscrowRow(value: unknown): value is EscrowRow {
   )
     return false;
   return (
-    typeof value.id === 'string' &&
-    typeof value.sender_id === 'string' &&
-    typeof value.receiver_id === 'string' &&
-    typeof value.amount === 'number' &&
-    typeof value.status === 'string'
+    typeof (value as Record<string, unknown>).id === 'string' &&
+    typeof (value as Record<string, unknown>).sender_id === 'string' &&
+    typeof (value as Record<string, unknown>).receiver_id === 'string' &&
+    typeof (value as Record<string, unknown>).amount === 'number' &&
+    typeof (value as Record<string, unknown>).status === 'string'
   );
+}
+
+function toSummaryRow(row: EscrowRow): EscrowSummaryRow {
+  return {
+    id: row.id,
+    sender_id: row.sender_id,
+    receiver_id: row.receiver_id,
+    amount: row.amount,
+    status: row.status,
+    description: row.description,
+    service_type: row.service_type,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
 }
 
 @Injectable()
@@ -88,6 +114,9 @@ export class EscrowService {
       );
     }
 
+    // Truncate description to safe length
+    const description = dto.description.slice(0, 500);
+
     // Deduct coins from sender (hold in escrow)
     const newBalance = senderBalance - dto.amount;
     const { error: updateError } = await supabase
@@ -107,7 +136,7 @@ export class EscrowService {
       receiver_id: dto.partner_id,
       amount: dto.amount,
       status: 'pending',
-      description: dto.description,
+      description,
       service_type: dto.service_type ?? 'other',
     };
 
@@ -144,21 +173,7 @@ export class EscrowService {
   ): Promise<EscrowReleaseResult> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: escrowData, error } = await supabase
-      .from('escrows')
-      .select('*')
-      .eq('id', dto.escrow_id)
-      .single();
-
-    if (error || !escrowData || !isEscrowRow(escrowData)) {
-      throw new NotFoundException(`Escrow '${dto.escrow_id}' not found.`);
-    }
-
-    if (escrowData.status !== 'pending') {
-      throw new BadRequestException(
-        `Escrow cannot be released because it is already ${escrowData.status}.`,
-      );
-    }
+    const escrowData = await this.fetchPendingEscrow(dto.escrow_id);
 
     // Only the sender can release the escrow
     if (escrowData.sender_id !== callerId) {
@@ -184,7 +199,6 @@ export class EscrowService {
       throw new InternalServerErrorException('Failed to credit receiver.');
     }
 
-    // Update escrow status
     const { error: updateError } = await supabase
       .from('escrows')
       .update({ status: 'released' })
@@ -208,54 +222,26 @@ export class EscrowService {
     callerId: string,
     dto: RefundEscrowDto,
   ): Promise<EscrowRefundResult> {
-    const supabase = this.supabaseService.getClient();
-
-    const { data: escrowData, error } = await supabase
-      .from('escrows')
-      .select('*')
-      .eq('id', dto.escrow_id)
-      .single();
-
-    if (error || !escrowData || !isEscrowRow(escrowData)) {
-      throw new NotFoundException(`Escrow '${dto.escrow_id}' not found.`);
-    }
-
-    if (escrowData.status !== 'pending') {
-      throw new BadRequestException(
-        `Escrow cannot be refunded because it is already ${escrowData.status}.`,
-      );
-    }
+    const escrowData = await this.fetchPendingEscrow(dto.escrow_id);
 
     // Only the sender can refund the escrow
     if (escrowData.sender_id !== callerId) {
       throw new ForbiddenException('Only the sender can request a refund.');
     }
 
-    // Refund sender
-    const { data: senderData } = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', escrowData.sender_id)
-      .single();
-
-    const senderBalance = senderData?.coins_balance ?? 0;
-    const newSenderBalance = senderBalance + escrowData.amount;
-
-    const { error: refundError } = await supabase
-      .from('users')
-      .update({ coins_balance: newSenderBalance })
-      .eq('id', escrowData.sender_id);
-
-    if (refundError) {
-      throw new InternalServerErrorException('Failed to refund sender.');
-    }
+    const newSenderBalance = await this.creditUser(
+      escrowData.sender_id,
+      escrowData.amount,
+      'Failed to refund sender.',
+    );
 
     // Update escrow status
+    const supabase = this.supabaseService.getClient();
     const { error: updateError } = await supabase
       .from('escrows')
       .update({
         status: 'refunded',
-        dispute_reason: dto.reason ?? null,
+        dispute_reason: dto.reason ? dto.reason.slice(0, 1000) : null,
       })
       .eq('id', dto.escrow_id);
 
@@ -277,26 +263,11 @@ export class EscrowService {
     callerId: string,
     dto: DisputeEscrowDto,
   ): Promise<EscrowRow> {
-    const supabase = this.supabaseService.getClient();
-
-    const { data: escrowData, error } = await supabase
-      .from('escrows')
-      .select('*')
-      .eq('id', dto.escrow_id)
-      .single();
-
-    if (error || !escrowData || !isEscrowRow(escrowData)) {
-      throw new NotFoundException(`Escrow '${dto.escrow_id}' not found.`);
-    }
-
-    if (escrowData.status !== 'pending') {
-      throw new BadRequestException(
-        `Escrow cannot be disputed because it is already ${escrowData.status}.`,
-      );
-    }
+    const escrowData = await this.fetchPendingEscrow(dto.escrow_id);
 
     const isParticipant =
-      escrowData.sender_id === callerId || escrowData.receiver_id === callerId;
+      escrowData.sender_id === callerId ||
+      escrowData.receiver_id === callerId;
 
     if (!isParticipant) {
       throw new ForbiddenException(
@@ -304,12 +275,16 @@ export class EscrowService {
       );
     }
 
+    const truncatedReason = dto.reason.slice(0, 1000);
+    const truncatedEvidence = dto.evidence ? dto.evidence.slice(0, 5000) : null;
+
+    const supabase = this.supabaseService.getClient();
     const { data: updated, error: updateError } = await supabase
       .from('escrows')
       .update({
         status: 'disputed',
-        dispute_reason: dto.reason,
-        dispute_evidence: dto.evidence ?? null,
+        dispute_reason: truncatedReason,
+        dispute_evidence: truncatedEvidence,
       })
       .eq('id', dto.escrow_id)
       .select('*')
@@ -322,7 +297,7 @@ export class EscrowService {
     }
 
     this.logger.warn(
-      `Escrow ${dto.escrow_id} disputed by ${callerId}: ${dto.reason}`,
+      `Escrow ${dto.escrow_id} disputed by ${callerId}: ${truncatedReason.slice(0, 100)}`,
     );
 
     return updated;
@@ -350,31 +325,20 @@ export class EscrowService {
       );
     }
 
+    const truncatedNote = dto.admin_note ? dto.admin_note.slice(0, 2000) : null;
+
     if (dto.resolution === 'release') {
-      // Credit receiver
-      const { data: receiverData } = await supabase
-        .from('users')
-        .select('coins_balance')
-        .eq('id', escrowData.receiver_id)
-        .single();
-
-      const receiverBalance = receiverData?.coins_balance ?? 0;
-      const newReceiverBalance = receiverBalance + escrowData.amount;
-
-      const { error: creditError } = await supabase
-        .from('users')
-        .update({ coins_balance: newReceiverBalance })
-        .eq('id', escrowData.receiver_id);
-
-      if (creditError) {
-        throw new InternalServerErrorException('Failed to credit receiver.');
-      }
+      const newReceiverBalance = await this.creditUser(
+        escrowData.receiver_id,
+        escrowData.amount,
+        'Failed to credit receiver.',
+      );
 
       const { error: updateError } = await supabase
         .from('escrows')
         .update({
           status: 'released',
-          admin_note: dto.admin_note ?? null,
+          admin_note: truncatedNote,
         })
         .eq('id', dto.escrow_id);
 
@@ -385,7 +349,7 @@ export class EscrowService {
       }
 
       this.logger.info(
-        `Dispute for escrow ${dto.escrow_id} resolved: released to receiver.`,
+        `Dispute for escrow ${dto.escrow_id} resolved by ${adminId}: released to receiver.`,
       );
 
       return {
@@ -397,29 +361,17 @@ export class EscrowService {
     }
 
     // Refund sender
-    const { data: senderData } = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', escrowData.sender_id)
-      .single();
-
-    const senderBalance = senderData?.coins_balance ?? 0;
-    const newSenderBalance = senderBalance + escrowData.amount;
-
-    const { error: refundError } = await supabase
-      .from('users')
-      .update({ coins_balance: newSenderBalance })
-      .eq('id', escrowData.sender_id);
-
-    if (refundError) {
-      throw new InternalServerErrorException('Failed to refund sender.');
-    }
+    const newSenderBalance = await this.creditUser(
+      escrowData.sender_id,
+      escrowData.amount,
+      'Failed to refund sender.',
+    );
 
     const { error: updateError } = await supabase
       .from('escrows')
       .update({
         status: 'refunded',
-        admin_note: dto.admin_note ?? null,
+        admin_note: truncatedNote,
       })
       .eq('id', dto.escrow_id);
 
@@ -430,7 +382,7 @@ export class EscrowService {
     }
 
     this.logger.info(
-      `Dispute for escrow ${dto.escrow_id} resolved: refunded to sender.`,
+      `Dispute for escrow ${dto.escrow_id} resolved by ${adminId}: refunded to sender.`,
     );
 
     return {
@@ -457,45 +409,142 @@ export class EscrowService {
     return data;
   }
 
-  async listUserEscrows(userId: string, status?: string): Promise<EscrowRow[]> {
+  async listUserEscrows(
+    userId: string,
+    dto: ListEscrowDto,
+  ): Promise<PaginatedEscrowResponse> {
     const supabase = this.supabaseService.getClient();
 
     if (
-      status &&
-      !['pending', 'released', 'refunded', 'disputed', 'cancelled'].includes(
-        status,
-      )
+      dto.status &&
+      !(VALID_ESCROW_STATUSES as readonly string[]).includes(dto.status)
     ) {
-      throw new BadRequestException(`Invalid escrow status filter: ${status}`);
+      throw new BadRequestException(
+        `Invalid escrow status filter: ${dto.status}`,
+      );
     }
 
-    let query = supabase
+    const limit = dto.limit ?? DEFAULT_PAGE_SIZE;
+    const offset = dto.offset ?? 0;
+
+    // Get total count for pagination metadata
+    let countQuery = supabase
       .from('escrows')
-      .select('*')
+      .select('id', { count: 'exact', head: true })
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+
+    if (dto.status) {
+      countQuery = countQuery.eq('status', dto.status);
+    }
+
+    const { count, error: countError } = await countQuery;
+
+    if (countError) {
+      throw new InternalServerErrorException('Failed to count escrows.');
+    }
+
+    // Fetch paginated results, excluding large free-text fields from list
+    let dataQuery = supabase
+      .from('escrows')
+      .select(
+        'id, sender_id, receiver_id, amount, status, description, service_type, created_at, updated_at',
+      )
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('created_at', { ascending: false });
 
-    if (status) {
-      query = query.eq('status', status);
+    if (dto.status) {
+      dataQuery = dataQuery.eq('status', dto.status);
     }
 
-    const { data, error } = await query;
+    dataQuery = dataQuery.range(offset, offset + limit - 1);
+
+    const { data, error } = await dataQuery;
 
     if (error) {
       throw new InternalServerErrorException('Failed to retrieve escrows.');
     }
 
-    const escrows = (data ?? []).filter(
-      (item: unknown): item is EscrowRow =>
-        typeof item === 'object' &&
-        item !== null &&
-        'id' in item &&
-        'sender_id' in item &&
-        'receiver_id' in item &&
-        'amount' in item &&
-        'status' in item,
-    );
+    const rows = (data ?? [])
+      .filter((item: unknown) => {
+        if (typeof item !== 'object' || item === null) return false;
+        const record = item as Record<string, unknown>;
+        return (
+          typeof record.id === 'string' &&
+          typeof record.sender_id === 'string' &&
+          typeof record.receiver_id === 'string' &&
+          typeof record.amount === 'number' &&
+          typeof record.status === 'string'
+        );
+      })
+      .map((item) => toSummaryRow(item as unknown as EscrowRow));
 
-    return escrows;
+    return {
+      data: rows,
+      total: count ?? 0,
+      limit,
+      offset,
+    };
+  }
+
+  // -- private helpers --
+
+  /**
+   * Fetch an escrow that must be in 'pending' status.
+   * Throws NotFoundException if the escrow does not exist, or
+   * BadRequestException if it is not pending.
+   */
+  private async fetchPendingEscrow(escrowId: string): Promise<EscrowRow> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data, error } = await supabase
+      .from('escrows')
+      .select('*')
+      .eq('id', escrowId)
+      .single();
+
+    if (error || !data || !isEscrowRow(data)) {
+      throw new NotFoundException(`Escrow '${escrowId}' not found.`);
+    }
+
+    if (data.status !== 'pending') {
+      throw new BadRequestException(
+        `Escrow cannot be modified because it is already ${data.status}.`,
+      );
+    }
+
+    return data;
+  }
+
+  /**
+   * Credit a user's coin balance by the specified amount.
+   * Returns the new balance after the credit.
+   * Throws InternalServerErrorException if the update fails.
+   */
+  private async creditUser(
+    userId: string,
+    amount: number,
+    failureMessage: string,
+  ): Promise<number> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('coins_balance')
+      .eq('id', userId)
+      .single();
+
+    const currentBalance = userData?.coins_balance ?? 0;
+    const newBalance = currentBalance + amount;
+
+    const { error } = await supabase
+      .from('users')
+      .update({ coins_balance: newBalance })
+      .eq('id', userId);
+
+    if (error) {
+      throw new InternalServerErrorException(failureMessage);
+    }
+
+    return newBalance;
   }
 }

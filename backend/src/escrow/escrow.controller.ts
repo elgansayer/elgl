@@ -13,6 +13,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   CreateEscrowDto,
   DisputeEscrowDto,
+  ListEscrowDto,
   RefundEscrowDto,
   ReleaseEscrowDto,
   ResolveDisputeDto,
@@ -78,9 +79,9 @@ export class EscrowController {
   @Get()
   async listEscrows(
     @CurrentUser() user: User | null,
-    @Query('status') status?: string,
+    @Query() dto: ListEscrowDto,
   ) {
     if (!user) return null;
-    return this.escrowService.listUserEscrows(user.id, status);
+    return this.escrowService.listUserEscrows(user.id, dto);
   }
 }

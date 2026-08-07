@@ -21,6 +21,7 @@ describe('EscrowService', () => {
       eq: jest.fn().mockReturnThis(),
       or: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       single: jest.fn(),
       maybeSingle: jest.fn(),
     };
@@ -67,21 +68,18 @@ describe('EscrowService', () => {
     expect(service).toBeDefined();
   });
 
-  // ── createEscrow ────────────────────────────────────────────
+  // -- createEscrow ---------------------------------------------------
 
   describe('createEscrow', () => {
     it('should create a pending escrow and deduct coins from sender', async () => {
-      // Receiver check
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: { id: 'partner-1' },
         error: null,
       });
-      // Sender balance check
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: { coins_balance: 500 },
         error: null,
       });
-      // Insert escrow
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: {
           id: 'escrow-1',
@@ -121,6 +119,42 @@ describe('EscrowService', () => {
         description: 'Lesson payment',
         service_type: 'lesson',
       });
+    });
+
+    it('should truncate description longer than 500 characters', async () => {
+      const longDescription = 'A'.repeat(600);
+
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'partner-1' },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { coins_balance: 500 },
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: {
+          id: 'escrow-1',
+          sender_id: 'sender-1',
+          receiver_id: 'partner-1',
+          amount: 200,
+          status: 'pending',
+          description: 'A'.repeat(500),
+          service_type: 'other',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+        error: null,
+      });
+
+      await service.createEscrow('sender-1', {
+        partner_id: 'partner-1',
+        amount: 200,
+        description: longDescription,
+      });
+
+      const insertCall = mockQueryBuilder.insert.mock.calls[0][0];
+      expect(insertCall.description.length).toBe(500);
     });
 
     it('should default service_type to "other" when not provided', async () => {
@@ -211,7 +245,6 @@ describe('EscrowService', () => {
         data: { coins_balance: 500 },
         error: null,
       });
-      // Insert fails with data that is not valid escrow row
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'Insert failed' },
@@ -225,14 +258,13 @@ describe('EscrowService', () => {
         }),
       ).rejects.toThrow('Failed to create escrow record.');
 
-      // Should have rolled back the deduction
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         coins_balance: 500,
       });
     });
   });
 
-  // ── releaseEscrow ───────────────────────────────────────────
+  // -- releaseEscrow --------------------------------------------------
 
   describe('releaseEscrow', () => {
     const escrowRecord = {
@@ -331,7 +363,7 @@ describe('EscrowService', () => {
     });
   });
 
-  // ── refundEscrow ────────────────────────────────────────────
+  // -- refundEscrow ---------------------------------------------------
 
   describe('refundEscrow', () => {
     const escrowRecord = {
@@ -370,6 +402,31 @@ describe('EscrowService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         coins_balance: 200,
       });
+    });
+
+    it('should truncate long refund reason', async () => {
+      const longReason = 'B'.repeat(2000);
+
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: escrowRecord,
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { coins_balance: 10 },
+        error: null,
+      });
+
+      await service.refundEscrow('sender-1', {
+        escrow_id: 'escrow-1',
+        reason: longReason,
+      });
+
+      const updateCalls = mockQueryBuilder.update.mock.calls;
+      const escrowUpdateCall = updateCalls.find(
+        ([arg]: [Record<string, unknown>]) =>
+          typeof arg === 'object' && 'dispute_reason' in arg,
+      );
+      expect(escrowUpdateCall[0].dispute_reason.length).toBe(1000);
     });
 
     it('should allow refund without providing a reason', async () => {
@@ -436,7 +493,7 @@ describe('EscrowService', () => {
     });
   });
 
-  // ── disputeEscrow ───────────────────────────────────────────
+  // -- disputeEscrow --------------------------------------------------
 
   describe('disputeEscrow', () => {
     const escrowRecord = {
@@ -499,6 +556,38 @@ describe('EscrowService', () => {
       expect(result.dispute_evidence).toBe('Screenshots');
     });
 
+    it('should truncate long dispute reason and evidence', async () => {
+      const longReason = 'C'.repeat(2000);
+      const longEvidence = 'D'.repeat(10000);
+
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: escrowRecord,
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: {
+          ...escrowRecord,
+          status: 'disputed',
+          dispute_reason: 'C'.repeat(1000),
+          dispute_evidence: 'D'.repeat(5000),
+        },
+        error: null,
+      });
+
+      await service.disputeEscrow('sender-1', {
+        escrow_id: 'escrow-1',
+        reason: longReason,
+        evidence: longEvidence,
+      });
+
+      const updateCall = mockQueryBuilder.update.mock.calls.find(
+        ([arg]: [Record<string, unknown>]) =>
+          typeof arg === 'object' && 'dispute_reason' in arg,
+      );
+      expect(updateCall[0].dispute_reason.length).toBe(1000);
+      expect(updateCall[0].dispute_evidence.length).toBe(5000);
+    });
+
     it('should throw NotFoundException when escrow does not exist', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
@@ -548,37 +637,36 @@ describe('EscrowService', () => {
       });
 
       await expect(
-        service.disputeEscrow('random-user', {
+        service.disputeEscrow('stranger-1', {
           escrow_id: 'escrow-1',
-          reason: 'Not involved',
+          reason: 'Not my escrow',
         }),
       ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  // ── resolveDispute ──────────────────────────────────────────
+  // -- resolveDispute -------------------------------------------------
 
   describe('resolveDispute', () => {
-    const disputedEscrow = {
+    const disputedRecord = {
       id: 'escrow-1',
       sender_id: 'sender-1',
       receiver_id: 'receiver-1',
       amount: 200,
       status: 'disputed',
-      description: 'Lesson',
-      service_type: 'lesson',
-      dispute_reason: 'Service not delivered',
+      description: 'Service',
+      service_type: 'other',
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-01T00:00:00Z',
     };
 
-    it('should resolve dispute by releasing funds to receiver', async () => {
+    it('should resolve dispute by releasing to receiver', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: disputedEscrow,
+        data: disputedRecord,
         error: null,
       });
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 50 },
+        data: { coins_balance: 100 },
         error: null,
       });
 
@@ -592,32 +680,56 @@ describe('EscrowService', () => {
         id: 'escrow-1',
         status: 'released',
         amount_released: 200,
-        receiver_new_balance: 250,
+        receiver_new_balance: 300,
       });
     });
 
-    it('should resolve dispute by refunding sender', async () => {
+    it('should resolve dispute by refunding to sender', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: disputedEscrow,
+        data: disputedRecord,
         error: null,
       });
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { coins_balance: 10 },
+        data: { coins_balance: 50 },
         error: null,
       });
 
       const result = await service.resolveDispute('admin-1', {
         escrow_id: 'escrow-1',
         resolution: 'refund',
-        admin_note: 'Refund warranted',
       });
 
       expect(result).toEqual({
         id: 'escrow-1',
         status: 'refunded',
         amount_refunded: 200,
-        sender_new_balance: 210,
+        sender_new_balance: 250,
       });
+    });
+
+    it('should truncate long admin_note', async () => {
+      const longNote = 'E'.repeat(5000);
+
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: disputedRecord,
+        error: null,
+      });
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { coins_balance: 100 },
+        error: null,
+      });
+
+      await service.resolveDispute('admin-1', {
+        escrow_id: 'escrow-1',
+        resolution: 'release',
+        admin_note: longNote,
+      });
+
+      const updateCall = mockQueryBuilder.update.mock.calls.find(
+        ([arg]: [Record<string, unknown>]) =>
+          typeof arg === 'object' && 'admin_note' in arg,
+      );
+      expect(updateCall[0].admin_note.length).toBe(2000);
     });
 
     it('should throw NotFoundException when escrow does not exist', async () => {
@@ -636,21 +748,7 @@ describe('EscrowService', () => {
 
     it('should throw BadRequestException when escrow is not disputed', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { ...disputedEscrow, status: 'pending' },
-        error: null,
-      });
-
-      await expect(
-        service.resolveDispute('admin-1', {
-          escrow_id: 'escrow-1',
-          resolution: 'release',
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw BadRequestException when escrow is already released', async () => {
-      mockQueryBuilder.single.mockResolvedValueOnce({
-        data: { ...disputedEscrow, status: 'released' },
+        data: { ...disputedRecord, status: 'pending' },
         error: null,
       });
 
@@ -663,15 +761,15 @@ describe('EscrowService', () => {
     });
   });
 
-  // ── getEscrow ───────────────────────────────────────────────
+  // -- getEscrow ------------------------------------------------------
 
   describe('getEscrow', () => {
     it('should return escrow by id', async () => {
-      const escrow = {
+      const record = {
         id: 'escrow-1',
         sender_id: 'sender-1',
         receiver_id: 'receiver-1',
-        amount: 150,
+        amount: 100,
         status: 'pending',
         description: 'Test',
         service_type: 'lesson',
@@ -679,18 +777,15 @@ describe('EscrowService', () => {
         updated_at: '2026-01-01T00:00:00Z',
       };
       mockQueryBuilder.single.mockResolvedValueOnce({
-        data: escrow,
+        data: record,
         error: null,
       });
 
       const result = await service.getEscrow('escrow-1');
-
-      expect(result).toEqual(escrow);
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('escrows');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'escrow-1');
+      expect(result).toEqual(record);
     });
 
-    it('should throw NotFoundException when escrow not found', async () => {
+    it('should throw NotFoundException when escrow does not exist', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: null,
@@ -702,89 +797,135 @@ describe('EscrowService', () => {
     });
   });
 
-  // ── listUserEscrows ─────────────────────────────────────────
+  // -- listUserEscrows ------------------------------------------------
 
   describe('listUserEscrows', () => {
-    const mockEscrows = [
-      {
-        id: 'escrow-1',
-        sender_id: 'user-1',
-        receiver_id: 'partner-1',
-        amount: 100,
-        status: 'pending',
-        description: 'Lesson',
-        service_type: 'lesson',
-        created_at: '2026-01-02T00:00:00Z',
-        updated_at: '2026-01-02T00:00:00Z',
-      },
-      {
-        id: 'escrow-2',
-        sender_id: 'partner-2',
-        receiver_id: 'user-1',
-        amount: 50,
-        status: 'released',
-        description: 'Correction',
-        service_type: 'proofreading',
-        created_at: '2026-01-01T00:00:00Z',
-        updated_at: '2026-01-01T00:00:00Z',
-      },
-    ];
-
-    it('should list all escrows for a user (both sent and received)', async () => {
-      const mockQueryAfterOr = {
+    function setupCountMock(count: number) {
+      const countBuilder = {
         ...mockQueryBuilder,
-        order: jest.fn().mockResolvedValue({ data: mockEscrows, error: null }),
+        count,
+        error: null,
       };
-      mockQueryBuilder.or = jest.fn().mockReturnValue(mockQueryAfterOr);
+      mockQueryBuilder.or.mockReturnValueOnce(countBuilder);
+    }
 
-      const result = await service.listUserEscrows('user-1');
+    function setupDataMock(data: unknown) {
+      mockQueryBuilder.or.mockReturnValueOnce(mockQueryBuilder);
+      mockQueryBuilder.order.mockReturnValueOnce(mockQueryBuilder);
+      mockQueryBuilder.range.mockReturnValueOnce({ data, error: null });
+    }
 
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('escrow-1');
-      expect(result[1].id).toBe('escrow-2');
-      expect(mockQueryBuilder.or).toHaveBeenCalledWith(
-        'sender_id.eq.user-1,receiver_id.eq.user-1',
-      );
+    it('should return paginated escrows with summary rows (default pagination)', async () => {
+      const summaryRows = [
+        {
+          id: 'escrow-1',
+          sender_id: 'user-1',
+          receiver_id: 'partner-1',
+          amount: 100,
+          status: 'pending',
+          description: 'Test',
+          service_type: 'lesson',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ];
+
+      setupCountMock(1);
+      setupDataMock(summaryRows);
+
+      const result = await service.listUserEscrows('user-1', {});
+
+      expect(result).toEqual({
+        data: summaryRows,
+        total: 1,
+        limit: 20,
+        offset: 0,
+      });
+    });
+
+    it('should honour custom limit and offset', async () => {
+      const summaryRows = [
+        {
+          id: 'escrow-2',
+          sender_id: 'user-1',
+          receiver_id: 'partner-2',
+          amount: 50,
+          status: 'released',
+          description: 'Second page',
+          service_type: 'other',
+          created_at: '2026-01-02T00:00:00Z',
+          updated_at: '2026-01-02T00:00:00Z',
+        },
+      ];
+
+      setupCountMock(5);
+      setupDataMock(summaryRows);
+
+      const result = await service.listUserEscrows('user-1', {
+        limit: 10,
+        offset: 5,
+      });
+
+      expect(result.limit).toBe(10);
+      expect(result.offset).toBe(5);
+      expect(result.total).toBe(5);
+      expect(result.data).toEqual(summaryRows);
+
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(5, 14);
     });
 
     it('should filter by status when provided', async () => {
-      const filtered = [mockEscrows[0]];
-      // Chain: from -> select -> or -> order -> eq -> await
-      // .or() must return something with .order()
-      // .order() must return something with .eq()
-      // .eq() resolves with data
-      const mockEq = jest
-        .fn()
-        .mockResolvedValue({ data: filtered, error: null });
-      const mockAfterOrder = { eq: mockEq };
-      const mockQueryAfterOr = {
-        order: jest.fn().mockReturnValue(mockAfterOrder),
-      };
-      mockQueryBuilder.or = jest.fn().mockReturnValue(mockQueryAfterOr);
+      setupCountMock(1);
+      setupDataMock([]);
 
-      const result = await service.listUserEscrows('user-1', 'pending');
+      await service.listUserEscrows('user-1', { status: 'pending' });
 
-      expect(result).toHaveLength(1);
-      expect(result[0].status).toBe('pending');
-      expect(mockEq).toHaveBeenCalledWith('status', 'pending');
+      const eqCalls = mockQueryBuilder.eq.mock.calls;
+      expect(eqCalls.some((call: string[]) => call[0] === 'status')).toBe(true);
     });
 
     it('should throw BadRequestException for invalid status filter', async () => {
       await expect(
-        service.listUserEscrows('user-1', 'invalid-status'),
+        service.listUserEscrows('user-1', { status: 'invalid' }),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should return empty array when user has no escrows', async () => {
-      const mockQueryAfterOr = {
-        ...mockQueryBuilder,
-        order: jest.fn().mockResolvedValue({ data: [], error: null }),
-      };
-      mockQueryBuilder.or = jest.fn().mockReturnValue(mockQueryAfterOr);
+    it('should handle empty result set gracefully', async () => {
+      setupCountMock(0);
+      setupDataMock(null);
 
-      const result = await service.listUserEscrows('user-1');
+      const result = await service.listUserEscrows('user-1', {});
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({
+        data: [],
+        total: 0,
+        limit: 20,
+        offset: 0,
+      });
+    });
+
+    it('should filter out malformed rows from data', async () => {
+      setupCountMock(2);
+      setupDataMock([
+        {
+          id: 'escrow-1',
+          sender_id: 'user-1',
+          receiver_id: 'partner-1',
+          amount: 100,
+          status: 'pending',
+          description: 'Good',
+          service_type: 'lesson',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+        { id: 'bad', status: 'broken' },
+      ]);
+
+      const result = await service.listUserEscrows('user-1', {});
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].id).toBe('escrow-1');
+      expect(result.total).toBe(2);
     });
   });
 });

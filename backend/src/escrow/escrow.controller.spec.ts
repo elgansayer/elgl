@@ -222,46 +222,47 @@ describe('EscrowController', () => {
 
   describe('listEscrows', () => {
     it('should return null if user is not provided', async () => {
-      const result = await controller.listEscrows(null);
+      const result = await controller.listEscrows(null, {});
       expect(result).toBeNull();
       expect(escrowService.listUserEscrows).not.toHaveBeenCalled();
     });
 
     it('should call service listUserEscrows when user is provided', async () => {
-      const response = [
-        {
-          id: 'escrow-1',
-          sender_id: 'user-1',
-          receiver_id: 'receiver-1',
-          amount: 100,
-          status: 'pending',
-          description: 'Test',
-          service_type: 'lesson',
-          created_at: '2026-01-01',
-          updated_at: '2026-01-01',
-        },
-      ];
+      const response = {
+        data: [
+          {
+            id: 'escrow-1',
+            sender_id: 'user-1',
+            receiver_id: 'receiver-1',
+            amount: 100,
+            status: 'pending',
+            description: 'Test',
+            service_type: 'lesson',
+            created_at: '2026-01-01',
+            updated_at: '2026-01-01',
+          },
+        ],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      };
       (escrowService.listUserEscrows as jest.Mock).mockResolvedValue(response);
 
+      const dto = { status: 'pending' };
       const result = await controller.listEscrows(
         { id: 'user-1' } as any,
-        'pending',
+        dto,
       );
-      expect(escrowService.listUserEscrows).toHaveBeenCalledWith(
-        'user-1',
-        'pending',
-      );
+      expect(escrowService.listUserEscrows).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(response);
     });
 
-    it('should call service listUserEscrows without status filter when none provided', async () => {
-      (escrowService.listUserEscrows as jest.Mock).mockResolvedValue([]);
+    it('should call service listUserEscrows with empty dto when none provided', async () => {
+      const response = { data: [], total: 0, limit: 20, offset: 0 };
+      (escrowService.listUserEscrows as jest.Mock).mockResolvedValue(response);
 
-      await controller.listEscrows({ id: 'user-1' } as any);
-      expect(escrowService.listUserEscrows).toHaveBeenCalledWith(
-        'user-1',
-        undefined,
-      );
+      await controller.listEscrows({ id: 'user-1' } as any, {});
+      expect(escrowService.listUserEscrows).toHaveBeenCalledWith('user-1', {});
     });
   });
 });
