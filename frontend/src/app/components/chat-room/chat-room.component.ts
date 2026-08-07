@@ -24,6 +24,7 @@ import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
 
 @Component({
   selector: 'app-chat-room',
@@ -43,6 +44,7 @@ import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card
     CulturalTipComponent,
     ReplyPreviewComponent,
     LinkPreviewCardComponent,
+    GroupParticipantDrawerComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -82,6 +84,17 @@ export class ChatRoomComponent implements OnDestroy {
   readonly pendingUnlock = signal<boolean>(false);
 
   readonly participants = signal<GroupMember[]>([]);
+
+  readonly drawerParticipants = computed<GroupParticipant[]>(() =>
+    this.participants().map((m) => ({
+      id: m.user_id,
+      display_name: m.user?.display_name ?? 'Unknown',
+      avatar_url: m.user?.avatar_url ?? undefined,
+      native_language: m.user?.native_language ?? '',
+      target_languages: m.user?.target_languages ?? [],
+      is_vip: false,
+    })),
+  );
   readonly blockedUserIds = signal<string[]>([]);
   readonly partnerLanguage = signal<string | null>(null);
   readonly filteredMessages = computed(() => {
