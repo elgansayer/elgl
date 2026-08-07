@@ -334,7 +334,7 @@
         {{ 'discovery.matchCount' | t: { count: partners().length } }}
       </div>
       <!-- User Grid: single column mobile, 2 cols tablet, 3 cols desktop -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200" role="list" aria-label="{{ 'discovery.partnerListLabel' | t }}">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200" role="list" [attr.aria-label]="'discovery.partnerListLabel' | t">
         @for (partner of partners(); track partner.id) {
           <article
             class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer"
@@ -363,12 +363,16 @@
                   </p>
                   @if (partner.is_vip) {
                     <span
+                      role="img"
+                      [attr.aria-label]="'discovery.vipBadge' | t"
                       class="rounded bg-yellow-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-black italic"
                       >{{ 'discovery.vipBadge' | t }}</span
                     >
                   }
                   @if (partner.is_partner_of_week) {
                     <span
+                      role="img"
+                      [attr.aria-label]="'discovery.partnerOfWeek' | t"
                       class="rounded bg-purple-500 px-1.5 py-0.5 text-[9px] font-black uppercase text-white"
                       >{{ 'discovery.partnerOfWeek' | t }}</span
                     >
@@ -404,6 +408,9 @@
                   <app-fluency-indicator
                     [nativeLanguages]="partner.nativeLangs || []"
                     [targetLanguages]="partner.targetLangs || []"
+                    [label]="'discovery.fluencyLabel' | t: { name: partner.display_name || ('discovery.partnerFallback' | t) }"
+                    [nativeLabel]="'discovery.nativeLanguagesLabel' | t"
+                    [targetLabel]="'discovery.learningLanguagesLabel' | t"
                   >
                   </app-fluency-indicator>
                 </div>
@@ -427,9 +434,10 @@
 
                 <!-- Interest/hobby tags -->
                 @if (partner.interests && partner.interests.length > 0) {
-                  <div class="flex flex-wrap gap-1 mt-1.5">
+                  <div class="flex flex-wrap gap-1 mt-1.5" role="list" [attr.aria-label]="'discovery.interestsLabel' | t">
                     @for (interest of partner.interests.slice(0, 5); track interest) {
                       <span
+                        role="listitem"
                         class="px-1.5 py-0.5 rounded-full bg-surface-200 text-[10px] text-text-secondary font-medium"
                       >
                         {{ interest | sanitiseHtml }}

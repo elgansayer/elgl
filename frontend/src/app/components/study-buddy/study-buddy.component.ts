@@ -10,32 +10,36 @@ import {
   selector: 'app-study-buddy',
   imports: [TranslatePipe],
   template: `
-    <div class="mx-auto max-w-4xl space-y-6 pb-20 pt-4">
+    <main class="mx-auto max-w-4xl space-y-6 pb-20 pt-4" role="main" aria-labelledby="study-buddy-title">
       <section class="app-card app-padded space-y-3">
-        <h2 class="app-section-title">{{ 'studyBuddy.title' | t }}</h2>
+        <h2 id="study-buddy-title" class="app-section-title">{{ 'studyBuddy.title' | t }}</h2>
         <p class="app-muted">{{ 'studyBuddy.description' | t }}</p>
       </section>
 
       @if (dataResource.isLoading()) {
-        <div class="app-card app-padded py-12 text-center">
+        <div class="app-card app-padded py-12 text-center" role="status">
           <p class="app-muted">{{ 'common.loading' | t }}</p>
         </div>
       } @else if (dataResource.error()) {
-        <div class="app-card app-padded py-12 text-center">
+        <div class="app-card app-padded py-12 text-center" role="alert">
           <p class="font-bold text-rose-400">{{ 'common.loadError' | t }}</p>
         </div>
       } @else {
         @if (incomingRequests().length) {
-          <section class="app-card app-padded space-y-3">
-            <h3 class="text-sm font-black text-text-primary">
+          <section class="app-card app-padded space-y-3" aria-labelledby="incoming-requests-title">
+            <h3 id="incoming-requests-title" class="text-sm font-black text-text-primary">
               {{ 'studyBuddy.incomingRequestsTitle' | t }}
             </h3>
+            <div role="list">
             @for (req of incomingRequests(); track req.id) {
-              <div class="flex flex-wrap items-center justify-between gap-3 rounded-card border border-surface-100 bg-surface-300 px-3 py-3">
+              <div
+                role="listitem"
+                class="flex flex-wrap items-center justify-between gap-3 rounded-card border border-surface-100 bg-surface-300 px-3 py-3"
+              >
                 <div class="flex items-center gap-3 min-w-0">
                   <img
                     [src]="req.requester?.avatar_url || ''"
-                    alt=""
+                    [alt]="'studyBuddy.avatarAlt' | t: { name: req.requester?.display_name || ('studyBuddy.requesterFallback' | t) }"
                     class="w-10 h-10 rounded-full object-cover bg-surface-100 flex-shrink-0"
                     loading="lazy"
                   />
@@ -47,33 +51,39 @@ import {
                   <button
                     type="button"
                     (click)="accept(req.id)"
-                    class="app-button-primary ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold"
+                    [attr.aria-label]="'studyBuddy.acceptAria' | t: { name: req.requester?.display_name || ('studyBuddy.requesterFallback' | t) }"
+                    class="app-button-primary ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     {{ 'studyBuddy.acceptBtn' | t }}
                   </button>
                   <button
                     type="button"
                     (click)="decline(req.id)"
-                    class="rounded-app border border-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-rose-400 hover:bg-rose-500/10"
+                    [attr.aria-label]="'studyBuddy.declineAria' | t: { name: req.requester?.display_name || ('studyBuddy.requesterFallback' | t) }"
+                    class="rounded-app border border-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-rose-400 hover:bg-rose-500/10 focus:outline-none focus:ring-2 focus:ring-rose-400"
                   >
                     {{ 'studyBuddy.declineBtn' | t }}
                   </button>
                 </div>
               </div>
             }
+            </div>
           </section>
         }
 
-        <section class="app-card app-padded space-y-3">
-          <h3 class="text-sm font-black text-text-primary">
+        <section class="app-card app-padded space-y-3" aria-labelledby="potential-matches-title">
+          <h3 id="potential-matches-title" class="text-sm font-black text-text-primary">
             {{ 'studyBuddy.potentialMatches' | t }}
           </h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2" role="list">
             @for (user of matches(); track user.id) {
-              <div class="flex flex-col items-center gap-2 rounded-card border border-surface-100 bg-surface-300 p-4 text-center">
+              <div
+                role="listitem"
+                class="flex flex-col items-center gap-2 rounded-card border border-surface-100 bg-surface-300 p-4 text-center"
+              >
                 <img
                   [src]="user.avatar_url || ''"
-                  alt=""
+                  [alt]="'studyBuddy.avatarAlt' | t: { name: user.display_name }"
                   class="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover bg-surface-100"
                   loading="lazy"
                 />
@@ -82,7 +92,8 @@ import {
                   type="button"
                   [disabled]="requestedIds().has(user.id)"
                   (click)="requestBuddy(user.id)"
-                  class="app-button-primary w-full ps-3 pe-3 pt-2 pb-2 text-xs font-bold disabled:opacity-50"
+                  [attr.aria-label]="'studyBuddy.requestAria' | t: { name: user.display_name }"
+                  class="app-button-primary w-full ps-3 pe-3 pt-2 pb-2 text-xs font-bold disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   {{
                     requestedIds().has(user.id)
@@ -99,7 +110,7 @@ import {
           </div>
         </section>
       }
-    </div>
+    </main>
   `,
 })
 export class StudyBuddyComponent {

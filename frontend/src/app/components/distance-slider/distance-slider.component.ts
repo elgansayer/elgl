@@ -27,7 +27,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           step="1"
           class="w-full h-8 appearance-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           [style.accent-color]="'var(--color-primary)'"
-          aria-label="{{ 'discovery.radiusLabel' | t: { radius: currentDistanceKm() } }}"
+          [attr.aria-label]="'discovery.radiusLabel' | t: { radius: currentDistanceKm() }"
         />
       </div>
     </div>
