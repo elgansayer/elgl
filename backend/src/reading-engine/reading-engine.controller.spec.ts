@@ -75,6 +75,12 @@ describe('ReadingEngineController', () => {
       expect(controller['getUserId'](req as never)).toBe('my-id');
     });
 
+    it('should return anonymous when no user is present', () => {
+      const req = { user: undefined };
+      expect(controller['getUserId'](req as never)).toBe('anonymous');
+    });
+  });
+
   describe('createResource', () => {
     it('delegates to readingService.createResource with dto', async () => {
       const dto: CreateReadingResourceDto = {
@@ -93,13 +99,15 @@ describe('ReadingEngineController', () => {
       };
       readingService.createResource.mockResolvedValue(mockResource);
 
-    it('should return anonymous when no user is present', () => {
-      const req = { user: undefined };
-      expect(controller['getUserId'](req as never)).toBe('anonymous');
+      const req = { user: { id: 'user-1' } };
+      const result = await controller.createResource(
+        dto as never,
+        req as never,
+      );
+      expect(readingService.createResource).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toBe(mockResource);
     });
-  });
 
-  describe('createResource', () => {
     it('should delegate to service with extracted user id', async () => {
       const dto = { title: 'Test', content: 'Hello' };
       const expected = { id: '1', title: 'Test' };

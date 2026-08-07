@@ -71,7 +71,7 @@ export class SrsOfflineService {
     await this.clearStore(db, 'flashcards');
     const store = db.transaction('flashcards', 'readwrite').objectStore('flashcards');
     for (const item of list) {
-      await this.putInStore(store, item as Record<string, unknown>);
+      await this.putInStore(store, item as unknown as Record<string, unknown>);
     }
   }
 
@@ -89,7 +89,7 @@ export class SrsOfflineService {
     await this.clearStore(db, 'due_reviews');
     const store = db.transaction('due_reviews', 'readwrite').objectStore('due_reviews');
     for (const item of list) {
-      await this.putInStore(store, item as Record<string, unknown>);
+      await this.putInStore(store, item as unknown as Record<string, unknown>);
     }
   }
 
@@ -164,7 +164,7 @@ export class SrsOfflineService {
     });
   }
 
-  private getAllFromStore(db: IDBDatabase, storeName: string): Promise<unknown[]> {
+  private getAllFromStore<T = unknown>(db: IDBDatabase, storeName: string): Promise<T[]> {
     return new Promise((resolve, reject) => {
       const store = db.transaction(storeName, 'readonly').objectStore(storeName);
       const req = store.getAll();
