@@ -9,6 +9,7 @@ import { GooglePlayNotificationService } from './google-play-notification.servic
 import { MonetisationService } from './monetisation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import * as retryHelper from '../common/retry.helper';
 
 const AUDIENCE = 'https://api.hellotalk.app/monetisation/webhooks/google';
 const SERVICE_ACCOUNT_EMAIL =
@@ -131,6 +132,17 @@ describe('GooglePlayNotificationService', () => {
         getPublicKey: () => publicKey,
       }),
     };
+  });
+
+  beforeAll(() => {
+    jest.spyOn(retryHelper, 'withRetry').mockImplementation(async (fn) => {
+      const result = await fn();
+      return { data: result.data, status: result.status };
+    });
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
   });
 
   afterEach(() => {
