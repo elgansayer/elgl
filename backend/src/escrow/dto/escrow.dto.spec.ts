@@ -87,7 +87,7 @@ describe('Escrow DTOs', () => {
       expect(errors.some((e) => e.property === 'amount_coins')).toBe(true);
     });
 
-    it('should accept when reason is missing (optional)', async () => {
+    it('should accept valid DTO without reason (optional)', async () => {
       const dto = new CreateEscrowDto();
       dto.payee_id = '87654321-4321-4321-4321-210987654321';
       dto.amount_coins = 50;
