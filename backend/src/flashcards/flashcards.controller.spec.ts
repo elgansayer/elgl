@@ -117,7 +117,9 @@ describe('FlashcardsController', () => {
         word_token: 'bonjour',
         translation: 'hello',
       });
-      flashcardsService.createOrUpdateFlashcard = jest.fn().mockResolvedValue(card);
+      flashcardsService.createOrUpdateFlashcard = jest
+        .fn()
+        .mockResolvedValue(card);
 
       const res = mockResponse();
       const result = await controller.createFlashcard(
@@ -139,7 +141,9 @@ describe('FlashcardsController', () => {
         translation: 'test',
       };
       const degradedCard = mockFlashcard({ degraded: true });
-      flashcardsService.createOrUpdateFlashcard = jest.fn().mockResolvedValue(degradedCard);
+      flashcardsService.createOrUpdateFlashcard = jest
+        .fn()
+        .mockResolvedValue(degradedCard);
 
       const res = mockResponse();
       await controller.createFlashcard(mockUser(), dto, res as Response);
@@ -178,7 +182,9 @@ describe('FlashcardsController', () => {
     it('should set X-SRS-Degraded header when result is degraded', async () => {
       const dto: UpdateSrsDto = { quality: 3 };
       const degradedCard = mockFlashcard({ id: 'card-1', degraded: true });
-      flashcardsService.updateSrsLevel = jest.fn().mockResolvedValue(degradedCard);
+      flashcardsService.updateSrsLevel = jest
+        .fn()
+        .mockResolvedValue(degradedCard);
 
       const res = mockResponse();
       await controller.updateSrs(mockUser(), 'card-1', dto, res as Response);
@@ -198,7 +204,11 @@ describe('FlashcardsController', () => {
       flashcardsService.getFlashcards = jest.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
-      const result = await controller.getFlashcards(mockUser(), '3', res as Response);
+      const result = await controller.getFlashcards(
+        mockUser(),
+        '3',
+        res as Response,
+      );
       expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3);
       expect(result).toEqual(cards);
     });
@@ -228,7 +238,10 @@ describe('FlashcardsController', () => {
       flashcardsService.getDueReviews = jest.fn().mockResolvedValue(cards);
 
       const res = mockResponse();
-      const result = await controller.getDueReviews(mockUser(), res as Response);
+      const result = await controller.getDueReviews(
+        mockUser(),
+        res as Response,
+      );
       expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(cards);
     });

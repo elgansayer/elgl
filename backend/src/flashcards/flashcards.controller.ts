@@ -31,8 +31,6 @@ import {
   CACHE_TAG_FLASHCARDS,
   CACHE_TAG_DUE_REVIEWS,
 } from '../common/cache.interceptor';
-import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
-import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
 import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
@@ -53,7 +51,6 @@ export class FlashcardsController {
     status: 200,
     description: 'SRS health status.',
   })
-  getHealth(): SrsHealthStatus {
     return this.flashcardsService.getHealthStatus();
   }
 
@@ -124,7 +121,6 @@ export class FlashcardsController {
   async updateSrs(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
-    @Body() dto: UpdateSrsDto,
     @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard | null> {
     if (!user) return null;

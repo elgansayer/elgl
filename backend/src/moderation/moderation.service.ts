@@ -34,20 +34,58 @@ const MAX_PAGE_SIZE = 200;
 // Pre-compiled dating-behaviour detection regex patterns to avoid
 // re-compilation on every analyseUserForDatingBehaviour() call.
 const DATING_FLAGS = [
-  'dating', 'date', 'relationship', 'boyfriend', 'girlfriend', 'love',
-  'marry', 'marriage', 'romance', 'romantic', 'sex', 'hookup', 'flirt',
-  'hot', 'sexy', 'single', 'looking for', 'meetup', 'in a relationship',
-  'partner', 'romantically', 'kiss', 'kissing', 'date me',
-  'looking for a man', 'looking for a woman', 'man for me', 'woman for me',
-  'marry me', 'fwb', 'friends with benefits', 'casual sex', 'affair',
-  'dinner', 'coffee', 'drinks', 'hang out', 'meet up', 'hook up',
-  'one night', 'sexting', 'daddy', 'mommy', 'horny',
+  'dating',
+  'date',
+  'relationship',
+  'boyfriend',
+  'girlfriend',
+  'love',
+  'marry',
+  'marriage',
+  'romance',
+  'romantic',
+  'sex',
+  'hookup',
+  'flirt',
+  'hot',
+  'sexy',
+  'single',
+  'looking for',
+  'meetup',
+  'in a relationship',
+  'partner',
+  'romantically',
+  'kiss',
+  'kissing',
+  'date me',
+  'looking for a man',
+  'looking for a woman',
+  'man for me',
+  'woman for me',
+  'marry me',
+  'fwb',
+  'friends with benefits',
+  'casual sex',
+  'affair',
+  'dinner',
+  'coffee',
+  'drinks',
+  'hang out',
+  'meet up',
+  'hook up',
+  'one night',
+  'sexting',
+  'daddy',
+  'mommy',
+  'horny',
 ];
 
-const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map((flag) => {
-  const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return { flag, regex: new RegExp(`\\b${escaped}\\b`, 'i') };
-});
+const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map(
+  (flag) => {
+    const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return { flag, regex: new RegExp(`\\b${escaped}\\b`, 'i') };
+  },
+);
 
 @Injectable()
 export class ModerationService {
@@ -159,7 +197,10 @@ export class ModerationService {
   private async batchGetMomentContent(
     momentIds: string[],
   ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
-    const result = new Map<string, { content_text: string; authorName: string | null }>();
+    const result = new Map<
+      string,
+      { content_text: string; authorName: string | null }
+    >();
 
     const { data, error } = await this.supabase
       .from('moments')

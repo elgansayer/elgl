@@ -26,7 +26,8 @@ export class CreateEscrowHoldDto {
   amount_coins!: number;
 
   @ApiProperty({
-    description: 'Description of the service being paid for via the escrow hold',
+    description:
+      'Description of the service being paid for via the escrow hold',
     maxLength: 500,
     example: 'Payment for 30-minute Spanish lesson',
   })
@@ -35,7 +36,8 @@ export class CreateEscrowHoldDto {
   reason!: string;
 
   @ApiPropertyOptional({
-    description: 'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
+    description:
+      'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
     example: { service_type: 'lesson', lesson_id: 'abc-123' },
   })
   @IsOptional()

@@ -2,7 +2,6 @@ import { Component, inject, signal, computed, afterNextRender, effect } from '@a
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { DatePipe, Location } from '@angular/common';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
@@ -35,7 +34,6 @@ interface StatusFilterEntry {
 
 @Component({
   selector: 'app-escrow-payments',
-  imports: [FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
 export class EscrowPaymentsComponent {

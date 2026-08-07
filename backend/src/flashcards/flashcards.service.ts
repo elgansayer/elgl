@@ -5,7 +5,6 @@ import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { withRetry, isRateLimitError } from '../common/retry';
 
 /**
  * Service responsible for flashcard CRUD and SRS (SM-2) scheduling with
@@ -71,8 +70,6 @@ export class FlashcardsService {
     ) {
       return true;
     }
-
-    return isRateLimitError(error);
   }
 
   async createOrUpdateFlashcard(

@@ -27,14 +27,14 @@ export const ESCROW_CACHE_PRIVATE_SHORT = {
   'Cache-Control':
     'private, max-age=60, s-maxage=120, stale-while-revalidate=300, stale-if-error=600',
   'CDN-Cache-Control': 'private, max-age=120, stale-while-revalidate=300',
-  'Vary': 'Authorization, Accept-Encoding',
+  Vary: 'Authorization, Accept-Encoding',
   'Cache-Tag': 'escrow-transactions-v1',
 } as const;
 
 export const ESCROW_CACHE_PRIVATE_NO_STORE = {
   'Cache-Control': 'private, no-store',
   'CDN-Cache-Control': 'private, no-store',
-  'Vary': 'Authorization',
+  Vary: 'Authorization',
 } as const;
 
 @Injectable()
