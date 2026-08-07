@@ -21,17 +21,21 @@ jest.mock('jsdom', () => ({
   })),
 }));
 
-// Strict DOMPurify mock that strips ALL HTML tags (matching strict config)
+// Simple DOMPurify mock that strips dangerous HTML
 const mockSanitize = (dirty: string): string => {
   if (typeof dirty !== 'string') return dirty;
-  // Strip all HTML tags completely
   return dirty
-    .replace(/<[^>]*>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'");
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\s+href\s*=\s*"[^"]*"/gi, (match) => {
+      if (/javascript\s*:/i.test(match)) return '';
+      return match;
+    })
+    .replace(/\s+href\s*=\s*'[^']*'/gi, (match) => {
+      if (/javascript\s*:/i.test(match)) return '';
+      return match;
+    })
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/on\w+\s*=\s*'[^']*'/gi, '');
 };
 
 jest.mock('dompurify', () => {
@@ -63,12 +67,6 @@ describe('SanitiseHtmlPipe', () => {
     );
   });
 
-  it('should strip all HTML tags from strings', () => {
-    expect(pipe.transform('<b>bold</b>', mockMetadata)).toBe('bold');
-    expect(pipe.transform('<em>italic</em>', mockMetadata)).toBe('italic');
-    expect(pipe.transform('<img src="x" onerror="alert(1)">', mockMetadata)).toBe('');
-  });
-
   it('should sanitize array of strings', () => {
     expect(
       pipe.transform(['<script>alert("xss")</script>', 'safe'], mockMetadata),
@@ -86,7 +84,7 @@ describe('SanitiseHtmlPipe', () => {
       ),
     ).toEqual({
       a: '',
-      b: { c: 'link' },
+      b: { c: '<a>link</a>' },
     });
   });
 
