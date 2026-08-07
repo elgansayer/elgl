@@ -214,12 +214,33 @@ export class PrivacyService {
       })),
     ];
 
+    // 9) Call logs (GDPR: communications metadata -- caller_name / receiver_name are PII)
+    const { data: callLogs } = await supabase
+      .from('call_logs')
+      .select('*')
+      .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('started_at', { ascending: false });
+
     // 10) Sticker pack ownership
     const { data: userStickerPacks } = await supabase
       .from('user_sticker_packs')
       .select('*')
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
+
+    // 11) Audio room captions (speaker voice transcript -- may contain PII in speech)
+    const { data: audioRoomCaptions } = await supabase
+      .from('audio_room_captions')
+      .select('*')
+      .eq('speaker_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 12) Audio room notes (vocabulary notes authored by the user)
+    const { data: audioRoomNotes } = await supabase
+      .from('audio_room_notes')
+      .select('*')
+      .eq('author_id', userId)
+      .order('created_at', { ascending: false });
 
     return {
       export_generated_at: new Date().toISOString(),
@@ -233,6 +254,9 @@ export class PrivacyService {
       favourites: userFavourites ?? [],
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
       gift_transactions: giftTransactions ?? [],
+      call_logs: callLogs ?? [],
+      audio_room_captions: audioRoomCaptions ?? [],
+      audio_room_notes: audioRoomNotes ?? [],
       user_sticker_packs: userStickerPacks ?? [],
     };
   }

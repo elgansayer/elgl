@@ -105,8 +105,20 @@ describe('PrivacyService', () => {
     // fresh object.  collectUserData calls .from() many times, so we set up
     // mockFrom to return a helper that can handle each table name properly.
     mockFrom.mockImplementation((table: string) => {
-      // Return empty data for economy tables we don't need to test in detail
-      if (table === 'coin_purchases') {
+      // Return empty data for economy and classroom tables we don't need
+      // to test in detail in most specs
+      const emptyOrderEq = jest.fn().mockReturnValue({
+        order: jest.fn().mockResolvedValue({ data: [], error: null }),
+      });
+      const emptyOrderOr = jest.fn().mockReturnValue({
+        order: jest.fn().mockResolvedValue({ data: [], error: null }),
+      });
+
+      if (
+        table === 'coin_purchases' ||
+        table === 'gift_transactions' ||
+        table === 'user_sticker_packs'
+      ) {
         return {
           select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
@@ -115,21 +127,24 @@ describe('PrivacyService', () => {
           }),
         };
       }
-      if (table === 'gift_transactions') {
+      if (table === 'call_logs') {
         return {
           select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({ data: [], error: null }),
-            }),
+            or: emptyOrderOr,
           }),
         };
       }
-      if (table === 'user_sticker_packs') {
+      if (table === 'audio_room_captions') {
         return {
           select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({ data: [], error: null }),
-            }),
+            eq: emptyOrderEq,
+          }),
+        };
+      }
+      if (table === 'audio_room_notes') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: emptyOrderEq,
           }),
         };
       }
@@ -319,6 +334,33 @@ describe('PrivacyService', () => {
           };
         }
         if (table === 'user_sticker_packs') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'call_logs') {
+          return {
+            select: jest.fn().mockReturnValue({
+              or: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'audio_room_captions') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'audio_room_notes') {
           return {
             select: jest.fn().mockReturnValue({
               eq: jest.fn().mockReturnValue({

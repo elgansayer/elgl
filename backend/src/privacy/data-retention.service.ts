@@ -6,7 +6,12 @@ import { SupabaseService } from '../supabase/supabase.service';
  * Scheduled data-retention enforcement for GDPR compliance.
  *
  * Runs nightly to:
+ * - Purge call_logs rows older than 90 days (call metadata is PII linking two users).
  * - Purge login_history rows older than 180 days.
+ * - Purge audio_room_captions older than 180 days (transcript data may contain PII).
+ * - Purge audio_room_notes older than 180 days (vocabulary notes contain author PII).
+ * - Purge audio_room_transcripts older than 180 days (session transcripts/summaries).
+ * - Purge audio_room_tips older than 365 days (financial transaction records).
  * - Purge reports older than 365 days that are in a terminal state.
  * - Archive deleted user records past their grace period.
  */
@@ -15,6 +20,150 @@ export class DataRetentionService {
   private readonly logger = new Logger(DataRetentionService.name);
 
   constructor(private readonly supabaseService: SupabaseService) {}
+
+  /**
+   * Purge call logs older than 90 days.
+   *
+   * Call logs contain caller_name, receiver_name, room_name, and duration
+   * metadata that links two natural persons to a real-time communication
+   * session. Under GDPR this is communications metadata and must not be
+   * retained indefinitely. We keep it for 90 days to support recent call
+   * history UI and abuse investigations.
+   *
+   * Runs once per day at 02:00 UTC.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async purgeCallLogs(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 90);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('call_logs')
+      .delete({ count: 'exact' })
+      .lt('created_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(`Failed to purge call logs: ${error.message}`);
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} call log rows older than ${cutoff.toISOString()}`,
+      );
+    }
+  }
+
+  /**
+   * Purge audio-room captions older than 180 days.
+   * Runs once per day at 02:15 UTC.
+   */
+  @Cron('0 15 2 * * *')
+  async purgeAudioRoomCaptions(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 180);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('audio_room_captions')
+      .delete({ count: 'exact' })
+      .lt('created_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(`Failed to purge audio-room captions: ${error.message}`);
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} audio room caption rows older than ${cutoff.toISOString()}`,
+      );
+    }
+  }
+
+  /**
+   * Purge audio-room notes older than 180 days.
+   * Runs once per day at 02:20 UTC.
+   */
+  @Cron('0 20 2 * * *')
+  async purgeAudioRoomNotes(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 180);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('audio_room_notes')
+      .delete({ count: 'exact' })
+      .lt('created_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(`Failed to purge audio-room notes: ${error.message}`);
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} audio room note rows older than ${cutoff.toISOString()}`,
+      );
+    }
+  }
+
+  /**
+   * Purge audio-room transcripts older than 180 days.
+   * Runs once per day at 02:25 UTC.
+   */
+  @Cron('0 25 2 * * *')
+  async purgeAudioRoomTranscripts(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 180);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('audio_room_transcripts')
+      .delete({ count: 'exact' })
+      .lt('created_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(
+        `Failed to purge audio-room transcripts: ${error.message}`,
+      );
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} audio room transcript rows older than ${cutoff.toISOString()}`,
+      );
+    }
+  }
+
+  /**
+   * Purge audio-room tips older than 365 days.
+   * Runs once per day at 02:30 UTC.
+   */
+  @Cron('0 30 2 * * *')
+  async purgeAudioRoomTips(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 365);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('audio_room_tips')
+      .delete({ count: 'exact' })
+      .lt('created_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(`Failed to purge audio-room tips: ${error.message}`);
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} audio room tip rows older than ${cutoff.toISOString()}`,
+      );
+    }
+  }
 
   /**
    * Purge login history older than 180 days.
@@ -142,10 +291,10 @@ export class DataRetentionService {
   /**
    * Remove all personal data for a user from related tables.
    *
-   * Covers the full Virtual Coin Economy surface area so that no PII or
-   * financial-linkable records survive the GDPR deletion. Receipt tokens
-   * and transaction IDs are destroyed; coin balances are already zeroed
-   * on the anonymised user row.
+   * Covers the full Virtual Coin Economy and Video/Audio Classroom surface
+   * areas so that no PII or financial-linkable records survive the GDPR
+   * deletion. Receipt tokens and transaction IDs are destroyed; coin
+   * balances are already zeroed on the anonymised user row.
    */
   private async wipeUserData(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
@@ -206,6 +355,59 @@ export class DataRetentionService {
       .from('user_statistics')
       .delete()
       .eq('user_id', userId);
+
+    // --- Video / Audio Classroom data ---
+    // Call logs (both caller and receiver)
+    await supabase.from('call_logs').delete().eq('caller_id', userId);
+    await supabase.from('call_logs').delete().eq('receiver_id', userId);
+
+    // Audio room captions (speech transcripts containing the user's voice)
+    await supabase
+      .from('audio_room_captions')
+      .delete()
+      .eq('speaker_id', userId);
+
+    // Audio room notes (vocabulary notes authored by the user)
+    await supabase
+      .from('audio_room_notes')
+      .delete()
+      .eq('author_id', userId);
+
+    // Audio room tips (both sent and received)
+    await supabase
+      .from('audio_room_tips')
+      .delete()
+      .eq('sender_user_id', userId);
+    await supabase
+      .from('audio_room_tips')
+      .delete()
+      .eq('receiver_user_id', userId);
+
+    // Anonymise the user's speaker_name in any remaining audio-room captions
+    // (rows where speaker_id was NOT the user but the name was captured).
+    // Use a bulk nullification to avoid leaving PII in remnant caption rows.
+    const { error: captionNameError } = await supabase
+      .from('audio_room_captions')
+      .update({ speaker_name: null })
+      .eq('speaker_id', userId);
+
+    if (captionNameError) {
+      this.logger.error(
+        `Failed to anonymise speaker_name in audio_room_captions for user ${userId}: ${captionNameError.message}`,
+      );
+    }
+
+    // Anonymise the user's author_name in any remaining audio-room notes
+    const { error: noteNameError } = await supabase
+      .from('audio_room_notes')
+      .update({ author_name: null })
+      .eq('author_id', userId);
+
+    if (noteNameError) {
+      this.logger.error(
+        `Failed to anonymise author_name in audio_room_notes for user ${userId}: ${noteNameError.message}`,
+      );
+    }
 
     this.logger.log(`Wiped personal data for user ${userId}`);
   }
