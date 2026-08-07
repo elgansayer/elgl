@@ -58,8 +58,7 @@ describe('CreateFlashcardDto', () => {
   });
 
   it('should fail when word_token is not a string', async () => {
-    const dto = new CreateFlashcardDto();
-    (dto as any).word_token = 12345;
+    const dto = Object.assign(new CreateFlashcardDto(), { word_token: 12345 });
     dto.translation = 'hello';
 
     const errors = await validate(dto);
@@ -67,9 +66,8 @@ describe('CreateFlashcardDto', () => {
   });
 
   it('should fail when translation is not a string', async () => {
-    const dto = new CreateFlashcardDto();
+    const dto = Object.assign(new CreateFlashcardDto(), { translation: 12345 });
     dto.word_token = 'bonjour';
-    (dto as any).translation = 12345;
 
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
@@ -104,8 +102,7 @@ describe('UpdateSrsDto', () => {
   });
 
   it('should fail when quality is not an integer', async () => {
-    const dto = new UpdateSrsDto();
-    (dto as any).quality = 3.5;
+    const dto = Object.assign(new UpdateSrsDto(), { quality: 3.5 });
 
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
@@ -119,8 +116,7 @@ describe('UpdateSrsDto', () => {
   });
 
   it('should fail when quality is not a number', async () => {
-    const dto = new UpdateSrsDto();
-    (dto as any).quality = 'great';
+    const dto = Object.assign(new UpdateSrsDto(), { quality: 'great' });
 
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);

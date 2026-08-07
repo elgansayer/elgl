@@ -60,8 +60,9 @@ export class VoiceroomPreviewComponent {
   readonly id = input<string>('');
 
   readonly roomResource = resource({
-    request: this.id,
-    loader: async ({ request: roomId }) => {
+    params: () => ({ roomId: this.id() }),
+    loader: async ({ params }) => {
+      const roomId = params.roomId;
       if (!roomId) {
         return undefined;
       }

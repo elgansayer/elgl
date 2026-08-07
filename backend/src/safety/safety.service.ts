@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
@@ -51,7 +52,10 @@ export const SAFETY_CATEGORIES = [
 export class SafetyService {
   private readonly logger = new Logger(SafetyService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly cacheInvalidationService: SafetyCacheInvalidationService,
+  ) {}
 
   /**
    * Invalidates any Redis caches that may contain blocked/reported user data
@@ -132,9 +136,15 @@ export class SafetyService {
       `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
     );
 
+<<<<<<< HEAD
     // Invalidate cached recommendations for both parties after a report.
     await this.invalidateSafetyCaches(reporterId);
     await this.invalidateSafetyCaches(dto.reported_id);
+=======
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserCaches(dto.reported_id);
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+>>>>>>> origin/main
 
     return { id: data.id };
   }
@@ -183,9 +193,18 @@ export class SafetyService {
 
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
 
+<<<<<<< HEAD
     // Invalidate cached recommendations for both parties after a block.
     await this.invalidateSafetyCaches(blockerId);
     await this.invalidateSafetyCaches(dto.blocked_id);
+=======
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserPairCaches(
+      blockerId,
+      dto.blocked_id,
+    );
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+>>>>>>> origin/main
 
     return { success: true, blocked_id: dto.blocked_id };
   }
@@ -207,9 +226,18 @@ export class SafetyService {
 
     this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
 
+<<<<<<< HEAD
     // Invalidate cached recommendations for both parties after an unblock.
     await this.invalidateSafetyCaches(blockerId);
     await this.invalidateSafetyCaches(blockedId);
+=======
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserPairCaches(
+      blockerId,
+      blockedId,
+    );
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+>>>>>>> origin/main
 
     return { success: true };
   }

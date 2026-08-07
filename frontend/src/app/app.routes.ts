@@ -175,6 +175,12 @@ export const routes: Routes = [
       import('./components/settings/settings.component').then((m) => m.SettingsComponent),
   },
   {
+    path: 'settings/account',
+    loadComponent: () =>
+      import('./pages/settings/account/account.component').then((m) => m.AccountSettingsComponent),
+    title: 'Account Settings - HelloTalk',
+  },
+  {
     path: 'settings/notification',
     loadComponent: () =>
       import('./pages/settings/notification-settings/notification-settings.component').then(
@@ -644,5 +650,13 @@ export const routes: Routes = [
         (m) => m.ChangePasswordComponent,
       ),
     title: 'Change Password - HelloTalk',
+  },
+  {
+    path: 'escrow',
+    loadComponent: () =>
+      import('./components/escrow-payments/escrow-payments.component').then(
+        (m) => m.EscrowPaymentsComponent,
+      ),
+    title: 'Escrow Payments - HelloTalk',
   },
 ];

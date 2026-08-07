@@ -1,10 +1,11 @@
 import { showToast } from '../../services/toast.service';
 import { Component, OnInit, inject, signal, input, output } from '@angular/core';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-word-definition-modal',
-  imports: [],
+  imports: [TranslatePipe],
   templateUrl: './word-definition-modal.component.html',
   styleUrls: ['./word-definition-modal.component.scss'],
 })

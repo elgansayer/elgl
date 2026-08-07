@@ -3,8 +3,11 @@ import { DatePipe } from '@angular/common';
 import {
   ModerationService,
   ModerationItem,
+  ModerationActionResponse,
   UserAnalysisResult,
 } from '../services/moderation.service';
+import { OfflineAdminStorageService } from '../services/offline-admin-storage.service';
+import { AdminOfflineBannerComponent } from '../components/admin-offline-banner/admin-offline-banner.component';
 import { TranslatePipe } from '../services/translate.pipe';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
@@ -12,18 +15,20 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
 
 @Component({
   selector: 'app-moderation-queue',
-  standalone: true,
   imports: [
     DatePipe,
     TranslatePipe,
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
     AppCardComponent,
+    AdminOfflineBannerComponent,
   ],
   templateUrl: './moderation-queue.component.html',
 })
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
+  private offlineStorage = inject(OfflineAdminStorageService);
+  readonly isOnline = this.offlineStorage.isOnline;
 
   readonly type = signal<'moment' | 'profile'>('profile');
   readonly status = signal<string | undefined>(undefined);
@@ -44,24 +49,58 @@ export class ModerationQueueComponent {
 
   readonly analysisResult = signal<UserAnalysisResult | null>(null);
   readonly analysisLoading = signal(false);
+  readonly actionInProgress = signal<string | null>(null);
+  readonly actionError = signal<string | null>(null);
 
   setType(type: 'moment' | 'profile'): void {
     this.type.set(type);
     this.analysisResult.set(null);
   }
 
-  setStatus(status: string): void {
-    this.status.set(status || undefined);
+  setStatus(newStatus: string): void {
+    this.status.set(newStatus || undefined);
+    // Clear analysis when switching status filter
+    this.analysisResult.set(null);
   }
 
   async approve(item: ModerationItem): Promise<void> {
-    await this.moderationService.approveItem(item.id, item.type);
-    this.items.reload();
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
+    try {
+      const result: ModerationActionResponse = await this.moderationService.approveItem(
+        item.id,
+        item.type,
+      );
+      if (result.success) {
+        this.items.reload();
+      } else {
+        this.actionError.set(result.error ?? 'Failed to approve item');
+      }
+    } catch {
+      this.actionError.set('Service temporarily unavailable');
+    } finally {
+      this.actionInProgress.set(null);
+    }
   }
 
   async reject(item: ModerationItem): Promise<void> {
-    await this.moderationService.rejectItem(item.id, item.type);
-    this.items.reload();
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
+    try {
+      const result: ModerationActionResponse = await this.moderationService.rejectItem(
+        item.id,
+        item.type,
+      );
+      if (result.success) {
+        this.items.reload();
+      } else {
+        this.actionError.set(result.error ?? 'Failed to reject item');
+      }
+    } catch {
+      this.actionError.set('Service temporarily unavailable');
+    } finally {
+      this.actionInProgress.set(null);
+    }
   }
 
   async analyse(item: ModerationItem): Promise<void> {
@@ -72,9 +111,10 @@ export class ModerationQueueComponent {
     this.analysisLoading.set(true);
     this.analysisResult.set(null);
     try {
-      this.analysisResult.set(
-        await this.moderationService.getUserRiskAnalysis(userId),
-      );
+      const result = await this.moderationService.getUserRiskAnalysis(userId);
+      this.analysisResult.set(result);
+    } catch {
+      this.actionError.set('Failed to analyse user');
     } finally {
       this.analysisLoading.set(false);
     }
