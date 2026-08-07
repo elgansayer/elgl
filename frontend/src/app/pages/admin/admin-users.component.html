@@ -8,13 +8,13 @@
       (input)="onSearchInput($event)"
       placeholder="{{ 'admin.users.searchPlaceholder' | t }}"
       class="border border-slate-300 rounded px-3 py-2 ms-2"
-    />
+     [attr.aria-label]=\"'admin.users.next' | t\"/>
     <button
       type="button"
       (click)="changePage(-1)"
       [disabled]="page() <= 1"
       class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
-    >
+     [attr.aria-label]="'admin.users.previous' | t">
       {{ 'admin.users.previous' | t }}
     </button>
     <span class="text-sm">
@@ -23,7 +23,7 @@
     <button
       type="button"
       (click)="changePage(1)"
-      [disabled]="page() >= pageTotal()"
+      [disabled]="page()  [attr.aria-label]="'admin.users.next' | t">= pageTotal()"
       class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
     >
       {{ 'admin.users.next' | t }}
@@ -101,7 +101,7 @@
                   type="button"
                   (click)="openHistory(user)"
                   class="btn btn-sm rounded border border-slate-300 px-3 py-1 me-2 hover:bg-slate-100"
-                >
+                 [attr.aria-label]="'admin.users.loginHistory' | t">
                   {{ 'admin.users.loginHistory' | t }}
                 </button>
                 <button
@@ -109,7 +109,7 @@
                   (click)="toggleVip(user)"
                   [disabled]="isVipUpdating() === user.id"
                   class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50"
-                >
+                 [attr.aria-label]="'admin.users.disableVip' | t">
                   {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
                 </button>
               </td>
@@ -169,7 +169,7 @@
             type="button"
             (click)="closeHistory()"
             class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
-          >
+           [attr.aria-label]="'admin.users.close' | t">
             {{ 'admin.users.close' | t }}
           </button>
         </div>
