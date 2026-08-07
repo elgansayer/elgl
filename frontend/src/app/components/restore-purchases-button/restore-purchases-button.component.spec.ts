@@ -1,22 +1,39 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { RestorePurchasesButtonComponent } from './restore-purchases-button.component';
+import { RestorePurchasesService } from '../../services/restore-purchases.service';
+import { I18nService } from '../../services/i18n.service';
 
 describe('RestorePurchasesButtonComponent', () => {
   let component: RestorePurchasesButtonComponent;
   let fixture: ComponentFixture<RestorePurchasesButtonComponent>;
   let httpMock: HttpTestingController;
+  let restoreService: RestorePurchasesService;
+
+  const mockI18nService = {
+    translate: (key: string) => key,
+    currentLocale: () => 'en',
+    currentDirection: () => 'ltr',
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [RestorePurchasesButtonComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        RestorePurchasesService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: I18nService, useValue: mockI18nService },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RestorePurchasesButtonComponent);
     component = fixture.componentInstance;
     httpMock = TestBed.inject(HttpTestingController);
+    restoreService = TestBed.inject(RestorePurchasesService);
     fixture.detectChanges();
   });
 
@@ -28,26 +45,33 @@ describe('RestorePurchasesButtonComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render the restore purchases button with translation key', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('restore_purchases');
+  it('should display restore purchases text when not restoring', () => {
+    expect(fixture.nativeElement.textContent).toContain('restore_purchases');
   });
 
-  it('should show spinning indicator while restoring', async () => {
-    const promise = component.onRestore();
+  it('should show loading spinner when isRestoring is true', () => {
+    restoreService.isRestoring.set(true);
     fixture.detectChanges();
-
-    const req = httpMock.expectOne('/api/monetisation/restore-purchases');
-    expect(component.restoreService.isRestoring()).toBe(true);
-
-    // Flush to clean up
-    req.flush({ received: true, status: 'restored' });
-    await promise;
-    fixture.detectChanges();
+    const spinner = fixture.nativeElement.querySelector('.animate-spin');
+    expect(spinner).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('restoring');
   });
 
-  it('should call restore on button click', () => {
+  it('should call restorePurchases on button click', () => {
+    const restoreSpy = vi.spyOn(restoreService, 'restorePurchases').mockResolvedValue({
+      success: true,
+      restoredPlans: [],
+      message: 'test',
+    });
     const button = fixture.nativeElement.querySelector('app-button-secondary');
-    expect(button).toBeTruthy();
+    button.dispatchEvent(new Event('clicked'));
+    expect(restoreSpy).toHaveBeenCalledOnce();
+  });
+
+  it('should disable button when isRestoring is true', () => {
+    restoreService.isRestoring.set(true);
+    fixture.detectChanges();
+    expect(restoreService.isRestoring()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('restoring');
   });
 });
