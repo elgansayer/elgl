@@ -258,8 +258,6 @@ export class MomentsFeedComponent {
       console.error('Inline translation error:', e);
       this.translationCache.update((prev) => ({ ...prev, [cacheKey]: this.i18n.translate('moments.transError') }));
       this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
-    } finally {
-      moment.isTranslating = false;
     }
   }
 
