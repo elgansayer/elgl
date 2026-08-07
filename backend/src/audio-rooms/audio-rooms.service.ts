@@ -1215,9 +1215,7 @@ export class AudioRoomsService implements OnModuleInit {
     }
     const rows = data as Array<{ host_id: string; is_private?: boolean }>;
     // Only return hosts of public active rooms
-    const publicHosts = rows
-      .filter((r) => !r.is_private)
-      .map((r) => r.host_id);
+    const publicHosts = rows.filter((r) => !r.is_private).map((r) => r.host_id);
     return [...new Set(publicHosts)];
   }
 
@@ -1725,7 +1723,9 @@ export class AudioRoomsService implements OnModuleInit {
 
     const tipRow = tipResponse.data as { id: string };
 
-    const senderUser = senderResponse.data as { display_name?: string | null } | null;
+    const senderUser = senderResponse.data as {
+      display_name?: string | null;
+    } | null;
     const senderName = senderUser?.display_name || 'Someone';
 
     void this.centrifugoService.publish(`room_${room.id}`, {
@@ -1792,9 +1792,7 @@ ${transcriptText.substring(0, 4000)}`;
         };
         return {
           summary: parsed.summary ?? '',
-          vocabulary: Array.isArray(parsed.vocabulary)
-            ? parsed.vocabulary
-            : [],
+          vocabulary: Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [],
         };
       }
     } catch (error) {
