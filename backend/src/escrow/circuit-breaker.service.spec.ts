@@ -135,5 +135,40 @@ describe('CircuitBreakerService', () => {
       expect(states.has('service-a')).toBe(true);
       expect(states.has('service-b')).toBe(true);
     });
+
+    it('should return empty map when no breakers registered', () => {
+      const states = service.getAllStates();
+      expect(states.size).toBe(0);
+    });
+  });
+
+  describe('concurrent operations', () => {
+    it('should not count reset as new failure', () => {
+      for (let i = 0; i < 3; i++) {
+        service.recordFailure('concurrent-test');
+      }
+      // Intermediate state: not yet open
+      expect(service.isAvailable('concurrent-test')).toBe(true);
+      // Add 2 more to open
+      service.recordFailure('concurrent-test');
+      service.recordFailure('concurrent-test');
+      expect(service.isAvailable('concurrent-test')).toBe(false);
+    });
+
+    it('should maintain separate states per service', () => {
+      for (let i = 0; i < 5; i++) {
+        service.recordFailure('service-x');
+      }
+      service.recordSuccess('service-y');
+      service.recordSuccess('service-y');
+
+      expect(service.isAvailable('service-x')).toBe(false);
+      expect(service.isAvailable('service-y')).toBe(true);
+
+      const stateX = service.getState('service-x');
+      const stateY = service.getState('service-y');
+      expect(stateX.failureCount).toBe(5);
+      expect(stateY.failureCount).toBe(0);
+    });
   });
 });
