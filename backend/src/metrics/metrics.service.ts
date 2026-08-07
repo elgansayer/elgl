@@ -26,7 +26,23 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+  // Escrow Payment metrics
+  readonly escrowCreated: Counter<string>;
+  readonly escrowReleased: Counter<string>;
+  readonly escrowRefunded: Counter<string>;
+  readonly escrowDisputed: Counter<string>;
+  readonly escrowsByStatus: Gauge<string>;
+  readonly escrowsValueHeld: Gauge<string>;
+  readonly escrowsStuckPending: Gauge<string>;
+  readonly escrowDisputeRate: Gauge<string>;
+  readonly escrowResolutionDuration: Histogram<string>;
+=======
+  // Trust & Safety metrics
+=======
 // Trust & Safety metrics
+>>>>>>> origin/main
   readonly tsReportsSubmitted: Counter<string>;
   readonly tsBlocksCreated: Counter<string>;
   readonly tsBlocksRemoved: Counter<string>;
@@ -36,6 +52,7 @@ export class MetricsService {
   readonly tsDatingRiskScore: Histogram<string>;
   readonly tsReportsByCategory: Counter<string>;
   readonly tsModerationQueueLatency: Histogram<string>;
+>>>>>>> origin/main
 
   // LingQ Reading Engine metrics
   readonly readingEngineSessions: Counter<string>;
@@ -192,7 +209,70 @@ export class MetricsService {
       registers: [this.register],
     });
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+    // --- Escrow Metrics ---
+
+    this.escrowCreated = new Counter({
+      name: 'hellotalk_escrow_created_total',
+      help: 'Total number of escrows created',
+      labelNames: ['service_type'],
+      registers: [this.register],
+    });
+
+    this.escrowReleased = new Counter({
+      name: 'hellotalk_escrow_released_total',
+      help: 'Total number of escrows released to receiver',
+      registers: [this.register],
+    });
+
+    this.escrowRefunded = new Counter({
+      name: 'hellotalk_escrow_refunded_total',
+      help: 'Total number of escrows refunded to sender',
+      registers: [this.register],
+    });
+
+    this.escrowDisputed = new Counter({
+      name: 'hellotalk_escrow_disputed_total',
+      help: 'Total number of escrow disputes raised',
+      registers: [this.register],
+    });
+
+    this.escrowsByStatus = new Gauge({
+      name: 'hellotalk_escrows_by_status',
+      help: 'Number of escrows per status',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.escrowsValueHeld = new Gauge({
+      name: 'hellotalk_escrows_value_held',
+      help: 'Total coin value currently held in pending escrows',
+      registers: [this.register],
+    });
+
+    this.escrowsStuckPending = new Gauge({
+      name: 'hellotalk_escrows_stuck_pending',
+      help: 'Number of pending escrows older than 24 hours',
+      registers: [this.register],
+    });
+
+    this.escrowDisputeRate = new Gauge({
+      name: 'hellotalk_escrow_dispute_rate',
+      help: 'Ratio of disputed escrows to total completed escrows, 0-1',
+      registers: [this.register],
+    });
+
+    this.escrowResolutionDuration = new Histogram({
+      name: 'hellotalk_escrow_resolution_duration_seconds',
+      help: 'Time from escrow creation to resolution (release or refund)',
+      registers: [this.register],
+      buckets: [60, 300, 900, 1800, 3600, 7200, 14400, 86400],
+=======
+    // --- Trust & Safety Metrics ---
+=======
 // --- Trust & Safety Metrics ---
+>>>>>>> origin/main
 
     this.tsReportsSubmitted = new Counter({
       name: 'hellotalk_ts_reports_submitted_total',
@@ -252,6 +332,7 @@ export class MetricsService {
       labelNames: ['action'],
       buckets: [0.1, 0.5, 1, 2, 5, 10],
       registers: [this.register],
+>>>>>>> origin/main
     });
 
     // --- LingQ Reading Engine Metrics ---
@@ -670,7 +751,49 @@ export class MetricsService {
     this.srsDecksCreated.inc();
   }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+  // --- Escrow metric helpers ---
+
+  recordEscrowCreated(serviceType: string = 'other'): void {
+    this.escrowCreated.inc({ service_type: serviceType });
+  }
+
+  recordEscrowReleased(): void {
+    this.escrowReleased.inc();
+  }
+
+  recordEscrowRefunded(): void {
+    this.escrowRefunded.inc();
+  }
+
+  recordEscrowDisputed(): void {
+    this.escrowDisputed.inc();
+  }
+
+  setEscrowsByStatus(status: string, count: number): void {
+    this.escrowsByStatus.set({ status }, count);
+  }
+
+  setEscrowsValueHeld(value: number): void {
+    this.escrowsValueHeld.set(value);
+  }
+
+  setEscrowsStuckPending(count: number): void {
+    this.escrowsStuckPending.set(count);
+  }
+
+  setEscrowDisputeRate(rate: number): void {
+    this.escrowDisputeRate.set(rate);
+  }
+
+  recordEscrowResolutionDuration(durationSeconds: number): void {
+    this.escrowResolutionDuration.observe(durationSeconds);
+=======
+  // --- Trust & Safety metric helpers ---
+=======
 // --- Trust & Safety metric helpers ---
+>>>>>>> origin/main
 
   recordTsReportSubmitted(reasonCategory: string = 'unknown'): void {
     this.tsReportsSubmitted.inc({ reason_category: reasonCategory });
@@ -704,6 +827,7 @@ export class MetricsService {
 
   recordTsDatingRiskScore(score: number): void {
     this.tsDatingRiskScore.observe(score);
+>>>>>>> origin/main
   }
 
   // --- LingQ Reading Engine metric helpers ---
