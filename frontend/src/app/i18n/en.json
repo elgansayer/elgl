@@ -71,6 +71,12 @@
       "next": "Next",
       "pageIndicator": "Page {page} of {totalPages}",
       "paginationAria": "Block list pagination"
+    },
+    "offline": {
+      "banner": "You are offline",
+      "cachedDataAvailable": "\u2013 viewing cached data",
+      "actionsDisabled": "Moderation actions are unavailable while offline",
+      "cachedDataNote": "Cached data"
     }
   },
   "aiConversation": {
@@ -80,5 +86,6 @@
     "send": "Send",
     "typing": "Writing...",
     "backToScenarios": "Back to scenarios"
-  }
+  },
+  "moderation": {}
 }

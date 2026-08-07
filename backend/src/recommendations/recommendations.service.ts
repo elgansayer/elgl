@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MOCK_USERS } from '../mock-data';
 
 export interface RecommendedUserDto {
   id: string;
@@ -12,6 +13,8 @@ export interface RecommendedUserDto {
   isSeriousLearner: boolean | null | undefined;
   studyStreakDays: number | null | undefined;
   correctionRatio: number | null | undefined;
+  /** Indicates which fallback tier produced this recommendation. */
+  matchTier?: 'interest' | 'language_exchange' | 'active_users' | 'mock';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -20,6 +23,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const DAILY_REDIS_TTL = 86400; // 24 hours
 const DAILY_LIMIT = 10;
+const FALLBACK_LIMIT = 20;
 
 interface UserRow {
   id: string;
@@ -31,6 +35,7 @@ interface UserRow {
   study_streak_days?: number | null;
   correction_ratio?: number | null;
   privacy_hide_from_search?: boolean | null;
+  last_active_at?: string | null;
 }
 
 @Injectable()
@@ -107,28 +112,148 @@ export class RecommendationsService {
     }
   }
 
-  /** Returns cached top 10 language partner recommendations for a user. */
+  /** Returns cached top 10 language partner recommendations for a user.
+   *  Gracefully degrades: Redis cache -> compute live -> empty array. */
   async getDailyRecommendations(userId: string): Promise<RecommendedUserDto[]> {
-    const redis = this.supabaseService.getRedisClient();
-    const cached = await redis.get(`recommendations:daily:${userId}`);
-    if (!cached) return [];
     try {
-      const parsed: unknown = JSON.parse(cached);
-      if (Array.isArray(parsed)) {
-        return parsed as RecommendedUserDto[];
+      const redis = this.supabaseService.getRedisClient();
+      const cached = await redis.get(`recommendations:daily:${userId}`);
+      if (cached) {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed as RecommendedUserDto[];
+        }
       }
-    } catch {
+    } catch (error) {
       this.logger.warn(
-        `Failed to parse cached daily recommendations for user ${userId}`,
+        `Redis unavailable for daily recommendations (user ${userId}), falling back to live computation`,
+        error,
+      );
+      // Fall through to live computation
+    }
+
+    // Tier 2: compute language-exchange recommendations on the fly
+    try {
+      return await this.recommendationsByLanguageExchange(userId);
+    } catch (error) {
+      this.logger.warn(
+        `Live language-exchange fallback failed for user ${userId}`,
+        error,
       );
     }
+
     return [];
   }
 
+  /** Interest-based recommendations. Falls back gracefully through tiers
+   *  when any tier returns empty or throws. */
   async getRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    // Tier 1: Interest-based
+    try {
+      const interestResults = await this.recommendationsByInterests(userId);
+      if (interestResults.length > 0) return interestResults;
+    } catch (error) {
+      this.logger.warn(
+        `Interest-based recommendations failed for user ${userId}, falling back to language exchange`,
+        error,
+      );
+    }
+
+    // Tier 2: language exchange matchmaking
+    try {
+      const languageMatches = await this.recommendationsByLanguageExchange(
+        userId,
+      );
+      if (languageMatches.length > 0) return languageMatches;
+    } catch (error) {
+      this.logger.warn(
+        `Language exchange fallback failed for user ${userId}`,
+        error,
+      );
+    }
+
+    // Tier 3: most active users
+    try {
+      const activeUsers = await this.recommendationsByActiveUsers(userId);
+      if (activeUsers.length > 0) return activeUsers;
+    } catch (error) {
+      this.logger.error(
+        `Active users fallback failed for user ${userId}`,
+        error,
+      );
+    }
+
+    // Tier 4: mock data as ultimate fallback
+    return this.recommendationsFromMock(userId);
+  }
+
+  /** Orchestrates multi-tier recommendations with graceful degradation.
+   *  Designed as the primary public API for matchmaking consumers. */
+  async getRecommendationsWithFallback(
+    userId: string,
+  ): Promise<RecommendedUserDto[]> {
+    // Tier 1: Interest-based (highest quality)
+    try {
+      const interestResults = await this.recommendationsByInterests(userId);
+      if (interestResults.length > 0) {
+        return interestResults.map((r) => ({
+          ...r,
+          matchTier: 'interest' as const,
+        }));
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Tier 1 (interest) unavailable for user ${userId}, degrading`,
+        error,
+      );
+    }
+
+    // Tier 2: Language exchange
+    try {
+      const languageResults = await this.recommendationsByLanguageExchange(
+        userId,
+      );
+      if (languageResults.length > 0) {
+        return languageResults.map((r) => ({
+          ...r,
+          matchTier: 'language_exchange' as const,
+        }));
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Tier 2 (language exchange) unavailable for user ${userId}, degrading`,
+        error,
+      );
+    }
+
+    // Tier 3: Most active users
+    try {
+      const activeResults = await this.recommendationsByActiveUsers(userId);
+      if (activeResults.length > 0) {
+        return activeResults.map((r) => ({
+          ...r,
+          matchTier: 'active_users' as const,
+        }));
+      }
+    } catch (error) {
+      this.logger.error(
+        `Tier 3 (active users) unavailable for user ${userId}, degrading to mock data`,
+        error,
+      );
+    }
+
+    // Tier 4: Mock data (always available)
+    return this.recommendationsFromMock(userId);
+  }
+
+  // ---- Private fallback tier methods ----
+
+  /** Tier 1: Interest-based matching via shared user_interests tags. */
+  private async recommendationsByInterests(
+    userId: string,
+  ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    // 1. Fetch the current user's interest tags
     const { data: ownTags, error: tagsError } = await supabase
       .from('user_interests')
       .select('tag')
@@ -151,7 +276,6 @@ export class RecommendationsService {
       return [];
     }
 
-    // 2. Find other users that share at least one of the same tags
     const { data: shared, error: sharedError } = await supabase
       .from('user_interests')
       .select('user_id, tag')
@@ -162,17 +286,13 @@ export class RecommendationsService {
       throw new Error(sharedError.message);
     }
 
-    // 3. Count how many tags each candidate has in common
     const sharedCount = new Map<string, number>();
     if (Array.isArray(shared)) {
       for (const row of shared) {
         if (isRecord(row)) {
-          const userIdValue = row['user_id'];
-          if (typeof userIdValue === 'string') {
-            sharedCount.set(
-              userIdValue,
-              (sharedCount.get(userIdValue) ?? 0) + 1,
-            );
+          const uid = row['user_id'];
+          if (typeof uid === 'string') {
+            sharedCount.set(uid, (sharedCount.get(uid) ?? 0) + 1);
           }
         }
       }
@@ -184,7 +304,6 @@ export class RecommendationsService {
 
     const candidateIds = Array.from(sharedCount.keys());
 
-    // 4. Fetch user profile details for all candidates
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(
@@ -197,8 +316,7 @@ export class RecommendationsService {
       throw new Error(usersError.message);
     }
 
-    // 5. Build the DTO list, sort by the requested criteria, and limit to 20
-    const recommended: RecommendedUserDto[] = (users ?? [])
+    return (users ?? [])
       .map((u) => ({
         id: u.id,
         displayName: u.display_name,
@@ -211,19 +329,149 @@ export class RecommendationsService {
         correctionRatio: u.correction_ratio,
       }))
       .sort((a, b) => {
-        // 1. Most shared interests
         if (b.sharedInterests !== a.sharedInterests) {
           return b.sharedInterests - a.sharedInterests;
         }
-        // 2. Serious learners first
         if (a.isSeriousLearner !== b.isSeriousLearner) {
           return b.isSeriousLearner ? 1 : -1;
         }
-        // 3. Highest streak days
         return (b.studyStreakDays ?? 0) - (a.studyStreakDays ?? 0);
       })
-      .slice(0, 20);
+      .slice(0, FALLBACK_LIMIT);
+  }
 
-    return recommended;
+  /** Tier 2: Language-exchange matching (complementary native/target languages). */
+  private async recommendationsByLanguageExchange(
+    userId: string,
+  ): Promise<RecommendedUserDto[]> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('native_language, target_languages')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (userError || !user) {
+      throw new Error(
+        `Failed to fetch user profile: ${userError?.message ?? 'not found'}`,
+      );
+    }
+
+    const nativeLang = user['native_language'] as string | null;
+    const targetLanguages = user['target_languages'] as string[] | null;
+
+    if (
+      !nativeLang ||
+      !targetLanguages ||
+      targetLanguages.length === 0
+    ) {
+      return [];
+    }
+
+    const { data: matches, error: matchError } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+      )
+      .neq('id', userId)
+      .eq('privacy_hide_from_search', false)
+      .in('native_language', targetLanguages)
+      .contains('target_languages', [nativeLang])
+      .order('is_serious_learner', { ascending: false })
+      .limit(FALLBACK_LIMIT);
+
+    if (matchError) {
+      throw new Error(matchError.message);
+    }
+
+    if (!matches || matches.length === 0) {
+      return [];
+    }
+
+    return (matches as UserRow[]).map((m) => ({
+      id: m.id,
+      displayName: m.display_name ?? null,
+      avatarUrl: m.avatar_url ?? null,
+      nativeLanguage: m.native_language ?? null,
+      targetLanguages: m.target_languages ?? null,
+      sharedInterests: 0,
+      isSeriousLearner: m.is_serious_learner ?? null,
+      studyStreakDays: m.study_streak_days ?? null,
+      correctionRatio: m.correction_ratio ?? null,
+    }));
+  }
+
+  /** Tier 3: Most active users by recent activity and study streaks. */
+  private async recommendationsByActiveUsers(
+    userId: string,
+  ): Promise<RecommendedUserDto[]> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: users, error } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+      )
+      .neq('id', userId)
+      .eq('privacy_hide_from_search', false)
+      .order('study_streak_days', { ascending: false })
+      .limit(FALLBACK_LIMIT);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!users || users.length === 0) {
+      return [];
+    }
+
+    return (users as UserRow[]).map((u) => ({
+      id: u.id,
+      displayName: u.display_name ?? null,
+      avatarUrl: u.avatar_url ?? null,
+      nativeLanguage: u.native_language ?? null,
+      targetLanguages: u.target_languages ?? null,
+      sharedInterests: 0,
+      isSeriousLearner: u.is_serious_learner ?? null,
+      studyStreakDays: u.study_streak_days ?? null,
+      correctionRatio: u.correction_ratio ?? null,
+    }));
+  }
+
+  /** Tier 4: Ultimate fallback using in-memory mock data. */
+  private recommendationsFromMock(
+    userId: string,
+  ): RecommendedUserDto[] {
+    this.logger.log(
+      `Using mock data as ultimate fallback for user ${userId}`,
+    );
+
+    const mockUsers = MOCK_USERS as Array<{
+      id: string;
+      display_name: string;
+      native_languages: string;
+      target_languages: string[];
+      study_streak_days: number;
+      correction_ratio: number;
+      is_serious_learner: boolean;
+      avatar_url: string;
+    }>;
+
+    return mockUsers
+      .filter((u) => u.id !== userId)
+      .slice(0, FALLBACK_LIMIT)
+      .map((u) => ({
+        id: u.id,
+        displayName: u.display_name,
+        avatarUrl: u.avatar_url,
+        nativeLanguage: u.native_languages,
+        targetLanguages: u.target_languages,
+        sharedInterests: 0,
+        isSeriousLearner: u.is_serious_learner,
+        studyStreakDays: u.study_streak_days,
+        correctionRatio: u.correction_ratio,
+        matchTier: 'mock' as const,
+      }));
   }
 }

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { OfflineAdminStorageService } from './offline-admin-storage.service';
 
 export interface AdminUserSummary {
   id: string;
@@ -121,6 +122,7 @@ const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
 export class AdminService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private offlineStorage = inject(OfflineAdminStorageService);
   private baseUrl = `${environment.apiUrl}/admin`;
 
   private getHeaders() {
@@ -154,27 +156,38 @@ export class AdminService {
       params = params.set('search', search);
     }
 
-    return firstValueFrom(
-      this.http
-        .get<AdminUserListResult>(`${this.baseUrl}/users`, {
+    try {
+      const result = await firstValueFrom(
+        this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
           headers: this.getHeaders(),
           params,
-        })
-        .pipe(
-          catchError(() =>
-            of({
-              users: search
-                ? MOCK_ADMIN_USERS.filter((u) =>
-                    (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
-                  )
-                : MOCK_ADMIN_USERS,
-              total: MOCK_ADMIN_USERS.length,
-              page,
-              pageSize,
-            }),
-          ),
-        ),
-    );
+        }),
+      );
+      // Cache the successful result for offline use
+      this.offlineStorage
+        .cacheUsers(search, page, pageSize, result.users, result.total)
+        .catch(() => undefined);
+      return result;
+    } catch {
+      // Try offline cache first, then mock fallback
+      const cached = await this.offlineStorage
+        .getCachedUsers(search, page, pageSize)
+        .catch(() => null);
+      if (cached) {
+        return { ...cached, page, pageSize };
+      }
+
+      return {
+        users: search
+          ? MOCK_ADMIN_USERS.filter((u) =>
+              (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
+            )
+          : MOCK_ADMIN_USERS,
+        total: MOCK_ADMIN_USERS.length,
+        page,
+        pageSize,
+      };
+    }
   }
 
   async setVipStatus(userId: string, isVip: boolean, vipTier?: string): Promise<AdminUserSummary> {
@@ -190,32 +203,56 @@ export class AdminService {
   }
 
   async getLoginHistory(userId: string): Promise<LoginHistoryEntry[]> {
-    return firstValueFrom(
-      this.http
-        .get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
+    try {
+      const result = await firstValueFrom(
+        this.http.get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
           headers: this.getHeaders(),
-        })
-        .pipe(catchError(() => of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId)))),
-    );
+        }),
+      );
+      // Cache for offline use
+      this.offlineStorage
+        .cacheLoginHistory(userId, result)
+        .catch(() => undefined);
+      return result;
+    } catch {
+      // Try offline cache first
+      const cached = await this.offlineStorage
+        .getCachedLoginHistory(userId)
+        .catch(() => null);
+      if (cached) return cached;
+      return MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId);
+    }
   }
 
   async banUser(userId: string): Promise<{ message: string }> {
     return firstValueFrom(
-      this.http.post<{ message: string }>(
-        `${this.baseUrl}/users/${userId}/ban`,
-        {},
-        { headers: this.getHeaders() },
-      ),
+      this.http
+        .post<{ message: string }>(
+          `${this.baseUrl}/users/${userId}/ban`,
+          {},
+          { headers: this.getHeaders() },
+        )
+        .pipe(
+          catchError(() =>
+            of({ message: 'Failed to ban user - service temporarily unavailable' }),
+          ),
+        ),
     );
   }
 
   async warnUser(userId: string): Promise<{ message: string }> {
     return firstValueFrom(
-      this.http.post<{ message: string }>(
-        `${this.baseUrl}/users/${userId}/warn`,
-        {},
-        { headers: this.getHeaders() },
-      ),
+      this.http
+        .post<{ message: string }>(
+          `${this.baseUrl}/users/${userId}/warn`,
+          {},
+          { headers: this.getHeaders() },
+        )
+        .pipe(
+          catchError(() =>
+            of({ message: 'Failed to warn user - service temporarily unavailable' }),
+          ),
+        ),
     );
   }
 
@@ -224,26 +261,35 @@ export class AdminService {
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
 
-    return firstValueFrom(
-      this.http
-        .get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
+    try {
+      const result = await firstValueFrom(
+        this.http.get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
           headers: this.getHeaders(),
           params,
-        })
-        .pipe(
-          catchError(() =>
-            of({ blocks: [], total: 0, page, pageSize }),
-          ),
-        ),
-    );
+        }),
+      );
+      // Cache for offline use
+      this.offlineStorage
+        .cacheBlocks(page, pageSize, result.blocks, result.total)
+        .catch(() => undefined);
+      return result;
+    } catch {
+      const cached = await this.offlineStorage
+        .getCachedBlocks(page, pageSize)
+        .catch(() => null);
+      if (cached) return { ...cached, page, pageSize };
+      return { blocks: [], total: 0, page, pageSize };
+    }
   }
 
   async removeBlock(blockId: string): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.delete<{ success: boolean }>(
-        `${this.baseUrl}/blocks/${blockId}`,
-        { headers: this.getHeaders() },
-      ),
+      this.http
+        .delete<{ success: boolean }>(
+          `${this.baseUrl}/blocks/${blockId}`,
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of({ success: false }))),
     );
   }
 }

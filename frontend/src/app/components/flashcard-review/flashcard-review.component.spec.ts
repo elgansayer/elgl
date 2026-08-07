@@ -83,16 +83,33 @@ describe('FlashcardReviewComponent', () => {
   });
 
   it('should render progress bar with ARIA attributes', () => {
+<<<<<<< HEAD
+=======
+    const fixture = TestBed.createComponent(FlashcardReviewComponent);
+    // Override the reviewCards computed by providing cards input
+    TestBed.flushEffects?.();
+    fixture.detectChanges();
+
+>>>>>>> origin/main
     const progressBar = fixture.nativeElement.querySelector('[role="progressbar"]');
     expect(progressBar).toBeTruthy();
     expect(progressBar.getAttribute('aria-valuemin')).toBe('0');
     expect(progressBar.getAttribute('aria-valuemax')).toBe('100');
   });
 
+<<<<<<< HEAD
   it('should render flashcard content when cards exist', () => {
     expect(component.reviewCards().length).toBe(2);
     const rendered = fixture.nativeElement.textContent;
     expect(rendered).toContain('abundant');
+=======
+  it('should render flashcard with keyboard accessibility', () => {
+    const fixture = TestBed.createComponent(FlashcardReviewComponent);
+    fixture.detectChanges();
+
+    // No card shown when empty, just verify component renders without error
+    expect(fixture.componentInstance).toBeTruthy();
+>>>>>>> origin/main
   });
 
   it('should flip card when clicked', () => {

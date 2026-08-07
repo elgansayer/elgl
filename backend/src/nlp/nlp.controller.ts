@@ -1,7 +1,13 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, UseInterceptors } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_PRIVATE_NO_STORE,
+  CACHE_PRIVATE_SHORT,
+  CACHE_PUBLIC_SHORT,
+} from '../common/cache.interceptor';
 import { UsersService } from '../users/users.service';
 import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
@@ -27,7 +33,12 @@ export class NlpController {
     private readonly usersService: UsersService,
   ) {}
 
+  /**
+   * Language detection is deterministic for the same input text.
+   * Client-side caching helps avoid redundant API calls.
+   */
   @Post('detect-language')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_SHORT))
   detectLanguage(@Body() body: { text?: string }): {
     language: string;
     confidence: number;
@@ -35,7 +46,11 @@ export class NlpController {
     return this.nlpService.detectLanguage(body.text || '');
   }
 
+  /**
+   * Translation: mutation-like (counts toward rate limit), no-store.
+   */
   @Post('translate')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async translate(
     @CurrentUser() user: User | null,
     @Body() dto: TranslateDto,
@@ -49,12 +64,21 @@ export class NlpController {
     );
   }
 
+  /**
+   * UI translations are cached in Redis and change rarely.
+   * Edge caching reduces load on the DeepL integration.
+   */
   @Post('translate-ui')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_SHORT))
   async translateUi(@Body() dto: TranslateUiDto): Promise<TranslateUiResult> {
     return await this.nlpService.translateUi(dto);
   }
 
+  /**
+   * Grammar check: mutation (counts toward rate limit), no-store.
+   */
   @Post('grammar-check')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async grammarCheck(
     @CurrentUser() user: User | null,
     @Body() dto: GrammarCheckDto,
@@ -68,7 +92,11 @@ export class NlpController {
     );
   }
 
+  /**
+   * Grammar explanation: mutation (counts toward rate limit), no-store.
+   */
   @Post('explain-grammar')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async explainGrammar(
     @CurrentUser() user: User | null,
     @Body() dto: ExplainGrammarDto,
@@ -86,7 +114,11 @@ export class NlpController {
     );
   }
 
+  /**
+   * Pronunciation scoring: mutation (counts toward rate limit), no-store.
+   */
   @Post('pronunciation-score')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async pronunciationScore(
     @CurrentUser() user: User | null,
     @Body() dto: PronunciationScoreDto,
@@ -100,7 +132,11 @@ export class NlpController {
     );
   }
 
+  /**
+   * Simplification: mutation (counts toward rate limit), no-store.
+   */
   @Post('simplify')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async simplify(
     @CurrentUser() user: User | null,
     @Body() dto: SimplifyDto,
@@ -114,7 +150,11 @@ export class NlpController {
     );
   }
 
+  /**
+   * Combined translate + correct: mutation, no-store.
+   */
   @Post('translate-and-correct')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async translateAndCorrect(
     @CurrentUser() user: User | null,
     @Body() dto: TranslateDto,
@@ -128,7 +168,11 @@ export class NlpController {
     );
   }
 
+  /**
+   * Bio translation: mutation (counts toward rate limit), no-store.
+   */
   @Post('translate-bio')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async translateBio(
     @CurrentUser() user: User | null,
     @Body() dto: TranslateBioDto,
@@ -146,7 +190,11 @@ export class NlpController {
     );
   }
 
+  /**
+   * Audio transcription: mutation (counts toward rate limit), no-store.
+   */
   @Post('transcribe-audio')
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async transcribeAudio(
     @Body() dto: TranscribeAudioDto,
   ): Promise<{ transcription: string; language: string }> {

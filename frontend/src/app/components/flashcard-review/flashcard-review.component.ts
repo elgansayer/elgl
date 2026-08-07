@@ -3,13 +3,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-flashcard-review',
   standalone: true,
-  imports: [TranslatePipe, SrsErrorBoundaryComponent],
+  imports: [TranslatePipe, SrsErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -17,174 +19,205 @@ type ReviewGrade = 'again' | 'good' | 'known';
       (retry)="handleRetry()"
     >
     <div class="mx-auto max-w-md space-y-6 pb-20 pt-4">
-      <!-- Header with progress -->
-      <section class="app-card app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
-        <div class="flex items-center justify-between">
-          <h2 class="app-section-title">{{ 'review.title' | t }}</h2>
-          <span class="text-xs font-bold text-text-muted" aria-live="polite">
-            {{ 'review.progress' | t: { current: currentIndex() + 1, total: reviewCards().length } }}
-          </span>
-        </div>
-        <!-- Progress bar -->
-        <div
-          class="h-1.5 w-full overflow-hidden rounded-full bg-surface-200"
-          role="progressbar"
-          [attr.aria-valuenow]="progressPercent()"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          [attr.aria-label]="'review.progressPercent' | t: { percent: progressPercent() }"
-        >
+      @if (isLoading()) {
+        <!-- Skeleton loading state -->
+        <section class="app-card app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
+          <div class="flex items-center justify-between">
+            <app-skeleton-loader [height]="'20px'" [width]="'140px'" [borderRadius]="'8px'" />
+            <app-skeleton-loader [height]="'14px'" [width]="'60px'" [borderRadius]="'8px'" />
+          </div>
+          <app-skeleton-loader [height]="'6px'" [width]="'100%'" [borderRadius]="'4px'" />
+          <div class="flex gap-3">
+            <app-skeleton-loader [height]="'20px'" [width]="'52px'" [borderRadius]="'999px'" />
+            <app-skeleton-loader [height]="'20px'" [width]="'52px'" [borderRadius]="'999px'" />
+            <app-skeleton-loader [height]="'20px'" [width]="'52px'" [borderRadius]="'999px'" />
+          </div>
+        </section>
+        <section class="app-card app-padded space-y-4" aria-hidden="true">
+          <app-skeleton-loader [height]="'14rem'" [width]="'100%'" [borderRadius]="'1rem'" />
+          <div class="grid grid-cols-4 gap-2">
+            <app-skeleton-loader [height]="'4.5rem'" [width]="'100%'" [borderRadius]="'0.75rem'" />
+            <app-skeleton-loader [height]="'4.5rem'" [width]="'100%'" [borderRadius]="'0.75rem'" class="col-span-2" />
+            <app-skeleton-loader [height]="'4.5rem'" [width]="'100%'" [borderRadius]="'0.75rem'" />
+          </div>
+        </section>
+      } @else if (reviewCards().length === 0) {
+        <!-- Empty state - no cards to review -->
+        <app-empty-state
+          [icon]="'🎯'"
+          [title]="'review.emptyTitle' | t"
+          [description]="'review.emptyDesc' | t"
+        />
+      } @else {
+        <!-- Header with progress -->
+        <section class="app-card app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
+          <div class="flex items-center justify-between">
+            <h2 class="app-section-title">{{ 'review.title' | t }}</h2>
+            <span class="text-xs font-bold text-text-muted" aria-live="polite">
+              {{ 'review.progress' | t: { current: currentIndex() + 1, total: reviewCards().length } }}
+            </span>
+          </div>
+          <!-- Progress bar -->
           <div
-            class="h-full rounded-full bg-primary transition-all duration-300 ease-out"
-            [style.width]="progressPercent() + '%'"
-          ></div>
-        </div>
-        <!-- Session stats -->
-        <div class="flex gap-3 text-xs" aria-live="polite" aria-atomic="true">
-          <span class="rounded-app bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-400">
-            {{ 'review.knownCount' | t: { count: sessionStats().known } }}
-          </span>
-          <span class="rounded-app bg-amber-500/20 px-2 py-0.5 font-bold text-amber-400">
-            {{ 'review.goodCount' | t: { count: sessionStats().good } }}
-          </span>
-          <span class="rounded-app bg-rose-500/20 px-2 py-0.5 font-bold text-rose-400">
-            {{ 'review.againCount' | t: { count: sessionStats().again } }}
-          </span>
-        </div>
-      </section>
-
-      @if (isComplete()) {
-        <!-- Completion state -->
-        <section
-          class="rounded-sheet border border-surface-100 bg-surface-200 p-8 text-center space-y-4"
-          role="status"
-          aria-live="polite"
-        >
-          <p class="text-4xl" aria-hidden="true">🎉</p>
-          <h3 class="text-xl font-black text-text-primary">{{ 'review.completeTitle' | t }}</h3>
-          <p class="text-sm text-text-secondary">{{ 'review.completeDesc' | t }}</p>
-          <div class="flex flex-wrap justify-center gap-3 text-xs">
-            <span class="rounded-app bg-emerald-500/20 px-3 py-1 font-bold text-emerald-400">
+            class="h-1.5 w-full overflow-hidden rounded-full bg-surface-200"
+            role="progressbar"
+            [attr.aria-valuenow]="progressPercent()"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-label]="'review.progressPercent' | t: { percent: progressPercent() }"
+          >
+            <div
+              class="h-full rounded-full bg-primary transition-all duration-300 ease-out"
+              [style.width]="progressPercent() + '%'"
+            ></div>
+          </div>
+          <!-- Session stats -->
+          <div class="flex gap-3 text-xs" aria-live="polite" aria-atomic="true">
+            <span class="rounded-app bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-400">
               {{ 'review.knownCount' | t: { count: sessionStats().known } }}
             </span>
-            <span class="rounded-app bg-amber-500/20 px-3 py-1 font-bold text-amber-400">
+            <span class="rounded-app bg-amber-500/20 px-2 py-0.5 font-bold text-amber-400">
               {{ 'review.goodCount' | t: { count: sessionStats().good } }}
             </span>
-            <span class="rounded-app bg-rose-500/20 px-3 py-1 font-bold text-rose-400">
+            <span class="rounded-app bg-rose-500/20 px-2 py-0.5 font-bold text-rose-400">
               {{ 'review.againCount' | t: { count: sessionStats().again } }}
             </span>
           </div>
-          <button
-            type="button"
-            (click)="restart()"
-            class="app-button-primary ps-5 pe-5 pt-2.5 pb-2.5 text-xs font-bold"
-          >
-            {{ 'review.restart' | t }}
-          </button>
         </section>
-      } @else {
-        <!-- Flashcard -->
-        @if (currentCard(); as card) {
-          <div class="space-y-4" aria-live="assertive" aria-atomic="true">
-            <!-- Card -->
-            <div
-              #flashcardEl
-              class="flip-card cursor-pointer select-none"
-              [class.is-flipped]="isFlipped()"
-              (click)="flipCard()"
-              (keyup.enter)="flipCard()"
-              (keyup.space)="flipCard(); $event.preventDefault()"
-              role="button"
-              tabindex="0"
-              [attr.aria-label]="(isFlipped() ? 'review.cardFlippedAriaLabel' : 'review.flipAriaLabel') | t: { word: card.word_token }"
-              [attr.aria-pressed]="isFlipped()"
-              [attr.aria-describedby]="'card-front-' + card.id + ' card-back-' + card.id"
+
+        @if (isComplete()) {
+          <!-- Completion state -->
+          <section
+            class="rounded-sheet border border-surface-100 bg-surface-200 p-8 text-center space-y-4"
+            role="status"
+            aria-live="polite"
+          >
+            <p class="text-4xl" aria-hidden="true">🎉</p>
+            <h3 class="text-xl font-black text-text-primary">{{ 'review.completeTitle' | t }}</h3>
+            <p class="text-sm text-text-secondary">{{ 'review.completeDesc' | t }}</p>
+            <div class="flex flex-wrap justify-center gap-3 text-xs">
+              <span class="rounded-app bg-emerald-500/20 px-3 py-1 font-bold text-emerald-400">
+                {{ 'review.knownCount' | t: { count: sessionStats().known } }}
+              </span>
+              <span class="rounded-app bg-amber-500/20 px-3 py-1 font-bold text-amber-400">
+                {{ 'review.goodCount' | t: { count: sessionStats().good } }}
+              </span>
+              <span class="rounded-app bg-rose-500/20 px-3 py-1 font-bold text-rose-400">
+                {{ 'review.againCount' | t: { count: sessionStats().again } }}
+              </span>
+            </div>
+            <button
+              type="button"
+              (click)="restart()"
+              class="app-button-primary ps-5 pe-5 pt-2.5 pb-2.5 text-xs font-bold"
             >
-              <div class="flip-card-inner">
-                <!-- Front -->
-                <div class="flip-card-face flip-card-front" [attr.id]="'card-front-' + card.id">
-                  <div class="mb-3 flex items-center justify-between text-xs font-bold">
-                    <span class="rounded-app bg-primary/20 px-2 py-0.5 text-primary">
-                      {{ 'review.levelBadge' | t: { level: card.srs_level } }}
-                    </span>
-                    @if (card.original_context) {
-                      <span class="text-text-muted truncate max-w-[60%]">
-                        {{ 'review.contextLabel' | t }}
+              {{ 'review.restart' | t }}
+            </button>
+          </section>
+        } @else {
+          <!-- Flashcard -->
+          @if (currentCard(); as card) {
+            <div class="space-y-4" aria-live="assertive" aria-atomic="true">
+              <!-- Card -->
+              <div
+                #flashcardEl
+                class="flip-card cursor-pointer select-none"
+                [class.is-flipped]="isFlipped()"
+                (click)="flipCard()"
+                (keyup.enter)="flipCard()"
+                (keyup.space)="flipCard(); $event.preventDefault()"
+                role="button"
+                tabindex="0"
+                [attr.aria-label]="(isFlipped() ? 'review.cardFlippedAriaLabel' : 'review.flipAriaLabel') | t: { word: card.word_token }"
+                [attr.aria-pressed]="isFlipped()"
+                [attr.aria-describedby]="'card-front-' + card.id + ' card-back-' + card.id"
+              >
+                <div class="flip-card-inner">
+                  <!-- Front -->
+                  <div class="flip-card-face flip-card-front" [attr.id]="'card-front-' + card.id">
+                    <div class="mb-3 flex items-center justify-between text-xs font-bold">
+                      <span class="rounded-app bg-primary/20 px-2 py-0.5 text-primary">
+                        {{ 'review.levelBadge' | t: { level: card.srs_level } }}
                       </span>
+                      @if (card.original_context) {
+                        <span class="text-text-muted truncate max-w-[60%]">
+                          {{ 'review.contextLabel' | t }}
+                        </span>
+                      }
+                    </div>
+                    <h3 class="text-3xl font-black text-text-primary">{{ card.word_token }}</h3>
+                    @if (card.original_context) {
+                      <p class="mt-3 text-sm italic text-text-secondary">
+                        &ldquo;{{ card.original_context }}&rdquo;
+                      </p>
+                    }
+                    <p class="mt-4 text-xs font-bold text-primary">
+                      {{ 'review.tapToFlip' | t }}
+                    </p>
+                  </div>
+                  <!-- Back -->
+                  <div class="flip-card-face flip-card-back" [attr.id]="'card-back-' + card.id">
+                    <div class="mb-3 flex items-center justify-between text-xs font-bold">
+                      <span class="rounded-app bg-emerald-500/20 px-2 py-0.5 text-emerald-400">
+                        {{ 'review.answerLabel' | t }}
+                      </span>
+                    </div>
+                    <h3 class="text-2xl font-black text-emerald-400">{{ card.translation }}</h3>
+                    @if (card.definition) {
+                      <p class="mt-3 text-sm text-text-primary">{{ card.definition }}</p>
+                    }
+                    @if (card.pronunciation_url) {
+                      <button
+                        type="button"
+                        class="mt-3 rounded-app border border-surface-100 px-3 py-1 text-xs font-bold text-text-secondary hover:bg-surface-300"
+                        (click)="playAudio(card.pronunciation_url, $event)"
+                        [attr.aria-label]="'review.playAudioAriaLabel' | t: { word: card.word_token }"
+                      >
+                        <span aria-hidden="true">🔊</span>
+                        {{ 'review.playAudio' | t }}
+                      </button>
                     }
                   </div>
-                  <h3 class="text-3xl font-black text-text-primary">{{ card.word_token }}</h3>
-                  @if (card.original_context) {
-                    <p class="mt-3 text-sm italic text-text-secondary">
-                      &ldquo;{{ card.original_context }}&rdquo;
-                    </p>
-                  }
-                  <p class="mt-4 text-xs font-bold text-primary">
-                    {{ 'review.tapToFlip' | t }}
-                  </p>
-                </div>
-                <!-- Back -->
-                <div class="flip-card-face flip-card-back" [attr.id]="'card-back-' + card.id">
-                  <div class="mb-3 flex items-center justify-between text-xs font-bold">
-                    <span class="rounded-app bg-emerald-500/20 px-2 py-0.5 text-emerald-400">
-                      {{ 'review.answerLabel' | t }}
-                    </span>
-                  </div>
-                  <h3 class="text-2xl font-black text-emerald-400">{{ card.translation }}</h3>
-                  @if (card.definition) {
-                    <p class="mt-3 text-sm text-text-primary">{{ card.definition }}</p>
-                  }
-                  @if (card.pronunciation_url) {
-                    <button
-                      type="button"
-                      class="mt-3 rounded-app border border-surface-100 px-3 py-1 text-xs font-bold text-text-secondary hover:bg-surface-300"
-                      (click)="playAudio(card.pronunciation_url, $event)"
-                      [attr.aria-label]="'review.playAudioAriaLabel' | t: { word: card.word_token }"
-                    >
-                      <span aria-hidden="true">🔊</span>
-                      {{ 'review.playAudio' | t }}
-                    </button>
-                  }
                 </div>
               </div>
-            </div>
 
-            <!-- Grading buttons (only visible after flip) -->
-            @if (isFlipped()) {
-              <div class="grid grid-cols-4 gap-2 animate-fadeIn" role="group" [attr.aria-label]="'review.gradingGroupLabel' | t">
-                <button
-                  type="button"
-                  (click)="gradeReview('again')"
-                  class="btn-grade btn-grade-again"
-                  [attr.aria-label]="'review.againAriaLabel' | t"
-                >
-                  <span class="block text-lg" aria-hidden="true">↻</span>
-                  <span class="text-xs font-bold">{{ 'review.againBtn' | t }}</span>
-                  <span class="text-[10px] opacity-80">{{ 'review.againHint' | t }}</span>
-                </button>
-                <button
-                  type="button"
-                  (click)="gradeReview('good')"
-                  class="btn-grade btn-grade-good col-span-2"
-                  [attr.aria-label]="'review.goodAriaLabel' | t"
-                >
-                  <span class="block text-lg" aria-hidden="true">✓</span>
-                  <span class="text-xs font-bold">{{ 'review.goodBtn' | t }}</span>
-                  <span class="text-[10px] opacity-80">{{ nextIntervalHint() }}</span>
-                </button>
-                <button
-                  type="button"
-                  (click)="gradeReview('known')"
-                  class="btn-grade btn-grade-known"
-                  [attr.aria-label]="'review.knownAriaLabel' | t"
-                >
-                  <span class="block text-lg" aria-hidden="true">★</span>
-                  <span class="text-xs font-bold">{{ 'review.knownBtn' | t }}</span>
-                  <span class="text-[10px] opacity-80">{{ 'review.knownHint' | t }}</span>
-                </button>
-              </div>
-            }
-          </div>
+              <!-- Grading buttons (only visible after flip) -->
+              @if (isFlipped()) {
+                <div class="grid grid-cols-4 gap-2 animate-fadeIn" role="group" [attr.aria-label]="'review.gradingGroupLabel' | t">
+                  <button
+                    type="button"
+                    (click)="gradeReview('again')"
+                    class="btn-grade btn-grade-again"
+                    [attr.aria-label]="'review.againAriaLabel' | t"
+                  >
+                    <span class="block text-lg" aria-hidden="true">↻</span>
+                    <span class="text-xs font-bold">{{ 'review.againBtn' | t }}</span>
+                    <span class="text-[10px] opacity-80">{{ 'review.againHint' | t }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="gradeReview('good')"
+                    class="btn-grade btn-grade-good col-span-2"
+                    [attr.aria-label]="'review.goodAriaLabel' | t"
+                  >
+                    <span class="block text-lg" aria-hidden="true">✓</span>
+                    <span class="text-xs font-bold">{{ 'review.goodBtn' | t }}</span>
+                    <span class="text-[10px] opacity-80">{{ nextIntervalHint() }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="gradeReview('known')"
+                    class="btn-grade btn-grade-known"
+                    [attr.aria-label]="'review.knownAriaLabel' | t"
+                  >
+                    <span class="block text-lg" aria-hidden="true">★</span>
+                    <span class="text-xs font-bold">{{ 'review.knownBtn' | t }}</span>
+                    <span class="text-[10px] opacity-80">{{ 'review.knownHint' | t }}</span>
+                  </button>
+                </div>
+              }
+            </div>
+          }
         }
       }
     </div>
@@ -325,6 +358,8 @@ export class FlashcardReviewComponent {
   readonly isFlipped = signal(false);
   readonly sessionStats = signal<Record<ReviewGrade, number>>({ again: 0, good: 0, known: 0 });
   readonly isSaving = signal(false);
+  readonly isLoading = signal(false);
+  readonly loadError = signal(false);
 
   readonly currentCard = computed(() => this.reviewCards()[this.currentIndex()] ?? null);
   readonly isComplete = computed(
@@ -359,10 +394,16 @@ export class FlashcardReviewComponent {
 
   handleRetry(): void {
     this.restart();
+<<<<<<< HEAD
     this.loadData();
+=======
+    this.loadReviewData();
+>>>>>>> origin/main
   }
 
   constructor() {
+    this.loadReviewData();
+
     // After card changes, return focus to flashcard for keyboard navigation
     effect(() => {
       if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
@@ -374,6 +415,7 @@ export class FlashcardReviewComponent {
     });
   }
 
+<<<<<<< HEAD
   private async loadData(): Promise<void> {
     try {
       await this.vocabStore.loadAllFlashcards();
@@ -390,6 +432,18 @@ export class FlashcardReviewComponent {
         e instanceof Error ? e : new Error(String(e)),
         'Failed to load due reviews',
       );
+=======
+  private async loadReviewData(): Promise<void> {
+    this.isLoading.set(true);
+    this.loadError.set(false);
+    try {
+      await this.vocabStore.loadAllFlashcards();
+      await this.vocabStore.loadDueReviews();
+    } catch {
+      this.loadError.set(true);
+    } finally {
+      this.isLoading.set(false);
+>>>>>>> origin/main
     }
   }
 
