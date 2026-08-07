@@ -6,7 +6,6 @@ import {
 import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { getLoggerToken } from 'nestjs-pino';
 import { MetricsService } from '../metrics/metrics.service';
 
 jest.mock('../common/retry', () => ({
@@ -134,15 +133,6 @@ describe('RecommendationsService', () => {
               from: mockFrom,
             }),
             getRedisClient: jest.fn().mockReturnValue(mockRedis),
-          },
-        },
-        {
-          provide: getLoggerToken(RecommendationsService.name),
-          useValue: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
           },
         },
         {

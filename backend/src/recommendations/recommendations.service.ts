@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
+import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { withRetry } from '../common/retry';
 import { MOCK_USERS } from '../mock-data';
 
@@ -26,6 +29,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const DAILY_REDIS_TTL = 86400;
 const DAILY_LIMIT = 10;
 const FALLBACK_LIMIT = 20;
+const GDPR_MATCHMAKING_FILTERS = { is_deleted: false };
 const CRON_USERS_LIMIT = 5000;
 const REDIS_PIPELINE_BATCH = 200;
 
@@ -48,6 +52,9 @@ export class RecommendationsService {
     @InjectPinoLogger(RecommendationsService.name)
     private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+    private readonly circuitBreakerService: CircuitBreakerService,
+    private readonly crashReportService: MatchmakingCrashReportService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
@@ -69,13 +76,12 @@ export class RecommendationsService {
     };
 
     try {
-      const { data: users, error } = await withRetry(
-        () =>
-          supabase
-            .from('users')
-            .select('id, native_language, target_languages')
-            .eq('privacy_hide_from_search', false),
-      );
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('id, native_language, target_languages')
+        .match(GDPR_MATCHMAKING_FILTERS)
+        .not('target_languages', 'is', null)
+        .limit(CRON_USERS_LIMIT);
 
       if (error || !users) {
         throw new Error(`Failed to fetch users: ${error?.message}`);
@@ -89,20 +95,17 @@ export class RecommendationsService {
 
         const nativeLang = user.native_language as string | null;
 
-        const { data: matches } = await withRetry(
-          () =>
-            supabase
-              .from('users')
-              .select(
-                'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-              )
-              .neq('id', user.id)
-              .eq('privacy_hide_from_search', false)
-              .in('native_language', targetLanguages)
-              .contains('target_languages', nativeLang ? [nativeLang] : [])
-              .order('is_serious_learner', { ascending: false })
-              .limit(DAILY_LIMIT),
-        );
+        const { data: matches } = await supabase
+          .from('users')
+          .select(
+            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+          )
+          .neq('id', user.id)
+          .match(GDPR_MATCHMAKING_FILTERS)
+          .in('native_language', targetLanguages)
+          .contains('target_languages', nativeLang ? [nativeLang] : [])
+          .order('is_serious_learner', { ascending: false })
+          .limit(DAILY_LIMIT);
 
         if (matches && matches.length > 0) {
           const dtos: RecommendedUserDto[] = (matches as UserRow[]).map(
@@ -318,16 +321,13 @@ export class RecommendationsService {
 
     const candidateIds = Array.from(sharedCount.keys());
 
-    const { data: users, error: usersError } = await withRetry(
-      () =>
-        supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .in('id', candidateIds)
-          .eq('privacy_hide_from_search', false),
-    );
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+      )
+      .in('id', candidateIds)
+      .match(GDPR_MATCHMAKING_FILTERS);
 
     if (usersError) {
       throw new Error(usersError.message);
@@ -384,20 +384,17 @@ export class RecommendationsService {
       return [];
     }
 
-    const { data: matches, error: matchError } = await withRetry(
-      () =>
-        supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .neq('id', userId)
-          .eq('privacy_hide_from_search', false)
-          .in('native_language', targetLanguages)
-          .contains('target_languages', [nativeLang])
-          .order('is_serious_learner', { ascending: false })
-          .limit(FALLBACK_LIMIT),
-    );
+    const { data: matches, error: matchError } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+      )
+      .neq('id', userId)
+      .match(GDPR_MATCHMAKING_FILTERS)
+      .in('native_language', targetLanguages)
+      .contains('target_languages', [nativeLang])
+      .order('is_serious_learner', { ascending: false })
+      .limit(FALLBACK_LIMIT);
 
     if (matchError) {
       throw new Error(matchError.message);
@@ -425,18 +422,15 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: users, error } = await withRetry(
-      () =>
-        supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .neq('id', userId)
-          .eq('privacy_hide_from_search', false)
-          .order('study_streak_days', { ascending: false })
-          .limit(FALLBACK_LIMIT),
-    );
+    const { data: users, error } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+      )
+      .neq('id', userId)
+      .match(GDPR_MATCHMAKING_FILTERS)
+      .order('study_streak_days', { ascending: false })
+      .limit(FALLBACK_LIMIT);
 
     if (error) {
       throw new Error(error.message);
@@ -459,6 +453,7 @@ export class RecommendationsService {
     }));
   }
 
+  /** Tier 4: Ultimate fallback using in-memory mock data. */
   private recommendationsFromMock(userId: string): RecommendedUserDto[] {
     this.logger.info(`Using mock data as ultimate fallback for user ${userId}`);
 

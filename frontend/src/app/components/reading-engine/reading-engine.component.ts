@@ -2,7 +2,6 @@ import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
-import { ReadingEngineCrashReportingService } from '../../services/reading-engine-crash-reporting.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
@@ -288,7 +287,6 @@ interface ReadingArticle {
 export class ReadingEngineComponent {
   private i18n = inject(I18nService);
   private vocabStore = inject(VocabularyStore);
-  private crashReporting = inject(ReadingEngineCrashReportingService);
 
   readonly activeTab = signal<'articles' | 'vocabulary' | 'history'>('articles');
   readonly selectedArticleId = signal<string | null>(null);
@@ -412,13 +410,7 @@ export class ReadingEngineComponent {
           wordCount: 67,
         },
       ];
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      this.crashReporting.reportCrash(error, {
-        boundaryContext: 'ReadingEngineComponent',
-        operation: 'fetchArticles',
-        renderingError: true,
-      });
+    } catch {
       this.fetchError.set(this.i18n.translate('readingEngine.fetchError'));
       return [];
     }

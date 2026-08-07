@@ -1628,7 +1628,7 @@ export interface Database {
           payer_id: string;
           payee_id: string;
           amount_coins: number;
-          status: 'held' | 'released' | 'refunded' | 'disputed';
+          status: 'held' | 'released' | 'refunded' | 'disputed' | 'cancelled' | 'pending';
           description: string | null;
           reference_id: string | null;
           created_at: string;
@@ -1641,7 +1641,7 @@ export interface Database {
           payer_id: string;
           payee_id: string;
           amount_coins: number;
-          status?: 'held' | 'released' | 'refunded' | 'disputed';
+          status?: 'held' | 'released' | 'refunded' | 'disputed' | 'cancelled' | 'pending';
           description?: string | null;
           reference_id?: string | null;
           created_at?: string;
@@ -1654,7 +1654,7 @@ export interface Database {
           payer_id?: string;
           payee_id?: string;
           amount_coins?: number;
-          status?: 'held' | 'released' | 'refunded' | 'disputed';
+          status?: 'held' | 'released' | 'refunded' | 'disputed' | 'cancelled' | 'pending';
           description?: string | null;
           reference_id?: string | null;
           created_at?: string;

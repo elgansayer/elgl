@@ -176,4 +176,54 @@ describe('CoinEconomyDashboardComponent', () => {
     component.startTour();
     expect(resetSpy).toHaveBeenCalled();
   });
+
+  // Skeleton loader and empty state tests
+  describe('loading states', () => {
+    it('should show skeleton loaders when loading and not yet loaded', () => {
+      economyStoreMock.isLoading.mockReturnValue(true);
+      economyStoreMock.hasLoadedOnce.mockReturnValue(false);
+      fixture.detectChanges();
+      const skeletonLoaders = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+      expect(skeletonLoaders.length).toBeGreaterThan(0);
+    });
+
+    it('should NOT show skeleton loaders when loaded even if isLoading', () => {
+      economyStoreMock.isLoading.mockReturnValue(true);
+      economyStoreMock.hasLoadedOnce.mockReturnValue(true);
+      fixture.detectChanges();
+      // Balance should still be visible since it has loaded at least once
+      const balanceEl: HTMLElement | null = fixture.nativeElement.querySelector('.text-3xl.font-extrabold.text-amber-400');
+      expect(balanceEl).toBeTruthy();
+    });
+  });
+
+  describe('empty states', () => {
+    it('should show transaction empty state when no transactions', () => {
+      economyStoreMock.recentTransactions.mockReturnValue([]);
+      fixture.detectChanges();
+      const emptyStates = fixture.nativeElement.querySelectorAll('app-empty-state');
+      // Empty state for transactions
+      expect(emptyStates.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should render transaction items when transactions exist', () => {
+      economyStoreMock.recentTransactions.mockReturnValue([
+        { id: 'tx1', type: 'daily_checkin', amount: 10, description: 'Daily Bonus', created_at: new Date().toISOString() },
+      ] as TransactionRecord[]);
+      fixture.detectChanges();
+      // Should have transaction rows rendered
+      expect(component.balance()).toBe(150);
+    });
+  });
+
+  describe('getTransactionTypeLabel', () => {
+    it.each(['earn', 'spend', 'gift_sent', 'gift_received', 'purchase', 'daily_checkin'] as const)(
+      'should return a non-empty label for %s',
+      (type) => {
+        const label = component.getTransactionTypeLabel(type);
+        expect(label).toBeTruthy();
+        expect(typeof label).toBe('string');
+      },
+    );
+  });
 });

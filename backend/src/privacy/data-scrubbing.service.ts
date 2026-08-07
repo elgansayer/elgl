@@ -1,4 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+
+const window = new JSDOM('').window;
+
+/** Strict DOMPurify instance for sanitising user-authored text fields. */
+const strictPurify = DOMPurify(window);
+strictPurify.setConfig({
+  ALLOWED_TAGS: [],
+  ALLOWED_ATTR: [],
+  ALLOW_DATA_ATTR: false,
+  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?:)?\/\/)/i,
+  KEEP_CONTENT: false,
+  RETURN_DOM: false,
+  RETURN_DOM_FRAGMENT: false,
+  WHOLE_DOCUMENT: false,
+  SANITIZE_DOM: true,
+  SANITIZE_NAMED_PROPS: true,
+});
 
 /**
  * Data-scrubbing helpers for GDPR compliance.
@@ -20,10 +39,8 @@ import { Injectable, Logger } from '@nestjs/common';
  *   debuggability while hiding the full payment credential.
  * - Transaction IDs are passed through as-is because they are opaque provider-
  *   generated identifiers that do not contain PII.
- * - User profile data exposed in recommendations/matchmaking contexts is
- *   pseudonymised for admin-audit surfaces: display names are truncated to
- *   first character + asterisks, avatar URLs are redacted, and language lists
- *   are passed through (they are public profile fields users consent to share).
+ * - Escrow transaction `reason` and `metadata` fields are sanitised via
+ *   DOMPurify to strip any embedded PII or HTML/script content.
  * - All scrub operations are logged at debug level for audit trail.
  */
 @Injectable()
@@ -184,9 +201,17 @@ export class DataScrubbingService {
   /**
    * Scrub a display name for admin audit surfaces.
    *
-   * Preserves the first character and replaces the rest with asterisks
-   * so that admins can still distinguish users without seeing full names.
-   * Names of 2 characters or fewer are fully replaced with asterisks.
+   * Policies applied:
+   * - `reason` -- user-authored free text that may contain PII (names,
+   *   contact details, etc.). Sanitised via strict DOMPurify to strip all
+   *   HTML/script content. Truncated to 500 characters to remove embedded
+   *   structured data while preserving essential dispute-resolution context.
+   * - `metadata` -- JSONB blob that may contain PII. Recursively sanitised
+   *   via DOMPurify to strip HTML from all string values.
+   * - `payer_id` / `payee_id` -- internal UUIDs; pass through (same policy
+   *   as gift transaction sender/receiver IDs).
+   * - `last_error` -- system-generated but may contain serialised user input.
+   *   Sanitised via DOMPurify.
    *
    * Examples:
    *   "Maria"   → "M****"
@@ -194,21 +219,22 @@ export class DataScrubbingService {
    *   "Li"      → "**"
    *   null      → null
    */
-  scrubDisplayName(raw: string | null | undefined): string | null {
-    if (!raw) {
-      return null;
+  scrubEscrowRecord(record: {
+    payer_id?: string | null;
+    payee_id?: string | null;
+    reason?: string | null;
+    metadata?: Record<string, unknown> | null;
+    last_error?: string | null;
+  }): void {
+    if (record.reason) {
+      record.reason = this.sanitiseText(record.reason).slice(0, 500);
     }
-
-    const trimmed = raw.trim();
-    if (trimmed.length <= 2) {
-      const scrubbed = '*'.repeat(trimmed.length);
-      this.logger.debug('Scrubbed short display name');
-      return scrubbed;
+    if (record.metadata && typeof record.metadata === 'object') {
+      record.metadata = this.sanitiseObject(record.metadata);
     }
-
-    const scrubbed = trimmed[0] + '*'.repeat(trimmed.length - 1);
-    this.logger.debug('Scrubbed display name');
-    return scrubbed;
+    if (record.last_error) {
+      record.last_error = this.sanitiseText(record.last_error);
+    }
   }
 
   /**
@@ -219,6 +245,20 @@ export class DataScrubbingService {
    * audit contexts we redact the URL entirely, replacing it with a static
    * indicator that an avatar exists.
    *
+   * Returns null if the input is null/undefined/empty, otherwise returns
+   * Pseudonymises a display name by keeping the first character and
+   * masking the rest with asterisks.  Returns null for empty/null input.
+   */
+  scrubDisplayName(raw: string | null | undefined): string | null {
+    if (!raw) {
+      return null;
+    }
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) return null;
+    return trimmed[0] + '*'.repeat(Math.max(0, trimmed.length - 1));
+  }
+
+  /**
    * Returns null if the input is null/undefined/empty, otherwise returns
    * the string "[AVATAR-REDACTED]" to indicate an avatar was present.
    */
@@ -310,8 +350,96 @@ export class DataScrubbingService {
     }
     if (records.length > 0) {
       this.logger.debug(
-        `Scrubbed ${records.length} recommendation records for admin audit`,
+        `Scrubbed ${records.length} escrow transaction records`,
       );
     }
+  }
+
+  /**
+   * Scrub a crash report record for GDPR-safe admin display.
+   *
+   * Policies:
+   * - `user_id` -- internal UUID; pass through.
+   * - `context` -- may contain PII (e.g., payer IDs, amounts, email
+   *   addresses logged during error handling). We log an audit entry but
+   *   pass through because context is essential for crash resolution.
+   * - `error_message` / `stack_trace` -- system-generated; pass through.
+   */
+  scrubCrashReport(record: {
+    user_id?: string | null;
+    context?: Record<string, unknown> | null;
+    error_message?: string | null;
+    stack_trace?: string | null;
+  }): void {
+    if (record.context && Object.keys(record.context).length > 0) {
+      this.logger.debug(
+        'Crash report context passed through (essential for crash resolution)',
+      );
+    }
+    // user_id is an internal UUID; pass through.
+    // error_message / stack_trace are system-generated; pass through.
+  }
+
+  /**
+   * Scrub an array of crash report records in-place.
+   */
+  scrubCrashReportRecords(
+    records: Array<{
+      user_id?: string | null;
+      context?: Record<string, unknown> | null;
+      error_message?: string | null;
+      stack_trace?: string | null;
+    }>,
+  ): void {
+    for (const record of records) {
+      this.scrubCrashReport(record);
+    }
+    if (records.length > 0) {
+      this.logger.debug(
+        `Scrubbed ${records.length} crash report records (pass-through per current policy)`,
+      );
+    }
+  }
+
+  /**
+   * Sanitise a plain-text string by removing all HTML tags, entities,
+   * and script content via DOMPurify.
+   *
+   * Used for free-text fields that are user-authored and may contain PII
+   * or malicious content (e.g., escrow reasons, crash report context).
+   */
+  private sanitiseText(text: string): string {
+    return strictPurify.sanitize(text);
+  }
+
+  /**
+   * Recursively sanitise an object's string values through DOMPurify.
+   *
+   * Arrays and nested plain objects are traversed; class instances and
+   * primitives are returned unchanged.
+   */
+  private sanitiseObject(obj: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (typeof val === 'string') {
+        result[key] = strictPurify.sanitize(val);
+      } else if (Array.isArray(val)) {
+        result[key] = val.map((item) =>
+          typeof item === 'string' ? strictPurify.sanitize(item) : item,
+        );
+      } else if (val !== null && typeof val === 'object') {
+        const proto = Object.getPrototypeOf(val);
+        if (proto === Object.prototype || proto === null) {
+          result[key] = this.sanitiseObject(
+            val as Record<string, unknown>,
+          );
+        } else {
+          result[key] = val;
+        }
+      } else {
+        result[key] = val;
+      }
+    }
+    return result;
   }
 }

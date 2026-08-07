@@ -21,6 +21,7 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { UsersService } from '../users/users.service';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
+import { DiscoveryProfileDto } from './dto/discovery-profile.dto';
 import { DiscoveryService } from './discovery.service';
 import {
   DiscoveryCacheInterceptor,
@@ -85,7 +86,9 @@ Supports filters:
 Sort options: best_match | nearest | newest | online_now`,
   })
   @ApiOkResponse({
-    description: 'A list of matching user profiles.',
+    description: 'List of user profiles matching partner criteria.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
@@ -155,7 +158,9 @@ filter parameters as the partner search, but only returns profiles
 with non-null, non-empty audio_intro_url values.`,
   })
   @ApiOkResponse({
-    description: 'A list of users with audio introductions.',
+    description: 'List of user profiles with audio introductions.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
@@ -186,8 +191,9 @@ native language set. Ordered by creation date descending, limited to 10
 results. Served with public CDN caching.`,
   })
   @ApiOkResponse({
-    description:
-      'A list of up to 10 recently joined users with native languages.',
+    description: 'List of recently joined native speaker profiles.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   async getRecentNativeSpeakers(
     @CurrentUser() user: User | null,
@@ -213,7 +219,9 @@ results. Served with public CDN caching.`,
 language set. Served with public CDN caching.`,
   })
   @ApiOkResponse({
-    description: 'A list of up to 5 spotlight user profiles.',
+    description: 'List of spotlight user profiles.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   async getSpotlight(@CurrentUser() user: User | null): Promise<UserProfile[]> {
     if (!user) return [];
@@ -241,7 +249,9 @@ Sort options:
 - newest: ordered by creation date`,
   })
   @ApiOkResponse({
-    description: 'A paginated list of users matching the language pair.',
+    description: 'List of user profiles matching the language pair criteria.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   async findByLanguagePair(
     @CurrentUser() user: User | null,
@@ -280,7 +290,9 @@ columns. At least one of country or city should be provided.`,
     example: 'Tokyo',
   })
   @ApiOkResponse({
-    description: 'A list of users matching the location criteria.',
+    description: 'List of user profiles in the specified country/city.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   async searchByLocation(
     @CurrentUser() user: User | null,
