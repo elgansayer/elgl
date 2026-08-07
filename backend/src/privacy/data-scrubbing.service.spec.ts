@@ -325,4 +325,111 @@ describe('DataScrubbingService', () => {
       expect(() => service.scrubCrashReportRecords([])).not.toThrow();
     });
   });
+
+  // -------------------------------------------------------------------------
+  //  Video Classroom scrubbing methods (GDPR audit -- Issue #2240)
+  // -------------------------------------------------------------------------
+
+  describe('scrubCallLogRecords', () => {
+    it('pseudonymises caller_name and receiver_name on every entry', () => {
+      const records = [
+        {
+          id: '1',
+          caller_name: 'Maria',
+          receiver_name: 'Juan',
+          caller_id: 'caller-uuid-1',
+          receiver_id: 'receiver-uuid-1',
+        },
+        {
+          id: '2',
+          caller_name: 'Alexander',
+          receiver_name: 'Fatima',
+          caller_id: 'caller-uuid-2',
+          receiver_id: 'receiver-uuid-2',
+        },
+        { id: '3', caller_name: null, receiver_name: null },
+        { id: '4' },
+      ];
+
+      service.scrubCallLogRecords(records);
+
+      expect(records[0].caller_name).toBe('M****');
+      expect(records[0].receiver_name).toBe('J***');
+      expect(records[1].caller_name).toBe('A********');
+      expect(records[1].receiver_name).toBe('F*****');
+      expect(records[2].caller_name).toBeNull();
+      expect(records[3].caller_name).toBeUndefined();
+
+      // caller_id / receiver_id are internal UUIDs; pass through
+      expect(records[0].caller_id).toBe('caller-uuid-1');
+      expect(records[0].receiver_id).toBe('receiver-uuid-1');
+    });
+
+    it('handles single-character names by passing them through', () => {
+      const records = [{ caller_name: 'A', receiver_name: 'B' }];
+
+      service.scrubCallLogRecords(records);
+
+      expect(records[0].caller_name).toBe('A');
+      expect(records[0].receiver_name).toBe('B');
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubCallLogRecords([])).not.toThrow();
+    });
+  });
+
+  describe('scrubAudioRoomTipRecords', () => {
+    it('passes through sender and receiver user IDs unmodified (documented policy)', () => {
+      const records = [
+        { sender_user_id: 'sender-1', receiver_user_id: 'receiver-1' },
+        { sender_user_id: 'sender-2', receiver_user_id: 'receiver-2' },
+      ];
+
+      service.scrubAudioRoomTipRecords(records);
+
+      expect(records[0].sender_user_id).toBe('sender-1');
+      expect(records[0].receiver_user_id).toBe('receiver-1');
+      expect(records[1].sender_user_id).toBe('sender-2');
+      expect(records[1].receiver_user_id).toBe('receiver-2');
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubAudioRoomTipRecords([])).not.toThrow();
+    });
+  });
+
+  describe('scrubAudioRoomCaptionRecords', () => {
+    it('passes through speaker_id and transcript_text unmodified (documented policy)', () => {
+      const records = [
+        {
+          speaker_id: 'speaker-1',
+          transcript_text: 'Hello, how are you?',
+        },
+        {
+          speaker_id: 'speaker-2',
+          transcript_text: 'I am fine, thank you.',
+        },
+      ];
+
+      service.scrubAudioRoomCaptionRecords(records);
+
+      expect(records[0].speaker_id).toBe('speaker-1');
+      expect(records[0].transcript_text).toBe('Hello, how are you?');
+      expect(records[1].speaker_id).toBe('speaker-2');
+      expect(records[1].transcript_text).toBe('I am fine, thank you.');
+    });
+
+    it('handles null fields gracefully', () => {
+      const records = [{ speaker_id: null, transcript_text: null }];
+
+      expect(() =>
+        service.scrubAudioRoomCaptionRecords(records),
+      ).not.toThrow();
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubAudioRoomCaptionRecords([])).not.toThrow();
+    });
+  });
 });

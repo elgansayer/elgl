@@ -10,6 +10,8 @@ import { SupabaseService } from '../supabase/supabase.service';
  * - Purge login_history rows older than 180 days.
  * - Purge reports older than 365 days that are in a terminal state.
  * - Archive deleted user records past their grace period.
+ * - Purge call_logs older than 365 days (GDPR Issue #2240).
+ * - Scrub ended audio_rooms older than 90 days (GDPR Issue #2240).
  */
 @Injectable()
 export class DataRetentionService {
@@ -233,6 +235,146 @@ export class DataRetentionService {
       );
     }
 
+    // --- Video Classrooms (GDPR audit -- Issue #2240) ---
+    // Call logs -- PII: caller_name/receiver_name are display names
+    await supabase.from('call_logs').delete().eq('caller_id', userId);
+    await supabase.from('call_logs').delete().eq('receiver_id', userId);
+
+    // Audio room tips (both sent and received)
+    await supabase
+      .from('audio_room_tips')
+      .delete()
+      .eq('sender_user_id', userId);
+    await supabase
+      .from('audio_room_tips')
+      .delete()
+      .eq('receiver_user_id', userId);
+
+    // Audio room captions -- PII: speaker_id links to user
+    await supabase
+      .from('audio_room_captions')
+      .delete()
+      .eq('speaker_id', userId);
+
+    // Poll votes -- PII: user_id links to user
+    await supabase.from('poll_votes').delete().eq('user_id', userId);
+
+    // Quick polls -- PII: host_id links to user
+    await supabase.from('quick_polls').delete().eq('host_id', userId);
+
+    // Anonymise audio rooms where the user is host or co-host
+    // (Cannot delete rooms because they are shared resources; anonymise instead.)
+    // host_id is an internal UUID, not PII -- after user anonymisation the
+    // link to the natural person is already broken. Only co_host_id is
+    // intentionally nulled (it is nullable in the DB schema).
+    await supabase
+      .from('audio_rooms')
+      .update({ co_host_id: null })
+      .eq('host_id', userId);
+
+    await supabase
+      .from('audio_rooms')
+      .update({ co_host_id: null })
+      .eq('co_host_id', userId);
+
     this.logger.log(`Wiped personal data for user ${userId}`);
+  }
+
+  // ---------------------------------------------------------------------------
+  //  Video Classroom retention policies (GDPR audit -- Issue #2240)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Purge call_logs older than 365 days.
+   *
+   * Call logs contain caller_name and receiver_name (display names -- PII).
+   * After 365 days, these are no longer needed for support investigations
+   * and must be purged to comply with GDPR storage-limitation principle.
+   *
+   * Runs once per day at 03:15 UTC.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, {
+    name: 'purgeOldCallLogs',
+  })
+  async purgeOldCallLogs(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 365);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('call_logs')
+      .delete({ count: 'exact' })
+      .lt('created_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(`Failed to purge old call logs: ${error.message}`);
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} call-log rows older than ${cutoff.toISOString()}`,
+      );
+    }
+  }
+
+  /**
+   * Scrub ended audio_rooms older than 90 days.
+   *
+   * Audio rooms that have ended are kept for 90 days to allow moderation
+   * review and support investigations. After that, we scrub co_host_id
+   * (which may link to user identity).
+   *
+   * Runs once per day at 03:45 UTC.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, {
+    name: 'purgeOldAudioRooms',
+  })
+  async purgeOldAudioRooms(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 90);
+    const supabase = this.supabaseService.getClient();
+
+    // Find ended rooms older than 90 days
+    const { data: roomsToScrub, error } = await supabase
+      .from('audio_rooms')
+      .select('id')
+      .eq('is_active', false)
+      .lt('ended_at', cutoff.toISOString())
+      .limit(200);
+
+    if (error) {
+      this.logger.error(
+        `Failed to query old audio rooms for scrubbing: ${error.message}`,
+      );
+      return;
+    }
+
+    if (!roomsToScrub || roomsToScrub.length === 0) {
+      return;
+    }
+
+    let scrubbedCount = 0;
+    for (const room of roomsToScrub) {
+      // Scrub PII from old ended rooms -- co_host_id links to user identity.
+      const { error: updateError } = await supabase
+        .from('audio_rooms')
+        .update({ co_host_id: null })
+        .eq('id', room.id);
+
+      if (updateError) {
+        this.logger.error(
+          `Failed to scrub audio room ${room.id}: ${updateError.message}`,
+        );
+      } else {
+        scrubbedCount++;
+      }
+    }
+
+    if (scrubbedCount > 0) {
+      this.logger.log(
+        `Scrubbed ${scrubbedCount} audio rooms older than ${cutoff.toISOString()}`,
+      );
+    }
   }
 }

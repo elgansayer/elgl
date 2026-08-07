@@ -279,6 +279,75 @@ export class PrivacyService {
       .eq('created_by', userId)
       .order('created_at', { ascending: false });
 
+    // 13) Call logs -- video classroom call history (GDPR archive, Issue #2240)
+    const { data: callerLogs } = await supabase
+      .from('call_logs')
+      .select('*')
+      .eq('caller_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: receiverLogs } = await supabase
+      .from('call_logs')
+      .select('*')
+      .eq('receiver_id', userId)
+      .order('created_at', { ascending: false });
+
+    const userCallLogs = [
+      ...(callerLogs ?? []).map((l: Record<string, unknown>) => ({
+        ...l,
+        call_direction: 'outgoing',
+      })),
+      ...(receiverLogs ?? []).map((l: Record<string, unknown>) => ({
+        ...l,
+        call_direction: 'incoming',
+      })),
+    ];
+
+    // 14) Audio room tips sent and received (GDPR archive, Issue #2240)
+    const { data: sentTips } = await supabase
+      .from('audio_room_tips')
+      .select('*')
+      .eq('sender_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: receivedTips } = await supabase
+      .from('audio_room_tips')
+      .select('*')
+      .eq('receiver_user_id', userId)
+      .order('created_at', { ascending: false });
+
+    const audioRoomTips = [
+      ...(sentTips ?? []).map((t: Record<string, unknown>) => ({
+        ...t,
+        direction: 'sent',
+      })),
+      ...(receivedTips ?? []).map((t: Record<string, unknown>) => ({
+        ...t,
+        direction: 'received',
+      })),
+    ];
+
+    // 15) Audio room captions authored by the user (GDPR archive, Issue #2240)
+    const { data: userAudioCaptions } = await supabase
+      .from('audio_room_captions')
+      .select('*')
+      .eq('speaker_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 16) Poll votes cast by the user (GDPR archive, Issue #2240)
+    const { data: userPollVotes } = await supabase
+      .from('poll_votes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 17) Quick polls hosted by the user (GDPR archive, Issue #2240)
+    const { data: userQuickPolls } = await supabase
+      .from('quick_polls')
+      .select('*')
+      .eq('host_id', userId)
+      .order('created_at', { ascending: false });
+
     return {
       export_generated_at: new Date().toISOString(),
       user_profile: userProfile ?? null,
@@ -295,6 +364,11 @@ export class PrivacyService {
       user_sticker_packs: userStickerPacks ?? [],
       reading_progress: userReadingProgress,
       reading_resources: userReadingResources ?? [],
+      call_logs: userCallLogs ?? [],
+      audio_room_tips: audioRoomTips,
+      audio_room_captions: userAudioCaptions ?? [],
+      poll_votes: userPollVotes ?? [],
+      quick_polls: userQuickPolls ?? [],
     };
   }
 }

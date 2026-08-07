@@ -123,11 +123,18 @@ let mockRedis: { del: jest.Mock };
         delete: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
+      const mockUpdateBuilder = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
       // Override from for subsequent calls within wipeUserData
       mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'users') {
           // First call is for select (limit), second is for update (eq)
           return mockQueryBuilder;
+        }
+        if (table === 'audio_rooms') {
+          return mockUpdateBuilder;
         }
         return mockDeleteBuilder;
       });
@@ -138,7 +145,7 @@ let mockRedis: { del: jest.Mock };
       expect(mockQueryBuilder.update).toHaveBeenCalled();
     });
 
-    it('wipes coin-economy and reading-engine tables for deleted users', async () => {
+    it('wipes coin-economy, reading-engine, and video-classroom tables for deleted users', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: [{ id: 'user-abc-123' }],
         error: null,
@@ -147,10 +154,18 @@ let mockRedis: { del: jest.Mock };
         delete: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
+      const mockUpdateBuilder = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
       const calledTables: string[] = [];
       mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'users') {
           return mockQueryBuilder;
+        }
+        if (table === 'audio_rooms') {
+          calledTables.push(table);
+          return mockUpdateBuilder;
         }
         calledTables.push(table);
         return mockDeleteBuilder;
@@ -172,6 +187,13 @@ let mockRedis: { del: jest.Mock };
         'reading.user_data_cleared',
         { userId: 'user-abc-123' },
       );
+      // Verify video classroom tables are included in the wipe (GDPR Issue #2240)
+      expect(calledTables).toContain('call_logs');
+      expect(calledTables).toContain('audio_room_tips');
+      expect(calledTables).toContain('audio_room_captions');
+      expect(calledTables).toContain('poll_votes');
+      expect(calledTables).toContain('quick_polls');
+      expect(calledTables).toContain('audio_rooms');
     });
 
     it('purges Redis recommendation cache during account deletion', async () => {
@@ -183,9 +205,16 @@ let mockRedis: { del: jest.Mock };
         delete: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
+      const mockUpdateBuilder = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
       mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'users') {
           return mockQueryBuilder;
+        }
+        if (table === 'audio_rooms') {
+          return mockUpdateBuilder;
         }
         return mockDeleteBuilder;
       });

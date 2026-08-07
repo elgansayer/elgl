@@ -288,4 +288,108 @@ export class DataScrubbingService {
       );
     }
   }
+
+  // ---------------------------------------------------------------------------
+  //  Video Classroom scrubbing methods (GDPR audit -- Issue #2240)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Scrub an array of call-log records for admin display.
+   *
+   * Call logs contain caller_name and receiver_name which are user display
+   * names (PII under GDPR). We replace them with a shortened, pseudonymised
+   * version that preserves the first character for readability while hiding
+   * the full name.
+   *
+   * Room names and call_type are opaque identifiers; they pass through.
+   * Duration and timestamps are not PII.
+   */
+  scrubCallLogRecords(
+    records: Array<{
+      caller_name?: string | null;
+      receiver_name?: string | null;
+      caller_id?: string | null;
+      receiver_id?: string | null;
+    }>,
+  ): void {
+    for (const record of records) {
+      if (record.caller_name) {
+        record.caller_name = this.pseudonymiseName(record.caller_name);
+      }
+      if (record.receiver_name) {
+        record.receiver_name = this.pseudonymiseName(record.receiver_name);
+      }
+      // caller_id / receiver_id are internal UUIDs; pass through for
+      // abuse-detection purposes (documented audit decision).
+    }
+    if (records.length > 0) {
+      this.logger.debug(`Scrubbed ${records.length} call-log records`);
+    }
+  }
+
+  /**
+   * Scrub an array of audio-room-tip records for admin display.
+   *
+   * Tips link sender and receiver user IDs. Under the current policy these
+   * internal UUIDs are passed through unmodified for abuse-detection
+   * purposes. If a future GDPR assessment requires pseudonymisation, apply
+   * HMAC-based replacement with a per-tenant secret.
+   */
+  scrubAudioRoomTipRecords(
+    records: Array<{
+      sender_user_id?: string | null;
+      receiver_user_id?: string | null;
+    }>,
+  ): void {
+    // Current policy: pass through unmodified for abuse-detection.
+    // This method exists as an explicit audit point.
+    for (const _record of records) {
+      // no-op: documented decision
+    }
+    if (records.length > 0) {
+      this.logger.debug(
+        `Scrubbed ${records.length} audio-room-tip records (no-op per current policy)`,
+      );
+    }
+  }
+
+  /**
+   * Scrub an array of audio-room-caption records for admin display.
+   *
+   * Captions contain speaker_id (internal UUID) and the caption transcript
+   * text. Transcript text is user-generated content, not necessarily PII.
+   * speaker_id passes through as an internal UUID for moderation.
+   */
+  scrubAudioRoomCaptionRecords(
+    records: Array<{
+      speaker_id?: string | null;
+      transcript_text?: string | null;
+    }>,
+  ): void {
+    // Current policy: pass through. Transcripts are necessary for moderation
+    // review and speaker_id is an internal UUID.
+    for (const _record of records) {
+      // no-op: documented decision
+    }
+    if (records.length > 0) {
+      this.logger.debug(
+        `Scrubbed ${records.length} audio-room-caption records (no-op per current policy)`,
+      );
+    }
+  }
+
+  /**
+   * Pseudonymise a display name for GDPR-safe admin display.
+   *
+   * Keeps the first character and appends asterisks for the rest.
+   * Example: "Maria" -> "M****"
+   *
+   * Single-character names are returned as-is (insufficient data to mask).
+   */
+  private pseudonymiseName(name: string): string {
+    if (name.length <= 1) {
+      return name;
+    }
+    return name.charAt(0) + '*'.repeat(name.length - 1);
+  }
 }
