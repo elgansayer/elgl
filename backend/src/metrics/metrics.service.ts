@@ -75,7 +75,7 @@ export class MetricsService {
   readonly coinFraudAttemptsTotal: Counter<string>;
   readonly coinTransactionLatency: Histogram<string>;
 
-  // Matchmaking (Recommendations) metrics
+// Matchmaking (Recommendations) metrics
   readonly matchmakingRecommendationsGenerated: Counter<string>;
   readonly matchmakingRecommendationsPerRequest: Histogram<string>;
   readonly matchmakingFallbackTierUsed: Counter<string>;
@@ -83,6 +83,18 @@ export class MetricsService {
   readonly matchmakingRequestDuration: Histogram<string>;
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
+
+  // Admin Moderation Dashboard metrics
+  readonly adminBanActions: Counter<string>;
+  readonly adminWarnActions: Counter<string>;
+  readonly adminVipToggles: Counter<string>;
+  readonly adminBlockRemovals: Counter<string>;
+  readonly adminReportResolutions: Counter<string>;
+  readonly adminApiErrors: Counter<string>;
+  readonly adminApiLatency: Histogram<string>;
+  readonly adminPendingReports: Gauge<string>;
+  readonly adminActiveBlocks: Gauge<string>;
+  readonly adminLoginHistoryRequests: Counter<string>;
 
   constructor() {
     this.register = new Registry();
@@ -466,7 +478,7 @@ export class MetricsService {
       buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
     });
 
-    // --- Matchmaking (Recommendations) Metrics ---
+// --- Matchmaking (Recommendations) Metrics ---
 
     this.matchmakingRecommendationsGenerated = new Counter({
       name: 'hellotalk_matchmaking_recommendations_generated_total',
@@ -515,6 +527,77 @@ export class MetricsService {
     this.matchmakingTierSuccessRate = new Gauge({
       name: 'hellotalk_matchmaking_tier_success_rate',
       help: 'Rolling success rate of tier-1 (interest-based) matchmaking, 0-1',
+      registers: [this.register],
+    });
+
+    // --- Admin Moderation Dashboard Metrics ---
+
+    this.adminBanActions = new Counter({
+      name: 'hellotalk_admin_ban_actions_total',
+      help: 'Total number of admin ban actions performed',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminWarnActions = new Counter({
+      name: 'hellotalk_admin_warn_actions_total',
+      help: 'Total number of admin warning actions performed',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminVipToggles = new Counter({
+      name: 'hellotalk_admin_vip_toggles_total',
+      help: 'Total number of VIP status toggles by admins',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminBlockRemovals = new Counter({
+      name: 'hellotalk_admin_block_removals_total',
+      help: 'Total number of block removals by admins',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminReportResolutions = new Counter({
+      name: 'hellotalk_admin_report_resolutions_total',
+      help: 'Total number of report resolutions (approve/reject)',
+      labelNames: ['action', 'result'],
+      registers: [this.register],
+    });
+
+    this.adminApiErrors = new Counter({
+      name: 'hellotalk_admin_api_errors_total',
+      help: 'Total number of admin API errors',
+      labelNames: ['endpoint', 'error_type'],
+      registers: [this.register],
+    });
+
+    this.adminApiLatency = new Histogram({
+      name: 'hellotalk_admin_api_latency_seconds',
+      help: 'Latency of admin API operations',
+      labelNames: ['endpoint', 'action'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+    });
+
+    this.adminPendingReports = new Gauge({
+      name: 'hellotalk_admin_pending_reports',
+      help: 'Number of reports pending admin review',
+      registers: [this.register],
+    });
+
+    this.adminActiveBlocks = new Gauge({
+      name: 'hellotalk_admin_active_blocks',
+      help: 'Total number of active block relationships across the platform',
+      registers: [this.register],
+    });
+
+    this.adminLoginHistoryRequests = new Counter({
+      name: 'hellotalk_admin_login_history_requests_total',
+      help: 'Total number of admin login history lookup requests',
+      labelNames: ['result'],
       registers: [this.register],
     });
   }
@@ -811,6 +894,51 @@ export class MetricsService {
 
   setEscrowStaleHeldCount(count: number): void {
     this.escrowStaleHeldCount.set(count);
+  }
+
+  // --- Admin Moderation Dashboard metric helpers ---
+
+  recordAdminBanAction(result: 'success' | 'failure'): void {
+    this.adminBanActions.inc({ result });
+  }
+
+  recordAdminWarnAction(result: 'success' | 'failure'): void {
+    this.adminWarnActions.inc({ result });
+  }
+
+  recordAdminVipToggle(result: 'success' | 'failure'): void {
+    this.adminVipToggles.inc({ result });
+  }
+
+  recordAdminBlockRemoval(result: 'success' | 'failure'): void {
+    this.adminBlockRemovals.inc({ result });
+  }
+
+  recordAdminReportResolution(
+    action: 'approve' | 'reject',
+    result: 'success' | 'failure',
+  ): void {
+    this.adminReportResolutions.inc({ action, result });
+  }
+
+  recordAdminApiError(endpoint: string, errorType: string): void {
+    this.adminApiErrors.inc({ endpoint, error_type: errorType });
+  }
+
+  observeAdminApiLatency(endpoint: string, action: string, durationSeconds: number): void {
+    this.adminApiLatency.observe({ endpoint, action }, durationSeconds);
+  }
+
+  setAdminPendingReports(count: number): void {
+    this.adminPendingReports.set(count);
+  }
+
+  setAdminActiveBlocks(count: number): void {
+    this.adminActiveBlocks.set(count);
+  }
+
+  recordAdminLoginHistoryRequest(result: 'success' | 'failure'): void {
+    this.adminLoginHistoryRequests.inc({ result });
   }
 
   getRegister(): Registry {

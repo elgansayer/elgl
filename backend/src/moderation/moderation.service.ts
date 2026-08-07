@@ -93,7 +93,7 @@ export class ModerationService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly metricsService: MetricsService,
+    private readonly metrics: MetricsService,
     @InjectPinoLogger(ModerationService.name)
     private readonly logger: PinoLogger,
   ) {
@@ -263,17 +263,25 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
+        this.metrics.recordAdminReportResolution('approve', 'failure');
         this.logger.warn(error, `Failed to approve item ${dto.itemId}`);
         return { success: false, error: 'Failed to approve item' };
       }
 
-      this.metricsService.recordTsModerationAction(
+this.metrics.recordTsModerationAction(
         'approve',
         dto.type,
         (Date.now() - startTime) / 1000,
       );
+      this.metrics.recordAdminReportResolution('approve', 'success');
       return { success: true };
     } catch (err) {
+      this.metrics.recordAdminReportResolution('approve', 'failure');
+      this.metrics.recordTsModerationAction(
+        'approve',
+        dto.type,
+        0,
+      );
       this.logger.warn(err, 'Failed to approve item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
@@ -293,17 +301,25 @@ export class ModerationService {
         .eq('id', dto.itemId);
 
       if (error) {
+        this.metrics.recordAdminReportResolution('reject', 'failure');
         this.logger.warn(error, `Failed to reject item ${dto.itemId}`);
         return { success: false, error: 'Failed to reject item' };
       }
 
-      this.metricsService.recordTsModerationAction(
+this.metrics.recordTsModerationAction(
         'reject',
         dto.type,
         (Date.now() - startTime) / 1000,
       );
+      this.metrics.recordAdminReportResolution('reject', 'success');
       return { success: true };
     } catch (err) {
+      this.metrics.recordAdminReportResolution('reject', 'failure');
+      this.metrics.recordTsModerationAction(
+        'reject',
+        dto.type,
+        0,
+      );
       this.logger.warn(err, 'Failed to reject item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
