@@ -33,6 +33,7 @@ describe('ModerationService', () => {
       recordTsModerationAction: jest.fn(),
       recordTsDatingRiskScore: jest.fn(),
       setTsPendingReports: jest.fn(),
+      recordAdminReportResolution: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

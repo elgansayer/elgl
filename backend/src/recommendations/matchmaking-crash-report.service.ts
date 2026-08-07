@@ -45,7 +45,7 @@ export class MatchmakingCrashReportService {
       const supabase = this.supabaseService.getClient();
 
       const { data, error } = await supabase
-        .from('matchmaking_crash_reports')
+        .from('matchmaking_crash_reports' as never)
         .insert({
           operation: payload.operation,
           user_id: payload.user_id ?? null,
@@ -56,7 +56,7 @@ export class MatchmakingCrashReportService {
           circuit_breaker_open: payload.circuit_breaker_open ?? false,
           degraded_tier: payload.degraded_tier ?? null,
           acknowledged: false,
-        })
+        } as never)
         .select('*')
         .single();
 
@@ -68,19 +68,20 @@ export class MatchmakingCrashReportService {
         return null;
       }
 
+      const row = data as unknown as Record<string, unknown>;
       return {
-        id: data.id,
-        operation: data.operation,
-        user_id: data.user_id,
-        error_type: data.error_type,
-        error_message: data.error_message,
-        stack_trace: data.stack_trace,
-        context: data.context,
-        circuit_breaker_open: data.circuit_breaker_open ?? false,
-        degraded_tier: data.degraded_tier ?? null,
-        created_at: data.created_at,
-        acknowledged: data.acknowledged ?? false,
-        resolved_at: data.resolved_at ?? null,
+        id: String(row.id ?? ''),
+        operation: String(row.operation ?? ''),
+        user_id: row.user_id as string | undefined,
+        error_type: String(row.error_type ?? ''),
+        error_message: String(row.error_message ?? ''),
+        stack_trace: row.stack_trace as string | undefined,
+        context: row.context as Record<string, unknown> | undefined,
+        circuit_breaker_open: (row.circuit_breaker_open as boolean) ?? false,
+        degraded_tier: (row.degraded_tier as string | undefined) ?? undefined,
+        created_at: String(row.created_at ?? ''),
+        acknowledged: (row.acknowledged as boolean) ?? false,
+        resolved_at: (row.resolved_at as string | null) ?? null,
       };
     } catch (persistError) {
       this.logger.error(
@@ -96,7 +97,7 @@ export class MatchmakingCrashReportService {
       const supabase = this.supabaseService.getClient();
 
       const { data, error } = await supabase
-        .from('matchmaking_crash_reports')
+        .from('matchmaking_crash_reports' as never)
         .select('*')
         .is('resolved_at', null)
         .order('created_at', { ascending: false })
@@ -189,8 +190,8 @@ export class MatchmakingCrashReportService {
       const supabase = this.supabaseService.getClient();
 
       const { error } = await supabase
-        .from('matchmaking_crash_reports')
-        .update({ acknowledged: true })
+        .from('matchmaking_crash_reports' as never)
+        .update({ acknowledged: true } as never)
         .eq('id', reportId);
 
       if (error) {
@@ -216,8 +217,8 @@ export class MatchmakingCrashReportService {
       const supabase = this.supabaseService.getClient();
 
       const { error } = await supabase
-        .from('matchmaking_crash_reports')
-        .update({ resolved_at: new Date().toISOString() })
+        .from('matchmaking_crash_reports' as never)
+        .update({ resolved_at: new Date().toISOString() } as never)
         .eq('id', reportId);
 
       if (error) {
@@ -248,7 +249,7 @@ export class MatchmakingCrashReportService {
       const supabase = this.supabaseService.getClient();
 
       const { data, error } = await supabase
-        .from('matchmaking_crash_reports')
+        .from('matchmaking_crash_reports' as never)
         .select('*');
 
       if (error || !data) {

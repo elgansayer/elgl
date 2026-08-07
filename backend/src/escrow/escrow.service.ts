@@ -187,7 +187,7 @@ export class EscrowService {
         payee_id: dto.payee_id,
         amount_coins: dto.amount_coins,
         status: 'held' as EscrowStatus,
-        reason: dto.reason,
+        reason: dto.reason || "",
         metadata: dto.metadata || {},
         held_at: now,
         retry_count: 0,
@@ -228,7 +228,7 @@ export class EscrowService {
     }
 
     this.logger.log(
-      `Escrow hold: ${dto.amount_coins} coins from ${payerId} to ${dto.payee_id} for "${dto.reason}"`,
+      `Escrow hold: ${dto.amount_coins} coins from ${payerId} to ${dto.payee_id} for "${dto.reason || ""}"`,
     );
 
     // Record metric for Datadog alerting (#2381)
@@ -253,7 +253,7 @@ export class EscrowService {
       payee_id: dto.payee_id,
       amount_coins: dto.amount_coins,
       status: 'pending' as EscrowStatus,
-      reason: dto.reason,
+      reason: dto.reason || "",
       metadata: dto.metadata || {},
       degraded: true,
       created_at: new Date().toISOString(),
@@ -282,7 +282,7 @@ export class EscrowService {
       payee_id: dto.payee_id,
       amount_coins: dto.amount_coins,
       status: 'pending',
-      reason: dto.reason,
+      reason: dto.reason || "",
       metadata: dto.metadata || {},
       held_at: null,
       released_at: null,

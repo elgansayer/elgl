@@ -33,7 +33,7 @@ import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
 import {
   AcknowledgeCrashReportDto,
-  CreateEscrowHoldDto,
+  CreateEscrowDto,
   ReleaseEscrowDto,
   RefundEscrowDto,
   CancelEscrowDto,
@@ -73,7 +73,7 @@ export class EscrowController {
     description:
       'Creates an escrow hold by deducting the specified coin amount from the authenticated user (payer) and holding it in escrow. The coins are only transferred to the payee upon explicit release. The payee must be a valid user different from the payer.',
   })
-  @ApiBody({ type: CreateEscrowHoldDto })
+  @ApiBody({ type: CreateEscrowDto })
   @ApiCreatedResponse({
     description: 'Escrow hold created successfully',
     schema: {
@@ -109,7 +109,7 @@ export class EscrowController {
   })
   async holdCoins(
     @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateEscrowHoldDto,
+    @Body() dto: CreateEscrowDto,
   ) {
     return this.escrowService.holdCoins(req.user.sub, dto);
   }
