@@ -20,6 +20,7 @@ import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
+import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -36,6 +37,7 @@ import {
     CorrectionModalComponent,
     LanguagePickerComponent,
     TextToSpeechComponent,
+    LikedByModalComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -70,6 +72,9 @@ export class MomentsFeedComponent {
   readonly activeCorrectionMomentId = signal<string | null>(null);
   readonly activeCorrectionOriginalText = signal<string>('');
   readonly activeLikedByMomentId = signal<string | null>(null);
+  // Translation cache and visibility toggle (issue #447)
+  readonly translationCache = signal<Record<string, string>>({});
+  readonly showTranslationMap = signal<Record<string, boolean>>({});
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
@@ -227,19 +232,32 @@ export class MomentsFeedComponent {
 
   async toggleInlineTranslation(moment: MomentRecord): Promise<void> {
     if (!moment.text_content) return;
-    if (moment.translatedText) {
-      // Toggle off
-      moment.isTranslating = false;
-      moment.translatedText = undefined;
+
+    const cacheKey = moment.id;
+    const currentlyShowing = this.showTranslationMap()[cacheKey];
+
+    // Toggle off: hide the translation but keep it cached
+    if (currentlyShowing) {
+      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: false }));
       return;
     }
+
+    // Show cached translation if available (issue #447)
+    if (this.translationCache()[cacheKey]) {
+      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
+      return;
+    }
+
+    // Fetch from API and cache the result
     moment.isTranslating = true;
     try {
       const res = await this.vocabStore.translateWordOrSentence(moment.text_content, 'en');
-      moment.translatedText = res.translated_text;
+      this.translationCache.update((prev) => ({ ...prev, [cacheKey]: res.translated_text }));
+      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
     } catch (e) {
       console.error('Inline translation error:', e);
-      moment.translatedText = this.i18n.translate('moments.transError');
+      this.translationCache.update((prev) => ({ ...prev, [cacheKey]: this.i18n.translate('moments.transError') }));
+      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
     } finally {
       moment.isTranslating = false;
     }
@@ -255,7 +273,7 @@ export class MomentsFeedComponent {
         original_context: `Moment by ${moment.author?.display_name || this.i18n.translate('common.unknownUser')}`,
         definition: 'Saved full social feed moment to LingQ Spaced Repetition deck.',
       });
-      await this.vocabStore.updateSrsLevel(created.id, 1);
+      await this.vocabStore.updateSrsLevel(created.id, 3);
       showToast(this.i18n.translate('moments.savedLingqAlert', { text: moment.text_content }));
     } catch (e) {
       console.error('Failed to save moment text to LingQ deck:', e);

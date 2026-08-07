@@ -20,7 +20,7 @@ import { environment } from '../../../environments/environment';
       @if (translationResource.isLoading()) {
         <p class="mt-1 text-xs text-gray-400">{{ 'common.loading' | t }}</p>
       } @else {
-        @if (translationResource.value()?.translation; as translation) {
+        @if (cachedTranslation() ?? translationResource.value()?.translation; as translation) {
           <p class="mt-1 text-sm text-gray-300 italic">{{ translation }}</p>
         } @else {
           <p class="mt-1 text-xs text-rose-500">{{ 'moments.translationError' | t }}</p>
@@ -35,9 +35,11 @@ export class MomentTranslateComponent {
 
   readonly showTranslation = signal(false);
   private readonly i18n = inject(I18nService);
+  // Cache the translation client-side to avoid re-fetching on toggle (issue #447)
+  readonly cachedTranslation = signal<string | null>(null);
 
   private readonly translateRequest = computed<{ text: string; target: string } | null>(() => {
-    if (!this.showTranslation()) {
+    if (!this.showTranslation() || this.cachedTranslation() !== null) {
       return null;
     }
     return {
@@ -69,12 +71,14 @@ export class MomentTranslateComponent {
           return response.json();
         })
         .then((data: { translation: string | undefined }) => {
-          if (data.translation) {
-            return { translation: data.translation };
-          }
-          return {};
+          const translation = data.translation ?? null;
+          this.cachedTranslation.set(translation);
+          return { translation: translation ?? undefined };
         })
-        .catch(() => ({}));
+        .catch(() => {
+          this.cachedTranslation.set(this.i18n.translate('moments.transError') ?? null);
+          return {};
+        });
     },
   });
 

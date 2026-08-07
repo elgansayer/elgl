@@ -42,7 +42,7 @@
     class="w-full rounded-md bg-indigo-600 ps-4 pe-4 py-2 font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
     [disabled]="!saveAvailable()"
     (click)="savePreferences()"
-  >
+   [attr.aria-label]="'common.save' | t">
     {{ 'common.save' | t }}
   </button>
 

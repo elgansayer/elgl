@@ -37,6 +37,7 @@ export class SettingsComponent implements OnInit {
   privacyHideExactLocation = false;
   privacyHideOnlineStatus = false;
   privacyHideVipStatus = false;
+  profileVisibility: 'everyone' | 'vips_only' | 'hidden' = 'everyone';
   autoPlayVoiceNotes = false;
   soundEffectsEnabled = false;
   vibrationEnabled = false;
@@ -64,6 +65,7 @@ export class SettingsComponent implements OnInit {
         this.privacyHideExactLocation = Boolean(profile.privacy_hide_exact_location);
         this.privacyHideOnlineStatus = Boolean(profile.privacy_hide_online_status);
         this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
+        this.profileVisibility = this.sanitizeProfileVisibility(profile.profile_visibility);
         this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
         this.autoDownloadMedia.set(Boolean(profile.auto_download_media));
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
@@ -145,6 +147,15 @@ export class SettingsComponent implements OnInit {
     return this.linkedAccounts().find((a) => a.provider === provider);
   }
 
+  private sanitizeProfileVisibility(
+    value: string | undefined,
+  ): 'everyone' | 'vips_only' | 'hidden' {
+    if (value === 'everyone' || value === 'vips_only' || value === 'hidden') {
+      return value;
+    }
+    return 'everyone';
+  }
+
   goBack(): void {
     this.location.back();
   }
@@ -154,15 +165,13 @@ export class SettingsComponent implements OnInit {
   }
 
   toggleInterest(interest: string): void {
-    this.interests.update(arr =>
-      arr.includes(interest)
-        ? arr.filter((x) => x !== interest)
-        : [...arr, interest],
+    this.interests.update((arr) =>
+      arr.includes(interest) ? arr.filter((x) => x !== interest) : [...arr, interest],
     );
   }
 
   removeInterest(index: number): void {
-    this.interests.update(arr => arr.filter((_, i) => i !== index));
+    this.interests.update((arr) => arr.filter((_, i) => i !== index));
   }
 
   toggleSoundEffects(): void {
@@ -196,19 +205,18 @@ export class SettingsComponent implements OnInit {
         privacy_hide_exact_location: this.privacyHideExactLocation,
         privacy_hide_online_status: this.privacyHideOnlineStatus,
         privacy_hide_vip_status: this.privacyHideVipStatus,
+        profile_visibility: this.profileVisibility,
         auto_play_voice_notes: this.autoPlayVoiceNotes,
         auto_download_media: this.autoDownloadMedia(),
         sound_effects_enabled: this.soundEffectsEnabled,
         vibration_enabled: this.vibrationEnabled,
         auto_download_preference: this.autoDownloadPreference(),
-        auto_download_wifi_only: this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
+        auto_download_wifi_only:
+          this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
         interests: this.interests(),
       });
 
-      await this.chatSettingsService.updateSetting(
-        'enterToSend',
-        this.chatEnterToSend(),
-      );
+      await this.chatSettingsService.updateSetting('enterToSend', this.chatEnterToSend());
       await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());
 
       this.successMessage.set('Settings saved successfully');

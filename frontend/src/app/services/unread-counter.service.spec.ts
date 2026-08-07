@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { UnreadCounterService } from './unread-counter.service';
+import { UnreadCounterService, NavTab } from './unread-counter.service';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 describe('UnreadCounterService', () => {
@@ -32,88 +32,107 @@ describe('UnreadCounterService', () => {
     TestBed.resetTestingModule();
   });
 
-  it('should initialise with zero unread counts', () => {
+  it('should initialise all unread counts to zero', () => {
     expect(service.chatUnread()).toBe(0);
+    expect(service.momentsUnread()).toBe(0);
+    expect(service.discoveryUnread()).toBe(0);
+    expect(service.audioRoomsUnread()).toBe(0);
     expect(service.notificationUnread()).toBe(0);
     expect(service.totalUnread()).toBe(0);
   });
 
-  it('should set chat unread count correctly', () => {
-    service.setChatUnread(5);
-    expect(service.chatUnread()).toBe(5);
-    service.setChatUnread(-1);
-    expect(service.chatUnread()).toBe(0);
+  it('should compute totalUnread as sum of all per-tab counts', () => {
+    service.set('chat', 3);
+    service.set('moments', 1);
+    service.set('discovery', 0);
+    service.set('audioRooms', 2);
+    service.set('profile', 4);
+    expect(service.totalUnread()).toBe(10);
   });
 
-  it('should set notification unread count correctly', () => {
+  it('should expose per-tab counts via tabCount', () => {
+    service.set('chat', 5);
+    service.set('moments', 8);
+    expect(service.tabCount('chat')).toBe(5);
+    expect(service.tabCount('moments')).toBe(8);
+  });
+
+  it('should handle the full set/increment/decrement lifecycle', () => {
+    service.increment('chat');
+    service.increment('chat');
+    expect(service.chatUnread()).toBe(2);
+
+    service.decrement('chat');
+    expect(service.chatUnread()).toBe(1);
+
+    service.decrement('chat');
+    service.decrement('chat');
+    expect(service.chatUnread()).toBe(0);
+
+    service.increment('discovery');
+    service.increment('discovery');
+    expect(service.discoveryUnread()).toBe(2);
+
+    service.set('discovery', 100);
+    expect(service.discoveryUnread()).toBe(100);
+  });
+
+  it('should support legacy method names', () => {
+    service.setChatUnread(7);
+    expect(service.chatUnread()).toBe(7);
+
+    service.incrementChatUnread();
+    expect(service.chatUnread()).toBe(8);
+
+    service.decrementChatUnread();
+    expect(service.chatUnread()).toBe(7);
+
     service.setNotificationUnread(3);
     expect(service.notificationUnread()).toBe(3);
-    service.setNotificationUnread(-2);
-    expect(service.notificationUnread()).toBe(0);
-  });
 
-  it('should increment chat unread', () => {
-    service.incrementChatUnread();
-    expect(service.chatUnread()).toBe(1);
-    service.incrementChatUnread();
-    expect(service.chatUnread()).toBe(2);
-  });
-
-  it('should decrement chat unread', () => {
-    service.setChatUnread(3);
-    service.decrementChatUnread();
-    expect(service.chatUnread()).toBe(2);
-    service.decrementChatUnread();
-    service.decrementChatUnread();
-    expect(service.chatUnread()).toBe(0);
-    service.decrementChatUnread();
-    expect(service.chatUnread()).toBe(0);
-  });
-
-  it('should increment notification unread', () => {
     service.incrementNotificationUnread();
-    expect(service.notificationUnread()).toBe(1);
-    service.incrementNotificationUnread();
-    expect(service.notificationUnread()).toBe(2);
+    expect(service.notificationUnread()).toBe(4);
+
+    service.decrementNotificationUnread();
+    expect(service.notificationUnread()).toBe(3);
   });
 
-  it('should decrement notification unread', () => {
-    service.setNotificationUnread(2);
-    service.decrementNotificationUnread();
-    expect(service.notificationUnread()).toBe(1);
-    service.decrementNotificationUnread();
-    expect(service.notificationUnread()).toBe(0);
-    service.decrementNotificationUnread();
-    expect(service.notificationUnread()).toBe(0);
-  });
-
-  it('should compute total unread as sum of chat and notification', () => {
-    service.setChatUnread(3);
-    service.setNotificationUnread(5);
-    expect(service.totalUnread()).toBe(8);
-
-    service.setChatUnread(0);
-    expect(service.totalUnread()).toBe(5);
-
-    service.setNotificationUnread(0);
+  it('should reset all counts to zero', () => {
+    service.set('chat', 5);
+    service.set('moments', 3);
+    service.set('profile', 1);
+    service.resetAll();
     expect(service.totalUnread()).toBe(0);
+    const tabs: NavTab[] = ['chat', 'moments', 'discovery', 'audioRooms', 'profile'];
+    for (const tab of tabs) {
+      expect(service.tabCount(tab)).toBe(0);
+    }
+  });
+
+  it('should not allow negative counts via set', () => {
+    service.set('chat', -5);
+    expect(service.chatUnread()).toBe(0);
+  });
+
+  it('should not allow negative counts via decrement', () => {
+    service.decrement('chat');
+    expect(service.chatUnread()).toBe(0);
   });
 
   it('should call setAppBadge when totalUnread is positive', async () => {
-    service.setChatUnread(1);
-    // Allow effect to run
+    service.set('chat', 1);
     await vi.waitFor(() => {
       expect(setAppBadgeSpy).toHaveBeenCalledWith(1);
     }, { timeout: 100 });
   });
 
   it('should call clearAppBadge when totalUnread becomes zero', async () => {
-    service.setNotificationUnread(5);
+    service.set('profile', 5);
     await vi.waitFor(() => {
       expect(setAppBadgeSpy).toHaveBeenCalledWith(5);
     }, { timeout: 100 });
 
-    service.setNotificationUnread(0);
+    service.set('profile', 0);
     await vi.waitFor(() => {
       expect(clearAppBadgeSpy).toHaveBeenCalled();
     }, { timeout: 100 });
@@ -121,8 +140,7 @@ describe('UnreadCounterService', () => {
 
   it('should handle badge update errors gracefully', async () => {
     setAppBadgeSpy.mockRejectedValueOnce(new Error('badge failed'));
-    // Should not throw
-    service.setChatUnread(3);
+    service.set('chat', 3);
     await vi.waitFor(() => {
       expect(setAppBadgeSpy).toHaveBeenCalled();
     }, { timeout: 100 });

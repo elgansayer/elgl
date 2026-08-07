@@ -248,6 +248,55 @@ describe('DiscoveryComponent', () => {
     expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(1);
   });
 
+  it('should toggle voice room active and re-search', async () => {
+    await init();
+    mockDiscoveryService.findPartners.mockClear();
+
+    component.toggleVoiceRoomActive();
+    await flush();
+
+    expect(component.voiceRoomActive()).toBe(true);
+    const callArgs = mockDiscoveryService.findPartners.mock.calls.at(-1)?.[0];
+    expect(callArgs.voice_room_active).toBe(true);
+
+    // Toggle back
+    component.toggleVoiceRoomActive();
+    await flush();
+    expect(component.voiceRoomActive()).toBe(false);
+    const callArgs2 = mockDiscoveryService.findPartners.mock.calls.at(-1)?.[0];
+    expect(callArgs2.voice_room_active).toBeUndefined();
+  });
+
+  it('should reset voice room active when resetting filters', async () => {
+    await init();
+    component.toggleVoiceRoomActive();
+    await flush();
+    expect(component.voiceRoomActive()).toBe(true);
+    mockDiscoveryService.findPartners.mockClear();
+
+    component.resetFilters();
+    await flush();
+
+    expect(component.voiceRoomActive()).toBe(false);
+    const callArgs = mockDiscoveryService.findPartners.mock.calls.at(-1)?.[0];
+    expect(callArgs.voice_room_active).toBeUndefined();
+  });
+
+  it('should render voice room active toggle checkbox', async () => {
+    await init();
+
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('#voiceRoomActiveCheckbox');
+    expect(checkbox).toBeTruthy();
+    expect(checkbox.checked).toBe(false);
+
+    checkbox.click();
+    await flush();
+
+    expect(component.voiceRoomActive()).toBe(true);
+    const callArgs = mockDiscoveryService.findPartners.mock.calls.at(-1)?.[0];
+    expect(callArgs.voice_room_active).toBe(true);
+  });
+
   it('should not change state when persisting serious learner mode fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mockUserService.updateMyProfile.mockRejectedValue(new Error('update failed'));

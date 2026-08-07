@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
+import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
 import { vi, Mocked } from 'vitest';
 import { VideoRoomComponent } from './video-room.component';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
@@ -36,6 +36,7 @@ describe('VideoRoomComponent', () => {
       currentRoom: currentRoomSignal,
       hostVideoTrack: signal(null),
       coHostVideoTrack: signal(null),
+      localVideoTrack: signal(null),
       inviteCoHost: vi.fn().mockResolvedValue(undefined),
       removeCoHost: vi.fn().mockResolvedValue(undefined),
     } as unknown as Mocked<Partial<AudioRoomsStore>>;
@@ -52,6 +53,7 @@ describe('VideoRoomComponent', () => {
         { provide: AudioRoomsStore, useValue: mockStore },
         { provide: AuthService, useValue: mockAuthService },
       ],
+      schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VideoRoomComponent);
@@ -105,5 +107,12 @@ describe('VideoRoomComponent', () => {
     component.removeCoHost();
 
     expect(mockStore.removeCoHost).toHaveBeenCalled();
+  });
+
+  it('should render live chat overlay inside host video tile', async () => {
+    await setup(baseRoom, 'host-1');
+    const el = fixture.nativeElement as HTMLElement;
+    const overlay = el.querySelector('app-live-chat-overlay');
+    expect(overlay).toBeTruthy();
   });
 });

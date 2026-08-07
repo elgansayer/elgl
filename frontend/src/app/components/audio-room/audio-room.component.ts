@@ -21,6 +21,7 @@ import {
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
 import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
+import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -35,6 +36,7 @@ import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component'
     AudioEqualizerComponent,
     QuickPollFormComponent,
     QuickPollDisplayComponent,
+    LiveChatOverlayComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],

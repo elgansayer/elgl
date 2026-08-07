@@ -119,7 +119,7 @@ export class AudioRoomsStore {
   readonly audienceCount = signal<number>(0);
 
   // Split-screen co-host video state
-  private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
+  readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
   private readonly remoteVideoTracksByIdentity = signal<Map<string, RemoteVideoTrack>>(new Map());
 
   readonly hostVideoTrack = computed<RemoteVideoTrack | null>(() => {

@@ -52,21 +52,39 @@ export class FlashcardsService {
   ): Promise<Flashcard> {
     const supabase = this.supabaseService.getClient();
 
-    // Compute next review interval
-    const now = new Date();
-    let addDays = 1;
-    if (dto.srs_level === 1) addDays = 3;
-    if (dto.srs_level === 2) addDays = 7;
-    if (dto.srs_level === 3) addDays = 14;
-    if (dto.srs_level === 4) addDays = 30;
+    // Fetch current card state to run SM-2 locally
+    const { data: current, error: fetchErr } = await supabase
+      .from('flashcards')
+      .select('easiness_factor, repetitions, interval_days')
+      .eq('id', flashcardId)
+      .eq('user_id', userId)
+      .single();
 
-    now.setDate(now.getDate() + addDays);
+    if (fetchErr || !current) {
+      throw new Error(
+        `Failed to fetch flashcard for SRS update: ${fetchErr?.message ?? 'Not found'}`,
+      );
+    }
+
+    const { newEf, newRepetitions, newInterval, newSrsLevel } =
+      this.applySm2Algorithm(
+        dto.quality,
+        current.easiness_factor,
+        current.repetitions,
+        current.interval_days,
+      );
+
+    const nextReviewAt = new Date();
+    nextReviewAt.setDate(nextReviewAt.getDate() + newInterval);
 
     const response = await supabase
       .from('flashcards')
       .update({
-        srs_level: dto.srs_level,
-        next_review_at: now.toISOString(),
+        srs_level: newSrsLevel,
+        easiness_factor: newEf,
+        repetitions: newRepetitions,
+        interval_days: newInterval,
+        next_review_at: nextReviewAt.toISOString(),
       })
       .eq('id', flashcardId)
       .eq('user_id', userId)
@@ -82,6 +100,82 @@ export class FlashcardsService {
     void this.xpService.awardXpForActivity(userId, 'review_flashcard');
 
     return response.data;
+  }
+
+  /**
+   * SM-2 algorithm for spaced repetition scheduling.
+   *
+   * @param quality - User's self-assessed recall quality (0-5).
+   *   0: complete blackout
+   *   1: incorrect response, but correct one remembered upon seeing it
+   *   2: incorrect response, but correct one seemed easy to recall
+   *   3: correct response with serious difficulty
+   *   4: correct response after hesitation
+   *   5: perfect response
+   * @param ef - Current easiness factor (minimum 1.3).
+   * @param repetitions - Current repetition count.
+   * @param interval - Current interval in days.
+   * @returns New SM-2 state.
+   */
+  private applySm2Algorithm(
+    quality: number,
+    ef: number,
+    repetitions: number,
+    interval: number,
+  ): {
+    newEf: number;
+    newRepetitions: number;
+    newInterval: number;
+    newSrsLevel: number;
+  } {
+    // Clamp quality to valid range
+    const q = Math.max(0, Math.min(5, quality));
+
+    // Update easiness factor
+    const newEf = Math.max(
+      1.3,
+      ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)),
+    );
+
+    let newRepetitions: number;
+    let newInterval: number;
+
+    if (q < 3) {
+      // Failed - reset repetitions, short interval
+      newRepetitions = 0;
+      newInterval = 1;
+    } else {
+      // Passed - schedule next review
+      if (repetitions === 0) {
+        newInterval = 1;
+      } else if (repetitions === 1) {
+        newInterval = 6;
+      } else {
+        newInterval = Math.round(interval * ef);
+      }
+      newRepetitions = repetitions + 1;
+    }
+
+    // Derive srs_level from SM-2 state for backwards compatibility
+    let newSrsLevel: number;
+    if (newRepetitions === 0) {
+      newSrsLevel = 0;
+    } else if (newRepetitions === 1) {
+      newSrsLevel = 1;
+    } else if (newRepetitions === 2) {
+      newSrsLevel = 2;
+    } else if (newInterval < 21) {
+      newSrsLevel = 3;
+    } else {
+      newSrsLevel = 4;
+    }
+
+    return {
+      newEf: Number(newEf.toFixed(4)),
+      newRepetitions,
+      newInterval,
+      newSrsLevel,
+    };
   }
 
   async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
