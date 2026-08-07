@@ -338,8 +338,6 @@ export class I18nService {
     'moments.liveDiffPreview': 'Live Diff Preview',
     'moments.quotedTextAlert': 'Quoted sentence in comment.',
     'moments.correctionSentAlert': 'Correction published to timeline.',
-    'common.optional': 'optional',
-    'common.cancel': 'Cancel',
     'common.confirm': 'Confirm',
     'common.close': 'Close',
     'common.back': 'Back',

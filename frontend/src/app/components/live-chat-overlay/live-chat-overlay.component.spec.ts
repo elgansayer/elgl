@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
-import { resolveComponentResources } from '@angular/core';
 import { Component, input } from '@angular/core';
 import { LiveChatOverlayComponent } from './live-chat-overlay.component';
 import { CentrifugoService } from '../../services/centrifugo.service';
@@ -27,16 +22,7 @@ describe('LiveChatOverlayComponent', () => {
   let mockI18n: { translate: ReturnType<typeof vi.fn> };
   let mockAuth: { currentUser: ReturnType<typeof vi.fn> };
 
-  beforeAll(async () => {
-    await resolveComponentResources(LiveChatOverlayComponent);
-  });
-
   beforeEach(async () => {
-    try {
-      TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
-    } catch {
-      // Ignore if already initialized
-    }
 
     mockCentrifugo = {
       subscribe: vi.fn(),
@@ -76,7 +62,7 @@ describe('LiveChatOverlayComponent', () => {
   });
 
   it('should subscribe to centrifugo channel on init', () => {
-    expect(mockCentrifugo.subscribe).toHaveBeenCalledWith(
+    expect(mockCentrifugo['subscribe']).toHaveBeenCalledWith(
       'room_test-room',
       expect.any(Function),
     );
@@ -84,7 +70,7 @@ describe('LiveChatOverlayComponent', () => {
 
   it('should unsubscribe on destroy', () => {
     fixture.destroy();
-    expect(mockCentrifugo.unsubscribe).toHaveBeenCalledWith('room_test-room');
+    expect(mockCentrifugo['unsubscribe']).toHaveBeenCalledWith('room_test-room');
   });
 
   it('should render chat overlay when toggle is clicked', () => {
@@ -124,7 +110,7 @@ describe('LiveChatOverlayComponent', () => {
       overlayComponent.inputText.set('Hello world');
       overlayComponent.sendMessage();
     }
-    expect(mockCentrifugo.publish).toHaveBeenCalledWith('room_test-room', {
+    expect(mockCentrifugo['publish']).toHaveBeenCalledWith('room_test-room', {
       type: 'text',
       content: 'Hello world',
       senderName: 'TestUser',
@@ -143,7 +129,7 @@ describe('LiveChatOverlayComponent', () => {
       overlayComponent.inputText.set('   ');
       overlayComponent.sendMessage();
     }
-    expect(mockCentrifugo.publish).not.toHaveBeenCalled();
+    expect(mockCentrifugo['publish']).not.toHaveBeenCalled();
   });
 
   it('should cap messages at 50', () => {

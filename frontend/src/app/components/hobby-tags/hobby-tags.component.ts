@@ -184,12 +184,12 @@ export class HobbyTagsComponent {
   public readonly i18n = inject(I18nService);
 
   private dataLoader = resource({
-    request: () => ({ lang: this.targetLanguage() }),
-    loader: async ({ request }) => {
+    loader: async () => {
+      const lang = this.targetLanguage();
       const [allTags, userTags, vocab] = await Promise.all([
         this.hobbyTagsService.getAllTags(),
         this.hobbyTagsService.getMyTags(),
-        this.hobbyTagsService.getVocabulary(request.lang),
+        this.hobbyTagsService.getVocabulary(lang),
       ]);
       this.allTags.set(allTags);
       this.userTags.set(userTags);

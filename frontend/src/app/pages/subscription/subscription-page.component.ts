@@ -3,7 +3,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
-import { AppButtonSecondaryComponent } from '../../components/primitives/button-secondary/button-secondary.component';
 import { AppPillComponent } from '../../components/primitives/pill/pill.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
 import { RestorePurchasesButtonComponent } from '../../components/restore-purchases-button/restore-purchases-button.component';
@@ -20,7 +19,6 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
-    AppButtonSecondaryComponent,
     AppPillComponent,
     AppGradientButtonComponent,
     RestorePurchasesButtonComponent,

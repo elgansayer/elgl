@@ -1,10 +1,9 @@
 import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-link-preview-card',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule],
   template: `
     <a
       [href]="url()"
