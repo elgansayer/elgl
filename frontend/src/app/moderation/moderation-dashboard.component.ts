@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 import { ModerationItem, ModerationService } from '../services/moderation.service';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
@@ -9,7 +10,7 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
 @Component({
   selector: 'app-moderation-dashboard',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4" role="main" aria-labelledby="moderation-title">
       <h2 id="moderation-title" class="text-2xl font-bold mb-4">{{ 'moderation.title' | t }}</h2>
@@ -79,13 +80,13 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
           @for (item of items.value(); track item.id) {
             <div class="border border-slate-200 rounded-lg p-4 mb-2" [attr.aria-label]="'moderation.reportItemAria' | t: { id: item.id }">
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reporter' | t }}: </span>{{ item.reporter?.display_name }}
+                <span class="sr-only">{{ 'moderation.reporter' | t }}: </span>{{ item.reporter?.display_name | sanitiseHtml }}
               </p>
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ item.reported_user?.display_name }}
+                <span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ item.reported_user?.display_name | sanitiseHtml }}
               </p>
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason }}
+                <span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason | sanitiseHtml }}
               </p>
 
               @if (analysis()?.userId === item.reported_user?.id) {
