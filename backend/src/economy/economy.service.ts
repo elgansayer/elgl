@@ -19,6 +19,7 @@ import {
   UnlockStickerPackDto,
 } from './dto/economy.dto';
 import { sanitiseEconomyData } from './sanitise-economy.helper';
+import { withExponentialBackoff } from '../common/http-retry.helper';
 
 export interface VirtualGiftRow {
   id: string;
@@ -739,12 +740,17 @@ export class EconomyService {
       throw new BadRequestException('Apple shared secret not configured');
     }
 
-    const response = await firstValueFrom(
-      this.httpService.post(verificationUrl, {
-        'receipt-data': receiptToken,
-        password: sharedSecret,
-        'exclude-old-transactions': true,
-      }),
+    const response = await withExponentialBackoff(
+      () =>
+        firstValueFrom(
+          this.httpService.post(verificationUrl, {
+            'receipt-data': receiptToken,
+            password: sharedSecret,
+            'exclude-old-transactions': true,
+          }),
+        ),
+      'Apple receipt verification',
+      { logger: this.logger },
     );
 
     const body = response.data as {
@@ -801,12 +807,17 @@ export class EconomyService {
 
     const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
 
-    const response = await firstValueFrom(
-      this.httpService.get(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }),
+    const response = await withExponentialBackoff(
+      () =>
+        firstValueFrom(
+          this.httpService.get(url, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }),
+        ),
+      'Google Play receipt verification',
+      { logger: this.logger },
     );
 
     const body = response.data as {
@@ -849,7 +860,11 @@ export class EconomyService {
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await this.stripe.checkout.sessions.retrieve(sessionId);
+      session = await withExponentialBackoff(
+        () => this.stripe.checkout.sessions.retrieve(sessionId),
+        'Stripe session retrieve',
+        { logger: this.logger },
+      );
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unexpected error';

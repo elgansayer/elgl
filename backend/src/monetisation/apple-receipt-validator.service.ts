@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidationResponse } from './dto/monetisation.dto';
+import { withExponentialBackoff } from '../common/http-retry.helper';
 
 interface AppleReceiptResponse {
   environment: 'Sandbox' | 'Production';
@@ -104,12 +105,17 @@ export class AppleReceiptValidatorService {
     receiptData: string,
     excludeOldTransactions: boolean,
   ): Promise<AppleReceiptResponse> {
-    const response = await firstValueFrom(
-      this.httpService.post<AppleReceiptResponse>(url, {
-        'receipt-data': receiptData,
-        password: this.sharedSecret,
-        'exclude-old-transactions': excludeOldTransactions,
-      }),
+    const response = await withExponentialBackoff(
+      () =>
+        firstValueFrom(
+          this.httpService.post<AppleReceiptResponse>(url, {
+            'receipt-data': receiptData,
+            password: this.sharedSecret,
+            'exclude-old-transactions': excludeOldTransactions,
+          }),
+        ),
+      'Apple receipt verification',
+      { logger: this.logger },
     );
 
     const result = response.data;
