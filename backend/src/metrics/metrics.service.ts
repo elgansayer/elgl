@@ -37,6 +37,18 @@ export class MetricsService {
   readonly tsReportsByCategory: Counter<string>;
   readonly tsModerationQueueLatency: Histogram<string>;
 
+  // LingQ Reading Engine metrics
+  readonly readingEngineSessions: Counter<string>;
+  readonly readingEngineWordsParsed: Counter<string>;
+  readonly readingEngineTokenisationDuration: Histogram<string>;
+  readonly readingEngineAiRequests: Counter<string>;
+  readonly readingEngineAiRequestDuration: Histogram<string>;
+  readonly readingEngineAiErrors: Counter<string>;
+  readonly readingEngineFlashcardSaves: Counter<string>;
+  readonly readingEngineSessionDuration: Histogram<string>;
+  readonly readingEngineUserWordsLookedUp: Counter<string>;
+  readonly readingEngineDailyActiveReaders: Gauge<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -194,6 +206,80 @@ export class MetricsService {
       buckets: [0.1, 0.5, 1, 2, 5, 10],
       registers: [this.register],
     });
+
+    // --- LingQ Reading Engine Metrics ---
+
+    this.readingEngineSessions = new Counter({
+      name: 'hellotalk_reading_engine_sessions_total',
+      help: 'Total number of LingQ reading sessions started',
+      labelNames: ['language'],
+      registers: [this.register],
+    });
+
+    this.readingEngineWordsParsed = new Counter({
+      name: 'hellotalk_reading_engine_words_parsed_total',
+      help: 'Total number of words tokenised via Intl.Segmenter',
+      labelNames: ['language'],
+      registers: [this.register],
+    });
+
+    this.readingEngineTokenisationDuration = new Histogram({
+      name: 'hellotalk_reading_engine_tokenisation_duration_seconds',
+      help: 'Time taken to tokenise text using Intl.Segmenter',
+      labelNames: ['language'],
+      registers: [this.register],
+      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
+    });
+
+    this.readingEngineAiRequests = new Counter({
+      name: 'hellotalk_reading_engine_ai_requests_total',
+      help: 'Total NLP/AI requests made (translate, grammar, pronunciation, simplify)',
+      labelNames: ['endpoint', 'status'],
+      registers: [this.register],
+    });
+
+    this.readingEngineAiRequestDuration = new Histogram({
+      name: 'hellotalk_reading_engine_ai_request_duration_seconds',
+      help: 'Duration of NLP/AI API calls (DeepL, Azure)',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+      buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
+    });
+
+    this.readingEngineAiErrors = new Counter({
+      name: 'hellotalk_reading_engine_ai_errors_total',
+      help: 'Total NLP/AI request errors (non-200 responses, timeouts)',
+      labelNames: ['endpoint', 'error_type'],
+      registers: [this.register],
+    });
+
+    this.readingEngineFlashcardSaves = new Counter({
+      name: 'hellotalk_reading_engine_flashcard_saves_total',
+      help: 'Total flashcards saved from LingQ reading sessions',
+      labelNames: ['source_language', 'target_language'],
+      registers: [this.register],
+    });
+
+    this.readingEngineSessionDuration = new Histogram({
+      name: 'hellotalk_reading_engine_session_duration_seconds',
+      help: 'Duration of LingQ reading sessions',
+      labelNames: ['language'],
+      registers: [this.register],
+      buckets: [10, 60, 180, 600, 1200, 1800, 3600],
+    });
+
+    this.readingEngineUserWordsLookedUp = new Counter({
+      name: 'hellotalk_reading_engine_words_looked_up_total',
+      help: 'Total number of word definitions/traductions looked up',
+      labelNames: ['source_language', 'target_language'],
+      registers: [this.register],
+    });
+
+    this.readingEngineDailyActiveReaders = new Gauge({
+      name: 'hellotalk_reading_engine_daily_active_readers',
+      help: 'Number of unique users who started a reading session in the last 24h',
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -298,6 +384,60 @@ export class MetricsService {
 
   recordTsDatingRiskScore(score: number): void {
     this.tsDatingRiskScore.observe(score);
+  }
+
+  // --- LingQ Reading Engine metric helpers ---
+
+  recordReadingEngineSession(language: string = 'unknown'): void {
+    this.readingEngineSessions.inc({ language });
+  }
+
+  recordReadingEngineWordsParsed(count: number, language: string = 'unknown'): void {
+    this.readingEngineWordsParsed.inc({ language }, count);
+  }
+
+  recordReadingEngineTokenisationDuration(language: string, durationSeconds: number): void {
+    this.readingEngineTokenisationDuration.observe({ language }, durationSeconds);
+  }
+
+  recordReadingEngineAiRequest(endpoint: string, status: string): void {
+    this.readingEngineAiRequests.inc({ endpoint, status });
+  }
+
+  recordReadingEngineAiRequestDuration(endpoint: string, durationSeconds: number): void {
+    this.readingEngineAiRequestDuration.observe({ endpoint }, durationSeconds);
+  }
+
+  recordReadingEngineAiError(endpoint: string, errorType: string): void {
+    this.readingEngineAiErrors.inc({ endpoint, error_type: errorType });
+  }
+
+  recordReadingEngineFlashcardSave(
+    sourceLanguage: string = 'unknown',
+    targetLanguage: string = 'unknown',
+  ): void {
+    this.readingEngineFlashcardSaves.inc({
+      source_language: sourceLanguage,
+      target_language: targetLanguage,
+    });
+  }
+
+  recordReadingEngineSessionDuration(language: string, durationSeconds: number): void {
+    this.readingEngineSessionDuration.observe({ language }, durationSeconds);
+  }
+
+  recordReadingEngineWordLookup(
+    sourceLanguage: string = 'unknown',
+    targetLanguage: string = 'unknown',
+  ): void {
+    this.readingEngineUserWordsLookedUp.inc({
+      source_language: sourceLanguage,
+      target_language: targetLanguage,
+    });
+  }
+
+  setReadingEngineDailyActiveReaders(count: number): void {
+    this.readingEngineDailyActiveReaders.set(count);
   }
 
   getRegister(): Registry {

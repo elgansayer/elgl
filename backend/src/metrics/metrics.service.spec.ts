@@ -185,4 +185,89 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_ts_moderation_queue_latency_seconds');
     });
   });
+
+  describe('LingQ Reading Engine metrics', () => {
+    it('should record reading engine session', () => {
+      expect(() => service.recordReadingEngineSession('fr')).not.toThrow();
+    });
+
+    it('should record reading engine session with defaults', () => {
+      expect(() => service.recordReadingEngineSession()).not.toThrow();
+    });
+
+    it('should record words parsed', () => {
+      expect(() =>
+        service.recordReadingEngineWordsParsed(500, 'ja'),
+      ).not.toThrow();
+    });
+
+    it('should record tokenisation duration', () => {
+      expect(() =>
+        service.recordReadingEngineTokenisationDuration('en', 0.025),
+      ).not.toThrow();
+    });
+
+    it('should record AI request', () => {
+      expect(() =>
+        service.recordReadingEngineAiRequest('translate', '200'),
+      ).not.toThrow();
+    });
+
+    it('should record AI request duration', () => {
+      expect(() =>
+        service.recordReadingEngineAiRequestDuration('grammar-check', 1.4),
+      ).not.toThrow();
+    });
+
+    it('should record AI error', () => {
+      expect(() =>
+        service.recordReadingEngineAiError('translate', 'timeout'),
+      ).not.toThrow();
+    });
+
+    it('should record flashcard save from reading', () => {
+      expect(() =>
+        service.recordReadingEngineFlashcardSave('es', 'en'),
+      ).not.toThrow();
+    });
+
+    it('should record flashcard save from reading with defaults', () => {
+      expect(() => service.recordReadingEngineFlashcardSave()).not.toThrow();
+    });
+
+    it('should record session duration', () => {
+      expect(() =>
+        service.recordReadingEngineSessionDuration('de', 420),
+      ).not.toThrow();
+    });
+
+    it('should record word lookup', () => {
+      expect(() =>
+        service.recordReadingEngineWordLookup('pt', 'en'),
+      ).not.toThrow();
+    });
+
+    it('should set daily active readers gauge', () => {
+      expect(() => service.setReadingEngineDailyActiveReaders(128)).not.toThrow();
+    });
+
+    it('should include reading engine metrics in getMetrics output', async () => {
+      service.recordReadingEngineSession('fr');
+      service.recordReadingEngineAiRequest('translate', '200');
+      service.recordReadingEngineAiError('translate', '429');
+      service.recordReadingEngineFlashcardSave('en', 'es');
+      service.setReadingEngineDailyActiveReaders(42);
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_reading_engine_sessions_total');
+      expect(metrics).toContain('hellotalk_reading_engine_ai_requests_total');
+      expect(metrics).toContain('hellotalk_reading_engine_ai_errors_total');
+      expect(metrics).toContain('hellotalk_reading_engine_flashcard_saves_total');
+      expect(metrics).toContain('hellotalk_reading_engine_daily_active_readers');
+      expect(metrics).toContain('hellotalk_reading_engine_session_duration_seconds');
+      expect(metrics).toContain('hellotalk_reading_engine_words_looked_up_total');
+      expect(metrics).toContain('hellotalk_reading_engine_words_parsed_total');
+      expect(metrics).toContain('hellotalk_reading_engine_tokenisation_duration_seconds');
+      expect(metrics).toContain('hellotalk_reading_engine_ai_request_duration_seconds');
+    });
+  });
 });
