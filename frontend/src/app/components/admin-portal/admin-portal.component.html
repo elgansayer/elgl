@@ -97,7 +97,7 @@
                 </div>
 
                 <div class="flex-1 min-w-[10rem]" role="cell">
-                  <p class="font-semibold">{{ displayNameFor(user) }}</p>
+                  <p class="font-semibold">{{ displayNameFor(user) | sanitiseHtml }}</p>
                   <p class="text-xs text-text-secondary">
                     {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
                   </p>
@@ -173,10 +173,10 @@
                         <li class="text-xs text-text-secondary">
                           {{ entry.created_at | date: 'medium' }}
                           @if (entry.ip_address) {
-                            &middot; {{ entry.ip_address }}
+                            &middot; {{ entry.ip_address | sanitiseHtml }}
                           }
                           @if (entry.user_agent) {
-                            &middot; {{ entry.user_agent }}
+                            &middot; {{ entry.user_agent | sanitiseHtml }}
                           }
                         </li>
                       }
