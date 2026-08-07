@@ -1,1 +1,18 @@
 /* Discovery component styles */
+
+/* Hide default scrollbar for horizontal pill containers */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsive partner card minimum height on desktop grid */
+@media (min-width: 1024px) {
+  .discovery-grid article {
+    min-height: 120px;
+  }
+}

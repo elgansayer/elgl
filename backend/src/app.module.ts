@@ -75,14 +75,11 @@ import { PronunciationScoringService } from './pronunciation-scoring/pronunciati
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
-<<<<<<< HEAD
-=======
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 <<<<<<< HEAD
 import { EscrowModule } from './escrow/escrow.module';
 =======
 import { CloudflareModule } from './cloudflare/cloudflare.module';
->>>>>>> origin/main
 
 @Module({
   imports: [
@@ -174,12 +171,7 @@ import { CloudflareModule } from './cloudflare/cloudflare.module';
     AssessmentsModule,
     AnalyticsModule,
     MetricsModule,
-<<<<<<< HEAD
-=======
-    ReadingEngineModule,
-    CloudflareModule,
->>>>>>> origin/main
-  ],
+],
   controllers: [AppController],
   providers: [
     AppService,
