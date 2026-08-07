@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
 import { SanitisePipe } from '../services/sanitise.pipe';
 import { ModerationItem, ModerationService } from './moderation.service';
@@ -176,6 +176,14 @@ export class ModerationDashboardComponent {
 
   readonly actionInProgress = signal<string | null>(null);
   readonly actionError = signal<string | null>(null);
+
+  constructor() {
+    // Clear analysis when switching between profile/moment tabs
+    effect(() => {
+      this.type();
+      this.analysis.set(null);
+    }, { allowSignalWrites: true });
+  }
 
   async approve(item: ModerationItem): Promise<void> {
     this.actionInProgress.set(item.id);
