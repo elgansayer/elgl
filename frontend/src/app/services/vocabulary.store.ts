@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, ErrorHandler } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -56,6 +56,7 @@ export class VocabularyStore {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private srsOffline = inject(SrsOfflineService);
+  private errorHandler = inject(ErrorHandler);
   private flashcardsUrl = `${environment.apiUrl}/flashcards`;
   private nlpUrl = `${environment.apiUrl}/nlp`;
 
@@ -90,7 +91,9 @@ export class VocabularyStore {
       this.flashcardMap.set(map);
       // Cache for offline access
       this.srsOffline.cacheFlashcards(list).catch(() => undefined);
-    } catch {
+    } catch (e) {
+      // Report error for crash tracking
+      this.reportSrsError('loadAllFlashcards', e);
       // Offline fallback - serve from local cache
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedFlashcards();
@@ -114,7 +117,9 @@ export class VocabularyStore {
       this.dueReviews.set(list);
       // Cache for offline access
       this.srsOffline.cacheDueReviews(list).catch(() => undefined);
-    } catch {
+    } catch (e) {
+      // Report error for crash tracking
+      this.reportSrsError('loadDueReviews', e);
       // Offline fallback
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedDueReviews();
@@ -292,6 +297,22 @@ export class VocabularyStore {
         { headers: this.getHeaders() },
       ),
     );
+  }
+
+  /**
+   * Reports SRS-related errors through the global error handler with context metadata.
+   * Replaces console.error so all SRS failures are tracked centrally.
+   */
+  private reportSrsError(operation: string, err: unknown): void {
+    const srsError = new Error(
+      `[SRS:VocabularyStore] ${operation} failed: ${(err as Error)?.message ?? String(err)}`,
+    );
+    srsError.name = 'SrsOperationError';
+    if (err instanceof Error && err.stack) {
+      srsError.stack = err.stack;
+    }
+    (srsError as Error & { srsOperation?: string }).srsOperation = operation;
+    this.errorHandler.handleError(srsError);
   }
 
   /**

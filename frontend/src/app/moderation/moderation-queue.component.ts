@@ -1,6 +1,5 @@
-import { Component, inject, signal, resource, afterNextRender } from '@angular/core';
+import { Component, inject, signal, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { JoyrideDirective } from 'ngx-joyride';
 import {
   ModerationService,
   ModerationItem,
@@ -10,7 +9,6 @@ import { TranslatePipe } from '../services/translate.pipe';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
-import { ModerationOnboardingService } from './moderation-onboarding.service';
 
 @Component({
   selector: 'app-moderation-queue',
@@ -21,13 +19,11 @@ import { ModerationOnboardingService } from './moderation-onboarding.service';
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
     AppCardComponent,
-    JoyrideDirective,
   ],
   templateUrl: './moderation-queue.component.html',
 })
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
-  private onboardingService = inject(ModerationOnboardingService);
 
   readonly type = signal<'moment' | 'profile'>('profile');
   readonly status = signal<string | undefined>(undefined);
@@ -48,24 +44,6 @@ export class ModerationQueueComponent {
 
   readonly analysisResult = signal<UserAnalysisResult | null>(null);
   readonly analysisLoading = signal(false);
-
-  constructor() {
-    afterNextRender(() => {
-      const hasSeenOnboarding = globalThis.localStorage?.getItem('moderationOnboardingSeen');
-      if (!hasSeenOnboarding) {
-        this.startOnboarding();
-      }
-    });
-  }
-
-  startOnboarding(): void {
-    this.onboardingService.startTour();
-    try {
-      globalThis.localStorage?.setItem('moderationOnboardingSeen', '1');
-    } catch {
-      // localStorage may be unavailable
-    }
-  }
 
   setType(type: 'moment' | 'profile'): void {
     this.type.set(type);
