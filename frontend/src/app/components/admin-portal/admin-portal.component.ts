@@ -5,10 +5,11 @@ import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
+import { AdminUserActionsComponent } from '../admin-user-actions/admin-user-actions.component';
 
 @Component({
   selector: 'app-admin-portal',
-  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent],
+  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AdminUserActionsComponent],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })

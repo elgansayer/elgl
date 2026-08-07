@@ -77,6 +77,12 @@
             >
               {{ (user.is_vip ? 'admin.revokeVipBtn' : 'admin.grantVipBtn') | t }}
             </button>
+
+            <app-admin-user-actions
+              [userId]="user.id"
+              [displayName]="displayNameFor(user)"
+              (actionCompleted)="loadUsers()"
+            />
           </div>
 
           <details class="mt-3" (toggle)="onLoginHistoryToggle(user, $any($event.target).open)">

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -104,6 +104,9 @@ export class AdminService {
   private authService = inject(AuthService);
   private baseUrl = `${environment.apiUrl}/admin`;
 
+  readonly banLoading = signal(false);
+  readonly warnLoading = signal(false);
+
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {
@@ -181,22 +184,32 @@ export class AdminService {
   }
 
   async banUser(userId: string): Promise<{ message: string }> {
-    return firstValueFrom(
-      this.http.post<{ message: string }>(
-        `${this.baseUrl}/users/${userId}/ban`,
-        {},
-        { headers: this.getHeaders() },
-      ),
-    );
+    this.banLoading.set(true);
+    try {
+      return await firstValueFrom(
+        this.http.post<{ message: string }>(
+          `${this.baseUrl}/users/${userId}/ban`,
+          {},
+          { headers: this.getHeaders() },
+        ),
+      );
+    } finally {
+      this.banLoading.set(false);
+    }
   }
 
   async warnUser(userId: string): Promise<{ message: string }> {
-    return firstValueFrom(
-      this.http.post<{ message: string }>(
-        `${this.baseUrl}/users/${userId}/warn`,
-        {},
-        { headers: this.getHeaders() },
-      ),
-    );
+    this.warnLoading.set(true);
+    try {
+      return await firstValueFrom(
+        this.http.post<{ message: string }>(
+          `${this.baseUrl}/users/${userId}/warn`,
+          {},
+          { headers: this.getHeaders() },
+        ),
+      );
+    } finally {
+      this.warnLoading.set(false);
+    }
   }
 }

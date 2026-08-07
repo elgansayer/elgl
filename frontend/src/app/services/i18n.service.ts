@@ -1169,6 +1169,12 @@ export class I18nService {
     'admin.pageIndicator': 'Page {{page}} of {{totalPages}}',
     'admin.userBanned': 'User banned',
     'admin.banFailed': 'Ban failed',
+    'admin.banBtn': 'Ban',
+    'admin.warnBtn': 'Warn',
+    'admin.banning': 'Banning...',
+    'admin.warning': 'Warning...',
+    'admin.banUserAria': 'Ban {{name}}',
+    'admin.warnUserAria': 'Warn {{name}}',
     'admin.warningIssued': 'Warning issued',
     'admin.warningFailed': 'Warning failed',
 

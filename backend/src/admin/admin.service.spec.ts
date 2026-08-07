@@ -168,4 +168,51 @@ describe('AdminService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('banUser', () => {
+    it('inserts a blocks row with the correct admin and target ids', async () => {
+      mockQueryBuilder.insert.mockResolvedValue({ error: null });
+
+      await service.banUser('target-1', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        blocker_id: 'admin-1',
+        blocked_id: 'target-1',
+      });
+    });
+
+    it('throws NotFoundException when the insert fails', async () => {
+      mockQueryBuilder.insert.mockResolvedValue({ error: { message: 'db error' } });
+
+      await expect(
+        service.banUser('target-1', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('warnUser', () => {
+    it('inserts a reports row with admin_warning category', async () => {
+      mockQueryBuilder.insert.mockResolvedValue({ error: null });
+
+      await service.warnUser('target-1', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        reporter_id: 'admin-1',
+        reported_user_id: 'target-1',
+        reason_category: 'admin_warning',
+        description: 'Admin warning',
+        status: 'open',
+      });
+    });
+
+    it('throws NotFoundException when the insert fails', async () => {
+      mockQueryBuilder.insert.mockResolvedValue({ error: { message: 'db error' } });
+
+      await expect(
+        service.warnUser('target-1', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });
