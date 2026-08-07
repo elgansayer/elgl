@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
+import { firstValueFrom, timer } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -358,7 +359,7 @@ export class ReadingEngineComponent {
 
   private async fetchArticles(): Promise<ReadingArticle[]> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await firstValueFrom(timer(800));
       return [
         {
           id: '1',
