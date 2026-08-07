@@ -2069,6 +2069,49 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      matchmaking_crash_reports: {
+        Row: {
+          id: string;
+          operation: string;
+          user_id: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace: string | null;
+          context: Record<string, unknown> | null;
+          circuit_breaker_open: boolean;
+          degraded_tier: string | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          operation: string;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          circuit_breaker_open?: boolean;
+          degraded_tier?: string | null;
+          created_at?: string;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Update: Partial<{
+          operation?: string;
+          user_id?: string | null;
+          error_type?: string;
+          error_message?: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          circuit_breaker_open?: boolean;
+          degraded_tier?: string | null;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

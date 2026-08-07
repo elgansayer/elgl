@@ -81,7 +81,7 @@ export class RecommendationsService {
         throw new Error(`Failed to fetch users: ${error?.message}`);
       }
 
-      this.logger.log(`Computing recommendations for ${users.length} users...`);
+      this.logger.info(`Computing recommendations for ${users.length} users...`);
 
       for (const user of users) {
         const targetLanguages = user.target_languages as string[] | null;
@@ -464,7 +464,7 @@ export class RecommendationsService {
       `Using mock data as ultimate fallback for user ${userId}`,
     );
 
-    const mockUsers = MOCK_USERS as Array<{
+    const mockUsers = MOCK_USERS as unknown as Array<{
       id: string;
       display_name: string;
       native_languages: string;
@@ -482,7 +482,7 @@ export class RecommendationsService {
         id: u.id,
         displayName: u.display_name,
         avatarUrl: u.avatar_url,
-        nativeLanguage: u.native_languages,
+        nativeLanguage: u.native_languages[0],
         targetLanguages: u.target_languages,
         sharedInterests: 0,
         isSeriousLearner: u.is_serious_learner,
@@ -498,7 +498,7 @@ export class RecommendationsService {
     try {
       const ownKey = `recommendations:daily:${userId}`;
       await redis.del(ownKey);
-      this.logger.log(
+      this.logger.info(
         `Purged own recommendations cache for user ${userId} (GDPR erasure)`,
       );
     } catch (error) {
@@ -508,7 +508,7 @@ export class RecommendationsService {
       );
     }
 
-    this.logger.log(
+    this.logger.info(
       `GDPR erasure initiated for user ${userId}; recommendation cache TTL (${DAILY_REDIS_TTL}s) will expire stale copies`,
     );
   }

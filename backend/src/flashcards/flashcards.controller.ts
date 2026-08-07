@@ -35,8 +35,6 @@ import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
 import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
-import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
-import { Flashcard } from './interfaces/flashcard.interface';
 
 @ApiTags('Spaced Repetition (SRS)')
 @Controller('flashcards')
