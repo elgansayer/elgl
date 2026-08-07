@@ -34,12 +34,12 @@ export class DataExportWorker {
       }
 
       const result: Record<string, unknown> = {
-        profile: profileRes.data as unknown,
-        moments: momentsRes.data as unknown,
-        comments: commentsRes.data as unknown,
-        messages: messagesRes.data as unknown,
-        flashcards: flashcardsRes.data as unknown,
-        favourites: favouritesRes.data as unknown,
+        profile: profileRes.data,
+        moments: momentsRes.data,
+        comments: commentsRes.data,
+        messages: messagesRes.data,
+        flashcards: flashcardsRes.data,
+        favourites: favouritesRes.data,
         exported_at: new Date().toISOString(),
       };
 

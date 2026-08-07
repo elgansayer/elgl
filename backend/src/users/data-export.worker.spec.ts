@@ -61,7 +61,9 @@ describe('DataExportWorker', () => {
           return {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({ data: mockProfile, error: null }),
+            single: jest
+              .fn()
+              .mockResolvedValue({ data: mockProfile, error: null }),
           };
         }
         const tableData = [
