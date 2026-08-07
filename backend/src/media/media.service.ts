@@ -92,31 +92,38 @@ export class MediaService implements OnModuleInit {
   async uploadAndCompressVoiceNote(
     userId: string,
     file: Express.Multer.File,
+    format: 'ogg' | 'm4a' = 'ogg',
   ): Promise<{ url: string }> {
     const tempDir = os.tmpdir();
+    const extension = format === 'm4a' ? 'm4a' : 'ogg';
+    const contentMimeType = format === 'm4a' ? 'audio/mp4' : 'audio/ogg';
     const inputPath = path.join(
       tempDir,
       `${Date.now()}-input-${file.originalname}`,
     );
-    const outputPath = path.join(tempDir, `${Date.now()}-output.ogg`);
+    const outputPath = path.join(tempDir, `${Date.now()}-output.${extension}`);
 
     try {
       // 1. Save uploaded buffer to temp file
       await fs.writeFile(inputPath, file.buffer);
 
-      // 2. Compress to OGG
-      await this.audioCompressionService.compressToOgg(inputPath, outputPath);
+      // 2. Compress to selected format
+      if (format === 'm4a') {
+        await this.audioCompressionService.compressToM4a(inputPath, outputPath);
+      } else {
+        await this.audioCompressionService.compressToOgg(inputPath, outputPath);
+      }
 
       // 3. Read compressed file and upload to R2
       const compressedBuffer = await fs.readFile(outputPath);
       const uniqueHash = crypto.randomBytes(8).toString('hex');
-      const objectKey = `voice-notes/${userId}/${Date.now()}-${uniqueHash}.ogg`;
+      const objectKey = `voice-notes/${userId}/${Date.now()}-${uniqueHash}.${extension}`;
 
       const command = new PutObjectCommand({
         Bucket: this.bucket,
         Key: objectKey,
         Body: compressedBuffer,
-        ContentType: 'audio/ogg',
+        ContentType: contentMimeType,
       });
 
       await this.s3Client.send(command);
