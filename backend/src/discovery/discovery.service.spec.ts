@@ -6,6 +6,7 @@ import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
+import { RetryService } from '../common/retry/retry.service';
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -99,6 +100,7 @@ describe('DiscoveryService', () => {
         {
           provide: `PinoLogger:${DiscoveryService.name}`,
           useValue: {
+            log: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
@@ -123,6 +125,17 @@ describe('DiscoveryService', () => {
         {
           provide: CloudflareCacheService,
           useValue: mockCloudflareCacheService,
+        },
+        {
+          provide: RetryService,
+          useValue: {
+            withRetry: jest.fn().mockImplementation(
+              async <T>(operation: () => Promise<T>) => {
+                const result = await operation();
+                return { result, attempts: 1, totalTimeMs: 0 };
+              },
+            ),
+          },
         },
       ],
     }).compile();
