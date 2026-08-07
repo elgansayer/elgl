@@ -90,6 +90,30 @@ describe('DataRetentionService', () => {
     });
   });
 
+  describe('purgeOldEscrows', () => {
+    it('deletes terminal escrow transactions older than 365 days', async () => {
+      mockQueryBuilder.lt.mockResolvedValue({ error: null, count: 5 });
+
+      await service.purgeOldEscrows();
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('escrow_transactions');
+      expect(mockQueryBuilder.in).toHaveBeenCalledWith('status', [
+        'released',
+        'refunded',
+        'cancelled',
+      ]);
+    });
+
+    it('logs error when escrow delete fails', async () => {
+      mockQueryBuilder.lt.mockResolvedValue({
+        error: { message: 'db error' },
+        count: null,
+      });
+
+      await expect(service.purgeOldEscrows()).resolves.toBeUndefined();
+    });
+  });
+
   describe('finaliseAccountDeletions', () => {
     it('does nothing when no users are pending deletion', async () => {
       mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
@@ -105,9 +129,10 @@ describe('DataRetentionService', () => {
         data: [{ id: 'user-abc-123' }],
         error: null,
       });
-      // Setup sub-queries for data wiping
-      const mockDeleteBuilder = {
+      // Setup sub-queries for data wiping -- supports both delete() and update()
+      const mockWipeBuilder = {
         delete: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
       // Override from for subsequent calls within wipeUserData
@@ -116,7 +141,7 @@ describe('DataRetentionService', () => {
           // First call is for select (limit), second is for update (eq)
           return mockQueryBuilder;
         }
-        return mockDeleteBuilder;
+        return mockWipeBuilder;
       });
 
       await service.finaliseAccountDeletions();

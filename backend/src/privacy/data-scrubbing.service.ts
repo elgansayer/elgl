@@ -16,8 +16,24 @@ import { Injectable, Logger } from '@nestjs/common';
  * - User-agent strings are passed through as-is because they are necessary for
  *   security investigations (they do NOT contain PII under GDPR in the
  *   controller-to-controller context).
+ * - Escrow transaction fields (reason, metadata) are scrubbed by replacing
+ *   free-text PII with redacted placeholders when the escrow is viewed by
+ *   non-participants (e.g. in admin dashboards or audit exports).
  * - All scrub operations are logged at debug level for audit trail.
  */
+
+/** Escrow PII fields that may contain free-text PII */
+export interface EscrowPiiFields {
+  reason?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+/** The result of scrubbing an escrow's PII fields */
+export interface ScrubbedEscrowPiiFields {
+  reason: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
 @Injectable()
 export class DataScrubbingService {
   private readonly logger = new Logger(DataScrubbingService.name);
@@ -75,5 +91,50 @@ export class DataScrubbingService {
         entry.ip_address = this.scrubIpAddress(entry.ip_address);
       }
     }
+  }
+
+  /**
+   * Scrub free-text PII fields from an escrow transaction record.
+   *
+   * When called with `fullScrub = false` (default for participant-facing APIs),
+   * the PII fields are returned as-is because the caller is a participant of
+   * that escrow.
+   *
+   * When called with `fullScrub = true` (admin / audit / non-participant views),
+   * all free-text PII fields are replaced with `[REDACTED]` to prevent
+   * accidental exposure of personal data embedded in escrow reasons or
+   * metadata.
+   */
+  scrubEscrowPii(
+    fields: EscrowPiiFields,
+    fullScrub: boolean,
+  ): ScrubbedEscrowPiiFields {
+    if (!fullScrub) {
+      return {
+        reason: fields.reason ?? null,
+        metadata: fields.metadata ?? null,
+      };
+    }
+
+    this.logger.debug('Full scrub applied to escrow PII fields');
+
+    return {
+      reason: this.redactFreeText(fields.reason),
+      metadata: fields.metadata ? {} : null,
+    };
+  }
+
+  /**
+   * Replace non-null free-text with `[REDACTED]`.
+   *
+   * Returns null if the input is null/undefined/empty, otherwise returns the
+   * redaction sentinel. This preserves the null-vs-populated distinction
+   * without exposing the original content.
+   */
+  redactFreeText(value: string | null | undefined): string | null {
+    if (!value || value.trim().length === 0) {
+      return null;
+    }
+    return '[REDACTED]';
   }
 }

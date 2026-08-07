@@ -221,6 +221,27 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
 
+    // 10) Escrow transactions (GDPR: payees and payers have right to export
+    //     their financial transaction history)
+    const { data: payerEscrows } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payer_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: payeeEscrows } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payee_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 11) Monetisation transactions
+    const { data: monetisationTransactions } = await supabase
+      .from('monetisation_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
     return {
       export_generated_at: new Date().toISOString(),
       user_profile: userProfile ?? null,
@@ -234,6 +255,9 @@ export class PrivacyService {
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
+      escrow_as_payer: payerEscrows ?? [],
+      escrow_as_payee: payeeEscrows ?? [],
+      monetisation_transactions: monetisationTransactions ?? [],
     };
   }
 }

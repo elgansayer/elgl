@@ -8,6 +8,8 @@ import { SupabaseService } from '../supabase/supabase.service';
  * Runs nightly to:
  * - Purge login_history rows older than 180 days.
  * - Purge reports older than 365 days that are in a terminal state.
+ * - Purge terminal escrow_transactions (released/refunded/cancelled) older than
+ *   365 days.
  * - Archive deleted user records past their grace period.
  */
 @Injectable()
@@ -67,6 +69,38 @@ export class DataRetentionService {
     if (count && count > 0) {
       this.logger.log(
         `Purged ${count} terminal reports older than ${cutoff.toISOString()}`,
+      );
+    }
+  }
+
+  /**
+   * Purge terminal escrow transactions (released / refunded / cancelled)
+   * older than 365 days. Runs once per day at 03:15 UTC.
+   *
+   * GDPR data-minimisation principle: settled escrow records older than one
+   * year no longer serve a legitimate business or legal purpose for the
+   * majority of jurisdictions.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'purgeOldEscrows' })
+  async purgeOldEscrows(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 365);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('escrow_transactions')
+      .delete({ count: 'exact' })
+      .in('status', ['released', 'refunded', 'cancelled'])
+      .lt('created_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(`Failed to purge old escrow transactions: ${error.message}`);
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} terminal escrow transactions older than ${cutoff.toISOString()}`,
       );
     }
   }
@@ -181,6 +215,31 @@ export class DataRetentionService {
       .from('notifications')
       .delete()
       .eq('recipient_id', userId);
+
+    // Scrub escrow PII for transactions involving the deleted user
+    // (we anonymise free-text fields instead of deleting the records
+    // to preserve the counterparty's financial records)
+    await supabase
+      .from('escrow_transactions' as never)
+      .update({
+        reason: '[DELETED_USER]',
+        metadata: {},
+      } as never)
+      .eq('payer_id' as never, userId as never);
+
+    await supabase
+      .from('escrow_transactions' as never)
+      .update({
+        reason: '[DELETED_USER_RECEIVER]',
+        metadata: {},
+      } as never)
+      .eq('payee_id' as never, userId as never);
+
+    // Wipe monetisation transactions
+    await supabase
+      .from('monetisation_transactions')
+      .delete()
+      .eq('user_id', userId);
 
     this.logger.log(`Wiped personal data for user ${userId}`);
   }

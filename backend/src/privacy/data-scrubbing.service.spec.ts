@@ -66,4 +66,53 @@ describe('DataScrubbingService', () => {
       expect(() => service.scrubLoginHistory([])).not.toThrow();
     });
   });
+
+  describe('redactFreeText', () => {
+    it('returns null for null, undefined, or empty values', () => {
+      expect(service.redactFreeText(null)).toBeNull();
+      expect(service.redactFreeText(undefined)).toBeNull();
+      expect(service.redactFreeText('')).toBeNull();
+      expect(service.redactFreeText('   ')).toBeNull();
+    });
+
+    it('returns [REDACTED] for any non-empty string', () => {
+      expect(service.redactFreeText('User phone is 555-1234')).toBe('[REDACTED]');
+      expect(service.redactFreeText('A')).toBe('[REDACTED]');
+      expect(service.redactFreeText('  hello  ')).toBe('[REDACTED]');
+    });
+  });
+
+  describe('scrubEscrowPii', () => {
+    const sampleFields = {
+      reason: 'Payment for language lesson with John',
+      metadata: { notes: 'Customer email: john@example.com' },
+    };
+
+    it('returns fields as-is when fullScrub is false', () => {
+      const result = service.scrubEscrowPii(sampleFields, false);
+      expect(result.reason).toBe(sampleFields.reason);
+      expect(result.metadata).toEqual(sampleFields.metadata);
+    });
+
+    it('redacts reason and clears metadata when fullScrub is true', () => {
+      const result = service.scrubEscrowPii(sampleFields, true);
+      expect(result.reason).toBe('[REDACTED]');
+      expect(result.metadata).toEqual({});
+    });
+
+    it('preserves null fields when fullScrub is true', () => {
+      const result = service.scrubEscrowPii(
+        { reason: 'Test', metadata: null },
+        true,
+      );
+      expect(result.reason).toBe('[REDACTED]');
+      expect(result.metadata).toBeNull();
+    });
+
+    it('handles completely empty input', () => {
+      const result = service.scrubEscrowPii({}, true);
+      expect(result.reason).toBeNull();
+      expect(result.metadata).toBeNull();
+    });
+  });
 });
