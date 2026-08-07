@@ -1,4 +1,16 @@
+<<<<<<< HEAD
 import { Component, inject, input, resource, signal, OnInit, OnDestroy } from '@angular/core';
+=======
+import {
+  Component,
+  inject,
+  input,
+  resource,
+  signal,
+  DestroyRef,
+  effect,
+} from '@angular/core';
+>>>>>>> origin/main
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
@@ -19,6 +31,7 @@ interface VoiceRoomNote {
 @Component({
   selector: 'app-voiceroom-notes',
   standalone: true,
+<<<<<<< HEAD
   imports: [TranslatePipe, DatePipe],
   template: `
     <div class="flex flex-col h-full">
@@ -125,13 +138,25 @@ interface VoiceRoomNote {
   styles: [`
     :host { display: flex; flex-direction: column; height: 100%; }
   `],
+=======
+  imports: [TranslatePipe],
+  templateUrl: './voiceroom-notes.component.html',
+  styleUrls: ['./voiceroom-notes.component.css'],
+>>>>>>> origin/main
 })
 export class VoiceroomNotesComponent {
   private http = inject(HttpClient);
   private i18n = inject(I18nService);
   private centrifugo = inject(CentrifugoService);
+<<<<<<< HEAD
   private injector = inject(Injector);
   readonly roomId = input<string>('');
+=======
+  private destroyRef = inject(DestroyRef);
+  private subscribedRoomId?: string;
+
+  roomId = input.required<string>();
+>>>>>>> origin/main
 
   content = signal('');
   vocabulary = signal('');
@@ -153,6 +178,7 @@ export class VoiceroomNotesComponent {
   });
 
   constructor() {
+<<<<<<< HEAD
     // Subscribe/unsubscribe to Centrifugo channel for real-time note updates
     // This is an exception to the "no effect for side effects" rule (allowed per AGENTS.md §5.3)
     effect(
@@ -181,6 +207,32 @@ export class VoiceroomNotesComponent {
 
   tokeniseVocabulary(text: string): string[] {
     return text.split(',').map((w) => w.trim()).filter(Boolean);
+=======
+    effect(() => {
+      const currentRoomId = this.roomId();
+      if (this.subscribedRoomId && this.subscribedRoomId !== currentRoomId) {
+        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.subscribedRoomId = undefined;
+      }
+
+      if (currentRoomId) {
+        this.subscribedRoomId = currentRoomId;
+        this.centrifugo.subscribeLiveRoom(currentRoomId, (data) => {
+          if (data.type === 'voice_room_note') {
+            this.refreshCounter.update((value) => value + 1);
+          } else if (data.type === 'voice_room_note_deleted') {
+            this.refreshCounter.update((value) => value + 1);
+          }
+        });
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      if (this.subscribedRoomId) {
+        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+      }
+    });
+>>>>>>> origin/main
   }
 
   onContentInput(event: Event): void {

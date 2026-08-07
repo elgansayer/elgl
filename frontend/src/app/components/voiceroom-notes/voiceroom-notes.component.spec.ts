@@ -6,7 +6,20 @@ import { vi } from 'vitest';
 import { VoiceroomNotesComponent } from './voiceroom-notes.component';
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
+<<<<<<< HEAD
 import { TranslatePipe } from '../../services/translate.pipe';
+=======
+
+@Pipe({
+  name: 't',
+  standalone: true,
+})
+class MockTranslatePipe implements PipeTransform {
+  transform(key: string): string {
+    return key;
+  }
+}
+>>>>>>> origin/main
 
 class MockI18nService {
   currentLang = signal('en-GB');
@@ -15,10 +28,24 @@ class MockI18nService {
   }
 }
 
+<<<<<<< HEAD
 class MockCentrifugeService {
   subscribe = vi.fn();
   unsubscribe = vi.fn();
 }
+=======
+class MockCentrifugoService {
+  subscribeLiveRoom = jest.fn();
+  unsubscribeLiveRoom = jest.fn();
+  publish = jest.fn();
+}
+
+@Component({
+  template: `<app-voiceroom-notes [roomId]="'room-1'" />`,
+  imports: [VoiceroomNotesComponent],
+})
+class HostComponent {}
+>>>>>>> origin/main
 
 describe('VoiceroomNotesComponent', () => {
   let fixture: ComponentFixture<VoiceroomNotesComponent>;
@@ -35,7 +62,11 @@ describe('VoiceroomNotesComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: I18nService, useClass: MockI18nService },
+<<<<<<< HEAD
         { provide: CentrifugoService, useValue: mockCentrifuge },
+=======
+        { provide: CentrifugoService, useClass: MockCentrifugoService },
+>>>>>>> origin/main
       ],
     }).compileComponents();
 
