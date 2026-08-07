@@ -341,13 +341,17 @@ export class FlashcardReviewComponent {
     return this.i18n.translate('review.goodHint', { interval: days });
   });
 
-private readonly focusEffect = effect(() => {
-    if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
-      requestAnimationFrame(() => {
-        this.flashcardEl()?.nativeElement?.focus();
-      });
-    }
-  });
+  constructor() {
+    // After card changes, return focus to flashcard for keyboard navigation
+    effect(() => {
+      if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
+        // Small delay to allow DOM to update
+        setTimeout(() => {
+          this.flashcardEl()?.nativeElement?.focus();
+        }, 0);
+      }
+    });
+  }
 
   flipCard(): void {
     if (this.currentCard()) {

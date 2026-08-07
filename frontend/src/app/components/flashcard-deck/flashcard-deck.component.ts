@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, afterNextRender } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -400,9 +400,7 @@ export class FlashcardDeckComponent {
   });
 
   constructor() {
-    afterNextRender(() => {
-      this.loadDecks();
-    });
+    this.loadDecks();
   }
 
   async loadDecks(): Promise<void> {
