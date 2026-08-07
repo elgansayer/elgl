@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -8,6 +8,7 @@ import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -55,6 +56,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
+  private readonly discoveryOnboarding = inject(DiscoveryOnboardingService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
@@ -94,6 +96,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   /** Abort controller for cancelling in-flight partner search. */
   private searchAbortController: AbortController | null = null;
+
+  private readonly discoveryTourEffect = effect(() => {
+    // Start the onboarding tour once partners have loaded and tour not yet completed
+    if (!this.isLoading() && this.partners().length > 0 && !this.discoveryOnboarding.hasCompletedTour()) {
+      queueMicrotask(() => this.discoveryOnboarding.startTour());
+    }
+  });
 
   readonly filterPills = computed(() => {
     this.i18n.translations();
