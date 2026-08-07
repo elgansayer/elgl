@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideLocationMocks } from '@angular/common/testing';
 import { DOCUMENT } from '@angular/common';
-import { vi } from 'vitest';
 import { AppComponent } from './app.component';
 import { AuthService } from './services/auth.service';
 import { AppLockService } from './services/app-lock.service';

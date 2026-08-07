@@ -51,10 +51,12 @@ export class TypingService {
     if (isTyping && now - this.lastPublishTime < this.THROTTLE_MS) return;
     this.lastPublishTime = now;
 
+    const currentUser = this.authService.currentUser();
+    const metadata = currentUser?.user_metadata as Record<string, unknown> | undefined;
     this.centrifugeService.publish(`chat:${this.currentRoomId}:typing`, {
-      userId: this.authService.currentUser()?.id ?? '',
-      displayName: this.authService.currentUser()?.display_name ?? '',
-      avatarUrl: this.authService.currentUser()?.avatar_url ?? '',
+      userId: currentUser?.id ?? '',
+      displayName: String(metadata?.['display_name'] ?? ''),
+      avatarUrl: String(metadata?.['avatar_url'] ?? ''),
       typing: isTyping,
       timestamp: now,
     });
