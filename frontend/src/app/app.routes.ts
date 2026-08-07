@@ -114,6 +114,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'decks',
+    loadComponent: () =>
+      import('./components/flashcard-deck/flashcard-deck.component').then(
+        (m) => m.FlashcardDeckComponent,
+      ),
+    title: 'Flashcard Decks - HelloTalk',
+  },
+  {
     path: 'profile',
     loadComponent: () =>
       import('./components/profile/profile.component').then((m) => m.ProfileComponent),
@@ -187,6 +195,14 @@ export const routes: Routes = [
         (m) => m.BackupRestoreComponent,
       ),
     title: 'Chat Backup & Restore - HelloTalk',
+  },
+  {
+    path: 'settings/linked-accounts',
+    loadComponent: () =>
+      import('./pages/settings/linked-accounts/linked-accounts.component').then(
+        (m) => m.LinkedAccountsComponent,
+      ),
+    title: 'Linked Accounts - HelloTalk',
   },
   {
     path: 'developer',
@@ -312,6 +328,12 @@ export const routes: Routes = [
     title: 'Onboarding - HelloTalk',
   },
   {
+    path: 'diagnostic-quiz',
+    loadComponent: () =>
+      import('./components/diagnostic-quiz/diagnostic-quiz.component').then((m) => m.DiagnosticQuizComponent),
+    title: 'Language Level Diagnostic - HelloTalk',
+  },
+  {
     path: 'forgot-password',
     loadComponent: () =>
       import('./components/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
@@ -360,6 +382,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./components/shop/shop.component').then((m) => m.ShopComponent),
     title: 'Shop - HelloTalk',
+  },
+  {
+    path: 'sticker-store',
+    loadComponent: () =>
+      import('./components/sticker-store/sticker-store.component').then(
+        (m) => m.StickerStoreComponent,
+      ),
+    title: 'Sticker Store - HelloTalk',
   },
   {
     path: 'cart',

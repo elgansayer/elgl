@@ -12,7 +12,10 @@ describe('BlockManagementComponent', () => {
   let component: BlockManagementComponent;
   let fixture: ComponentFixture<BlockManagementComponent>;
   let blockedUsersSignal: ReturnType<typeof signal<BlockedUserResponse[]>>;
+  let loadingSignal: ReturnType<typeof signal<boolean>>;
+  let errorSignal: ReturnType<typeof signal<string | null>>;
   let unblockUserSpy: ReturnType<typeof vi.fn>;
+  let loadBlockedUsersSpy: ReturnType<typeof vi.fn>;
 
   const mockI18nService = {
     translate: (key: string) => key,
@@ -28,7 +31,10 @@ describe('BlockManagementComponent', () => {
 
   beforeEach(async () => {
     blockedUsersSignal = signal<BlockedUserResponse[]>([]);
+    loadingSignal = signal<boolean>(false);
+    errorSignal = signal<string | null>(null);
     unblockUserSpy = vi.fn().mockResolvedValue(undefined);
+    loadBlockedUsersSpy = vi.fn().mockResolvedValue(undefined);
 
     await TestBed.configureTestingModule({
       imports: [BlockManagementComponent],
@@ -38,7 +44,10 @@ describe('BlockManagementComponent', () => {
           provide: BlockedUsersService,
           useValue: {
             blockedUsers: blockedUsersSignal.asReadonly(),
+            isLoading: loadingSignal.asReadonly(),
+            error: errorSignal.asReadonly(),
             unblockUser: unblockUserSpy,
+            loadBlockedUsers: loadBlockedUsersSpy,
           },
         },
       ],
@@ -53,12 +62,35 @@ describe('BlockManagementComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('shows the empty state when there are no blocked users', () => {
+  it('shows skeleton loaders when loading', () => {
+    loadingSignal.set(true);
     fixture.detectChanges();
 
-    const emptyMessage = fixture.nativeElement.querySelector('p');
-    expect(emptyMessage.textContent).toContain('blockManagement.noBlockedUsers');
-    expect(fixture.nativeElement.querySelectorAll('li').length).toBe(0);
+    const skeletonEls = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(skeletonEls.length).toBeGreaterThan(0);
+
+    const title = fixture.nativeElement.querySelector('h1');
+    expect(title.textContent).toContain('safety.blockManagement.title');
+  });
+
+  it('shows error empty state when load error occurs', () => {
+    errorSignal.set('Failed to load blocked users');
+    fixture.detectChanges();
+
+    const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+    expect(emptyState).toBeTruthy();
+    const btn = emptyState.querySelector('button');
+    expect(btn).toBeTruthy();
+    btn.click();
+    expect(loadBlockedUsersSpy).toHaveBeenCalled();
+  });
+
+  it('shows empty state when there are no blocked users', () => {
+    fixture.detectChanges();
+
+    const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+    expect(emptyState).toBeTruthy();
+    expect(emptyState.textContent).toContain('safety.blockManagement.emptyTitle');
   });
 
   it('renders a list item for each blocked user', () => {
@@ -75,7 +107,7 @@ describe('BlockManagementComponent', () => {
 
     const text = fixture.nativeElement.querySelector('li p.text-sm').textContent;
     expect(text).toContain('English');
-    expect(text).toContain('→');
+    expect(text).toContain('\u2192');
     expect(text).toContain('French, German');
   });
 
@@ -84,7 +116,8 @@ describe('BlockManagementComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('li img')).toBeNull();
-    expect(fixture.nativeElement.querySelector('li div.bg-surface-2')).toBeTruthy();
+    const avatarFallback = fixture.nativeElement.querySelector('li .bg-surface-2');
+    expect(avatarFallback).toBeTruthy();
   });
 
   it('renders the avatar image when avatar_url is present', () => {

@@ -8,7 +8,11 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 export class PasswordResetController {
   constructor(private readonly resetService: PasswordResetService) {}
 
+<<<<<<< HEAD
   @Throttle({ default: { limit: 2, ttl: 60000 } })
+=======
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
+>>>>>>> origin/main
   @Post('request-password-reset')
   @HttpCode(HttpStatus.OK)
   async requestPasswordReset(
@@ -20,7 +24,11 @@ export class PasswordResetController {
     };
   }
 
+<<<<<<< HEAD
   @Throttle({ default: { limit: 2, ttl: 60000 } })
+=======
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
+>>>>>>> origin/main
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(

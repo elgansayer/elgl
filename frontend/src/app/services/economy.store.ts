@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
+import { GiftAnimationService, GiftAnimationType } from './gift-animation.service';
 
 export interface VirtualGift {
   id: string;
@@ -38,6 +39,13 @@ export interface ActiveGiftOverlay {
   receiver_name: string;
 }
 
+export interface StickerPack {
+  id: string;
+  name: string;
+  cost_coins: number;
+  owned?: boolean;
+}
+
 export interface DiagnosticLog {
   id: string;
   timestamp: string;
@@ -62,11 +70,13 @@ export class EconomyStore {
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private giftAnimationService = inject(GiftAnimationService);
   private baseUrl = `${environment.apiUrl}/economy`;
   private monetisationUrl = `${environment.apiUrl}/monetisation`;
   private safetyUrl = `${environment.apiUrl}/safety`;
 
   readonly coinsBalance = signal<number>(50);
+  readonly stickerPacks = signal<StickerPack[]>([]);
   readonly catalog = signal<VirtualGift[]>([]);
   readonly coinPackages = signal<CoinPackage[]>([]);
   readonly developerStats = signal<DeveloperAnalytics | null>(null);
@@ -357,9 +367,106 @@ export class EconomyStore {
 
   triggerGiftAnimation(overlay: ActiveGiftOverlay): void {
     this.activeGiftAnimation.set(overlay);
-    setTimeout(() => {
-      this.activeGiftAnimation.set(null);
-    }, 4500);
+    const animationType = this.sanitiseAnimationType(overlay.gift.animation_type);
+    this.giftAnimationService.playAnimation({
+      id: overlay.gift.id,
+      giftName: overlay.gift.name,
+      giftIcon: overlay.gift.icon,
+      animationType,
+      animationUrl: overlay.gift.animationUrl,
+      senderName: overlay.sender_name,
+      receiverName: overlay.receiver_name,
+      coinValue: overlay.gift.cost_coins,
+    });
+  }
+
+  private readonly validAnimationTypes = new Set<string>(['float', 'confetti', 'premium', 'sparkle', 'hearts']);
+  private sanitiseAnimationType(raw: string): GiftAnimationType {
+    if (this.isAnimationType(raw)) return raw;
+    return 'float';
+  }
+  private isAnimationType(value: string): value is GiftAnimationType {
+    return this.validAnimationTypes.has(value);
+  }
+
+  triggerPublicGiftAnimation(payload: {
+    giftId: string;
+    giftName: string;
+    giftIcon: string;
+    animationType: string;
+    animationUrl?: string;
+    senderName: string;
+    receiverName: string;
+    coinValue: number;
+  }): void {
+    const animationType = this.sanitiseAnimationType(payload.animationType);
+    this.giftAnimationService.playAnimation({
+      id: payload.giftId,
+      giftName: payload.giftName,
+      giftIcon: payload.giftIcon,
+      animationType,
+      animationUrl: payload.animationUrl,
+      senderName: payload.senderName,
+      receiverName: payload.receiverName,
+      coinValue: payload.coinValue,
+    });
+  }
+
+  async loadStickerPacks(): Promise<void> {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{
+          packs: StickerPack[];
+          owned_pack_ids: string[];
+          user_coins: number;
+        }>(`${this.baseUrl}/sticker-packs`, { headers: this.getHeaders() }),
+      );
+      this.coinsBalance.set(res.user_coins);
+      const ownedSet = new Set(res.owned_pack_ids);
+      this.stickerPacks.set(
+        res.packs.map((pack) => ({
+          ...pack,
+          owned: ownedSet.has(pack.id),
+        })),
+      );
+    } catch (e) {
+      console.error('Load sticker packs error:', e);
+    }
+  }
+
+  async unlockStickerPack(packId: string): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{
+          success: boolean;
+          coins_remaining: number;
+          pack: StickerPack;
+        }>(
+          `${this.baseUrl}/unlock-sticker-pack`,
+          { pack_id: packId },
+          { headers: this.getHeaders() },
+        ),
+      );
+      if (res.success) {
+        this.coinsBalance.set(res.coins_remaining);
+        this.stickerPacks.update((packs) =>
+          packs.map((p) =>
+            p.id === packId ? { ...p, owned: true } : p,
+          ),
+        );
+        showToast(
+          this.i18n.translate('sticker.purchaseSuccess', {
+            name: res.pack.name,
+          }),
+        );
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Unlock sticker pack error:', e);
+      showToast(this.i18n.translate('sticker.notEnoughCoins'));
+      return false;
+    }
   }
 
   private mapDiagnosticLog(log: DiagnosticLogApiRecord): DiagnosticLog {

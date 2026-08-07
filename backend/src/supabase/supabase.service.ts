@@ -564,6 +564,8 @@ type FlashcardRow = {
   definition?: string | null;
   pronunciation_url?: string | null;
   srs_level: number;
+  easiness_factor: number;
+  repetition_count: number;
   next_review_at: string;
   created_at: string;
 };
@@ -1684,6 +1686,63 @@ export interface Database {
         Row: LocationShareRow;
         Insert: Partial<LocationShareRow>;
         Update: Partial<LocationShareRow>;
+        Relationships: [];
+      };
+      decks: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          colour: string;
+          icon: string;
+          card_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          colour?: string;
+          icon?: string;
+          card_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string | null;
+          colour?: string;
+          icon?: string;
+          card_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Relationships: [];
+      };
+      deck_flashcards: {
+        Row: {
+          id: string;
+          deck_id: string;
+          flashcard_id: string;
+          added_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          deck_id: string;
+          flashcard_id: string;
+          added_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          deck_id?: string;
+          flashcard_id?: string;
+          added_at?: string;
+        }>;
         Relationships: [];
       };
     };

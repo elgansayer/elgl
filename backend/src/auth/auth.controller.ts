@@ -26,6 +26,7 @@ export class AuthController {
 
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('change-password')
   async changePassword(
     @Req() req: RequestWithUser,
@@ -38,6 +39,7 @@ export class AuthController {
 
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post('two-factor/enable')
   async enableTwoFactor(
     @Req() req: RequestWithUser,
@@ -48,6 +50,7 @@ export class AuthController {
 
   @Throttle({ default: { limit: 2, ttl: 60000 } })
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('two-factor/verify')
   async verifyTwoFactor(
     @Req() req: RequestWithUser,
@@ -66,6 +69,7 @@ export class AuthController {
 
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('two-factor/disable')
   async disableTwoFactor(
     @Req() req: RequestWithUser,
@@ -88,6 +92,7 @@ export class AuthController {
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/generate')
   async generateTransferLink(
     @Req() req: RequestWithUser,

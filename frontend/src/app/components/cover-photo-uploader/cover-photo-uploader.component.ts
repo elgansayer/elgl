@@ -30,7 +30,7 @@ interface CropBox {
       @if (!imageSource()) {
         <div class="relative w-full h-48 md:h-64 rounded-xl overflow-hidden group">
           @if (currentCoverUrl()) {
-            <img [src]="currentCoverUrl()" alt="Cover photo" class="w-full h-full object-cover" />
+            <img [src]="currentCoverUrl()" alt="{{ 'coverPhoto.previewAlt' | t }}" class="w-full h-full object-cover" />
           } @else {
             <div class="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900"></div>
           }
@@ -56,7 +56,7 @@ interface CropBox {
                 />
               </svg>
               <span class="text-sm font-medium">{{
-                currentCoverUrl() ? 'Change Cover Photo' : 'Add Cover Photo'
+                currentCoverUrl() ? ('coverPhoto.changeCover' | t) : ('coverPhoto.addCover' | t)
               }}</span>
             </div>
           </div>
@@ -142,14 +142,14 @@ interface CropBox {
                 (click)="startCropping()"
                 class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-surface-100 transition-colors text-sm"
               >
-                Crop
+                {{ 'common.crop' | t }}
               </button>
             } @else {
               <button
                 (click)="applyCrop()"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm"
               >
-                Apply Crop
+                {{ 'common.applyCrop' | t }}
               </button>
               <button
                 (click)="cancelCrop()"
@@ -163,7 +163,7 @@ interface CropBox {
               [disabled]="isUploading()"
               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50"
             >
-              {{ isUploading() ? 'Uploading...' : 'Upload' }}
+              {{ isUploading() ? ('common.uploading' | t) : ('common.upload' | t) }}
             </button>
             <button
               (click)="reset()"
@@ -176,7 +176,7 @@ interface CropBox {
           <!-- Preview -->
           @if (croppedPreviewUrl()) {
             <div class="mt-4">
-              <p class="text-sm text-text-muted mb-2">Preview:</p>
+              <p class="text-sm text-text-muted mb-2">{{ 'common.preview' | t }}</p>
               <img [src]="croppedPreviewUrl()" alt="Cropped preview" class="w-full rounded-lg" />
             </div>
           }
@@ -198,7 +198,7 @@ export class CoverPhotoUploaderComponent {
 
   private originalImage: HTMLImageElement | null = null;
   private canvas = document.createElement('canvas');
-  private ctx = this.canvas.getContext('2d')!;
+  private ctx = this.canvas.getContext('2d');
 
   readonly cropBox = signal<CropBox>({ x: 0, y: 0, width: 200, height: 100 });
   readonly imageWidth = signal(0);
@@ -257,7 +257,7 @@ export class CoverPhotoUploaderComponent {
   }
 
   applyCrop(): void {
-    if (!this.originalImage) return;
+    if (!this.originalImage || !this.ctx) return;
 
     const box = this.cropBox();
     this.canvas.width = box.width;
