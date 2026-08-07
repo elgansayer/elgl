@@ -1,3 +1,138 @@
-<section role="region" aria-label="Classrooms marketplace">
-  <p>classrooms-marketplace works!</p>
-</section>
+<app-video-classroom-error-boundary>
+  <div class="p-4 sm:p-6 space-y-6">
+    <!-- Header -->
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-black text-white">{{ 'classroomsMarketplace.title' | t }}</h1>
+        <p class="text-sm text-slate-400 mt-1">{{ 'classroomsMarketplace.subtitle' | t }}</p>
+      </div>
+      @if (isHosting()) {
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-500/20 px-3 py-1 text-xs font-semibold text-purple-300">
+          &#127909;&#65039; {{ 'classroomsMarketplace.hostingBadge' | t }}
+        </span>
+      }
+    </header>
+
+    <!-- Language Filter Pills -->
+    @if (languagePairOptions().length > 1) {
+      <nav aria-label="Language filters" class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          (click)="selectLanguage(null)"
+          [attr.aria-pressed]="!selectedLanguage()"
+          class="rounded-full px-4 py-1.5 text-xs font-bold transition-all"
+          [class.bg-purple-600]="!selectedLanguage()"
+          [class.text-white]="!selectedLanguage()"
+          [class.bg-slate-800]="!!selectedLanguage()"
+          [class.text-slate-300]="!!selectedLanguage()"
+        >
+          {{ 'classroomsMarketplace.filterAll' | t }}
+        </button>
+        @for (lang of languagePairOptions(); track lang) {
+          <button
+            type="button"
+            (click)="selectLanguage(lang)"
+            [attr.aria-pressed]="selectedLanguage() === lang"
+            class="rounded-full px-4 py-1.5 text-xs font-bold transition-all"
+            [class.bg-purple-600]="selectedLanguage() === lang"
+            [class.text-white]="selectedLanguage() === lang"
+            [class.bg-slate-800]="selectedLanguage() !== lang"
+            [class.text-slate-300]="selectedLanguage() !== lang"
+          >
+            {{ lang }}
+          </button>
+        }
+      </nav>
+    }
+
+    <!-- Loading state -->
+    @if (isLoading()) {
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <div class="rounded-2xl bg-slate-800/60 animate-pulse h-48"></div>
+        }
+      </div>
+    }
+
+    <!-- Error state -->
+    @if (errorMessage()) {
+      <div class="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-center space-y-3" role="alert">
+        <p class="text-4xl" aria-hidden="true">&#9888;&#65039;</p>
+        <h3 class="text-lg font-bold text-rose-400">{{ 'classroomsMarketplace.loadErrorTitle' | t }}</h3>
+        <p class="text-sm text-text-secondary">{{ 'classroomsMarketplace.loadErrorDescription' | t }}</p>
+        <button
+          type="button"
+          (click)="loadRooms()"
+          class="app-button-primary rounded-full px-6 py-2 text-sm font-bold"
+        >
+          {{ 'classroomsMarketplace.retryLoadBtn' | t }}
+        </button>
+      </div>
+    }
+
+    <!-- Empty state -->
+    @if (!isLoading() && !errorMessage() && videoRooms().length === 0) {
+      <div class="rounded-2xl bg-surface-200 p-10 text-center space-y-4">
+        <p class="text-5xl" aria-hidden="true">&#127979;&#65039;</p>
+        <h3 class="text-lg font-bold text-white">{{ 'classroomsMarketplace.emptyTitle' | t }}</h3>
+        <p class="text-sm text-slate-400">{{ 'classroomsMarketplace.emptyDescription' | t }}</p>
+      </div>
+    }
+
+    <!-- Room Grid -->
+    @if (!isLoading() && !errorMessage() && videoRooms().length > 0) {
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        @for (room of videoRooms(); track room.id) {
+          <article
+            class="rounded-2xl bg-surface-200 border border-slate-700 overflow-hidden hover:border-purple-500/50 transition-all cursor-pointer group"
+          >
+            <!-- Video room preview placeholder -->
+            <div class="aspect-video bg-slate-900 flex items-center justify-center relative">
+              <span class="text-4xl" aria-hidden="true">&#127909;&#65039;</span>
+              @if (room.is_active) {
+                <span class="absolute top-2 start-2 inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-0.5 text-[10px] font-bold text-white">
+                  <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                  {{ 'classroomsMarketplace.liveBadge' | t }}
+                </span>
+              }
+              <span class="absolute bottom-2 end-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white backdrop-blur-sm">
+                {{ room.listeners_count }} {{ 'classroomsMarketplace.watching' | t }}
+              </span>
+            </div>
+
+            <div class="p-4 space-y-3">
+              <h3 class="font-bold text-white text-sm leading-snug line-clamp-2">{{ room.title }}</h3>
+
+              <div class="flex flex-wrap items-center gap-2">
+                @if (room.language_pair) {
+                  <span class="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-300">
+                    {{ room.language_pair }}
+                  </span>
+                }
+                @if (room.topic_tag) {
+                  <span class="rounded-full bg-slate-700 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
+                    {{ room.topic_tag }}
+                  </span>
+                }
+              </div>
+
+              <div class="flex items-center gap-2 text-xs text-slate-400">
+                <span>{{ 'classroomsMarketplace.speakersLabel' | t: { count: room.speakers.length } }}</span>
+                <span aria-hidden="true">&middot;</span>
+                <span>{{ 'classroomsMarketplace.createdAt' | t: { date: room.created_at } }}</span>
+              </div>
+
+              <button
+                type="button"
+                (click)="joinRoom(room)"
+                class="w-full rounded-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 text-xs transition-colors"
+              >
+                {{ 'classroomsMarketplace.joinBtn' | t }}
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+</app-video-classroom-error-boundary>
