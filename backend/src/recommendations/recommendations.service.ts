@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 <<<<<<< HEAD
 import { withRetry } from '../common/retry';
@@ -64,6 +65,12 @@ interface UserRow {
 
 @Injectable()
 export class RecommendationsService {
+<<<<<<< HEAD
+  constructor(
+    @InjectPinoLogger(RecommendationsService.name)
+    private readonly logger: PinoLogger,
+    private readonly supabaseService: SupabaseService,
+=======
   private readonly logger = new Logger(RecommendationsService.name);
 
   constructor(
@@ -71,11 +78,12 @@ export class RecommendationsService {
     private readonly metricsService: MetricsService,
     private readonly circuitBreakerService: CircuitBreakerService,
     private readonly crashReportService: MatchmakingCrashReportService,
+>>>>>>> origin/main
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations(): Promise<void> {
-    this.logger.log('Starting daily recommendation calculations...');
+    this.logger.info('Starting daily recommendation calculations...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -188,9 +196,14 @@ export class RecommendationsService {
         }
       }
 
+<<<<<<< HEAD
+      this.logger.info(
+        'Successfully calculated and cached daily recommendations.',
+=======
       await flushPipeline();
       this.logger.log(
         `Successfully calculated and cached ${totalCached} daily recommendation sets.`,
+>>>>>>> origin/main
       );
     } catch (error) {
       await flushPipeline();
@@ -723,8 +736,17 @@ export class RecommendationsService {
   }
 
   /** Tier 4: Ultimate fallback using in-memory mock data. */
+<<<<<<< HEAD
+  private recommendationsFromMock(
+    userId: string,
+  ): RecommendedUserDto[] {
+    this.logger.info(
+      `Using mock data as ultimate fallback for user ${userId}`,
+    );
+=======
   private recommendationsFromMock(userId: string): RecommendedUserDto[] {
     this.logger.log(`Using mock data as ultimate fallback for user ${userId}`);
+>>>>>>> origin/main
 
     const mockUsers = MOCK_USERS as Array<{
       id: string;

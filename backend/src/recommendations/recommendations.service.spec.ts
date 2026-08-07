@@ -6,7 +6,11 @@ import {
 import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { MatchmakingCrashReportService } from './matchmaking-crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
+<<<<<<< HEAD
+import { getLoggerToken } from 'nestjs-pino';
+=======
 import { MetricsService } from '../metrics/metrics.service';
+>>>>>>> origin/main
 
 jest.mock('../common/retry', () => ({
   withRetry: jest.fn((fn: () => unknown) => fn()),
@@ -123,6 +127,14 @@ describe('RecommendationsService', () => {
           },
         },
         {
+<<<<<<< HEAD
+          provide: getLoggerToken(RecommendationsService.name),
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+=======
           provide: MetricsService,
           useValue: mockMetricsService,
         },
@@ -151,6 +163,7 @@ describe('RecommendationsService', () => {
           provide: MatchmakingCrashReportService,
           useValue: {
             reportCrash: jest.fn().mockResolvedValue({}),
+>>>>>>> origin/main
           },
         },
       ],
