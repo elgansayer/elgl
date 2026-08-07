@@ -1,6 +1,7 @@
 import { Component, signal, output, input, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
+import { ImageCompressionService } from '../../services/image-compression.service';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -30,7 +31,7 @@ interface CropBox {
       @if (!imageSource()) {
         <div class="relative w-full h-48 md:h-64 rounded-xl overflow-hidden group">
           @if (currentCoverUrl()) {
-            <img [src]="currentCoverUrl()" alt="{{ 'coverPhoto.previewAlt' | t }}" class="w-full h-full object-cover" />
+            <img [src]="currentCoverUrl()" alt="{{ 'coverPhoto.previewAlt' | t }}" class="w-full h-full object-cover"  loading="lazy" />
           } @else {
             <div class="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900"></div>
           }
@@ -74,7 +75,7 @@ interface CropBox {
               class="w-full select-none"
               draggable="false"
               #imageElement
-            />
+             loading="lazy" />
 
             @if (isCropping()) {
               <div class="absolute inset-0">
@@ -177,7 +178,7 @@ interface CropBox {
           @if (croppedPreviewUrl()) {
             <div class="mt-4">
               <p class="text-sm text-text-muted mb-2">{{ 'common.preview' | t }}</p>
-              <img [src]="croppedPreviewUrl()" alt="Cropped preview" class="w-full rounded-lg" />
+              <img [src]="croppedPreviewUrl()" alt="Cropped preview" class="w-full rounded-lg"  loading="lazy" />
             </div>
           }
         </div>
@@ -187,6 +188,7 @@ interface CropBox {
 })
 export class CoverPhotoUploaderComponent {
   private http = inject(HttpClient);
+  private imageCompression = inject(ImageCompressionService);
 
   readonly currentCoverUrl = input<string>('');
   readonly coverPhotoUploaded = output<string>();

@@ -79,4 +79,11 @@ export class LanguagePairQueryDto {
   )
   @IsBoolean()
   availability_evening?: boolean;
+
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === 'true' || value === true,
+  )
+  @IsBoolean()
+  voice_room_active?: boolean;
 }

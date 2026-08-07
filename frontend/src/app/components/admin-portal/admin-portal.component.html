@@ -12,7 +12,7 @@
       (input)="onSearchInput($any($event.target).value)"
       [attr.placeholder]="'admin.searchPlaceholder' | t"
     />
-    <button type="submit" class="app-pill bg-primary text-white px-4">
+    <button type="submit" class="app-pill bg-primary text-white px-4" [attr.aria-label]="'admin.searchBtn' | t">
       {{ 'admin.searchBtn' | t }}
     </button>
   </form>
@@ -32,7 +32,7 @@
           <div class="flex flex-wrap items-center gap-3" role="row">
             <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden">
               @if (user.avatar_url) {
-                <img [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
+                <img loading="lazy" [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
               } @else {
                 <div
                   class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
@@ -139,7 +139,7 @@
         class="app-pill border border-surface-100"
         [disabled]="page() <= 1"
         (click)="goToPage(-1)"
-      >
+       [attr.aria-label]="'admin.prevPage' | t">
         {{ 'admin.prevPage' | t }}
       </button>
       <span class="text-sm text-text-secondary">
@@ -148,7 +148,7 @@
       <button
         type="button"
         class="app-pill border border-surface-100"
-        [disabled]="page() >= totalPages()"
+        [disabled]="page()  [attr.aria-label]="'admin.nextPage' | t">= totalPages()"
         (click)="goToPage(1)"
       >
         {{ 'admin.nextPage' | t }}
