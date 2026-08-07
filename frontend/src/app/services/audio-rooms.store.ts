@@ -154,6 +154,14 @@ export class AudioRoomsStore {
     target_user_id?: string;
     caption?: CaptionRecord;
     message?: RoomChatMessage;
+    icon?: string;
+    gift_id?: string;
+    gift_name?: string;
+    animation_type?: string;
+    animation_url?: string;
+    sender_name?: string;
+    receiver_name?: string;
+    coin_value?: number;
   } {
     return typeof data === 'object' && data !== null;
   }

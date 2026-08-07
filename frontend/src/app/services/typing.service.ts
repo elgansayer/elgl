@@ -53,8 +53,8 @@ export class TypingService {
 
     this.centrifugeService.publish(`chat:${this.currentRoomId}:typing`, {
       userId: this.authService.currentUser()?.id ?? '',
-      displayName: this.authService.currentUser()?.display_name ?? '',
-      avatarUrl: this.authService.currentUser()?.avatar_url ?? '',
+      displayName: this.authService.currentUser()?.user_metadata?.['display_name'] ?? '',
+      avatarUrl: this.authService.currentUser()?.user_metadata?.['avatar_url'] ?? '',
       typing: isTyping,
       timestamp: now,
     });

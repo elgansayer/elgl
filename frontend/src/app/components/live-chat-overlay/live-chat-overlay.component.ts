@@ -99,7 +99,7 @@ export class LiveChatOverlayComponent implements OnInit {
     if (!content) return;
 
     const currentUser = this.authService.currentUser();
-    const senderName = currentUser?.display_name ?? this.i18n.translate('common.user');
+    const senderName = currentUser?.user_metadata?.['display_name'] ?? this.i18n.translate('common.user');
 
     this.centrifugo.publish(this.channelName, {
       type: 'text',

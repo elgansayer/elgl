@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IncomingCallModalComponent, IncomingCallData } from './incoming-call-modal.component';
-import { I18nService } from '../../../services/i18n.service';
+import { I18nService } from '../../services/i18n.service';
 import { vi } from 'vitest';
 
 describe('IncomingCallModalComponent', () => {
