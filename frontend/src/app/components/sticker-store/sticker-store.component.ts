@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
-import { JoyrideDirective } from 'ngx-joyride';
+import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { EconomyStore, StickerPack } from '../../services/economy.store';
@@ -11,7 +11,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 @Component({
   selector: 'app-sticker-store',
   imports: [
-    JoyrideDirective,
+    JoyrideModule,
     TranslatePipe,
     AppCardComponent,
     AppPillComponent,
