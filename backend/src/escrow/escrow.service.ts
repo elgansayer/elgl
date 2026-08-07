@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
+import Redis from 'ioredis';
 import {
   EscrowTransaction,
   EscrowStatus,
@@ -29,6 +30,15 @@ const RETRY_CONFIG = {
 };
 
 const SERVICE_NAME = 'escrow';
+
+/** Redis cache key prefixes for escrow read-through caching. */
+const ESCROW_DETAIL_PREFIX = 'escrow:detail:';
+const ESCROW_USER_LIST_PREFIX = 'escrow:user_list:';
+
+/** TTL (seconds) for escrow detail cache entries. */
+const ESCROW_DETAIL_TTL = 120;
+/** TTL (seconds) for escrow user list cache entries. */
+const ESCROW_USER_LIST_TTL = 60;
 
 @Injectable()
 export class EscrowService {
@@ -112,12 +122,18 @@ export class EscrowService {
       degradedMarker,
     );
 
+    const transactionId =
+      typeof result === 'object' && result !== null && 'id' in result
+        ? String(result.id)
+        : '';
+
+    if (!degradedMarker.degraded && transactionId) {
+      this.invalidateEscrowCaches(transactionId, payerId, dto.payee_id);
+    }
+
     return sanitiseEscrowData({
       success: true,
-      transaction_id:
-        typeof result === 'object' && result !== null && 'id' in result
-          ? String(result.id)
-          : '',
+      transaction_id: transactionId,
       degraded: degradedMarker.degraded,
       fallback_reason: degradedMarker.reason,
     });
@@ -296,6 +312,14 @@ export class EscrowService {
       },
       degradedMarker,
     );
+
+    if (!degradedMarker.degraded && result.payer_id && result.payee_id) {
+      this.invalidateEscrowCaches(
+        transactionId,
+        result.payer_id,
+        result.payee_id,
+      );
+    }
 
     return sanitiseEscrowData({
       success: true,
@@ -560,11 +584,13 @@ export class EscrowService {
       degradedMarker,
     );
 
-    return this.toResponse(
-      result as EscrowTransaction,
-      degradedMarker.degraded,
-      degradedMarker.reason,
-    );
+    const tx = result as EscrowTransaction;
+
+    if (!degradedMarker.degraded && tx.payer_id && tx.payee_id) {
+      this.invalidateEscrowCaches(transactionId, tx.payer_id, tx.payee_id);
+    }
+
+    return this.toResponse(tx, degradedMarker.degraded, degradedMarker.reason);
   }
 
   /**
@@ -640,16 +666,48 @@ export class EscrowService {
 
     this.logger.log(`Escrow cancelled: ${transactionId}`);
 
+    this.invalidateEscrowCaches(transactionId, tx.payer_id, tx.payee_id);
+
     return this.toResponse(updated);
   }
 
   /**
    * Retrieves an escrow transaction by ID.
+   *
+   * Read-through Redis caching: escrow details are cached for a short
+   * TTL to reduce database pressure during repeated reads (e.g., polling
+   * by mobile clients awaiting payment confirmation).
    */
   async getTransaction(
     transactionId: string,
     userId: string,
   ): Promise<EscrowTransactionResponse> {
+    const redis = this.supabaseService.getRedisClient();
+    const cacheKey = `${ESCROW_DETAIL_PREFIX}${transactionId}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as EscrowTransaction;
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'payer_id' in parsed &&
+          'payee_id' in parsed
+        ) {
+          if (parsed.payer_id !== userId && parsed.payee_id !== userId) {
+            throw new BadRequestException('Not authorised to view this escrow');
+          }
+          return this.toResponse(parsed);
+        }
+      } catch (err) {
+        if (err instanceof BadRequestException) throw err;
+        this.logger.warn(
+          `Invalid escrow detail cache entry for ${transactionId}, falling back to DB`,
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const { data: txRow, error: txError } = await supabase
@@ -669,11 +727,21 @@ export class EscrowService {
       throw new BadRequestException('Not authorised to view this escrow');
     }
 
+    void redis.set(
+      cacheKey,
+      JSON.stringify(tx),
+      'EX',
+      ESCROW_DETAIL_TTL,
+    );
+
     return this.toResponse(tx);
   }
 
   /**
    * Lists escrow transactions for a user.
+   *
+   * Read-through Redis caching: the user's escrow list is cached with a short
+   * TTL so repeated polling reads (common in payment flows) avoid DB round-trips.
    */
   async listTransactions(
     userId: string,
@@ -681,6 +749,24 @@ export class EscrowService {
     limit = 20,
     offset = 0,
   ): Promise<EscrowTransactionResponse[]> {
+    const redis = this.supabaseService.getRedisClient();
+    const statusSuffix = status ? `:s${status}` : '';
+    const cacheKey = `${ESCROW_USER_LIST_PREFIX}${userId}:l${limit}:o${offset}${statusSuffix}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed as EscrowTransactionResponse[];
+        }
+      } catch {
+        this.logger.warn(
+          `Invalid escrow list cache entry for user ${userId}, falling back to DB`,
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
 
     let query = supabase
@@ -703,7 +789,59 @@ export class EscrowService {
       return [];
     }
 
-    return (data as EscrowTransaction[]).map((tx) => this.toResponse(tx));
+    const result = (data as EscrowTransaction[]).map((tx) => this.toResponse(tx));
+
+    void redis.set(cacheKey, JSON.stringify(result), 'EX', ESCROW_USER_LIST_TTL);
+
+    return result;
+  }
+
+  /**
+   * Invalidate Redis caches related to an escrow transaction and its
+   * participants. Called after every mutation (hold, release, refund, cancel)
+   * to ensure reads stay consistent.
+   *
+   * Strategy:
+   *  - Delete the escrow detail cache key.
+   *  - Delete user list caches for both the payer and the payee.
+   *    Because list caches are keyed by (userId, limit, offset[, status]), we
+   *    use a SCAN + DEL pattern to cover all pagination/status-filter variants.
+   */
+  private invalidateEscrowCaches(
+    transactionId: string,
+    payerId: string,
+    payeeId: string,
+  ): void {
+    const redis = this.supabaseService.getRedisClient();
+
+    void (async () => {
+      try {
+        // Delete the specific detail key
+        await redis.del(`${ESCROW_DETAIL_PREFIX}${transactionId}`);
+
+        // Scan and delete user list keys for payer and payee
+        for (const userId of [payerId, payeeId]) {
+          let cursor = '0';
+          do {
+            const [nextCursor, scannedKeys] = await redis.scan(
+              cursor,
+              'MATCH',
+              `${ESCROW_USER_LIST_PREFIX}${userId}:*`,
+              'COUNT',
+              100,
+            );
+            cursor = nextCursor;
+            if (scannedKeys.length > 0) {
+              await redis.del(...scannedKeys);
+            }
+          } while (cursor !== '0');
+        }
+      } catch (err: unknown) {
+        this.logger.warn(
+          `Failed to invalidate escrow caches for ${transactionId}: ${(err as Error)?.message ?? 'unknown'}`,
+        );
+      }
+    })();
   }
 
   /**
