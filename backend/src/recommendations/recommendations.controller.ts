@@ -6,13 +6,17 @@ import {
   RecommendedUserDto,
 } from './recommendations.service';
 import { sanitiseRecommendationsData } from './sanitise-recommendations.helper';
+import {
+  RecommendationsRateLimiterGuard,
+  RecommendationsRateLimit,
+} from './recommendations-rate-limiter.guard';
 
 interface AuthenticatedRequest {
   user?: { id: string };
 }
 
 @Controller('recommendations')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, RecommendationsRateLimiterGuard)
 @UseFilters(MatchmakingExceptionFilter)
 export class RecommendationsController {
   constructor(
@@ -20,6 +24,7 @@ export class RecommendationsController {
   ) {}
 
   @Get('for-you')
+  @RecommendationsRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
   async getForYou(
     @Req() req: AuthenticatedRequest,
   ): Promise<RecommendedUserDto[]> {
@@ -29,6 +34,7 @@ export class RecommendationsController {
   }
 
   @Get('daily')
+  @RecommendationsRateLimit({ freeMaxRequests: 10, vipMaxRequests: 60, windowSeconds: 60 })
   async getDaily(
     @Req() req: AuthenticatedRequest,
   ): Promise<RecommendedUserDto[]> {

@@ -4,6 +4,7 @@ import { MatchmakingCrashReportService } from './matchmaking-crash-report.servic
 import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 import { RecommendationsController } from './recommendations.controller';
 import { RecommendationsService } from './recommendations.service';
+import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.guard';
 
 @Module({
   imports: [EscrowModule],
@@ -12,6 +13,7 @@ import { RecommendationsService } from './recommendations.service';
     RecommendationsService,
     MatchmakingCrashReportService,
     MatchmakingExceptionFilter,
+    RecommendationsRateLimiterGuard,
   ],
   exports: [RecommendationsService, MatchmakingCrashReportService],
 })
