@@ -5,6 +5,7 @@ import { validationSchema } from './config/validation.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SharedLoggerModule } from './common/logger/logger.module';
+import { RetryModule } from './common/retry/retry.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LocationModule } from './location/location.module';
@@ -22,6 +23,7 @@ import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
+import { EscrowModule } from './escrow/escrow.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { InterestsModule } from './interests/interests.module';
@@ -100,6 +102,7 @@ import { EscrowModule } from './escrow/escrow.module';
       ignoreErrors: false,
     }),
     SharedLoggerModule,
+    RetryModule,
     SupabaseModule,
     LocationModule,
     AuthModule,
@@ -115,6 +118,7 @@ import { EscrowModule } from './escrow/escrow.module';
     AudioRoomsModule,
     MonetisationModule,
     EconomyModule,
+    EscrowModule,
     SafetyModule,
     HobbyTagsModule,
     InterestsModule,

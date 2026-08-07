@@ -57,6 +57,16 @@ describe('HostDashboardComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-, border-s, border-e)', () => {
+    const componentHtml = fixture.nativeElement.innerHTML;
+    expect(componentHtml).not.toMatch(/\bpl-\d/);
+    expect(componentHtml).not.toMatch(/\bpr-\d/);
+    expect(componentHtml).not.toMatch(/\bml-\d/);
+    expect(componentHtml).not.toMatch(/\bmr-\d/);
+    expect(componentHtml).not.toMatch(/\bborder-l\b/);
+    expect(componentHtml).not.toMatch(/\bborder-r\b/);
+  });
+
   it('should initialise viewerCount and earnedCoins to zero', () => {
     expect(component.viewerCount()).toBe(0);
     expect(component.earnedCoins()).toBe(0);

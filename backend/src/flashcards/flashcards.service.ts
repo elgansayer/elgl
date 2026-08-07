@@ -4,6 +4,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { withRetry } from '../common/retry';
 
 @Injectable()
 export class FlashcardsService {
@@ -12,6 +14,7 @@ export class FlashcardsService {
     private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async createOrUpdateFlashcard(
@@ -21,21 +24,25 @@ export class FlashcardsService {
     const supabase = this.supabaseService.getClient();
     const cleanToken = dto.word_token.toLowerCase().trim();
 
-    const response = await supabase
-      .from('flashcards')
-      .upsert(
-        {
-          user_id: userId,
-          word_token: cleanToken,
-          original_context: dto.original_context ?? null,
-          translation: dto.translation,
-          definition: dto.definition ?? null,
-          pronunciation_url: dto.pronunciation_url ?? null,
-        },
-        { onConflict: 'user_id, word_token' },
-      )
-      .select()
-      .single();
+    const response = await withRetry(
+      () =>
+        supabase
+          .from('flashcards')
+          .upsert(
+            {
+              user_id: userId,
+              word_token: cleanToken,
+              original_context: dto.original_context ?? null,
+              translation: dto.translation,
+              definition: dto.definition ?? null,
+              pronunciation_url: dto.pronunciation_url ?? null,
+            },
+            { onConflict: 'user_id, word_token' },
+          )
+          .select()
+          .single(),
+      { logger: this.logger },
+    );
 
     if (response.error || !response.data) {
       const msg = response.error?.message ?? 'Unknown error';
@@ -48,6 +55,8 @@ export class FlashcardsService {
 
     // Award XP for creating a flashcard
     void this.xpService.awardXpForActivity(userId, 'create_flashcard');
+
+    this.metricsService.recordSrsFlashcardCreated();
 
     this.logger.info(
       { userId, wordToken: cleanToken, flashcardId: response.data.id },
@@ -62,15 +71,20 @@ export class FlashcardsService {
     flashcardId: string,
     dto: UpdateSrsDto,
   ): Promise<Flashcard> {
+    const reviewStartTime = Date.now();
     const supabase = this.supabaseService.getClient();
 
-    // Fetch current card state to run SM-2 locally
-    const { data: current, error: fetchErr } = await supabase
-      .from('flashcards')
-      .select('easiness_factor, repetitions, interval_days')
-      .eq('id', flashcardId)
-      .eq('user_id', userId)
-      .single();
+    // Fetch current card state to run SM-2 locally (with retry for 429)
+    const { data: current, error: fetchErr } = await withRetry(
+      () =>
+        supabase
+          .from('flashcards')
+          .select('easiness_factor, repetitions, interval_days')
+          .eq('id', flashcardId)
+          .eq('user_id', userId)
+          .single(),
+      { logger: this.logger },
+    );
 
     if (fetchErr || !current) {
       const msg = fetchErr?.message ?? 'Not found';
@@ -78,9 +92,7 @@ export class FlashcardsService {
         { userId, flashcardId, error: msg },
         'Failed to fetch flashcard for SRS update',
       );
-      throw new Error(
-        `Failed to fetch flashcard for SRS update: ${msg}`,
-      );
+      throw new Error(`Failed to fetch flashcard for SRS update: ${msg}`);
     }
 
     const { newEf, newRepetitions, newInterval, newSrsLevel } =
@@ -94,19 +106,24 @@ export class FlashcardsService {
     const nextReviewAt = new Date();
     nextReviewAt.setDate(nextReviewAt.getDate() + newInterval);
 
-    const response = await supabase
-      .from('flashcards')
-      .update({
-        srs_level: newSrsLevel,
-        easiness_factor: newEf,
-        repetitions: newRepetitions,
-        interval_days: newInterval,
-        next_review_at: nextReviewAt.toISOString(),
-      })
-      .eq('id', flashcardId)
-      .eq('user_id', userId)
-      .select()
-      .single();
+    // Update with retry for HTTP 429 rate limiting
+    const response = await withRetry(
+      () =>
+        supabase
+          .from('flashcards')
+          .update({
+            srs_level: newSrsLevel,
+            easiness_factor: newEf,
+            repetitions: newRepetitions,
+            interval_days: newInterval,
+            next_review_at: nextReviewAt.toISOString(),
+          })
+          .eq('id', flashcardId)
+          .eq('user_id', userId)
+          .select()
+          .single(),
+      { logger: this.logger },
+    );
 
     if (response.error || !response.data) {
       const msg = response.error?.message ?? 'Unknown error';
@@ -119,6 +136,15 @@ export class FlashcardsService {
 
     // Award XP for reviewing a flashcard
     void this.xpService.awardXpForActivity(userId, 'review_flashcard');
+
+    // Record SRS review metrics
+    const reviewDurationSeconds = (Date.now() - reviewStartTime) / 1000;
+    const result = dto.quality >= 3 ? 'pass' : 'fail';
+    this.metricsService.recordSrsReviewCompleted(
+      dto.quality,
+      result,
+      reviewDurationSeconds,
+    );
 
     this.logger.info(
       {

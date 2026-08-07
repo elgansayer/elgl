@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UnreadCounterService } from '../../services/unread-counter.service';
