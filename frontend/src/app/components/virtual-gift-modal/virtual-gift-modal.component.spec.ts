@@ -95,8 +95,8 @@ describe('VirtualGiftModalComponent', () => {
     giftButtons[0].click();
     fixture.detectChanges();
 
-    expect(component.selectedGift).not.toBeNull();
-    expect(component.selectedGift!.id).toBe('gift_rose');
+    expect(component.selectedGift()).not.toBeNull();
+    expect(component.selectedGift()!.id).toBe('gift_rose');
     expect(component.effectiveBalance()).toBe(40);
     expect(component.deductedAmount()).toBe(10);
   });
@@ -114,7 +114,7 @@ describe('VirtualGiftModalComponent', () => {
     buyBtn.click();
     fixture.detectChanges();
 
-    expect(component.showCoinPackages).toBe(true);
+    expect(component.showCoinPackages()).toBe(true);
     expect(mockStore.loadCoinPackages).toHaveBeenCalled();
   });
 

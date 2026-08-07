@@ -153,7 +153,7 @@ describe('GiftPickerComponent', () => {
 
   it('should emit closed when cancel button is clicked', () => {
     let emitted = false;
-    const sub = component.closed.subscribe(() => { emitted = true; });
+    const sub = component.closed.listen(() => { emitted = true; });
 
     const cancelBtn = fixture.debugElement.queryAll(By.css('.border-t button'))[0];
     cancelBtn.triggerEventHandler('click', null);
@@ -163,13 +163,13 @@ describe('GiftPickerComponent', () => {
   });
 
   it('should toggle coin packages view', () => {
-    expect(component.showCoinPackages).toBe(false);
+    expect(component.showCoinPackages()).toBe(false);
 
     const buyCoinsBtn = fixture.debugElement.query(By.css('.bg-amber-500'));
     buyCoinsBtn.triggerEventHandler('click', null);
     fixture.detectChanges();
 
-    expect(component.showCoinPackages).toBe(true);
+    expect(component.showCoinPackages()).toBe(true);
 
     // Should now show the back button
     const backBtn = fixture.debugElement.query(By.css('.bg-amber-500'));
