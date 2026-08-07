@@ -17,6 +17,14 @@ function generateUUID() {
 }
 
 /**
+ * Pick a random element from an array.
+ */
+function pickRandomArrayItem(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
  * Called before each request in a scenario flow.
  * Injects a correlation ID for tracing load-test requests in server logs.
  */
@@ -30,5 +38,6 @@ function beforeRequest(requestParams, context, events, next) {
 
 module.exports = {
   generateUUID,
+  pickRandomArrayItem,
   beforeRequest,
 };
