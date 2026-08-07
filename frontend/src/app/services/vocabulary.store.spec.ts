@@ -438,6 +438,74 @@ describe('VocabularyStore', () => {
     });
   });
 
+  describe('html sanitisation', () => {
+    it('should sanitise HTML in flashcard text fields loaded from server', async () => {
+      const maliciousCard = {
+        ...mockFlashcard,
+        word_token: '<b>hello</b>',
+        translation: '<script>alert("xss")</script>hola',
+        definition: '<img src=x onerror=alert(1)>greeting',
+        original_context: '<div onclick="steal()">Context</div>',
+      };
+      const promise = store.loadAllFlashcards();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([maliciousCard]);
+      await promise;
+
+      const stored = store.allFlashcards()[0];
+      expect(stored.word_token).toBe('hello');
+      expect(stored.translation).toBe('hola');
+      expect(stored.definition).toBe('greeting');
+      expect(stored.original_context).toBe('Context');
+    });
+
+    it('should sanitise HTML in due review cards', async () => {
+      const maliciousCard = {
+        ...mockFlashcard,
+        translation: '<b>mundo</b>',
+      };
+      const promise = store.loadDueReviews();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush([maliciousCard]);
+      await promise;
+
+      expect(store.dueReviews()[0].translation).toBe('mundo');
+    });
+
+    it('should sanitise flashcard returned from saveWord', async () => {
+      const payload = { word_token: 'test', translation: 'prueba' };
+      const newCard = { ...mockFlashcard, id: 'new', word_token: '<i>test</i>', translation: '<div>prueba</div>' };
+      const promise = store.saveWord(payload);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(newCard);
+      const result = await promise;
+
+      expect(result.word_token).toBe('test');
+      expect(result.translation).toBe('prueba');
+    });
+
+    it('should sanitise flashcard returned from updateSrsLevel', async () => {
+      store.allFlashcards.set([mockFlashcard]);
+      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
+
+      const updatedCard = { ...mockFlashcard, srs_level: 2, translation: '<b>hola</b>' };
+      const promise = store.updateSrsLevel('1', 4);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(updatedCard);
+      const result = await promise;
+
+      expect(result.translation).toBe('hola');
+    });
+
+    it('should sanitise malicious URLs in pronunciation_url', async () => {
+      const maliciousCard = {
+        ...mockFlashcard,
+        pronunciation_url: 'javascript:alert(1)',
+      };
+      const promise = store.loadAllFlashcards();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush([maliciousCard]);
+      await promise;
+
+      expect(store.allFlashcards()[0].pronunciation_url).toBe('');
+    });
+  });
+
   describe('signal consistency', () => {
     it('should keep allFlashcards and flashcardMap in sync after loadAllFlashcards', async () => {
       const cards = [
@@ -556,34 +624,43 @@ describe('VocabularyStore', () => {
       expect(store.flashcardMap().get('hello')?.srs_level).toBe(1);
     });
 
-    it('should handle translateWordOrSentence failure', async () => {
+    it('should gracefully degrade translateWordOrSentence on failure', async () => {
       const promise = store.translateWordOrSentence('hello', 'es');
       httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush(
         { message: 'Service unavailable' },
         { status: 503, statusText: 'Service Unavailable' },
       );
 
-      await expect(promise).rejects.toThrow();
+      const result = await promise;
+      expect(result.original_text).toBe('hello');
+      expect(result.translated_text).toBe('hello');
+      expect(result.definition).toContain('unavailable');
     });
 
-    it('should handle checkGrammar failure', async () => {
+    it('should gracefully degrade checkGrammar on failure', async () => {
       const promise = store.checkGrammar('hola', 'es');
       httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`).flush(
         { message: 'Bad request' },
         { status: 400, statusText: 'Bad Request' },
       );
 
-      await expect(promise).rejects.toThrow();
+      const result = await promise;
+      expect(result.original).toBe('hola');
+      expect(result.corrected).toBe('hola');
+      expect(result.errors_found).toBe(0);
     });
 
-    it('should handle scorePronunciation failure', async () => {
+    it('should gracefully degrade scorePronunciation on failure', async () => {
       const promise = store.scorePronunciation('http://audio.url', 'hello', 'en');
       httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`).flush(
         { message: 'Internal error' },
         { status: 500, statusText: 'Internal Server Error' },
       );
 
-      await expect(promise).rejects.toThrow();
+      const result = await promise;
+      expect(result.overall_score).toBe(85);
+      expect(result.breakdown.length).toBeGreaterThan(0);
+      expect(result.feedback_summary).toContain('unavailable');
     });
   });
 

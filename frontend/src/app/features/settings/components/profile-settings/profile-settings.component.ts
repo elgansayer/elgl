@@ -3,17 +3,37 @@ import { FormBuilder, ReactiveFormsModule, FormArray, Validators } from '@angula
 import { debounceTime } from 'rxjs';
 import { TranslatePipe } from '../../../../services/translate.pipe';
 import { SettingsService } from '../../../../core/services/settings.service';
+<<<<<<< HEAD
 import { LanguageLevel, JLPTLevel, ProfileDiscoverySettings } from '../../../../core/models/settings.model';
+=======
+import {
+  LanguageLevel,
+  JLPTLevel,
+  ProfileDiscoverySettings,
+} from '../../../../core/models/settings.model';
+
+>>>>>>> origin/main
 function isHTMLInputElement(element: EventTarget | null): element is HTMLInputElement {
   return element !== null && 'value' in element;
 }
 
+interface TargetLanguageFormEntry {
+  language?: unknown;
+  level?: unknown;
+  jlptLevel?: unknown;
+}
+
 const isLanguageLevel = (level: unknown): level is LanguageLevel => {
-    return typeof level === 'string' && ['Beginner', 'Elementary', 'Intermediate', 'Upper Intermediate', 'Advanced', 'Native'].includes(level);
+  return (
+    typeof level === 'string' &&
+    ['Beginner', 'Elementary', 'Intermediate', 'Upper Intermediate', 'Advanced', 'Native'].includes(
+      level,
+    )
+  );
 };
 
 const isJLPTLevel = (level: unknown): level is JLPTLevel => {
-    return typeof level === 'string' && ['N5', 'N4', 'N3', 'N2', 'N1', 'None'].includes(level);
+  return typeof level === 'string' && ['N5', 'N4', 'N3', 'N2', 'N1', 'None'].includes(level);
 };
 
 @Component({
@@ -35,12 +55,12 @@ export class ProfileSettingsComponent implements OnInit {
     displayKana: [false],
     ageFilter: this.fb.group({
       min: [18, [Validators.min(18)]],
-      max: [100, [Validators.max(120)]]
+      max: [100, [Validators.max(120)]],
     }),
     matchingPreferences: this.fb.group({
       gender: ['Any'],
-      onlyVerified: [false]
-    })
+      onlyVerified: [false],
+    }),
   });
 
   get targetLanguages(): FormArray {
@@ -61,13 +81,16 @@ export class ProfileSettingsComponent implements OnInit {
   ngOnInit() {
     const data = this.settingsService.profileSettings();
     if (data) {
-      this.profileForm.patchValue({
-        bio: data.bio,
-        nativeLanguage: data.nativeLanguage,
-        displayKana: data.displayKana,
-        ageFilter: data.ageFilter,
-        matchingPreferences: data.matchingPreferences
-      }, { emitEvent: false });
+      this.profileForm.patchValue(
+        {
+          bio: data.bio,
+          nativeLanguage: data.nativeLanguage,
+          displayKana: data.displayKana,
+          ageFilter: data.ageFilter,
+          matchingPreferences: data.matchingPreferences,
+        },
+        { emitEvent: false },
+      );
 
       this.distanceRadius.set(data.distanceRadiusKm);
 
@@ -76,12 +99,14 @@ export class ProfileSettingsComponent implements OnInit {
         this.targetLanguages.removeAt(0);
       }
 
-      data.targetLanguages.forEach(lang => {
-        this.targetLanguages.push(this.fb.group({
-          language: [lang.language, Validators.required],
-          level: [lang.level, Validators.required],
-          jlptLevel: [lang.jlptLevel]
-        }));
+      data.targetLanguages.forEach((lang) => {
+        this.targetLanguages.push(
+          this.fb.group({
+            language: [lang.language, Validators.required],
+            level: [lang.level, Validators.required],
+            jlptLevel: [lang.jlptLevel],
+          }),
+        );
       });
     }
 
@@ -93,11 +118,13 @@ export class ProfileSettingsComponent implements OnInit {
   }
 
   addTargetLanguage() {
-    this.targetLanguages.push(this.fb.group({
-      language: ['', Validators.required],
-      level: ['Beginner', Validators.required],
-      jlptLevel: ['None']
-    }));
+    this.targetLanguages.push(
+      this.fb.group({
+        language: ['', Validators.required],
+        level: ['Beginner', Validators.required],
+        jlptLevel: ['None'],
+      }),
+    );
     this.persist();
   }
 
@@ -124,12 +151,18 @@ export class ProfileSettingsComponent implements OnInit {
 
     let genderVal: 'Any' | 'Male' | 'Female' | 'Non-binary' = 'Any';
     const rawGender = formValue.matchingPreferences?.gender;
-    if (rawGender === 'Any' || rawGender === 'Male' || rawGender === 'Female' || rawGender === 'Non-binary') {
-        genderVal = rawGender;
+    if (
+      rawGender === 'Any' ||
+      rawGender === 'Male' ||
+      rawGender === 'Female' ||
+      rawGender === 'Non-binary'
+    ) {
+      genderVal = rawGender;
     }
 
-    const tLangs: Array<{ language: string; level: LanguageLevel; jlptLevel?: JLPTLevel; }> = [];
+    const tLangs: Array<{ language: string; level: LanguageLevel; jlptLevel?: JLPTLevel }> = [];
     if (Array.isArray(formValue.targetLanguages)) {
+<<<<<<< HEAD
         for (const rawLang of formValue.targetLanguages) {
             const lang = rawLang as Record<string, unknown>;
             let lvlVal: LanguageLevel = 'Beginner';
@@ -145,7 +178,24 @@ export class ProfileSettingsComponent implements OnInit {
                 level: lvlVal,
                 jlptLevel: jlptVal
             });
+=======
+      for (const raw of formValue.targetLanguages) {
+        const lang: TargetLanguageFormEntry = typeof raw === 'object' && raw !== null ? raw : {};
+        let lvlVal: LanguageLevel = 'Beginner';
+        if (isLanguageLevel(lang.level)) {
+          lvlVal = lang.level;
+>>>>>>> origin/main
         }
+        let jlptVal: JLPTLevel | undefined = undefined;
+        if (isJLPTLevel(lang.jlptLevel)) {
+          jlptVal = lang.jlptLevel;
+        }
+        tLangs.push({
+          language: String(lang.language || ''),
+          level: lvlVal,
+          jlptLevel: jlptVal,
+        });
+      }
     }
 
     const newSettings: Partial<ProfileDiscoverySettings> = {
@@ -155,13 +205,13 @@ export class ProfileSettingsComponent implements OnInit {
       displayKana: formValue.displayKana || false,
       ageFilter: {
         min: formValue.ageFilter?.min || 18,
-        max: formValue.ageFilter?.max || 100
+        max: formValue.ageFilter?.max || 100,
       },
       distanceRadiusKm: this.distanceRadius(),
       matchingPreferences: {
         gender: genderVal,
-        onlyVerified: formValue.matchingPreferences?.onlyVerified || false
-      }
+        onlyVerified: formValue.matchingPreferences?.onlyVerified || false,
+      },
     };
 
     this.settingsService.updateProfileSettings(newSettings);
