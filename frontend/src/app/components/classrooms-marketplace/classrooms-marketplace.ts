@@ -5,7 +5,8 @@ import { VideoClassroomErrorHandlerService } from '../../services/video-classroo
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, interval } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
@@ -84,18 +85,14 @@ export class ClassroomsMarketplace implements OnInit {
 
   private subscribeToUpdates(): void {
     // Watch active rooms from the store for real-time updates
-    this.store.activeRooms;
-    // Simpler: poll or watch via effect-like pattern
-    const interval = setInterval(() => {
-      const fresh = this.store.activeRooms();
-      if (fresh.length > 0) {
-        this.rooms.set(fresh);
-      }
-    }, 5000);
-
-    this.destroyRef.onDestroy(() => {
-      clearInterval(interval);
-    });
+    interval(5000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const fresh = this.store.activeRooms();
+        if (fresh.length > 0) {
+          this.rooms.set(fresh);
+        }
+      });
   }
 
   selectLanguage(lang: string | null): void {
