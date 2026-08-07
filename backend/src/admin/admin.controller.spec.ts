@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -93,7 +94,7 @@ describe('AdminController', () => {
 
       const result = await controller.banUser('target-user', {
         user: { sub: 'admin-1' },
-      } as any);
+      } as Request & { user: { sub: string } });
 
       expect(adminService.banUser).toHaveBeenCalledWith(
         'target-user',
@@ -109,7 +110,7 @@ describe('AdminController', () => {
 
       const result = await controller.warnUser('target-user', {
         user: { sub: 'admin-1' },
-      } as any);
+      } as Request & { user: { sub: string } });
 
       expect(adminService.warnUser).toHaveBeenCalledWith(
         'target-user',

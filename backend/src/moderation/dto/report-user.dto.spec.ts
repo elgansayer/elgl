@@ -52,26 +52,29 @@ describe('ReportUserDto', () => {
     });
 
     it('should reject non-string reportedUserId', async () => {
-      const dto = new ReportUserDto();
-      (dto as any).reportedUserId = 123;
+      const dto = Object.assign(new ReportUserDto(), {
+        reportedUserId: 123 as unknown as string,
+      });
       dto.reasonCategory = 'harassment';
       const errors = await validate(dto);
       expect(errors.some((e) => e.property === 'reportedUserId')).toBe(true);
     });
 
     it('should reject non-string reasonCategory', async () => {
-      const dto = new ReportUserDto();
+      const dto = Object.assign(new ReportUserDto(), {
+        reasonCategory: 123 as unknown as string,
+      });
       dto.reportedUserId = 'user-123';
-      (dto as any).reasonCategory = 123;
       const errors = await validate(dto);
       expect(errors.some((e) => e.property === 'reasonCategory')).toBe(true);
     });
 
     it('should reject non-string description', async () => {
-      const dto = new ReportUserDto();
+      const dto = Object.assign(new ReportUserDto(), {
+        description: 42 as unknown as string,
+      });
       dto.reportedUserId = 'user-123';
       dto.reasonCategory = 'spam';
-      (dto as any).description = 42;
       const errors = await validate(dto);
       expect(errors.some((e) => e.property === 'description')).toBe(true);
     });

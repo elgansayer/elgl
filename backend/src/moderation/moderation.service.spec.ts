@@ -4,8 +4,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('ModerationService', () => {
   let service: ModerationService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
+  let mockSupabaseClient: Record<string, jest.Mock>;
+  let mockQueryBuilder: Record<string, jest.Mock> & { _response?: Record<string, unknown> };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -19,7 +19,7 @@ describe('ModerationService', () => {
       limit: jest.fn(),
       single: jest.fn(),
       maybeSingle: jest.fn(),
-      then: jest.fn((resolve: any) => resolve(mockQueryBuilder._response)),
+      then: jest.fn((resolve: (value: unknown) => void) => resolve(mockQueryBuilder._response)),
     };
 
     mockSupabaseClient = {

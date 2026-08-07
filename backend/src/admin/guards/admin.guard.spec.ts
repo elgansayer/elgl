@@ -8,8 +8,8 @@ import { SupabaseService } from '../../supabase/supabase.service';
 
 describe('AdminGuard', () => {
   let guard: AdminGuard;
-  let mockQueryBuilder: any;
-  let mockSupabaseClient: any;
+  let mockQueryBuilder: Record<string, jest.Mock>;
+  let mockSupabaseClient: Record<string, jest.Mock>;
 
   const buildContext = (user?: { id: string }): ExecutionContext =>
     ({
