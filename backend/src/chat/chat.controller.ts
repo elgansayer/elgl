@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -31,6 +33,7 @@ import {
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
+import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 
@@ -39,6 +42,7 @@ import { TranslationService } from './translation.service';
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
+    private readonly centrifugoService: CentrifugoService,
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
   ) {}
@@ -47,12 +51,25 @@ export class ChatController {
   // signed Centrifugo connection token, the most auth-sensitive operation this
   // backend issues (actual login/signup is delegated entirely to Supabase Auth,
   // which is not part of this codebase and has its own rate limiting).
+  // Additionally enforces Redis-backed sliding-window WebSocket connection
+  // rate limiting (CENTRIFUGO_CONNECTION_RATE_LIMIT per window).
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('token')
   async getConnectionToken(
     @CurrentUser() user: User | null,
   ): Promise<{ token: string } | null> {
     if (!user) return null;
+
+    const allowed = await this.centrifugoService.checkConnectionRateLimit(
+      user.id,
+    );
+    if (!allowed) {
+      throw new HttpException(
+        'Too many WebSocket connection attempts. Please wait before reconnecting.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const token =
       (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
     return { token };
