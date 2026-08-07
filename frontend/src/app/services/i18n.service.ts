@@ -378,6 +378,13 @@ export class I18nService {
     'tour.close': 'Close',
     'discovery.offlineBanner': 'You are offline',
     'discovery.offlineCachedData': '\u2013 viewing cached data',
+    'discovery.offlineRankedData': '\u2013 offline ranked results',
+    // ---- Matchmaking algorithm labels ----
+    'matchmaking.reasonLanguageExchange': 'Complementary language exchange',
+    'matchmaking.reasonSharedInterests': 'Shared learning interests',
+    'matchmaking.reasonSeriousLearner': 'Serious learner match',
+    'matchmaking.reasonActiveLearner': 'Active study streak',
+    'matchmaking.reasonGeneral': 'General match',
 
     // Moments Feed Component
     'moments.title': 'Moments',
