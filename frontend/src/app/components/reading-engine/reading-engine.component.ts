@@ -358,7 +358,6 @@ export class ReadingEngineComponent {
 
   private async fetchArticles(): Promise<ReadingArticle[]> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
       return [
         {
           id: '1',

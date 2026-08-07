@@ -415,10 +415,11 @@ export class FlashcardReviewComponent {
     // After card changes, return focus to flashcard for keyboard navigation
     effect(() => {
       if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
-        // Small delay to allow DOM to update
-        setTimeout(() => {
-          this.flashcardEl()?.nativeElement?.focus();
-        }, 0);
+        const elRef = this.flashcardEl();
+        if (elRef) {
+          // Schedule focus on next animation frame after DOM update
+          requestAnimationFrame(() => elRef.nativeElement.focus());
+        }
       }
     });
   }
