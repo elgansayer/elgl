@@ -6,6 +6,7 @@ const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
 /**
+<<<<<<< HEAD
  * Strict DOMPurify configuration: strip ALL HTML tags and attributes.
  * All user-submitted text must be plain text only.
  *
@@ -20,6 +21,22 @@ const STRICT_SANITISE_CONFIG: DOMPurify.Config = {
   ALLOW_DATA_ATTR: false,
   KEEP_CONTENT: true,
 };
+=======
+ * Fields that must never pass through HTML sanitisation because they contain
+ * non-user-authored technical data whose angle-bracket content is meaningful
+ * (e.g. stack traces with `<anonymous>`, webhook signatures, etc.).
+ */
+const SANITISATION_EXEMPT_KEYS = new Set([
+  'stack',
+  'componentStack',
+  'rawBody',
+  'signedPayload',
+  // Stack-frame fields that may contain angle brackets (e.g. <anonymous>)
+  'functionName',
+  'fileName',
+  'source',
+]);
+>>>>>>> origin/main
 
 @Injectable()
 export class SanitiseHtmlPipe implements PipeTransform {
@@ -41,7 +58,16 @@ export class SanitiseHtmlPipe implements PipeTransform {
       if (keyName && keyName.toLowerCase().includes('password')) {
         return value;
       }
+<<<<<<< HEAD
       return purify.sanitize(value, STRICT_SANITISE_CONFIG);
+=======
+      // Exempt non-user-authored technical fields whose angle-bracket
+      // content is meaningful (stack traces, webhook signatures, etc.)
+      if (keyName && SANITISATION_EXEMPT_KEYS.has(keyName)) {
+        return value;
+      }
+      return purify.sanitize(value);
+>>>>>>> origin/main
     }
 
     if (Array.isArray(value)) {
