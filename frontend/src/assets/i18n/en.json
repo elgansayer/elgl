@@ -1384,6 +1384,8 @@
   "seconds": "Seconds",
   "settings.accentColor": "Primary Accent Colour",
   "settings.accentColorDesc": "Personalise your app experience.",
+  "settings.customColourLabel": "Custom Colour",
+  "settings.customColourPlaceholder": "Enter hex colour, e.g. #ff6b6b",
   "settings.appearanceSection": "Appearance",
   "settings.autoDownloadCellular": "Auto Download Cellular",
   "settings.autoDownloadMedia": "Auto Download Media",

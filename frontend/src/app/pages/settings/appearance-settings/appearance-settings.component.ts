@@ -70,6 +70,13 @@ export class AppearanceSettingsComponent {
     this.primaryAccentColor.set(color);
   }
 
+  onCustomColorChange(event: Event): void {
+    if (!this.isVip()) return;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    this.primaryAccentColor.set(target.value);
+  }
+
   async saveSettings(): Promise<void> {
     this.errorMessage.set('');
     this.successMessage.set('');
