@@ -1763,5 +1763,9 @@
   "dataStorage.pageTitle": "Data & Storage",
   "dataStorage.pageSubtitle": "Manage your local cache and data usage",
   "dataStorage.clearCacheDesc": "Remove cached images, messages, and temporary files",
-  "dataStorage.cellularDesc": "Allow automatic media downloads when using cellular data"
+  "dataStorage.cellularDesc": "Allow automatic media downloads when using cellular data",
+  "chat_settings.auto_translate_desc": "Automatically translate messages to your language",
+  "chat_settings.read_receipts_desc": "Let others know when you have read their messages",
+  "chat_settings.enter_to_send_desc": "Press Enter to send messages instead of clicking the send button",
+  "chat_settings.reset_defaults": "Reset to defaults"
 }
