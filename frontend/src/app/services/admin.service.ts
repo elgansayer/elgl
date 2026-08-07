@@ -1,8 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, catchError, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { OfflineAdminStorageService } from './offline-admin-storage.service';
+import { withRetry } from './http-retry';
 
 export interface AdminUserSummary {
   id: string;
@@ -121,6 +123,7 @@ const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
 export class AdminService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private offlineStorage = inject(OfflineAdminStorageService);
   private baseUrl = `${environment.apiUrl}/admin`;
 
   private getHeaders() {
@@ -136,11 +139,13 @@ export class AdminService {
    */
   async checkAdminAccess(): Promise<boolean> {
     try {
-      await firstValueFrom(
-        this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
-          headers: this.getHeaders(),
-          params: new HttpParams().set('page', '1').set('pageSize', '1'),
-        }),
+      await withRetry(() =>
+        firstValueFrom(
+          this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
+            headers: this.getHeaders(),
+            params: new HttpParams().set('page', '1').set('pageSize', '1'),
+          }),
+        ),
       );
       return true;
     } catch {
@@ -154,81 +159,87 @@ export class AdminService {
       params = params.set('search', search);
     }
 
-    return firstValueFrom(
-      this.http
-        .get<AdminUserListResult>(`${this.baseUrl}/users`, {
-          headers: this.getHeaders(),
-          params,
-        })
-        .pipe(
-          catchError(() =>
-            of({
-              users: search
-                ? MOCK_ADMIN_USERS.filter((u) =>
-                    (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
-                  )
-                : MOCK_ADMIN_USERS,
-              total: MOCK_ADMIN_USERS.length,
-              page,
-              pageSize,
-            }),
-          ),
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<AdminUserListResult>(`${this.baseUrl}/users`, {
+            headers: this.getHeaders(),
+            params,
+          }),
         ),
-    );
+      );
+    } catch {
+      return {
+        users: search
+          ? MOCK_ADMIN_USERS.filter((u) =>
+              (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
+            )
+          : MOCK_ADMIN_USERS,
+        total: MOCK_ADMIN_USERS.length,
+        page,
+        pageSize,
+      };
+    }
   }
 
   async setVipStatus(userId: string, isVip: boolean, vipTier?: string): Promise<AdminUserSummary> {
     // This is a mutation, so HTTP failures (e.g. a 403 from AdminGuard) must
     // propagate to the caller rather than being masked by a fake success.
-    return firstValueFrom(
-      this.http.patch<AdminUserSummary>(
-        `${this.baseUrl}/users/${userId}/vip`,
-        { is_vip: isVip, vip_tier: vipTier },
-        { headers: this.getHeaders() },
+    return withRetry(() =>
+      firstValueFrom(
+        this.http.patch<AdminUserSummary>(
+          `${this.baseUrl}/users/${userId}/vip`,
+          { is_vip: isVip, vip_tier: vipTier },
+          { headers: this.getHeaders() },
+        ),
       ),
     );
   }
 
   async getLoginHistory(userId: string): Promise<LoginHistoryEntry[]> {
-    return firstValueFrom(
-      this.http
-        .get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
-          headers: this.getHeaders(),
-        })
-        .pipe(catchError(() => of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId)))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
+            headers: this.getHeaders(),
+          }),
+        ),
+      );
+    } catch {
+      return MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId);
+    }
   }
 
   async banUser(userId: string): Promise<{ message: string }> {
-    return firstValueFrom(
-      this.http
-        .post<{ message: string }>(
-          `${this.baseUrl}/users/${userId}/ban`,
-          {},
-          { headers: this.getHeaders() },
-        )
-        .pipe(
-          catchError(() =>
-            of({ message: 'Failed to ban user - service temporarily unavailable' }),
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<{ message: string }>(
+            `${this.baseUrl}/users/${userId}/ban`,
+            {},
+            { headers: this.getHeaders() },
           ),
         ),
-    );
+      );
+    } catch {
+      return { message: 'Failed to ban user - service temporarily unavailable' };
+    }
   }
 
   async warnUser(userId: string): Promise<{ message: string }> {
-    return firstValueFrom(
-      this.http
-        .post<{ message: string }>(
-          `${this.baseUrl}/users/${userId}/warn`,
-          {},
-          { headers: this.getHeaders() },
-        )
-        .pipe(
-          catchError(() =>
-            of({ message: 'Failed to warn user - service temporarily unavailable' }),
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<{ message: string }>(
+            `${this.baseUrl}/users/${userId}/warn`,
+            {},
+            { headers: this.getHeaders() },
           ),
         ),
-    );
+      );
+    } catch {
+      return { message: 'Failed to warn user - service temporarily unavailable' };
+    }
   }
 
   async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {
@@ -236,28 +247,32 @@ export class AdminService {
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
 
-    return firstValueFrom(
-      this.http
-        .get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
-          headers: this.getHeaders(),
-          params,
-        })
-        .pipe(
-          catchError(() =>
-            of({ blocks: [], total: 0, page, pageSize }),
-          ),
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
+            headers: this.getHeaders(),
+            params,
+          }),
         ),
-    );
+      );
+    } catch {
+      return { blocks: [], total: 0, page, pageSize };
+    }
   }
 
   async removeBlock(blockId: string): Promise<{ success: boolean }> {
-    return firstValueFrom(
-      this.http
-        .delete<{ success: boolean }>(
-          `${this.baseUrl}/blocks/${blockId}`,
-          { headers: this.getHeaders() },
-        )
-        .pipe(catchError(() => of({ success: false }))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.delete<{ success: boolean }>(
+            `${this.baseUrl}/blocks/${blockId}`,
+            { headers: this.getHeaders() },
+          ),
+        ),
+      );
+    } catch {
+      return { success: false };
+    }
   }
 }

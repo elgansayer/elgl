@@ -1,4 +1,12 @@
+<<<<<<< HEAD
 import { PinoLogger } from 'nestjs-pino';
+=======
+/** Minimal logger interface for retry operations. Compatible with both NestJS Logger and PinoLogger. */
+export interface RetryLogger {
+  warn(message: string): void;
+  debug(message: string): void;
+}
+>>>>>>> origin/main
 
 export interface RetryOptions {
   /** Maximum number of retry attempts (default: 5) */
@@ -8,7 +16,11 @@ export interface RetryOptions {
   /** Maximum total delay across all retries in milliseconds (default: 60000) */
   maxTotalDelayMs?: number;
   /** Optional logger instance for debug output */
+<<<<<<< HEAD
   logger?: PinoLogger;
+=======
+  logger?: RetryLogger;
+>>>>>>> origin/main
 }
 
 /**
@@ -91,14 +103,6 @@ function isHttp429Error(error: unknown): boolean {
 
   // Plain HTTP error with status field
   if (err.status === 429) {
-    return true;
-  }
-
-  // AxiosError with status field (some versions)
-  if (
-    typeof err.status === 'number' &&
-    (err.status as number) === 429
-  ) {
     return true;
   }
 
