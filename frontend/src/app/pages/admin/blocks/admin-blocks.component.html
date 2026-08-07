@@ -46,41 +46,33 @@
     />
   } @else {
     <ul class="space-y-2">
-      @for (user of blockedUsers(); track user.id) {
+      @for (entry of blockedUsers(); track entry.id) {
         <li
-          class="flex items-center justify-between bg-surface rounded-lg p-3"
+          class="flex flex-wrap items-center justify-between bg-surface rounded-lg p-3 gap-3"
         >
           <div class="flex items-center gap-3">
-            @if (user.avatar_url) {
+            @if (entry.blocked_avatar) {
               <img
-                [src]="user.avatar_url"
-                [alt]="user.display_name ?? ''"
+                [src]="entry.blocked_avatar"
+                [alt]="entry.blocked_name ?? ''"
                 class="w-10 h-10 rounded-full object-cover"
               />
             } @else {
               <div class="h-10 w-10 rounded-full bg-surface-2 flex items-center justify-center text-text-secondary font-bold">
-                {{ (user.display_name ?? '?').charAt(0) }}
+                {{ (entry.blocked_name ?? '?').charAt(0) }}
               </div>
             }
             <div>
-              <p class="font-medium text-text-primary">{{ user.display_name ?? '' }}</p>
+              <p class="font-medium text-text-primary">{{ entry.blocked_name ?? 'Unknown' }}</p>
               <p class="text-sm text-text-secondary">
-                @if (user.native_language) {
-                  <span>{{ user.native_language }}</span>
-                }
-                @if (user.target_languages && user.target_languages.length > 0) {
-                  @if (user.native_language) {
-                    <span class="ms-1">→</span>
-                  }
-                  <span>{{ user.target_languages.join(', ') }}</span>
-                }
+                {{ 'admin.blocks.blockedBy' | t }}: {{ entry.blocker_name ?? 'Unknown' }}
               </p>
             </div>
           </div>
           <button
             class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
-            (click)="onUnblock(user)"
-            [disabled]="isUnblocking(user.id)"
+            (click)="onUnblock(entry)"
+            [disabled]="isUnblocking(entry.id)"
             [attr.aria-label]="'admin.blocks.unblock' | t"
           >
             {{ 'admin.blocks.unblock' | t }}
