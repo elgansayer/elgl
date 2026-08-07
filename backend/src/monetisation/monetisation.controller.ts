@@ -135,12 +135,14 @@ export class MonetisationController {
     @Body() dto: { platform?: string; receipt_data?: string },
   ) {
     if (!user) return null;
-    if (!dto.platform || !['ios', 'android'].includes(dto.platform)) {
-      throw new BadRequestException('Platform must be "ios" or "android"');
+    if (!dto.platform || !['ios', 'android', 'stripe'].includes(dto.platform)) {
+      throw new BadRequestException(
+        'Platform must be "ios", "android", or "stripe"',
+      );
     }
     return await this.monetisationService.restorePurchases(
       user.id,
-      dto.platform as 'ios' | 'android',
+      dto.platform as 'ios' | 'android' | 'stripe',
       dto.receipt_data,
     );
   }
