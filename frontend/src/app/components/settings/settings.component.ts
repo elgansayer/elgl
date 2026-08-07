@@ -1,11 +1,13 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
-import { UserService, LinkedAccount } from '../../services/user.service';
+import { UserService } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
+import { LinkedAccountsService, LinkedAccount } from '../../services/linked-accounts.service';
+
 @Component({
   selector: 'app-settings',
   imports: [FormsModule, TranslatePipe, RouterModule],
@@ -18,6 +20,7 @@ export class SettingsComponent implements OnInit {
   private location = inject(Location);
   private router = inject(Router);
   private chatSettingsService = inject(ChatSettingsService);
+  private linkedAccountsService = inject(LinkedAccountsService);
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -49,11 +52,7 @@ export class SettingsComponent implements OnInit {
   protected chatEnterToSend = signal(false);
   protected chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
 
-  /** Providers we support linking */
-  readonly supportedProviders: readonly string[] = ['google', 'facebook', 'twitter', 'apple'];
-
   async ngOnInit(): Promise<void> {
-    // Font scale is handled by FontScaleService and applied globally.
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
@@ -77,20 +76,18 @@ export class SettingsComponent implements OnInit {
         }
       }
 
-      // Load linked accounts
-      const accounts: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
+      const accounts = await this.linkedAccountsService.getLinkedAccounts();
       this.linkedAccounts.set(accounts ?? []);
 
       const available = await this.userService.getAvailableInterests();
       this.availableInterests.set(available);
     } catch {
-      this.autoDownloadPreference.set('wifi'); // Default to Wi-Fi only
+      this.autoDownloadPreference.set('wifi');
       this.errorMessage.set('Failed to load profile or linked accounts');
     } finally {
       this.isLoading.set(false);
     }
 
-    // Load chat-specific settings
     try {
       await this.chatSettingsService.loadSettings();
       this.chatEnterToSend.set(this.chatSettingsService.enterToSend());
@@ -98,53 +95,6 @@ export class SettingsComponent implements OnInit {
     } catch {
       // keep service defaults
     }
-  }
-
-  async linkAccount(provider: string): Promise<void> {
-    this.errorMessage.set('');
-    this.successMessage.set('');
-    try {
-      await this.userService.linkAccount(provider);
-      const updated: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
-      this.linkedAccounts.set(updated ?? []);
-      this.successMessage.set(`Linked account (${provider})`);
-    } catch {
-      this.errorMessage.set(`Failed to link ${provider}`);
-    }
-  }
-
-  async unlinkAccount(provider: string): Promise<void> {
-    this.errorMessage.set('');
-    this.successMessage.set('');
-    try {
-      await this.userService.unlinkAccount(provider);
-      const updated: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
-      this.linkedAccounts.set(updated ?? []);
-      this.successMessage.set(`Unlinked account (${provider})`);
-    } catch {
-      this.errorMessage.set(`Failed to unlink ${provider}`);
-    }
-  }
-
-  /** Returns true if the given provider is already linked */
-  isLinked(provider: string): boolean {
-    return this.linkedAccounts().some((a) => a.provider === provider);
-  }
-
-  /** Returns a simple icon (emoji or letter) for a provider */
-  providerIcon(provider: string): string {
-    const icons: Record<string, string> = {
-      google: 'G',
-      facebook: 'F',
-      twitter: '𝕏',
-      apple: '⌘',
-    };
-    return icons[provider] ?? '?';
-  }
-
-  /** Returns the linked account object for a provider if it exists */
-  getLinkedAccount(provider: string): LinkedAccount | undefined {
-    return this.linkedAccounts().find((a) => a.provider === provider);
   }
 
   private sanitizeProfileVisibility(
