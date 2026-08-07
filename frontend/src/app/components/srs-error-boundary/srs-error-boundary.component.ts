@@ -107,7 +107,7 @@ export class SrsErrorBoundaryComponent {
 
   private reportErrorInternal(error: Error): void {
     const ctx = this.context();
-    (error as Error & { srsContext?: SrsErrorContext }).srsContext = ctx;
-    this.errorHandler.handleError(error);
+    const enriched = Object.assign(error, { srsContext: ctx });
+    this.errorHandler.handleError(enriched);
   }
 }

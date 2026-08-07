@@ -7,6 +7,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -20,6 +21,11 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_EDGE_MEDIUM,
+  CACHE_NO_STORE,
+} from '../common/cache.interceptor';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
@@ -35,6 +41,7 @@ export class FlashcardsController {
   @Post()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 30, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Create or update a flashcard',
     description:
@@ -44,7 +51,10 @@ export class FlashcardsController {
     status: 201,
     description: 'Flashcard created or updated successfully.',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized -- missing or invalid JWT.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized -- missing or invalid JWT.',
+  })
   async createFlashcard(
     @CurrentUser() user: User | null,
     @Body() dto: CreateFlashcardDto,
@@ -56,6 +66,7 @@ export class FlashcardsController {
   @Patch(':id/srs')
   @Throttle({ default: { limit: 120, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 120, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Submit an SRS review for a flashcard',
     description:
@@ -68,10 +79,14 @@ export class FlashcardsController {
   })
   @ApiResponse({
     status: 200,
-    description: 'SRS review applied successfully. Returns updated flashcard with new scheduling.',
+    description:
+      'SRS review applied successfully. Returns updated flashcard with new scheduling.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'Flashcard not found or does not belong to user.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Flashcard not found or does not belong to user.',
+  })
   async updateSrs(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
@@ -84,6 +99,7 @@ export class FlashcardsController {
   @Get()
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 30, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM))
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
@@ -92,7 +108,8 @@ export class FlashcardsController {
   @ApiQuery({
     name: 'level',
     required: false,
-    description: 'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
+    description:
+      'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
     example: '2',
   })
   @ApiResponse({ status: 200, description: 'Array of flashcards.' })
@@ -109,6 +126,7 @@ export class FlashcardsController {
   @Get('due')
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 60, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Get flashcards due for review',
     description:

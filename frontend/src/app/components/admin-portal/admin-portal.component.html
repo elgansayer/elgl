@@ -1,4 +1,5 @@
 <div class="max-w-5xl mx-auto ps-4 pe-4 pt-6 pb-6" role="main" aria-labelledby="admin-title">
+  <app-admin-offline-banner />
   <h1 id="admin-title" class="text-2xl font-bold mb-1">{{ 'admin.title' | t }}</h1>
   <p class="text-sm text-text-secondary mb-4">{{ 'admin.subtitle' | t }}</p>
 
@@ -46,7 +47,7 @@
             </div>
 
             <div class="flex-1 min-w-[10rem]" role="cell">
-              <p class="font-semibold">{{ displayNameFor(user) }}</p>
+              <p class="font-semibold">{{ displayNameFor(user) | sanitiseHtml }}</p>
               <p class="text-xs text-text-secondary">
                 {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
               </p>
@@ -118,10 +119,10 @@
                     <li class="text-xs text-text-secondary">
                       {{ entry.created_at | date: 'medium' }}
                       @if (entry.ip_address) {
-                        &middot; {{ entry.ip_address }}
+                        &middot; {{ entry.ip_address | sanitiseHtml }}
                       }
                       @if (entry.user_agent) {
-                        &middot; {{ entry.user_agent }}
+                        &middot; {{ entry.user_agent | sanitiseHtml }}
                       }
                     </li>
                   }

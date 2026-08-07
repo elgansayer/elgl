@@ -4,10 +4,12 @@ import { I18nService } from '../../services/i18n.service';
 import { HobbyTagsStore } from '../../services/hobby-tags.store';
 import { FlashcardService } from '../../services/flashcard.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-vocabulary-display',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   template: `
     <div class="mx-auto max-w-5xl space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -27,15 +29,35 @@ import { showToast, showErrorToast } from '../../services/toast.service';
         </button>
       </div>
 
-      @if (vocabularyByTag().size === 0) {
-        <div class="app-empty-state" role="status">
-          <p class="text-3xl mb-3" aria-hidden="true">&#128218;</p>
-          <p class="font-bold text-text-primary">{{ 'vocabDisplay.emptyTitle' | t }}</p>
-          <p class="app-muted mt-1">{{ 'vocabDisplay.emptyDesc' | t }}</p>
+      @if (loading()) {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" role="status" aria-busy="true">
+          @for (_ of [0, 1, 2]; track _) {
+            <div class="app-card app-padded space-y-3">
+              <div class="flex items-center gap-2">
+                <app-skeleton-loader [height]="'1.25rem'" [width]="'1.25rem'" [borderRadius]="'8px'" />
+                <app-skeleton-loader [height]="'14px'" [width]="'50%'" [borderRadius]="'6px'" />
+              </div>
+              <div class="space-y-2">
+                <div class="rounded-card border border-surface-100 px-3 py-2 flex items-center justify-between">
+                  <div class="flex-1 space-y-1">
+                    <app-skeleton-loader [height]="'13px'" [width]="'60%'" [borderRadius]="'6px'" />
+                    <app-skeleton-loader [height]="'11px'" [width]="'40%'" [borderRadius]="'6px'" />
+                  </div>
+                  <app-skeleton-loader [height]="'24px'" [width]="'48px'" [borderRadius]="'8px'" />
+                </div>
+              </div>
+            </div>
+          }
         </div>
-      }
+      } @else if (vocabularyByTag().size === 0) {
+        <app-empty-state
+          [icon]="'📖'"
+          [title]="'vocabDisplay.emptyTitle' | t"
+          [description]="'vocabDisplay.emptyDesc' | t"
+        />
+      } @else {
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @for (entry of vocabularyByTagEntries(); track entry[0]) {
           <section class="app-card app-padded space-y-3">
             <h4 class="text-sm font-bold text-text-primary flex items-center gap-2">
@@ -63,7 +85,8 @@ import { showToast, showErrorToast } from '../../services/toast.service';
             </div>
           </section>
         }
-      </div>
+        </div>
+      }
     </div>
   `,
 })

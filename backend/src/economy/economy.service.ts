@@ -19,6 +19,7 @@ import {
   UnlockStickerPackDto,
 } from './dto/economy.dto';
 import { sanitiseEconomyData } from './sanitise-economy.helper';
+import { withExponentialBackoff } from '../common/http-retry.helper';
 
 export interface VirtualGiftRow {
   id: string;
@@ -233,30 +234,61 @@ export class EconomyService {
     );
   }
 
+  private static readonly CATALOG_CACHE_KEY = 'economy:catalog';
+  private static readonly CATALOG_CACHE_TTL = 3600;
+  private static readonly STICKER_PACKS_CACHE_PREFIX = 'economy:sticker_packs:';
+  private static readonly STICKER_PACKS_CACHE_TTL = 300;
+
   async getCatalog(): Promise<VirtualGiftRow[]> {
+    const redis = this.supabaseService.getRedisClient();
+
+    const cached = await redis.get(EconomyService.CATALOG_CACHE_KEY);
+    if (cached) {
+      try {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed as VirtualGiftRow[];
+        }
+      } catch {
+        this.logger.warn(
+          'Invalid economy catalog cache entry, falling back to DB',
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('virtual_gifts')
       .select('*')
       .order('cost_coins', { ascending: true });
     const rows = response.data;
+    let gifts: VirtualGiftRow[];
     if (!Array.isArray(rows)) {
-      return sanitiseEconomyData(this.getDefaultGiftCatalog());
+      gifts = this.getDefaultGiftCatalog();
+    } else {
+      const filtered = rows.filter(
+        (item: unknown): item is VirtualGiftRow =>
+          typeof item === 'object' &&
+          item !== null &&
+          'id' in item &&
+          'name' in item &&
+          'icon' in item &&
+          'cost_coins' in item &&
+          'animation_type' in item,
+      );
+      gifts = filtered.length > 0 ? filtered : this.getDefaultGiftCatalog();
     }
-    const gifts = rows.filter(
-      (item: unknown): item is VirtualGiftRow =>
-        typeof item === 'object' &&
-        item !== null &&
-        'id' in item &&
-        'name' in item &&
-        'icon' in item &&
-        'cost_coins' in item &&
-        'animation_type' in item,
+
+    const sanitised = sanitiseEconomyData(gifts);
+
+    void redis.set(
+      EconomyService.CATALOG_CACHE_KEY,
+      JSON.stringify(sanitised),
+      'EX',
+      EconomyService.CATALOG_CACHE_TTL,
     );
-    if (gifts.length === 0) {
-      return sanitiseEconomyData(this.getDefaultGiftCatalog());
-    }
-    return sanitiseEconomyData(gifts);
+
+    return sanitised;
   }
 
   private getDefaultGiftCatalog(): VirtualGiftRow[] {
@@ -417,6 +449,8 @@ export class EconomyService {
     this.logger.debug(
       `User ${userId} claimed daily check-in reward of ${reward} coins.`,
     );
+
+    this.invalidateUserEconomyCaches(userId);
 
     return { claimed: true, coins_rewarded: reward, new_balance: newBalance };
   }
@@ -641,8 +675,10 @@ export class EconomyService {
     }
 
     this.logger.info(
-      `User ${userId} received ${coinPackage.coins} coins (transaction ${transactionId})`,
+      `User ${userId} received ${coinPackage.coins} coins (transaction ${(transactionId ?? '').slice(-8) || '[unknown]'})`,
     );
+
+    this.invalidateUserEconomyCaches(userId);
 
     return {
       coins: coinPackage.coins,
@@ -704,12 +740,17 @@ export class EconomyService {
       throw new BadRequestException('Apple shared secret not configured');
     }
 
-    const response = await firstValueFrom(
-      this.httpService.post(verificationUrl, {
-        'receipt-data': receiptToken,
-        password: sharedSecret,
-        'exclude-old-transactions': true,
-      }),
+    const response = await withExponentialBackoff(
+      () =>
+        firstValueFrom(
+          this.httpService.post(verificationUrl, {
+            'receipt-data': receiptToken,
+            password: sharedSecret,
+            'exclude-old-transactions': true,
+          }),
+        ),
+      'Apple receipt verification',
+      { logger: this.logger },
     );
 
     const body = response.data as {
@@ -766,12 +807,17 @@ export class EconomyService {
 
     const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
 
-    const response = await firstValueFrom(
-      this.httpService.get(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }),
+    const response = await withExponentialBackoff(
+      () =>
+        firstValueFrom(
+          this.httpService.get(url, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }),
+        ),
+      'Google Play receipt verification',
+      { logger: this.logger },
     );
 
     const body = response.data as {
@@ -814,7 +860,11 @@ export class EconomyService {
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await this.stripe.checkout.sessions.retrieve(sessionId);
+      session = await withExponentialBackoff(
+        () => this.stripe.checkout.sessions.retrieve(sessionId),
+        'Stripe session retrieve',
+        { logger: this.logger },
+      );
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unexpected error';
@@ -1009,6 +1059,9 @@ export class EconomyService {
       void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
     }
 
+    this.invalidateUserEconomyCaches(senderId);
+    this.invalidateUserEconomyCaches(dto.receiver_id);
+
     return sanitiseEconomyData({
       success: true,
       coins_remaining: newSenderBalance,
@@ -1076,6 +1129,8 @@ export class EconomyService {
       );
     }
 
+    this.invalidateUserEconomyCaches(userId);
+
     return sanitiseEconomyData({
       success: true,
       coins_remaining: newBalance,
@@ -1088,6 +1143,33 @@ export class EconomyService {
     owned_pack_ids: string[];
     user_coins: number;
   }> {
+    const redis = this.supabaseService.getRedisClient();
+    const cacheKey = `${EconomyService.STICKER_PACKS_CACHE_PREFIX}${userId}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed: unknown = JSON.parse(cached);
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'packs' in parsed &&
+          'owned_pack_ids' in parsed &&
+          'user_coins' in parsed
+        ) {
+          return parsed as {
+            packs: StickerPackRow[];
+            owned_pack_ids: string[];
+            user_coins: number;
+          };
+        }
+      } catch {
+        this.logger.warn(
+          `Invalid sticker packs cache entry for user ${userId}, falling back to DB`,
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const [packsResponse, ownedResponse, balanceResponse] = await Promise.all([
@@ -1111,19 +1193,44 @@ export class EconomyService {
         'cost_coins' in item,
     );
 
+    let result: {
+      packs: StickerPackRow[];
+      owned_pack_ids: string[];
+      user_coins: number;
+    };
+
     if (packs.length === 0) {
-      return sanitiseEconomyData({
+      result = sanitiseEconomyData({
         packs: this.getDefaultStickerPacks(),
+        owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
+        user_coins: balanceResponse.data?.coins_balance ?? 0,
+      });
+    } else {
+      result = sanitiseEconomyData({
+        packs,
         owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
         user_coins: balanceResponse.data?.coins_balance ?? 0,
       });
     }
 
-    return sanitiseEconomyData({
-      packs,
-      owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
-      user_coins: balanceResponse.data?.coins_balance ?? 0,
-    });
+    void redis.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      EconomyService.STICKER_PACKS_CACHE_TTL,
+    );
+
+    return result;
+  }
+
+  /**
+   * Invalidates Redis caches related to a user's economy state.
+   * Called after any mutation that changes balances or ownership
+   * (purchaseCoins, sendGift, unlockStickerPack, claimDailyCheckIn).
+   */
+  private invalidateUserEconomyCaches(userId: string): void {
+    const redis = this.supabaseService.getRedisClient();
+    void redis.del(`${EconomyService.STICKER_PACKS_CACHE_PREFIX}${userId}`);
   }
 
   private getDefaultStickerPacks(): StickerPackRow[] {

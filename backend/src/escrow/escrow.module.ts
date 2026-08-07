@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
+import { SupabaseModule } from '../supabase/supabase.module';
 import { EscrowController } from './escrow.controller';
 import { EscrowService } from './escrow.service';
-import { UsersModule } from '../users/users.module';
+import { CircuitBreakerService } from './circuit-breaker.service';
+import { EscrowQueueWorker } from './escrow-queue.worker';
 
 @Module({
-  imports: [UsersModule],
+  imports: [SupabaseModule],
   controllers: [EscrowController],
-  providers: [EscrowService],
-  exports: [EscrowService],
+  providers: [EscrowService, CircuitBreakerService, EscrowQueueWorker],
+  exports: [EscrowService, CircuitBreakerService],
 })
 export class EscrowModule {}
