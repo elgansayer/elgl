@@ -3,11 +3,11 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { firstValueFrom } from 'rxjs';
 import Stripe from 'stripe';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -213,10 +213,11 @@ export interface GiftEventPayload {
 
 @Injectable()
 export class EconomyService {
-  private readonly logger = new Logger(EconomyService.name);
   private readonly stripe: Stripe;
 
   constructor(
+    @InjectPinoLogger(EconomyService.name)
+    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,
     private readonly centrifugoService: CentrifugoService,
@@ -412,7 +413,7 @@ export class EconomyService {
     // Set key to expire in 24 hours
     await redis.set(key, '1', 'EX', 86400);
 
-    this.logger.log(
+    this.logger.debug(
       `User ${userId} claimed daily check-in reward of ${reward} coins.`,
     );
 
@@ -638,7 +639,7 @@ export class EconomyService {
       );
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} received ${coinPackage.coins} coins (transaction ${transactionId})`,
     );
 
