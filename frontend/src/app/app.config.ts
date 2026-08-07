@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { ApplicationConfig, ErrorHandler, inject, isDevMode, APP_INITIALIZER, importProvidersFrom } from '@angular/core';
+=======
+import { ApplicationConfig, ErrorHandler, importProvidersFrom, inject, isDevMode, APP_INITIALIZER } from '@angular/core';
+>>>>>>> origin/main
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withFetch, HttpClient } from '@angular/common/http';
 import { provideClientHydration } from '@angular/platform-browser';
@@ -49,6 +53,7 @@ export const appConfig: ApplicationConfig = {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
     }),
+    importProvidersFrom(JoyrideModule.forRoot()),
     ...(TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
