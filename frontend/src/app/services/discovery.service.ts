@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, catchError, of, timeout, retry, Subject } from 'rxjs';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom, catchError, of, timeout, retry, Subject, throwError } from 'rxjs';
 import { takeUntil } from 'rxjs';
 import { MOCK_PARTNERS } from './mock-data';
 import { environment } from '../../environments/environment';
@@ -186,7 +186,12 @@ export class DiscoveryService {
           timeout(15000),
           retry({ count: 1, delay: 1000 }),
           takeUntil(cancel$),
-          catchError(() => of<UserProfile[]>(MOCK_PARTNERS)),
+          catchError((error: unknown) => {
+            if (error instanceof HttpErrorResponse && error.status === 429) {
+              return throwError(() => error);
+            }
+            return of<UserProfile[]>(MOCK_PARTNERS);
+          }),
         ),
     );
 
@@ -285,7 +290,14 @@ export class DiscoveryService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(catchError(() => of<UserProfile[]>(MOCK_PARTNERS))),
+        .pipe(
+          catchError((error: unknown) => {
+            if (error instanceof HttpErrorResponse && error.status === 429) {
+              return throwError(() => error);
+            }
+            return of<UserProfile[]>(MOCK_PARTNERS);
+          }),
+        ),
     );
     return users;
   }
@@ -308,7 +320,14 @@ export class DiscoveryService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(catchError(() => of<UserProfile[]>([]))),
+        .pipe(
+          catchError((error: unknown) => {
+            if (error instanceof HttpErrorResponse && error.status === 429) {
+              return throwError(() => error);
+            }
+            return of<UserProfile[]>([]);
+          }),
+        ),
     );
     const currentUser = this.authService.currentUser();
     let filtered = users;
@@ -329,7 +348,14 @@ export class DiscoveryService {
         .get<UserProfile[]>(`${this.baseUrl}/recent-native-speakers`, {
           headers: this.getHeaders(),
         })
-        .pipe(catchError(() => of<UserProfile[]>([]))),
+        .pipe(
+          catchError((error: unknown) => {
+            if (error instanceof HttpErrorResponse && error.status === 429) {
+              return throwError(() => error);
+            }
+            return of<UserProfile[]>([]);
+          }),
+        ),
     );
     const currentUser = this.authService.currentUser();
     let filtered = users;
@@ -351,7 +377,14 @@ export class DiscoveryService {
           .get<UserProfile[]>(`${this.baseUrl}/spotlight`, {
             headers: this.getHeaders(),
           })
-          .pipe(catchError(() => of<UserProfile[]>([]))),
+          .pipe(
+          catchError((error: unknown) => {
+            if (error instanceof HttpErrorResponse && error.status === 429) {
+              return throwError(() => error);
+            }
+            return of<UserProfile[]>([]);
+          }),
+        ),
       );
       const currentUser = this.authService.currentUser();
       let filtered = users;
@@ -393,7 +426,14 @@ export class DiscoveryService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(catchError(() => of<UserProfile[]>([]))),
+        .pipe(
+          catchError((error: unknown) => {
+            if (error instanceof HttpErrorResponse && error.status === 429) {
+              return throwError(() => error);
+            }
+            return of<UserProfile[]>([]);
+          }),
+        ),
     );
     const currentUser = this.authService.currentUser();
     let filtered = users;

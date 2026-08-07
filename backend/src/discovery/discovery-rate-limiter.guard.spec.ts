@@ -23,6 +23,13 @@ describe('DiscoveryRateLimiterGuard', () => {
     handler: () => void,
     controllerClass: new (...args: unknown[]) => unknown,
   ): ExecutionContext {
+    const mockResponse = {
+      setHeader: jest.fn(),
+      getHeader: jest.fn(),
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+    };
+
     return {
       getHandler: () => handler,
       getClass: () => controllerClass,
@@ -30,7 +37,7 @@ describe('DiscoveryRateLimiterGuard', () => {
         getRequest: () => ({
           user: userId ? { id: userId } : undefined,
         }),
-        getResponse: jest.fn(),
+        getResponse: () => mockResponse,
         getNext: jest.fn(),
       }),
       getType: () => 'http',
@@ -140,12 +147,23 @@ describe('DiscoveryRateLimiterGuard', () => {
 
     it('should block free user when free limit exceeded', async () => {
       redisMock.incr.mockResolvedValue(31);
+      redisMock.ttl.mockResolvedValue(90);
 
       const context = createMockExecutionContext('user-1', handler, TestController);
-      await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
-      await expect(guard.canActivate(context)).rejects.toMatchObject({
-        status: HttpStatus.TOO_MANY_REQUESTS,
-      });
+
+      let caught: HttpException | undefined;
+      try {
+        await guard.canActivate(context);
+      } catch (err: unknown) {
+        caught = err as HttpException;
+      }
+
+      expect(caught).toBeInstanceOf(HttpException);
+      expect(caught?.getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
+
+      const mockResponse = context.switchToHttp().getResponse();
+      // retryAfter = Math.max(windowSeconds(60), ttl(90)) = 90
+      expect(mockResponse.setHeader).toHaveBeenCalledWith('Retry-After', '90');
     });
 
     it('should allow VIP user to exceed free limit but stay within VIP limit', async () => {
