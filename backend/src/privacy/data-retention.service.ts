@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 
 /**
@@ -14,7 +15,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class DataRetentionService {
   private readonly logger = new Logger(DataRetentionService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Purge login history older than 180 days.
@@ -181,6 +185,23 @@ export class DataRetentionService {
       .delete()
       .eq('recipient_id', userId);
 
+    // LingQ Reading Engine: reading progress and authored resources
+    await supabase
+      .from('reading_progress')
+      .delete()
+      .eq('user_id', userId);
+    await supabase
+      .from('reading_resources')
+      .delete()
+      .eq('created_by', userId);
+
+    // Invalidate reading-engine Redis caches for this user
+    try {
+      this.eventEmitter.emit('reading.user_data_cleared', { userId });
+    } catch {
+      // Non-critical: cache invalidation failure should not block deletion
+    }
+
     // --- Virtual Coin Economy ---
     // Coin purchases (receipt tokens, transaction IDs -- PII under GDPR)
     await supabase.from('coin_purchases').delete().eq('user_id', userId);
@@ -206,6 +227,24 @@ export class DataRetentionService {
       .from('user_statistics')
       .delete()
       .eq('user_id', userId);
+
+    // Purge recommendation cache (GDPR "right to erasure")
+    // The Redis cache contains PII (display names, avatar URLs) and must be
+    // purged immediately.  Other users' caches containing this user will
+    // expire naturally within 24 hours (DAILY_REDIS_TTL).
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      const ownKey = `recommendations:daily:${userId}`;
+      await redis.del(ownKey);
+      this.logger.log(
+        `Purged recommendation cache for user ${userId} (GDPR erasure)`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to purge recommendation cache for user ${userId}`,
+        err,
+      );
+    }
 
     this.logger.log(`Wiped personal data for user ${userId}`);
   }

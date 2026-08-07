@@ -109,6 +109,9 @@ export class ReadingEngineService {
     return resource;
   }
 
+  private static readonly MAX_LIST_LIMIT = 100;
+  private static readonly DEFAULT_LIST_LIMIT = 20;
+
   async listResources(params: {
     language?: string;
     difficulty?: string;
@@ -116,6 +119,12 @@ export class ReadingEngineService {
     limit?: number;
     offset?: number;
   }): Promise<ReadingResource[]> {
+    const sanitisedLimit = Math.min(
+      Math.max(1, params.limit ?? ReadingEngineService.DEFAULT_LIST_LIMIT),
+      ReadingEngineService.MAX_LIST_LIMIT,
+    );
+    const sanitisedOffset = Math.max(0, params.offset ?? 0);
+
     let query = this.db
       .from('reading_resources')
       .select()
@@ -124,12 +133,19 @@ export class ReadingEngineService {
     if (params.language) query = query.eq('language', params.language);
     if (params.difficulty) query = query.eq('difficulty', params.difficulty);
     if (params.topic) query = query.eq('topic', params.topic);
-    if (params.limit) query = query.limit(params.limit);
-    if (params.offset) query = query.range(params.offset, params.offset + (params.limit ?? 20) - 1);
+    query = query.limit(sanitisedLimit);
+    query = query.range(sanitisedOffset, sanitisedOffset + sanitisedLimit - 1);
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data ?? []).map((row) => this.toResource(row));
+    const rows = (data ?? []) as Array<Record<string, unknown>>;
+    if (rows.length > ReadingEngineService.MAX_LIST_LIMIT) {
+      this.logger.warn(
+        { requestedLimit: params.limit, enforcedLimit: sanitisedLimit, actualRows: rows.length },
+        'Supabase returned more rows than the enforced limit; possible RLS bypass',
+      );
+    }
+    return rows.slice(0, sanitisedLimit).map((row) => this.toResource(row));
   }
 
   async deleteResource(resourceId: string): Promise<void> {

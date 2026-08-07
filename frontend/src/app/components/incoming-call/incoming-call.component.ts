@@ -298,8 +298,7 @@ export class IncomingCallComponent implements OnDestroy {
 
       this.hapticFeedback.success();
       this.callAccepted.emit(info);
-    } catch (error) {
-      console.error('Failed to accept call:', error);
+    } catch (_error: unknown) {
       // Re-show modal if join failed
       this.showCallModal.set(true);
     }
