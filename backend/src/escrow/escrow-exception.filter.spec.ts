@@ -11,9 +11,16 @@ describe('EscrowExceptionFilter', () => {
   let filter: EscrowExceptionFilter;
   let crashReportService: CrashReportService;
 
-  let mockResponse: any;
-  let mockRequest: any;
-  let mockHost: any;
+  let mockResponse: { status: jest.Mock; json: jest.Mock };
+  let mockRequest: {
+    method: string;
+    path: string;
+    url: string;
+    body: Record<string, unknown>;
+    params: Record<string, unknown>;
+    user?: { id: string } | undefined;
+  };
+  let mockHost: { switchToHttp: jest.Mock };
 
   beforeEach(() => {
     crashReportService = {

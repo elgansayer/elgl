@@ -2,10 +2,26 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
+type CrashReportQueryResult = {
+  data: unknown;
+  error: { message: string } | null;
+};
+
+type CrashReportQueryBuilder = {
+  select: jest.Mock;
+  insert: jest.Mock;
+  update: jest.Mock;
+  eq: jest.Mock;
+  is: jest.Mock;
+  order: jest.Mock;
+  limit: jest.Mock;
+  single: jest.Mock<Promise<CrashReportQueryResult>>;
+};
+
 describe('CrashReportService', () => {
   let service: CrashReportService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
+  let mockSupabaseClient: { from: jest.Mock };
+  let mockQueryBuilder: CrashReportQueryBuilder;
 
   beforeEach(async () => {
     mockQueryBuilder = {
