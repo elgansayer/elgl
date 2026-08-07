@@ -157,12 +157,21 @@
               }
             </div>
 
+<<<<<<< HEAD
             <div class="flex-1 min-w-[10rem]" role="cell">
               <p class="font-semibold">{{ displayNameFor(user) }}</p>
               <p class="text-xs text-text-secondary">
                 {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
               </p>
             </div>
+=======
+                <div class="flex-1 min-w-[10rem]" role="cell">
+                  <p class="font-semibold">{{ displayNameFor(user) | sanitiseHtml }}</p>
+                  <p class="text-xs text-text-secondary">
+                    {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
+                  </p>
+                </div>
+>>>>>>> origin/main
 
             <div class="flex items-center gap-2" role="cell">
               @if (user.is_admin) {
@@ -219,6 +228,7 @@
               {{ 'admin.viewLoginHistory' | t }}
             </summary>
 
+<<<<<<< HEAD
             <div class="mt-2 ps-4 border-s border-surface-100">
               @if (loginHistoryLoadingId() === user.id) {
                 <p class="text-xs text-text-secondary" aria-busy="true">
@@ -235,6 +245,29 @@
                       {{ entry.created_at | date: 'medium' }}
                       @if (entry.ip_address) {
                         &middot; {{ entry.ip_address }}
+=======
+                <div class="mt-2 ps-4 border-s border-surface-100">
+                  @if (loginHistoryLoadingId() === user.id) {
+                    <p class="text-xs text-text-secondary" aria-busy="true">
+                      {{ 'admin.loginHistoryLoading' | t }}
+                    </p>
+                  } @else if (
+                    !loginHistoryByUser()[user.id] || loginHistoryByUser()[user.id].length === 0
+                  ) {
+                    <p class="text-xs text-text-secondary">{{ 'admin.loginHistoryEmpty' | t }}</p>
+                  } @else {
+                    <ul class="space-y-1" role="list">
+                      @for (entry of loginHistoryByUser()[user.id]; track entry.id) {
+                        <li class="text-xs text-text-secondary">
+                          {{ entry.created_at | date: 'medium' }}
+                          @if (entry.ip_address) {
+                            &middot; {{ entry.ip_address | sanitiseHtml }}
+                          }
+                          @if (entry.user_agent) {
+                            &middot; {{ entry.user_agent | sanitiseHtml }}
+                          }
+                        </li>
+>>>>>>> origin/main
                       }
                       @if (entry.user_agent) {
                         &middot; {{ entry.user_agent }}

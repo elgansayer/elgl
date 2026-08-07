@@ -62,11 +62,18 @@ export class VocabularyStore {
   private flashcardsUrl = `${environment.apiUrl}/flashcards`;
   private nlpUrl = `${environment.apiUrl}/nlp`;
 
+  /** Maximum number of flashcards to fetch in a single page load. */
+  private static readonly FLASHCARDS_PAGE_SIZE = 50;
+
   // Reactive state map of word_token -> Flashcard
   readonly flashcardMap = signal<Map<string, Flashcard>>(new Map());
   readonly allFlashcards = signal<Flashcard[]>([]);
   readonly dueReviews = signal<Flashcard[]>([]);
   readonly isLoading = signal<boolean>(false);
+  /** True when there are more flashcards to load from the server. */
+  readonly hasMoreFlashcards = signal<boolean>(true);
+  /** Current page offset for paginated flashcard loading. */
+  private flashcardPage = 0;
 
   /** Cards queued for a deck-specific review session */
   readonly pendingReviewCards = signal<Flashcard[]>([]);
@@ -81,14 +88,25 @@ export class VocabularyStore {
     };
   }
 
+  /**
+   * Load the first page of flashcards. Use {@link loadMoreFlashcards} to load
+   * subsequent pages in a paginated fashion.
+   */
   async loadAllFlashcards(): Promise<void> {
     this.isLoading.set(true);
     try {
+      const params = new URLSearchParams();
+      params.set('limit', String(VocabularyStore.FLASHCARDS_PAGE_SIZE));
+      params.set('offset', '0');
       const list = await firstValueFrom(
-        this.http.get<Flashcard[]>(this.flashcardsUrl, { headers: this.getHeaders() }),
+        this.http.get<Flashcard[]>(`${this.flashcardsUrl}?${params.toString()}`, {
+          headers: this.getHeaders(),
+        }),
       );
       const sanitised = this.sanitiseFlashcards(list);
       this.allFlashcards.set(sanitised);
+      this.flashcardPage = 0;
+      this.hasMoreFlashcards.set(sanitised.length >= VocabularyStore.FLASHCARDS_PAGE_SIZE);
       const map = new Map<string, Flashcard>();
       sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
       this.flashcardMap.set(map);
@@ -107,6 +125,7 @@ export class VocabularyStore {
           const sanitised = this.sanitiseFlashcards(cached);
 >>>>>>> origin/main
           this.allFlashcards.set(sanitised);
+          this.hasMoreFlashcards.set(false);
           const map = new Map<string, Flashcard>();
           sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
           this.flashcardMap.set(map);
@@ -115,6 +134,55 @@ export class VocabularyStore {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Load the next page of flashcards and append to the existing list.
+   * Returns the number of newly loaded cards (0 if no more pages).
+   */
+  async loadMoreFlashcards(): Promise<number> {
+    if (!this.hasMoreFlashcards() || this.isLoading()) return 0;
+    this.isLoading.set(true);
+    const nextPage = this.flashcardPage + 1;
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', String(VocabularyStore.FLASHCARDS_PAGE_SIZE));
+      params.set('offset', String(nextPage * VocabularyStore.FLASHCARDS_PAGE_SIZE));
+      const list = await firstValueFrom(
+        this.http.get<Flashcard[]>(`${this.flashcardsUrl}?${params.toString()}`, {
+          headers: this.getHeaders(),
+        }),
+      );
+      const sanitised = this.sanitiseFlashcards(list);
+      if (sanitised.length === 0) {
+        this.hasMoreFlashcards.set(false);
+        return 0;
+      }
+      this.flashcardPage = nextPage;
+      this.hasMoreFlashcards.set(sanitised.length >= VocabularyStore.FLASHCARDS_PAGE_SIZE);
+      this.allFlashcards.update((prev) => [...prev, ...sanitised]);
+      this.flashcardMap.update((prevMap) => {
+        const next = new Map(prevMap);
+        sanitised.forEach((fc) => next.set(fc.word_token.toLowerCase(), fc));
+        return next;
+      });
+      // Cache combined set for offline access
+      this.srsOffline.cacheFlashcards(this.allFlashcards()).catch(() => undefined);
+      return sanitised.length;
+    } catch (e) {
+      this.reportSrsError('loadMoreFlashcards', e);
+      return 0;
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  /** Resets pagination state and clears the local flashcard store. */
+  resetFlashcardPagination(): void {
+    this.flashcardPage = 0;
+    this.hasMoreFlashcards.set(true);
+    this.allFlashcards.set([]);
+    this.flashcardMap.set(new Map());
   }
 
   async loadDueReviews(): Promise<void> {

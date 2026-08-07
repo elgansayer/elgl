@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
 import { AppCardComponent } from '../primitives/card/card.component';
@@ -12,9 +13,13 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 @Component({
   selector: 'app-admin-portal',
 <<<<<<< HEAD
+<<<<<<< HEAD
   imports: [DatePipe, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
 =======
   imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+>>>>>>> origin/main
+=======
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
 >>>>>>> origin/main
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
