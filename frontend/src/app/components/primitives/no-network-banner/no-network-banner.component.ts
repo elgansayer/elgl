@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { NetworkStatusService } from '../../../services/network-status.service';
 
