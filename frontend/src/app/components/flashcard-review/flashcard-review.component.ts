@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler } from '@angular/core';
+import { Component, inject, signal, computed, input, viewChild, ElementRef, effect } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
@@ -308,9 +308,9 @@ type ReviewGrade = 'again' | 'good' | 'known';
 export class FlashcardReviewComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
-  private errorHandler = inject(ErrorHandler);
 
   readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
+  private errorBoundaryEl = viewChild(SrsErrorBoundaryComponent);
 
   /** Optional input: a specific set of flashcards to review. If omitted, uses pending review cards from store. */
   readonly cards = input<Flashcard[]>([]);
@@ -359,20 +359,38 @@ export class FlashcardReviewComponent {
 
   handleRetry(): void {
     this.restart();
-    this.vocabStore.loadAllFlashcards().catch(() => undefined);
-    this.vocabStore.loadDueReviews().catch(() => undefined);
+    this.loadData();
   }
 
   constructor() {
     // After card changes, return focus to flashcard for keyboard navigation
     effect(() => {
       if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
-        // Small delay to allow DOM to update
-        setTimeout(() => {
+        // Defer focus to next microtask to allow DOM update
+        queueMicrotask(() => {
           this.flashcardEl()?.nativeElement?.focus();
-        }, 0);
+        });
       }
     });
+  }
+
+  private async loadData(): Promise<void> {
+    try {
+      await this.vocabStore.loadAllFlashcards();
+    } catch (e) {
+      this.errorBoundaryEl()?.captureError(
+        e instanceof Error ? e : new Error(String(e)),
+        'Failed to load flashcards for review',
+      );
+    }
+    try {
+      await this.vocabStore.loadDueReviews();
+    } catch (e) {
+      this.errorBoundaryEl()?.captureError(
+        e instanceof Error ? e : new Error(String(e)),
+        'Failed to load due reviews',
+      );
+    }
   }
 
   flipCard(): void {
@@ -394,8 +412,17 @@ export class FlashcardReviewComponent {
     this.isSaving.set(true);
     try {
       await this.vocabStore.updateSrsLevel(card.id, newLevel);
-    } catch {
-      // Silently fail - the UI has already optimistically updated
+    } catch (e) {
+      this.errorBoundaryEl()?.captureError(
+        e instanceof Error ? e : new Error(String(e)),
+        `Failed to persist review grade '${grade}' for card ${card.id}`,
+      );
+      // Revert the optimistic update on persist failure
+      this.sessionStats.update((s) => ({
+        ...s,
+        [grade]: Math.max(0, s[grade] - 1),
+      }));
+      return;
     } finally {
       this.isSaving.set(false);
     }
@@ -419,7 +446,7 @@ export class FlashcardReviewComponent {
     event.stopPropagation();
     const audio = new Audio(url);
     audio.play().catch(() => {
-      // Audio playback failed silently
+      // Audio playback failed silently - non-critical UX feature
     });
   }
 

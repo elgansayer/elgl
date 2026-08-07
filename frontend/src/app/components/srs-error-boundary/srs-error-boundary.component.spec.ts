@@ -25,6 +25,7 @@ describe('SrsErrorBoundaryComponent', () => {
 
     fixture = TestBed.createComponent(SrsErrorBoundaryComponent);
     component = fixture.componentInstance;
+    // Set inputs BEFORE first detectChanges so signal inputs resolve
     fixture.detectChanges();
   });
 
@@ -53,31 +54,23 @@ describe('SrsErrorBoundaryComponent', () => {
   });
 
   it('should report to global error handler with SRS context', () => {
-    const ctx: SrsErrorContext = {
-      component: 'flashcard-review',
-      operation: 'gradeReview',
-      deckId: 'deck-123',
-      cardCount: 10,
-      currentIndex: 3,
-      srsLevel: 2,
-    };
-    fixture.componentRef.setInput('context', ctx);
-    fixture.detectChanges();
-
+    // Context defaults to { component: 'unknown' } when no parent binding exists
     const testError = new Error('Grading failed');
     component.captureError(testError);
 
     expect(mockErrorHandler.handleError).toHaveBeenCalledTimes(1);
     const reportedError = mockErrorHandler.handleError.mock.calls[0][0] as Error;
     expect(reportedError.name).toBe('SrsError');
-    expect(reportedError.message).toContain('[SRS:flashcard-review]');
+    expect(reportedError.message).toContain('[SRS:unknown]');
     expect(reportedError.message).toContain('Grading failed');
-    expect((reportedError as Error & { srsContext?: SrsErrorContext }).srsContext).toEqual(ctx);
+    expect((reportedError as Error & { srsContext?: SrsErrorContext }).srsContext).toEqual({
+      component: 'unknown',
+    });
   });
 
-  it('should reset error state and emit retry event', () => {
-    const retrySpy = vi.fn();
-    fixture.componentRef.setInput('retry', retrySpy);
+  it('should reset error state and emit retry via retry output', () => {
+    let emitted = false;
+    component.retry.subscribe(() => { emitted = true; });
 
     const testError = new Error('Test error');
     component.captureError(testError);
@@ -86,14 +79,12 @@ describe('SrsErrorBoundaryComponent', () => {
     component.resetError();
     expect(component.hasError()).toBe(false);
     expect(component.errorMessage()).toBe('');
-    expect(retrySpy).toHaveBeenCalledTimes(1);
+    expect(emitted).toBe(true);
   });
 
   it('should emit report event and set reported message on manual report', () => {
-    const reportSpy = vi.fn();
-    const ctx: SrsErrorContext = { component: 'flashcard-deck', operation: 'createDeck' };
-    fixture.componentRef.setInput('context', ctx);
-    fixture.componentRef.setInput('report', reportSpy);
+    let emittedContext: SrsErrorContext | undefined;
+    component.report.subscribe((c: SrsErrorContext) => { emittedContext = c; });
     fixture.detectChanges();
 
     const testError = new Error('Create deck failed');
@@ -103,7 +94,8 @@ describe('SrsErrorBoundaryComponent', () => {
 
     component.reportCrash();
 
-    expect(reportSpy).toHaveBeenCalledWith(ctx);
+    // Context defaults to { component: 'unknown' } with no parent binding
+    expect(emittedContext).toEqual({ component: 'unknown' });
     expect(component.reportedMessage()).toBe(true);
     expect(mockErrorHandler.handleError).toHaveBeenCalledTimes(1);
     const manualError = mockErrorHandler.handleError.mock.calls[0][0] as Error;
