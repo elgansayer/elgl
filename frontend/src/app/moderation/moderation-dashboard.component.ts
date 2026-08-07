@@ -1,12 +1,10 @@
-import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
 import { ModerationItem, ModerationService } from './moderation.service';
 
 @Component({
   selector: 'app-moderation-dashboard',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4" role="main" aria-labelledby="moderation-title">
       <h2 id="moderation-title" class="text-2xl font-bold mb-4">{{ 'moderation.title' | t }}</h2>

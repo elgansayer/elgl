@@ -1,11 +1,10 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService, AdminBlockEntry } from '../../services/admin.service';
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   templateUrl: './admin-blocks.component.html',
 })
 export class AdminBlocksComponent {

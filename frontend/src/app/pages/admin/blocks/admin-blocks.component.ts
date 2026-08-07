@@ -9,7 +9,7 @@ import { AppSkeletonLoaderComponent } from '../../../components/primitives/skele
   selector: 'app-admin-blocks',
   imports: [TranslatePipe, AppCardComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-blocks.component.html',
-  styles: [],
+  
 })
 export class AdminBlocksComponent {
   private readonly adminService = inject(AdminService);

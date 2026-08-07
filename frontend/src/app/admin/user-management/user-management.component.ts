@@ -1,20 +1,19 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-user-management',
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   templateUrl: './user-management.component.html',
 })
-export class UserManagementComponent implements OnInit {
+export class UserManagementComponent {
   private adminService = inject(AdminService);
 
   users = signal<AdminUserSummary[]>([]);
-  isLoading = signal<boolean>(true);
+  isLoading = signal(true);
 
-  ngOnInit(): void {
+  constructor() {
     this.loadUsers();
   }
 
@@ -24,7 +23,7 @@ export class UserManagementComponent implements OnInit {
       const data = await this.adminService.listUsers('', 1, 50);
       this.users.set(data.users);
     } catch (err) {
-      console.error('Failed to load users', err);
+      console.warn('Failed to load users', err);
     } finally {
       this.isLoading.set(false);
     }
@@ -36,9 +35,9 @@ export class UserManagementComponent implements OnInit {
 
     try {
       await this.adminService.setVipStatus(user.id, newVipStatus, newTier);
-      await this.loadUsers(); // Reload to reflect changes
+      await this.loadUsers();
     } catch (err) {
-      console.error('Failed to update VIP status', err);
+      console.warn('Failed to update VIP status', err);
     }
   }
 }

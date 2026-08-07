@@ -13,7 +13,6 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
 
 @Component({
   selector: 'app-moderation-queue',
-  standalone: true,
   imports: [
     DatePipe,
     TranslatePipe,

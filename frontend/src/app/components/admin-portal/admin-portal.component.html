@@ -9,7 +9,7 @@
       type="search"
       class="flex-1 rounded-lg border border-surface-100 bg-surface-200 ps-3 pe-3 pt-2 pb-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
       [value]="searchTerm()"
-      (input)="onSearchInput($any($event.target).value)"
+      (input)="onSearchInput($event)"
       [attr.placeholder]="'admin.searchPlaceholder' | t"
     />
     <button type="submit" class="app-pill bg-primary text-white px-4" [attr.aria-label]="'admin.searchBtn' | t">
@@ -102,8 +102,8 @@
             </button>
           </div>
 
-          <details class="mt-3" (toggle)="onLoginHistoryToggle(user, $any($event.target).open)">
-            <summary class="cursor-pointer text-sm text-primary select-none" [attr.aria-expanded]="$any($event.target).open ? 'true' : 'false'">
+          <details class="mt-3" (toggle)="onLoginHistoryToggle(user, $event)">
+            <summary class="cursor-pointer text-sm text-primary select-none">
               {{ 'admin.viewLoginHistory' | t }}
             </summary>
 

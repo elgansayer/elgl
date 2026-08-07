@@ -1,5 +1,4 @@
-import {Component, inject, signal} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
@@ -12,50 +11,43 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
-  imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './moderation-panel.html',
 })
 export class ModerationPanelComponent {
   private readonly moderationService = inject(ModerationService);
 
-  currentFilter = signal<'moment' | 'profile'>('moment');
-  items = signal<ModerationItem[]>([]);
-  loading = signal(true);
-  loadError = signal<string | null>(null);
-  analysisResult = signal<UserAnalysisResult | null>(null);
-  analysing = signal(false);
+  readonly currentFilter = signal<'moment' | 'profile'>('moment');
 
-  constructor() {
-    this.loadItems();
-  }
+  private readonly refreshToken = signal(0);
+
+  private readonly itemsResource = resource({
+    request: () => ({ filter: this.currentFilter(), refresh: this.refreshToken() }),
+    loader: ({ request }) => this.moderationService.getItems(request.filter),
+    defaultValue: [],
+  });
+
+  readonly items = this.itemsResource.value;
+  readonly loading = this.itemsResource.isLoading;
+  readonly loadError = computed(() =>
+    this.itemsResource.error() ? 'Failed to load items' : null,
+  );
+
+  readonly analysisResult = signal<UserAnalysisResult | null>(null);
+  readonly analysing = signal(false);
 
   filterByType(type: 'moment' | 'profile') {
     this.currentFilter.set(type);
-    this.loadItems();
-  }
-
-  private async loadItems() {
-    this.loading.set(true);
-    this.loadError.set(null);
-    try {
-      const items = await this.moderationService.getItems(this.currentFilter());
-      this.items.set(items);
-    } catch {
-      this.loadError.set('Failed to load items');
-      this.items.set([]);
-    } finally {
-      this.loading.set(false);
-    }
   }
 
   async approve(item: ModerationItem) {
     await this.moderationService.approveItem(item.id, item.type);
-    this.loadItems();
+    this.refreshToken.update((v) => v + 1);
   }
 
   async reject(item: ModerationItem) {
     await this.moderationService.rejectItem(item.id, item.type);
-    this.loadItems();
+    this.refreshToken.update((v) => v + 1);
   }
 
   async analyseUserProfile(userId: string) {

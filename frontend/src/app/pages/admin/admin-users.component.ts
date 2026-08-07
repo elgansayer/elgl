@@ -1,12 +1,10 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 
 @Component({
   selector: 'app-admin-users',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {

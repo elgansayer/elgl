@@ -1,5 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
@@ -9,11 +8,11 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
-  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent],
+  imports: [TranslatePipe, AppCardComponent, AppPillComponent],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
-export class AdminPortalComponent implements OnInit {
+export class AdminPortalComponent {
   private readonly adminService = inject(AdminService);
   private readonly i18n = inject(I18nService);
 
@@ -31,8 +30,8 @@ export class AdminPortalComponent implements OnInit {
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
-  async ngOnInit(): Promise<void> {
-    await this.loadUsers();
+  constructor() {
+    this.loadUsers();
   }
 
   async loadUsers(): Promise<void> {
@@ -53,8 +52,11 @@ export class AdminPortalComponent implements OnInit {
     }
   }
 
-  onSearchInput(value: string): void {
-    this.searchTerm.set(value);
+  onSearchInput(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      this.searchTerm.set(target.value);
+    }
   }
 
   async runSearch(): Promise<void> {
@@ -81,18 +83,18 @@ export class AdminPortalComponent implements OnInit {
     }
   }
 
-  async onLoginHistoryToggle(user: AdminUserSummary, isOpen: boolean): Promise<void> {
+  onLoginHistoryToggle(user: AdminUserSummary, event: Event): void {
+    const isOpen = event instanceof ToggleEvent ? event.newState === "open" : false;
     if (!isOpen || this.loginHistoryByUser()[user.id]) return;
     this.loginHistoryLoadingId.set(user.id);
-    try {
-      const history = await this.adminService.getLoginHistory(user.id);
+    this.adminService.getLoginHistory(user.id).then((history) => {
       this.loginHistoryByUser.update((map) => ({
         ...map,
         [user.id]: history,
       }));
-    } finally {
+    }).finally(() => {
       this.loginHistoryLoadingId.set(null);
-    }
+    });
   }
 
   displayNameFor(user: AdminUserSummary): string {
