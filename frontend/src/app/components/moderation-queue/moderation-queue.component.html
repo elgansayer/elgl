@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-4xl p-4">
-  <div class="flex items-center justify-between mb-6">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
     <h2 class="text-2xl font-bold text-text-primary">{{ 'moderation.title' | t }}</h2>
-    <div class="flex rounded-xl bg-surface-100 p-1" role="tablist">
+    <div class="flex self-start sm:self-auto rounded-xl bg-surface-100 p-1" role="tablist">
       <button
         [attr.aria-selected]="activeTab() === 'moment' ? true : false"
         [class.bg-surface-200]="activeTab() === 'moment'"
