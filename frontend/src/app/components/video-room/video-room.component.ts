@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, effect, viewChild, ElementRef } from '@angular/core';
+import { JoyrideModule } from 'ngx-joyride';
 import { VideoTrack } from 'livekit-client';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
@@ -7,12 +8,17 @@ import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-video-room',
-  imports: [TranslatePipe, LiveChatOverlayComponent],
+  imports: [TranslatePipe, JoyrideModule, LiveChatOverlayComponent],
   template: `
     @if (store.currentRoom(); as room) {
       <div class="flex flex-col h-full w-full bg-slate-900 p-4 rounded-2xl">
         <!-- Room Header -->
-        <div class="flex justify-between items-center mb-4 text-white">
+        <div
+          class="flex justify-between items-center mb-4 text-white"
+          joyrideStep="videoClassroomTour@roomHeader"
+          [text]="'videoClassroomTour.roomHeaderDesc' | t"
+          stepPosition="bottom"
+        >
           <h2 class="text-xl font-bold">{{ room.title }}</h2>
 
           @if (isHost() && !hasCoHost()) {
@@ -20,6 +26,9 @@ import { AuthService } from '../../services/auth.service';
               <button
                 (click)="showInvitePicker.set(!showInvitePicker())"
                 class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full font-semibold transition-colors"
+                joyrideStep="videoClassroomTour@coHostInvite"
+                [text]="'videoClassroomTour.coHostInviteDesc' | t"
+                stepPosition="bottom"
               >
                 {{ 'audioRoom.inviteCoHostBtn' | t }}
               </button>
@@ -46,6 +55,9 @@ import { AuthService } from '../../services/auth.service';
         <div class="flex-1 grid gap-4 transition-all duration-300" [class]="gridClass()">
           <!-- Host Video Tile -->
           <div
+            joyrideStep="videoClassroomTour@hostVideo"
+            [text]="'videoClassroomTour.hostVideoDesc' | t"
+            stepPosition="bottom"
             class="relative bg-black rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center shadow-lg"
           >
             @if (!hasHostVideo()) {
@@ -61,7 +73,13 @@ import { AuthService } from '../../services/auth.service';
             </div>
 
             <!-- Scrolling live chat overlay over host video stream -->
-            <app-live-chat-overlay [roomId]="room.id"></app-live-chat-overlay>
+            <div
+              joyrideStep="videoClassroomTour@liveChat"
+              [text]="'videoClassroomTour.liveChatDesc' | t"
+              stepPosition="top"
+            >
+              <app-live-chat-overlay [roomId]="room.id"></app-live-chat-overlay>
+            </div>
           </div>
 
           <!-- Co-Host Video Tile (Split Screen) -->

@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
+import { signal, NO_ERRORS_SCHEMA, importProvidersFrom } from '@angular/core';
+import { JoyrideModule } from 'ngx-joyride';
 import { vi, Mocked } from 'vitest';
 import { VideoRoomComponent } from './video-room.component';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
@@ -48,6 +49,7 @@ describe('VideoRoomComponent', () => {
     await TestBed.configureTestingModule({
       imports: [VideoRoomComponent],
       providers: [
+        importProvidersFrom(JoyrideModule.forRoot()),
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AudioRoomsStore, useValue: mockStore },

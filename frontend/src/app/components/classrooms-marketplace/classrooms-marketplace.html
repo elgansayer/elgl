@@ -1,1 +1,47 @@
-<p>classrooms-marketplace works!</p>
+<div
+  class="p-4"
+  joyrideStep="videoClassroomTour@marketplace"
+  [text]="'videoClassroomTour.marketplaceDesc' | t"
+  stepPosition="bottom"
+>
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <h2 class="text-2xl font-bold text-white">{{ 'videoClassroomTour.marketplaceTitle' | t }}</h2>
+    <button
+      (click)="startOnboardingTour()"
+      class="rounded-app bg-indigo-600 hover:bg-indigo-700 ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-white transition-colors"
+    >
+      {{ 'escrow.onboarding.helpBtn' | t }}
+    </button>
+  </div>
+
+  @if (activeVideoRooms().length === 0) {
+    <div class="text-center py-10 opacity-70">
+      <p class="text-lg font-semibold text-text-secondary">{{ 'audioRoom.noActiveRooms' | t }}</p>
+      <p class="text-sm mt-1">{{ 'audioRoom.beFirst' | t }}</p>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      @for (room of activeVideoRooms(); track room.id) {
+        @if (room.is_video_stream && room.is_active) {
+          <article class="app-card app-padded space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="app-chip bg-red-500/20 text-red-400">{{ 'audioRoom.liveTag' | t }}</span>
+              <span class="app-chip text-primary">{{ room.language_pair || room.target_language }}</span>
+            </div>
+            <h3 class="text-base font-black text-text-primary">{{ room.title }}</h3>
+            <p class="text-xs text-text-secondary">
+              {{ 'audioRoom.hostLabel' | t }}:
+              <span class="font-semibold text-text-primary">{{ room.host?.display_name || ('audioRoom.hostFallback' | t) }}</span>
+            </p>
+            <div class="flex items-center justify-between border-t border-surface-100 pt-3">
+              <span class="app-muted">{{ 'audioRoom.listenersCount' | t: { count: room.listeners_count } }}</span>
+              <button (click)="joinRoom(room)" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">
+                {{ 'audioRoom.joinRoomBtn' | t }}
+              </button>
+            </div>
+          </article>
+        }
+      }
+    </div>
+  }
+</div>
