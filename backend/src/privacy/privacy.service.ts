@@ -66,11 +66,14 @@ export class PrivacyService {
     }
 
     const supabase = this.supabaseService.getClient();
+    const deletionDate = new Date();
+    deletionDate.setDate(deletionDate.getDate() + 30); // 30-day grace period
+
     const { error } = await supabase
       .from('users')
       .update({
+        scheduled_for_deletion_at: deletionDate.toISOString(),
         deletion_requested_at: new Date().toISOString(),
-        deletion_grace_days: 30,
         is_deletion_pending: true,
       })
       .eq('id', userId);
@@ -82,7 +85,30 @@ export class PrivacyService {
       throw new BadRequestException('Failed to initiate account deletion');
     }
 
-    this.logger.log(`Deletion pending for user ${userId}`);
+    this.logger.log(
+      `Deletion pending for user ${userId}, scheduled for ${deletionDate.toISOString()}`,
+    );
+  }
+
+  async cancelDeletion(userId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({
+        scheduled_for_deletion_at: null,
+        deletion_requested_at: null,
+        is_deletion_pending: false,
+      })
+      .eq('id', userId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to cancel deletion for user ${userId}: ${error.message}`,
+      );
+      throw new BadRequestException('Failed to cancel account deletion');
+    }
+
+    this.logger.log(`Account deletion cancelled for user ${userId}`);
   }
 
   // -----------------------------------------------------------------------
@@ -130,6 +156,25 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
+    // 5b) Decks created by the user (SRS organisation)
+    const { data: userDecks } = await supabase
+      .from('decks')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // 5c) Deck-flashcard junction records for the user's decks
+    let userDeckFlashcards: unknown[] = [];
+    if (userDecks && userDecks.length > 0) {
+      const deckIds = userDecks.map((d: { id: string }) => d.id);
+      const { data: junctionData } = await supabase
+        .from('deck_flashcards')
+        .select('*')
+        .in('deck_id', deckIds)
+        .order('added_at', { ascending: false });
+      userDeckFlashcards = junctionData ?? [];
+    }
+
     // 6) Favourites bookmarked by the user
     const { data: userFavourites } = await supabase
       .from('favourites')
@@ -144,6 +189,8 @@ export class PrivacyService {
       moment_comments: userMomentComments ?? [],
       chat_messages: userChatMessages ?? [],
       flashcards: userFlashcards ?? [],
+      decks: userDecks ?? [],
+      deck_flashcards: userDeckFlashcards,
       favourites: userFavourites ?? [],
     };
   }

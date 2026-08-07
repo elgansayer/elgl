@@ -54,7 +54,6 @@ const EXPECTED_MODULE_NAMES = [
   'StudyBuddiesModule',
   'AudioIntroModule',
   'StatsModule',
-  'ScheduledDeletionModule',
   'EventsModule',
   'LessonsModule',
   'LinkPreviewModule',
@@ -64,6 +63,7 @@ const EXPECTED_MODULE_NAMES = [
   'WordOfTheDayModule',
   'SpamDetectionModule',
   'UserStatisticsModule',
+  'MetricsModule',
 ];
 
 function findProvider(

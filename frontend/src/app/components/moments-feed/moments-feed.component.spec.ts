@@ -239,7 +239,7 @@ describe('MomentsFeedComponent', () => {
     expect(component.activeWordContext()).toBe('Hello world');
   });
 
-  it('translates a moment inline', async () => {
+  it('translates a moment inline and caches the result', async () => {
     const moment = component.momentsStore.feed().find((m) => m.id === 'm1')!;
     await component.toggleInlineTranslation(moment);
 
@@ -247,6 +247,38 @@ describe('MomentsFeedComponent', () => {
       'Hello world',
       'en',
     );
-    expect(moment.translatedText).toBe('Hola');
+    expect(component.translationCache()['m1']).toBe('Hola');
+    expect(component.showTranslationMap()['m1']).toBe(true);
+  });
+
+  it('hides a cached translation without re-fetching', async () => {
+    const moment = component.momentsStore.feed().find((m) => m.id === 'm1')!;
+    // Pre-populate the cache
+    component.translationCache.set({ m1: 'Hola' });
+    component.showTranslationMap.set({ m1: true });
+    vi.mocked(mockVocabStore.translateWordOrSentence).mockClear();
+
+    await component.toggleInlineTranslation(moment);
+
+    // Should hide translation without API call
+    expect(mockVocabStore.translateWordOrSentence).not.toHaveBeenCalled();
+    expect(component.showTranslationMap()['m1']).toBe(false);
+    // Cache should still be intact
+    expect(component.translationCache()['m1']).toBe('Hola');
+  });
+
+  it('shows a cached translation without re-fetching', async () => {
+    const moment = component.momentsStore.feed().find((m) => m.id === 'm1')!;
+    // Pre-populate the cache but hidden
+    component.translationCache.set({ m1: 'Hola' });
+    component.showTranslationMap.set({ m1: false });
+    vi.mocked(mockVocabStore.translateWordOrSentence).mockClear();
+
+    await component.toggleInlineTranslation(moment);
+
+    // Should show cached translation without API call
+    expect(mockVocabStore.translateWordOrSentence).not.toHaveBeenCalled();
+    expect(component.showTranslationMap()['m1']).toBe(true);
+    expect(component.translationCache()['m1']).toBe('Hola');
   });
 });

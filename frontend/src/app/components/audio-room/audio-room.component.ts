@@ -20,6 +20,10 @@ import {
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
+import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
+import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
+import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
+import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -30,9 +34,13 @@ import { QuickPollDisplayComponent } from './quick-poll-display.component';
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
+    ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
     QuickPollFormComponent,
     QuickPollDisplayComponent,
+    LiveChatOverlayComponent,
+    TipHostModalComponent,
+    VoiceroomNotesComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -45,7 +53,9 @@ export class AudioRoomComponent implements OnInit {
 
   readonly showCreateModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
+  readonly showTipModal = signal<boolean>(false);
   readonly showSafetyModal = signal<boolean>(false);
+  readonly showApprovalModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
@@ -144,6 +154,11 @@ export class AudioRoomComponent implements OnInit {
 
   async approve(targetUserId: string): Promise<void> {
     await this.store.approveSpeaker(targetUserId);
+  }
+
+  async handleApproveSpeaker(targetUserId: string): Promise<void> {
+    await this.approve(targetUserId);
+    this.showApprovalModal.set(false);
   }
 
   async demote(targetUserId: string): Promise<void> {

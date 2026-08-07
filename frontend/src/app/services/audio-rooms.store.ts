@@ -17,6 +17,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
+import { EconomyStore } from './economy.store';
 
 export interface AudioRoomRecord {
   id: string;
@@ -94,6 +95,7 @@ export class AudioRoomsStore {
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private economyStore = inject(EconomyStore);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
@@ -117,7 +119,7 @@ export class AudioRoomsStore {
   readonly audienceCount = signal<number>(0);
 
   // Split-screen co-host video state
-  private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
+  readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
   private readonly remoteVideoTracksByIdentity = signal<Map<string, RemoteVideoTrack>>(new Map());
 
   readonly hostVideoTrack = computed<RemoteVideoTrack | null>(() => {
@@ -146,6 +148,16 @@ export class AudioRoomsStore {
    * Type guard that narrows the raw Centrifugo payload into the expected shape.
    * This avoids production `as` type assertions.
    */
+  private isHostTipPayload(data: unknown): data is {
+    tip_id?: string;
+    amount_coins?: number;
+    sender_user_id?: string;
+    sender_name?: string;
+    receiver_user_id?: string;
+  } {
+    return typeof data === 'object' && data !== null && !Array.isArray(data);
+  }
+
   private isRoomEvent(data: unknown): data is {
     type?: string;
     user_id?: string;
@@ -369,6 +381,29 @@ export class AudioRoomsStore {
         }
       } else if (p.type === 'subtitle' && p.caption) {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
+      } else if (p.type === 'host_tip' && p.tip && isHostTipPayload(p.tip)) {
+        const tip = p.tip;
+        this.economyStore.triggerPublicGiftAnimation({
+          giftId: `tip_${tip.tip_id ?? 'unknown'}`,
+          giftName: `${tip.amount_coins} Coins`,
+          giftIcon: '🪙',
+          animationType: 'sparkle',
+          animationUrl: undefined,
+          senderName: tip.sender_name ?? 'Someone',
+          receiverName: 'Host',
+          coinValue: tip.amount_coins ?? 0,
+        });
+      } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
+        this.economyStore.triggerPublicGiftAnimation({
+          giftId: typeof p.gift_id === 'string' ? p.gift_id : 'unknown',
+          giftName: typeof p.gift_name === 'string' ? p.gift_name : 'Gift',
+          giftIcon: typeof p.icon === 'string' ? p.icon : '🎁',
+          animationType: typeof p.animation_type === 'string' ? p.animation_type : 'float',
+          animationUrl: typeof p.animation_url === 'string' ? p.animation_url : undefined,
+          senderName: typeof p.sender_name === 'string' ? p.sender_name : 'Someone',
+          receiverName: typeof p.receiver_name === 'string' ? p.receiver_name : 'Host',
+          coinValue: typeof p.coin_value === 'number' ? p.coin_value : 0,
+        });
       } else if (p.type === 'chat_message' && p.message) {
         this.roomMessages.update((list) => [...list.slice(-99), p.message!]);
       } else if (p.type === 'room_ended') {
@@ -581,6 +616,37 @@ export class AudioRoomsStore {
       );
     } catch (e) {
       console.error('Broadcast AI caption error:', e);
+    }
+  }
+
+  async tipHost(roomId: string, amountCoins: number): Promise<boolean> {
+    try {
+      await firstValueFrom(
+        this.http.post<{
+          tip_id: string;
+          amount_coins: number;
+          receiver_id: string;
+          receiver_new_balance: number;
+        }>(
+          `${this.baseUrl}/${roomId}/tip`,
+          { room_id: roomId, amount_coins: amountCoins },
+          { headers: this.getHeaders() },
+        ),
+      );
+      this.economyStore.coinsBalance.update((bal) => bal - amountCoins);
+      showToast(
+        this.i18n.translate('audioRoom.tipSentToast', {
+          amount: amountCoins,
+        }),
+      );
+      return true;
+    } catch (e: unknown) {
+      console.error('Tip host error:', e);
+      const message = e instanceof Error ? e.message : String(e);
+      showToast(
+        message || this.i18n.translate('audioRoom.tipError'),
+      );
+      return false;
     }
   }
 

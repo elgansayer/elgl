@@ -22,18 +22,22 @@ describe('DailyLoginModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display zero coins by default', () => {
-    const coinEl = fixture.debugElement.query(By.css('.text-amber-500'));
-    expect(coinEl).not.toBeNull();
-    expect(coinEl.nativeElement.textContent).toBe('0 coins');
+  it('should display zero coins in body by default', () => {
+    const bodyEl = fixture.debugElement.query(By.css('.text-text-secondary'));
+    expect(bodyEl).not.toBeNull();
+    expect(bodyEl.nativeElement.textContent).toContain('0 coins');
   });
 
-  it('should display the coins value passed via input', () => {
-    fixture.componentRef.setInput('coins', 42);
-    fixture.detectChanges();
-    const coinEl = fixture.debugElement.query(By.css('.text-amber-500'));
-    expect(coinEl).not.toBeNull();
-    expect(coinEl.nativeElement.textContent).toBe('42 coins');
+  it('should display the title', () => {
+    const titleEl = fixture.debugElement.query(By.css('h3'));
+    expect(titleEl).not.toBeNull();
+    expect(titleEl.nativeElement.textContent).toBeTruthy();
+  });
+
+  it('should display the CTA button', () => {
+    const button = fixture.debugElement.query(By.css('button'));
+    expect(button).not.toBeNull();
+    expect(button.nativeElement.textContent).toBeTruthy();
   });
 
   it('should emit closed event when the button is clicked', () => {

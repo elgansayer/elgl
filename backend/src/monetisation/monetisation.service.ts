@@ -473,15 +473,27 @@ export class MonetisationService {
   }
 
   /**
-   * Restore previous purchases (Apple App Store / Google Play).
+   * Restore previous purchases (Apple App Store / Google Play / Stripe).
    * Validates receipt and updates VIP status accordingly.
    */
   async restorePurchases(
     userId: string,
-    platform: 'ios' | 'android',
+    platform: 'ios' | 'android' | 'stripe',
     receiptData?: string,
   ): Promise<{ received: boolean; status: string }> {
-    if (platform === 'ios') {
+    if (platform === 'stripe') {
+      const subscription = await this.findActiveStripeSubscription(userId);
+      if (subscription) {
+        const tier =
+          subscription.metadata?.tier ??
+          this.inferTierFromPriceId(subscription.items?.data?.[0]?.price?.id);
+        if (tier) {
+          await this.updateVipStatusFromWebhook(userId, true, tier);
+          return { received: true, status: 'restored' };
+        }
+      }
+      return { received: true, status: 'no_valid_subscription' };
+    } else if (platform === 'ios') {
       if (!receiptData) {
         throw new BadRequestException('Receipt data is required for iOS');
       }
@@ -571,8 +583,34 @@ export class MonetisationService {
       }
 
       return { received: true, status: 'no_valid_subscription' };
+    } else {
+      // Stripe/web platform: look up active Stripe subscription and sync VIP status
+      const subscription = await this.findActiveStripeSubscription(userId);
+      if (!subscription) {
+        return { received: true, status: 'no_valid_subscription' };
+      }
+
+      // Determine VIP tier from the subscription metadata or price lookup
+      const item = subscription.items.data[0];
+      const priceId = item?.price?.id;
+      let tier: string | null = null;
+      if (priceId) {
+        tier = this.subscriptionPlansService.getTierByProductId(priceId);
+      }
+
+      if (tier) {
+        await this.updateVipStatusFromWebhook(userId, true, tier);
+        return { received: true, status: 'restored' };
+      }
+
+      // No matching tier but active subscription exists -- restore as consumer VIP
+      await this.updateVipStatusFromWebhook(
+        userId,
+        true,
+        'consumer_8_ukp_10_usd',
+      );
+      return { received: true, status: 'restored' };
     }
-    throw new BadRequestException('Invalid platform');
   }
 
   /**
@@ -674,9 +712,44 @@ export class MonetisationService {
     });
     return (
       subscriptions.data.find(
-        (sub) => sub.metadata?.userId === userId && sub.status === 'active',
+        (sub) =>
+          sub.metadata?.userId === userId &&
+          (sub.status === 'active' || sub.status === 'trialing'),
       ) ?? null
     );
+  }
+
+  /**
+   * Infer VIP tier from a Stripe price ID by matching against configured price IDs.
+   */
+  private inferTierFromPriceId(priceId?: string): string | null {
+    if (!priceId) return null;
+    const monthlyPriceId = this.configService.get<string>(
+      'STRIPE_MONTHLY_PRICE_ID',
+    );
+    const yearlyPriceId = this.configService.get<string>(
+      'STRIPE_YEARLY_PRICE_ID',
+    );
+    const proMonthlyPriceId = this.configService.get<string>(
+      'STRIPE_PRO_MONTHLY_PRICE_ID',
+    );
+    const proYearlyPriceId = this.configService.get<string>(
+      'STRIPE_PRO_YEARLY_PRICE_ID',
+    );
+    const devMonthlyPriceId = this.configService.get<string>(
+      'STRIPE_DEVELOPER_MONTHLY_PRICE_ID',
+    );
+    const devYearlyPriceId = this.configService.get<string>(
+      'STRIPE_DEVELOPER_YEARLY_PRICE_ID',
+    );
+
+    if (priceId === monthlyPriceId || priceId === yearlyPriceId)
+      return 'consumer_8_ukp_10_usd';
+    if (priceId === proMonthlyPriceId || priceId === proYearlyPriceId)
+      return 'pro_12_ukp_15_usd';
+    if (priceId === devMonthlyPriceId || priceId === devYearlyPriceId)
+      return 'developer_20_ukp_26_usd';
+    return null;
   }
 
   /**

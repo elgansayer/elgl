@@ -1,16 +1,17 @@
 import {
   Component,
   ElementRef,
+  DestroyRef,
+  afterNextRender,
   inject,
   input,
   signal,
   viewChild,
-  OnDestroy,
   OnInit,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { CentrifugoService } from '../../services/centrifugo.service';
 import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 interface LiveMessage {
   id: string;
@@ -28,7 +29,7 @@ interface CentrifugoMessageData {
 
 @Component({
   selector: 'app-live-chat-overlay',
-  imports: [CommonModule],
+  imports: [TranslatePipe],
   template: `
     <!-- Overlay container positioned at the bottom of the video stream -->
     <div
@@ -52,7 +53,6 @@ interface CentrifugoMessageData {
   `,
   styles: [
     `
-      /* Hide scrollbar for clean overlay look */
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
       }
@@ -60,14 +60,10 @@ interface CentrifugoMessageData {
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-
-      /* Fade out messages at the top of the container */
       .mask-image-fade-top {
         mask-image: linear-gradient(to bottom, transparent, black 25%);
         -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%);
       }
-
-      /* Smooth entry animation for new comments */
       @keyframes fadeInSlideUp {
         from {
           opacity: 0;
@@ -84,23 +80,26 @@ interface CentrifugoMessageData {
     `,
   ],
 })
-export class LiveChatOverlayComponent implements OnInit, OnDestroy {
-  roomId = input.required<string>();
+export class LiveChatOverlayComponent implements OnInit {
+  roomId = input<string>('');
 
   private centrifugo = inject(CentrifugoService);
   private i18n = inject(I18nService);
+  private destroyRef = inject(DestroyRef);
   private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
   messages = signal<LiveMessage[]>([]);
   private channelName = '';
   private subscription: unknown = null;
 
+  // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit() {
-    this.channelName = `room_${this.roomId()}`;
+    const id = this.roomId();
+    if (!id) return;
 
-    // Subscribe directly to the channel and listen for publications
+    this.channelName = `room_${id}`;
+
     this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
-      // Type guard to verify the payload shape
       const isCentrifugoMessageData = (value: unknown): value is CentrifugoMessageData => {
         if (typeof value !== 'object' || value === null) return false;
         if (!('type' in value) || !('content' in value)) return false;
@@ -111,10 +110,8 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
 
       if (!isCentrifugoMessageData(data)) return;
 
-      // data is now narrowed to CentrifugoMessageData
       const event = data;
 
-      // Handle text payloads as defined in SPEC.md
       if (event.type === 'text') {
         this.addMessage({
           id: event.id || Math.random().toString(36).substring(2),
@@ -126,10 +123,18 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
     });
   }
 
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.channelName) {
+        this.centrifugo.unsubscribe(this.channelName);
+      }
+    });
+  }
+
   private addMessage(msg: LiveMessage) {
     this.messages.update((msgs) => {
       const newMsgs = [...msgs, msg];
-      // Cap at 50 messages to maintain 60 FPS rendering performance (SPEC.md requirement)
+      // Cap at 50 messages to maintain 60 FPS rendering performance
       if (newMsgs.length > 50) {
         newMsgs.shift();
       }
@@ -139,8 +144,7 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
   }
 
   private scrollToBottom() {
-    // Small delay to allow Angular to render the new DOM node before scrolling
-    setTimeout(() => {
+    afterNextRender(() => {
       const el = this.scrollContainer()?.nativeElement;
       if (el) {
         el.scrollTo({
@@ -148,12 +152,6 @@ export class LiveChatOverlayComponent implements OnInit, OnDestroy {
           behavior: 'smooth',
         });
       }
-    }, 50);
-  }
-
-  ngOnDestroy() {
-    if (this.channelName) {
-      this.centrifugo.unsubscribe(this.channelName);
-    }
+    });
   }
 }

@@ -6,10 +6,11 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { HobbyTagsService } from './hobby-tags.service';
+import { HobbyTagsService, VocabularyResultItem } from './hobby-tags.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import type { Request } from 'express';
 
@@ -74,6 +75,19 @@ export class HobbyTagsController {
       userId as string,
       hobbyTagId,
       body.proficiency_level,
+    );
+  }
+
+  @Get('vocabulary')
+  @UseGuards(SupabaseAuthGuard)
+  async getVocabulary(
+    @Req() req: { user?: { id: string } },
+    @Query('language') language: string,
+  ): Promise<VocabularyResultItem[]> {
+    const userId = req.user?.id;
+    return this.hobbyTagsService.getVocabularyForUser(
+      userId as string,
+      language,
     );
   }
 }

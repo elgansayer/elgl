@@ -29,8 +29,8 @@
         <button
           (click)="showAdminPanel.set(!showAdminPanel())"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-        >
-          Admin
+         [attr.aria-label]="'chatRoom.adminBtn' | t">
+          {{ 'chatRoom.adminBtn' | t }}
         </button>
       }
       <button
@@ -48,8 +48,8 @@
         (keyup.enter)="onSearch()"
         [placeholder]="'chatRoom.searchPlaceholder' | t"
         class="app-input w-28 sm:w-44 text-xs pt-2 pb-2"
-      />
-      <button (click)="onSearch()" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs">
+       [attr.aria-label]="'text input'"/>
+      <button (click)="onSearch()" class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.searchBtn' | t">
         {{ 'chatRoom.searchBtn' | t }}
       </button>
     </div>
@@ -60,7 +60,7 @@
       <span class="text-4xl" aria-hidden="true">🔒</span>
       <p class="text-base font-bold text-text-primary">{{ 'chatRoom.lockedTitle' | t }}</p>
       <p class="text-sm text-text-secondary max-w-xs">{{ 'chatRoom.lockedMessage' | t }}</p>
-      <button (click)="unlockRoom()" class="app-button-primary ps-6 pe-6 pt-2.5 pb-2.5 text-sm">
+      <button (click)="unlockRoom()" class="app-button-primary ps-6 pe-6 pt-2.5 pb-2.5 text-sm" [attr.aria-label]="'chatRoom.unlockBtn' | t">
         {{ 'chatRoom.unlockBtn' | t }}
       </button>
     </div>
@@ -70,41 +70,41 @@
     <div
       class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
     >
-      <h3 class="text-sm font-bold text-text-primary">Group Admin Settings</h3>
+      <h3 class="text-sm font-bold text-text-primary">{{ 'chatRoom.adminPanelTitle' | t }}</h3>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newGroupName"
-          placeholder="New Group Name"
+          [placeholder]="'chatRoom.newGroupPlaceholder' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-        />
-        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-          Rename
+         [attr.aria-label]="'chatRoom.newGroupPlaceholder' | t"/>
+        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.renameBtn' | t">
+          {{ 'chatRoom.renameBtn' | t }}
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newMemberId"
-          placeholder="User ID to Add"
+          [placeholder]="'chatRoom.userIdAddPlaceholder' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-        />
-        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
-          Add Member
+         [attr.aria-label]="'chatRoom.userIdAddPlaceholder' | t"/>
+        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.addMemberBtn' | t">
+          {{ 'chatRoom.addMemberBtn' | t }}
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="memberToRemoveId"
-          placeholder="User ID to Remove"
+          [placeholder]="'chatRoom.userIdRemovePlaceholder' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-        />
+         [attr.aria-label]="'chatRoom.userIdRemovePlaceholder' | t"/>
         <button
           (click)="removeMember()"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
-        >
-          Remove Member
+         [attr.aria-label]="'chatRoom.removeMemberBtn' | t">
+          {{ 'chatRoom.removeMemberBtn' | t }}
         </button>
       </div>
     </div>
@@ -185,7 +185,7 @@
                   type="button"
                   (click)="scrollToMessage(msg.reply_to_id!)"
                   class="mb-1.5 block w-full rounded-lg border-s-4 border-accent-500 bg-black/10 ps-2 pe-2 pt-1 pb-1 text-start text-xs opacity-90 hover:opacity-100"
-                >
+                 [attr.aria-label]="'chat.unknown_user' | t">
                   <span class="block font-semibold">
                     {{
                       (parentMessageFor(msg)?.sender?.display_name ??
@@ -215,6 +215,15 @@
                     {{ translations()[msg.id] }}
                   </p>
                 }
+                @if (msg.link_preview; as lp) {
+                  <app-link-preview-card
+                    [url]="lp.url"
+                    [title]="lp.title"
+                    [description]="lp.description"
+                    [image]="lp.image"
+                    [siteName]="lp.siteName"
+                  ></app-link-preview-card>
+                }
               }
               @if (msg.message_type === 'correction' && msg.correction_payload) {
                 <app-visual-diff
@@ -238,13 +247,19 @@
                 />
               }
               @if (msg.message_type === 'voice' && msg.media_url) {
-                <audio [src]="msg.media_url ?? ''" controls class="w-full min-w-52"></audio>
+                <audio
+                  [attr.id]="'audio-' + msg.id"
+                  [src]="msg.media_url ?? ''"
+                  controls
+                  class="w-full min-w-52"
+                  (ended)="playNextVoiceNote(msg.id)"
+                ></audio>
                 <div class="mt-2 flex items-center gap-2">
                   <button
                     (click)="onTranscribeVoice(msg)"
                     [disabled]="transcribingIds().has(msg.id)"
                     class="rounded-lg bg-surface-200 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-secondary"
-                  >
+                   [attr.aria-label]="(transcribingIds().has(msg.id) ? 'chatRoom.transcribingBtn' : 'chatRoom.transcribeBtn') | t">
                     {{ (transcribingIds().has(msg.id) ? 'chatRoom.transcribingBtn' : 'chatRoom.transcribeBtn') | t }}
                   </button>
                 </div>
@@ -260,14 +275,14 @@
                   <button
                     (click)="saveSentenceToLingq(msg)"
                     class="rounded-lg bg-amber-500/90 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-white"
-                  >
+                   [attr.aria-label]="'chatRoom.saveBtn' | t">
                     {{ 'chatRoom.saveBtn' | t }}
                   </button>
                 }
                 <button
                   (click)="bookmark(msg)"
                   class="rounded-lg bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[11px] font-bold text-text-primary"
-                >
+                 [attr.aria-label]="'chatRoom.favBtn' | t">
                   {{ 'chatRoom.favBtn' | t }}
                 </button>
               </div>
@@ -277,11 +292,10 @@
       }
     }
 
-    @if (isTyping()) {
-      <div class="ps-2 pe-2 pt-1 pb-1 text-xs font-semibold text-text-secondary">
-        {{ 'chatRoom.someoneTyping' | t }}
-      </div>
-    }
+    <app-typing-indicator
+      class="mt-1 block"
+      [typingUsers]="typingService.typingUsers()"
+    ></app-typing-indicator>
   </div>
 
   @if (activeWordToken(); as token) {
@@ -320,30 +334,30 @@
         [(ngModel)]="originalText"
         [placeholder]="'chatRoom.originalSentence' | t"
         class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
-      />
+       [attr.aria-label]="'text input'"/>
       <input
         type="text"
         [(ngModel)]="correctedText"
         [placeholder]="'chatRoom.correctedSentence' | t"
         class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
-      />
+       [attr.aria-label]="'text input'"/>
       <input
         type="text"
         [(ngModel)]="explanationText"
         [placeholder]="'chatRoom.explanation' | t"
         class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
-      />
+       [attr.aria-label]="'text input'"/>
       <div class="flex gap-2">
         <button
           (click)="showCorrectionForm.set(false)"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-        >
+         [attr.aria-label]="'chatRoom.cancelBtn' | t">
           {{ 'chatRoom.cancelBtn' | t }}
         </button>
         <button
           (click)="sendCorrection()"
           class="rounded-app bg-emerald-600 ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-white"
-        >
+         [attr.aria-label]="'chatRoom.sendCorrection' | t">
           {{ 'chatRoom.sendCorrection' | t }}
         </button>
       </div>
@@ -362,25 +376,25 @@
       <button
         (click)="showCorrectionForm.set(!showCorrectionForm())"
         class="app-button-secondary bg-amber-500/20 text-amber-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      >
+       [attr.aria-label]="'chatRoom.correctBtn' | t">
         {{ 'chatRoom.correctBtn' | t }}
       </button>
       <button
         (click)="showDoodleModal.set(true)"
         class="app-button-secondary bg-blue-500/20 text-blue-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      >
+       [attr.aria-label]="'chatRoom.doodleBtn' | t">
         {{ 'chatRoom.doodleBtn' | t }}
       </button>
       <button
         (click)="showVoiceModal.set(true)"
         class="app-button-secondary bg-red-500/20 text-red-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      >
+       [attr.aria-label]="'chatRoom.voiceBtn' | t">
         {{ 'chatRoom.voiceBtn' | t }}
       </button>
       <button
         (click)="showStickerDrawer.set(!showStickerDrawer())"
         class="app-button-secondary bg-purple-500/20 text-purple-400 ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-      >
+       [attr.aria-label]="'chatRoom.stickerBtn' | t">
         {{ 'chatRoom.stickerBtn' | t }}
       </button>
     </div>
@@ -414,7 +428,7 @@
               [class.bg-surface-300]="i === mentionActiveIndex()"
               (mousedown)="$event.preventDefault()"
               (click)="selectMention(member)"
-            >
+             [attr.aria-label]="member.user?.display_name">
               <span class="font-semibold">{{ member.user?.display_name }}</span>
             </button>
           }
@@ -431,7 +445,7 @@
         role="combobox"
         aria-autocomplete="list"
         aria-controls="mention-listbox"
-        [attr.aria-expanded]="mentionSuggestions().length > 0"
+        [attr.aria-expanded]="mentionSuggestions().length  [attr.aria-label]="'chat-message-input'"> 0"
         [attr.aria-activedescendant]="
           mentionSuggestions().length > 0 ? 'mention-option-' + mentionActiveIndex() : null
         "
@@ -447,4 +461,16 @@
     </div>
   </div>
   }
+
+  <app-group-participant-drawer
+    [isOpen]="showParticipantDrawer()"
+    [participants]="groupParticipants()"
+    (closed)="showParticipantDrawer.set(false)"
+  ></app-group-participant-drawer>
 </div>
+
+<app-group-participant-drawer
+  [isOpen]="showParticipantDrawer()"
+  [participants]="drawerParticipants()"
+  (closed)="showParticipantDrawer.set(false)"
+></app-group-participant-drawer>

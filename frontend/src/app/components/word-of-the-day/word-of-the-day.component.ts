@@ -22,13 +22,17 @@ export interface WordOfTheDay {
       <h2 class="text-sm uppercase tracking-wider text-gray-400 font-medium">
         {{ 'home.wordOfDay.title' | t }}
       </h2>
-      <div class="flex items-center gap-3">
-        <span class="text-3xl font-bold text-accent">{{ word() }}</span>
-        <span class="text-lg text-gray-300">{{ translation() }}</span>
-        <span class="text-sm text-gray-400 ms-auto">{{ language() }}</span>
-      </div>
-      @if (example(); as ex) {
-        <p class="text-sm text-gray-400 italic">{{ ex }}</p>
+      @if (wordOfTheDayResource.isLoading()) {
+        <p class="text-sm text-gray-400">{{ 'home.wordOfDay.loading' | t }}</p>
+      } @else {
+        <div class="flex items-center gap-3">
+          <span class="text-3xl font-bold text-accent">{{ word() }}</span>
+          <span class="text-lg text-gray-300">{{ translation() }}</span>
+          <span class="text-sm text-gray-400 ms-auto">{{ language() }}</span>
+        </div>
+        @if (example(); as ex) {
+          <p class="text-sm text-gray-400 italic">{{ ex }}</p>
+        }
       }
     </section>
   `,
@@ -37,37 +41,42 @@ export interface WordOfTheDay {
 export class WordOfTheDayComponent {
   private readonly authService = inject(AuthService);
 
-  private readonly wordOfTheDayResource = resource<WordOfTheDay, unknown>({
+  protected readonly wordOfTheDayResource = resource<WordOfTheDay, unknown>({
     loader: () => {
       const token = this.authService.getAccessToken();
       if (!token) {
-        return Promise.resolve({
-          word: 'Hola',
-          translation: 'Hello',
-          language: 'Spanish',
-          example: '¡Hola! ¿Cómo estás?',
-        });
+        return Promise.resolve(this.getFallbackWord());
       }
-      return fetch(`${environment.apiUrl}/word-of-the-day`)
+      return fetch(`${environment.apiUrl}/word-of-the-day`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
         .then((r) => {
           if (!r.ok) throw new Error('Failed to fetch word of the day');
           return r.json();
         })
-        .catch(() => ({
-          word: 'Hola',
-          translation: 'Hello',
-          language: 'Spanish',
-          example: '¡Hola! ¿Cómo estás?',
-        }));
+        .catch(() => this.getFallbackWord());
     },
   });
 
-  protected readonly word = computed(() => this.wordOfTheDayResource.value()?.word ?? 'Hola');
+  protected readonly word = computed(
+    () => this.wordOfTheDayResource.value()?.word ?? 'Hola',
+  );
   protected readonly translation = computed(
     () => this.wordOfTheDayResource.value()?.translation ?? 'Hello',
   );
   protected readonly language = computed(
     () => this.wordOfTheDayResource.value()?.language ?? 'Spanish',
   );
-  protected readonly example = computed(() => this.wordOfTheDayResource.value()?.example);
+  protected readonly example = computed(
+    () => this.wordOfTheDayResource.value()?.example,
+  );
+
+  private getFallbackWord(): WordOfTheDay {
+    return {
+      word: 'Hola',
+      translation: 'Hello',
+      language: 'Spanish',
+      example: '¡Hola! ¿Cómo estás?',
+    };
+  }
 }

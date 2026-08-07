@@ -39,7 +39,7 @@ interface AiChatMessage {
               [class.bg-blue-500/10]="selectedRoom()?.id === room.id"
             >
               <div class="flex items-center gap-3">
-                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="" />
+                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt=""  loading="lazy" />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate">{{ room.title }}</p>
                   <p class="text-sm text-text-muted truncate">{{ room.subtitle }}</p>
@@ -77,7 +77,7 @@ interface AiChatMessage {
                     [src]="msg.role === 'ai' ? '/assets/ai-partner.svg' : '/assets/default-avatar.svg'"
                     class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
                     alt=""
-                  />
+                   loading="lazy" />
                   <div
                     class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed"
                     [class.bg-blue-600/20]="msg.role === 'user'"
@@ -126,7 +126,7 @@ interface AiChatMessage {
             <!-- Header -->
             <div class="p-4 border-b border-surface-100 ">
               <div class="flex items-center gap-3">
-                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="" />
+                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt=""  loading="lazy" />
                 <div>
                   <h3 class="font-semibold">{{ room.title }}</h3>
                   <p class="text-sm text-text-muted">{{ room.subtitle }}</p>
@@ -152,7 +152,7 @@ interface AiChatMessage {
                     [src]="msg.sender?.avatar_url ?? '/assets/default-avatar.svg'"
                     class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
                     alt=""
-                  />
+                   loading="lazy" />
                   <div
                     class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed "
                     [class.bg-blue-600/20]="msg.sender_id === currentUserId()"
@@ -191,7 +191,7 @@ interface AiChatMessage {
 
                     <!-- media -->
                     @if (msg.media_url && !msg.is_view_once) {
-                      <img [src]="msg.media_url" class="mt-1 rounded-lg max-h-60 object-contain" alt="" />
+                      <img [src]="msg.media_url" class="mt-1 rounded-lg max-h-60 object-contain" alt=""  loading="lazy" />
                     }
                     @if (msg.is_view_once && !msg.viewed_at) {
                       <button
@@ -221,9 +221,32 @@ interface AiChatMessage {
                       }
                     </div>
 
-                    <!-- timestamp -->
-                    <p class="text-[10px] text-text-muted mt-1 text-end">
+                    <!-- timestamp + read receipts -->
+                    <p class="text-[10px] text-text-muted mt-1 text-end flex items-center justify-end gap-0.5">
                       {{ msg.created_at | date:'shortTime' }}
+                      @if (msg.sender_id === currentUserId()) {
+                        <span class="inline-flex items-center">
+                          @if (msg.delivery_status === 'read') {
+                            <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg class="w-3 h-3 -ms-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          } @else if (msg.delivery_status === 'delivered') {
+                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg class="w-3 h-3 -ms-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          } @else if (msg.delivery_status === 'sent') {
+                            <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          }
+                        </span>
+                      }
                     </p>
                   </div>
                 </div>
@@ -386,6 +409,18 @@ export class ChatPageComponent implements OnInit {
     try {
       const messages = await this.chatService.getMessages(room.id);
       this.messages.set(messages);
+
+      // Auto-mark messages from others as delivered and then read
+      const currentUserId = this.authService.currentUser()?.id;
+      if (currentUserId) {
+        const messagesFromOthers = messages.filter(
+          (m) => m.sender_id !== currentUserId && !m.delivery_status,
+        );
+        for (const msg of messagesFromOthers) {
+          this.chatService.markMessageStatus(msg.id, 'delivered').catch(() => {});
+          this.chatService.markMessageStatus(msg.id, 'read').catch(() => {});
+        }
+      }
     } catch (error) {
       console.error('Failed to load messages', error);
     }

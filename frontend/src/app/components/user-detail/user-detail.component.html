@@ -53,6 +53,7 @@
             class="h-10 w-10 rounded-full border border-surface-100 bg-surface-300 flex items-center justify-center transition-colors"
             [class.text-neon-pink]="isLiked()"
             [class.border-neon-pink]="isLiked()"
+            aria-label="{{ isLiked() ? 'Unlike profile' : 'Like profile' }}"
           >
             {{ isLiked() ? '❤️' : '🤍' }}
           </button>
@@ -66,7 +67,7 @@
             [class.text-text-primary]="isFollowing()"
             [class.border]="isFollowing()"
             [class.border-surface-100]="isFollowing()"
-          >
+           [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t">
             {{ (isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t }}
           </button>
         </div>
@@ -124,6 +125,7 @@
             <button
               (click)="playAudioIntro(profile()?.audio_intro_url)"
               class="flex items-center gap-2 text-neon-blue text-sm font-bold hover:opacity-80 transition-opacity"
+              [attr.aria-label]="'profile.playAudioIntro' | t"
             >
               <span class="bg-neon-blue/20 p-2 rounded-full">▶️</span>
               {{ 'profile.playAudioIntro' | t }}

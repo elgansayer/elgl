@@ -1,7 +1,9 @@
 import {Component, inject, signal} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppCardComponent } from '../primitives/card/card.component';
 import {
   ModerationService,
   ModerationItem,
@@ -10,8 +12,7 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './moderation-panel.html',
 })
 export class ModerationPanelComponent {
@@ -19,7 +20,8 @@ export class ModerationPanelComponent {
 
   currentFilter = signal<'moment' | 'profile'>('moment');
   items = signal<ModerationItem[]>([]);
-  loading = signal(false);
+  loading = signal(true);
+  loadError = signal<string | null>(null);
   analysisResult = signal<UserAnalysisResult | null>(null);
   analysing = signal(false);
 
@@ -34,21 +36,25 @@ export class ModerationPanelComponent {
 
   private async loadItems() {
     this.loading.set(true);
+    this.loadError.set(null);
     try {
-      const items = await firstValueFrom(this.moderationService.getItems(this.currentFilter()));
+      const items = await this.moderationService.getItems(this.currentFilter());
       this.items.set(items);
+    } catch {
+      this.loadError.set('Failed to load items');
+      this.items.set([]);
     } finally {
       this.loading.set(false);
     }
   }
 
   async approve(item: ModerationItem) {
-    await firstValueFrom(this.moderationService.approveItem(item.id, item.type));
+    await this.moderationService.approveItem(item.id, item.type);
     this.loadItems();
   }
 
   async reject(item: ModerationItem) {
-    await firstValueFrom(this.moderationService.rejectItem(item.id, item.type));
+    await this.moderationService.rejectItem(item.id, item.type);
     this.loadItems();
   }
 
@@ -56,7 +62,7 @@ export class ModerationPanelComponent {
     this.analysing.set(true);
     this.analysisResult.set(null);
     try {
-      const result = await firstValueFrom(this.moderationService.getUserRiskAnalysis(userId));
+      const result = await this.moderationService.getUserRiskAnalysis(userId);
       this.analysisResult.set(result);
     } finally {
       this.analysing.set(false);

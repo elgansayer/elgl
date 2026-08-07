@@ -17,6 +17,9 @@ export interface GroupMember {
     id: string;
     display_name: string | null | undefined;
     avatar_url: string | null | undefined;
+    native_language: string | null | undefined;
+    target_languages: string[] | null | undefined;
+    is_vip: boolean | null | undefined;
   } | null;
 }
 
@@ -155,7 +158,10 @@ export class GroupsService {
         user:users!chat_room_members_user_id_fkey (
           id,
           display_name,
-          avatar_url
+          avatar_url,
+          native_language,
+          target_languages,
+          is_vip
         )
       `,
       )
@@ -202,7 +208,11 @@ export class GroupsService {
       throw new NotFoundException('Invalid or expired invite link');
     }
 
-    const roomData = room as unknown as { id: string; title: string; max_members: number };
+    const roomData = room as unknown as {
+      id: string;
+      title: string;
+      max_members: number;
+    };
 
     // Check if the group is full
     const { count: memberCount } = await supabase
@@ -227,7 +237,11 @@ export class GroupsService {
       throw new NotFoundException('Invalid or expired invite code');
     }
 
-    const roomData = room as unknown as { id: string; title: string; max_members: number };
+    const roomData = room as unknown as {
+      id: string;
+      title: string;
+      max_members: number;
+    };
 
     // Check if the group is full
     const { count: memberCount } = await supabase

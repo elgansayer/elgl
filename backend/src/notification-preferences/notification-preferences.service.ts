@@ -55,7 +55,12 @@ export class NotificationPreferencesService {
   }
 
   private getDefaultPreferences(userId: string) {
-    const defaultCategory = { push: false, email: false, in_app: true };
+    const defaultCategory = {
+      push: false,
+      email: false,
+      in_app: true,
+      badges: true,
+    };
     return {
       user_id: userId,
       new_message: { ...defaultCategory },

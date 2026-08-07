@@ -14,9 +14,20 @@ describe('validationSchema', () => {
     expect(value.CENTRIFUGO_URL).toBe('http://localhost:8000');
     expect(value.CENTRIFUGO_API_KEY).toBe('test-centrifugo-api-key');
     expect(value.CENTRIFUGO_SECRET).toBe('test-centrifugo-secret');
+    expect(value.CENTRIFUGO_CONNECTION_RATE_LIMIT).toBe(5);
+    expect(value.CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC).toBe(60);
     expect(value.LIVEKIT_URL).toBe('http://localhost:7880');
     expect(value.LIVEKIT_API_KEY).toBe('test-livekit-api-key');
     expect(value.LIVEKIT_SECRET).toBe('test-livekit-secret');
+    expect(value.LIVEKIT_TURN_ENABLED).toBe('false');
+    expect(value.LIVEKIT_TURN_DOMAIN).toBe('turn.example.com');
+    expect(value.LIVEKIT_TURN_CERT_FILE).toBe('');
+    expect(value.LIVEKIT_TURN_KEY_FILE).toBe('');
+    expect(value.LIVEKIT_TURN_TLS_PORT).toBe('5349');
+    expect(value.LIVEKIT_TURN_UDP_PORT).toBe('3478');
+    expect(value.LIVEKIT_RTC_STUN_SERVERS).toBe(
+      'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302',
+    );
     expect(value.CLOUDFLARE_R2_ENDPOINT).toBe(
       'https://example.r2.cloudflarestorage.com',
     );
@@ -54,6 +65,8 @@ describe('validationSchema', () => {
       CENTRIFUGO_URL: 'http://centrifugo.example.com',
       CENTRIFUGO_API_KEY: 'cent-api-key',
       CENTRIFUGO_SECRET: 'cent-secret',
+      CENTRIFUGO_CONNECTION_RATE_LIMIT: '10',
+      CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC: '120',
       LIVEKIT_URL: 'http://livekit.example.com',
       LIVEKIT_API_KEY: 'livekit-api-key',
       LIVEKIT_SECRET: 'livekit-secret',

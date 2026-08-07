@@ -2,6 +2,9 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { ShoppingService } from './shopping.service';
 import { MonetisationService } from '../monetisation/monetisation.service';
@@ -13,17 +16,67 @@ export interface CartItem {
   unitPrice: number;
 }
 
+interface CartEntry {
+  items: CartItem[];
+  lastAccessedAt: number;
+}
+
+const CART_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_CART_ITEMS = 50;
+
 @Injectable()
-export class CartService {
-  private carts: Map<string, CartItem[]> = new Map();
+export class CartService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(CartService.name);
+  private carts: Map<string, CartEntry> = new Map();
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly shoppingService: ShoppingService,
     private readonly monetisationService: MonetisationService,
   ) {}
 
+  onModuleInit(): void {
+    this.cleanupTimer = setInterval(() => {
+      void this.evictStaleCarts();
+    }, CLEANUP_INTERVAL_MS);
+  }
+
+  onModuleDestroy(): void {
+    if (this.cleanupTimer !== null) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+  }
+
+  private touchCart(userId: string): CartEntry {
+    let entry = this.carts.get(userId);
+    if (!entry) {
+      entry = { items: [], lastAccessedAt: Date.now() };
+      this.carts.set(userId, entry);
+    } else {
+      entry.lastAccessedAt = Date.now();
+    }
+    return entry;
+  }
+
+  private async evictStaleCarts(): Promise<void> {
+    const now = Date.now();
+    let evicted = 0;
+    for (const [userId, entry] of this.carts.entries()) {
+      if (now - entry.lastAccessedAt > CART_TTL_MS) {
+        this.carts.delete(userId);
+        evicted++;
+      }
+    }
+    if (evicted > 0) {
+      this.logger.log(`Evicted ${evicted} stale carts (TTL: ${CART_TTL_MS}ms)`);
+    }
+  }
+
   getCart(userId: string): CartItem[] {
-    return this.carts.get(userId) ?? [];
+    const entry = this.touchCart(userId);
+    return entry.items;
   }
 
   addItem(userId: string, itemId: string, quantity: number): CartItem[] {
@@ -38,7 +91,15 @@ export class CartService {
       throw new BadRequestException('Insufficient stock');
     }
 
-    const items = this.carts.get(userId) ?? [];
+    const entry = this.touchCart(userId);
+    const items = entry.items;
+
+    if (items.length >= MAX_CART_ITEMS) {
+      throw new BadRequestException(
+        `Cart is full (max ${MAX_CART_ITEMS} unique items).`,
+      );
+    }
+
     const existing = items.find((i) => i.itemId === itemId);
     if (existing) {
       existing.quantity += quantity;
@@ -50,7 +111,6 @@ export class CartService {
         unitPrice: item.price,
       });
     }
-    this.carts.set(userId, items);
     return items;
   }
 
@@ -58,10 +118,11 @@ export class CartService {
     if (quantity <= 0 || !Number.isInteger(quantity)) {
       throw new BadRequestException('Quantity must be a positive integer');
     }
-    const items = this.carts.get(userId) ?? [];
+    const entry = this.touchCart(userId);
+    const items = entry.items;
     const existing = items.find((i) => i.itemId === itemId);
     if (!existing) {
-      return items; // nothing to remove
+      return items;
     }
     if (quantity >= existing.quantity) {
       const idx = items.indexOf(existing);
@@ -75,7 +136,8 @@ export class CartService {
   async checkout(
     userId: string,
   ): Promise<{ success: boolean; message: string }> {
-    const items = this.carts.get(userId) ?? [];
+    const entry = this.touchCart(userId);
+    const items = entry.items;
     if (items.length === 0) {
       return { success: false, message: 'Cart is empty.' };
     }
@@ -103,8 +165,6 @@ export class CartService {
         item.quantity,
       );
       if (!ok) {
-        // This should not happen because we validated earlier,
-        // but keep guard for safety.
         throw new BadRequestException(
           `Insufficient stock for item ${item.name}`,
         );

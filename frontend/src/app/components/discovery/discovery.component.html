@@ -5,7 +5,7 @@
       <h1 class="text-xl font-black text-text-primary tracking-tight">
         {{ 'discovery.title' | t }}
       </h1>
-      <a routerLink="/notifications" class="p-2 text-xl hover:opacity-80 transition-opacity">🔔</a>
+      <a routerLink="/notifications" class="p-2 text-xl hover:opacity-80 transition-opacity" [attr.aria-label]="'nav.notifications' | t">🔔</a>
     </div>
 
     <!-- Top Filter Pills (Horizontal Scroll) -->
@@ -24,13 +24,14 @@
           [class.bg-surface-200]="selectedTargetLanguage() === lang.code"
           [class.bg-surface-300]="selectedTargetLanguage() !== lang.code"
           class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
-        >
+         [attr.aria-label]=\"lang.labelKey | t\">
           <span>{{ lang.flag }}</span> {{ lang.labelKey | t }}
         </button>
       }
       <button
         (click)="setLanguage('')"
         class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100 whitespace-nowrap"
+        [attr.aria-label]="'discovery.langAny' | t"
       >
         {{ 'discovery.langAny' | t }}
       </button>
@@ -80,7 +81,7 @@
           id="genderVipNote"
           routerLink="/vip"
           class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
-        >
+         [attr.aria-label]="'discovery.genderVipRequired' | t">
           {{ 'discovery.genderVipRequired' | t }}
         </a>
       }
@@ -106,7 +107,7 @@
             id="distanceVipNote"
             routerLink="/vip"
             class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
-          >
+           [attr.aria-label]="'discovery.vipRadiusNote' | t">
             {{ 'discovery.vipRadiusNote' | t }}
           </a>
         }
@@ -126,6 +127,22 @@
           <label for="seriousModeCheckbox" class="sr-only">{{ 'discovery.seriousModeToggle' | t }}</label>
         </div>
         <span class="text-[10px] text-text-secondary leading-tight">{{ 'discovery.seriousModeDesc' | t }}</span>
+      </div>
+
+      <!-- Voice Room Active Toggle -->
+      <div class="flex items-center gap-3 px-4 mt-2 pb-3">
+        <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">{{ 'discovery.voiceRoomActiveToggle' | t }}</span>
+        <div class="flex items-center">
+          <input
+            type="checkbox"
+            id="voiceRoomActiveCheckbox"
+            [checked]="voiceRoomActive()"
+            (change)="toggleVoiceRoomActive()"
+            class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400"
+          />
+          <label for="voiceRoomActiveCheckbox" class="sr-only">{{ 'discovery.voiceRoomActiveToggle' | t }}</label>
+        </div>
+        <span class="text-[10px] text-text-secondary leading-tight">{{ 'discovery.voiceRoomActiveDesc' | t }}</span>
       </div>
   </header>
 
@@ -159,7 +176,7 @@
           <button
             [routerLink]="['/vip']"
             class="bg-white text-purple-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors shadow-md mt-2"
-          >
+           [attr.aria-label]="'discovery.bannerView' | t">
             {{ 'discovery.bannerView' | t }}
           </button>
         </div>
@@ -175,14 +192,16 @@
   <!-- Content States -->
   <main class="p-0">
     @if (isLoading()) {
-      <div class="p-8 text-center text-text-secondary font-bold">
-        {{ 'discovery.searching' | t }}
-      </div>
+      <app-empty-state
+        [title]="'discovery.searching' | t"
+        [customClass]="'py-16'">
+      </app-empty-state>
     } @else if (partners().length === 0) {
-      <div class="p-8 text-center">
-        <p class="font-bold text-text-primary text-lg">{{ 'discovery.noMatches' | t }}</p>
-        <p class="mt-2 text-text-secondary text-sm">{{ 'discovery.tryBroadening' | t }}</p>
-      </div>
+      <app-empty-state
+        [illustration]="'/assets/illustrations/no-users-nearby.svg'"
+        [title]="'discovery.noUsersNearby' | t"
+        [description]="'discovery.noUsersHint' | t">
+      </app-empty-state>
     } @else {
       <!-- User List -->
       <div class="divide-y divide-surface-200">

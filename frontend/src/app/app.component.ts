@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { EconomyStore, VirtualGift } from './services/economy.store';
+import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
@@ -30,19 +30,19 @@ import { DailyLoginModalComponent } from './components/daily-login-modal/daily-l
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
+import { ForcedUpdateModalComponent } from './components/forced-update-modal/forced-update-modal.component';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
+import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
+import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
+import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
-}
-
-function isVirtualGift(v: unknown): v is VirtualGift {
-  return isRecord(v) && 'id' in v && 'name' in v && 'icon' in v;
 }
 
 @Component({
@@ -60,6 +60,10 @@ function isVirtualGift(v: unknown): v is VirtualGift {
     ThemeSelectorComponent,
     FontScaleSliderComponent,
     AppLanguageSelectorComponent,
+    GiftAnimationOverlayComponent,
+    ForcedUpdateModalComponent,
+    NoNetworkBannerComponent,
+    DesktopSidebarComponent,
   ],
   templateUrl: './app.component.html',
   host: {
@@ -81,7 +85,7 @@ export class AppComponent implements OnInit {
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
-  private versionCheckService = inject(VersionCheckService);
+  readonly versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
@@ -142,13 +146,8 @@ export class AppComponent implements OnInit {
       );
     });
 
-    // Apply font scale to the root rem unit
-    effect(() => {
-      const scale = this.fontScaleService.scaleFactor();
-      if (this.document && this.document.documentElement) {
-        this.document.documentElement.style.fontSize = `${(scale * 16).toFixed(2)}px`;
-      }
-    });
+    // Font scale is applied globally by FontScaleService via effect()
+    // which sets document.documentElement.style.fontSize, adjusting base rem CSS rules.
 
     // Redirect to the lock screen when the app is locked
     effect(() => {
@@ -165,7 +164,7 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale and base rem sizing are handled globally by FontScaleService.
     // Block the app immediately if the installed version is deprecated.
-    await this.versionCheckService.checkVersion();
+    this.versionCheckService.checkVersion();
 
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
@@ -189,11 +188,30 @@ export class AppComponent implements OnInit {
         if (!isRecord(data)) return;
         const eventType = typeof data['type'] === 'string' ? data['type'] : null;
 
-        if (eventType === 'virtual_gift' && isVirtualGift(data['gift'])) {
+        if (eventType === 'virtual_gift') {
+          const giftName = typeof data['gift_name'] === 'string' ? data['gift_name'] : 'Gift';
+          const giftIcon = typeof data['icon'] === 'string' ? data['icon'] : '🎁';
+          const giftId = typeof data['gift_id'] === 'string' ? data['gift_id'] : 'unknown';
+          const costCoins = typeof data['coin_value'] === 'number' ? data['coin_value'] : 0;
+          const animationType =
+            typeof data['animation_type'] === 'string' ? data['animation_type'] : 'float';
+          const animationUrl =
+            typeof data['animation_url'] === 'string' && data['animation_url'].length > 0
+              ? data['animation_url']
+              : undefined;
+          const senderName =
+            typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner';
+
           this.economyStore.triggerGiftAnimation({
-            gift: data['gift'],
-            sender_name:
-              typeof data['sender_name'] === 'string' ? data['sender_name'] : 'Language Partner',
+            gift: {
+              id: giftId,
+              name: giftName,
+              icon: giftIcon,
+              cost_coins: costCoins,
+              animation_type: animationType,
+              animationUrl,
+            },
+            sender_name: senderName,
             receiver_name: 'You',
           });
         }
@@ -215,6 +233,23 @@ export class AppComponent implements OnInit {
             isVideoCall,
           });
         }
+
+        // Update unread counters for real-time chat messages
+        if (eventType === 'new_message') {
+          this.unreadCounter.incrementChatUnread();
+        }
+
+        // Update unread counters for real-time notifications
+        if (
+          eventType === 'follow' ||
+          eventType === 'like_profile' ||
+          eventType === 'like_moment' ||
+          eventType === 'comment_moment' ||
+          eventType === 'profile_visit' ||
+          eventType === 'system'
+        ) {
+          this.unreadCounter.incrementNotificationUnread();
+        }
       });
 
       // Request notification permission after user is authenticated
@@ -229,7 +264,6 @@ export class AppComponent implements OnInit {
 
   private isValidPayload(data: unknown): data is {
     type: string;
-    gift?: VirtualGift;
     sender_name?: string;
     callerId?: string;
     callerName?: string;
@@ -260,14 +294,39 @@ export class AppComponent implements OnInit {
     );
   }
 
-  onAcceptCall(_callData: IncomingCallData): void {
+  onAcceptCall(callData: IncomingCallData): void {
     this.incomingCallData.set(null);
-    // TODO: Navigate to call room or start LiveKit session
+
+    if (callData.isVideoCall) {
+      void this.router.navigate(['/video-call'], {
+        queryParams: {
+          roomName: callData.roomName,
+          otherUserId: callData.callerId,
+          otherUserName: callData.callerName,
+          currentUserId: this.authService.currentUser()?.id || '',
+        },
+      });
+    } else {
+      void this.router.navigate(['/active-call'], {
+        queryParams: {
+          roomName: callData.roomName,
+          callerName: callData.callerName,
+          callerAvatar: callData.callerAvatarUrl || '',
+          callDirection: 'incoming',
+        },
+      });
+    }
   }
 
-  onDeclineCall(_callData: IncomingCallData): void {
+  onDeclineCall(callData: IncomingCallData): void {
     this.incomingCallData.set(null);
-    // TODO: Send decline notification via Centrifugo
+    this.centrifugeService.publish(`user_${callData.callerId}`, {
+      type: 'call_rejected',
+      data: {
+        userId: this.authService.currentUser()?.id,
+        roomName: callData.roomName,
+      },
+    });
   }
 
   async toggleBiometricLock(): Promise<void> {

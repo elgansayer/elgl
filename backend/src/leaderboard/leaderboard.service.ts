@@ -31,7 +31,8 @@ export class LeaderboardService {
     return (data ?? []).map((user) => ({
       ...user,
       is_serious_learner:
-        (user.study_streak_days ?? 0) > 7 && (user.correction_ratio ?? 0) >= 0.8,
+        (user.study_streak_days ?? 0) > 7 &&
+        (user.correction_ratio ?? 0) >= 0.8,
     }));
   }
 }

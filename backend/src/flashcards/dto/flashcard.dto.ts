@@ -32,6 +32,6 @@ export class CreateFlashcardDto {
 export class UpdateSrsDto {
   @IsInt()
   @Min(0)
-  @Max(4)
-  srs_level!: number;
+  @Max(5)
+  quality!: number;
 }
