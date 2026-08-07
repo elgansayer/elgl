@@ -58,7 +58,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
         margin: 16px;
       }
       button {
-        margin-left: 8px;
+        margin-inline-start: 8px;
       }
     `,
   ],
