@@ -133,6 +133,10 @@ export class GiftAnimationService {
   }
 
   private tick = (): void => {
+    if (!this.isPlaying) {
+      return;
+    }
+
     const elapsedMs = performance.now() - this.startTime;
     this.elapsed.set(elapsedMs);
 
