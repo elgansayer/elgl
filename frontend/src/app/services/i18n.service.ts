@@ -657,6 +657,11 @@ export class I18nService {
     'videoClassroomErrorBoundary.retryBtn': 'Try Again',
     'videoClassroomErrorBoundary.reportBtn': 'Report Crash',
     'videoClassroomErrorBoundary.reportedMessage': 'Crash reported. Thank you for helping us improve!',
+    'discoveryErrorBoundary.title': 'Discovery Interrupted',
+    'discoveryErrorBoundary.description': 'Something went wrong while searching for language partners. Your filters and preferences have been preserved.',
+    'discoveryErrorBoundary.retryBtn': 'Try Again',
+    'discoveryErrorBoundary.reportBtn': 'Report Crash',
+    'discoveryErrorBoundary.reportedMessage': 'Crash reported. Thank you for helping us improve!',
 
     // 1:1 Video Call Component
     'video_call.waiting_for': 'Waiting for {{name}}...',

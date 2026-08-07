@@ -9,6 +9,11 @@ import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
+import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
+import {
+  DiscoveryErrorBoundaryComponent,
+  DiscoveryErrorContext,
+} from '../discovery-error-boundary/discovery-error-boundary.component';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -43,6 +48,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     DistanceSliderComponent,
     AppEmptyStateComponent,
     DiscoverySkeletonCardComponent,
+    DiscoveryErrorBoundaryComponent,
     SanitiseHtmlPipe,
   ],
   templateUrl: './discovery.component.html',
@@ -56,6 +62,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
+  private readonly discoveryErrorHandler = inject(DiscoveryErrorHandlerService);
   private readonly discoveryOnboarding = inject(DiscoveryOnboardingService);
 
   private currentAudio: HTMLAudioElement | null = null;
@@ -64,6 +71,21 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   /** Whether currently offline and serving cached data */
   readonly isOffline = computed(() => !this.offlineCache.isOnline());
   readonly isUsingCachedData = computed(() => this.isOffline() && this.offlineCache.cachedDataAvailable());
+
+  /** Error boundary context - provides rich diagnostic data on crash */
+  readonly errorBoundaryContext = computed<DiscoveryErrorContext>(() => ({
+    component: "discovery-map",
+    filterType: this.selectedFilter(),
+    targetLanguage: this.selectedTargetLanguage() || undefined,
+    nativeLanguage: this.selectedNativeLanguage() || undefined,
+    partnerCount: this.partners().length,
+    sortMode: this.selectedSort(),
+    radiusKm: this.selectedDistanceKm(),
+    metadata: {
+      isLoading: this.isLoading(),
+      isOffline: this.isOffline(),
+    },
+  }));
 
   readonly partners = signal<
     (UserProfile & {
@@ -258,8 +280,20 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     } catch (e) {
       // Don't log aborted request errors - they are expected
       if (!(e instanceof DOMException && e.name === 'AbortError')) {
-        console.error('Partner search failed:', e);
         this.hasError.set(true);
+        this.discoveryErrorHandler.reportDiscoveryCrash(
+          e instanceof Error ? e : new Error(String(e)),
+          {
+            action: 'searchPartners',
+            filterType: this.selectedFilter(),
+            targetLanguage: this.selectedTargetLanguage() || undefined,
+            nativeLanguage: this.selectedNativeLanguage() || undefined,
+            partnerCount: this.partners().length,
+            sortMode: this.selectedSort(),
+            radiusKm: this.selectedDistanceKm(),
+            isVip: this.isVip(),
+          },
+        );
       }
     } finally {
       this.isLoading.set(false);
@@ -293,7 +327,14 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       }
       await this.searchPartners();
     } catch (e) {
-      console.error('Failed to update serious learner mode', e);
+      this.discoveryErrorHandler.reportDiscoveryCrash(
+        e instanceof Error ? e : new Error(String(e)),
+        {
+          action: 'toggleSeriousLearnerMode',
+          filterType: this.selectedFilter(),
+          isVip: this.isVip(),
+        },
+      );
     }
   }
 

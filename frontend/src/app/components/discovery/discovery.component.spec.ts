@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { JoyrideService } from 'ngx-joyride';
+import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
 import { provideRouter } from '@angular/router';
 
 class MockAudio {
@@ -77,6 +78,7 @@ describe('DiscoveryComponent', () => {
   let mockAuthService: { currentUser: ReturnType<typeof signal> };
   let mockDiscoveryOnboardingService: { startTour: ReturnType<typeof vi.fn> };
   let mockJoyrideService: { startTour: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof vi.fn> };
+  let mockDiscoveryErrorHandler: { reportDiscoveryCrash: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     audioInstances = [];
@@ -102,6 +104,9 @@ describe('DiscoveryComponent', () => {
       startTour: vi.fn(),
       isTourInProgress: vi.fn().mockReturnValue(false),
     };
+    mockDiscoveryErrorHandler = {
+      reportDiscoveryCrash: vi.fn(),
+    };
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
@@ -120,6 +125,7 @@ describe('DiscoveryComponent', () => {
         },
         { provide: DiscoveryOnboardingService, useValue: mockDiscoveryOnboardingService },
         { provide: JoyrideService, useValue: mockJoyrideService },
+        { provide: DiscoveryErrorHandlerService, useValue: mockDiscoveryErrorHandler },
       ],
     }).compileComponents();
 
@@ -222,16 +228,16 @@ describe('DiscoveryComponent', () => {
     expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(2);
   });
 
-  it('should set isLoading false, set hasError true and log when search fails', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('should set isLoading false, set hasError true and report crash when search fails', async () => {
     mockDiscoveryService.findPartners.mockRejectedValue(new Error('search failed'));
 
     await init();
 
     expect(component.isLoading()).toBe(false);
     expect(component.hasError()).toBe(true);
-    expect(consoleErrorSpy).toHaveBeenCalled();
-    consoleErrorSpy.mockRestore();
+    expect(mockDiscoveryErrorHandler.reportDiscoveryCrash).toHaveBeenCalled();
+    const error = mockDiscoveryErrorHandler.reportDiscoveryCrash.mock.calls[0][0] as Error;
+    expect(error.message).toBe('search failed');
   });
 
   it('should update filter, serious learner flag and distance when selecting "serious"', async () => {
@@ -362,16 +368,17 @@ describe('DiscoveryComponent', () => {
     expect(callArgs.voice_room_active).toBe(true);
   });
 
-  it('should not change state when persisting serious learner mode fails', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('should not change state and report crash when persisting serious learner mode fails', async () => {
     mockUserService.updateMyProfile.mockRejectedValue(new Error('update failed'));
     await init();
+    mockDiscoveryErrorHandler.reportDiscoveryCrash.mockClear();
 
     await component.toggleSeriousLearnerMode();
 
     expect(component.seriousLearnerMode()).toBe(false);
-    expect(consoleErrorSpy).toHaveBeenCalled();
-    consoleErrorSpy.mockRestore();
+    expect(mockDiscoveryErrorHandler.reportDiscoveryCrash).toHaveBeenCalled();
+    const error = mockDiscoveryErrorHandler.reportDiscoveryCrash.mock.calls[0][0] as Error;
+    expect(error.message).toBe('update failed');
   });
 
   it('should format distances under 1km in metres and miles', async () => {
