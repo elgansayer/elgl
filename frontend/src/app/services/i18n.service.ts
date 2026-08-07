@@ -344,6 +344,11 @@ export class I18nService {
     'common.close': 'Close',
     'common.back': 'Back',
     'common.loadError': 'Failed to load data',
+
+    // My Stats dashboard
+    'stats.title': 'My Stats',
+    'stats.studyHours': 'Study Hours (This Week)',
+    'stats.activityBreakdown': 'Activity Breakdown',
     'moments.showMore': 'Show more',
     'moments.showLess': 'Show less',
     'moments.translate': 'Translate',
