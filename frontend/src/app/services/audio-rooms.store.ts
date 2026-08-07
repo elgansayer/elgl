@@ -17,6 +17,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
+import { EconomyStore } from './economy.store';
 
 export interface AudioRoomRecord {
   id: string;
@@ -94,6 +95,7 @@ export class AudioRoomsStore {
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private economyStore = inject(EconomyStore);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
@@ -369,6 +371,17 @@ export class AudioRoomsStore {
         }
       } else if (p.type === 'subtitle' && p.caption) {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
+      } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
+        this.economyStore.triggerPublicGiftAnimation({
+          giftId: typeof p.gift_id === 'string' ? p.gift_id : 'unknown',
+          giftName: typeof p.gift_name === 'string' ? p.gift_name : 'Gift',
+          giftIcon: typeof p.icon === 'string' ? p.icon : '🎁',
+          animationType: typeof p.animation_type === 'string' ? p.animation_type : 'float',
+          animationUrl: typeof p.animation_url === 'string' ? p.animation_url : undefined,
+          senderName: typeof p.sender_name === 'string' ? p.sender_name : 'Someone',
+          receiverName: typeof p.receiver_name === 'string' ? p.receiver_name : 'Host',
+          coinValue: typeof p.coin_value === 'number' ? p.coin_value : 0,
+        });
       } else if (p.type === 'chat_message' && p.message) {
         this.roomMessages.update((list) => [...list.slice(-99), p.message!]);
       } else if (p.type === 'room_ended') {
