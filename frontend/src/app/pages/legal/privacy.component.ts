@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
-import { LegalDocumentViewerComponent, LegalSection } from '../../components/legal-document-viewer/legal-document-viewer.component';
+import { Component, inject, resource } from '@angular/core';
+import { LegalDocumentViewerComponent } from '../../components/legal-document-viewer/legal-document-viewer.component';
+import { LegalService } from '../../services/legal.service';
 
 @Component({
   selector: 'app-privacy',
@@ -7,24 +8,18 @@ import { LegalDocumentViewerComponent, LegalSection } from '../../components/leg
   template: `
     <app-legal-document-viewer
       title="Privacy Policy"
-      [lastUpdated]="currentDate"
-      [sections]="sections"
+      [lastUpdated]="documentResource.value()?.lastUpdated ?? fallbackDate"
+      [sections]="documentResource.value()?.sections ?? []"
+      [isLoading]="documentResource.isLoading()"
+      [error]="documentResource.error()"
     ></app-legal-document-viewer>
   `,
 })
 export class PrivacyComponent {
-  currentDate = new Date();
+  private legalService = inject(LegalService);
+  fallbackDate = new Date().toISOString();
 
-  sections: LegalSection[] = [
-    {
-      id: 'information-we-collect',
-      heading: '1. Information We Collect',
-      content: 'We collect information you provide directly to us, such as when you create or modify your account, request on-demand services, contact customer support, or otherwise communicate with us.',
-    },
-    {
-      id: 'how-we-use-information',
-      heading: '2. How We Use Information',
-      content: 'We may use the information we collect about you to provide, maintain, and improve our services.',
-    }
-  ];
+  documentResource = resource({
+    loader: () => this.legalService.getDocument('privacy'),
+  });
 }
