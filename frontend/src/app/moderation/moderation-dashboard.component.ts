@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../services/translate.pipe';
 import { ModerationItem, ModerationService } from './moderation.service';
 
@@ -112,7 +111,7 @@ export class ModerationDashboardComponent {
 
   async approve(item: ModerationItem): Promise<void> {
     try {
-      await firstValueFrom(this.moderationService.approveItem(item.id, item.type));
+      await this.moderationService.approveItem(item.id, item.type);
       this.items.reload();
     } catch (err) {
       console.warn('Approve failed', err);
@@ -121,7 +120,7 @@ export class ModerationDashboardComponent {
 
   async reject(item: ModerationItem): Promise<void> {
     try {
-      await firstValueFrom(this.moderationService.rejectItem(item.id, item.type));
+      await this.moderationService.rejectItem(item.id, item.type);
       this.items.reload();
     } catch (err) {
       console.warn('Reject failed', err);
@@ -132,9 +131,7 @@ export class ModerationDashboardComponent {
     const userId = item.reported_user?.id;
     if (!userId) return;
     try {
-      const result = await firstValueFrom(
-        this.moderationService.analyseUser(userId),
-      );
+      const result = await this.moderationService.analyseUser(userId);
       this.analysis.set({
         riskScore: result.riskScore,
         flags: result.flags,

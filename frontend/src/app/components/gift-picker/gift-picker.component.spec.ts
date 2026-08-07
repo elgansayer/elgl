@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { signal } from '@angular/core';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GiftPickerComponent } from './gift-picker.component';
 import { EconomyStore, VirtualGift, CoinPackage } from '../../services/economy.store';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -39,11 +40,11 @@ function createMockEconomyStore(overrides: Partial<{
     coinsBalance: signal(overrides.coinsBalance ?? 50),
     catalog: signal(overrides.catalog ?? MOCK_CATALOG),
     coinPackages: signal(overrides.coinPackages ?? MOCK_PACKAGES),
-    loadInitialData: jasmine.createSpy('loadInitialData').and.resolveTo(),
-    loadCoinPackages: jasmine.createSpy('loadCoinPackages').and.resolveTo(),
-    buyCoins: jasmine.createSpy('buyCoins').and.resolveTo(),
-    sendGift: jasmine.createSpy('sendGift').and.resolveTo(true),
-    triggerGiftAnimation: jasmine.createSpy('triggerGiftAnimation'),
+    loadInitialData: vi.fn().mockResolvedValue(undefined),
+    loadCoinPackages: vi.fn().mockResolvedValue(undefined),
+    buyCoins: vi.fn().mockResolvedValue(undefined),
+    sendGift: vi.fn().mockResolvedValue(true),
+    triggerGiftAnimation: vi.fn(),
   } as unknown as EconomyStore;
 }
 

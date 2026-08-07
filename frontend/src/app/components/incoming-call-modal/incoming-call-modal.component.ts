@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 import { Component, input, output, effect, OnDestroy, viewChild, ElementRef } from '@angular/core';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
+=======
+import { Component, input, output, effect, viewChild, ElementRef, inject, DestroyRef } from '@angular/core';
+>>>>>>> origin/main
 import { TranslatePipe } from '../../services/translate.pipe';
 
 export interface IncomingCallData {
@@ -27,7 +31,11 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 
 @Component({
   selector: 'app-incoming-call-modal',
+<<<<<<< HEAD
   imports: [AppButtonPrimaryComponent, AppButtonSecondaryComponent, TranslatePipe],
+=======
+  imports: [TranslatePipe],
+>>>>>>> origin/main
   template: `
     @if (callData(); as data) {
       <div
@@ -45,7 +53,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
               @if (data.callerAvatarUrl) {
                 <img
                   [src]="data.callerAvatarUrl"
-                  [alt]="data.callerName"
+                  [alt]="'voip.callerAvatar' | t: { name: data.callerName }"
                   class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-500/50"
                 />
               } @else {
@@ -75,11 +83,19 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 
           <!-- Action Buttons -->
           <div class="flex justify-center gap-6">
+<<<<<<< HEAD
             <app-button-secondary
               size="lg"
               customClass="!rounded-full !w-16 !h-16 !p-0 !bg-red-500/20 !border-red-500/30 hover:!bg-red-500/40"
               [attr.aria-label]="'voip.decline' | t"
               (clicked)="onDecline()"
+=======
+            <!-- Decline Button -->
+            <button
+              (click)="onDecline()"
+              class="flex flex-col items-center gap-2 group"
+              [attr.aria-label]="'voip.decline' | t"
+>>>>>>> origin/main
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -116,6 +132,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   <polygon points="23 7 16 12 23 17 23 7"></polygon>
                   <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
                 </svg>
+<<<<<<< HEAD
               } @else {
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -146,6 +163,54 @@ function getAudioContextClass(): typeof AudioContext | undefined {
             <span class="text-xs text-text-muted animate-pulse">
               {{ 'voip.ringing' | t }}
             </span>
+=======
+              </div>
+              <span class="text-sm text-text-muted group-hover:text-slate-300">{{ 'voip.decline' | t }}</span>
+            </button>
+
+            <!-- Accept Button -->
+            <button
+              (click)="onAccept()"
+              class="flex flex-col items-center gap-2 group"
+              [attr.aria-label]="'voip.accept' | t"
+            >
+              <div
+                class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/40 transition-colors duration-150 animate-pulse"
+              >
+                @if (data.isVideoCall) {
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-8 h-8 text-green-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                  </svg>
+                } @else {
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-8 h-8 text-green-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                    ></path>
+                  </svg>
+                }
+              </div>
+              <span class="text-sm text-green-400 group-hover:text-green-300">{{ 'voip.accept' | t }}</span>
+            </button>
+>>>>>>> origin/main
           </div>
         </div>
       </div>
@@ -174,7 +239,12 @@ function getAudioContextClass(): typeof AudioContext | undefined {
     `,
   ],
 })
+<<<<<<< HEAD
 export class IncomingCallModalComponent implements OnDestroy {
+=======
+export class IncomingCallModalComponent {
+  /** Input: The incoming call invitation data */
+>>>>>>> origin/main
   callData = input<IncomingCallData | null>(null);
   ringtoneUrl = input<string>('/assets/audio/ringtone.mp3');
   acceptCall = output<IncomingCallData>();
@@ -182,6 +252,7 @@ export class IncomingCallModalComponent implements OnDestroy {
 
   private ringtoneAudioRef = viewChild<ElementRef<HTMLAudioElement>>('ringtoneAudio');
 
+  private destroyRef = inject(DestroyRef);
   private audioContext: AudioContext | null = null;
   private oscillator: OscillatorNode | null = null;
   private gainNode: GainNode | null = null;
@@ -194,6 +265,11 @@ export class IncomingCallModalComponent implements OnDestroy {
       } else {
         this.stopRingtone();
       }
+    });
+
+    // Ensure ringtone is stopped when component is destroyed
+    this.destroyRef.onDestroy(() => {
+      this.stopRingtone();
     });
   }
 
@@ -279,9 +355,5 @@ export class IncomingCallModalComponent implements OnDestroy {
       this.stopRingtone();
       this.declineCall.emit(data);
     }
-  }
-
-  ngOnDestroy(): void {
-    this.stopRingtone();
   }
 }

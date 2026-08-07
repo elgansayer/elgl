@@ -25,11 +25,12 @@ import {
 import { LivekitService } from '../../services/livekit.service';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
+import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-video-call',
-  imports: [AppButtonSecondaryComponent, AppGradientButtonComponent, TranslatePipe],
+  imports: [AppButtonSecondaryComponent, AppGradientButtonComponent, LiveChatOverlayComponent, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 bg-black flex flex-col">
       <!-- Remote Video (full screen background) -->
@@ -94,6 +95,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <div class="absolute top-4 start-4 text-white/80 text-sm font-mono">
           {{ callDuration() }}
         </div>
+
+        <!-- Live chat overlay over host video stream -->
+        <app-live-chat-overlay
+          [roomId]="roomName()"
+        ></app-live-chat-overlay>
       </div>
 
       <!-- Controls bar -->
