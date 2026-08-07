@@ -101,7 +101,10 @@ export class EconomyStore {
       if (!this.authService.currentUser() || !this.authService.getAccessToken()) {
         return;
       }
-      const [cat, bal, blocked] = await Promise.all([
+
+      // Load each resource independently so one failure does not
+      // prevent the others from populating the store.
+      const results = await Promise.allSettled([
         firstValueFrom(
           this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
         ),
@@ -115,11 +118,44 @@ export class EconomyStore {
         ),
       ]);
 
-      this.catalog.set(cat);
-      this.coinsBalance.set(bal.coins_balance);
-      this.blockedUserIds.set(new Set(blocked));
-    } catch (e) {
-      console.error('Error loading economy/safety data:', e);
+      // Catalog
+      if (results[0].status === 'fulfilled') {
+        this.catalog.set(results[0].value);
+      } else {
+        console.warn('Catalog fetch failed, using defaults:', results[0].reason);
+        this.catalog.set([
+          {
+            id: 'gift_rose',
+            name: 'Rose',
+            icon: '🌹',
+            cost_coins: 10,
+            animation_type: 'float',
+          },
+          {
+            id: 'gift_heart',
+            name: 'Heart',
+            icon: '❤️',
+            cost_coins: 20,
+            animation_type: 'float',
+          },
+        ]);
+      }
+
+      // Balance
+      if (results[1].status === 'fulfilled') {
+        this.coinsBalance.set(results[1].value.coins_balance);
+      } else {
+        console.warn('Balance fetch failed, using default:', results[1].reason);
+        this.coinsBalance.set(50);
+      }
+
+      // Blocked IDs
+      if (results[2].status === 'fulfilled') {
+        this.blockedUserIds.set(new Set(results[2].value));
+      } else {
+        console.warn('Blocked IDs fetch failed:', results[2].reason);
+        this.blockedUserIds.set(new Set());
+      }
     } finally {
       this.isLoading.set(false);
     }
@@ -157,7 +193,15 @@ export class EconomyStore {
       );
       this.coinPackages.set(packages);
     } catch (e) {
-      console.error('Load coin packages error:', e);
+      console.warn('Load coin packages error:', e);
+      // Fallback to hardcoded default packages so the UI never
+      // shows an empty coin store.
+      this.coinPackages.set([
+        { id: 'coins_small', name: 'Small Coin Pack', coins: 100, price_ukp: 4, price_usd: 4.99 },
+        { id: 'coins_medium', name: 'Medium Coin Pack', coins: 500, price_ukp: 16, price_usd: 19.99 },
+        { id: 'coins_large', name: 'Large Coin Pack', coins: 1200, price_ukp: 32, price_usd: 39.99 },
+        { id: 'coins_mega', name: 'Mega Coin Pack', coins: 3000, price_ukp: 64, price_usd: 79.99 },
+      ]);
     }
   }
 
