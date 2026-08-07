@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, resource } from '@angular/core';
+import { Component, inject, signal, resource } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
 import { I18nService } from '../../../services/i18n.service';
 import {

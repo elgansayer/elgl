@@ -124,10 +124,11 @@ import { ModerationItem, ModerationService } from './moderation.service';
                 {{ 'moderation.analyse' | t }}
               </button>
             </div>
+          </div>
           } @empty {
             <p class="text-slate-500">{{ 'moderation.empty' | t }}</p>
           }
-          </div>
+        </div>
         }
       </div>
     </div>

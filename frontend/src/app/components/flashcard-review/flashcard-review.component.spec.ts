@@ -62,7 +62,6 @@ describe('FlashcardReviewComponent', () => {
 
   it('should render progress bar with ARIA attributes', () => {
     const fixture = TestBed.createComponent(FlashcardReviewComponent);
-    const component = fixture.componentInstance;
     // Override the reviewCards computed by providing cards input
     TestBed.flushEffects?.();
     fixture.detectChanges();
@@ -78,7 +77,6 @@ describe('FlashcardReviewComponent', () => {
     const fixture = TestBed.createComponent(FlashcardReviewComponent);
     fixture.detectChanges();
 
-    const card = fixture.nativeElement.querySelector('.flip-card');
     // No card shown when empty, just verify component renders without error
     expect(fixture.componentInstance).toBeTruthy();
   });
