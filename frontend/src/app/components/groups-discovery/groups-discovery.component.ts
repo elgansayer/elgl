@@ -1,6 +1,9 @@
-import {Component, signal} from '@angular/core';import { CommonModule } from '@angular/common';
+import { Component, inject, signal, resource } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 interface DiscoverableGroup {
@@ -27,7 +30,7 @@ interface DiscoverableGroup {
         <div class="text-slate-400">{{ 'loading' | t }}</div>
       } @else {
         <div class="space-y-3">
-          @for (group of groups(); track group.id) {
+          @for (group of items(); track group.id) {
             <div class="bg-slate-800 p-3 rounded-lg flex justify-between items-center">
               <div>
                 <span class="text-white font-semibold">{{ group.name | sanitiseHtml }}</span>
@@ -68,42 +71,39 @@ interface DiscoverableGroup {
   ],
 })
 export class GroupsDiscoveryComponent {
+  private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
-  protected groups = signal<DiscoverableGroup[]>([]);
-  protected loading = signal(true);
+
   protected error = signal('');
   protected joiningId = signal<string | null>(null);
 
-  constructor() {
-    this.fetchGroups();
-  }
+  protected groupsResource = resource({
+    loader: async (): Promise<DiscoverableGroup[]> => {
+      this.error.set('');
+      try {
+        return await firstValueFrom(
+          this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/groups/discoverable`)
+        );
+      } catch {
+        this.error.set('Failed to load groups');
+        return [];
+      }
+    },
+  });
 
-  async fetchGroups(): Promise<void> {
-    try {
-      const data = await fetch(`${this.apiUrl}/groups/discoverable`).then(
-        (r) => r.json(),
-      );
-      this.groups.set(data);
-    } catch {
-      this.error.set('Failed to load groups');
-    } finally {
-      this.loading.set(false);
-    }
-  }
+  protected readonly loading = this.groupsResource.isLoading;
+  protected readonly items = this.groupsResource.value;
 
   async joinGroup(groupId: string): Promise<void> {
     this.joiningId.set(groupId);
     try {
-      const res = await fetch(`${this.apiUrl}/groups/${groupId}/join`, {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to join');
-      }
-      await this.fetchGroups();
+      await firstValueFrom(
+        this.http.post<unknown>(`${this.apiUrl}/groups/${groupId}/join`, {})
+      );
+      this.groupsResource.reload();
     } catch (e: unknown) {
-      this.error.set(e instanceof Error ? e.message : 'Failed to join');
+      const message = e instanceof Error ? e.message : 'Failed to join';
+      this.error.set(message);
     } finally {
       this.joiningId.set(null);
     }

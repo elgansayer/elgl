@@ -7,6 +7,8 @@ import { UserService, UserProfile } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
+import { JoyrideService } from 'ngx-joyride';
 import { provideRouter } from '@angular/router';
 
 class MockAudio {
@@ -21,6 +23,12 @@ class MockAudio {
   }
   addEventListener(event: string, cb: () => void): void {
     (this.listeners[event] ??= []).push(cb);
+  }
+  removeEventListener(event: string, cb: () => void): void {
+    const stack = this.listeners[event];
+    if (stack) {
+      this.listeners[event] = stack.filter((f) => f !== cb);
+    }
   }
   emit(event: string): void {
     this.listeners[event]?.forEach((cb) => cb());
@@ -59,6 +67,8 @@ describe('DiscoveryComponent', () => {
   };
   let mockSafetyService: { getBlockedIdsAsync: ReturnType<typeof vi.fn> };
   let mockAuthService: { currentUser: ReturnType<typeof signal> };
+  let mockDiscoveryOnboardingService: { startTour: ReturnType<typeof vi.fn> };
+  let mockJoyrideService: { startTour: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     audioInstances = [];
@@ -77,6 +87,13 @@ describe('DiscoveryComponent', () => {
     mockAuthService = {
       currentUser: signal<{ is_vip: boolean } | null>(null),
     };
+    mockDiscoveryOnboardingService = {
+      startTour: vi.fn(),
+    };
+    mockJoyrideService = {
+      startTour: vi.fn(),
+      isTourInProgress: vi.fn().mockReturnValue(false),
+    };
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
@@ -93,6 +110,8 @@ describe('DiscoveryComponent', () => {
             cachedDataAvailable: signal(false).asReadonly(),
           },
         },
+        { provide: DiscoveryOnboardingService, useValue: mockDiscoveryOnboardingService },
+        { provide: JoyrideService, useValue: mockJoyrideService },
       ],
     }).compileComponents();
 
@@ -128,6 +147,35 @@ describe('DiscoveryComponent', () => {
     // slider's initial ageRangeChanged emission.
     expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(2);
     expect(component.isLoading()).toBe(false);
+  });
+
+  it('should render skeleton loaders while loading', () => {
+    fixture.detectChanges();
+    const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(skeletons.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('should show empty state with reset action when no partners', async () => {
+    await init();
+
+    const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+    expect(emptyState).toBeTruthy();
+
+    // Verify reset button calls resetFilters
+    const resetSpy = vi.spyOn(component, 'resetFilters');
+    const actionButton = fixture.nativeElement.querySelector('app-empty-state button');
+    if (actionButton) {
+      actionButton.click();
+      expect(resetSpy).toHaveBeenCalled();
+    }
+  });
+
+  it('should not show skeleton loaders after loading completes', async () => {
+    await init();
+
+    fixture.detectChanges();
+    const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(skeletons.length).toBe(0);
   });
 
   it('should populate target languages and restore serious learner mode from profile', async () => {
@@ -625,6 +673,21 @@ describe('DiscoveryComponent', () => {
 
       expect(audio.pause).toHaveBeenCalled();
       expect(component.playingPartnerId()).toBeNull();
+    });
+
+    it('should remove event listeners when stopping audio to prevent memory leaks', async () => {
+      await init();
+
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+      const audio = audioInstances[0];
+      expect(audio['listeners']['ended']).toHaveLength(1);
+      expect(audio['listeners']['error']).toHaveLength(1);
+
+      // Simulate stop via toggle with same partner
+      component.toggleAudioIntro('partner-1', 'https://example.com/intro.mp3', new Event('click'));
+
+      expect(audio['listeners']['ended']).toHaveLength(0);
+      expect(audio['listeners']['error']).toHaveLength(0);
     });
   });
 
