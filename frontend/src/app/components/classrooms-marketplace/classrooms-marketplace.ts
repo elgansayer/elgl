@@ -9,6 +9,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { JoyrideModule } from 'ngx-joyride';
+import { withRetry } from '../../services/http-retry';
 import { firstValueFrom, interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
@@ -70,11 +71,14 @@ export class ClassroomsMarketplace implements OnInit {
   async loadRooms(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const list = await firstValueFrom(
-        this.http.get<AudioRoomRecord[]>(
-          `${this.baseUrl}/list`,
-          { headers: this.getHeaders() },
-        ),
+      const list = await withRetry(
+        () =>
+          firstValueFrom(
+            this.http.get<AudioRoomRecord[]>(
+              `${this.baseUrl}/list`,
+              { headers: this.getHeaders() },
+            ),
+          ),
       );
       this.rooms.set(Array.isArray(list) ? list : []);
     } catch (err: unknown) {
