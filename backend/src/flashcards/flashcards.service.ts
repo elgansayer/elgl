@@ -5,18 +5,7 @@ import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
-<<<<<<< HEAD
 import { withRetry, isRateLimitError } from '../common/retry';
-=======
-import { withRetry } from '../common/retry';
-import { CloudflareCacheService } from '../cloudflare/cache.service';
-import { CACHE_TAG_FLASHCARDS, CACHE_TAG_DUE_REVIEWS } from '../common/cache.interceptor';
-
-const FLASHCARD_LIST_CACHE_PREFIX = 'flashcards:list:';
-const FLASHCARD_LIST_CACHE_TTL = 300; // 5 minutes
-const DUE_REVIEWS_CACHE_PREFIX = 'flashcards:due:';
-const DUE_REVIEWS_CACHE_TTL = 60; // 1 minute
->>>>>>> origin/main
 
 /**
  * Service responsible for flashcard CRUD and SRS (SM-2) scheduling with
@@ -480,7 +469,6 @@ export class FlashcardsService {
     if (level !== undefined && !isNaN(level)) {
       return cards.filter((c) => c.srs_level === level);
     }
-<<<<<<< HEAD
     return cards;
   }
 
@@ -492,42 +480,5 @@ export class FlashcardsService {
         (c.srs_level ?? 0) < 4 &&
         c.next_review_at <= now,
     );
-=======
-    // Delete due reviews cache
-    void redis.del(`${DUE_REVIEWS_CACHE_PREFIX}${userId}`);
-
-    // Also invalidate Cloudflare edge cache for this user's SRS endpoints
-    void this.purgeSrsCache(userId);
-  }
-
-  /**
-   * Purges Cloudflare edge cache for the given user's SRS endpoints
-   * (flashcard list and due reviews). Called after mutations to ensure
-   * users see fresh data immediately.
-   *
-   * Fire-and-forget: failures are logged but do not block the response.
-   */
-  purgeSrsCache(userId: string): void {
-    this.cloudflareCacheService
-      .purgeByCacheTags([
-        `${CACHE_TAG_FLASHCARDS}:${userId}`,
-        `${CACHE_TAG_DUE_REVIEWS}:${userId}`,
-      ])
-      .then((purged) => {
-        this.logger.info(
-          { userId, purged },
-          'Cloudflare edge cache invalidated for SRS',
-        );
-      })
-      .catch((err: unknown) => {
-        this.logger.warn(
-          {
-            userId,
-            error: err instanceof Error ? err.message : 'Unknown error',
-          },
-          'Failed to purge Cloudflare edge cache for SRS',
-        );
-      });
->>>>>>> origin/main
   }
 }
