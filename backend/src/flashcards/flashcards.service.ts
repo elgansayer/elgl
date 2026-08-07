@@ -1,10 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import Redis from 'ioredis';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { withRetry } from '../common/retry';
+
+const FLASHCARD_LIST_CACHE_PREFIX = 'flashcards:list:';
+const FLASHCARD_LIST_CACHE_TTL = 300; // 5 minutes
+const DUE_REVIEWS_CACHE_PREFIX = 'flashcards:due:';
+const DUE_REVIEWS_CACHE_TTL = 60; // 1 minute
 
 @Injectable()
 export class FlashcardsService {
@@ -16,6 +23,10 @@ export class FlashcardsService {
     private readonly metricsService: MetricsService,
   ) {}
 
+  private getRedis(): Redis {
+    return this.supabaseService.getRedisClient();
+  }
+
   async createOrUpdateFlashcard(
     userId: string,
     dto: CreateFlashcardDto,
@@ -23,21 +34,25 @@ export class FlashcardsService {
     const supabase = this.supabaseService.getClient();
     const cleanToken = dto.word_token.toLowerCase().trim();
 
-    const response = await supabase
-      .from('flashcards')
-      .upsert(
-        {
-          user_id: userId,
-          word_token: cleanToken,
-          original_context: dto.original_context ?? null,
-          translation: dto.translation,
-          definition: dto.definition ?? null,
-          pronunciation_url: dto.pronunciation_url ?? null,
-        },
-        { onConflict: 'user_id, word_token' },
-      )
-      .select()
-      .single();
+    const response = await withRetry(
+      () =>
+        supabase
+          .from('flashcards')
+          .upsert(
+            {
+              user_id: userId,
+              word_token: cleanToken,
+              original_context: dto.original_context ?? null,
+              translation: dto.translation,
+              definition: dto.definition ?? null,
+              pronunciation_url: dto.pronunciation_url ?? null,
+            },
+            { onConflict: 'user_id, word_token' },
+          )
+          .select()
+          .single(),
+      { logger: this.logger },
+    );
 
     if (response.error || !response.data) {
       const msg = response.error?.message ?? 'Unknown error';
@@ -47,6 +62,9 @@ export class FlashcardsService {
       );
       throw new Error(`Failed to create/update flashcard: ${msg}`);
     }
+
+    // Invalidate Redis caches for this user's flashcard lists
+    this.invalidateUserFlashcardCaches(userId);
 
     // Award XP for creating a flashcard
     void this.xpService.awardXpForActivity(userId, 'create_flashcard');
@@ -70,12 +88,16 @@ export class FlashcardsService {
     const supabase = this.supabaseService.getClient();
 
     // Fetch current card state to run SM-2 locally (with retry for 429)
-    const { data: current, error: fetchErr } = await supabase
-      .from('flashcards')
-      .select('easiness_factor, repetitions, interval_days')
-      .eq('id', flashcardId)
-      .eq('user_id', userId)
-      .single();
+    const { data: current, error: fetchErr } = await withRetry(
+      () =>
+        supabase
+          .from('flashcards')
+          .select('easiness_factor, repetitions, interval_days')
+          .eq('id', flashcardId)
+          .eq('user_id', userId)
+          .single(),
+      { logger: this.logger },
+    );
 
     if (fetchErr || !current) {
       const msg = fetchErr?.message ?? 'Not found';
@@ -98,19 +120,23 @@ export class FlashcardsService {
     nextReviewAt.setDate(nextReviewAt.getDate() + newInterval);
 
     // Update with retry for HTTP 429 rate limiting
-    const response = await supabase
-      .from('flashcards')
-      .update({
-        srs_level: newSrsLevel,
-        easiness_factor: newEf,
-        repetitions: newRepetitions,
-        interval_days: newInterval,
-        next_review_at: nextReviewAt.toISOString(),
-      })
-      .eq('id', flashcardId)
-      .eq('user_id', userId)
-      .select()
-      .single();
+    const response = await withRetry(
+      () =>
+        supabase
+          .from('flashcards')
+          .update({
+            srs_level: newSrsLevel,
+            easiness_factor: newEf,
+            repetitions: newRepetitions,
+            interval_days: newInterval,
+            next_review_at: nextReviewAt.toISOString(),
+          })
+          .eq('id', flashcardId)
+          .eq('user_id', userId)
+          .select()
+          .single(),
+      { logger: this.logger },
+    );
 
     if (response.error || !response.data) {
       const msg = response.error?.message ?? 'Unknown error';
@@ -120,6 +146,9 @@ export class FlashcardsService {
       );
       throw new Error(`Failed to update SRS review level: ${msg}`);
     }
+
+    // Invalidate Redis caches for this user's flashcard lists
+    this.invalidateUserFlashcardCaches(userId);
 
     // Award XP for reviewing a flashcard
     void this.xpService.awardXpForActivity(userId, 'review_flashcard');
@@ -221,6 +250,28 @@ export class FlashcardsService {
   }
 
   async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+    const cacheKey =
+      level !== undefined && !isNaN(level)
+        ? `${FLASHCARD_LIST_CACHE_PREFIX}${userId}:level:${level}`
+        : `${FLASHCARD_LIST_CACHE_PREFIX}${userId}`;
+
+    // Check Redis cache first
+    const redis = this.getRedis();
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed as Flashcard[];
+        }
+      } catch {
+        this.logger.warn(
+          { cacheKey },
+          'Failed to parse cached flashcard list, falling back to database',
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('flashcards')
@@ -236,10 +287,38 @@ export class FlashcardsService {
     if (response.error || !response.data) {
       return [];
     }
+
+    // Cache the result in Redis
+    void redis.set(
+      cacheKey,
+      JSON.stringify(response.data),
+      'EX',
+      FLASHCARD_LIST_CACHE_TTL,
+    );
+
     return response.data;
   }
 
   async getDueReviews(userId: string): Promise<Flashcard[]> {
+    const cacheKey = `${DUE_REVIEWS_CACHE_PREFIX}${userId}`;
+
+    // Check Redis cache first
+    const redis = this.getRedis();
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed as Flashcard[];
+        }
+      } catch {
+        this.logger.warn(
+          { cacheKey },
+          'Failed to parse cached due reviews, falling back to database',
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('flashcards')
@@ -252,6 +331,36 @@ export class FlashcardsService {
     if (response.error || !response.data) {
       return [];
     }
+
+    // Cache the result in Redis (short TTL since due reviews change frequently)
+    void redis.set(
+      cacheKey,
+      JSON.stringify(response.data),
+      'EX',
+      DUE_REVIEWS_CACHE_TTL,
+    );
+
     return response.data;
+  }
+
+  /**
+   * Invalidates Redis caches related to a user's flashcard state.
+   * Called after any mutation that changes flashcards or SRS levels
+   * (createOrUpdateFlashcard, updateSrsLevel).
+   *
+   * We use a pattern-based approach: delete known cache keys for the user.
+   * Since the level filter creates cache keys like `flashcards:list:{userId}:level:{N}`,
+   * we delete the main list cache plus all possible level-specific caches (levels 0-4).
+   */
+  private invalidateUserFlashcardCaches(userId: string): void {
+    const redis = this.getRedis();
+    // Delete the main flashcard list cache
+    void redis.del(`${FLASHCARD_LIST_CACHE_PREFIX}${userId}`);
+    // Delete all level-specific caches
+    for (let level = 0; level <= 4; level++) {
+      void redis.del(`${FLASHCARD_LIST_CACHE_PREFIX}${userId}:level:${level}`);
+    }
+    // Delete due reviews cache
+    void redis.del(`${DUE_REVIEWS_CACHE_PREFIX}${userId}`);
   }
 }

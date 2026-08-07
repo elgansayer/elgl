@@ -326,6 +326,29 @@ type ResourceLibraryRow = {
   updated_at?: string;
 };
 
+export type ReadingResourceRow = {
+  id: string;
+  title: string;
+  content: string;
+  language: string;
+  difficulty?: string | null;
+  topic?: string | null;
+  source_url?: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReadingProgressRow = {
+  user_id: string;
+  words_read: number;
+  articles_completed: number;
+  total_reading_time_seconds: number;
+  fluency_percentage: number;
+  last_read_at?: string | null;
+  updated_at: string;
+};
+
 export type LessonRow = {
   id: string;
   title: string;
@@ -914,6 +937,18 @@ export interface Database {
         Row: ResourceLibraryRow;
         Insert: Partial<ResourceLibraryRow>;
         Update: Partial<ResourceLibraryRow>;
+        Relationships: [];
+      };
+      reading_resources: {
+        Row: ReadingResourceRow;
+        Insert: Partial<ReadingResourceRow>;
+        Update: Partial<ReadingResourceRow>;
+        Relationships: [];
+      };
+      reading_progress: {
+        Row: ReadingProgressRow;
+        Insert: Partial<ReadingProgressRow>;
+        Update: Partial<ReadingProgressRow>;
         Relationships: [];
       };
       lessons: {
@@ -2013,6 +2048,15 @@ export interface Database {
           serious_only: boolean;
         };
         Returns: unknown[];
+      };
+      upsert_reading_progress: {
+        Args: {
+          p_user_id: string;
+          p_resource_id: string;
+          p_words_read: number;
+          p_duration_seconds: number;
+        };
+        Returns: void;
       };
     };
     location_shares: {
