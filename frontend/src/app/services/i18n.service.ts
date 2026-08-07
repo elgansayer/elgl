@@ -891,6 +891,11 @@ export class I18nService {
     'readingEngine.topic.culture': 'Culture',
     'readingEngine.topic.travel': 'Travel',
     'readingEngine.topic.technology': 'Technology',
+    'readingEngine.offlineBanner': 'You are offline. Showing cached content.',
+    'readingEngine.offlineCachedInfo': '{{count}} articles available offline',
+    'readingEngine.vocabularyOfflineNote': 'Vocabulary shown from local cache while offline. Some features may be limited.',
+    'readingEngine.historyOfflineNote': 'History shown from locally stored reading activity.',
+    'readingEngine.historyListAriaLabel': 'Reading history list',
 
     'vocabDisplay.title': 'Vocabulary from your interests',
     'vocabDisplay.refresh': 'Refresh',
