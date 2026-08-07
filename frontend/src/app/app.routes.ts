@@ -190,6 +190,14 @@ export const routes: Routes = [
     title: 'Notification Customisation - HelloTalk',
   },
   {
+    path: 'settings/message-filters',
+    loadComponent: () =>
+      import(
+        './pages/settings/message-filter-settings/message-filter-settings.component'
+      ).then((m) => m.MessageFilterSettingsComponent),
+    title: 'Message Filters - HelloTalk',
+  },
+  {
     path: 'settings/appearance',
     loadComponent: () =>
       import('./pages/settings/appearance-settings/appearance-settings.component').then(
