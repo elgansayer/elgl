@@ -106,6 +106,11 @@ export class EconomyStore {
   readonly hasLoadedOnce = signal<boolean>(false);
   readonly isOnline = this.networkStatus.isOnline;
 
+  /** Whether the coin economy is operating in degraded mode (some features limited). */
+  readonly isDegraded = signal<boolean>(false);
+  /** List of currently degraded feature identifiers reported by the backend. */
+  readonly degradedFeatures = signal<string[]>([]);
+
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {
@@ -246,6 +251,28 @@ export class EconomyStore {
           this.coinPackages.set(cached);
         }
       }
+    }
+  }
+
+  /**
+   * Checks the economy health endpoint and updates degradation state.
+   * Called periodically or on-demand to detect when backend dependencies
+   * (Redis, Supabase, Stripe, Centrifugo) are degraded/unavailable.
+   */
+  async checkEconomyHealth(): Promise<void> {
+    try {
+      const health = await firstValueFrom(
+        this.http.get<{
+          overall: 'healthy' | 'degraded' | 'unavailable';
+          degradedFeatures: string[];
+        }>(`${this.baseUrl}/health`),
+      );
+      this.isDegraded.set(health.overall !== 'healthy');
+      this.degradedFeatures.set(health.degradedFeatures ?? []);
+    } catch {
+      // If the health endpoint itself is unreachable, we are in degraded mode
+      this.isDegraded.set(true);
+      this.degradedFeatures.set(['health-endpoint-unreachable']);
     }
   }
 

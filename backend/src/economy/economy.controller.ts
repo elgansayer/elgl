@@ -8,7 +8,7 @@ import {
   UseInterceptors,
   UseFilters,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -25,6 +25,7 @@ import {
   UnlockStickerPackDto,
 } from './dto/economy.dto';
 import { EconomyService } from './economy.service';
+import { CoinEconomyHealthService } from './coin-economy-health.service';
 import {
   CacheControlInterceptor,
   CACHE_PUBLIC_LONG,
@@ -45,7 +46,10 @@ import {
 export class EconomyController {
   private readonly logger = new Logger(EconomyController.name);
 
-  constructor(private readonly economyService: EconomyService) {}
+  constructor(
+    private readonly economyService: EconomyService,
+    private readonly healthService: CoinEconomyHealthService,
+  ) {}
 
   /**
    * Virtual gift catalog: public, long-lived CDN cache.
@@ -417,5 +421,47 @@ export class EconomyController {
   ) {
     if (!user) return null;
     return await this.economyService.unlockStickerPack(user.id, dto);
+  }
+
+  /**
+   * Economy health check: returns the health status of all virtual coin
+   * economy dependencies (Redis, Supabase, Stripe, Centrifugo) plus any
+   * degraded features. This endpoint does NOT require authentication so
+   * monitoring systems (Prometheus, Grafana) can poll it.
+   */
+  @Get('health')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Get coin economy health status',
+    description:
+      'Returns the health status of all economy dependencies (Redis, Supabase, Stripe, Centrifugo) ' +
+      'and lists any degraded features. This endpoint is unauthenticated for monitoring integration.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Economy health snapshot.',
+    schema: {
+      type: 'object',
+      properties: {
+        overall: { type: 'string', example: 'healthy' },
+        timestamp: { type: 'string', example: '2026-08-07T12:00:00.000Z' },
+        dependencies: {
+          type: 'object',
+          properties: {
+            redis: { type: 'object' },
+            supabase: { type: 'object' },
+            stripe: { type: 'object' },
+            centrifugo: { type: 'object' },
+          },
+        },
+        degradedFeatures: { type: 'array', items: { type: 'string' } },
+        uptimeSeconds: { type: 'number', example: 3600 },
+      },
+    },
+  })
+  async getHealth() {
+    return this.healthService.getHealthSnapshot();
   }
 }
