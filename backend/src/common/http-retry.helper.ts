@@ -15,6 +15,13 @@ export interface RetryOptions {
   logger?: RetryLogger;
 }
 
+/** Default retry configuration for Virtual Coin Economy purchase flows. */
+export const ECONOMY_RETRY_OPTIONS: RetryOptions = {
+  maxRetries: 5,
+  baseDelayMs: 1000,
+  maxTotalDelayMs: 60_000,
+};
+
 /**
  * Executes an async operation with exponential backoff when HTTP 429
  * (Too Many Requests) is encountered. Non-429 errors are thrown immediately

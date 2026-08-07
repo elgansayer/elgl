@@ -19,7 +19,10 @@ import {
   UnlockStickerPackDto,
 } from './dto/economy.dto';
 import { sanitiseEconomyData } from './sanitise-economy.helper';
-import { withExponentialBackoff } from '../common/http-retry.helper';
+import {
+  withExponentialBackoff,
+  ECONOMY_RETRY_OPTIONS,
+} from '../common/http-retry.helper';
 
 export interface VirtualGiftRow {
   id: string;
