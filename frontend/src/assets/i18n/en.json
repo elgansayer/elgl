@@ -1842,5 +1842,16 @@
   "escrow.status.disputed": "Disputed",
   "escrow.status.cancelled": "Cancelled",
   "economy.offlinePurchaseUnavailable": "Purchases are not available while offline. Please check your internet connection.",
-  "economy.offlineGiftQueued": "Gift has been queued and will be sent when your connection is restored."
+  "economy.offlineGiftQueued": "Gift has been queued and will be sent when your connection is restored.",
+  "classrooms.emptyIcon": "📚",
+  "classrooms.emptyTitle": "No tutors available",
+  "classrooms.emptyDescription": "Check back soon for new tutors joining the marketplace.",
+  "classrooms.videoThumbnailAlt": "Video thumbnail for {{name}}",
+  "classrooms.avatarAlt": "Avatar for {{name}}",
+  "classrooms.playIcon": "▶",
+  "classrooms.ratingAria": "Rating {{rating}} out of 5 from {{count}} reviews",
+  "classrooms.fullStar": "★",
+  "classrooms.emptyStar": "☆",
+  "classrooms.hourlyRate": "{{gbp}} UKP / {{usd}} USD per hour",
+  "classrooms.bookNow": "Book now"
 }
