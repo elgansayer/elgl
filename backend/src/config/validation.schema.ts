@@ -52,6 +52,11 @@ export const validationSchema = Joi.object({
   CENTRIFUGO_URL: Joi.string().uri().default(testDefaults.CENTRIFUGO_URL),
   CENTRIFUGO_API_KEY: Joi.string().default(testDefaults.CENTRIFUGO_API_KEY),
   CENTRIFUGO_SECRET: Joi.string().default(testDefaults.CENTRIFUGO_SECRET),
+  CENTRIFUGO_CONNECTION_RATE_LIMIT: Joi.number().integer().min(1).default(5),
+  CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC: Joi.number()
+    .integer()
+    .min(1)
+    .default(60),
   LIVEKIT_URL: Joi.string().default(testDefaults.LIVEKIT_URL),
   LIVEKIT_API_KEY: Joi.string().default(testDefaults.LIVEKIT_API_KEY),
   LIVEKIT_SECRET: Joi.string().default(testDefaults.LIVEKIT_SECRET),
