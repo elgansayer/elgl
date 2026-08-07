@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Component, inject, signal, computed, input } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -5,14 +6,30 @@ import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+=======
+import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
+import { I18nService } from '../../services/i18n.service';
+import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
+>>>>>>> origin/main
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-flashcard-review',
   standalone: true,
+<<<<<<< HEAD
   imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+=======
+  imports: [TranslatePipe, SrsErrorBoundaryComponent],
+>>>>>>> origin/main
   template: `
+    <app-srs-error-boundary
+      [context]="errorContext()"
+      [showReportButton]="true"
+      (retry)="handleRetry()"
+    >
     <div class="mx-auto max-w-md space-y-6 pb-20 pt-4">
       <!-- Header with progress -->
       <section class="app-card app-padded space-y-3">
@@ -180,6 +197,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
         }
       }
     </div>
+    </app-srs-error-boundary>
   `,
   styles: [
     `
@@ -299,7 +317,13 @@ type ReviewGrade = 'again' | 'good' | 'known';
 export class FlashcardReviewComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
+<<<<<<< HEAD
   private router = inject(Router);
+=======
+  private errorHandler = inject(ErrorHandler);
+
+  readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
+>>>>>>> origin/main
 
   /** Optional input: a specific set of flashcards to review. If omitted, uses pending review cards from store. */
   readonly cards = input<Flashcard[]>([]);
@@ -339,8 +363,25 @@ export class FlashcardReviewComponent {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   constructor() {}
 =======
+=======
+  readonly errorContext = computed<SrsErrorContext>(() => ({
+    component: 'flashcard-review',
+    operation: 'review',
+    cardCount: this.reviewCards().length,
+    currentIndex: this.currentIndex(),
+    srsLevel: this.currentCard()?.srs_level,
+  }));
+
+  handleRetry(): void {
+    this.restart();
+    this.vocabStore.loadAllFlashcards().catch(() => undefined);
+    this.vocabStore.loadDueReviews().catch(() => undefined);
+  }
+
+>>>>>>> origin/main
   constructor() {
     // After card changes, return focus to flashcard for keyboard navigation
     effect(() => {
