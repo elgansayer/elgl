@@ -97,6 +97,39 @@ export class I18nService {
     'common.unknownSender': 'Unknown',
     'common.languagePartner': 'Language Partner',
     'common.loading': 'Loading...',
+    'common.cancel': 'Cancel',
+    'common.save': 'Save',
+    'common.upload': 'Upload',
+    'common.uploading': 'Uploading...',
+    'common.crop': 'Crop',
+    'common.applyCrop': 'Apply Crop',
+    'common.preview': 'Preview:',
+
+    // Cover Photo
+    'coverPhoto.changeCover': 'Change Cover Photo',
+    'coverPhoto.addCover': 'Add Cover Photo',
+    'coverPhoto.crop': 'Crop Cover Photo',
+    'coverPhoto.save': 'Save Cover Photo',
+    'coverPhoto.cancel': 'Cancel',
+    'coverPhoto.previewAlt': 'Cover preview',
+    'coverPhoto.uploadLabel': 'Tap to upload a cover photo',
+    'coverPhoto.supportedFormats': 'JPEG, PNG or WebP',
+
+    // Profile Edit
+    'profileEdit.title': 'Edit Profile',
+    'profileEdit.coverPhoto': 'Cover Photo',
+    'profileEdit.changeCover': 'Change Cover',
+    'profileEdit.displayName': 'Display Name',
+    'profileEdit.gender': 'Gender',
+    'profileEdit.genderNone': 'Prefer not to say',
+    'profileEdit.genderMale': 'Male',
+    'profileEdit.genderFemale': 'Female',
+    'profileEdit.genderOther': 'Other',
+    'profileEdit.businessName': 'Business Name',
+    'profileEdit.businessHours': 'Business Hours',
+    'profileEdit.websiteUrl': 'Website URL',
+    'profileEdit.save': 'Save Profile',
+    'profileEdit.uploadFailed': 'Failed to upload cover photo',
     'studyStreak.daily': 'Daily Study Streak',
     'studyStreak.checkin': 'Check In',
     'studyStreak.day': 'Day',
@@ -153,12 +186,14 @@ export class I18nService {
     'nav.lingqReader': '📚 LingQ Reader',
     'nav.favourites': '⭐ Favourites',
     'nav.developerApi': '⚡ Developer API',
+    'nav.leaderboard': '🏆 Top Correctors',
     'nav.profile': '👤 Me',
     'common.coinsBalance': '{{coins}} Coins',
     'common.vipDevLabel': '20 UKP / $26 USD Dev VIP',
     'common.vipStdLabel': '8 UKP / $10 USD VIP',
     'common.signOut': 'Sign out',
     'common.demoActive': 'Demo / Mock Auth Active',
+    'gift.broadcastAnnouncement': '{{sender}} sent a {{giftName}} gift',
     'gift.broadcastTitle': '{{giftName}} Broadcast!',
     'gift.broadcastDesc': '🎉 {{sender}} gifted {{receiver}} a {{giftName}}! (🪙 {{cost}} Coins)',
 
@@ -795,6 +830,7 @@ export class I18nService {
     'privacy.incognitoVisitsHint': 'Visit other profiles without appearing in their visitor list.',
     'privacy.incognitoVisitsVipRequired':
       'Upgrade to VIP (8 UKP / $10 USD per month) to browse profiles incognito.',
+    'profile.coverUpdated': 'Cover photo updated successfully!',
     'profile.visitorsBtn': 'Visitors',
     'profile.audioIntroBtn': 'Audio intro',
     'profile.audioIntroCardTitle': 'Audio Introduction',
@@ -856,6 +892,7 @@ export class I18nService {
     'profile.saveChangesBtn': 'Save changes',
     'profile.updateSuccess': 'Profile updated successfully.',
     'profile.visibilityLabel': 'Who can see my profile',
+    'profile.visibilityDescription': 'Control who can view your profile on HelloTalk.',
     'profile.visibility.everyone': 'Everyone',
     'profile.visibility.vipsOnly': 'VIPs only',
     'profile.visibility.hidden': 'Hidden',
@@ -1138,6 +1175,9 @@ export class I18nService {
     'voip.dismiss': 'Dismiss',
     'voip.incomingVoiceCall': 'Incoming voice call...',
     'voip.incomingVideoCall': 'Incoming video call...',
+    'voip.decline': 'Decline',
+    'voip.accept': 'Accept',
+    'voip.callerAvatar': 'Caller avatar',
     'common.unknownCaller': 'Unknown Caller',
 
     // Admin Portal (User Management)
@@ -1406,6 +1446,8 @@ export class I18nService {
     // Language Settings Page
     'languageSettings.title': 'Language Settings',
     'languageSettings.description': 'Choose the UI language independently of your study target.',
+    'languageSettings.interfaceLanguage': 'Interface Language',
+    'languageSettings.interfaceLanguageDescription': 'This changes the language used for buttons, menus, and labels throughout the app. It does not affect your study languages.',
     'languageSettings.selectLabel': 'Select interface language',
     'languageSettings.applyBtn': 'Apply',
     'languageSettings.currentLang': 'Current: {{name}}',
@@ -1535,8 +1577,26 @@ export class I18nService {
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
 
-    // Link Preview
+// Link Preview
     'linkPreview.openLink': 'Open link: {title}',
+
+    // Diagnostic Quiz
+    'diagnosticQuiz.title': 'Language Level Diagnostic',
+    'diagnosticQuiz.loading': 'Loading your diagnostic quiz...',
+    'diagnosticQuiz.errorTitle': 'Unable to load quiz',
+    'diagnosticQuiz.errorDescription': 'Please check your connection and try again.',
+    'diagnosticQuiz.retry': 'Try again',
+    'diagnosticQuiz.previous': 'Previous',
+    'diagnosticQuiz.next': 'Next',
+    'diagnosticQuiz.submit': 'Finish',
+    'diagnosticQuiz.submitError': 'Could not save quiz results.',
+    'diagnosticQuiz.empty': 'No questions available for this language yet.',
+    'diagnosticQuiz.questionCounter': 'Question {{current}} of {{total}}',
+    'diagnosticQuiz.optionLabel': 'Option {{number}}: {{text}}',
+    'diagnosticQuiz.resultTitle': 'Your Diagnostic Result',
+    'diagnosticQuiz.scoreLabel': 'Score: {{score}} / {{maxScore}}',
+    'diagnosticQuiz.levelLabel': 'Suggested Level: {{level}}',
+    'diagnosticQuiz.resultAction': 'Continue to onboarding',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

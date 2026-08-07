@@ -328,6 +328,12 @@ export const routes: Routes = [
     title: 'Onboarding - HelloTalk',
   },
   {
+    path: 'diagnostic-quiz',
+    loadComponent: () =>
+      import('./components/diagnostic-quiz/diagnostic-quiz.component').then((m) => m.DiagnosticQuizComponent),
+    title: 'Language Level Diagnostic - HelloTalk',
+  },
+  {
     path: 'forgot-password',
     loadComponent: () =>
       import('./components/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
