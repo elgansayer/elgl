@@ -28,6 +28,7 @@ import {
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { EscrowService } from './escrow.service';
+import { CrashReportService } from './crash-report.service';
 import {
   CreateEscrowHoldDto,
   ReleaseEscrowDto,

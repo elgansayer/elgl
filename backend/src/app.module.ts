@@ -75,6 +75,7 @@ import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.s
 import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
+import { EscrowModule } from './escrow/escrow.module';
 
 @Module({
   imports: [

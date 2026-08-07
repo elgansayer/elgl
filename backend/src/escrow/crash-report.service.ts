@@ -6,6 +6,9 @@ import {
   CrashReport,
 } from './interfaces/crash-report.interface';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type AnyRecord = Record<string, any>;
+
 @Injectable()
 export class CrashReportService {
   constructor(
@@ -33,7 +36,7 @@ export class CrashReportService {
     );
 
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getClient() as unknown as { from: (table: string) => AnyRecord };
 
       const { data, error } = await supabase
         .from('escrow_crash_reports')
@@ -58,18 +61,19 @@ export class CrashReportService {
         return null;
       }
 
+      const d = data as AnyRecord;
       return {
-        id: data.id,
-        operation: data.operation,
-        escrow_id: data.escrow_id,
-        user_id: data.user_id,
-        error_type: data.error_type,
-        error_message: data.error_message,
-        stack_trace: data.stack_trace,
-        context: data.context,
-        created_at: data.created_at,
-        acknowledged: data.acknowledged ?? false,
-        resolved_at: data.resolved_at ?? null,
+        id: d.id,
+        operation: d.operation,
+        escrow_id: d.escrow_id,
+        user_id: d.user_id,
+        error_type: d.error_type,
+        error_message: d.error_message,
+        stack_trace: d.stack_trace,
+        context: d.context,
+        created_at: d.created_at,
+        acknowledged: d.acknowledged ?? false,
+        resolved_at: d.resolved_at ?? null,
       };
     } catch (persistError) {
       this.logger.error(
@@ -85,7 +89,7 @@ export class CrashReportService {
    */
   async listUnresolved(limit = 50): Promise<CrashReport[]> {
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getClient() as unknown as { from: (table: string) => AnyRecord };
 
       const { data, error } = await supabase
         .from('escrow_crash_reports')
@@ -103,7 +107,7 @@ export class CrashReportService {
       }
 
       return (data as unknown[]).map((row: unknown) => {
-        const r = row as Record<string, unknown>;
+        const r = row as AnyRecord;
         return {
           id: String(r.id ?? ''),
           operation: String(r.operation ?? ''),
@@ -132,7 +136,7 @@ export class CrashReportService {
    */
   async acknowledgeReport(reportId: string): Promise<boolean> {
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getClient() as unknown as { from: (table: string) => AnyRecord };
 
       const { error } = await supabase
         .from('escrow_crash_reports')
@@ -162,7 +166,7 @@ export class CrashReportService {
    */
   async resolveReport(reportId: string): Promise<boolean> {
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.getClient() as unknown as { from: (table: string) => AnyRecord };
 
       const { error } = await supabase
         .from('escrow_crash_reports')

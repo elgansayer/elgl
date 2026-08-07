@@ -78,8 +78,6 @@ export type UsersRow = {
   deletion_requested_at?: string | null;
   deletion_grace_days?: number | null;
   is_deletion_pending?: boolean | null;
-  is_deleted?: boolean | null;
-  deleted_at?: string | null;
 };
 
 type AudioRoomsRow = {

@@ -39,6 +39,73 @@ strictPurify.setConfig({
  * The generic signature preserves the caller's type without requiring
  * type assertions at the call site.
  */
+/** Purchase record shape expected by scrubCoinPurchasesForArchive. */
+interface PurchaseRecord {
+  id?: string;
+  receipt_token?: string | null;
+  transaction_id?: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Redacts a single receipt token, preserving only the last 4 characters
+ * for tokens >= 8 chars. Shorter tokens are fully redacted.
+ */
+export function scrubReceiptToken(
+  token: string | null | undefined,
+): string | null | undefined {
+  if (token === null || token === undefined) {
+    return token;
+  }
+  if (token.length === 0) {
+    return '';
+  }
+  if (token.length < 8) {
+    return '[REDACTED-SHORT-TOKEN]';
+  }
+  return '***...' + token.slice(-4);
+}
+
+/**
+ * Scrubs a single coin purchase record, redacting receipt_token and
+ * transaction_id while leaving the original unmodified.
+ */
+export function scrubCoinPurchaseForArchive(
+  record: PurchaseRecord | null | undefined,
+): PurchaseRecord | null | undefined {
+  if (record === null || record === undefined) {
+    return record;
+  }
+
+  const result = { ...record };
+  if (typeof result.receipt_token === 'string') {
+    result.receipt_token = scrubReceiptToken(result.receipt_token);
+  }
+  if (typeof result.transaction_id === 'string') {
+    result.transaction_id = scrubReceiptToken(result.transaction_id);
+  }
+  return result;
+}
+
+/**
+ * Scrubs an array of coin purchase records for GDPR/data requests.
+ * Non-object / nullable elements are returned unmodified.
+ */
+export function scrubCoinPurchasesForArchive(
+  records: unknown[] | null | undefined,
+): unknown[] | null | undefined {
+  if (records === null || records === undefined) {
+    return records;
+  }
+
+  return records.map((record: unknown) => {
+    if (record === null || typeof record !== 'object') {
+      return record;
+    }
+    return scrubCoinPurchaseForArchive(record as PurchaseRecord);
+  });
+}
+
 export function sanitiseEconomyData<T>(value: T): T {
   if (typeof value === 'string') {
     return strictPurify.sanitize(value) as unknown as T;
