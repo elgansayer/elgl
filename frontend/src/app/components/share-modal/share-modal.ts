@@ -1,6 +1,7 @@
 import { Component, inject, input, output, signal, computed } from '@angular/core';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { A11yClickableDirective } from '../primitives/a11y-clickable';
 
 export interface ShareEntity {
   id: string;
@@ -14,7 +15,7 @@ export interface ShareEntity {
 @Component({
   selector: 'app-share-modal',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, A11yClickableDirective],
   templateUrl: './share-modal.html',
   styleUrls: ['./share-modal.scss']
 })
