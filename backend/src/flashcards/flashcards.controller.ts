@@ -31,6 +31,8 @@ import {
   CACHE_TAG_FLASHCARDS,
   CACHE_TAG_DUE_REVIEWS,
 } from '../common/cache.interceptor';
+import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
+import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
 import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 
@@ -51,6 +53,7 @@ export class FlashcardsController {
     status: 200,
     description: 'SRS health status.',
   })
+  getHealth(): SrsHealthStatus {
     return this.flashcardsService.getHealthStatus();
   }
 
@@ -121,6 +124,7 @@ export class FlashcardsController {
   async updateSrs(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
+    @Body() dto: UpdateSrsDto,
     @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard | null> {
     if (!user) return null;
@@ -153,30 +157,16 @@ export class FlashcardsController {
       'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
     example: '2',
   })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Maximum number of flashcards to return (default 50, max 100).',
-  })
-  @ApiQuery({
-    name: 'offset',
-    required: false,
-    description: 'Number of flashcards to skip for pagination (default 0).',
-  })
   @ApiResponse({ status: 200, description: 'Array of flashcards.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getFlashcards(
     @CurrentUser() user: User | null,
     @Query('level') level?: string,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
     @Res({ passthrough: true }) res?: Response,
   ): Promise<Flashcard[]> {
     if (!user) return [];
     const lvlNum = level !== undefined ? parseInt(level, 10) : undefined;
-    const limitNum = limit !== undefined ? parseInt(limit, 10) : undefined;
-    const offsetNum = offset !== undefined ? parseInt(offset, 10) : undefined;
-    const result = await this.flashcardsService.getFlashcards(user.id, lvlNum, limitNum, offsetNum);
+    const result = await this.flashcardsService.getFlashcards(user.id, lvlNum);
     if (result.some((c) => c.degraded) && res) {
       res.header('X-SRS-Degraded', 'true');
     }
