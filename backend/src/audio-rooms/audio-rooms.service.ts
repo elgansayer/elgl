@@ -989,6 +989,7 @@ export class AudioRoomsService implements OnModuleInit {
     const supabase = this.supabaseService.getClient();
     const profile = await this.usersService.getProfile(userId);
     const speakerName = profile?.display_name ?? 'Speaker';
+    const sanitisedContent = (dto.text_content ?? '').slice(0, 500);
 
     const response = await supabase
       .from('audio_room_captions')
@@ -996,7 +997,7 @@ export class AudioRoomsService implements OnModuleInit {
         room_id: dto.room_id,
         speaker_id: userId,
         speaker_name: speakerName,
-        text_content: dto.text_content,
+        text_content: sanitisedContent,
       })
       .select()
       .single();
@@ -1389,13 +1390,14 @@ export class AudioRoomsService implements OnModuleInit {
     return noteRow;
   }
 
-  async getNotes(roomId: string): Promise<VoiceRoomNote[]> {
+  async getNotes(roomId: string, limit = 50): Promise<VoiceRoomNote[]> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('audio_room_notes')
       .select('*')
       .eq('room_id', roomId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
     if (response.error) {
       throw new Error(`Failed to fetch notes: ${response.error.message}`);
     }

@@ -143,6 +143,16 @@ export class AudioRoomsStore {
 
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
+  private onTrackSubscribedBound: ((
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant,
+  ) => void) | null = null;
+  private onTrackUnsubscribedBound: ((
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant,
+  ) => void) | null = null;
 
   /**
    * Type guard that narrows the raw Centrifugo payload into the expected shape.
@@ -272,9 +282,11 @@ export class AudioRoomsStore {
       if (typeof window !== 'undefined' && !tokenRes.livekit_url.includes('mock')) {
         try {
           this.livekitRoom = new Room();
+          this.onTrackSubscribedBound = this.onTrackSubscribed.bind(this);
+          this.onTrackUnsubscribedBound = this.onTrackUnsubscribed.bind(this);
           this.livekitRoom
-            .on(RoomEvent.TrackSubscribed, this.onTrackSubscribed.bind(this))
-            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed.bind(this));
+            .on(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound)
+            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
           await this.livekitRoom.connect(tokenRes.livekit_url, tokenRes.token);
           this.isConnectedToLiveKit.set(true);
 
@@ -830,6 +842,14 @@ export class AudioRoomsStore {
 
   leaveRoom(): void {
     if (this.livekitRoom) {
+      if (this.onTrackSubscribedBound) {
+        this.livekitRoom.off(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound);
+        this.onTrackSubscribedBound = null;
+      }
+      if (this.onTrackUnsubscribedBound) {
+        this.livekitRoom.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+        this.onTrackUnsubscribedBound = null;
+      }
       this.livekitRoom.disconnect();
       this.livekitRoom = null;
     }
@@ -843,7 +863,7 @@ export class AudioRoomsStore {
     this.stageInfo.set(null);
     this.stageParticipants.set([]);
     this.audienceCount.set(0);
-    this.localVideoTrack.set(null);
+    this.unpublishLocalCamera();
     this.remoteVideoTracksByIdentity.set(new Map());
   }
 }
