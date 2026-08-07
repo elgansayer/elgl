@@ -4,7 +4,6 @@ import { debounceTime } from 'rxjs';
 import { TranslatePipe } from '../../../../services/translate.pipe';
 import { SettingsService } from '../../../../core/services/settings.service';
 import { LanguageLevel, JLPTLevel, ProfileDiscoverySettings } from '../../../../core/models/settings.model';
-import template from './profile-settings.component.html?raw';
 
 function isHTMLInputElement(element: EventTarget | null): element is HTMLInputElement {
   return element !== null && 'value' in element;
@@ -22,7 +21,8 @@ const isJLPTLevel = (level: unknown): level is JLPTLevel => {
   selector: 'app-profile-settings',
   standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe],
-  template: template,
+  templateUrl: './profile-settings.component.html',
+  styleUrls: [],
 })
 export class ProfileSettingsComponent implements OnInit {
   private fb = inject(FormBuilder);
@@ -130,9 +130,20 @@ export class ProfileSettingsComponent implements OnInit {
         genderVal = rawGender;
     }
 
-    const tLangs: Array<{ language: string; level: LanguageLevel; jlptLevel?: JLPTLevel; }> = [];
+    interface TargetLanguageFormValue {
+    language?: unknown;
+    level?: unknown;
+    jlptLevel?: unknown;
+}
+
+function isTargetLanguageFormValue(val: unknown): val is TargetLanguageFormValue {
+    return typeof val === 'object' && val !== null;
+}
+
+const tLangs: Array<{ language: string; level: LanguageLevel; jlptLevel?: JLPTLevel; }> = [];
     if (Array.isArray(formValue.targetLanguages)) {
         for (const lang of formValue.targetLanguages) {
+            if (!isTargetLanguageFormValue(lang)) continue;
             let lvlVal: LanguageLevel = 'Beginner';
             if (isLanguageLevel(lang.level)) {
                 lvlVal = lang.level;

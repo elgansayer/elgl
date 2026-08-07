@@ -131,14 +131,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
               (click)="confirmSend()"
               class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
             >
-              {{
-                isSending()
-                  ? ('giftModal.sendingBtn' | t)
-                  : selectedGift()
-                    ? ('giftModal.sendBtnText'
-                      | t: { icon: selectedGift().icon, cost: selectedGift().cost_coins })
-                    : ('giftModal.selectGift' | t)
-              }}
+              @if (isSending()) {
+                {{ 'giftModal.sendingBtn' | t }}
+              } @else if (selectedGift(); as gift) {
+                {{ 'giftModal.sendBtnText' | t: { icon: gift.icon, cost: gift.cost_coins } }}
+              } @else {
+                {{ 'giftModal.selectGift' | t }}
+              }
             </button>
           }
         </div>

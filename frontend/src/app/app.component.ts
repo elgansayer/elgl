@@ -41,7 +41,6 @@ import { GiftAnimationOverlayComponent } from './components/gift-animation-overl
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 import { NetworkStatusService } from './services/network-status.service';
-import { showToast } from './services/toast.service';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;

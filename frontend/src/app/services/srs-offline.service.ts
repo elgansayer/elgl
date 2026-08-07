@@ -30,7 +30,7 @@ export class SrsOfflineService {
   }
 
   async syncQueuedReviews(
-    processor: (item: SrsReviewQueueItem) => Promise<void>,
+    _processor: (item: SrsReviewQueueItem) => Promise<void>,
   ): Promise<{ synced: number; failed: number }> {
     // Stub: sync queued reviews
     return { synced: 0, failed: 0 };

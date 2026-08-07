@@ -8,7 +8,7 @@ import { EconomyStore } from '../../services/economy.store';
   selector: 'app-tip-host-modal',
   imports: [TranslatePipe, FormsModule],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" (click)="onBackdropClick($event)">
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true" (click)="onBackdropClick($event)" (keydown.escape)="closed.emit()" tabindex="0">
       <div class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">

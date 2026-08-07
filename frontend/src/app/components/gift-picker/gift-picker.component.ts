@@ -95,13 +95,13 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 'giftModal.selectPrompt' | t: { name: receiverName() }
               }}</span>
             }
-            @if (selectedGift()) {
+            @if (selectedGift(); as gift) {
               <div class="flex items-center gap-3 p-3 bg-primary/5 rounded-2xl border border-primary/20">
-                <span class="text-3xl">{{ selectedGift().icon }}</span>
+                <span class="text-3xl">{{ gift.icon }}</span>
                 <div class="flex-1">
-                  <span class="font-bold text-sm text-text-primary block">{{ selectedGift().name }}</span>
+                  <span class="font-bold text-sm text-text-primary block">{{ gift.name }}</span>
                   <span class="text-xs text-text-secondary">{{
-                    'giftModal.giftCost' | t: { cost: selectedGift().cost_coins }
+                    'giftModal.giftCost' | t: { cost: gift.cost_coins }
                   }}</span>
                 </div>
                 <button
@@ -153,14 +153,13 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
               (click)="confirmSend()"
               class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
             >
-              {{
-                isSending()
-                  ? ('giftModal.sendingBtn' | t)
-                  : selectedGift()
-                    ? ('giftModal.sendBtnText'
-                      | t: { icon: selectedGift().icon, cost: selectedGift().cost_coins })
-                    : ('giftModal.selectGift' | t)
-              }}
+              @if (isSending()) {
+                {{ 'giftModal.sendingBtn' | t }}
+              } @else if (selectedGift(); as gift) {
+                {{ 'giftModal.sendBtnText' | t: { icon: gift.icon, cost: gift.cost_coins } }}
+              } @else {
+                {{ 'giftModal.selectGift' | t }}
+              }
             </button>
           }
         </div>

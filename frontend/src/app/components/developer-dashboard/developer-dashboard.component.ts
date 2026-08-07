@@ -1,3 +1,4 @@
+import { UpperCasePipe } from '@angular/common';
 import { Component, inject, signal, resource } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { EconomyStore } from '../../services/economy.store';
@@ -9,7 +10,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-developer-dashboard',
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, UpperCasePipe],
   templateUrl: './developer-dashboard.component.html',
   styleUrls: ['./developer-dashboard.component.scss'],
 })

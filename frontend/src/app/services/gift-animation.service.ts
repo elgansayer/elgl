@@ -1,4 +1,4 @@
-import { Injectable, signal, inject, computed } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 
 export type GiftAnimationType = 'float' | 'confetti' | 'premium' | 'sparkle' | 'hearts';
 

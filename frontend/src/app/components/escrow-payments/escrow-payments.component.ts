@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, AfterViewInit, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -7,8 +7,18 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
+import { JoyrideModule, JoyrideService } from 'ngx-joyride';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
+
+interface JoyrideOptions {
+  steps: string[];
+  startWith?: string;
+  waitingTime?: number;
+  stepDefaultPosition?: string;
+  themeColor?: string;
+  showCounter?: boolean;
+  showPrevButton?: boolean;
+}
 
 type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
 type EscrowServiceType = 'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
@@ -35,7 +45,7 @@ interface EscrowRow {
   imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
   templateUrl: './escrow-payments.component.html',
 })
-export class EscrowPaymentsComponent implements AfterViewInit {
+export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);

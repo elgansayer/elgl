@@ -102,8 +102,8 @@
             </button>
           </div>
 
-          <details class="mt-3" (toggle)="onLoginHistoryToggle(user, $any($event.target).open)">
-            <summary class="cursor-pointer text-sm text-primary select-none" [attr.aria-expanded]="$any($event.target).open ? 'true' : 'false'">
+          <details class="mt-3" #detailsEl (toggle)="onLoginHistoryToggle(user, detailsEl.open)">
+            <summary class="cursor-pointer text-sm text-primary select-none" [attr.aria-expanded]="detailsEl.open ? 'true' : 'false'">
               {{ 'admin.viewLoginHistory' | t }}
             </summary>
 
