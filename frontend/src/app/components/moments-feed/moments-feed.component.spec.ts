@@ -239,8 +239,9 @@ describe('MomentsFeedComponent', () => {
     expect(component.activeWordContext()).toBe('Hello world');
   });
 
-  it('translates a moment inline', async () => {
+  it('translates a moment inline and caches the result', async () => {
     const moment = component.momentsStore.feed().find((m) => m.id === 'm1')!;
+    // First translation - should call API and cache
     await component.toggleInlineTranslation(moment);
 
     expect(mockVocabStore.translateWordOrSentence).toHaveBeenCalledWith(
@@ -248,5 +249,18 @@ describe('MomentsFeedComponent', () => {
       'en',
     );
     expect(moment.translatedText).toBe('Hola');
+    expect(moment.showTranslation).toBe(true);
+
+    // Toggle off - hide translation, but keep cache
+    await component.toggleInlineTranslation(moment);
+    expect(moment.showTranslation).toBe(false);
+    expect(moment.translatedText).toBe('Hola'); // translation preserved
+
+    // Toggle on again - should use cache, no API call
+    mockVocabStore.translateWordOrSentence = vi.fn();
+    await component.toggleInlineTranslation(moment);
+    expect(moment.showTranslation).toBe(true);
+    expect(moment.translatedText).toBe('Hola');
+    expect(mockVocabStore.translateWordOrSentence).not.toHaveBeenCalled();
   });
 });

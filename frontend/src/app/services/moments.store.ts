@@ -46,6 +46,7 @@ export interface MomentRecord {
   comments?: MomentComment[];
   isTranslating?: boolean;
   translatedText?: string;
+  showTranslation?: boolean;
 }
 
 @Injectable({
