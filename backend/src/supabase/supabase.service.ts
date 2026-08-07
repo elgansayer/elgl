@@ -2033,6 +2033,17 @@ export interface Database {
         Row: {
           id: string;
           operation: string;
+<<<<<<< HEAD
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at?: string | null;
+=======
           escrow_id: string | null;
           user_id: string | null;
           error_type: string;
@@ -2042,6 +2053,7 @@ export interface Database {
           created_at: string;
           acknowledged: boolean;
           resolved_at: string | null;
+>>>>>>> origin/main
         };
         Insert: Partial<{
           id?: string;
@@ -2052,9 +2064,15 @@ export interface Database {
           error_message: string;
           stack_trace?: string | null;
           context?: Record<string, unknown> | null;
+<<<<<<< HEAD
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+          created_at?: string;
+=======
           created_at?: string;
           acknowledged?: boolean;
           resolved_at?: string | null;
+>>>>>>> origin/main
         }>;
         Update: Partial<{
           operation?: string;

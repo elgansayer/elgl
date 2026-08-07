@@ -185,9 +185,17 @@ export class ModerationService {
             }
           }
         }
+<<<<<<< HEAD
+
+        return items;
+      }
+
+      return items.filter((item) => item.reported_user != null);
+=======
       }
 
       return items;
+>>>>>>> origin/main
     } catch (err) {
       this.logger.warn(
         err,
