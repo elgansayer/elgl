@@ -1,4 +1,10 @@
-import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import {
   ApiTags,
@@ -21,11 +27,15 @@ import {
   DISCOVERY_CACHE_PUBLIC_SHORT,
   DISCOVERY_CACHE_PRIVATE_SHORT,
 } from './cache.interceptor';
+import {
+  DiscoveryRateLimiterGuard,
+  DiscoveryRateLimit,
+} from './discovery-rate-limiter.guard';
 
 @ApiTags('Discovery')
 @ApiBearerAuth('bearer')
 @Controller('discovery')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, DiscoveryRateLimiterGuard)
 export class DiscoveryController {
   constructor(
     private readonly discoveryService: DiscoveryService,
@@ -37,6 +47,7 @@ export class DiscoveryController {
    */
   @Get('partners')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Find language exchange partners',
     description:
@@ -74,6 +85,9 @@ export class DiscoveryController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+=======
+  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
+>>>>>>> origin/main
   async findPartners(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -93,6 +107,7 @@ export class DiscoveryController {
    */
   @Get('partner-of-week')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG))
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Get Partner of the Week IDs',
     description:
@@ -107,6 +122,9 @@ export class DiscoveryController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+=======
+  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
+>>>>>>> origin/main
   async getPartnerOfWeek(): Promise<string[]> {
     return this.discoveryService.getPartnerOfWeekIds();
   }
@@ -116,6 +134,7 @@ export class DiscoveryController {
    */
   @Get('audio-intros')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Discover audio introductions',
     description:
@@ -149,6 +168,9 @@ export class DiscoveryController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+=======
+  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
+>>>>>>> origin/main
   async getAudioIntros(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -163,6 +185,7 @@ export class DiscoveryController {
    */
   @Get('recent-native-speakers')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Get recently joined native speakers',
     description:
@@ -193,6 +216,9 @@ export class DiscoveryController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+=======
+  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
+>>>>>>> origin/main
   async getRecentNativeSpeakers(
     @CurrentUser() user: User | null,
   ): Promise<UserProfile[]> {
@@ -205,6 +231,7 @@ export class DiscoveryController {
    */
   @Get('spotlight')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Get spotlighted users',
     description:
@@ -235,6 +262,9 @@ export class DiscoveryController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+=======
+  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
+>>>>>>> origin/main
   async getSpotlight(@CurrentUser() user: User | null): Promise<UserProfile[]> {
     if (!user) return [];
     return this.discoveryService.getSpotlightUsers(user.id);
@@ -245,6 +275,7 @@ export class DiscoveryController {
    */
   @Get('language-pair')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Find partners by language pair',
     description:
@@ -276,6 +307,9 @@ export class DiscoveryController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+=======
+  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
+>>>>>>> origin/main
   async findByLanguagePair(
     @CurrentUser() user: User | null,
     @Query() query: LanguagePairQueryDto,
@@ -289,6 +323,7 @@ export class DiscoveryController {
    */
   @Get('search-by-location')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+<<<<<<< HEAD
   @ApiOperation({
     summary: 'Search partners by country or city',
     description:
@@ -332,6 +367,9 @@ export class DiscoveryController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT' })
+=======
+  @DiscoveryRateLimit({ freeMaxRequests: 20, vipMaxRequests: 80, windowSeconds: 60 })
+>>>>>>> origin/main
   async searchByLocation(
     @CurrentUser() user: User | null,
     @Query('country') country?: string,

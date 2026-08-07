@@ -34,11 +34,16 @@ interface CentrifugoMessageData {
     <!-- Overlay container positioned at the bottom of the video stream -->
     <div
       class="absolute bottom-0 start-0 w-full h-72 p-4 flex flex-col justify-end pointer-events-none bg-gradient-to-t from-black/80 via-black/30 to-transparent z-50"
+      role="complementary"
+      [attr.aria-label]="'liveChat.overlayAria' | t"
     >
       <!-- Scrollable message list with top-fade mask -->
       <div
         #scrollContainer
         class="overflow-y-auto flex flex-col gap-3 max-h-full pointer-events-auto scrollbar-hide mask-image-fade-top pb-2"
+        role="log"
+        aria-live="polite"
+        [attr.aria-label]="'liveChat.overlayAria' | t"
       >
         @for (msg of messages(); track msg.id) {
           <div

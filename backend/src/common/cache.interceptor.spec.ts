@@ -3,9 +3,23 @@ import {
   CacheControlInterceptor,
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
+  CACHE_PUBLIC_VERY_SHORT,
   CACHE_PRIVATE_SHORT,
   CACHE_PRIVATE_MEDIUM,
   CACHE_PRIVATE_NO_STORE,
+  CACHE_EDGE_SHORT,
+  CACHE_EDGE_MEDIUM,
+  CACHE_EDGE_VERY_SHORT,
+  CACHE_NO_STORE,
+  CACHE_TAG_FLASHCARDS,
+  CACHE_TAG_DUE_REVIEWS,
+  CACHE_TAG_DECKS,
+  CACHE_TAG_SUGGESTIONS,
+  CACHE_TAG_AUDIO_ROOMS,
+  CACHE_TAG_AUDIO_ROOM_STAGE,
+  CACHE_TAG_AUDIO_ROOM_POLLS,
+  CACHE_TAG_CALLS,
+  CACHE_TAG_ESCROW,
 } from './cache.interceptor';
 
 describe('CacheControlInterceptor', () => {
@@ -69,6 +83,45 @@ describe('CacheControlInterceptor', () => {
       expect(CACHE_PRIVATE_NO_STORE['CDN-Cache-Control']).toBe(
         'private, no-store',
       );
+    });
+
+    it('CACHE_PUBLIC_VERY_SHORT should have short-lived public CDN cache', () => {
+      expect(CACHE_PUBLIC_VERY_SHORT['Cache-Control']).toContain('public');
+      expect(CACHE_PUBLIC_VERY_SHORT['Cache-Control']).toContain('max-age=30');
+      expect(CACHE_PUBLIC_VERY_SHORT['Cache-Control']).toContain('s-maxage=60');
+      expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain('public');
+      expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain('max-age=60');
+      expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain(
+        'stale-while-revalidate=60',
+      );
+    });
+
+    it('CACHE_EDGE_VERY_SHORT should have edge-only very short cache with browser revalidation', () => {
+      expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('private');
+      expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('max-age=0');
+      expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('must-revalidate');
+      expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain('public');
+      expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain('max-age=30');
+      expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain(
+        'stale-while-revalidate=15',
+      );
+    });
+
+    it('CACHE_NO_STORE should prevent all caching', () => {
+      expect(CACHE_NO_STORE['Cache-Control']).toBe('private, no-store');
+      expect(CACHE_NO_STORE['CDN-Cache-Control']).toBe('private, no-store');
+    });
+
+    it('should define all Cache-Tag constants correctly', () => {
+      expect(CACHE_TAG_FLASHCARDS).toBe('flashcards');
+      expect(CACHE_TAG_DUE_REVIEWS).toBe('flashcards:due');
+      expect(CACHE_TAG_DECKS).toBe('decks');
+      expect(CACHE_TAG_SUGGESTIONS).toBe('flashcards:suggest');
+      expect(CACHE_TAG_AUDIO_ROOMS).toBe('audio-rooms');
+      expect(CACHE_TAG_AUDIO_ROOM_STAGE).toBe('audio-rooms:stage');
+      expect(CACHE_TAG_AUDIO_ROOM_POLLS).toBe('audio-rooms:polls');
+      expect(CACHE_TAG_CALLS).toBe('calls');
+      expect(CACHE_TAG_ESCROW).toBe('escrow');
     });
   });
 
@@ -164,6 +217,54 @@ describe('CacheControlInterceptor', () => {
         'CDN-Cache-Control',
         CACHE_PRIVATE_MEDIUM['CDN-Cache-Control'],
       );
+    });
+
+    it('should set Cache-Tag header when cacheTags are provided', async () => {
+      const setHeader = jest.fn();
+      const context = createCallContext(setHeader);
+      const interceptor = new CacheControlInterceptor(
+        CACHE_EDGE_MEDIUM,
+        ['flashcards', 'flashcards:due'],
+      );
+      const next = { handle: () => of([]) } as Parameters<
+        typeof interceptor.intercept
+      >[1];
+
+      await lastValueFrom(interceptor.intercept(context, next));
+      expect(setHeader).toHaveBeenCalledWith(
+        'Cache-Tag',
+        'flashcards,flashcards:due',
+      );
+    });
+
+    it('should not set Cache-Tag header when cacheTags is empty', async () => {
+      const setHeader = jest.fn();
+      const context = createCallContext(setHeader);
+      const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, []);
+      const next = { handle: () => of([]) } as Parameters<
+        typeof interceptor.intercept
+      >[1];
+
+      await lastValueFrom(interceptor.intercept(context, next));
+      expect(setHeader).not.toHaveBeenCalledWith('Cache-Tag', expect.anything());
+    });
+
+    it('should remove Cache-Tag header on error', async () => {
+      const setHeader = jest.fn();
+      const removeHeader = jest.fn();
+      const context = createCallContext(setHeader, removeHeader);
+      const interceptor = new CacheControlInterceptor(
+        CACHE_EDGE_MEDIUM,
+        ['flashcards'],
+      );
+      const next = {
+        handle: () => throwError(() => new Error('db error')),
+      } as Parameters<typeof interceptor.intercept>[1];
+
+      const result$ = interceptor.intercept(context, next);
+      await expect(lastValueFrom(result$)).rejects.toThrow('db error');
+
+      expect(removeHeader).toHaveBeenCalledWith('Cache-Tag');
     });
   });
 });

@@ -90,10 +90,6 @@ export class DistanceSliderComponent {
       const initial = this.initialDistanceKm();
       if (initial !== undefined) this.currentDistanceKm.set(initial);
     });
-
-    effect(() => {
-      this.distanceChanged.emit(this.currentDistanceKm());
-    });
   }
 
   protected onChange(event: Event): void {
@@ -102,5 +98,6 @@ export class DistanceSliderComponent {
     const value = Number(target.value);
     const clamped = Math.max(this.minKm(), Math.min(value, this.maxKm()));
     this.currentDistanceKm.set(clamped);
+    this.distanceChanged.emit(clamped);
   }
 }
