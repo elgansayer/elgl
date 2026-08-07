@@ -66,6 +66,13 @@
               {{ 'audioRoom.exclusiveEmojiBtn' | t }}
             </button>
           }
+          <button
+            (click)="showNotesPanel.set(!showNotesPanel())"
+            class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs"
+            [attr.aria-label]="'audioRoom.notesBtn' | t"
+          >
+            {{ 'audioRoom.notesBtn' | t }}
+          </button>
         </div>
       </div>
 
@@ -311,8 +318,13 @@
           }
 =======
         <div class="flex flex-col gap-4">
-          <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
           <app-room-chat></app-room-chat>
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
+          @if (showNotesPanel()) {
+            <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
+          }
 >>>>>>> origin/main
         </div>
       </div>
@@ -431,7 +443,7 @@
             [class.bg-purple-500/20]="store.selectedLanguageGroup() === group.language_pair"
             [class.border-surface-100]="store.selectedLanguageGroup() !== group.language_pair"
             [class.bg-surface]="store.selectedLanguageGroup() !== group.language_pair"
-           [attr.aria-label]=\"group.language_pair + ' - ' + group.count + ' room(s)'\">
+           [attr.aria-label]="group.language_pair + ' - ' + group.count + ' room(s)'">
             <span class="text-text-primary">{{ group.language_pair }}</span>
             <span
               class="ms-2 rounded-full px-2 py-0.5 text-[10px]"
