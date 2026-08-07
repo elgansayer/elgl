@@ -155,9 +155,9 @@ import { MetricsModule } from './metrics/metrics.module';
     LanguageIslandsModule,
     EmailModule,
     PasswordResetModule,
-            AssessmentsModule,
-            AnalyticsModule,
-            MetricsModule,
+    AssessmentsModule,
+    AnalyticsModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [
