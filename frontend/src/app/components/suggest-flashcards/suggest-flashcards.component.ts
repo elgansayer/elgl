@@ -81,8 +81,11 @@ export class SuggestFlashcardsComponent {
   suggestions = signal<string[]>([]);
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
+<<<<<<< HEAD
   /** Set to true when a suggestion request has been made at least once */
   previousResult = signal<boolean>(false);
+=======
+>>>>>>> origin/main
 
   constructor() {
     effect(() => {
