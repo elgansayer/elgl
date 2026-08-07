@@ -247,7 +247,7 @@
                 />
               }
               @if (msg.message_type === 'voice' && msg.media_url) {
-                <audio [src]="msg.media_url ?? ''" controls class="w-full min-w-52"></audio>
+                <audio [src]="msg.media_url ?? ''" controls [id]="'audio-' + msg.id" (ended)="playNextVoiceNote(msg.id)" class="w-full min-w-52"></audio>
                 <div class="mt-2 flex items-center gap-2">
                   <button
                     (click)="onTranscribeVoice(msg)"
