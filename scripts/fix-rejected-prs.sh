@@ -77,6 +77,19 @@ process_pr() {
       else
         echo "[$pr] WARN: Rebase conflicts with main. Aborting rebase."
         git rebase --abort 2>/dev/null || true
+        
+        # Automate un-sticking conflicts: Push an empty commit with PAT to trigger the AI PR Reviewer
+        LAST_COMMIT_MSG=$(git log -1 --format=%s 2>/dev/null || echo "")
+        if [ "$LAST_COMMIT_MSG" != "chore: trigger synchronize for AI reviewer" ]; then
+          echo "[$pr] Triggering AI PR Reviewer by pushing an empty commit..."
+          git commit --allow-empty -m "chore: trigger synchronize for AI reviewer" 2>/dev/null || true
+          HEAD_REF=$(gh pr view "$pr" --json headRefName -q '.headRefName' 2>/dev/null)
+          # Use GH_TOKEN (PAT) so GitHub Actions triggers the pull_request:synchronize event
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${HEAD_REF}" 2>/dev/null || true
+        else
+          echo "[$pr] Already pushed empty commit. Waiting for AI PR Reviewer to finish."
+        fi
+        
         echo "[$pr] Leaving branch as-is for the AI PR reviewer to resolve."
       fi
     )
