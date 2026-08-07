@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, DestroyRef, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, FormArray, Validators } from '@angular/forms';
 import { debounceTime } from 'rxjs';
 import { TranslatePipe } from '../../../../services/translate.pipe';
@@ -27,6 +28,7 @@ const isJLPTLevel = (level: unknown): level is JLPTLevel => {
 export class ProfileSettingsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private settingsService = inject(SettingsService);
+  private destroyRef = inject(DestroyRef);
 
   distanceRadius = signal<number>(50);
 
@@ -87,7 +89,7 @@ export class ProfileSettingsComponent implements OnInit {
       });
     }
 
-    this.profileForm.valueChanges.pipe(debounceTime(500)).subscribe(() => {
+    this.profileForm.valueChanges.pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       if (this.profileForm.valid) {
         this.persist();
       }
