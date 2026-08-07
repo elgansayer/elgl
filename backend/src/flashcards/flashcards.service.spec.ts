@@ -194,7 +194,9 @@ describe('FlashcardsService', () => {
         { onConflict: 'user_id, word_token' },
       );
       // Verify Redis invalidation was called
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:list:user-1');
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'flashcards:list:user-1',
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:due:user-1');
       expect(mockMetricsService.recordSrsFlashcardCreated).toHaveBeenCalled();
       expect(result).toEqual(savedCard);
@@ -269,7 +271,9 @@ describe('FlashcardsService', () => {
         next_review_at: '2026-07-23T12:00:00.000Z',
       });
       // Verify Redis cache invalidation on successful SRS update
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:list:user-1');
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'flashcards:list:user-1',
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:due:user-1');
       expect(mockMetricsService.recordSrsReviewCompleted).toHaveBeenCalledWith(
         5,
@@ -309,7 +313,9 @@ describe('FlashcardsService', () => {
       expect(result.interval_days).toBe(41);
       expect(result.easiness_factor).toBe(2.7);
       // Verify Redis invalidation
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:list:user-1');
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'flashcards:list:user-1',
+      );
       expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:due:user-1');
     });
 
@@ -410,7 +416,9 @@ describe('FlashcardsService', () => {
 
       const result = await service.getFlashcards('user-1');
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1');
+      expect(mockRedisClient.get).toHaveBeenCalledWith(
+        'flashcards:list:user-1',
+      );
       // Should NOT hit the database when cache is fresh
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
       expect(result).toEqual(cards);
@@ -426,7 +434,9 @@ describe('FlashcardsService', () => {
 
       const result = await service.getFlashcards('user-1');
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1');
+      expect(mockRedisClient.get).toHaveBeenCalledWith(
+        'flashcards:list:user-1',
+      );
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
@@ -468,7 +478,9 @@ describe('FlashcardsService', () => {
 
       const result = await service.getFlashcards('user-1', 2);
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:level:2');
+      expect(mockRedisClient.get).toHaveBeenCalledWith(
+        'flashcards:list:user-1:level:2',
+      );
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
       // Should use the level-specific cache key for storing
       expect(mockRedisClient.set).toHaveBeenCalledWith(
