@@ -1,13 +1,16 @@
 import { Component, inject, AfterViewInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { EconomyStore } from '../../services/economy.store';
+import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
+import { EconomyStore, TransactionRecord } from '../../services/economy.store';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoinEconomyOnboardingService } from '../../services/coin-economy-onboarding.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-coin-economy-dashboard',
@@ -19,6 +22,8 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
     AppCardComponent,
     AppPillComponent,
     AppButtonPrimaryComponent,
+    AppSkeletonLoaderComponent,
+    AppEmptyStateComponent,
   ],
   templateUrl: './coin-economy-dashboard.component.html',
 })
@@ -32,6 +37,10 @@ export class CoinEconomyDashboardComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     void this.economyStore.loadInitialData();
     this.maybeStartTour();
+  }
+
+  getTransactionTypeLabel(type: TransactionRecord['type']): string {
+    return this.i18n.translate(`coinEconomy.transaction.${type}`);
   }
 
   private maybeStartTour(): void {

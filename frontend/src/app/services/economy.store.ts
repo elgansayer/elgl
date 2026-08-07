@@ -51,6 +51,17 @@ export interface StickerPack {
   animation_url?: string;
 }
 
+export interface TransactionRecord {
+  id: string;
+  type: 'earn' | 'spend' | 'gift_sent' | 'gift_received' | 'purchase' | 'daily_checkin';
+  amount: number;
+  description: string;
+  related_user_name?: string;
+  related_user_avatar?: string;
+  gift_icon?: string;
+  created_at: string;
+}
+
 export interface DiagnosticLog {
   id: string;
   timestamp: string;
@@ -90,7 +101,9 @@ export class EconomyStore {
   readonly activeGiftAnimation = signal<ActiveGiftOverlay | null>(null);
   readonly blockedUserIds = signal<Set<string>>(new Set());
   readonly diagnosticLogs = signal<DiagnosticLog[]>([]);
+  readonly recentTransactions = signal<TransactionRecord[]>([]);
   readonly isLoading = signal<boolean>(false);
+  readonly hasLoadedOnce = signal<boolean>(false);
   readonly isOnline = this.networkStatus.isOnline;
 
   private getHeaders() {
@@ -105,6 +118,7 @@ export class EconomyStore {
     try {
       if (!this.authService.currentUser() || !this.authService.getAccessToken()) {
         this.isLoading.set(false);
+        this.hasLoadedOnce.set(true);
         if (!this.isOnline()) {
           await this.hydrateFromOfflineCache();
         }
@@ -138,12 +152,21 @@ export class EconomyStore {
         console.error('Error loading blocked users:', e);
       });
 
-      await Promise.allSettled([loadCatalog, loadBalance, loadBlocked]);
+      const loadTransactions = this.loadTransactionHistory().catch((e) => {
+        console.error('Error loading transactions:', e);
+      });
+
+      const loadPacks = this.loadStickerPacks().catch((e) => {
+        console.error('Error loading sticker packs:', e);
+      });
+
+      await Promise.allSettled([loadCatalog, loadBalance, loadBlocked, loadTransactions, loadPacks]);
     } catch (e) {
       console.error('Error loading economy/safety data:', e);
       await this.hydrateFromOfflineCache();
     } finally {
       this.isLoading.set(false);
+      this.hasLoadedOnce.set(true);
     }
   }
 
@@ -508,6 +531,19 @@ export class EconomyStore {
       receiverName: payload.receiverName,
       coinValue: payload.coinValue,
     });
+  }
+
+  async loadTransactionHistory(): Promise<void> {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ transactions: TransactionRecord[] }>(`${this.baseUrl}/transactions`, {
+          headers: this.getHeaders(),
+        }),
+      );
+      this.recentTransactions.set(res.transactions ?? []);
+    } catch (e) {
+      console.error('Load transaction history error:', e);
+    }
   }
 
   async loadStickerPacks(): Promise<void> {
