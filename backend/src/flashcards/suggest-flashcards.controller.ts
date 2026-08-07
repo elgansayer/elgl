@@ -3,6 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -35,6 +36,30 @@ export class SuggestFlashcardsController {
     description:
       'Tokenises the input message using Intl.Segmenter, extracts unique word tokens, optionally excludes already-known words (SRS level 4), and returns a list of suggestions to add as flashcards.',
   })
+  @ApiQuery({
+    name: 'message',
+    required: true,
+    description: 'Raw text (chat message, article snippet, etc.) to extract vocabulary suggestions from.',
+    example: 'J\'apprends le francais avec mes amis.',
+  })
+  @ApiQuery({
+    name: 'user_id',
+    required: false,
+    description: 'UUID of the user. When provided and exclude_known=true, words already at SRS level 4 are filtered out.',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+  })
+  @ApiQuery({
+    name: 'target_language',
+    required: false,
+    description: 'ISO 639-1 language code for Intl.Segmenter locale-aware tokenisation.',
+    example: 'fr',
+  })
+  @ApiQuery({
+    name: 'exclude_known',
+    required: false,
+    description: 'Set to false to include already-mastered words (SRS level 4) in suggestions. Default: true.',
+    example: 'true',
+  })
   @ApiResponse({
     status: 200,
     description: 'Array of suggested word tokens.',
@@ -42,7 +67,8 @@ export class SuggestFlashcardsController {
       example: { suggestions: ['apprendre', 'francais', 'amis'] },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized -- missing or invalid JWT.' })
+  @ApiResponse({ status: 429, description: 'Too many requests -- rate limit exceeded (20 req/min).' })
   async suggest(@Query() dto: SuggestFlashcardsDto) {
     return this.suggestService.suggestFromMessage(dto);
   }

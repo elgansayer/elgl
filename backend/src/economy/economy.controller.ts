@@ -5,6 +5,7 @@ import {
   Post,
   UseGuards,
   UseInterceptors,
+  UseFilters,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
@@ -23,9 +24,11 @@ import {
   CACHE_PUBLIC_SHORT,
   CACHE_PRIVATE_NO_STORE,
 } from './cache.interceptor';
+import { EconomyExceptionFilter } from './economy-exception.filter';
 
 @Controller('economy')
 @UseGuards(SupabaseAuthGuard)
+@UseFilters(EconomyExceptionFilter)
 export class EconomyController {
   constructor(private readonly economyService: EconomyService) {}
 

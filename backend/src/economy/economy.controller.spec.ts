@@ -26,6 +26,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
+import { EconomyExceptionFilter } from './economy-exception.filter';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('EconomyController', () => {
@@ -49,6 +50,14 @@ describe('EconomyController', () => {
             getStickerPacks: jest.fn(),
             unlockStickerPack: jest.fn(),
           },
+        },
+        {
+          provide: EconomyExceptionFilter,
+          useValue: { catch: jest.fn() },
+        },
+        {
+          provide: 'PinoLogger:EconomyExceptionFilter',
+          useValue: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
         },
       ],
     })
