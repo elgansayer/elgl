@@ -1762,6 +1762,7 @@ export class I18nService {
     // Daily Learning Tip
     'home.title': 'Home',
     'home.wordOfDay.title': 'Word of the day',
+    'home.wordOfDay.loading': 'Loading word of the day...',
     'home.dailyTip.title': 'Daily learning tip',
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
