@@ -14,9 +14,7 @@ describe('SettingsComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [SettingsComponent],
-      providers: [
-        { provide: Router, useValue: routerMock },
-      ],
+      providers: [{ provide: Router, useValue: routerMock }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SettingsComponent);
@@ -28,10 +26,10 @@ describe('SettingsComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should toggle the exact location privacy setting', () => {
-    const initialValue = component.privacyHideExactLocation;
-    component.privacyHideExactLocation = !initialValue;
-    expect(component.privacyHideExactLocation).toBe(!initialValue);
+  it('should toggle sound effects setting', () => {
+    const initialValue = component.soundEffectsEnabled;
+    component.soundEffectsEnabled = !initialValue;
+    expect(component.soundEffectsEnabled).toBe(!initialValue);
   });
 
   it('should navigate to the My Subscription page', () => {

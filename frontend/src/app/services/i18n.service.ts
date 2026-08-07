@@ -404,7 +404,8 @@ export class I18nService {
     'audioRoom.demoteBtn': 'Demote',
     'audioRoom.raisedHandsTitle': '✋ Raised hands',
     'audioRoom.approveSpeakerModalTitle': '✋ Speaker requests',
-    'audioRoom.approveSpeakerModalDesc': '{{count}} learner(s) are requesting to speak on stage. Approve them to grant microphone access.',
+    'audioRoom.approveSpeakerModalDesc':
+      '{{count}} learner(s) are requesting to speak on stage. Approve them to grant microphone access.',
     'audioRoom.approveSpeakerBtn': 'Approve',
     'audioRoom.wantsStageAccess': 'Wants to speak on stage',
     'audioRoom.noRaisedHands': 'No pending speaker requests.',
@@ -697,7 +698,8 @@ export class I18nService {
     'deck.addCardsTitle': 'Add cards to this deck',
     'deck.addBtn': '+ Add',
     'deck.cardsInDeck': 'Cards in deck ({{count}})',
-    'deck.noCardsAvailable': 'All flashcards are already in this deck. Save more words to add them!',
+    'deck.noCardsAvailable':
+      'All flashcards are already in this deck. Save more words to add them!',
     'deck.noCardsInDeck': 'No cards in this deck yet. Add cards from the list above.',
     'deck.removeAriaLabel': 'Remove {{word}} from deck',
     'deck.startReview': '▶ Start Review',
@@ -865,7 +867,8 @@ export class I18nService {
     'profile.visitorsBtn': 'Visitors',
     'profile.audioIntroBtn': 'Audio intro',
     'profile.audioIntroCardTitle': 'Audio Introduction',
-    'profile.audioIntroHint': 'Record a 30-second audio introduction to let others hear your voice.',
+    'profile.audioIntroHint':
+      'Record a 30-second audio introduction to let others hear your voice.',
     'profile.audioIntroRecord': 'Record Intro',
     'profile.audioIntroRerecord': 'Re-record',
     'profile.audioIntroStop': 'Stop Recording',
@@ -1061,7 +1064,8 @@ export class I18nService {
     'safety.blockManagement.title': '🛡️ Blocked Users',
     'safety.blockManagement.unblock': 'Unblock',
     'safety.blockManagement.emptyTitle': 'No blocked users',
-    'safety.blockManagement.emptyDesc': 'When you block someone, they will appear here. Blocked users cannot message you or see your activity.',
+    'safety.blockManagement.emptyDesc':
+      'When you block someone, they will appear here. Blocked users cannot message you or see your activity.',
     'safety.blockManagement.loadError': 'Failed to load blocked users',
     'safety.blockManagement.loadErrorDesc': 'Please check your connection and try again.',
     'safety.moderation.loadingTitle': 'Loading moderation queue...',
@@ -1281,6 +1285,20 @@ export class I18nService {
     'privacy.success': 'Privacy settings updated.',
     'privacy.error': 'Failed to update privacy settings.',
     'privacy.loadError': 'Failed to load privacy settings.',
+    'privacy.profileSection': 'Profile Privacy',
+    'privacy.visibilitySection': 'Visibility Controls',
+    'privacy.visibility.everyone': 'Everyone',
+    'privacy.visibility.contacts': 'Contacts',
+    'privacy.visibility.nobody': 'Nobody',
+    'privacy.lastSeenLabel': 'Who can see my last seen',
+    'privacy.profilePhotoLabel': 'Who can see my profile photo',
+    'privacy.aboutInfoLabel': 'Who can see my About info',
+    'privacy.statusLabel': 'Who can see my status',
+    'privacy.vipSection': 'VIP Features',
+    'privacy.dataSection': 'Data & Account',
+    'privacy.downloadData': 'Download my data',
+    'privacy.policyLink': 'Privacy policy',
+    'privacy.blockedUsers': 'Blocked users',
 
     // VIP Subscription page
     'vip.heroTitle': 'Unlock Your Language Learning Potential',
@@ -1486,7 +1504,8 @@ export class I18nService {
     'languageSettings.title': 'Language Settings',
     'languageSettings.description': 'Choose the UI language independently of your study target.',
     'languageSettings.interfaceLanguage': 'Interface Language',
-    'languageSettings.interfaceLanguageDescription': 'This changes the language used for buttons, menus, and labels throughout the app. It does not affect your study languages.',
+    'languageSettings.interfaceLanguageDescription':
+      'This changes the language used for buttons, menus, and labels throughout the app. It does not affect your study languages.',
     'languageSettings.selectLabel': 'Select interface language',
     'languageSettings.applyBtn': 'Apply',
     'languageSettings.currentLang': 'Current: {{name}}',
@@ -1529,7 +1548,8 @@ export class I18nService {
     'culturalGuide.title': 'Cultural Etiquette Guide',
     'settings.linkedAccountsSection': 'Linked Accounts',
     'settings.linkedAccounts.title': 'Linked Accounts',
-    'settings.linkedAccounts.subtitle': 'Connect your social accounts to sign in with multiple providers and keep your account secure.',
+    'settings.linkedAccounts.subtitle':
+      'Connect your social accounts to sign in with multiple providers and keep your account secure.',
     'settings.linkedAccounts.active': 'Connected',
     'settings.linkedAccounts.inactive': 'Not connected',
     'settings.linkedAccounts.unlink': 'Unlink',
@@ -1616,10 +1636,10 @@ export class I18nService {
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
 
-// Link Preview
+    // Link Preview
     'linkPreview.openLink': 'Open link: {title}',
 
-// Diagnostic Quiz
+    // Diagnostic Quiz
     'diagnosticQuiz.title': 'Language Level Diagnostic',
     'diagnosticQuiz.loading': 'Loading your diagnostic quiz...',
     'diagnosticQuiz.errorTitle': 'Unable to load quiz',

@@ -458,6 +458,8 @@ export class UserService {
     privacy_hide_exact_location: boolean;
     privacy_hide_online_status: boolean;
     privacy_hide_vip_status: boolean;
+    incognito_visits?: boolean;
+    profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   }> {
     return firstValueFrom(
       this.http
@@ -473,6 +475,8 @@ export class UserService {
           privacy_hide_exact_location: boolean;
           privacy_hide_online_status: boolean;
           privacy_hide_vip_status: boolean;
+          incognito_visits?: boolean;
+          profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
         }>(`${this.baseUrl}/me/privacy-settings`, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
@@ -489,6 +493,8 @@ export class UserService {
               privacy_hide_exact_location: profile.privacy_hide_exact_location ?? false,
               privacy_hide_online_status: profile.privacy_hide_online_status ?? false,
               privacy_hide_vip_status: profile.privacy_hide_vip_status ?? false,
+              incognito_visits: profile.incognito_visits ?? false,
+              profile_visibility: profile.profile_visibility ?? 'everyone',
             });
           }),
         ),

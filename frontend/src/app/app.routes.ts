@@ -11,8 +11,7 @@ export const routes: Routes = [
   },
   {
     path: 'home',
-    loadComponent: () =>
-      import('./pages/home/home.component').then((m) => m.HomeComponent),
+    loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent),
     title: 'Home - HelloTalk',
   },
   {
@@ -92,9 +91,7 @@ export const routes: Routes = [
   {
     path: 'communities',
     loadComponent: () =>
-      import('./components/communities/communities.component').then(
-        (m) => m.CommunitiesComponent,
-      ),
+      import('./components/communities/communities.component').then((m) => m.CommunitiesComponent),
     title: 'Communities - HelloTalk',
   },
   {
@@ -200,9 +197,7 @@ export const routes: Routes = [
   {
     path: 'settings/backup-restore',
     loadComponent: () =>
-      import('./pages/settings/backup-restore.component').then(
-        (m) => m.BackupRestoreComponent,
-      ),
+      import('./pages/settings/backup-restore.component').then((m) => m.BackupRestoreComponent),
     title: 'Chat Backup & Restore - HelloTalk',
   },
   {
@@ -212,6 +207,14 @@ export const routes: Routes = [
         (m) => m.LinkedAccountsComponent,
       ),
     title: 'Linked Accounts - HelloTalk',
+  },
+  {
+    path: 'settings/privacy',
+    loadComponent: () =>
+      import('./pages/settings/privacy-settings/privacy-settings.component').then(
+        (m) => m.PrivacySettingsComponent,
+      ),
+    title: 'Privacy Settings - HelloTalk',
   },
   {
     path: 'developer',
@@ -255,10 +258,7 @@ export const routes: Routes = [
   },
   {
     path: 'vip',
-    loadComponent: () =>
-      import('./pages/vip/vip.component').then(
-        (m) => m.VipComponent,
-      ),
+    loadComponent: () => import('./pages/vip/vip.component').then((m) => m.VipComponent),
     title: 'VIP Subscription - HelloTalk',
   },
   {
@@ -327,31 +327,41 @@ export const routes: Routes = [
   {
     path: 'support',
     loadComponent: () =>
-      import('./pages/support-centre/support-centre.component').then((m) => m.SupportCentreComponent),
+      import('./pages/support-centre/support-centre.component').then(
+        (m) => m.SupportCentreComponent,
+      ),
     title: 'Support Centre - HelloTalk',
   },
   {
     path: 'onboarding',
     loadComponent: () =>
-      import('./components/onboarding/onboarding-wizard.component').then((m) => m.OnboardingWizardComponent),
+      import('./components/onboarding/onboarding-wizard.component').then(
+        (m) => m.OnboardingWizardComponent,
+      ),
     title: 'Onboarding - HelloTalk',
   },
   {
     path: 'diagnostic-quiz',
     loadComponent: () =>
-      import('./components/diagnostic-quiz/diagnostic-quiz.component').then((m) => m.DiagnosticQuizComponent),
+      import('./components/diagnostic-quiz/diagnostic-quiz.component').then(
+        (m) => m.DiagnosticQuizComponent,
+      ),
     title: 'Language Level Diagnostic - HelloTalk',
   },
   {
     path: 'forgot-password',
     loadComponent: () =>
-      import('./components/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
+      import('./components/forgot-password/forgot-password.component').then(
+        (m) => m.ForgotPasswordComponent,
+      ),
     title: 'Forgot Password - HelloTalk',
   },
   {
     path: 'host-dashboard',
     loadComponent: () =>
-      import('./components/host-dashboard/host-dashboard.component').then((m) => m.HostDashboardComponent),
+      import('./components/host-dashboard/host-dashboard.component').then(
+        (m) => m.HostDashboardComponent,
+      ),
     title: 'Host Dashboard - HelloTalk',
   },
   {
@@ -373,23 +383,18 @@ export const routes: Routes = [
   {
     path: 'chat-settings',
     loadComponent: () =>
-      import('./pages/chat-settings/chat-settings.component').then(
-        (m) => m.ChatSettingsComponent,
-      ),
+      import('./pages/chat-settings/chat-settings.component').then((m) => m.ChatSettingsComponent),
     title: 'Chat Settings - HelloTalk',
   },
   {
     path: 'data-storage',
     loadComponent: () =>
-      import('./pages/data-storage/data-storage.component').then(
-        (m) => m.DataStorageComponent,
-      ),
+      import('./pages/data-storage/data-storage.component').then((m) => m.DataStorageComponent),
     title: 'Data & Storage - HelloTalk',
   },
   {
     path: 'shop',
-    loadComponent: () =>
-      import('./components/shop/shop.component').then((m) => m.ShopComponent),
+    loadComponent: () => import('./components/shop/shop.component').then((m) => m.ShopComponent),
     title: 'Shop - HelloTalk',
   },
   {
@@ -402,46 +407,36 @@ export const routes: Routes = [
   },
   {
     path: 'cart',
-    loadComponent: () =>
-      import('./components/cart/cart.component').then((m) => m.CartComponent),
+    loadComponent: () => import('./components/cart/cart.component').then((m) => m.CartComponent),
     title: 'Shopping Cart - HelloTalk',
   },
   {
     path: 'gdpr',
-    loadComponent: () =>
-      import('./components/gdpr/gdpr.component').then((m) => m.GdprComponent),
+    loadComponent: () => import('./components/gdpr/gdpr.component').then((m) => m.GdprComponent),
     title: 'Personal Data - HelloTalk',
   },
   {
     path: 'help-about',
     loadComponent: () =>
-      import('./pages/help-about/help-about.component').then(
-        (m) => m.HelpAboutComponent,
-      ),
+      import('./pages/help-about/help-about.component').then((m) => m.HelpAboutComponent),
     title: 'Help & About - HelloTalk',
   },
   {
     path: 'ai-conversation',
     loadComponent: () =>
-      import('./ai-conversation/ai-conversation.component').then(
-        (m) => m.AiConversationComponent,
-      ),
+      import('./ai-conversation/ai-conversation.component').then((m) => m.AiConversationComponent),
     title: 'AI Conversation - HelloTalk',
   },
   {
     path: 'quests',
     loadComponent: () =>
-      import('./components/quests/quests.component').then(
-        (m) => m.QuestsComponent,
-      ),
+      import('./components/quests/quests.component').then((m) => m.QuestsComponent),
     title: 'Quests - HelloTalk',
   },
   {
     path: 'lessons',
     loadComponent: () =>
-      import('./pages/lessons/lessons.component').then(
-        (m) => m.LessonsComponent,
-      ),
+      import('./pages/lessons/lessons.component').then((m) => m.LessonsComponent),
     title: 'Lessons - HelloTalk',
   },
   {
@@ -455,17 +450,13 @@ export const routes: Routes = [
   {
     path: 'call-logs',
     loadComponent: () =>
-      import('./pages/call-logs/call-logs.component').then(
-        (m) => m.CallLogsComponent,
-      ),
+      import('./pages/call-logs/call-logs.component').then((m) => m.CallLogsComponent),
     title: 'Call Logs - HelloTalk',
   },
   {
     path: 'active-call',
     loadComponent: () =>
-      import('./components/active-call/active-call.component').then(
-        (m) => m.ActiveCallComponent,
-      ),
+      import('./components/active-call/active-call.component').then((m) => m.ActiveCallComponent),
     title: 'Active Call - HelloTalk',
   },
   {
@@ -487,9 +478,7 @@ export const routes: Routes = [
   {
     path: 'admin/moderation',
     loadComponent: () =>
-      import('./moderation/moderation-queue.component').then(
-        (m) => m.ModerationQueueComponent,
-      ),
+      import('./moderation/moderation-queue.component').then((m) => m.ModerationQueueComponent),
     canActivate: [adminGuard],
     title: 'Moderation - HelloTalk',
   },
@@ -555,13 +544,17 @@ export const routes: Routes = [
   {
     path: 'language-islands',
     loadComponent: () =>
-      import('./pages/language-islands/language-islands.component').then((m) => m.LanguageIslandsComponent),
+      import('./pages/language-islands/language-islands.component').then(
+        (m) => m.LanguageIslandsComponent,
+      ),
     title: 'Language Islands - HelloTalk',
   },
   {
     path: 'language-parties',
     loadComponent: () =>
-      import('./components/language-parties/language-parties.component').then((m) => m.LanguagePartiesComponent),
+      import('./components/language-parties/language-parties.component').then(
+        (m) => m.LanguagePartiesComponent,
+      ),
     title: 'Language Parties - HelloTalk',
   },
   {
@@ -573,7 +566,9 @@ export const routes: Routes = [
   {
     path: 'events/calendar',
     loadComponent: () =>
-      import('./components/events-calendar/events-calendar.component').then((m) => m.EventsCalendarComponent),
+      import('./components/events-calendar/events-calendar.component').then(
+        (m) => m.EventsCalendarComponent,
+      ),
     title: 'Event Calendar - HelloTalk',
   },
   {
