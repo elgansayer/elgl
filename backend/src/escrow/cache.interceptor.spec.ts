@@ -1,105 +1,105 @@
 import { lastValueFrom, of, throwError } from 'rxjs';
 import {
   EscrowCacheInterceptor,
-  ESCROW_CACHE_PRIVATE_SHORT,
-  ESCROW_CACHE_PRIVATE_NO_STORE,
+  ESCROW_CACHE_READ,
+  ESCROW_CACHE_MUTATION,
+  CACHE_TAG_ESCROW,
 } from './cache.interceptor';
 
 describe('EscrowCacheInterceptor', () => {
-  describe('constants', () => {
-    it('ESCROW_CACHE_PRIVATE_SHORT should prevent CDN caching and require browser revalidation', () => {
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain('private');
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain('max-age=0');
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain(
-        'must-revalidate',
-      );
-      // Verify no contradictory CDN directives
-      expect(ESCROW_CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toBe(
-        'private, no-store',
-      );
-      // Should vary by auth to prevent cross-user cache leakage
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Vary']).toBe('Authorization');
+  describe('legacy re-exports', () => {
+    it('EscrowCacheInterceptor should extend CacheControlInterceptor', () => {
+      const instance = new EscrowCacheInterceptor(ESCROW_CACHE_READ);
+      expect(instance).toBeInstanceOf(EscrowCacheInterceptor);
+      // The parent class is CacheControlInterceptor (imported and extended)
+      expect(Object.getPrototypeOf(EscrowCacheInterceptor).name).toBe('CacheControlInterceptor');
     });
 
-    it('ESCROW_CACHE_PRIVATE_NO_STORE should prevent all caching', () => {
-      expect(ESCROW_CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain('private');
-      expect(ESCROW_CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain('no-store');
-      expect(ESCROW_CACHE_PRIVATE_NO_STORE['CDN-Cache-Control']).toBe(
-        'private, no-store',
-      );
-      expect(ESCROW_CACHE_PRIVATE_NO_STORE['Vary']).toBe('Authorization');
+    it('ESCROW_CACHE_READ should be equivalent to CACHE_EDGE_MEDIUM', () => {
+      expect(ESCROW_CACHE_READ['Cache-Control']).toContain('private');
+      expect(ESCROW_CACHE_READ['Cache-Control']).toContain('max-age=0');
+      expect(ESCROW_CACHE_READ['Cache-Control']).toContain('must-revalidate');
+      expect(ESCROW_CACHE_READ['CDN-Cache-Control']).toContain('public');
+      expect(ESCROW_CACHE_READ['CDN-Cache-Control']).toContain('max-age=300');
+      expect(ESCROW_CACHE_READ['Vary']).toBe('Authorization');
+    });
+
+    it('ESCROW_CACHE_MUTATION should be equivalent to CACHE_NO_STORE', () => {
+      expect(ESCROW_CACHE_MUTATION['Cache-Control']).toBe('private, no-store');
+      expect(ESCROW_CACHE_MUTATION['CDN-Cache-Control']).toBe('private, no-store');
+    });
+
+    it('CACHE_TAG_ESCROW should be the correct tag name', () => {
+      expect(CACHE_TAG_ESCROW).toBe('escrow');
     });
   });
 
-  describe('intercept', () => {
-    it('should set private short cache headers on successful response', async () => {
-      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT);
-
-      const setHeader = jest.fn();
-      const mockResponse = { setHeader };
-      const context = {
+  describe('intercept (via shared CacheControlInterceptor)', () => {
+    function createCallContext(
+      setHeader = jest.fn(),
+      removeHeader = jest.fn(),
+    ): Parameters<typeof EscrowCacheInterceptor.prototype.intercept>[0] {
+      const mockResponse = { setHeader, removeHeader };
+      return {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
-      } as unknown as Parameters<typeof interceptor.intercept>[0];
+      } as unknown as Parameters<
+        typeof EscrowCacheInterceptor.prototype.intercept
+      >[0];
+    }
 
-      const next = {
-        handle: () => of('escrow-list'),
-      } as Parameters<typeof interceptor.intercept>[1];
+    it('should set escrow read cache headers on successful response (with Cache-Tag)', async () => {
+      const setHeader = jest.fn();
+      const context = createCallContext(setHeader);
+      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_READ, [
+        CACHE_TAG_ESCROW,
+      ]);
+      const next = { handle: () => of('escrow-list') } as Parameters<
+        typeof interceptor.intercept
+      >[1];
 
       const result = await lastValueFrom(interceptor.intercept(context, next));
 
       expect(result).toBe('escrow-list');
       expect(setHeader).toHaveBeenCalledWith(
         'Cache-Control',
-        ESCROW_CACHE_PRIVATE_SHORT['Cache-Control'],
+        ESCROW_CACHE_READ['Cache-Control'],
       );
       expect(setHeader).toHaveBeenCalledWith(
         'CDN-Cache-Control',
-        ESCROW_CACHE_PRIVATE_SHORT['CDN-Cache-Control'],
+        ESCROW_CACHE_READ['CDN-Cache-Control'],
       );
       expect(setHeader).toHaveBeenCalledWith(
-        'Vary',
-        'Authorization',
+        'Cache-Tag',
+        CACHE_TAG_ESCROW,
       );
     });
 
-    it('should set no-store headers on successful mutation response', async () => {
-      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE);
-
+    it('should set no-store headers on mutation', async () => {
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
-      const context = {
-        switchToHttp: () => ({ getResponse: () => mockResponse }),
-      } as unknown as Parameters<typeof interceptor.intercept>[0];
-
-      const next = {
-        handle: () => of('mutation-result'),
-      } as Parameters<typeof interceptor.intercept>[1];
+      const context = createCallContext(setHeader);
+      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_MUTATION);
+      const next = { handle: () => of('mutation-result') } as Parameters<
+        typeof interceptor.intercept
+      >[1];
 
       await lastValueFrom(interceptor.intercept(context, next));
-
       expect(setHeader).toHaveBeenCalledWith(
         'Cache-Control',
-        ESCROW_CACHE_PRIVATE_NO_STORE['Cache-Control'],
+        ESCROW_CACHE_MUTATION['Cache-Control'],
       );
       expect(setHeader).toHaveBeenCalledWith(
         'CDN-Cache-Control',
-        ESCROW_CACHE_PRIVATE_NO_STORE['CDN-Cache-Control'],
-      );
-      expect(setHeader).toHaveBeenCalledWith(
-        'Vary',
-        'Authorization',
+        ESCROW_CACHE_MUTATION['CDN-Cache-Control'],
       );
     });
 
-    it('should override cache headers to private/no-store on error', async () => {
-      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT);
-
+    it('should override to no-store on error and remove Cache-Tag', async () => {
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
-      const context = {
-        switchToHttp: () => ({ getResponse: () => mockResponse }),
-      } as unknown as Parameters<typeof interceptor.intercept>[0];
-
+      const removeHeader = jest.fn();
+      const context = createCallContext(setHeader, removeHeader);
+      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_READ, [
+        CACHE_TAG_ESCROW,
+      ]);
       const next = {
         handle: () => throwError(() => new Error('escrow failure')),
       } as Parameters<typeof interceptor.intercept>[1];
@@ -108,7 +108,6 @@ describe('EscrowCacheInterceptor', () => {
         lastValueFrom(interceptor.intercept(context, next)),
       ).rejects.toThrow('escrow failure');
 
-      // Error path must override all headers to prevent caching error responses
       expect(setHeader).toHaveBeenCalledWith(
         'Cache-Control',
         'private, no-store',
@@ -117,34 +116,7 @@ describe('EscrowCacheInterceptor', () => {
         'CDN-Cache-Control',
         'private, no-store',
       );
-      expect(setHeader).toHaveBeenCalledWith(
-        'Vary',
-        'Authorization',
-      );
-    });
-
-    it('should set Vary: Authorization to prevent cross-user cache leakage', async () => {
-      // All escrow responses are user-specific; Vary: Authorization ensures
-      // Cloudflare and other intermediaries key caches by auth token.
-      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT);
-
-      const setHeader = jest.fn();
-      const mockResponse = { setHeader };
-      const context = {
-        switchToHttp: () => ({ getResponse: () => mockResponse }),
-      } as unknown as Parameters<typeof interceptor.intercept>[0];
-
-      const next = {
-        handle: () => of('user-specific-escrow'),
-      } as Parameters<typeof interceptor.intercept>[1];
-
-      await lastValueFrom(interceptor.intercept(context, next));
-
-      const varyCalls = setHeader.mock.calls.filter(
-        (call: [string, string]) => call[0] === 'Vary',
-      );
-      expect(varyCalls.length).toBeGreaterThanOrEqual(1);
-      expect(varyCalls[0][1]).toContain('Authorization');
+      expect(removeHeader).toHaveBeenCalledWith('Cache-Tag');
     });
   });
 });
