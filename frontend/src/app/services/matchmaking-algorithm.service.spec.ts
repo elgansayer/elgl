@@ -59,7 +59,6 @@ describe('MatchmakingAlgorithmService', () => {
         target_languages: ['ja'],
       });
 
-      // Perfect complement: partner native=ja (user target) AND partner learning=en (user native)
       const best = makeUser({
         id: 'best',
         native_languages: ['ja'],
@@ -69,7 +68,6 @@ describe('MatchmakingAlgorithmService', () => {
         learning_goals: 'conversation,vocabulary',
       });
 
-      // Partial: partner native=ja but not learning en
       const medium = makeUser({
         id: 'medium',
         native_languages: ['ja'],
@@ -79,7 +77,6 @@ describe('MatchmakingAlgorithmService', () => {
         learning_goals: 'conversation',
       });
 
-      // No complement
       const worst = makeUser({
         id: 'worst',
         native_languages: ['fr'],
@@ -272,8 +269,18 @@ describe('MatchmakingAlgorithmService', () => {
     it('should filter by availability', () => {
       const current = makeUser();
       const scored = service.scoreAndRank(current, [
-        makeUser({ id: 'morning', availability_morning: true, availability_afternoon: false, availability_evening: false }),
-        makeUser({ id: 'evening', availability_morning: false, availability_afternoon: false, availability_evening: true }),
+        makeUser({
+          id: 'morning',
+          availability_morning: true,
+          availability_afternoon: false,
+          availability_evening: false,
+        }),
+        makeUser({
+          id: 'evening',
+          availability_morning: false,
+          availability_afternoon: false,
+          availability_evening: true,
+        }),
       ]);
 
       const filtered = service.applyOfflineFilters(scored, { availability_morning: true });

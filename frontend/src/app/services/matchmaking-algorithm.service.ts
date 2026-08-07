@@ -5,7 +5,6 @@ import type { SearchFilterParams } from './discovery.service';
 
 export interface PartnerScore {
   partner: UserProfile;
-  /** Total composite score (0-100), higher is better. */
   totalScore: number;
   breakdown: {
     languageComplementarity: number;
@@ -68,7 +67,7 @@ export class MatchmakingAlgorithmService {
 
       if (filters.age_min !== undefined || filters.age_max !== undefined) {
         const age = partner.age;
-        if (age === undefined || age === null) return true; // keep if unknown
+        if (age === undefined || age === null) return true;
         if (filters.age_min !== undefined && age < filters.age_min) return false;
         if (filters.age_max !== undefined && age > filters.age_max) return false;
       }
@@ -135,12 +134,10 @@ export class MatchmakingAlgorithmService {
     let score = 0;
     const maxScore = WEIGHTS.languageComplementarity;
 
-    // Half weight: partner is native in a language the user wants to learn
     const partnerTeaches = partnerNative.filter((lang) => myTarget.includes(lang)).length;
     const partnerTeachesCount = myTarget.length > 0 ? partnerTeaches / myTarget.length : 0;
     score += (maxScore * 0.5) * Math.min(1, partnerTeachesCount);
 
-    // Half weight: partner wants to learn a language the user is native in
     const canTeachPartner = myNative.filter((lang) => partnerTarget.includes(lang)).length;
     const canTeachRatio = partnerTarget.length > 0 ? canTeachPartner / partnerTarget.length : 0;
     score += (maxScore * 0.5) * Math.min(1, canTeachRatio);
@@ -176,7 +173,6 @@ export class MatchmakingAlgorithmService {
   private scoreSeriousLearner(partner: UserProfile, currentUser: UserProfile): number {
     if (!partner.is_serious_learner) return 0;
     let bonus = WEIGHTS.seriousLearnerBonus;
-    // Extra boost when both are serious learners
     if (currentUser.is_serious_learner) {
       bonus = WEIGHTS.seriousLearnerBonus * 1.25;
     }

@@ -157,9 +157,7 @@ export class DiscoveryService {
       // Ultimate fallback: mock data with algorithm-based ranking
       const currentUser = this.authService.currentUser();
       if (currentUser?.id) {
-        const profile = await this.userService
-          .getMyProfile()
-          .catch((): UserProfile | null => null);
+        const profile = await this.userService.getMyProfile().catch((): UserProfile | null => null);
         if (profile) {
           const scored = this.matchmakingAlgorithm.scoreAndRank(profile, MOCK_PARTNERS);
           const scoreFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored, filters);
