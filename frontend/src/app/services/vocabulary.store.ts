@@ -83,8 +83,8 @@ export class VocabularyStore {
       const map = new Map<string, Flashcard>();
       list.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
       this.flashcardMap.set(map);
-    } catch (e) {
-      console.error('Failed to load flashcards:', e);
+    } catch {
+      // Failed to load flashcards - silently handled
     } finally {
       this.isLoading.set(false);
     }
@@ -96,8 +96,8 @@ export class VocabularyStore {
         this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
       );
       this.dueReviews.set(list);
-    } catch (e) {
-      console.error('Failed to load due reviews:', e);
+    } catch {
+      // Failed to load due reviews - silently handled
     }
   }
 
