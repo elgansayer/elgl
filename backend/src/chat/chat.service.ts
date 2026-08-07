@@ -253,6 +253,11 @@ export class ChatService {
       }
     }
 
+    // Check message filters for initial (first) message in a room
+    if (receiverId) {
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
+    }
+
     // Spam detection for text messages
     if (dto.message_type === 'text' && dto.text_content) {
       const isSpam = this.spamDetectionService.isSpam(dto.text_content);
@@ -1970,5 +1975,113 @@ export class ChatService {
     await this.centrifugoService.publish(`chat:${roomId}`, {
       message: awayMessageChat,
     });
+  }
+
+  /**
+   * Checks the receiver's message filters (age, native language, gender) and
+   * rejects the message if the sender does not meet the criteria. Only applies
+   * to the first message in a room (when there are no prior messages from the
+   * sender to the receiver).
+   */
+  private async enforceMessageFilters(
+    senderId: string,
+    receiverId: string,
+    roomId: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    // Check if there are already messages from the sender in this room
+    const { count, error: countError } = await supabase
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', roomId)
+      .eq('sender_id', senderId);
+
+    if (countError) return;
+    if ((count ?? 0) > 0) return; // Not the first message - skip filter check
+
+    // Fetch receiver's message filters
+    const { data: receiverData, error: receiverError } = await supabase
+      .from('users')
+      .select('message_filters')
+      .eq('id', receiverId)
+      .single();
+
+    if (receiverError || !receiverData) return;
+
+    const filters = (receiverData as { message_filters?: Record<string, unknown> })
+      ?.message_filters;
+
+    if (!filters) return;
+
+    // Fetch sender's profile for age, native_languages, and gender
+    const { data: senderProfile, error: senderError } = await supabase
+      .from('users')
+      .select('age, native_languages, gender')
+      .eq('id', senderId)
+      .single();
+
+    if (senderError || !senderProfile) return;
+
+    const senderProfileTyped = senderProfile as {
+      age?: number | null;
+      native_languages?: string[] | null;
+      gender?: string | null;
+    };
+
+    // Check age filter
+    const ageMin = typeof filters.age_min === 'number' ? filters.age_min : undefined;
+    const ageMax = typeof filters.age_max === 'number' ? filters.age_max : undefined;
+
+    if (ageMin !== undefined || ageMax !== undefined) {
+      const senderAge = senderProfileTyped.age;
+      if (senderAge == null) {
+        throw new BadRequestException(
+          'The recipient has set age restrictions and your age is not available.',
+        );
+      }
+      if (ageMin !== undefined && senderAge < ageMin) {
+        throw new BadRequestException(
+          `The recipient only accepts messages from users aged ${ageMin} and above.`,
+        );
+      }
+      if (ageMax !== undefined && senderAge > ageMax) {
+        throw new BadRequestException(
+          `The recipient only accepts messages from users aged ${ageMax} and below.`,
+        );
+      }
+    }
+
+    // Check native language filter
+    const allowedLanguages = Array.isArray(filters.allowed_native_languages)
+      ? (filters.allowed_native_languages as string[])
+      : undefined;
+
+    if (allowedLanguages && allowedLanguages.length > 0) {
+      const senderNativeLanguages = senderProfileTyped.native_languages ?? [];
+      const hasIntersection = senderNativeLanguages.some((lang) =>
+        allowedLanguages.includes(lang),
+      );
+
+      if (!hasIntersection) {
+        throw new BadRequestException(
+          'The recipient only accepts messages from users speaking specific native languages.',
+        );
+      }
+    }
+
+    // Check gender filter
+    const allowedGenders = Array.isArray(filters.allowed_genders)
+      ? (filters.allowed_genders as string[])
+      : undefined;
+
+    if (allowedGenders && allowedGenders.length > 0) {
+      const senderGender = senderProfileTyped.gender;
+      if (!senderGender || !allowedGenders.includes(senderGender)) {
+        throw new BadRequestException(
+          'The recipient only accepts messages from specific genders.',
+        );
+      }
+    }
   }
 }

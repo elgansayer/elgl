@@ -379,6 +379,14 @@ export const routes: Routes = [
     title: 'Block Management - HelloTalk',
   },
   {
+    path: 'message-filters',
+    loadComponent: () =>
+      import('./pages/message-filter-settings/message-filter-settings.component').then(
+        (m) => m.MessageFilterSettingsComponent,
+      ),
+    title: 'Message Filter Settings - HelloTalk',
+  },
+  {
     path: 'chat-settings',
     loadComponent: () =>
       import('./pages/chat-settings/chat-settings.component').then(
