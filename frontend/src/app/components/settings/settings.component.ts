@@ -6,9 +6,10 @@ import { UserService, LinkedAccount } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
 import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
+import { PrivacySettingsComponent } from '../../features/settings/components/privacy-settings/privacy-settings.component';
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, TranslatePipe, RouterModule],
+  imports: [FormsModule, TranslatePipe, RouterModule, PrivacySettingsComponent],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
