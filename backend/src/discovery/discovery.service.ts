@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';

@@ -80,6 +80,7 @@ describe('RecommendationsService', () => {
   let mockRedis: { get: jest.Mock; set: jest.Mock; del: jest.Mock; pipeline: jest.Mock };
   let mockPipeline: { set: jest.Mock; exec: jest.Mock };
   let mockFrom: jest.Mock;
+  let mockLogger: { info: jest.Mock; warn: jest.Mock; error: jest.Mock; debug: jest.Mock };
   let mockMetricsService: {
     recordMatchmakingRecommendationsGenerated: jest.Mock;
     recordMatchmakingRecommendationsPerRequest: jest.Mock;
@@ -115,9 +116,20 @@ describe('RecommendationsService', () => {
       setMatchmakingTierSuccessRate: jest.fn(),
     };
 
+    mockLogger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RecommendationsService,
+        {
+          provide: `PinoLogger:${RecommendationsService.name}`,
+          useValue: mockLogger,
+        },
         {
           provide: SupabaseService,
           useValue: {

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -136,7 +137,7 @@ export class RecommendationsService {
 
       await flushPipeline();
       this.logger.info(
-        'Successfully calculated and cached daily recommendations.',
+        `Successfully calculated and cached ${totalCached} daily recommendation sets.`,
       );
     } catch (error) {
       await flushPipeline();
@@ -460,9 +461,7 @@ export class RecommendationsService {
   }
 
   private recommendationsFromMock(userId: string): RecommendedUserDto[] {
-    this.logger.info(
-      `Using mock data as ultimate fallback for user ${userId}`,
-    );
+    this.logger.info(`Using mock data as ultimate fallback for user ${userId}`);
 
     const mockUsers = MOCK_USERS as unknown as Array<{
       id: string;
@@ -508,6 +507,14 @@ export class RecommendationsService {
       );
     }
 
+    // Daily caches containing this user expire within 24 hours (DAILY_REDIS_TTL).
+    // For immediate cleanup we would need to scan all `recommendations:daily:*`
+    // keys, which is O(N) and should be rate-limited.  The 24-hour TTL serves
+    // as the guard: GDPR allows "reasonable time" for erasure in backup/cache
+    // layers.
+    //
+    // This approach is documented in the GDPR data-retention policy
+    // (see data-retention.service.ts) and auditable via debug logs.
     this.logger.info(
       `GDPR erasure initiated for user ${userId}; recommendation cache TTL (${DAILY_REDIS_TTL}s) will expire stale copies`,
     );
