@@ -76,7 +76,10 @@ export class DiscoveryService {
     }
   }
 
-  async findPartners(filters: SearchFilterParams & { serious_learner_mode?: boolean }): Promise<UserProfile[]> {
+  async findPartners(
+    filters: SearchFilterParams & { serious_learner_mode?: boolean },
+    abortSignal?: AbortSignal,
+  ): Promise<UserProfile[]> {
     const filtersKey = this.offlineCache.buildFiltersKey(filters as Record<string, unknown>);
     const isOnline = this.offlineCache.isOnline();
 

@@ -79,7 +79,7 @@ export class DiscoveryService {
   // Daily calculation (existing functionality)
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations() {
-    this.logger.info('Starting daily partner recommendations calculation...');
+    this.logger.log('Starting daily partner recommendations calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -203,7 +203,7 @@ export class DiscoveryService {
       }
 
       await flushPipeline();
-      this.logger.info(
+      this.logger.log(
         `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
       );
     } catch (err) {

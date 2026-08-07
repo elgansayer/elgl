@@ -76,6 +76,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   >([]);
   readonly isLoading = signal<boolean>(true);
   readonly searchError = signal<string | null>(null);
+  readonly hasError = computed(() => this.searchError() !== null);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 

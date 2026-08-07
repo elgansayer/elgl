@@ -351,7 +351,7 @@ export class NlpService {
       try {
         // Azure Speech Services Pronunciation Assessment API
         // We need to download the audio from the URL and send it to Azure
-        const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url);
+        const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url, {});
         if (audioResponse.ok) {
           const audioBuffer = await audioResponse.arrayBuffer();
 
@@ -456,7 +456,7 @@ export class NlpService {
     }
 
     // Download the audio file from the provided URL
-    const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url);
+    const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url, {});
     if (!audioResponse.ok) {
       throw new BadRequestException('Failed to fetch audio file from URL');
     }
@@ -844,7 +844,7 @@ export class NlpService {
       };
     }
 
-    const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url);
+    const audioResponse = await NlpService.fetchWithTimeout(dto.audio_url, {});
     if (!audioResponse.ok) {
       throw new BadRequestException('Failed to fetch audio file from URL');
     }

@@ -161,7 +161,7 @@ export class ModerationService {
         const pendingCount = status
           ? items.length
           : items.filter((item) => item.status === 'pending').length;
-        this.metricsService.setTsPendingReports(pendingCount);
+        this.metrics.setTsPendingReports(pendingCount);
       }
 
       // Batch-fetch moment content for all moment items in a single query
@@ -244,7 +244,7 @@ export class ModerationService {
         return { success: false, error: 'Failed to create report' };
       }
 
-      this.metricsService.recordTsReportSubmitted(dto.reasonCategory);
+      this.metrics.recordTsReportSubmitted(dto.reasonCategory);
       return { success: true };
     } catch (err) {
       this.logger.warn(err, 'Failed to create report, degraded');
@@ -398,7 +398,7 @@ this.metrics.recordTsModerationAction(
         ),
       );
 
-      this.metricsService.recordTsDatingRiskScore(riskScore);
+      this.metrics.recordTsDatingRiskScore(riskScore);
       return { riskScore, flags: uniqueFlags };
     } catch (err) {
       this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);
