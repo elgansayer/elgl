@@ -538,7 +538,5 @@
   "wordModal.saveLearningBtn": "🟡 حفظ للتعلم",
   "wordModal.srsStatus": "حالة التكرار المتباعد: {{status}}",
   "wordModal.title": "تعريف القاموس",
-  "wordModal.translationLabel": "الترجمة",
-  "economy.offlinePurchaseUnavailable": "المشتريات غير متاحة بدون اتصال بالإنترنت. يرجى التحقق من اتصالك.",
-  "economy.offlineGiftQueued": "تم وضع الهدية في قائمة الانتظار وسيتم إرسالها عند استعادة الاتصال."
+  "wordModal.translationLabel": "الترجمة"
 }

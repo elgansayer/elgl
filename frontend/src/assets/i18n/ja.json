@@ -599,7 +599,5 @@
   "auth.resetPassword.error": "パスワードのリセットに失敗しました。トークンが無効か期限切れです。",
   "auth.resetPassword.backToHome": "ホームに戻る",
   "common.pleaseWait": "お待ちください...",
-  "common.submit": "送信",
-  "economy.offlinePurchaseUnavailable": "オフライン中は購入できません。インターネット接続を確認してください。",
-  "economy.offlineGiftQueued": "ギフトはキューに入れられました。接続が復旧次第送信されます。"
+  "common.submit": "送信"
 }
