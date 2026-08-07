@@ -65,7 +65,8 @@
                       ? 'bg-primary/10 border-primary text-primary font-black shadow-sm'
                       : 'bg-surface-300/50 border-surface-100 text-text-primary hover:bg-surface-100')
                   "
-                 [attr.aria-label]="lang.name || lang.nativeName">
+                  [attr.aria-label]="lang.name || lang.nativeName"
+                >
                   <span class="text-2xl shrink-0">{{ lang.flag }}</span>
                   <div class="min-w-0 flex-1">
                     <div class="text-sm font-bold truncate">{{ lang.name }}</div>
@@ -83,7 +84,8 @@
             type="button"
             (click)="closeModal()"
             class="ps-5 pe-5 py-2 rounded-xl bg-surface-100 text-text-primary font-bold text-sm hover:bg-surface-200 transition-colors"
-           [attr.aria-label]="'common.close' | t">
+            [attr.aria-label]="'common.close' | t"
+          >
             {{ 'common.close' | t }}
           </button>
         </div>

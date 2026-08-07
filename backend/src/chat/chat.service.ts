@@ -126,7 +126,107 @@ export class ChatService {
     return null;
   }
 
-  
+  /**
+   * Enforces the receiver's message_filters for initial messages.
+   * Only applies to the very first message from sender to receiver in a room.
+   */
+  private async enforceMessageFilters(
+    senderId: string,
+    receiverId: string,
+    roomId: string,
+  ): Promise<void> {
+    // Only enforce for initial messages - check if sender has already sent messages to receiver
+    const supabase = this.supabaseService.getClient();
+    const { count, error: countError } = await supabase
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomId)
+      .eq('sender_id', senderId);
+
+    if (countError) return;
+
+    // If sender has already messaged in this room, skip filter enforcement
+    if ((count ?? 0) > 0) return;
+
+    // Fetch receiver's message filters and profile
+    const { data: receiverProfile, error: profileError } = await supabase
+      .from('users')
+      .select('message_filters, native_languages, age, gender')
+      .eq('id', receiverId)
+      .single();
+
+    if (profileError || !receiverProfile) return;
+
+    const filters = (receiverProfile as Record<string, unknown>)
+      ?.message_filters as
+      | {
+          age_min?: number;
+          age_max?: number;
+          allowed_native_languages?: string[];
+          allowed_genders?: string[];
+        }
+      | undefined;
+
+    if (!filters) return;
+
+    // Fetch sender's profile for validation
+    const { data: senderProfile, error: senderError } = await supabase
+      .from('users')
+      .select('native_languages, age, gender')
+      .eq('id', senderId)
+      .single();
+
+    if (senderError || !senderProfile) return;
+
+    const sender = senderProfile as {
+      native_languages?: string[];
+      age?: number;
+      gender?: string;
+    };
+
+    // Check native language filter - any of sender's native languages must match
+    if (
+      filters.allowed_native_languages &&
+      filters.allowed_native_languages.length > 0
+    ) {
+      const senderNativeLangs = sender.native_languages ?? [];
+      const hasAllowedLanguage = senderNativeLangs.some((lang: string) =>
+        filters.allowed_native_languages!.includes(lang),
+      );
+      if (senderNativeLangs.length > 0 && !hasAllowedLanguage) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their native language filter settings.',
+        );
+      }
+    }
+
+    // Check age filter
+    if (filters.age_min !== undefined || filters.age_max !== undefined) {
+      const senderAge = sender.age;
+      if (senderAge !== undefined && senderAge !== null) {
+        if (filters.age_min !== undefined && senderAge < filters.age_min) {
+          throw new BadRequestException(
+            'You cannot send the first message to this user due to their age filter settings.',
+          );
+        }
+        if (filters.age_max !== undefined && senderAge > filters.age_max) {
+          throw new BadRequestException(
+            'You cannot send the first message to this user due to their age filter settings.',
+          );
+        }
+      }
+    }
+
+    // Check gender filter
+    if (filters.allowed_genders && filters.allowed_genders.length > 0) {
+      const senderGender = sender.gender ?? '';
+      if (senderGender && !filters.allowed_genders.includes(senderGender)) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their gender filter settings.',
+        );
+      }
+    }
+  }
 
   async getRooms(currentUserId: string): Promise<ChatRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
@@ -258,6 +358,11 @@ export class ChatService {
       await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
+    // Check message filters for initial (first) message in a room
+    if (receiverId) {
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
+    }
+
     // Spam detection for text messages
     if (dto.message_type === 'text' && dto.text_content) {
       const isSpam = this.spamDetectionService.isSpam(dto.text_content);
@@ -266,6 +371,11 @@ export class ChatService {
           'Your message appears to be a duplicate or spam content.',
         );
       }
+    }
+
+    // Enforce receiver's message filters for initial messages
+    if (receiverId) {
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
     const insertResponse = await supabase
@@ -696,105 +806,6 @@ export class ChatService {
     }
 
     return room;
-  }
-
-  private async enforceMessageFilters(
-    senderId: string,
-    receiverId: string,
-    roomId: string,
-  ): Promise<void> {
-    // Only enforce for initial messages - check if sender has already sent messages to receiver
-    const supabase = this.supabaseService.getClient();
-    const { count, error: countError } = await supabase
-      .from('chat_messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('room_id', roomId)
-      .eq('sender_id', senderId);
-
-    if (countError) return;
-
-    // If sender has already messaged in this room, skip filter enforcement
-    if ((count ?? 0) > 0) return;
-
-    // Fetch receiver's message filters and profile
-    const { data: receiverProfile, error: profileError } = await supabase
-      .from('users')
-      .select('message_filters, native_languages, age, gender')
-      .eq('id', receiverId)
-      .single();
-
-    if (profileError || !receiverProfile) return;
-
-    const filters = (
-      receiverProfile as unknown as Record<string, unknown>
-    )?.message_filters as
-      | {
-          age_min?: number;
-          age_max?: number;
-          allowed_native_languages?: string[];
-          allowed_genders?: string[];
-        }
-      | undefined;
-
-    if (!filters) return;
-
-    // Fetch sender's profile for validation
-    const { data: senderProfile, error: senderError } = await supabase
-      .from('users')
-      .select('native_languages, age, gender')
-      .eq('id', senderId)
-      .single();
-
-    if (senderError || !senderProfile) return;
-
-    const sender = senderProfile as {
-      native_languages?: string[];
-      age?: number;
-      gender?: string;
-    };
-
-    // Check native language filter - any of sender's native languages must match
-    if (
-      filters.allowed_native_languages &&
-      filters.allowed_native_languages.length > 0
-    ) {
-      const senderNativeLangs = sender.native_languages ?? [];
-      const hasAllowedLanguage = senderNativeLangs.some((lang: string) =>
-        filters.allowed_native_languages!.includes(lang),
-      );
-      if (senderNativeLangs.length > 0 && !hasAllowedLanguage) {
-        throw new BadRequestException(
-          'You cannot send the first message to this user due to their native language filter settings.',
-        );
-      }
-    }
-
-    // Check age filter
-    if (filters.age_min !== undefined || filters.age_max !== undefined) {
-      const senderAge = sender.age;
-      if (senderAge !== undefined && senderAge !== null) {
-        if (filters.age_min !== undefined && senderAge < filters.age_min) {
-          throw new BadRequestException(
-            'You cannot send the first message to this user due to their age filter settings.',
-          );
-        }
-        if (filters.age_max !== undefined && senderAge > filters.age_max) {
-          throw new BadRequestException(
-            'You cannot send the first message to this user due to their age filter settings.',
-          );
-        }
-      }
-    }
-
-    // Check gender filter
-    if (filters.allowed_genders && filters.allowed_genders.length > 0) {
-      const senderGender = sender.gender ?? '';
-      if (senderGender && !filters.allowed_genders.includes(senderGender)) {
-        throw new BadRequestException(
-          'You cannot send the first message to this user due to their gender filter settings.',
-        );
-      }
-    }
   }
 
   private async verifyAdmin(userId: string, roomId: string): Promise<void> {
