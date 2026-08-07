@@ -1,6 +1,9 @@
 import {Component, inject, signal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppCardComponent } from '../primitives/card/card.component';
 import {
   ModerationService,
   ModerationItem,
@@ -9,8 +12,7 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './moderation-panel.html',
 })
 export class ModerationPanelComponent {
@@ -18,7 +20,8 @@ export class ModerationPanelComponent {
 
   currentFilter = signal<'moment' | 'profile'>('moment');
   items = signal<ModerationItem[]>([]);
-  loading = signal(false);
+  loading = signal(true);
+  loadError = signal<string | null>(null);
   analysisResult = signal<UserAnalysisResult | null>(null);
   analysing = signal(false);
 
@@ -33,9 +36,13 @@ export class ModerationPanelComponent {
 
   private async loadItems() {
     this.loading.set(true);
+    this.loadError.set(null);
     try {
       const items = await this.moderationService.getItems(this.currentFilter());
       this.items.set(items);
+    } catch {
+      this.loadError.set('Failed to load items');
+      this.items.set([]);
     } finally {
       this.loading.set(false);
     }
