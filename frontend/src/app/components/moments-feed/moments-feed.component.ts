@@ -16,6 +16,7 @@ import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.compone
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
 import { TextToSpeechComponent } from '../text-to-speech/text-to-speech.component';
+import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 import {
   LanguagePickerComponent,
   getLanguageFlag,
@@ -34,6 +35,7 @@ import {
     VoiceRecorderComponent,
     ScrollablePillsComponent,
     CorrectionModalComponent,
+    LikedByModalComponent,
     LanguagePickerComponent,
     TextToSpeechComponent,
   ],
