@@ -92,6 +92,15 @@ describe('DiscoveryService', () => {
       providers: [
         DiscoveryService,
         {
+          provide: `PinoLogger:${DiscoveryService.name}`,
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
+        {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),

@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import Redis from 'ioredis';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
@@ -27,8 +28,6 @@ import {
  */
 @Injectable()
 export class DiscoveryCacheInvalidationService {
-  private readonly logger = new Logger(DiscoveryCacheInvalidationService.name);
-
   /** Canonical set of invalidation rules for the entire discovery surface. */
   readonly rules: ReadonlyArray<CacheInvalidationRule> = [
     {
@@ -118,7 +117,11 @@ export class DiscoveryCacheInvalidationService {
     },
   ];
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    @InjectPinoLogger(DiscoveryCacheInvalidationService.name)
+    private readonly logger: PinoLogger,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   private getRedis(): Redis {
     return this.supabaseService.getRedisClient();
@@ -134,7 +137,7 @@ export class DiscoveryCacheInvalidationService {
       DiscoveryCacheNamespace.PARTNER_OF_WEEK,
     );
     if (deleted > 0) {
-      this.logger.log(
+      this.logger.info(
         'Invalidated partner_of_week_ids cache (partner_of_week_updated)',
       );
     }
@@ -150,7 +153,7 @@ export class DiscoveryCacheInvalidationService {
       `${DiscoveryCacheNamespace.RECOMMENDATIONS_DAILY}:*`,
     );
     if (total > 0) {
-      this.logger.log(`Invalidated ${total} daily recommendation cache key(s)`);
+      this.logger.info(`Invalidated ${total} daily recommendation cache key(s)`);
     }
   }
 
@@ -170,7 +173,7 @@ export class DiscoveryCacheInvalidationService {
       `discovery:audio_intros:user:${payload.userId}:*`,
     );
     if (total > 0) {
-      this.logger.log(
+      this.logger.info(
         `Invalidated ${total} user-scoped discovery cache key(s) for ${payload.userId}`,
       );
     }
@@ -183,7 +186,7 @@ export class DiscoveryCacheInvalidationService {
     total += await this.getRedis().del(DiscoveryCacheNamespace.RECENT_NATIVE);
     total += await this.getRedis().del(DiscoveryCacheNamespace.SPOTLIGHT);
     if (total > 0) {
-      this.logger.log(
+      this.logger.info(
         `Invalidated ${total} shared discovery cache key(s) after VIP change`,
       );
     }
@@ -199,7 +202,7 @@ export class DiscoveryCacheInvalidationService {
       `discovery:partner_search:user:${payload.userId}:*`,
     );
     if (total > 0) {
-      this.logger.log(
+      this.logger.info(
         `Invalidated ${total} location-scoped discovery cache key(s) for ${payload.userId}`,
       );
     }
@@ -217,7 +220,7 @@ export class DiscoveryCacheInvalidationService {
     total += await this.getRedis().del(DiscoveryCacheNamespace.RECENT_NATIVE);
     total += await this.getRedis().del(DiscoveryCacheNamespace.SPOTLIGHT);
     if (total > 0) {
-      this.logger.log(
+      this.logger.info(
         `Invalidated ${total} discovery cache key(s) after metrics update`,
       );
     }
@@ -230,7 +233,7 @@ export class DiscoveryCacheInvalidationService {
     total += await this.getRedis().del(DiscoveryCacheNamespace.SPOTLIGHT);
     total += await this.deleteByPattern(`discovery:partner_search:user:*`);
     if (total > 0) {
-      this.logger.log(
+      this.logger.info(
         `Invalidated ${total} discovery cache key(s) after new user onboarded`,
       );
     }
@@ -255,7 +258,7 @@ export class DiscoveryCacheInvalidationService {
       total += await this.getRedis().del(prefix);
     }
     if (total > 0) {
-      this.logger.log(
+      this.logger.info(
         `Bulk-invalidated ${total} discovery cache key(s) for user ${payload.userId}`,
       );
     }
@@ -308,7 +311,7 @@ export class DiscoveryCacheInvalidationService {
         }
       } while (cursor !== '0');
       if (deleted > 0) {
-        this.logger.log(
+        this.logger.info(
           { pattern, deleted },
           'Discovery bulk cache invalidation',
         );

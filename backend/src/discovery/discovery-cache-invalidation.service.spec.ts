@@ -28,6 +28,15 @@ describe('DiscoveryCacheInvalidationService', () => {
       providers: [
         DiscoveryCacheInvalidationService,
         {
+          provide: `PinoLogger:${DiscoveryCacheInvalidationService.name}`,
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
+        {
           provide: SupabaseService,
           useValue: { getRedisClient: () => mockRedis },
         },

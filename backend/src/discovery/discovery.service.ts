@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -32,9 +33,9 @@ type DiscoveryUser = UserProfile & {
 
 @Injectable()
 export class DiscoveryService {
-  private readonly logger = new Logger(DiscoveryService.name);
-
   constructor(
+    @InjectPinoLogger(DiscoveryService.name)
+    private readonly logger: PinoLogger,
     private readonly audioRoomsService: AudioRoomsService,
     private readonly cloudflareCacheService: CloudflareCacheService,
     private readonly supabaseService: SupabaseService,
@@ -44,7 +45,7 @@ export class DiscoveryService {
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
-    this.logger.log('Starting Partner of the Week calculation...');
+    this.logger.info('Starting Partner of the Week calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -73,7 +74,7 @@ export class DiscoveryService {
         'EX',
         604800,
       );
-      this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
+      this.logger.info(`Partner of the Week set for ${partnerIds.length} users`);
 
       // Purge Cloudflare edge cache for the old POTW list across all PoPs
       await this.cloudflareCacheService.purgeByCacheTags([
@@ -87,7 +88,7 @@ export class DiscoveryService {
   // Daily calculation (existing functionality)
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations() {
-    this.logger.log('Starting daily partner recommendations calculation...');
+    this.logger.info('Starting daily partner recommendations calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -163,9 +164,8 @@ export class DiscoveryService {
           }
         }
       }
-
-      await flushPipeline();
-      this.logger.log(
+await flushPipeline();
+      this.logger.info(
         `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
       );
     } catch (err) {
@@ -195,7 +195,7 @@ export class DiscoveryService {
       query.country ||
       query.city
     ) {
-      this.logger.log(
+      this.logger.info(
         `Discovery location search by user ${currentUserId}: ` +
           `lat=${query.latitude ?? 'none'}, lon=${query.longitude ?? 'none'}, ` +
           `country=${query.country ?? 'none'}, city=${query.city ?? 'none'}`,
@@ -945,7 +945,7 @@ export class DiscoveryService {
     query: { country?: string; city?: string },
   ): Promise<UserProfile[]> {
     // GDPR audit log: record location search for compliance
-    this.logger.log(
+    this.logger.info(
       `Discovery country/city search by user ${currentUserId}: ` +
         `country=${query.country ?? 'none'}, city=${query.city ?? 'none'}`,
     );
