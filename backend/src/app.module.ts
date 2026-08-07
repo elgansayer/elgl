@@ -76,6 +76,7 @@ import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.s
 import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
+import { CloudflareModule } from './cloudflare/cloudflare.module';
 
 @Module({
   imports: [
@@ -168,6 +169,7 @@ import { ReadingEngineModule } from './reading-engine/reading-engine.module';
     AnalyticsModule,
     MetricsModule,
     ReadingEngineModule,
+    CloudflareModule,
   ],
   controllers: [AppController],
   providers: [
