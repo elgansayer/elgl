@@ -4,7 +4,7 @@
     <button
       class="btn-primary w-full text-start"
       (click)="clearCache()"
-    >
+     [attr.aria-label]="'dataStorage.clearCache' | t">
       {{ 'dataStorage.clearCache' | t }}
     </button>
     <div class="flex items-center justify-between ps-4 pe-4">

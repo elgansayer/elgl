@@ -19,7 +19,7 @@ export class GooglePlayNotificationController {
   @Post()
   @HttpCode(200)
   async handleNotification(
-    @Body() payload: any,
+    @Body() payload: unknown,
     @Headers('authorization') authorization?: string,
   ) {
     this.logger.log('Received Google Play Developer Notification');

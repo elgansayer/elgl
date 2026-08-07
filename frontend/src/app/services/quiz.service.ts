@@ -2,34 +2,24 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-export interface QuizOption {
-  id: string;
-  text: string;
-  points: number;
-}
-
 export interface QuizQuestion {
   id: string;
   text: string;
-  skill: 'reading' | 'writing' | 'speaking' | 'listening' | 'grammar' | 'vocabulary';
-  category: 'self_assessment' | 'comprehension' | 'production' | 'interaction';
-  options: QuizOption[];
+  options: { id: string; text: string; points: number }[];
 }
 
-export interface QuizResultResponse {
-  totalScore: number;
+export interface QuizResults {
+  score: number;
   maxScore: number;
-  percentage: number;
-  suggestedCefr: string;
-  skillBreakdown: Record<string, { score: number; max: number }>;
-  description: string;
+  suggestedLevel: string;
+  answers: Record<string, number>;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class QuizService {
-  private readonly http = inject(HttpClient);
+  private http = inject(HttpClient);
 
   getQuestions(language: string): Promise<QuizQuestion[]> {
     return firstValueFrom(
@@ -37,9 +27,9 @@ export class QuizService {
     );
   }
 
-  evaluateResults(language: string, answers: Record<string, number>): Promise<QuizResultResponse> {
+  submitResults(results: QuizResults): Promise<void> {
     return firstValueFrom(
-      this.http.post<QuizResultResponse>('/api/quiz/evaluate', { language, answers }),
+      this.http.post<void>('/api/quiz/results', results),
     );
   }
 }

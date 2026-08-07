@@ -104,4 +104,27 @@ describe('EconomyController', () => {
       expect(result).toEqual(response);
     });
   });
+
+  describe('getStickerPacks', () => {
+    it('should return sticker packs from service', async () => {
+      const response = { packs: [], owned_pack_ids: [], user_coins: 100 };
+      (economyService.getStickerPacks as jest.Mock).mockResolvedValue(response);
+
+      const result = await controller.getStickerPacks({ id: 'user-1' } as any);
+      expect(economyService.getStickerPacks).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('unlockStickerPack', () => {
+    it('should call service unlockStickerPack when user is provided', async () => {
+      const dto = { pack_id: 'stk_pack_1' };
+      const response = { success: true, coins_remaining: 150, pack: { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 } };
+      (economyService.unlockStickerPack as jest.Mock).mockResolvedValue(response);
+
+      const result = await controller.unlockStickerPack({ id: 'user-1' } as any, dto);
+      expect(economyService.unlockStickerPack).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(response);
+    });
+  });
 });

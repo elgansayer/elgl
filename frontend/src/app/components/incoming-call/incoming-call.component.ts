@@ -151,7 +151,7 @@ export class IncomingCallComponent implements OnDestroy {
   readonly callInfo = signal<IncomingCallInfo | null>(null);
 
   private ringtoneAudio: HTMLAudioElement | null = null;
-  private ringtoneUrl = '/assets/audio/ringtone.mp3';
+  private ringtoneUrl = '/assets/audio/ringtone.wav';
 
   private subscribedChannel: string | null = null;
   private currentUserSilenceUnknown = signal<boolean>(false);
