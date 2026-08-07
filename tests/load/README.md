@@ -36,6 +36,8 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-pay
 | `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
 | `test:escrow-payments` | `escrow-payments.load.yml` | Load tests the Escrow Payments endpoints |
 | `test:escrow-payments:report` | (output + HTML) | Runs the Escrow Payments test and generates an HTML report |
+| `test:video-classrooms` | `video-classrooms.load.yml` | Load tests the Video Classrooms endpoints (LiveKit room creation and joining) |
+| `test:video-classrooms:report` | (output + HTML) | Runs the Video Classrooms test and generates an HTML report |
 
 ## Configuration
 
@@ -117,3 +119,7 @@ Both test scripts include the following phases:
 - `POST /economy/send-gift` - Send virtual gift to another user
 - `GET /economy/sticker-packs` - Sticker pack storefront
 - `POST /economy/unlock-sticker-pack` - Unlock a sticker pack
+
+### Video Classrooms Module (`/video-calls`)
+- `POST /video-calls/start` - Create a new LiveKit video room and return an access token
+- `POST /video-calls/accept` - Join an existing LiveKit video room with a room name
