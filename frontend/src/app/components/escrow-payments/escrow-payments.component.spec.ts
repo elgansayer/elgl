@@ -683,4 +683,28 @@ describe('EscrowPaymentsComponent', () => {
     expect(callArgs.startWith).toBe('escrowStepTitle');
 >>>>>>> origin/main
   });
+
+  it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-) are used instead of physical direction classes', () => {
+    const componentHtml = fixture.nativeElement.innerHTML;
+
+    // Physical direction classes must NOT appear
+    expect(componentHtml).not.toMatch(/\bpl-\d/);
+    expect(componentHtml).not.toMatch(/\bpr-\d/);
+    expect(componentHtml).not.toMatch(/\bml-\d/);
+    expect(componentHtml).not.toMatch(/\bmr-\d/);
+
+    // Physical border classes must NOT appear
+    expect(componentHtml).not.toMatch(/\bborder-l\b/);
+    expect(componentHtml).not.toMatch(/\bborder-r\b/);
+
+    // Physical position classes must NOT appear
+    expect(componentHtml).not.toMatch(/\bleft-\d/);
+    expect(componentHtml).not.toMatch(/\bright-\d/);
+
+    // Logical direction classes SHOULD appear
+    expect(componentHtml).toMatch(/\bps-\d/);
+    expect(componentHtml).toMatch(/\bpe-\d/);
+    expect(componentHtml).toMatch(/\bms-\d/);
+    expect(componentHtml).toMatch(/\bme-\d/);
+  });
 });
