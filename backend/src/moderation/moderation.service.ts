@@ -145,28 +145,7 @@ export class ModerationService {
         }
       }
 
-      // Batch-fetch moment content for all moment reports in a single
-      // round-trip to avoid the N+1 query anti-pattern.
-      const momentItems = items.filter((item) => item.reportedMomentId != null);
-
-      if (momentItems.length === 0) {
-        return [];
-      }
-
-      const momentIds = momentItems.map((item) => item.reportedMomentId as string);
-      const momentMap = await this.batchGetMomentContent(momentIds);
-
-      return momentItems.map((item) => {
-        const moment = momentMap.get(item.reportedMomentId as string);
-        if (moment) {
-          return {
-            ...item,
-            moment_content: moment.content_text,
-            momentAuthorName: moment.authorName,
-          };
-        }
-        return item;
-      });
+      return items;
     } catch (err) {
       this.logger.warn(
         err,
@@ -358,8 +337,7 @@ export class ModerationService {
       );
 
       this.metricsService.recordTsDatingRiskScore(riskScore);
-      const matchedFlags: string[] = [];
-      return { riskScore, flags: matchedFlags };
+      return { riskScore, flags: uniqueFlags };
     } catch (err) {
       this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);
       return { riskScore: 0, flags: [] };

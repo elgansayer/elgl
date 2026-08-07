@@ -2,11 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
+import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 import { MOCK_USERS } from '../mock-data';
 
 type DiscoveryUser = UserProfile & {
@@ -33,6 +35,7 @@ type DiscoveryUser = UserProfile & {
 export class DiscoveryService {
   constructor(
     private readonly audioRoomsService: AudioRoomsService,
+    private readonly cloudflareCacheService: CloudflareCacheService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
     @InjectPinoLogger(DiscoveryService.name)
@@ -50,6 +53,7 @@ export class DiscoveryService {
       const { data: topUsers, error } = await supabase
         .from('users')
         .select('id')
+        .eq('is_deletion_pending', false)
         .gt('correction_ratio', 0.5)
         .order('correction_ratio', { ascending: false })
         .order('study_streak_days', { ascending: false })
@@ -70,7 +74,16 @@ export class DiscoveryService {
         'EX',
         604800,
       );
+<<<<<<< HEAD
       this.logger.info(`Partner of the Week set for ${partnerIds.length} users`);
+=======
+      this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
+
+      // Purge Cloudflare edge cache for the old POTW list across all PoPs
+      await this.cloudflareCacheService.purgeByCacheTags([
+        DISCOVERY_CACHE_TAG_POTW,
+      ]);
+>>>>>>> origin/main
     } catch (err) {
       this.logger.error(
         { error: err instanceof Error ? err.message : String(err) },
@@ -86,10 +99,25 @@ export class DiscoveryService {
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
+    let pipeline = redis.pipeline();
+    let pipelineOps = 0;
+    let totalCached = 0;
+
+    const flushPipeline = async (): Promise<void> => {
+      if (pipelineOps > 0) {
+        await pipeline.exec();
+        pipeline = redis.pipeline();
+        pipelineOps = 0;
+      }
+    };
+
     try {
       const { data: users, error } = await supabase
         .from('users')
         .select('id, native_languages, target_languages')
+        .eq('is_deletion_pending', false)
+        .not('native_languages', 'is', null)
+        .not('target_languages', 'is', null)
         .limit(1000);
 
       if (error || !users) {
@@ -116,6 +144,7 @@ export class DiscoveryService {
           .select('id')
           .neq('id', user.id)
           .eq('privacy_hide_from_search', false)
+          .eq('is_deletion_pending', false)
           .contains('native_languages', [user.target_languages[0]])
           .contains('target_languages', [user.native_languages[0]])
           .order('study_streak_days', { ascending: false })
@@ -130,21 +159,38 @@ export class DiscoveryService {
             matchIds = matchIds.filter((id) => !blockedIds.includes(id));
           }
           if (matchIds.length > 0) {
-            await redis.set(
+            pipeline.set(
               `daily_recommendations:${user.id}`,
               JSON.stringify(matchIds),
               'EX',
               86400,
             );
+            pipelineOps++;
+            totalCached++;
+
+            if (pipelineOps >= 200) {
+              await flushPipeline();
+            }
           }
         }
       }
+<<<<<<< HEAD
       this.logger.info('Finished daily partner recommendations calculation.');
     } catch (err) {
       this.logger.error(
         { error: err instanceof Error ? err.message : String(err) },
         'Error calculating daily recommendations',
       );
+=======
+
+      await flushPipeline();
+      this.logger.log(
+        `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
+      );
+    } catch (err) {
+      await flushPipeline();
+      this.logger.error('Error calculating daily recommendations', err);
+>>>>>>> origin/main
     }
   }
 
@@ -161,6 +207,20 @@ export class DiscoveryService {
     query: SearchQueryDto,
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
+
+    // GDPR audit log: record location-based searches for compliance
+    if (
+      query.latitude !== undefined ||
+      query.longitude !== undefined ||
+      query.country ||
+      query.city
+    ) {
+      this.logger.log(
+        `Discovery location search by user ${currentUserId}: ` +
+          `lat=${query.latitude ?? 'none'}, lon=${query.longitude ?? 'none'}, ` +
+          `country=${query.country ?? 'none'}, city=${query.city ?? 'none'}`,
+      );
+    }
 
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
@@ -206,7 +266,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
 
     if (query.has_audio_intro) {
       queryBuilder = queryBuilder
@@ -437,7 +498,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
 
     queryBuilder = queryBuilder
       .not('audio_intro_url', 'is', null)
@@ -515,6 +577,7 @@ export class DiscoveryService {
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -553,6 +616,7 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -604,7 +668,8 @@ export class DiscoveryService {
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
 
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
@@ -899,6 +964,12 @@ export class DiscoveryService {
     currentUserId: string,
     query: { country?: string; city?: string },
   ): Promise<UserProfile[]> {
+    // GDPR audit log: record location search for compliance
+    this.logger.log(
+      `Discovery country/city search by user ${currentUserId}: ` +
+        `country=${query.country ?? 'none'}, city=${query.city ?? 'none'}`,
+    );
+
     const supabase = this.supabaseService.getClient();
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
@@ -908,7 +979,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
     if (blockedIds.length > 0) {
       qb = qb.not('id', 'in', blockedIds);
     }

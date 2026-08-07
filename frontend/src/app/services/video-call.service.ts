@@ -1,9 +1,10 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import { Room, RoomEvent, Track, RemoteParticipant, VideoPresets } from 'livekit-client';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, interval, Subscription } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface VideoCallState {
   roomName: string;
@@ -20,8 +21,9 @@ export interface VideoCallState {
 export class VideoCallService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private destroyRef = inject(DestroyRef);
   private room: Room | null = null;
-  private durationInterval: ReturnType<typeof setInterval> | null = null;
+  private durationSubscription: Subscription | null = null;
 
   readonly callState = signal<VideoCallState | null>(null);
   readonly localVideoTrack = signal<MediaStreamTrack | null>(null);
@@ -71,9 +73,8 @@ export class VideoCallService {
       if (localVideoPublication?.track) {
         this.localVideoTrack.set(localVideoPublication.track.mediaStreamTrack);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.connectionError.set('Failed to start video call');
-      console.error('Video call start error:', error);
       throw error;
     }
   }
@@ -109,9 +110,8 @@ export class VideoCallService {
       if (localVideoPublication?.track) {
         this.localVideoTrack.set(localVideoPublication.track.mediaStreamTrack);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.connectionError.set('Failed to accept video call');
-      console.error('Video call accept error:', error);
       throw error;
     }
   }
@@ -226,21 +226,24 @@ export class VideoCallService {
   }
 
   private startDurationTimer(): void {
-    this.durationInterval = setInterval(() => {
-      const currentState = this.callState();
-      if (currentState) {
-        this.callState.set({
-          ...currentState,
-          callDuration: currentState.callDuration + 1,
-        });
-      }
-    }, 1000);
+    this.stopDurationTimer();
+    this.durationSubscription = interval(1000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const currentState = this.callState();
+        if (currentState) {
+          this.callState.set({
+            ...currentState,
+            callDuration: currentState.callDuration + 1,
+          });
+        }
+      });
   }
 
   private stopDurationTimer(): void {
-    if (this.durationInterval) {
-      clearInterval(this.durationInterval);
-      this.durationInterval = null;
+    if (this.durationSubscription) {
+      this.durationSubscription.unsubscribe();
+      this.durationSubscription = null;
     }
   }
 }

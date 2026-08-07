@@ -2,12 +2,13 @@ import { Component, inject, signal, computed, effect, viewChild, ElementRef } fr
 import { VideoTrack } from 'livekit-client';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-video-room',
-  imports: [TranslatePipe, LiveChatOverlayComponent],
+  imports: [TranslatePipe, LiveChatOverlayComponent, AppSkeletonLoaderComponent],
   template: `
     @if (store.currentRoom(); as room) {
       <section
@@ -70,9 +71,21 @@ import { AuthService } from '../../services/auth.service';
             [attr.aria-label]="'videoRoom.hostBadge' | t"
           >
             @if (!hasHostVideo()) {
-              <p class="text-slate-500 text-sm px-4 text-center" aria-live="polite">
-                {{ 'videoRoom.waitingForHost' | t }}
-              </p>
+              <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
+                <app-skeleton-loader
+                  [height]="'60px'"
+                  [width]="'60px'"
+                  [variant]="'circle'"
+                />
+                <app-skeleton-loader
+                  [height]="'14px'"
+                  [width]="'60%'"
+                  [variant]="'text'"
+                />
+                <p class="text-slate-500 text-xs" aria-live="polite">
+                  {{ 'videoRoom.waitingForHost' | t }}
+                </p>
+              </div>
             }
             <video
               #hostVideo
@@ -101,9 +114,21 @@ import { AuthService } from '../../services/auth.service';
               [attr.aria-label]="'videoRoom.coHostBadge' | t"
             >
               @if (!hasCoHostVideo()) {
-                <p class="text-slate-500 text-sm px-4 text-center" aria-live="polite">
-                  {{ 'videoRoom.waitingForCoHost' | t }}
-                </p>
+                <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4">
+                  <app-skeleton-loader
+                    [height]="'48px'"
+                    [width]="'48px'"
+                    [variant]="'circle'"
+                  />
+                  <app-skeleton-loader
+                    [height]="'12px'"
+                    [width]="'50%'"
+                    [variant]="'text'"
+                  />
+                  <p class="text-slate-500 text-xs" aria-live="polite">
+                    {{ 'videoRoom.waitingForCoHost' | t }}
+                  </p>
+                </div>
               }
               <video
                 #coHostVideo
@@ -144,6 +169,25 @@ import { AuthService } from '../../services/auth.service';
           }
         </div>
       </section>
+    } @else {
+      <div class="flex flex-col items-center justify-center h-full w-full bg-slate-900 rounded-2xl p-8 gap-4">
+        <app-skeleton-loader
+          [height]="'80px'"
+          [width]="'80px'"
+          [variant]="'circle'"
+        />
+        <app-skeleton-loader
+          [height]="'20px'"
+          [width]="'60%'"
+          [variant]="'text'"
+        />
+        <app-skeleton-loader
+          [height]="'14px'"
+          [width]="'40%'"
+          [variant]="'text'"
+        />
+        <p class="text-slate-500 text-sm mt-2">{{ 'videoRoom.connectingToRoom' | t }}</p>
+      </div>
     }
   `,
   styles: [
