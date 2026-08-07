@@ -4,6 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { vi, Mocked } from 'vitest';
 import { VideoRoomComponent } from './video-room.component';
+import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 
@@ -52,7 +53,11 @@ describe('VideoRoomComponent', () => {
         { provide: AudioRoomsStore, useValue: mockStore },
         { provide: AuthService, useValue: mockAuthService },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(VideoRoomComponent, {
+        remove: { imports: [LiveChatOverlayComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(VideoRoomComponent);
     component = fixture.componentInstance;
