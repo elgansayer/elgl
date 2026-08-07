@@ -1,5 +1,11 @@
 import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, input, output, effect, ErrorHandler, viewChild } from '@angular/core';
+<<<<<<< HEAD
+import { Component, inject, signal, computed, input, output, effect, ErrorHandler } from '@angular/core';
+import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
+=======
+import { Component, OnInit, inject, signal, input, output, computed, viewChild, ErrorHandler } from '@angular/core';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
@@ -7,6 +13,7 @@ import {
   SrsErrorBoundaryComponent,
   SrsErrorContext,
 } from '../srs-error-boundary/srs-error-boundary.component';
+>>>>>>> origin/main
 
 @Component({
   selector: 'app-word-definition-modal',
@@ -110,8 +117,16 @@ export class WordDefinitionModalComponent {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
+<<<<<<< HEAD
   readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
 
+  constructor() {
+    // Auto-fetch definition when word token changes, replacing ngOnInit
+    effect(() => {
+      const token = this.wordToken();
+      const target = this.targetLanguage();
+      const status = this.vocabStore.getWordStatus(token);
+=======
   readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
 
   readonly errorContext = computed<SrsErrorContext>(() => ({
@@ -124,12 +139,10 @@ export class WordDefinitionModalComponent {
     },
   }));
 
-  constructor() {
-    // Auto-fetch definition when word token changes, replacing ngOnInit
-    effect(() => {
-      const token = this.wordToken();
-      const target = this.targetLanguage();
-      const status = this.vocabStore.getWordStatus(token);
+  async ngOnInit(): Promise<void> {
+    try {
+      const status = this.vocabStore.getWordStatus(this.wordToken());
+>>>>>>> origin/main
       if (status.flashcard) {
         this.existingCard.set(status.flashcard);
       }
@@ -144,6 +157,28 @@ export class WordDefinitionModalComponent {
   async fetchDefinition(): Promise<void> {
     this.isLoading.set(true);
     try {
+<<<<<<< HEAD
+      const res = await this.vocabStore.translateWordOrSentence(wordToken, targetLang);
+      // Sanitise all user-visible translation result fields
+      this.translationResult.set({
+        ...res,
+        original_text: this.sanitisation.sanitiseText(res.original_text),
+        translated_text: this.sanitisation.sanitiseText(res.translated_text),
+        detected_language: this.sanitisation.sanitiseText(res.detected_language),
+        transliteration: res.transliteration ? this.sanitisation.sanitiseText(res.transliteration) : undefined,
+        definition: res.definition ? this.sanitisation.sanitiseText(res.definition) : undefined,
+        pronunciation_url: res.pronunciation_url ? this.sanitisation.sanitiseUrl(res.pronunciation_url) : undefined,
+      });
+    } catch (e) {
+      this.reportError('fetchDefinition', e);
+      // Fallback display
+      this.translationResult.set({
+        original_text: this.sanitisation.sanitiseText(wordToken),
+        translated_text: `Translation of "${this.sanitisation.sanitiseText(wordToken)}"`,
+        detected_language: 'auto',
+        definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
+        transliteration: this.sanitisation.sanitiseText(wordToken),
+=======
       const res = await this.vocabStore.translateWordOrSentence(
         this.wordToken(),
         this.targetLanguage(),
@@ -165,6 +200,7 @@ export class WordDefinitionModalComponent {
         detected_language: 'auto',
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
         transliteration: this.wordToken(),
+>>>>>>> origin/main
       });
       this.handleError(e, 'fetchDefinition');
     } finally {
@@ -175,11 +211,18 @@ export class WordDefinitionModalComponent {
   playAudio(): void {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
+<<<<<<< HEAD
       const safeUrl = this.sanitisation.sanitiseUrl(url);
       if (safeUrl) {
         const audio = new Audio(safeUrl);
-        audio.play().catch((e) => this.handleError(e, 'playAudio'));
+        audio.play().catch((e) => this.reportError('playAudio', e));
       }
+=======
+      const audio = new Audio(url);
+      audio.play().catch((err) => {
+        this.handleError(err, 'playAudio');
+      });
+>>>>>>> origin/main
     }
   }
 

@@ -23,11 +23,15 @@ interface StatusFilterOption {
   imports: [FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
+<<<<<<< HEAD
 export class EscrowPaymentsComponent {
-  private readonly location = inject(Location);
-  private readonly auth = inject(AuthService);
-  private readonly i18n = inject(I18nService);
-  private readonly network = inject(NetworkStatusService);
+=======
+export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
+>>>>>>> origin/main
+  private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  private i18n = inject(I18nService);
+  private readonly joyrideService = inject(JoyrideService);
   private readonly onboardingService = inject(EscrowOnboardingService);
   private readonly escrowService = inject(EscrowService);
 

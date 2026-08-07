@@ -3,6 +3,11 @@ import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AdminService, AdminBlockEntry } from '../../services/admin.service';
+<<<<<<< HEAD
+=======
+import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
+import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
+>>>>>>> origin/main
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
@@ -10,8 +15,11 @@ import { CrashReportService } from '../../services/crash-report.service';
 
 @Component({
   selector: 'app-admin-blocks',
+<<<<<<< HEAD
   imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
-
+=======
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+>>>>>>> origin/main
   templateUrl: './admin-blocks.component.html',
 })
 export class AdminBlocksComponent {
