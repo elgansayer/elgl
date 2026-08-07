@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
+import { Location } from '@angular/common';
 import { DataStorageService } from '../../services/data-storage.service';
 import { CacheService } from '../../services/cache.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -12,23 +13,70 @@ import { TranslatePipe } from '../../services/translate.pipe';
 export class DataStorageComponent {
   protected dataStorageService = inject(DataStorageService);
   private cacheService = inject(CacheService);
+  private location = inject(Location);
 
   readonly isClearingCache = signal(false);
   readonly isDeletingOldMedia = signal(false);
+  readonly isDownloading = signal(false);
+  readonly successMessage = signal('');
+  readonly errorMessage = signal('');
+  readonly storageEstimateBytes = signal<number | null>(null);
+  readonly storageQuotaBytes = signal<number | null>(null);
+
+  readonly storageUsedLabel = computed(() => {
+    const used = this.storageEstimateBytes();
+    if (used === null) return '';
+    return this.formatBytes(used);
+  });
+
+  readonly totalStorageLabel = computed(() => {
+    const quota = this.storageQuotaBytes();
+    if (quota === null) return '';
+    return this.formatBytes(quota);
+  });
+
+  readonly storageUsedPercent = computed(() => {
+    const used = this.storageEstimateBytes();
+    const quota = this.storageQuotaBytes();
+    if (used === null || quota === null || quota === 0) {
+      return 0;
+    }
+    return Math.min(Math.round((used / quota) * 100), 100);
+  });
+
+  constructor() {
+    this.estimateStorage();
+  }
+
+  goBack(): void {
+    this.location.back();
+  }
 
   async clearCache(): Promise<void> {
+    this.errorMessage.set('');
+    this.successMessage.set('');
     this.isClearingCache.set(true);
     try {
       await this.cacheService.clearCache();
+      this.successMessage.set('dataStorage.cacheClearedSuccess');
+      await this.estimateStorage();
+    } catch {
+      this.errorMessage.set('common.error_occurred');
     } finally {
       this.isClearingCache.set(false);
     }
   }
 
   async deleteOldMedia(): Promise<void> {
+    this.errorMessage.set('');
+    this.successMessage.set('');
     this.isDeletingOldMedia.set(true);
     try {
       await this.cacheService.deleteOldMedia();
+      this.successMessage.set('dataStorage.oldMediaDeletedSuccess');
+      await this.estimateStorage();
+    } catch {
+      this.errorMessage.set('common.error_occurred');
     } finally {
       this.isDeletingOldMedia.set(false);
     }
@@ -36,5 +84,39 @@ export class DataStorageComponent {
 
   toggleCellular(): void {
     this.dataStorageService.toggleCellularAutoDownload();
+  }
+
+  async downloadMyData(): Promise<void> {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.isDownloading.set(true);
+    try {
+      this.successMessage.set('dataStorage.downloadStarted');
+    } catch {
+      this.errorMessage.set('common.error_occurred');
+    } finally {
+      this.isDownloading.set(false);
+    }
+  }
+
+  private async estimateStorage(): Promise<void> {
+    if ('storage' in navigator && typeof navigator.storage?.estimate === 'function') {
+      try {
+        const estimate = await navigator.storage.estimate();
+        this.storageEstimateBytes.set(estimate.usage ?? 0);
+        this.storageQuotaBytes.set(estimate.quota ?? 0);
+      } catch {
+        this.storageEstimateBytes.set(null);
+        this.storageQuotaBytes.set(null);
+      }
+    }
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / Math.pow(1024, i);
+    return value.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
   }
 }
