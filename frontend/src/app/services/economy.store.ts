@@ -332,10 +332,15 @@ export class EconomyStore {
     message: string;
   }): Promise<void> {
     try {
+      // Cap message size to prevent unbounded memory from long diagnostic strings.
+      const safePayload = {
+        ...payload,
+        message: payload.message.slice(0, 500),
+      };
       const created = await firstValueFrom(
         this.http.post<DiagnosticLogApiRecord>(
           `${this.monetisationUrl}/diagnostics/logs`,
-          payload,
+          safePayload,
           {
             headers: this.getHeaders(),
           },

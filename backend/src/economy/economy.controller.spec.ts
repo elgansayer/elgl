@@ -18,6 +18,8 @@ describe('EconomyController', () => {
             getBalance: jest.fn(),
             purchaseCoins: jest.fn(),
             sendGift: jest.fn(),
+            getStickerPacks: jest.fn(),
+            unlockStickerPack: jest.fn(),
           },
         },
       ],
