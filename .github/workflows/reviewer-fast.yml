@@ -87,7 +87,7 @@ jobs:
             You are the AI PR Reviewer. PR #${{ github.event.pull_request.number }}.
 
             CRITICAL: If merge conflicts exist, read BOTH sides and resolve properly.
-            NEVER discard changes. NEVER commit raw conflict markers (<<<<<<<).
+            HARD RULE: Do NOT merge unless all builds+tests pass. Fix, commit, push, re-run. Repeat until green.
 
             MANDATORY GATE:
             1. Review code changes thoroughly.
@@ -117,17 +117,17 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "deepseek/deepseek-v4-pro"
+          llm_model: 'deepseek/deepseek-v4-pro'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             Review PR #${{ github.event.pull_request.number }}.
 
             MANDATORY: build + test both backend and frontend. Fix all failures.
             Remove conflict markers. Only merge when green.
             gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
-          cli_args: "--max-iterations 80"
+          cli_args: '--max-iterations 80'
 
       - name: Tier 3 - Gemini
         id: tertiary
@@ -135,14 +135,14 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.5-flash"
+          llm_model: 'gemini/gemini-3.5-flash'
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             Review PR #${{ github.event.pull_request.number }}. Build, test, fix, merge.
             gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
-          cli_args: "--max-iterations 40"
+          cli_args: '--max-iterations 40'
 
   fix_stale_prs:
     if: github.event_name == 'schedule'
@@ -157,7 +157,7 @@ jobs:
       - name: Fix stale PRs
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
-          MAX_PARALLEL_PR_FIXER: "20"
+          MAX_PARALLEL_PR_FIXER: '20'
         run: |
           chmod +x scripts/fix-rejected-prs.sh
           bash scripts/fix-rejected-prs.sh

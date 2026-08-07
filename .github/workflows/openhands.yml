@@ -60,8 +60,10 @@ jobs:
             8. Only when ALL checks pass: commit with a descriptive message.
             9. Create a PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
 
-            CRITICAL: A PR with broken builds or failing tests is UNACCEPTABLE.
-            Fix everything before creating the PR. DO NOT FINISH until all checks pass and the PR is created.
+            CRITICAL — HARD RULE: You MUST NOT call `gh pr create` unless ALL verification steps pass.
+            If ANY command returns a non-zero exit code, fix the code and re-verify. Keep
+            fixing and re-running until everything passes. Only then create the PR.
+            A PR with failing builds is FORBIDDEN. DO NOT FINISH until the PR is created.
 
       # Auto-skip: claude-code-action exits 0 even on auth/quota errors.
       # We check whether a PR was actually created for this issue instead.
@@ -96,7 +98,7 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "deepseek/deepseek-v4-pro"
+          llm_model: 'deepseek/deepseek-v4-pro'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
@@ -111,10 +113,11 @@ jobs:
             5. Scan for conflict markers (<<<<<<<, =======, >>>>>>>) in ALL changed files. Remove them.
             6. Only when EVERYTHING passes: commit and create PR:
                gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
-            DO NOT create a PR with broken code. Fix everything first.
-          cli_args: "--max-iterations 50"
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+            HARD RULE: Do NOT call `gh pr create` unless all commands succeed (exit code 0).
+            Fix failures, re-run, repeat until green. A broken PR is FORBIDDEN.
+          cli_args: '--max-iterations 50'
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
@@ -123,7 +126,7 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.5-flash"
+          llm_model: 'gemini/gemini-3.5-flash'
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: >
             Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
@@ -137,7 +140,8 @@ jobs:
             5. Scan for and remove conflict markers (<<<<<<<, =======, >>>>>>>).
             6. Commit and create PR:
                gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
-            DO NOT create a PR with broken code. Fix everything first.
-          cli_args: "--max-iterations 30"
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+            HARD RULE: Do NOT call `gh pr create` unless all builds+tests pass (exit 0).
+            Fix failures, re-run, repeat. Broken PR is FORBIDDEN.
+          cli_args: '--max-iterations 30'
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'

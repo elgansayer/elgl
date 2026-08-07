@@ -84,10 +84,10 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "deepseek/deepseek-v4-pro"
+          llm_model: 'deepseek/deepseek-v4-pro'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }}.
@@ -99,8 +99,8 @@ jobs:
             5. Remove all conflict markers. Resolve merge conflicts properly.
             6. Only when ALL pass: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
             7. If blocked by checks: gh pr checks ${{ github.event.pull_request.number }} --watch, then retry merge.
-            NEVER merge broken code. Fix everything first.
-          cli_args: "--max-iterations 50"
+            HARD RULE: Do NOT merge unless all builds+tests pass. Fix, commit, push to same PR, re-run. Repeat until green.
+          cli_args: '--max-iterations 50'
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
@@ -109,10 +109,10 @@ jobs:
         uses: xinbenlv/openhands-action@v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          llm_model: "gemini/gemini-3.5-flash"
+          llm_model: 'gemini/gemini-3.5-flash'
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
-          openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
-          runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+          openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
+          runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
             PR #${{ github.event.pull_request.number }}. MANDATORY:
             1. Review code. 2. cd backend && npm run build && npm test
@@ -120,4 +120,4 @@ jobs:
             4. Fix all failures, remove conflict markers.
             5. gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
             NEVER merge broken code.
-          cli_args: "--max-iterations 30"
+          cli_args: '--max-iterations 30'
