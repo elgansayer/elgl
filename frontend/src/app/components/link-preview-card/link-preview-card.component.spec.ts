@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LinkPreviewCardComponent } from './link-preview-card.component';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 import { By } from '@angular/platform-browser';
 
 describe('LinkPreviewCardComponent', () => {
@@ -8,6 +9,7 @@ describe('LinkPreviewCardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [LinkPreviewCardComponent],
+      providers: [HtmlSanitisationService],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LinkPreviewCardComponent);
