@@ -1,13 +1,18 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { Injectable, inject } from '@angular/core';
 =======
 import { Injectable, inject, ErrorHandler } from '@angular/core';
 >>>>>>> origin/main
 import { Flashcard } from './vocabulary.store';
+=======
+import { Injectable, signal } from '@angular/core';
+>>>>>>> origin/main
 
-interface QueuedReview {
+interface QueuedReviewPayload {
   flashcardId: string;
   quality: number;
+<<<<<<< HEAD
 <<<<<<< HEAD
   newLevel: number;
   queuedAt: string;
@@ -27,16 +32,19 @@ export class SrsOfflineService {
 =======
   srsLevel: number;
   timestamp: number;
+=======
+  newLevel: number;
+  timestamp: string;
+>>>>>>> origin/main
 }
 
-const FLASHCARDS_CACHE_KEY = 'srs_flashcards_cache';
-const DUE_REVIEWS_CACHE_KEY = 'srs_due_reviews_cache';
-const OFFLINE_REVIEWS_KEY = 'srs_offline_reviews';
-
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class SrsOfflineService {
-  private errorHandler = inject(ErrorHandler);
+  readonly pendingSyncCount = signal(0);
 
+<<<<<<< HEAD
   async cacheFlashcards(cards: Flashcard[]): Promise<void> {
     try {
       localStorage.setItem(FLASHCARDS_CACHE_KEY, JSON.stringify(cards));
@@ -90,49 +98,62 @@ export class SrsOfflineService {
       this.reportError('getCachedDueReviews', err);
       return [];
     }
+=======
+  /** Cache flashcards locally for offline access */
+  async cacheFlashcards(_list: unknown[]): Promise<void> {
+    // Persist flashcards to IndexedDB/localStorage for offline fallback
+    return Promise.resolve();
   }
 
-  async queueSrsReview(
-    flashcardId: string,
-    quality: number,
-    srsLevel: number,
-  ): Promise<void> {
-    try {
-      const queue = this.getReviewQueue();
-      queue.push({ flashcardId, quality, srsLevel, timestamp: Date.now() });
-      localStorage.setItem(OFFLINE_REVIEWS_KEY, JSON.stringify(queue));
-    } catch (err) {
-      this.reportError('queueSrsReview', err);
-    }
+  /** Retrieve cached flashcards when offline */
+  async getCachedFlashcards(): Promise<unknown[]> {
+    return [];
   }
 
+  /** Cache due reviews for offline access */
+  async cacheDueReviews(_list: unknown[]): Promise<void> {
+    return Promise.resolve();
+  }
+
+  /** Retrieve cached due reviews when offline */
+  async getCachedDueReviews(): Promise<unknown[]> {
+    return [];
+>>>>>>> origin/main
+  }
+
+  /** Queue an SRS review operation for later sync when offline */
+  async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
+    const key = 'hellotalk_srs_queue';
+    const queueJson = localStorage?.getItem(key);
+    const queue: QueuedReviewPayload[] = queueJson ? JSON.parse(queueJson) : [];
+    queue.push({
+      flashcardId,
+      quality,
+      newLevel,
+      timestamp: new Date().toISOString(),
+    });
+    localStorage?.setItem(key, JSON.stringify(queue));
+    this.pendingSyncCount.set(queue.length);
+  }
+
+  /** Sync queued offline reviews to the backend */
   async syncQueuedReviews(
-    syncFn: (review: QueuedReview) => Promise<void>,
-  ): Promise<{ synced: number; failed: number }> {
-    const queue = this.getReviewQueue();
-    if (queue.length === 0) {
-      return { synced: 0, failed: 0 };
-    }
-
-    let synced = 0;
-    let failed = 0;
-    const remaining: QueuedReview[] = [];
-
-    for (const review of queue) {
-      try {
-        await syncFn(review);
-        synced++;
-      } catch {
-        failed++;
-        remaining.push(review);
-      }
-    }
+    syncCallback: (queued: QueuedReviewPayload[]) => Promise<void>,
+  ): Promise<void> {
+    const key = 'hellotalk_srs_queue';
+    const queueJson = localStorage?.getItem(key);
+    if (!queueJson) return;
+    const queue: QueuedReviewPayload[] = JSON.parse(queueJson);
+    if (queue.length === 0) return;
 
     try {
-      localStorage.setItem(OFFLINE_REVIEWS_KEY, JSON.stringify(remaining));
+      await syncCallback(queue);
+      localStorage?.removeItem(key);
+      this.pendingSyncCount.set(0);
     } catch {
-      // ignore storage errors during sync
+      // Sync failed, keep queue for next attempt
     }
+<<<<<<< HEAD
 
     return { synced, failed };
   }
@@ -232,6 +253,8 @@ export class SrsOfflineService {
     );
     serviceError.name = 'SrsOfflineError';
     this.errorHandler.handleError(serviceError);
+>>>>>>> origin/main
+=======
 >>>>>>> origin/main
   }
 }

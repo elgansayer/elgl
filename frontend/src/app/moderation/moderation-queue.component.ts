@@ -9,6 +9,7 @@ import {
 import { OfflineAdminStorageService } from '../services/offline-admin-storage.service';
 import { AdminOfflineBannerComponent } from '../components/admin-offline-banner/admin-offline-banner.component';
 import { TranslatePipe } from '../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../components/primitives/card/card.component';
@@ -18,6 +19,7 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
   imports: [
     DatePipe,
     TranslatePipe,
+    SanitiseHtmlPipe,
     AppEmptyStateComponent,
     AppSkeletonLoaderComponent,
     AppCardComponent,
