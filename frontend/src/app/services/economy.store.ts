@@ -164,6 +164,23 @@ export class EconomyStore {
     }
   }
 
+
+  private getDefaultCatalog(): VirtualGift[] {
+    return [
+      { id: 'gift_rose', name: 'Rose', icon: '🌹', cost_coins: 10, animation_type: 'float' },
+      { id: 'gift_heart', name: 'Heart', icon: '❤️', cost_coins: 20, animation_type: 'float' },
+    ];
+  }
+
+  private getDefaultCoinPackages(): CoinPackage[] {
+    return [
+      { id: 'coins_small', name: 'Small Coin Pack', coins: 100, price_ukp: 4, price_usd: 4.99 },
+      { id: 'coins_medium', name: 'Medium Coin Pack', coins: 500, price_ukp: 16, price_usd: 19.99 },
+      { id: 'coins_large', name: 'Large Coin Pack', coins: 1200, price_ukp: 32, price_usd: 39.99 },
+      { id: 'coins_mega', name: 'Mega Coin Pack', coins: 3000, price_ukp: 64, price_usd: 79.99 },
+    ];
+  }
+
   async claimDailyCheckIn(): Promise<{
     claimed: boolean;
     coins_rewarded: number;

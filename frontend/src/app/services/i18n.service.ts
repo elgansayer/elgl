@@ -584,6 +584,13 @@ export class I18nService {
     'videoRoom.waitingForCoHost': 'Waiting for co-host to join...',
     'videoRoom.removeCoHostAria': 'Remove co-host from split screen',
     'videoRoom.noEligibleSpeakers': 'Approve a stage speaker before inviting a co-host.',
+    'videoRoom.hostVideoAria': 'Host video stream',
+    'videoRoom.coHostVideoAria': 'Co-host video stream',
+    'videoRoom.inviteCoHostAria': 'Invite co-host to split screen',
+    'videoRoom.inviteCoHostExpanded': 'Invite co-host picker expanded',
+    'videoRoom.inviteCoHostCollapsed': 'Invite co-host picker collapsed',
+    'videoRoom.speakerPickerAria': 'Select speaker to invite as co-host',
+    'videoRoom.speakerOptionAria': 'Invite {{id}} as co-host',
 
     // 1:1 Video Call Component
     'video_call.waiting_for': 'Waiting for {{name}}...',
@@ -598,6 +605,22 @@ export class I18nService {
     'video_call.enter_pip_aria': 'Enter picture-in-picture',
     'video_call.exit_pip_aria': 'Exit picture-in-picture',
     'video_call.end_call_aria': 'End call',
+    'video_call.remote_video_aria': 'Remote participant video',
+    'video_call.local_video_aria': 'Your camera preview',
+    'video_call.remote_camera_aria': 'Remote camera picture-in-picture',
+    'video_call.remote_avatar_aria': '{{initials}}, waiting for video',
+    'video_call.call_duration_aria': 'Call duration',
+    'video_call.controls_toolbar_aria': 'Call controls',
+    'video_call.presenting_badge_aria': 'You are presenting your screen',
+
+    // Split Screen Video Component
+    'splitScreen.hostVideoAria': 'Host video',
+    'splitScreen.coHostVideoAria': 'Co-host video',
+    'splitScreen.inviteCoHostAria': 'Invite a co-host to split screen',
+
+    // Live Chat Overlay Component
+    'liveChat.overlayAria': 'Live chat messages',
+    'liveChat.liveRegionAria': 'New messages appearing',
 
     // Chat Room Component
     'chatRoom.liveNow': 'Live now',
