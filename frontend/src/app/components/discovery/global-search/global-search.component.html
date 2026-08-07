@@ -11,7 +11,7 @@
     <select
       id="global-nativeLanguages"
       [value]="nativeLanguages()"
-      (change)="onNativeLanguageChange($event)"
+      (change)="nativeLanguages.set($any($event.target).value)"
       class="w-full p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:ring-2 focus:ring-blue-500 outline-none"
     >
       <option value="">{{ 'discovery.any_language' | t }}</option>
@@ -29,7 +29,7 @@
     <select
       id="global-targetLanguage"
       [value]="targetLanguage()"
-      (change)="onTargetLanguageChange($event)"
+      (change)="targetLanguage.set($any($event.target).value)"
       class="w-full p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:ring-2 focus:ring-blue-500 outline-none"
     >
       <option value="">{{ 'discovery.any_language' | t }}</option>
@@ -47,7 +47,7 @@
     <select
       id="global-proficiencyLevel"
       [value]="level()"
-      (change)="onLevelChange($event)"
+      (change)="level.set($any($event.target).value)"
       class="w-full p-2.5 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:ring-2 focus:ring-blue-500 outline-none"
     >
       <option value="">{{ 'discovery.any_level' | t }}</option>

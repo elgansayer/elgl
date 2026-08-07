@@ -42,8 +42,7 @@
         [pills]="filterPills()"
         [selected]="selectedFilter()"
         [ariaLabel]="'discovery.filterAriaLabel' | t"
-        (pillPicked)="onFilterSelect($event)"
-        role="radiogroup"
+        (select)="onFilterSelect($any($event))"
       >
       </app-scrollable-pills>
     </div>
@@ -100,7 +99,7 @@
           id="sortBySelect"
           class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer"
           [value]="selectedSort()"
-          (change)="onSortChange($event)"
+          (change)="setSort($any($event.target).value)"
         >
           @for (option of sortOptions(); track option.id) {
             <option [value]="option.id">{{ option.label }}</option>
@@ -119,7 +118,7 @@
           [value]="selectedGender()"
           [disabled]="!isVip()"
           [attr.aria-describedby]="!isVip() ? 'genderVipNote' : null"
-          (change)="onGenderChange($event)"
+          (change)="setGender($any($event.target).value)"
         >
           <option value="">{{ 'discovery.genderAny' | t }}</option>
           <option value="male">{{ 'discovery.genderMale' | t }}</option>
