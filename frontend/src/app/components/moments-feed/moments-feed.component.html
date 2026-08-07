@@ -244,11 +244,11 @@
               </div>
             }
 
-            @if (moment.translatedText) {
+            @if (showTranslationMap()[moment.id] && translationCache()[moment.id]) {
               <div
                 class="mt-3 rounded-xl border border-purple-500/30 bg-purple-500/10 p-3 text-[14px] text-text-primary"
               >
-                {{ moment.translatedText }}
+                {{ translationCache()[moment.id] }}
               </div>
             }
 
@@ -260,7 +260,12 @@
                 [class.text-red-500]="moment.is_liked_by_me"
                [attr.aria-label]="'moments.likeBtn' | t">
                 <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
-                <span class="font-bold">{{ moment.likes_count || ('moments.likeBtn' | t) }}</span>
+              </button>
+              <button
+                (click)="openLikedBy(moment)"
+                class="flex items-center gap-1.5 hover:text-text-primary transition-colors font-bold"
+              >
+                <span>{{ moment.likes_count || 0 }}</span>
               </button>
               <button
                 (click)="toggleComments(moment)"
@@ -293,7 +298,7 @@
                   class="flex items-center gap-1 hover:text-purple-400 transition-colors ms-auto font-bold"
                  [attr.aria-label]="'moments.hideTranslation' | t">
                   {{
-                    moment.translatedText
+                    showTranslationMap()[moment.id]
                       ? ('moments.hideTranslation' | t)
                       : ('moments.translate' | t)
                   }}
@@ -402,5 +407,13 @@
       (cancelled)="activeCorrectionMomentId.set(null)"
     >
     </app-correction-modal>
+  }
+
+  <!-- Liked By Modal -->
+  @if (activeLikedByMomentId(); as likedMomentId) {
+    <app-liked-by-modal
+      [momentId]="likedMomentId"
+      (closeModal)="closeLikedBy()"
+    ></app-liked-by-modal>
   }
 </div>
