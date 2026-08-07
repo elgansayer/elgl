@@ -194,6 +194,33 @@ describe('BlocksService', () => {
     });
   });
 
+  describe('blockUser', () => {
+    it('should insert a block record and return success', async () => {
+      mockQueryBuilder._response = { error: null };
+      mockQueryBuilder.insert = jest.fn().mockReturnThis();
+
+      const result = await service.blockUser('user-1', 'user-to-block');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        blocker_id: 'user-1',
+        blocked_id: 'user-to-block',
+      });
+      expect(result).toEqual({ success: true });
+    });
+
+    it('should throw error when insert fails', async () => {
+      mockQueryBuilder.insert = jest.fn().mockReturnThis();
+      mockQueryBuilder._response = {
+        error: { message: 'duplicate entry' },
+      };
+
+      await expect(
+        service.blockUser('user-1', 'user-to-block'),
+      ).rejects.toThrow('Failed to block user: duplicate entry');
+    });
+  });
+
   describe('unblockUser', () => {
     it('should delete the block record and return success', async () => {
       mockQueryBuilder._response = { error: null };

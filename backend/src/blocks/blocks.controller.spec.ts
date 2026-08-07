@@ -16,6 +16,7 @@ describe('BlocksController', () => {
           provide: BlocksService,
           useValue: {
             getBlockedUsers: jest.fn(),
+            blockUser: jest.fn(),
             unblockUser: jest.fn(),
           },
         },
@@ -57,6 +58,29 @@ describe('BlocksController', () => {
       await expect(controller.getBlockedUsers(null)).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+  });
+
+  describe('blockUser', () => {
+    it('should call service blockUser when user is authenticated', async () => {
+      (blocksService.blockUser as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+
+      const user = { id: 'user-1' } as any;
+      const result = await controller.blockUser(user, 'user-to-block');
+
+      expect(blocksService.blockUser).toHaveBeenCalledWith(
+        'user-1',
+        'user-to-block',
+      );
+      expect(result).toEqual({ success: true });
+    });
+
+    it('should throw UnauthorizedException when user is null', async () => {
+      await expect(
+        controller.blockUser(null, 'user-to-block'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 

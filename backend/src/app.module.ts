@@ -70,6 +70,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 import { AssessmentsModule } from './assessments/assessments.module';
+import { BlocksModule } from './blocks/blocks.module';
 
 @Module({
   imports: [
@@ -156,6 +157,7 @@ import { AssessmentsModule } from './assessments/assessments.module';
     PasswordResetModule,
             AssessmentsModule,
             AnalyticsModule,
+            BlocksModule,
   ],
   controllers: [AppController],
   providers: [
