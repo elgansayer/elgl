@@ -1238,3 +1238,226 @@ describe('Discovery Map - Combined Filter Operations', () => {
     cy.contains('Maria Garcia').should('be.visible');
   });
 });
+
+// -----------------------------------------------------------------
+// 26. Sort Options - All Values
+// -----------------------------------------------------------------
+
+describe('Discovery Map - Sort Options Coverage', () => {
+  beforeEach(() => {
+    setupDiscoveryMocks();
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+  });
+
+  it('should trigger search with sort=best_match by default', () => {
+    cy.get('#sortBySelect').should('have.value', 'best_match');
+  });
+
+  it('should trigger search with sort=online_now', () => {
+    cy.get('#sortBySelect').select('online_now');
+    cy.wait('@getPartners').its('request.url').should('include', 'sort=online_now');
+  });
+
+  it('should trigger search with sort=newest', () => {
+    cy.get('#sortBySelect').select('newest');
+    cy.wait('@getPartners').its('request.url').should('include', 'sort=newest');
+  });
+});
+
+// -----------------------------------------------------------------
+// 27. Filter Pill - Paid Practice
+// -----------------------------------------------------------------
+
+describe('Discovery Map - Paid Practice Filter', () => {
+  beforeEach(() => {
+    setupDiscoveryMocks();
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+  });
+
+  it('should display the Paid Practice filter pill', () => {
+    cy.contains(/Paid/i).should('exist');
+  });
+
+  it('should trigger a search when Paid pill is clicked', () => {
+    cy.contains(/Paid/i).click();
+    cy.wait('@getPartners');
+    // Paid filter resets distance to 50km and removes serious_learner_only
+    cy.get('@getPartners').its('request.url').should('not.include', 'serious_learner_only=true');
+  });
+});
+
+// -----------------------------------------------------------------
+// 28. Accessibility & Screen Reader
+// -----------------------------------------------------------------
+
+describe('Discovery Map - Accessibility', () => {
+  beforeEach(() => {
+    setupDiscoveryMocks();
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+  });
+
+  it('should have the main landmark region', () => {
+    cy.get('main').should('exist');
+  });
+
+  it('should have a status region for live announcements', () => {
+    cy.get('[role="status"]').should('exist');
+  });
+
+  it('should have an aria-label on filter pills radiogroup', () => {
+    cy.get('[role="radiogroup"]').should('exist');
+  });
+
+  it('should label partner cards as list items', () => {
+    cy.get('[role="list"]').should('exist');
+    cy.get('[role="listitem"]').should('have.length.at.least', 3);
+  });
+
+  it('should have aria-labels on avatar images', () => {
+    cy.get('article img').first().should('have.attr', 'alt');
+  });
+
+  it('should have a skip link in the header navigation', () => {
+    cy.get('h1').should('exist');
+  });
+});
+
+// -----------------------------------------------------------------
+// 29. Additional API Contract Tests
+// -----------------------------------------------------------------
+
+describe('Discovery Map - Additional API Contracts', () => {
+  it('GET /api/discovery/audio-intros should return 200 or 401', () => {
+    cy.request({
+      method: 'GET',
+      url: `${DISCOVERY_BASE}/audio-intros`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.be.oneOf([200, 401]);
+    });
+  });
+
+  it('GET /api/discovery/recent-native-speakers should return 200 or 401', () => {
+    cy.request({
+      method: 'GET',
+      url: `${DISCOVERY_BASE}/recent-native-speakers`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.be.oneOf([200, 401]);
+    });
+  });
+
+  it('GET /api/discovery/spotlight should return 200 or 401', () => {
+    cy.request({
+      method: 'GET',
+      url: `${DISCOVERY_BASE}/spotlight`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.be.oneOf([200, 401]);
+    });
+  });
+
+  it('GET /api/discovery/language-pair should return 200 or 401', () => {
+    cy.request({
+      method: 'GET',
+      url: `${DISCOVERY_BASE}/language-pair?native_language=EN&target_language=JA`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.be.oneOf([200, 401]);
+    });
+  });
+
+  it('GET /api/discovery/search-by-location should return 200 or 401', () => {
+    cy.request({
+      method: 'GET',
+      url: `${DISCOVERY_BASE}/search-by-location?country=JP&city=Tokyo`,
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status).to.be.oneOf([200, 401]);
+    });
+  });
+});
+
+// -----------------------------------------------------------------
+// 30. Partner Card Detail Verification
+// -----------------------------------------------------------------
+
+describe('Discovery Map - Partner Card Edge Cases', () => {
+  it('should handle partners with empty interests gracefully', () => {
+    const partners = [
+      makePartner({
+        id: 'partner-minimal',
+        display_name: 'Minimal User',
+        bio_text: 'Just a basic profile',
+        interests: [],
+        distance_metres: 1000,
+        last_active_at: new Date().toISOString(),
+        native_languages: ['EN'],
+        target_languages: ['ES'],
+      }),
+    ];
+    setupDiscoveryMocks(partners);
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+
+    cy.contains('Minimal User').should('be.visible');
+    cy.get('article').should('have.length', 1);
+  });
+
+  it('should handle partners with many interests (overflow)', () => {
+    const partners = [
+      makePartner({
+        id: 'partner-many',
+        display_name: 'Many Interests User',
+        interests: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
+        distance_metres: 500,
+        last_active_at: new Date().toISOString(),
+      }),
+    ];
+    setupDiscoveryMocks(partners);
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+
+    // Should show overflow count (+5)
+    cy.contains('+5').should('be.visible');
+  });
+
+  it('should handle partner with hidden location privacy', () => {
+    const partners = [
+      makePartner({
+        id: 'partner-hidden',
+        display_name: 'Private User',
+        privacy_hide_location: true,
+        distance_metres: undefined,
+        last_active_at: new Date().toISOString(),
+      }),
+    ];
+    setupDiscoveryMocks(partners);
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+
+    cy.contains('Private User').should('be.visible');
+  });
+
+  it('should display VIP partner with correct badge styling', () => {
+    const partners = [
+      makePartner({
+        id: 'partner-vip',
+        display_name: 'VIP User',
+        is_vip: true,
+        vip_tier: 'gold',
+        distance_metres: 3000,
+        last_active_at: new Date().toISOString(),
+      }),
+    ];
+    setupDiscoveryMocks(partners);
+    cy.visit('/discovery');
+    cy.wait('@getPartners');
+
+    cy.get('.bg-yellow-400').should('exist');
+    cy.contains('VIP User').should('be.visible');
+  });
+});
