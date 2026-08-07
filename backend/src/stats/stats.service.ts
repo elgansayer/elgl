@@ -62,10 +62,14 @@ export class StatsService {
     }
 
     const dailySeconds: Record<string, number> = {};
-    for (const log of (callLogs as { duration_seconds: number; started_at: string }[]) ?? []) {
+    for (const log of (callLogs as {
+      duration_seconds: number;
+      started_at: string;
+    }[]) ?? []) {
       const dayIdx = new Date(log.started_at).getDay();
       const day = dayNames[dayIdx];
-      dailySeconds[day] = (dailySeconds[day] ?? 0) + (log.duration_seconds ?? 0);
+      dailySeconds[day] =
+        (dailySeconds[day] ?? 0) + (log.duration_seconds ?? 0);
     }
 
     const study_hours = dayNames.map((day) => ({

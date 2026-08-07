@@ -43,7 +43,7 @@ import { CommonModule } from '@angular/common';
             [class.pointer-events-none]="i !== currentIndex()"
             class="absolute max-w-full max-h-full object-contain transition-all duration-300 ease-out select-none"
             alt="Moment media"
-          />
+           loading="lazy" />
         }
       </div>
 

@@ -21,6 +21,8 @@ import {
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
 import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
+import { DraftService } from '../../services/draft.service';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -38,6 +40,7 @@ import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.componen
     LanguagePickerComponent,
     TextToSpeechComponent,
     LikedByModalComponent,
+    AppEmptyStateComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -51,6 +54,7 @@ export class MomentsFeedComponent {
   readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
+  private readonly draftService = inject(DraftService);
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
@@ -59,7 +63,11 @@ export class MomentsFeedComponent {
   constructor() {
     afterNextRender(() => {
       window.addEventListener('scroll', this.handleWindowScroll);
-      this.destroyRef.onDestroy(() => window.removeEventListener('scroll', this.handleWindowScroll));
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('scroll', this.handleWindowScroll);
+        this.saveMomentDraft();
+      });
+      this.restoreMomentDraft();
     });
   }
 
@@ -217,6 +225,7 @@ export class MomentsFeedComponent {
       this.newMediaUrls.set([]);
       this.newMediaType.set('none');
       this.newVoiceDurationSec = null;
+      this.draftService.clearMomentDraft();
     } catch (e) {
       console.error('Error submitting moment:', e);
       showToast(this.i18n.translate('moments.publishError'));
@@ -436,4 +445,26 @@ export class MomentsFeedComponent {
       }
     }
   };
+
+  private saveMomentDraft(): void {
+    this.draftService.saveMomentDraft({
+      text: this.newText(),
+      mediaUrls: this.newMediaUrls().length > 0 ? this.newMediaUrls() : undefined,
+      mediaType: this.newMediaType(),
+      targetLanguage: this.newTargetLanguage(),
+      voiceDurationSec: this.newVoiceDurationSec,
+    });
+  }
+
+  private restoreMomentDraft(): void {
+    const draft = this.draftService.loadMomentDraft();
+    if (!draft) return;
+    if (draft.text) this.newText.set(draft.text);
+    if (draft.mediaUrls && draft.mediaUrls.length > 0) {
+      this.newMediaUrls.set(draft.mediaUrls);
+      this.newMediaType.set(draft.mediaType ?? 'images');
+    }
+    if (draft.targetLanguage) this.newTargetLanguage.set(draft.targetLanguage);
+    if (draft.voiceDurationSec !== undefined) this.newVoiceDurationSec = draft.voiceDurationSec;
+  }
 }

@@ -206,7 +206,7 @@ describe('StatsService', () => {
         { duration_seconds: 1800, started_at: new Date().toISOString() },
       ];
 
-      let callIdx = 0;
+      const callIdx = 0;
       supabaseMock.from.mockImplementation((table: string) => {
         const chain = createQueryChain();
         if (table === 'call_logs') {
@@ -259,7 +259,9 @@ describe('StatsService', () => {
         return chain;
       });
 
-      await expect(service.getStats('user-1')).rejects.toThrow('DB connection error');
+      await expect(service.getStats('user-1')).rejects.toThrow(
+        'DB connection error',
+      );
     });
 
     it('should throw an error when chat_messages query fails', async () => {
@@ -302,8 +304,16 @@ describe('StatsService', () => {
 
       const result = await service.getStats('user-1');
 
-      const todayHours = result.study_hours.find((s) => s.day === ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][today.getDay()])!.hours;
-      const yesterdayHours = result.study_hours.find((s) => s.day === ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][yesterday.getDay()])!.hours;
+      const todayHours = result.study_hours.find(
+        (s) =>
+          s.day ===
+          ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][today.getDay()],
+      )!.hours;
+      const yesterdayHours = result.study_hours.find(
+        (s) =>
+          s.day ===
+          ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][yesterday.getDay()],
+      )!.hours;
 
       // 7200 + 900 = 8100 seconds = 2.25 hours, rounded = 2.3
       expect(todayHours).toBe(2.3);

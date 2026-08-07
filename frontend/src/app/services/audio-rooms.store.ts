@@ -164,14 +164,6 @@ export class AudioRoomsStore {
     target_user_id?: string;
     caption?: CaptionRecord;
     message?: RoomChatMessage;
-    sender_name?: string;
-    receiver_name?: string;
-    coin_value?: number;
-    gift_id?: string;
-    gift_name?: string;
-    icon?: string;
-    animation_type?: string;
-    animation_url?: string;
   } {
     return typeof data === 'object' && data !== null;
   }
@@ -629,7 +621,7 @@ export class AudioRoomsStore {
 
   async tipHost(roomId: string, amountCoins: number): Promise<boolean> {
     try {
-      const res = await firstValueFrom(
+      await firstValueFrom(
         this.http.post<{
           tip_id: string;
           amount_coins: number;

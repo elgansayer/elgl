@@ -17,22 +17,22 @@ Use `/design` to prototype new components and pages before implementing them.
 
 ## Claude Code Integration
 
-- `@design` — reference the DESIGN.md for visual context
+- `@design` -- reference the DESIGN.md for visual context
 - The project uses Angular v22 (standalone, signals, control flow) and NestJS
 - See `AGENTS.md` for the full engineering constitution
 
 ## Key Files
 
-- `DESIGN.md` — design system tokens and guidelines
-- `AGENTS.md` — engineering standards and conventions
-- `specs/` — feature specifications
-- `original-hello-talk-screenshots/` — reference screenshots for visual parity
+- `DESIGN.md` -- design system tokens and guidelines
+- `AGENTS.md` -- engineering standards and conventions
+- `specs/` -- feature specifications
+- `original-hello-talk-screenshots/` -- reference screenshots for visual parity
 
 ## Frontend Stack
 
 - Angular v22+, Tailwind CSS v3
-- No NgModules — all standalone components
-- No decorator Input/Output — use signal input()/output()
-- No *ngIf/*ngFor — use @if/@for control flow
-- No hardcoded strings — use TranslatePipe (`| t`)
-- No physical direction CSS — use logical properties (ps/pe/ms/me)
+- No NgModules -- all standalone components
+- No decorator Input/Output -- use signal input()/output()
+- No *ngIf/*ngFor -- use @if/@for control flow
+- No hardcoded strings -- use TranslatePipe (`| t`)
+- No physical direction CSS -- use logical properties (ps/pe/ms/me)
