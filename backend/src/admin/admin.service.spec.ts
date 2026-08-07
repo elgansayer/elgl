@@ -250,6 +250,61 @@ describe('AdminService', () => {
     });
   });
 
+  describe('banUser', () => {
+    it('inserts a block row for the admin and target and succeeds', async () => {
+      mockQueryBuilder.insert = jest
+        .fn()
+        .mockReturnValue({ error: null });
+
+      await service.banUser('target-user', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        blocker_id: 'admin-1',
+        blocked_id: 'target-user',
+      });
+    });
+
+    it('throws NotFoundException when the insert errors', async () => {
+      mockQueryBuilder.insert = jest.fn().mockReturnValue({
+        error: { message: 'db error' },
+      });
+
+      await expect(service.banUser('target-user', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('warnUser', () => {
+    it('inserts a report row as an admin warning and succeeds', async () => {
+      mockQueryBuilder.insert = jest
+        .fn()
+        .mockReturnValue({ error: null });
+
+      await service.warnUser('target-user', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        reporter_id: 'admin-1',
+        reported_user_id: 'target-user',
+        reason_category: 'admin_warning',
+        description: 'Admin warning',
+        status: 'open',
+      });
+    });
+
+    it('throws NotFoundException when the insert errors', async () => {
+      mockQueryBuilder.insert = jest.fn().mockReturnValue({
+        error: { message: 'db error' },
+      });
+
+      await expect(service.warnUser('target-user', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
   describe('removeBlock', () => {
     it('deletes the block and returns success', async () => {
       mockQueryBuilder.delete = jest
