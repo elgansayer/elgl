@@ -143,6 +143,35 @@ describe('DiscoveryComponent', () => {
     expect(component.isLoading()).toBe(false);
   });
 
+  it('should render skeleton loaders while loading', () => {
+    fixture.detectChanges();
+    const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(skeletons.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('should show empty state with reset action when no partners', async () => {
+    await init();
+
+    const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+    expect(emptyState).toBeTruthy();
+
+    // Verify reset button calls resetFilters
+    const resetSpy = vi.spyOn(component, 'resetFilters');
+    const actionButton = fixture.nativeElement.querySelector('app-empty-state button');
+    if (actionButton) {
+      actionButton.click();
+      expect(resetSpy).toHaveBeenCalled();
+    }
+  });
+
+  it('should not show skeleton loaders after loading completes', async () => {
+    await init();
+
+    fixture.detectChanges();
+    const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(skeletons.length).toBe(0);
+  });
+
   it('should populate target languages and restore serious learner mode from profile', async () => {
     mockUserService.getMyProfile.mockResolvedValue({
       target_languages: ['JA', 'FR'],

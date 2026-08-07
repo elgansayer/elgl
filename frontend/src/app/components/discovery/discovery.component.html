@@ -285,9 +285,36 @@
     class="p-0"
   >
     @if (isLoading()) {
-      <section aria-live="polite" aria-busy="true">
-        <app-empty-state [title]="'discovery.searching' | t" [customClass]="'py-16'" role="status">
-        </app-empty-state>
+<section aria-live="polite" aria-busy="true">
+        <!-- Skeleton Loading Cards -->
+        <div class="divide-y divide-surface-200" aria-label="Loading partner results">
+          @for (i of skeletonCount; track i) {
+            <div class="flex items-center gap-3 p-4">
+              <!-- Avatar skeleton -->
+              <app-skeleton-loader
+                variant="circle"
+                height="56px"
+                width="56px"
+                borderRadius="50%"
+                customClass="shrink-0"
+              />
+              <!-- Text content skeletons -->
+              <div class="flex-1 min-w-0 space-y-2.5">
+                <app-skeleton-loader height="16px" width="55%" borderRadius="6px" />
+                <app-skeleton-loader height="12px" width="80%" borderRadius="5px" />
+                <app-skeleton-loader height="12px" width="40%" borderRadius="5px" />
+              </div>
+              <!-- Action button skeleton -->
+              <app-skeleton-loader
+                variant="circle"
+                height="40px"
+                width="40px"
+                borderRadius="50%"
+                customClass="shrink-0"
+              />
+            </div>
+          }
+        </div>
       </section>
     } @else if (partners().length === 0) {
       <section aria-live="polite">
@@ -295,7 +322,10 @@
           [illustration]="'/assets/illustrations/no-users-nearby.svg'"
           [title]="'discovery.noUsersNearby' | t"
           [description]="'discovery.noUsersHint' | t"
+          [actionLabel]="'discovery.resetFilters' | t"
+          (actionClicked)="resetFilters()"
         >
+          <p class="text-xs text-text-muted mt-1">{{ 'discovery.tryBroadening' | t }}</p>
         </app-empty-state>
       </section>
     } @else {

@@ -24,6 +24,7 @@ import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-discovery',
@@ -41,6 +42,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     AgeRangeSliderComponent,
     DistanceSliderComponent,
     AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -72,6 +74,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     })[]
   >([]);
   readonly isLoading = signal<boolean>(true);
+  readonly skeletonCount = Array.from({ length: 5 }, (_, i) => i);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 
