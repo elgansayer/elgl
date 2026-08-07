@@ -15,6 +15,7 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { UsersService } from '../users/users.service';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
+import { DiscoveryProfileDto } from './dto/discovery-profile.dto';
 import { DiscoveryService } from './discovery.service';
 import {
   DiscoveryCacheInterceptor,
@@ -59,28 +60,8 @@ export class DiscoveryController {
   })
   @ApiOkResponse({
     description: 'List of user profiles matching partner criteria.',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'Unique user identifier (UUID)' },
-          display_name: { type: 'string', description: 'User display name' },
-          native_languages: { type: 'array', items: { type: 'string' }, description: 'Native language ISO codes' },
-          target_languages: { type: 'array', items: { type: 'string' }, description: 'Target language ISO codes' },
-          bio_text: { type: 'string', nullable: true, description: 'User biography' },
-          avatar_url: { type: 'string', nullable: true, description: 'Avatar image URL' },
-          audio_intro_url: { type: 'string', nullable: true, description: 'Audio introduction URL' },
-          is_vip: { type: 'boolean', description: 'VIP subscription status' },
-          study_streak_days: { type: 'number', description: 'Consecutive study days' },
-          correction_ratio: { type: 'number', description: 'Ratio of corrections contributed' },
-          is_serious_learner: { type: 'boolean', description: 'Serious learner flag' },
-          is_partner_of_week: { type: 'boolean', description: 'Partner of the Week flag' },
-          distance_metres: { type: 'number', nullable: true, description: 'Distance in metres (when using geospatial search)' },
-          proficiency_level: { type: 'string', nullable: true, description: 'Self-assessed proficiency level' },
-        },
-      },
-    },
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded. Free: 30/min, VIP: 120/min.' })
@@ -165,6 +146,8 @@ export class DiscoveryController {
   })
   @ApiOkResponse({
     description: 'List of user profiles with audio introductions.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded. Free: 30/min, VIP: 120/min.' })
@@ -192,6 +175,8 @@ export class DiscoveryController {
   })
   @ApiOkResponse({
     description: 'List of recently joined native speaker profiles.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded. Free: 60/min, VIP: 300/min.' })
@@ -218,6 +203,8 @@ export class DiscoveryController {
   })
   @ApiOkResponse({
     description: 'List of spotlight user profiles.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded. Free: 60/min, VIP: 300/min.' })
@@ -242,6 +229,8 @@ export class DiscoveryController {
   })
   @ApiOkResponse({
     description: 'List of user profiles matching the language pair criteria.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded. Free: 30/min, VIP: 120/min.' })
@@ -283,6 +272,8 @@ export class DiscoveryController {
   })
   @ApiOkResponse({
     description: 'List of user profiles in the specified country/city.',
+    type: DiscoveryProfileDto,
+    isArray: true,
   })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
   @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded. Free: 20/min, VIP: 80/min.' })
