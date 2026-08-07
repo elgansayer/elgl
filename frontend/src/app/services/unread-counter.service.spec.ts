@@ -1,0 +1,99 @@
+import { TestBed } from '@angular/core/testing';
+import { UnreadCounterService, NavTab } from './unread-counter.service';
+import { describe, it, expect, beforeEach } from 'vitest';
+
+describe('UnreadCounterService', () => {
+  let service: UnreadCounterService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({});
+    service = TestBed.inject(UnreadCounterService);
+  });
+
+  it('should initialise all unread counts to zero', () => {
+    expect(service.chatUnread()).toBe(0);
+    expect(service.momentsUnread()).toBe(0);
+    expect(service.discoveryUnread()).toBe(0);
+    expect(service.audioRoomsUnread()).toBe(0);
+    expect(service.notificationUnread()).toBe(0);
+    expect(service.totalUnread()).toBe(0);
+  });
+
+  it('should compute totalUnread as sum of all per-tab counts', () => {
+    service.set('chat', 3);
+    service.set('moments', 1);
+    service.set('discovery', 0);
+    service.set('audioRooms', 2);
+    service.set('profile', 4);
+    expect(service.totalUnread()).toBe(10);
+  });
+
+  it('should expose per-tab counts via tabCount', () => {
+    service.set('chat', 5);
+    service.set('moments', 8);
+    expect(service.tabCount('chat')).toBe(5);
+    expect(service.tabCount('moments')).toBe(8);
+  });
+
+  it('should handle the full set/increment/decrement lifecycle', () => {
+    service.increment('chat');
+    service.increment('chat');
+    expect(service.chatUnread()).toBe(2);
+
+    service.decrement('chat');
+    expect(service.chatUnread()).toBe(1);
+
+    service.decrement('chat');
+    service.decrement('chat');
+    expect(service.chatUnread()).toBe(0);
+
+    service.increment('discovery');
+    service.increment('discovery');
+    expect(service.discoveryUnread()).toBe(2);
+
+    service.set('discovery', 100);
+    expect(service.discoveryUnread()).toBe(100);
+  });
+
+  it('should support legacy method names', () => {
+    service.setChatUnread(7);
+    expect(service.chatUnread()).toBe(7);
+
+    service.incrementChatUnread();
+    expect(service.chatUnread()).toBe(8);
+
+    service.decrementChatUnread();
+    expect(service.chatUnread()).toBe(7);
+
+    service.setNotificationUnread(3);
+    expect(service.notificationUnread()).toBe(3);
+
+    service.incrementNotificationUnread();
+    expect(service.notificationUnread()).toBe(4);
+
+    service.decrementNotificationUnread();
+    expect(service.notificationUnread()).toBe(3);
+  });
+
+  it('should reset all counts to zero', () => {
+    service.set('chat', 5);
+    service.set('moments', 3);
+    service.set('profile', 1);
+    service.resetAll();
+    expect(service.totalUnread()).toBe(0);
+    const tabs: NavTab[] = ['chat', 'moments', 'discovery', 'audioRooms', 'profile'];
+    for (const tab of tabs) {
+      expect(service.tabCount(tab)).toBe(0);
+    }
+  });
+
+  it('should not allow negative counts via set', () => {
+    service.set('chat', -5);
+    expect(service.chatUnread()).toBe(0);
+  });
+
+  it('should not allow negative counts via decrement', () => {
+    service.decrement('chat');
+    expect(service.chatUnread()).toBe(0);
+  });
+});
