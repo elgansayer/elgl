@@ -1,19 +1,20 @@
 import { Component, inject, resource, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AdminService } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, SanitiseHtmlPipe],
   template: `
     <div class="admin-actions" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">
       <h2>{{ 'admin.quickModeration' | t }}</h2>
       <ul role="list">
         @for (user of users(); track user.id) {
           <li>
-            <span>{{ user.display_name ?? user.id }}</span>
+            <span>{{ (user.display_name ?? user.id) | sanitiseHtml }}</span>
             <button
               type="button"
               [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"

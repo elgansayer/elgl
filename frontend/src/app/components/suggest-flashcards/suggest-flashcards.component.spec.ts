@@ -31,7 +31,7 @@ describe('SuggestFlashcardsComponent', () => {
               if (key === 'suggest_flashcards.error') return 'Failed to suggest flashcards';
               return key;
             }),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
           } as any,
         },
         {

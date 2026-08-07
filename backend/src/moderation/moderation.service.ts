@@ -51,13 +51,17 @@ const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map((flag
 
 @Injectable()
 export class ModerationService {
+  private readonly logger = new (require('@nestjs/common')).Logger(ModerationService.name);
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly metricsService: MetricsService,
+<<<<<<< HEAD
     @InjectPinoLogger(ModerationService.name)
     private readonly logger: PinoLogger,
+=======
+>>>>>>> origin/main
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -144,11 +148,17 @@ export class ModerationService {
             }
           }
         }
+<<<<<<< HEAD
 
         return items;
       }
 
       return items.filter((item) => item.reported_user != null);
+=======
+      }
+
+      return items;
+>>>>>>> origin/main
     } catch (err) {
       this.logger.warn(
         err,

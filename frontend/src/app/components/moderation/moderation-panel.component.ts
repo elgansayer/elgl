@@ -1,5 +1,7 @@
 import { Component, inject, signal, resource, computed } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../primitives/card/card.component';
@@ -11,7 +13,7 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
-  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [TranslatePipe, DatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './moderation-panel.html',
 })
 export class ModerationPanelComponent {

@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
@@ -32,6 +32,7 @@ export type UsersRow = {
   /** @deprecated superseded by native_languages (see migration 013); retained for legacy callers */
   native_language?: string | null;
   privacy_hide_from_search?: boolean | null;
+  matchmaking_consent?: boolean | null;
   incognito_visits?: boolean | null;
   age?: number | null;
   is_deleted?: boolean | null;
@@ -2032,6 +2033,7 @@ export interface Database {
         Row: {
           id: string;
           operation: string;
+<<<<<<< HEAD
           escrow_id?: string | null;
           user_id?: string | null;
           error_type: string;
@@ -2041,6 +2043,17 @@ export interface Database {
           created_at: string;
           acknowledged: boolean;
           resolved_at?: string | null;
+=======
+          escrow_id: string | null;
+          user_id: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace: string | null;
+          context: Record<string, unknown> | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at: string | null;
+>>>>>>> origin/main
         };
         Insert: Partial<{
           id?: string;
@@ -2051,9 +2064,15 @@ export interface Database {
           error_message: string;
           stack_trace?: string | null;
           context?: Record<string, unknown> | null;
+<<<<<<< HEAD
           acknowledged?: boolean;
           resolved_at?: string | null;
           created_at?: string;
+=======
+          created_at?: string;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+>>>>>>> origin/main
         }>;
         Update: Partial<{
           operation?: string;
@@ -2080,10 +2099,15 @@ export interface Database {
           search_lat: number;
           search_lon: number;
           radius_m: number;
-          exclude_user_id: string;
-          filter_native: string[] | null;
+          exclude_user_id: string | null;
+          filter_native_arr: string[] | null;
           filter_target: string | null;
           serious_only: boolean;
+          filter_level: string | null;
+          filter_gender: string | null;
+          filter_age_min: number | null;
+          filter_age_max: number | null;
+          filter_audio_intro: boolean;
         };
         Returns: unknown[];
       };
@@ -2109,6 +2133,7 @@ export interface Database {
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
   private readonly client: SupabaseClient<Database>;
+  private readonly logger = new Logger(SupabaseService.name);
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -2130,7 +2155,7 @@ export class SupabaseService implements OnModuleDestroy {
       lazyConnect: true,
     });
     this.redisClient.on('error', (err) => {
-      console.error('Redis connection error in SupabaseService:', err.message);
+      this.logger.error(`Redis connection error in SupabaseService: ${err.message}`);
     });
   }
 

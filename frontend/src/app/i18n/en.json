@@ -79,6 +79,11 @@
       "cachedDataNote": "Cached data"
     }
   },
+  "discovery": {
+    "title": "Find partners",
+    "offlineBanner": "You are offline",
+    "offlineCachedData": "\u2013 viewing cached data"
+  },
   "aiConversation": {
     "chooseScenario": "Choose a role-play scenario",
     "chooseScenarioDesc": "Practise real-life conversations with an AI partner. Pick a scenario to get started.",

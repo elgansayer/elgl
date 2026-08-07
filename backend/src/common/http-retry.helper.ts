@@ -24,10 +24,14 @@ export interface RetryOptions {
  * where jitter is ±25% of the exponential delay.
  */
 export async function withExponentialBackoff<T>(
+<<<<<<< HEAD
   operation: () => PromiseLike<T>,
+=======
+  operation: () => T | PromiseLike<T>,
+>>>>>>> origin/main
   operationName: string,
   options: RetryOptions = {},
-): Promise<T> {
+): Promise<Awaited<T>> {
   const {
     maxRetries = 5,
     baseDelayMs = 1000,
