@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
@@ -5,7 +8,44 @@ import { AdminBlocksComponent } from './admin-blocks.component';
 import { AdminService, AdminBlockEntry, AdminBlocksListResult } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, '..');
+
 describe('AdminBlocksComponent', () => {
+  describe('RTL logical CSS compliance', () => {
+    let templateContent: string;
+
+    beforeAll(() => {
+      templateContent = readFileSync(
+        resolve(__dirname, 'admin-blocks.component.html'),
+        'utf-8',
+      );
+    });
+
+    it('should not contain any physical direction CSS utilities', () => {
+      const violations = [
+        /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
+        /\bleft-[0-9]/, /\bright-[0-9]/,
+        /\bborder-l\b/, /\bborder-r\b/,
+        /\btext-left\b/, /\btext-right\b/,
+      ];
+      for (const pattern of violations) {
+        expect(templateContent).not.toMatch(pattern);
+      }
+    });
+
+    it('should use logical text alignment for table headers', () => {
+      expect(templateContent).toContain('text-start');
+    });
+
+    it('should not hardcode English user-facing strings', () => {
+      expect(templateContent).not.toMatch(/Blocker/);
+      expect(templateContent).not.toMatch(/Blocked/);
+      expect(templateContent).not.toMatch(/Unblock/);
+      expect(templateContent).not.toMatch(/Actions/);
+    });
+  });
+
   let component: AdminBlocksComponent;
   let fixture: ComponentFixture<AdminBlocksComponent>;
   let listAllBlocksSpy: ReturnType<typeof vi.fn>;
