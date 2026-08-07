@@ -19,6 +19,7 @@ import { GlobalSearchComponent } from './global-search/global-search.component';
 import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-discovery',
@@ -33,6 +34,7 @@ import { DistanceSliderComponent } from '../distance-slider/distance-slider.comp
     RouterLink,
     AgeRangeSliderComponent,
     DistanceSliderComponent,
+    AppEmptyStateComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
