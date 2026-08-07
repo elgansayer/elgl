@@ -287,9 +287,14 @@ export class DiscoveryService {
         search_lon: searchLon,
         radius_m: query.radius_metres || 50000,
         exclude_user_id: currentUserId,
-        filter_native: query.native_languages ? [query.native_languages] : null,
+        filter_native_arr: query.native_languages ? [query.native_languages] : null,
         filter_target: query.target_language || null,
         serious_only: Boolean(query.serious_learner_only),
+        filter_level: query.level || null,
+        filter_gender: _currentUserProfile?.is_vip && query.gender ? query.gender : null,
+        filter_age_min: query.age_min ?? null,
+        filter_age_max: query.age_max ?? null,
+        filter_audio_intro: query.has_audio_intro === true,
       })) as unknown as {
         data: unknown[] | null;
         error: { message?: string } | null;
@@ -348,59 +353,11 @@ export class DiscoveryService {
       if (blockedIds.length > 0) {
         rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
       }
-      if (query.level) {
-        if (rpcResults.length > 0) {
-          const { data: levelData } = await supabase
-            .from('users')
-            .select('id, proficiency_level')
-            .in(
-              'id',
-              rpcResults.map((u) => u.id),
-            );
-          const levelMap = new Map<string, string>(
-            (levelData ?? []).map((u) => [u.id, u.proficiency_level as string]),
-          );
-          rpcResults = rpcResults.filter(
-            (u) => levelMap.get(u.id) === query.level,
-          );
-        } else {
-          rpcResults = rpcResults.filter(
-            (u) => u.proficiency_level === query.level,
-          );
-        }
-      }
+      // RPC now handles level, gender, age, and audio_intro filters natively,
+      // but interests still needs post-processing since the RPC returns interests column
       if (query.interests) {
-        if (rpcResults.length > 0) {
-          const { data: interestData } = await supabase
-            .from('users')
-            .select('id, interests')
-            .in(
-              'id',
-              rpcResults.map((u) => u.id),
-            );
-          const interestMap = new Map<string, string[]>(
-            (interestData ?? []).map((u) => [u.id, u.interests as string[]]),
-          );
-          rpcResults = rpcResults.filter((u) =>
-            interestMap.get(u.id)?.includes(query.interests!),
-          );
-        }
-      }
-      if (_currentUserProfile?.is_vip && query.gender) {
-        rpcResults = rpcResults.filter((u) => u.gender === query.gender);
-      }
-      if (query.age_min !== undefined) {
-        const ageMin = query.age_min;
-        rpcResults = rpcResults.filter((u) => u.age! >= ageMin);
-      }
-      if (query.age_max !== undefined) {
-        const ageMax = query.age_max;
-        rpcResults = rpcResults.filter((u) => u.age! <= ageMax);
-      }
-
-      if (query.has_audio_intro) {
         rpcResults = rpcResults.filter(
-          (u) => u.audio_intro_url && u.audio_intro_url.trim() !== '',
+          (u) => u.interests?.includes(query.interests!),
         );
       }
       const filtered = await this.filterByVoiceRoomActive(

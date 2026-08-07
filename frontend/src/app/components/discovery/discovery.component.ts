@@ -7,6 +7,7 @@ import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -40,13 +41,20 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
   styleUrls: ['./discovery.component.scss'],
 })
 export class DiscoveryComponent implements OnInit, OnDestroy {
+  // NOTE: ngOnInit/ngOnDestroy permitted here per AGENTS.md 5.3 exception -
+  // audio playback uses imperative HTMLAudioElement API requiring manual teardown.
   private readonly discoveryService = inject(DiscoveryService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+  private readonly offlineCache = inject(OfflineDiscoveryCacheService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
+
+  /** Whether currently offline and serving cached data */
+  readonly isOffline = computed(() => !this.offlineCache.isOnline());
+  readonly isUsingCachedData = computed(() => this.isOffline() && this.offlineCache.cachedDataAvailable());
 
   readonly partners = signal<
     (UserProfile & {

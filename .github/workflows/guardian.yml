@@ -20,7 +20,7 @@ jobs:
             node-version: '20'
             dir: backend
           - name: frontend
-            node-version: '22'
+            node-version: '22.22.3'
             dir: frontend
     steps:
       - uses: actions/checkout@v4

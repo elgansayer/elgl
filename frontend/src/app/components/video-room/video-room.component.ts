@@ -1,14 +1,13 @@
 import { Component, inject, signal, computed, effect, viewChild, ElementRef } from '@angular/core';
 import { VideoTrack } from 'livekit-client';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-video-room',
-  imports: [TranslatePipe, SanitiseHtmlPipe, LiveChatOverlayComponent],
+  imports: [TranslatePipe, LiveChatOverlayComponent],
   template: `
     @if (store.currentRoom(); as room) {
       <section
@@ -18,7 +17,7 @@ import { AuthService } from '../../services/auth.service';
       >
         <!-- Room Header -->
         <div class="flex justify-between items-center mb-4 text-white">
-          <h2 class="text-xl font-bold">{{ room.title | sanitiseHtml }}</h2>
+          <h2 class="text-xl font-bold">{{ room.title }}</h2>
 
           @if (isHost() && !hasCoHost()) {
             @if (eligibleSpeakers().length > 0) {
