@@ -1,12 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { DiscoveryComponent } from './discovery.component';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+
+import { CrashReportService } from '../../services/crash-report.service';
+
 import { provideRouter } from '@angular/router';
 
 class MockAudio {
@@ -59,6 +64,7 @@ describe('DiscoveryComponent', () => {
   };
   let mockSafetyService: { getBlockedIdsAsync: ReturnType<typeof vi.fn> };
   let mockAuthService: { currentUser: ReturnType<typeof signal> };
+  let mockCrashReportService: { reportCrash: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     audioInstances = [];
@@ -77,6 +83,9 @@ describe('DiscoveryComponent', () => {
     mockAuthService = {
       currentUser: signal<{ is_vip: boolean } | null>(null),
     };
+    mockCrashReportService = {
+      reportCrash: vi.fn(),
+    };
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
@@ -86,6 +95,7 @@ describe('DiscoveryComponent', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: SafetyService, useValue: mockSafetyService },
         { provide: AuthService, useValue: mockAuthService },
+
         {
           provide: OfflineDiscoveryCacheService,
           useValue: {
@@ -93,6 +103,9 @@ describe('DiscoveryComponent', () => {
             cachedDataAvailable: signal(false).asReadonly(),
           },
         },
+
+        { provide: CrashReportService, useValue: mockCrashReportService },
+
       ],
     }).compileComponents();
 
@@ -164,17 +177,22 @@ describe('DiscoveryComponent', () => {
 
     expect(component.myTargetLangs()).toEqual([]);
     expect(mockDiscoveryService.findPartners).toHaveBeenCalledTimes(2);
+    expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ feature: 'discovery', action: 'loadProfile' }),
+    );
   });
 
-  it('should set isLoading false and log when search fails', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('should set isLoading false and report crash when search fails', async () => {
     mockDiscoveryService.findPartners.mockRejectedValue(new Error('search failed'));
 
     await init();
 
     expect(component.isLoading()).toBe(false);
-    expect(consoleErrorSpy).toHaveBeenCalled();
-    consoleErrorSpy.mockRestore();
+    expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ feature: 'discovery', action: 'searchPartners' }),
+    );
   });
 
   it('should update filter, serious learner flag and distance when selecting "serious"', async () => {
@@ -306,15 +324,17 @@ describe('DiscoveryComponent', () => {
   });
 
   it('should not change state when persisting serious learner mode fails', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mockUserService.updateMyProfile.mockRejectedValue(new Error('update failed'));
+    mockCrashReportService.reportCrash.mockClear();
     await init();
 
     await component.toggleSeriousLearnerMode();
 
     expect(component.seriousLearnerMode()).toBe(false);
-    expect(consoleErrorSpy).toHaveBeenCalled();
-    consoleErrorSpy.mockRestore();
+    expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ feature: 'discovery', action: 'toggleSeriousLearnerMode' }),
+    );
   });
 
   it('should format distances under 1km in metres and miles', async () => {

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, viewChild } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -7,8 +7,12 @@ import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+
+import { CrashReportService } from '../../services/crash-report.service';
+
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -22,6 +26,7 @@ import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { DiscoveryErrorBoundaryComponent } from './discovery-error-boundary.component';
 
 @Component({
   selector: 'app-discovery',
@@ -38,6 +43,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     AgeRangeSliderComponent,
     DistanceSliderComponent,
     AppEmptyStateComponent,
+    DiscoveryErrorBoundaryComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -49,14 +55,22 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
+
+  private readonly crashReportService = inject(CrashReportService);
+
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
 
+
   /** Whether currently offline and serving cached data */
   readonly isOffline = computed(() => !this.offlineCache.isOnline());
   readonly isUsingCachedData = computed(() => this.isOffline() && this.offlineCache.cachedDataAvailable());
+
+  readonly discoveryErrorBoundary = viewChild(DiscoveryErrorBoundaryComponent);
+
 
   readonly partners = signal<
     (UserProfile & {
@@ -173,14 +187,22 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
         }
       }
     } catch (e) {
-      console.warn('Could not load user profile for target languages', e);
+      const error = e instanceof Error ? e : new Error(String(e));
+      this.crashReportService.reportCrash(error, {
+        feature: 'discovery',
+        action: 'loadProfile',
+      });
     }
 
     try {
       const blockedIds = await this.safetyService.getBlockedIdsAsync();
       this.blockedUserIds.set(blockedIds);
     } catch (e) {
-      console.warn('Could not load blocked user IDs', e);
+      const error = e instanceof Error ? e : new Error(String(e));
+      this.crashReportService.reportCrash(error, {
+        feature: 'discovery',
+        action: 'loadBlockedIds',
+      });
     }
 
     await this.searchPartners();
@@ -225,7 +247,16 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
       this.partners.set(mapped);
     } catch (e) {
-      console.error('Partner search failed:', e);
+      const error = e instanceof Error ? e : new Error(String(e));
+      this.crashReportService.reportCrash(error, {
+        feature: 'discovery',
+        action: 'searchPartners',
+      });
+      this.discoveryErrorBoundary()?.captureError(error, undefined, {
+        action: 'searchPartners',
+        distanceKm: this.selectedDistanceKm(),
+        sort: this.selectedSort(),
+      });
     } finally {
       this.isLoading.set(false);
     }
@@ -247,7 +278,11 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       }
       await this.searchPartners();
     } catch (e) {
-      console.error('Failed to update serious learner mode', e);
+      const error = e instanceof Error ? e : new Error(String(e));
+      this.crashReportService.reportCrash(error, {
+        feature: 'discovery',
+        action: 'toggleSeriousLearnerMode',
+      });
     }
   }
 
