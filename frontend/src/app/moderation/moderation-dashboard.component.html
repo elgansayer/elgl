@@ -55,13 +55,13 @@
     @for (item of items.value(); track item.id) {
       <div class="border border-slate-700 rounded-lg p-4 mb-2 bg-surface">
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reporter' | t }}: {{ item.reporter?.display_name }}
+          {{ 'moderation.reporter' | t }}: {{ item.reporter?.display_name | sanitiseHtml }}
         </p>
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reported_user' | t }}: {{ item.reported_user?.display_name }}
+          {{ 'moderation.reported_user' | t }}: {{ item.reported_user?.display_name | sanitiseHtml }}
         </p>
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reason' | t }}: {{ item.reason }}
+          {{ 'moderation.reason' | t }}: {{ item.reason | sanitiseHtml }}
         </p>
 
         @if (analysis()?.userId === item.reported_user?.id) {
