@@ -9,27 +9,32 @@ import { tap } from 'rxjs';
 import { Response } from 'express';
 
 /**
- * Cloudflare edge-caching constants optimised for Stripe Escrow Payments.
+ * Cloudflare edge-caching constants optimised for Escrow Payments.
  *
  * Strategy:
- *  - Escrow agreement details (read-only, long-lived):  public CDN cache with
- *    stale-while-revalidate so Cloudflare serves stale content while
- *    revalidating asynchronously.
- *  - Escrow status / balance (semi-static, user-specific): private short
- *    cache to reduce DB pressure while keeping freshness for funds state.
- *  - Mutations (create, capture, release, dispute): never cached.
- *  - Webhook endpoints from Stripe: never cached.
+ *  - Read endpoints (list, get): private short-lived CDN cache with
+ *    Vary: Authorization to prevent cross-user cache leakage.
+ *    stale-while-revalidate=300 allows Cloudflare to serve stale
+ *    while asynchronously refreshing, reducing DB load during bursts.
+ *  - Mutation endpoints (create, release, refund): no-store.
+ *  - Cloudflare-CDN-Cache-Control is used to set distinct CDN
+ *    behaviour (different from browser Cache-Control).
+ *  - Cache-Tag: escrow-v1 allows programmatic invalidation via
+ *    Cloudflare API should batch invalidations be needed.
  */
 export const ESCROW_CACHE_PUBLIC_LONG = {
   'Cache-Control':
     'public, max-age=600, s-maxage=7200, stale-while-revalidate=86400, stale-if-error=86400',
   'CDN-Cache-Control': 'public, max-age=7200, stale-while-revalidate=86400',
+  'Cache-Tag': 'escrow-agreements-v1',
 } as const;
 
 export const ESCROW_CACHE_PRIVATE_SHORT = {
   'Cache-Control':
     'private, max-age=60, s-maxage=120, stale-while-revalidate=300, stale-if-error=600',
   'CDN-Cache-Control': 'private, max-age=120, stale-while-revalidate=300',
+  'Vary': 'Authorization, Accept-Encoding',
+  'Cache-Tag': 'escrow-transactions-v1',
 } as const;
 
 export const ESCROW_CACHE_PRIVATE_NO_STORE = {
@@ -53,6 +58,7 @@ export class EscrowCacheInterceptor implements NestInterceptor {
         error: () => {
           response.setHeader('Cache-Control', 'private, no-store');
           response.setHeader('CDN-Cache-Control', 'private, no-store');
+          response.removeHeader('Cache-Tag');
         },
       }),
     );

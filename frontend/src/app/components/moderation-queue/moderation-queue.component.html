@@ -74,15 +74,15 @@
             <div class="flex-1">
               <div class="flex items-center gap-2 text-xs text-text-secondary mb-2">
                 <span class="px-2 py-0.5 rounded-full bg-surface-100">{{ 'moderation.moment' | t }}</span>
-                <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary">{{ item.reason }}</span>
+                <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary">{{ item.reason | sanitiseHtml }}</span>
               </div>
               @if (item.moment_content) {
-                <p class="text-sm text-text-primary mb-2 line-clamp-3">{{ item.moment_content }}</p>
+                <p class="text-sm text-text-primary mb-2 line-clamp-3">{{ item.moment_content | sanitiseHtml }}</p>
               }
               <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary">
-                <span><span class="sr-only">{{ 'moderation.reporter' | t }}: </span><strong>{{ item.reporter.name }}</strong></span>
+                <span><span class="sr-only">{{ 'moderation.reporter' | t }}: </span><strong>{{ (item.reporter.name ?? "") | sanitiseHtml }}</strong></span>
                 @if (item.reported_user) {
-                  <span><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span><strong>{{ item.reported_user.name }}</strong></span>
+                  <span><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span><strong>{{ (item.reported_user?.name ?? "") | sanitiseHtml }}</strong></span>
                 }
                 <span>{{ item.created_at | date: 'medium' }}</span>
               </div>
@@ -144,11 +144,11 @@
             <div class="flex-1">
               <div class="flex items-center gap-2 text-xs text-text-secondary mb-2">
                 <span class="px-2 py-0.5 rounded-full bg-surface-100">{{ 'moderation.profile' | t }}</span>
-                <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary">{{ item.reason }}</span>
+                <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary">{{ item.reason | sanitiseHtml }}</span>
               </div>
               <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary">
-                <span><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span><strong>{{ item.reported_user?.name }}</strong></span>
-                <span><span class="sr-only">{{ 'moderation.reporter' | t }}: </span><strong>{{ item.reporter.name }}</strong></span>
+                <span><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span><strong>{{ (item.reported_user?.name ?? "") | sanitiseHtml }}</strong></span>
+                <span><span class="sr-only">{{ 'moderation.reporter' | t }}: </span><strong>{{ (item.reporter.name ?? "") | sanitiseHtml }}</strong></span>
                 <span>{{ item.created_at | date: 'medium' }}</span>
               </div>
             </div>
