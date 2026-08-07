@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
@@ -85,7 +86,10 @@ export class ModerationService {
   private readonly logger = new Logger(ModerationService.name);
   private readonly supabase: ReturnType<SupabaseService['getClient']>;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {
     this.supabase = this.supabaseService.getClient();
   }
 
@@ -143,6 +147,14 @@ export class ModerationService {
           reportedMomentId: (obj.reported_moment_id as string | null) ?? null,
         };
       });
+
+      // Record pending report count for Datadog monitoring
+      if (!status || status === 'pending') {
+        const pendingCount = status
+          ? items.length
+          : items.filter((item) => item.status === 'pending').length;
+        this.metricsService.setTsPendingReports(pendingCount);
+      }
 
       // Batch-fetch moment content for all moment items in a single query
       if (type !== 'profile') {
@@ -225,6 +237,7 @@ export class ModerationService {
         return { success: false, error: 'Failed to create report' };
       }
 
+      this.metricsService.recordTsReportSubmitted(dto.reasonCategory);
       return { success: true };
     } catch (err) {
       this.logger.warn('Failed to create report, degraded', err);
@@ -233,6 +246,7 @@ export class ModerationService {
   }
 
   async approveItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+    const startTime = Date.now();
     try {
       const { error } = await this.supabase
         .from('reports')
@@ -244,6 +258,11 @@ export class ModerationService {
         return { success: false, error: 'Failed to approve item' };
       }
 
+      this.metricsService.recordTsModerationAction(
+        'approve',
+        dto.type,
+        (Date.now() - startTime) / 1000,
+      );
       return { success: true };
     } catch (err) {
       this.logger.warn('Failed to approve item, degraded', err);
@@ -252,6 +271,7 @@ export class ModerationService {
   }
 
   async rejectItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+    const startTime = Date.now();
     try {
       const { error } = await this.supabase
         .from('reports')
@@ -266,6 +286,11 @@ export class ModerationService {
         return { success: false, error: 'Failed to reject item' };
       }
 
+      this.metricsService.recordTsModerationAction(
+        'reject',
+        dto.type,
+        (Date.now() - startTime) / 1000,
+      );
       return { success: true };
     } catch (err) {
       this.logger.warn('Failed to reject item, degraded', err);
@@ -347,6 +372,7 @@ export class ModerationService {
         ),
       );
 
+      this.metricsService.recordTsDatingRiskScore(riskScore);
       return { riskScore, flags: matchedFlags };
     } catch (err) {
       this.logger.warn(`Failed to analyse user ${userId}, degraded`, err);
