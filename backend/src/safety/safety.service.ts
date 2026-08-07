@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
+import Redis from 'ioredis';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
@@ -45,8 +46,12 @@ export const SAFETY_CATEGORIES = [
 @Injectable()
 export class SafetyService {
   private readonly logger = new Logger(SafetyService.name);
+  private readonly redis: Redis;
+  private readonly BLOCK_CACHE_TTL = 3600; // 1 hour
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly supabaseService: SupabaseService) {
+    this.redis = this.supabaseService.getRedisClient();
+  }
 
   getCategories() {
     return SAFETY_CATEGORIES;
@@ -151,6 +156,9 @@ export class SafetyService {
       throw new Error(`Failed to block user: ${error.message}`);
     }
 
+    // Invalidate Redis caches for both parties
+    await this.invalidateBlockCaches(blockerId, dto.blocked_id);
+
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
     return { success: true, blocked_id: dto.blocked_id };
   }
@@ -170,11 +178,28 @@ export class SafetyService {
       throw new Error(`Failed to unblock user: ${error.message}`);
     }
 
+    // Invalidate Redis caches for both parties
+    await this.invalidateBlockCaches(blockerId, blockedId);
+
     this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
     return { success: true };
   }
 
   async isBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+    const cacheKey = `safety:is_blocked:${blockerId}:${blockedId}`;
+
+    // Check Redis cache first
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached !== null) {
+        return cached === '1';
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Redis error reading isBlocked cache: ${(err as Error).message}`,
+      );
+    }
+
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('blocks')
@@ -188,37 +213,194 @@ export class SafetyService {
       return false;
     }
 
-    return data !== null;
+    const result = data !== null;
+
+    // Populate cache
+    try {
+      await this.redis.set(
+        cacheKey,
+        result ? '1' : '0',
+        'EX',
+        this.BLOCK_CACHE_TTL,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Redis error writing isBlocked cache: ${(err as Error).message}`,
+      );
+    }
+
+    return result;
   }
 
   async getBlockedUserIds(userId: string): Promise<string[]> {
+    const cacheKey = `safety:blocked_ids:${userId}`;
+
+    // Check Redis cache first
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached !== null) {
+        return this.parseStringArray(cached);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Redis error reading blockedIds cache: ${(err as Error).message}`,
+      );
+    }
+
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('blocks')
       .select('blocked_id')
       .eq('blocker_id', userId);
 
-    if (error || !data) {
-      this.logger.error(`Failed to get blocked user IDs for ${userId}:`, error);
-      return [];
-    }
+    const result = this.extractBlockIdList(
+      error,
+      data,
+      'blocked_id',
+      `Failed to get blocked user IDs for ${userId}`,
+    );
 
-    if (!Array.isArray(data)) {
-      return [];
-    }
+    // Populate cache
+    await this.cacheBlockList(cacheKey, result);
 
-    return (data as { blocked_id: string }[]).map((b) => b.blocked_id);
+    return result;
   }
 
   async getBlockerUserIds(userId: string): Promise<string[]> {
+    const cacheKey = `safety:blocker_ids:${userId}`;
+
+    // Check Redis cache first
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached !== null) {
+        return this.parseStringArray(cached);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Redis error reading blockerIds cache: ${(err as Error).message}`,
+      );
+    }
+
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('blocks')
       .select('blocker_id')
       .eq('blocked_id', userId);
 
+    const result = this.extractBlockIdList(
+      error,
+      data,
+      'blocker_id',
+      `Failed to get blocker user IDs for ${userId}`,
+    );
+
+    // Populate cache
+    await this.cacheBlockList(cacheKey, result);
+
+    return result;
+  }
+
+  async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
+    const cacheKey = `safety:blocked_and_blocker_ids:${userId}`;
+
+    // Try combined cache first
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached !== null) {
+        return this.parseStringArray(cached);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Redis error reading blockedAndBlockerIds cache: ${(err as Error).message}`,
+      );
+    }
+
+    const [blocked, blockers] = await Promise.all([
+      this.getBlockedUserIds(userId),
+      this.getBlockerUserIds(userId),
+    ]);
+    const result = [...new Set([...blocked, ...blockers])];
+
+    // Populate combined cache
+    try {
+      await this.redis.set(
+        cacheKey,
+        JSON.stringify(result),
+        'EX',
+        this.BLOCK_CACHE_TTL,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Redis error writing blockedAndBlockerIds cache: ${(err as Error).message}`,
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Invalidates all Redis cache entries related to a block relationship.
+   * Called when a user blocks or unblocks another user.
+   */
+  private async invalidateBlockCaches(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<void> {
+    const keysToDelete: string[] = [
+      `safety:blocked_ids:${blockerId}`,
+      `safety:blocked_and_blocker_ids:${blockerId}`,
+      `safety:blocker_ids:${blockedId}`,
+      `safety:blocked_and_blocker_ids:${blockedId}`,
+      `safety:is_blocked:${blockerId}:${blockedId}`,
+    ];
+
+    try {
+      await Promise.all(
+        keysToDelete.map((key) =>
+          this.redis.del(key).catch(() => {
+            // Best-effort deletion – don't throw if Redis is unavailable
+          }),
+        ),
+      );
+      this.logger.debug(
+        `Invalidated safety caches for blocker=${blockerId}, blocked=${blockedId}`,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Redis error invalidating block caches: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Parses a JSON-encoded string array stored in Redis.
+   */
+  private parseStringArray(raw: string | null): string[] {
+    if (!raw || raw === '[]') {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // fall through
+    }
+    return [];
+  }
+
+  /**
+   * Extracts block/blocker ID list from a Supabase query result, handling errors.
+   */
+  private extractBlockIdList(
+    error: PostgrestError | null,
+    data: unknown[] | null,
+    column: string,
+    logMessage: string,
+  ): string[] {
     if (error || !data) {
-      this.logger.error(`Failed to get blocker user IDs for ${userId}:`, error);
+      this.logger.error(logMessage, error);
       return [];
     }
 
@@ -226,15 +408,35 @@ export class SafetyService {
       return [];
     }
 
-    return (data as { blocker_id: string }[]).map((b) => b.blocker_id);
+    return (data as Record<string, string>[]).map(
+      (row: Record<string, string>) => row[column],
+    );
   }
 
-  async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
-    const [blocked, blockers] = await Promise.all([
-      this.getBlockedUserIds(userId),
-      this.getBlockerUserIds(userId),
-    ]);
-    return [...new Set([...blocked, ...blockers])];
+  /**
+   * Caches a block ID list in Redis with appropriate TTL.
+   */
+  private async cacheBlockList(
+    cacheKey: string,
+    ids: string[],
+  ): Promise<void> {
+    try {
+      if (ids.length > 0) {
+        await this.redis.set(
+          cacheKey,
+          JSON.stringify(ids),
+          'EX',
+          this.BLOCK_CACHE_TTL,
+        );
+      } else {
+        // Cache empty results with a shorter TTL to prevent stampedes on new users
+        await this.redis.set(cacheKey, '[]', 'EX', 300);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Redis error writing cache ${cacheKey}: ${(err as Error).message}`,
+      );
+    }
   }
 
   async getBlockedUserDetails(

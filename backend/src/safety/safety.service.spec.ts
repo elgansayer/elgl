@@ -7,9 +7,18 @@ describe('SafetyService', () => {
   let service: SafetyService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockRedisClient: any;
 
   beforeEach(async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+
+    mockRedisClient = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn().mockResolvedValue(1),
+    };
 
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
@@ -32,6 +41,7 @@ describe('SafetyService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
         },
       ],
@@ -57,13 +67,11 @@ describe('SafetyService', () => {
         context_url: 'http://example.com',
       };
 
-      // user existence check
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: { id: 'reported-1' },
         error: null,
       });
 
-      // report insertion
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: { id: 'report-id' },
         error: null,
@@ -121,12 +129,10 @@ describe('SafetyService', () => {
         context_url: null,
       };
 
-      // user exists
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: { id: 'reported-1' },
         error: null,
       });
-      // insertion fails
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'Database error' },
@@ -162,18 +168,15 @@ describe('SafetyService', () => {
   });
 
   describe('blockUser', () => {
-    it('should block a user successfully', async () => {
-      // user existence check
+    it('should block a user successfully and invalidate Redis caches', async () => {
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: { id: 'blocked-user' },
         error: null,
       });
-      // existing block check returns null
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
-      // insert succeeds
       mockQueryBuilder._response = { error: null };
 
       const logSpy = jest
@@ -185,17 +188,25 @@ describe('SafetyService', () => {
       });
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith('id');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocker_id', 'user-1');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
-        'blocked_id',
-        'blocked-user',
-      );
-      expect(mockQueryBuilder.maybeSingle).toHaveBeenCalled();
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
         blocker_id: 'user-1',
         blocked_id: 'blocked-user',
       });
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'safety:blocked_ids:user-1',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'safety:blocked_and_blocker_ids:user-1',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'safety:blocker_ids:blocked-user',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'safety:blocked_and_blocker_ids:blocked-user',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'safety:is_blocked:user-1:blocked-user',
+      );
       expect(logSpy).toHaveBeenCalledWith('User user-1 blocked blocked-user');
       expect(result).toEqual({ success: true, blocked_id: 'blocked-user' });
       logSpy.mockRestore();
@@ -219,12 +230,10 @@ describe('SafetyService', () => {
     });
 
     it('should throw when the user is already blocked', async () => {
-      // user existence check
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: { id: 'blocked-user' },
         error: null,
       });
-      // existing block exists
       mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
         data: { id: 'existing-block' },
         error: null,
@@ -253,17 +262,21 @@ describe('SafetyService', () => {
   });
 
   describe('unblockUser', () => {
-    it('should unblock a user', async () => {
+    it('should unblock a user and invalidate Redis caches', async () => {
       mockQueryBuilder._response = { error: null };
 
       const result = await service.unblockUser('user-1', 'blocked-user');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.delete).toHaveBeenCalled();
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocker_id', 'user-1');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
-        'blocked_id',
-        'blocked-user',
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'safety:blocked_ids:user-1',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'safety:blocker_ids:blocked-user',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'safety:is_blocked:user-1:blocked-user',
       );
       expect(result).toEqual({ success: true });
     });
@@ -324,8 +337,9 @@ describe('SafetyService', () => {
   });
 
   describe('getBlockedUserIds', () => {
-    it('should return list of blocked user IDs for a user', async () => {
-      // Build chain: from('blocks').select('blocked_id').eq('blocker_id', userId)
+    it('should return list of blocked user IDs from database when cache is empty', async () => {
+      mockRedisClient.get.mockResolvedValueOnce(null);
+
       mockQueryBuilder.then = jest.fn((resolve: any) =>
         resolve({
           data: [{ blocked_id: 'blocked-1' }, { blocked_id: 'blocked-2' }],
@@ -343,9 +357,28 @@ describe('SafetyService', () => {
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('blocked_id');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('blocker_id', 'user-1');
       expect(result).toEqual(['blocked-1', 'blocked-2']);
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'safety:blocked_ids:user-1',
+        JSON.stringify(['blocked-1', 'blocked-2']),
+        'EX',
+        3600,
+      );
     });
 
-    it('should return empty array when query returns no data', async () => {
+    it('should return list from Redis cache when available', async () => {
+      mockRedisClient.get.mockResolvedValueOnce(
+        JSON.stringify(['cached-blocked-1', 'cached-blocked-2']),
+      );
+
+      const result = await service.getBlockedUserIds('user-1');
+
+      expect(result).toEqual(['cached-blocked-1', 'cached-blocked-2']);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should return empty array and cache it when query returns no data', async () => {
+      mockRedisClient.get.mockResolvedValueOnce(null);
+
       mockQueryBuilder.then = jest.fn((resolve: any) =>
         resolve({ data: null, error: null }),
       );
@@ -353,6 +386,12 @@ describe('SafetyService', () => {
 
       const result = await service.getBlockedUserIds('user-1');
       expect(result).toEqual([]);
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'safety:blocked_ids:user-1',
+        '[]',
+        'EX',
+        300,
+      );
     });
 
     it('should return empty array when query results in error', async () => {
@@ -566,6 +605,73 @@ describe('SafetyService', () => {
 
       const result = await service.getBlockedUserDetails('user-1');
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('isBlocked', () => {
+    it('should return true from cache when cached value is "1"', async () => {
+      mockRedisClient.get.mockResolvedValueOnce('1');
+
+      const result = await service.isBlocked('user-1', 'blocked-user');
+
+      expect(result).toBe(true);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should return false from cache when cached value is "0"', async () => {
+      mockRedisClient.get.mockResolvedValueOnce('0');
+
+      const result = await service.isBlocked('user-1', 'blocked-user');
+
+      expect(result).toBe(false);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should query database and populate cache on cache miss', async () => {
+      mockRedisClient.get.mockResolvedValueOnce(null);
+      mockQueryBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'block-record' },
+        error: null,
+      });
+
+      const result = await service.isBlocked('user-1', 'blocked-user');
+
+      expect(result).toBe(true);
+      expect(mockQueryBuilder.maybeSingle).toHaveBeenCalled();
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'safety:is_blocked:user-1:blocked-user',
+        '1',
+        'EX',
+        3600,
+      );
+    });
+  });
+
+  describe('getBlockedAndBlockerIds', () => {
+    it('should return combined list from cache when available', async () => {
+      mockRedisClient.get.mockResolvedValueOnce(
+        JSON.stringify(['user-a', 'user-b', 'user-c']),
+      );
+
+      const result = await service.getBlockedAndBlockerIds('user-1');
+
+      expect(result).toEqual(['user-a', 'user-b', 'user-c']);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should deduplicate overlapping blocked and blocker IDs', async () => {
+      mockRedisClient.get.mockResolvedValueOnce(null);
+      mockRedisClient.get.mockResolvedValueOnce(
+        JSON.stringify(['user-a', 'user-b']),
+      );
+      mockRedisClient.get.mockResolvedValueOnce(
+        JSON.stringify(['user-a', 'user-c']),
+      );
+
+      const result = await service.getBlockedAndBlockerIds('user-1');
+
+      expect(result).toEqual(['user-a', 'user-b', 'user-c']);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
   });
 });
