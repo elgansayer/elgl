@@ -5,6 +5,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { NetworkStatusService } from '../../services/network-status.service';
+import { OfflineReadingService } from '../../services/offline-reading.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { environment } from '../../environments/environment';
@@ -25,6 +27,19 @@ interface ReadingArticle {
   standalone: true,
   imports: [TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `<div class="reading-engine mx-auto max-w-4xl space-y-6 pb-20 pt-4">
+  <!-- Offline banner -->
+  @if (isOffline()) {
+    <div class="flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 text-sm font-semibold rounded-app shadow-md" role="alert" aria-live="assertive">
+      <span class="text-base leading-none" aria-hidden="true">&#x26A0;&#xFE0F;</span>
+      <span>{{ 'readingEngine.offlineBanner' | t }}</span>
+      @if (cachedArticlesCount() > 0) {
+        <span class="text-white/80">
+          {{ 'readingEngine.offlineCachedInfo' | t: { count: cachedArticlesCount() } }}
+        </span>
+      }
+    </div>
+  }
+
   <!-- Header & Tab Navigation -->
   <header class="app-card app-padded space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -240,6 +255,9 @@ interface ReadingArticle {
       <div class="app-card app-padded space-y-3">
         <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.vocabularyTabTitle' | t }}</h3>
         <p class="app-muted">{{ 'readingEngine.vocabularyTabDescription' | t }}</p>
+        @if (isOffline()) {
+          <p class="text-xs text-amber-400">{{ 'readingEngine.vocabularyOfflineNote' | t }}</p>
+        }
       </div>
 
       @if (vocabularyCount() === 0) {
@@ -263,15 +281,46 @@ interface ReadingArticle {
       <div class="app-card app-padded space-y-3">
         <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.historyTabTitle' | t }}</h3>
         <p class="app-muted">{{ 'readingEngine.historyTabDescription' | t }}</p>
+        @if (isOffline()) {
+          <p class="text-xs text-amber-400">{{ 'readingEngine.historyOfflineNote' | t }}</p>
+        }
       </div>
 
-      <app-empty-state
-        [icon]="'&#x1F4D6;'"
-        [title]="'readingEngine.noHistoryTitle' | t"
-        [description]="'readingEngine.noHistoryDescription' | t"
-        [actionLabel]="'readingEngine.browseArticlesAction' | t"
-        (actionClicked)="activeTab.set('articles')">
-      </app-empty-state>
+      @if (readingHistory().length === 0) {
+        <app-empty-state
+          [icon]="'&#x1F4D6;'"
+          [title]="'readingEngine.noHistoryTitle' | t"
+          [description]="'readingEngine.noHistoryDescription' | t"
+          [actionLabel]="'readingEngine.browseArticlesAction' | t"
+          (actionClicked)="activeTab.set('articles')">
+        </app-empty-state>
+      } @else {
+        <div class="space-y-3" role="list" [attr.aria-label]="'readingEngine.historyListAriaLabel' | t">
+          @for (entry of readingHistory(); track entry.articleId + entry.readAt) {
+            <div class="app-card app-padded flex flex-wrap items-center justify-between gap-2" role="listitem">
+              <div class="space-y-1">
+                <p class="text-sm font-bold text-text-primary">{{ entry.title }}</p>
+                <div class="flex items-center gap-2">
+                  <span
+                    [class.bg-emerald-500/20]="entry.difficulty === 'beginner'"
+                    [class.text-emerald-400]="entry.difficulty === 'beginner'"
+                    [class.bg-amber-500/20]="entry.difficulty === 'intermediate'"
+                    [class.text-amber-400]="entry.difficulty === 'intermediate'"
+                    [class.bg-rose-500/20]="entry.difficulty === 'advanced'"
+                    [class.text-rose-400]="entry.difficulty === 'advanced'"
+                    class="rounded-app px-2 py-0.5 text-[10px] font-bold">
+                    {{ 'readingEngine.difficulty.' + entry.difficulty | t }}
+                  </span>
+                  <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[10px] font-bold text-text-secondary">
+                    {{ 'readingEngine.topic.' + entry.topic | t }}
+                  </span>
+                </div>
+              </div>
+              <span class="text-[10px] text-text-muted">{{ formatReadDate(entry.readAt) }}</span>
+            </div>
+          }
+        </div>
+      }
     </section>
   }
 </div>
@@ -291,6 +340,8 @@ export class ReadingEngineComponent {
   private i18n = inject(I18nService);
   private vocabStore = inject(VocabularyStore);
   private http = inject(HttpClient);
+  private networkStatus = inject(NetworkStatusService);
+  private offlineReading = inject(OfflineReadingService);
   private readingApiUrl = `${environment.apiUrl}/reading`;
 
   readonly activeTab = signal<'articles' | 'vocabulary' | 'history'>('articles');
@@ -299,6 +350,10 @@ export class ReadingEngineComponent {
   readonly filterTopic = signal<string | null>(null);
 
   readonly fetchError = signal<string | null>(null);
+  readonly readingHistory = signal<{ articleId: string; title: string; difficulty: string; topic: string; readAt: number }[]>([]);
+
+  readonly isOffline = computed(() => !this.networkStatus.isOnline());
+  readonly cachedArticlesCount = signal(0);
 
   readonly articlesResource = resource<ReadingArticle[], unknown>({
     loader: async () => this.fetchArticles(),
@@ -337,6 +392,14 @@ export class ReadingEngineComponent {
   selectArticle(id: string): void {
     this.selectedArticleId.set(id);
     this.fetchError.set(null);
+
+    const articles = this.articlesResource.value();
+    const article = articles?.find((a) => a.id === id);
+    if (article) {
+      this.offlineReading
+        .recordReadingHistory(article.id, article.title, article.difficulty, article.topic)
+        .catch(() => undefined);
+    }
   }
 
   backToList(): void {
@@ -361,6 +424,25 @@ export class ReadingEngineComponent {
     this.articlesResource.reload();
   }
 
+  formatReadDate(timestamp: number): string {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  async loadReadingHistory(): Promise<void> {
+    try {
+      const entries = await this.offlineReading.getReadingHistory();
+      this.readingHistory.set(entries);
+    } catch {
+      this.readingHistory.set([]);
+    }
+  }
+
   private async fetchArticles(): Promise<ReadingArticle[]> {
     try {
       const params = new URLSearchParams();
@@ -371,8 +453,31 @@ export class ReadingEngineComponent {
           `${this.readingApiUrl}/resources?${params.toString()}`,
         ),
       );
-      return list ?? [];
+      const articles = list ?? [];
+
+      // Cache articles for offline access
+      this.offlineReading.cacheArticles(articles).catch(() => undefined);
+      this.cachedArticlesCount.set(articles.length);
+
+      return articles;
     } catch {
+      // If offline, try to serve cached articles
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const cached = await this.offlineReading.getCachedArticles();
+        if (cached.length > 0) {
+          this.cachedArticlesCount.set(cached.length);
+          return cached.map((c) => ({
+            id: c.id,
+            title: c.title,
+            content: c.content,
+            language: c.language,
+            difficulty: c.difficulty as ReadingArticle['difficulty'],
+            topic: c.topic,
+            audioUrl: c.audioUrl,
+            wordCount: c.wordCount,
+          }));
+        }
+      }
       this.fetchError.set(this.i18n.translate('readingEngine.fetchError'));
       return [];
     }
