@@ -1,12 +1,13 @@
 import { Component, inject, signal, computed, effect, viewChild, ElementRef } from '@angular/core';
 import { VideoTrack } from 'livekit-client';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-video-room',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, LiveChatOverlayComponent],
   template: `
     @if (store.currentRoom(); as room) {
       <div class="flex flex-col h-full w-full bg-slate-900 p-4 rounded-2xl">
@@ -58,6 +59,9 @@ import { AuthService } from '../../services/auth.service';
             >
               {{ 'videoRoom.hostBadge' | t }}
             </div>
+
+            <!-- Scrolling live chat overlay over host video stream -->
+            <app-live-chat-overlay [roomId]="room.id"></app-live-chat-overlay>
           </div>
 
           <!-- Co-Host Video Tile (Split Screen) -->
