@@ -51,19 +51,6 @@
   ],
   "dataGroups": [
     {
-      "name": "api-srs",
-      "urls": [
-        "/api/flashcards",
-        "/api/flashcards/due"
-      ],
-      "cacheConfig": {
-        "strategy": "performance",
-        "maxSize": 50,
-        "maxAge": "7d",
-        "timeout": "5s"
-      }
-    },
-    {
       "name": "api-performance",
       "urls": [
         "/api/discovery/**",
