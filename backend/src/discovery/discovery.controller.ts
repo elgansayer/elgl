@@ -26,7 +26,15 @@ import {
   DiscoveryCacheInterceptor,
   DISCOVERY_CACHE_PUBLIC_LONG,
   DISCOVERY_CACHE_PUBLIC_SHORT,
-  DISCOVERY_CACHE_PRIVATE_SHORT,
+  DISCOVERY_CACHE_EDGE_MEDIUM,
+  CACHE_TAG_DISCOVERY_PARTNERS,
+  CACHE_TAG_DISCOVERY_POTW,
+  CACHE_TAG_DISCOVERY_AUDIO_INTROS,
+  CACHE_TAG_DISCOVERY_RECENT_NATIVE,
+  CACHE_TAG_DISCOVERY_SPOTLIGHT,
+  CACHE_TAG_DISCOVERY_LANGUAGE_PAIR,
+  CACHE_TAG_DISCOVERY_LOCATION,
+  CACHE_TAG_DISCOVERY_PUBLIC,
 } from './cache.interceptor';
 import {
   DiscoveryRateLimiterGuard,
@@ -48,7 +56,7 @@ export class DiscoveryController {
    * Personalised partner search: user-specific filters, private short cache.
    */
   @Get('partners')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_EDGE_MEDIUM, [CACHE_TAG_DISCOVERY_PARTNERS]))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -98,7 +106,7 @@ Sort options: best_match | nearest | newest | online_now`,
    * Partner of the Week: refreshed weekly by cron, public long-lived CDN cache.
    */
   @Get('partner-of-week')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG, [CACHE_TAG_DISCOVERY_POTW]))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -133,7 +141,7 @@ Users qualify based on:
    * Audio intro discovery: user-specific filters, private short cache.
    */
   @Get('audio-intros')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_EDGE_MEDIUM, [CACHE_TAG_DISCOVERY_AUDIO_INTROS]))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -164,7 +172,7 @@ with non-null, non-empty audio_intro_url values.`,
    * Recently joined native speakers: shared list, public short-lived CDN cache.
    */
   @Get('recent-native-speakers')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT, [CACHE_TAG_DISCOVERY_RECENT_NATIVE]))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -192,7 +200,7 @@ results. Served with public CDN caching.`,
    * Spotlight users: shared list, public short-lived CDN cache.
    */
   @Get('spotlight')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT, [CACHE_TAG_DISCOVERY_SPOTLIGHT]))
   @DiscoveryRateLimit({
     freeMaxRequests: 60,
     vipMaxRequests: 300,
@@ -216,7 +224,7 @@ language set. Served with public CDN caching.`,
    * Language pair matching: user-specific, private short cache.
    */
   @Get('language-pair')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_EDGE_MEDIUM, [CACHE_TAG_DISCOVERY_LANGUAGE_PAIR]))
   @DiscoveryRateLimit({
     freeMaxRequests: 30,
     vipMaxRequests: 120,
@@ -247,7 +255,7 @@ Sort options:
    * Location-based search: user-specific, private short cache.
    */
   @Get('search-by-location')
-  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_EDGE_MEDIUM, [CACHE_TAG_DISCOVERY_LOCATION]))
   @DiscoveryRateLimit({
     freeMaxRequests: 20,
     vipMaxRequests: 80,
