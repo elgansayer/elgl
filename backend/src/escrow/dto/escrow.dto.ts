@@ -1,67 +1,31 @@
-import {
-  IsIn,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsPositive,
-  IsString,
-  IsUUID,
-} from 'class-validator';
+import { IsString, IsInt, Min, MaxLength, IsOptional, Max } from 'class-validator';
 
 export class CreateEscrowDto {
-  @IsUUID()
-  partner_id!: string;
+  @IsString()
+  payee_id!: string;
 
   @IsInt()
-  @IsPositive()
-  amount!: number;
-
-  @IsString()
-  @IsNotEmpty()
-  description!: string;
+  @Min(1)
+  @Max(1000000)
+  amount_coins!: number;
 
   @IsOptional()
   @IsString()
-  @IsIn(['lesson', 'language_exchange', 'proofreading', 'translation', 'other'])
-  service_type?: string;
+  @MaxLength(500)
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  reference_id?: string;
 }
 
 export class ReleaseEscrowDto {
-  @IsUUID()
+  @IsString()
   escrow_id!: string;
 }
 
 export class RefundEscrowDto {
-  @IsUUID()
+  @IsString()
   escrow_id!: string;
-
-  @IsOptional()
-  @IsString()
-  reason?: string;
-}
-
-export class DisputeEscrowDto {
-  @IsUUID()
-  escrow_id!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  reason!: string;
-
-  @IsOptional()
-  @IsString()
-  evidence?: string;
-}
-
-export class ResolveDisputeDto {
-  @IsUUID()
-  escrow_id!: string;
-
-  @IsString()
-  @IsIn(['release', 'refund'])
-  resolution!: 'release' | 'refund';
-
-  @IsOptional()
-  @IsString()
-  admin_note?: string;
 }

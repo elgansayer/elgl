@@ -14,7 +14,7 @@
           class="app-chip whitespace-nowrap transition-colors"
           [class.app-chip-active]="activeTab() === tab.id"
           (click)="setTab(tab.id)"
-         [attr.aria-label]=\"tab.labelKey | t\">
+         [attr.aria-label]="tab.labelKey | t">
           {{ tab.icon }} {{ tab.labelKey | t }}
           @if (tab.id === 'all') {
             <span class="ms-1 text-[10px] opacity-60">({{ favourites().length }})</span>

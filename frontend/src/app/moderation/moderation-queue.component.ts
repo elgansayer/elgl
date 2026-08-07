@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import {
   ModerationService,
   ModerationItem,
+  ModerationActionResponse,
   UserAnalysisResult,
 } from '../services/moderation.service';
 import { TranslatePipe } from '../services/translate.pipe';
@@ -44,6 +45,8 @@ export class ModerationQueueComponent {
 
   readonly analysisResult = signal<UserAnalysisResult | null>(null);
   readonly analysisLoading = signal(false);
+  readonly actionInProgress = signal<string | null>(null);
+  readonly actionError = signal<string | null>(null);
 
   setType(type: 'moment' | 'profile'): void {
     this.type.set(type);
@@ -55,13 +58,43 @@ export class ModerationQueueComponent {
   }
 
   async approve(item: ModerationItem): Promise<void> {
-    await this.moderationService.approveItem(item.id, item.type);
-    this.items.reload();
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
+    try {
+      const result: ModerationActionResponse = await this.moderationService.approveItem(
+        item.id,
+        item.type,
+      );
+      if (result.success) {
+        this.items.reload();
+      } else {
+        this.actionError.set(result.error ?? 'Failed to approve item');
+      }
+    } catch {
+      this.actionError.set('Service temporarily unavailable');
+    } finally {
+      this.actionInProgress.set(null);
+    }
   }
 
   async reject(item: ModerationItem): Promise<void> {
-    await this.moderationService.rejectItem(item.id, item.type);
-    this.items.reload();
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
+    try {
+      const result: ModerationActionResponse = await this.moderationService.rejectItem(
+        item.id,
+        item.type,
+      );
+      if (result.success) {
+        this.items.reload();
+      } else {
+        this.actionError.set(result.error ?? 'Failed to reject item');
+      }
+    } catch {
+      this.actionError.set('Service temporarily unavailable');
+    } finally {
+      this.actionInProgress.set(null);
+    }
   }
 
   async analyse(item: ModerationItem): Promise<void> {
@@ -75,6 +108,8 @@ export class ModerationQueueComponent {
       this.analysisResult.set(
         await this.moderationService.getUserRiskAnalysis(userId),
       );
+    } catch {
+      this.actionError.set('Failed to analyse user');
     } finally {
       this.analysisLoading.set(false);
     }
