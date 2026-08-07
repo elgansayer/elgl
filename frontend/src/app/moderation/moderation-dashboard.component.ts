@@ -2,8 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { ModerationItem, ModerationService } from './moderation.service';
 =======
+=======
+import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
+>>>>>>> origin/main
 import { ModerationItem, ModerationService } from '../services/moderation.service';
 >>>>>>> origin/main
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
@@ -13,6 +17,7 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
 @Component({
   selector: 'app-moderation-dashboard',
   standalone: true,
+<<<<<<< HEAD
   imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
 <<<<<<< HEAD
   template: `
@@ -156,6 +161,9 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
     </div>
   `,
 =======
+=======
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+>>>>>>> origin/main
   templateUrl: './moderation-dashboard.component.html',
 >>>>>>> origin/main
 })

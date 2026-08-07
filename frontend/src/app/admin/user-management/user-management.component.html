@@ -60,14 +60,14 @@
                   </div>
                   <div>
                     <div class="text-sm font-medium text-text-primary">
-                      {{ user.display_name || ('common.unknownUser' | t) }}
+                      {{ (user.display_name || ('common.unknownUser' | t)) | sanitiseHtml }}
                     </div>
                     <div class="text-xs text-text-secondary truncate max-w-[8rem]">{{ user.id }}</div>
                   </div>
                 </div>
               </td>
               <td class="px-4 py-3 text-start text-sm text-text-secondary hidden sm:table-cell">
-                {{ user.native_languages.join(', ') }}
+                {{ user.native_languages.join(', ') | sanitiseHtml }}
               </td>
               <td class="px-4 py-3 text-start text-sm text-text-secondary">
                 {{ user.coins_balance }}
