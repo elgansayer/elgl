@@ -7,6 +7,8 @@ import { UserService, UserProfile } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
+import { JoyrideService } from 'ngx-joyride';
 import { provideRouter } from '@angular/router';
 
 class MockAudio {
@@ -59,6 +61,8 @@ describe('DiscoveryComponent', () => {
   };
   let mockSafetyService: { getBlockedIdsAsync: ReturnType<typeof vi.fn> };
   let mockAuthService: { currentUser: ReturnType<typeof signal> };
+  let mockDiscoveryOnboardingService: { startTour: ReturnType<typeof vi.fn> };
+  let mockJoyrideService: { startTour: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     audioInstances = [];
@@ -77,6 +81,13 @@ describe('DiscoveryComponent', () => {
     mockAuthService = {
       currentUser: signal<{ is_vip: boolean } | null>(null),
     };
+    mockDiscoveryOnboardingService = {
+      startTour: vi.fn(),
+    };
+    mockJoyrideService = {
+      startTour: vi.fn(),
+      isTourInProgress: vi.fn().mockReturnValue(false),
+    };
 
     await TestBed.configureTestingModule({
       imports: [DiscoveryComponent],
@@ -93,6 +104,8 @@ describe('DiscoveryComponent', () => {
             cachedDataAvailable: signal(false).asReadonly(),
           },
         },
+        { provide: DiscoveryOnboardingService, useValue: mockDiscoveryOnboardingService },
+        { provide: JoyrideService, useValue: mockJoyrideService },
       ],
     }).compileComponents();
 

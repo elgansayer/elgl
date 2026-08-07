@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
+import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
@@ -8,6 +9,7 @@ import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
+import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
@@ -27,6 +29,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
   selector: 'app-discovery',
   imports: [
     FormsModule,
+    JoyrideModule,
     TranslatePipe,
     SanitiseHtmlPipe,
     ScrollablePillsComponent,
@@ -50,6 +53,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
+  private readonly discoveryOnboardingService = inject(DiscoveryOnboardingService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
@@ -345,5 +349,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
     void this.searchPartners();
+  }
+
+  startDiscoveryTour(): void {
+    this.discoveryOnboardingService.startTour();
   }
 }
