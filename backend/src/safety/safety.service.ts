@@ -416,10 +416,7 @@ export class SafetyService {
   /**
    * Caches a block ID list in Redis with appropriate TTL.
    */
-  private async cacheBlockList(
-    cacheKey: string,
-    ids: string[],
-  ): Promise<void> {
+  private async cacheBlockList(cacheKey: string, ids: string[]): Promise<void> {
     try {
       if (ids.length > 0) {
         await this.redis.set(
