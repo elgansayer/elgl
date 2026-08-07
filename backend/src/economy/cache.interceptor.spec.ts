@@ -68,7 +68,7 @@ describe('CacheControlInterceptor', () => {
       const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const mockResponse = { setHeader, removeHeader: jest.fn() };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];
@@ -96,7 +96,7 @@ describe('CacheControlInterceptor', () => {
       const interceptor = new CacheControlInterceptor(CACHE_NO_STORE);
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const mockResponse = { setHeader, removeHeader: jest.fn() };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];
@@ -121,7 +121,7 @@ describe('CacheControlInterceptor', () => {
       const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM);
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const mockResponse = { setHeader, removeHeader: jest.fn() };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];
@@ -147,7 +147,7 @@ describe('CacheControlInterceptor', () => {
       const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const mockResponse = { setHeader, removeHeader: jest.fn() };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];
@@ -179,7 +179,7 @@ describe('CacheControlInterceptor', () => {
       const interceptor = new CacheControlInterceptor(customDirective);
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const mockResponse = { setHeader, removeHeader: jest.fn() };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];

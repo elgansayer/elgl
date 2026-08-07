@@ -73,8 +73,9 @@ describe('CacheControlInterceptor', () => {
   describe('intercept', () => {
     function createCallContext(
       setHeader = jest.fn(),
+      removeHeader = jest.fn(),
     ): Parameters<typeof CacheControlInterceptor.prototype.intercept>[0] {
-      const mockResponse = { setHeader };
+      const mockResponse = { setHeader, removeHeader };
       return {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<
