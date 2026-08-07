@@ -4,6 +4,7 @@ import {
   RecommendedUserDto,
 } from './recommendations.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 type QueryChainMock = {
   select: jest.Mock;
@@ -61,6 +62,15 @@ describe('RecommendationsService', () => {
   let service: RecommendationsService;
   let mockRedis: { get: jest.Mock; set: jest.Mock };
   let mockFrom: jest.Mock;
+  let mockMetricsService: {
+    recordMatchmakingRecommendationsGenerated: jest.Mock;
+    recordMatchmakingRecommendationsPerRequest: jest.Mock;
+    recordMatchmakingFallbackTierUsed: jest.Mock;
+    recordMatchmakingEmptyResults: jest.Mock;
+    recordMatchmakingRequestDuration: jest.Mock;
+    recordMatchmakingDailyCacheMiss: jest.Mock;
+    setMatchmakingTierSuccessRate: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockRedis = {
@@ -69,6 +79,16 @@ describe('RecommendationsService', () => {
     };
 
     mockFrom = jest.fn();
+
+    mockMetricsService = {
+      recordMatchmakingRecommendationsGenerated: jest.fn(),
+      recordMatchmakingRecommendationsPerRequest: jest.fn(),
+      recordMatchmakingFallbackTierUsed: jest.fn(),
+      recordMatchmakingEmptyResults: jest.fn(),
+      recordMatchmakingRequestDuration: jest.fn(),
+      recordMatchmakingDailyCacheMiss: jest.fn(),
+      setMatchmakingTierSuccessRate: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -81,6 +101,10 @@ describe('RecommendationsService', () => {
             }),
             getRedisClient: jest.fn().mockReturnValue(mockRedis),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();
@@ -205,12 +229,24 @@ describe('RecommendationsService', () => {
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('p-1');
+      expect(
+        mockMetricsService.recordMatchmakingRecommendationsGenerated,
+      ).toHaveBeenCalledWith('cached', 'getDailyRecommendations', 1);
+      expect(
+        mockMetricsService.recordMatchmakingRequestDuration,
+      ).toHaveBeenCalled();
     });
 
     it('should return empty array when nothing cached', async () => {
       mockRedis.get.mockResolvedValue(null);
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toEqual([]);
+      expect(
+        mockMetricsService.recordMatchmakingDailyCacheMiss,
+      ).toHaveBeenCalledWith('empty_cache');
+      expect(
+        mockMetricsService.recordMatchmakingEmptyResults,
+      ).toHaveBeenCalledWith('getDailyRecommendations');
     });
 
     it('should return empty array on parse failure', async () => {
@@ -315,6 +351,9 @@ describe('RecommendationsService', () => {
       const result = await service.getRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].sharedInterests).toBe(2);
+      expect(
+        mockMetricsService.recordMatchmakingRecommendationsGenerated,
+      ).toHaveBeenCalledWith('interest', 'getRecommendations', 1);
     });
 
     it('should fall back to language exchange when interests return empty', async () => {
