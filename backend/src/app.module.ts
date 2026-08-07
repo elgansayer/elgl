@@ -55,7 +55,6 @@ import { MilestonesModule } from './milestones/milestones.module';
 import { StudyBuddiesModule } from './study-buddies/study-buddies.module';
 import { AudioIntroModule } from './audio-intro/audio-intro.module';
 import { StatsModule } from './stats/stats.module';
-import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
 import { EventsModule } from './events/events.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { LinkPreviewModule } from './link-preview/link-preview.module';
@@ -144,7 +143,6 @@ import { MetricsModule } from './metrics/metrics.module';
     StudyBuddiesModule,
     AudioIntroModule,
     StatsModule,
-    ScheduledDeletionModule,
     EventsModule,
     LessonsModule,
     LinkPreviewModule,
@@ -159,7 +157,10 @@ import { MetricsModule } from './metrics/metrics.module';
     PasswordResetModule,
             AssessmentsModule,
             AnalyticsModule,
+<<<<<<< HEAD
     MetricsModule,
+=======
+>>>>>>> origin/main
   ],
   controllers: [AppController],
   providers: [

@@ -1697,11 +1697,17 @@ export class AudioRoomsService implements OnModuleInit {
 
     const tipRow = tipResponse.data as { id: string };
 
+    const senderUser = senderResponse.data as { display_name?: string | null } | null;
+    const senderName = senderUser?.display_name || 'Someone';
+
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'host_tip',
       tip: {
+        tip_id: tipRow.id,
         amount_coins: amount,
         sender_user_id: userId,
+        sender_name: senderName,
+        receiver_user_id: room.host_id,
       },
     });
 

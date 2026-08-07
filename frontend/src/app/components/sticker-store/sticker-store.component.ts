@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, resource, effect } from '@angular/core';
+import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { EconomyStore, StickerPack } from '../../services/economy.store';
@@ -90,10 +90,20 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                 </span>
               </div>
             }
+            @if (pack.is_animated && !pack.owned) {
+              <div
+                class="absolute top-2 end-2 rounded-full bg-fuchsia-500 px-2 py-0.5 text-xs font-bold text-white shadow-lg"
+              >
+                {{ 'stickerStore.animatedBadge' | t }}
+              </div>
+            }
           </div>
 
           <!-- Pack details -->
           <h3 class="text-sm font-semibold text-white mb-1">{{ pack.name }}</h3>
+          @if (pack.is_animated) {
+            <p class="text-xs text-fuchsia-400 mb-1">{{ 'stickerStore.animatedDescription' | t }}</p>
+          }
 
           <!-- Purchase section -->
           <div class="mt-auto pt-2">

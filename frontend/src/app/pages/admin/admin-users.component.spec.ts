@@ -17,6 +17,8 @@ describe('AdminUsersComponent', () => {
             listUsers: vi.fn().mockResolvedValue({ users: [], total: 0 }),
             getLoginHistory: vi.fn().mockResolvedValue([]),
             setVipStatus: vi.fn().mockResolvedValue({}),
+            banUser: vi.fn().mockResolvedValue({ message: 'User banned' }),
+            warnUser: vi.fn().mockResolvedValue({ message: 'User warned' }),
           },
         },
       ],
