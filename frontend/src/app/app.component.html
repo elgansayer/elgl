@@ -1,11 +1,6 @@
 <div
   class="min-h-[100dvh] flex flex-col bg-surface-500 text-text-primary font-sans relative overflow-x-hidden"
 >
-  @if (versionCheckService.isDeprecated()) {
-    <app-forced-update-modal
-      [storeUrl]="'https://yourapp.com/update'"
-    />
-  }
   @if (authService.appLocked()) {
     <div
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90"

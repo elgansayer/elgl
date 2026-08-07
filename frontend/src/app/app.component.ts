@@ -30,7 +30,6 @@ import { DailyLoginModalComponent } from './components/daily-login-modal/daily-l
 import { ConfirmDialogComponent } from './components/confirm-dialog/confirm-dialog.component';
 import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
-import { ForcedUpdateModalComponent } from './components/forced-update-modal/forced-update-modal.component';
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
 import { FontScaleService } from './services/font-scale.service';
@@ -58,8 +57,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     ThemeSelectorComponent,
     FontScaleSliderComponent,
     AppLanguageSelectorComponent,
-GiftAnimationOverlayComponent,
-    ForcedUpdateModalComponent,
+    GiftAnimationOverlayComponent,
   ],
   templateUrl: './app.component.html',
   host: {
@@ -81,7 +79,7 @@ export class AppComponent implements OnInit {
   private safetyService = inject(SafetyService);
   reportModalService = inject(ReportUserModalService);
   readonly unreadCounter = inject(UnreadCounterService);
-  readonly versionCheckService = inject(VersionCheckService);
+  private versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
@@ -160,7 +158,7 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale and base rem sizing are handled globally by FontScaleService.
     // Block the app immediately if the installed version is deprecated.
-    this.versionCheckService.checkVersion();
+    await this.versionCheckService.checkVersion();
 
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
