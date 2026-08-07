@@ -1,16 +1,27 @@
 import { Component, inject, signal, resource } from '@angular/core';
+<<<<<<< HEAD
 import { CommonModule } from '@angular/common';
+=======
+import { DatePipe } from '@angular/common';
+>>>>>>> origin/main
 import {
   ModerationService,
   ModerationItem,
   UserAnalysisResult,
 } from '../services/moderation.service';
 import { TranslatePipe } from '../services/translate.pipe';
+<<<<<<< HEAD
 import { SanitisePipe } from '../services/sanitise.pipe';
+=======
+import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
+import { AppCardComponent } from '../components/primitives/card/card.component';
+>>>>>>> origin/main
 
 @Component({
   selector: 'app-moderation-queue',
   standalone: true,
+<<<<<<< HEAD
   imports: [CommonModule, TranslatePipe, SanitisePipe],
   template: `
     <div class="min-h-screen bg-surface p-6 text-on-surface">
@@ -124,6 +135,16 @@ import { SanitisePipe } from '../services/sanitise.pipe';
       }
     </div>
   `,
+=======
+  imports: [
+    DatePipe,
+    TranslatePipe,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+    AppCardComponent,
+  ],
+  templateUrl: './moderation-queue.component.html',
+>>>>>>> origin/main
 })
 export class ModerationQueueComponent {
   private moderationService = inject(ModerationService);
