@@ -23,8 +23,10 @@ jest.mock('dompurify', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
+import { EconomyExceptionFilter } from './economy-exception.filter';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('EconomyController', () => {
@@ -39,16 +41,29 @@ describe('EconomyController', () => {
           provide: EconomyService,
           useValue: {
             getCatalog: jest.fn(),
+            getPackages: jest.fn(),
             getBalance: jest.fn(),
+            claimDailyCheckIn: jest.fn(),
+            createCheckoutSession: jest.fn(),
             purchaseCoins: jest.fn(),
             sendGift: jest.fn(),
             getStickerPacks: jest.fn(),
             unlockStickerPack: jest.fn(),
           },
         },
+        {
+          provide: EconomyExceptionFilter,
+          useValue: { catch: jest.fn() },
+        },
+        {
+          provide: 'PinoLogger:EconomyExceptionFilter',
+          useValue: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(ThrottlerGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
@@ -75,6 +90,17 @@ describe('EconomyController', () => {
     });
   });
 
+  describe('getPackages', () => {
+    it('should return coin packages from service', () => {
+      const packages = [{ id: 'coins_small', coins: 100 }];
+      (economyService.getPackages as jest.Mock).mockReturnValue(packages);
+
+      const result = controller.getPackages();
+      expect(economyService.getPackages).toHaveBeenCalled();
+      expect(result).toEqual(packages);
+    });
+  });
+
   describe('getBalance', () => {
     it('should return 0 balance if user is not provided', async () => {
       const result = await controller.getBalance(null);
@@ -89,6 +115,57 @@ describe('EconomyController', () => {
       const result = await controller.getBalance({ id: 'user-1' } as any);
       expect(economyService.getBalance).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(balance);
+    });
+  });
+
+  describe('claimDailyCheckIn', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.claimDailyCheckIn(null);
+      expect(result).toBeNull();
+      expect(economyService.claimDailyCheckIn).not.toHaveBeenCalled();
+    });
+
+    it('should call service claimDailyCheckIn when user is provided', async () => {
+      const response = { claimed: true, coins_rewarded: 7, new_balance: 107 };
+      (economyService.claimDailyCheckIn as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.claimDailyCheckIn({
+        id: 'user-1',
+      } as any);
+      expect(economyService.claimDailyCheckIn).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('createCheckoutSession', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.createCheckoutSession(null, {
+        package_id: 'coins_small',
+      });
+      expect(result).toBeNull();
+      expect(economyService.createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it('should call service createCheckoutSession when user is provided', async () => {
+      const response = {
+        sessionUrl: 'https://checkout.stripe.com/test',
+        sessionId: 'sess_123',
+      };
+      (economyService.createCheckoutSession as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.createCheckoutSession(
+        { id: 'user-1' } as any,
+        { package_id: 'coins_medium' },
+      );
+      expect(economyService.createCheckoutSession).toHaveBeenCalledWith(
+        'user-1',
+        'coins_medium',
+      );
+      expect(result).toEqual(response);
     });
   });
 
@@ -163,6 +240,55 @@ describe('EconomyController', () => {
         dto,
       );
       expect(result).toEqual(response);
+    });
+  });
+
+  describe('rate limiting decorators', () => {
+    it('should apply Throttle decorators to economy endpoints', () => {
+      const controllerPrototype = Object.getPrototypeOf(controller);
+      const LIMIT = 'THROTTLER:LIMIT';
+      const TTL = 'THROTTLER:TTL';
+
+      const catalogLimit = Reflect.getMetadata(
+        LIMIT + 'default',
+        controllerPrototype.getCatalog,
+      );
+      expect(catalogLimit).toBe(30);
+      const catalogTtl = Reflect.getMetadata(
+        TTL + 'default',
+        controllerPrototype.getCatalog,
+      );
+      expect(catalogTtl).toBe(60000);
+
+      const balanceLimit = Reflect.getMetadata(
+        LIMIT + 'default',
+        controllerPrototype.getBalance,
+      );
+      expect(balanceLimit).toBe(30);
+
+      const dailyCheckInLimit = Reflect.getMetadata(
+        LIMIT + 'default',
+        controllerPrototype.claimDailyCheckIn,
+      );
+      expect(dailyCheckInLimit).toBe(3);
+
+      const purchaseCoinsLimit = Reflect.getMetadata(
+        LIMIT + 'default',
+        controllerPrototype.purchaseCoins,
+      );
+      expect(purchaseCoinsLimit).toBe(5);
+
+      const sendGiftLimit = Reflect.getMetadata(
+        LIMIT + 'default',
+        controllerPrototype.sendGift,
+      );
+      expect(sendGiftLimit).toBe(10);
+
+      const unlockStickerLimit = Reflect.getMetadata(
+        LIMIT + 'default',
+        controllerPrototype.unlockStickerPack,
+      );
+      expect(unlockStickerLimit).toBe(5);
     });
   });
 });
