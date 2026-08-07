@@ -244,11 +244,11 @@
               </div>
             }
 
-            @if (moment.translatedText) {
+            @if (showTranslationMap()[moment.id] && translationCache()[moment.id]) {
               <div
                 class="mt-3 rounded-xl border border-purple-500/30 bg-purple-500/10 p-3 text-[14px] text-text-primary"
               >
-                {{ moment.translatedText }}
+                {{ translationCache()[moment.id] }}
               </div>
             }
 
@@ -298,7 +298,7 @@
                   class="flex items-center gap-1 hover:text-purple-400 transition-colors ms-auto font-bold"
                  [attr.aria-label]="'moments.hideTranslation' | t">
                   {{
-                    moment.translatedText
+                    showTranslationMap()[moment.id]
                       ? ('moments.hideTranslation' | t)
                       : ('moments.translate' | t)
                   }}
