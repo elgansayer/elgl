@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from '../monetisation/monetisation.service';
@@ -17,14 +18,39 @@ import {
 } from './interfaces/escrow.interface';
 import { CreateEscrowDto } from './dto/escrow.dto';
 
+/** Maximum items per page to bound payload sizes (audit #2396). */
+const MAX_LIST_LIMIT = 50;
+/** Expiry cleanup interval in ms (6 hours). */
+const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+/** Max records to process per expiry cleanup batch. */
+const CLEANUP_BATCH_SIZE = 100;
+
 @Injectable()
-export class EscrowService {
+export class EscrowService implements OnModuleDestroy {
   private readonly logger = new Logger(EscrowService.name);
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly monetisationService: MonetisationService,
-  ) {}
+  ) {
+    // Periodic cleanup of stale held escrows to prevent resource leaks
+    this.cleanupTimer = setInterval(() => {
+      this.cleanupExpiredEscrows().catch((err: unknown) => {
+        this.logger.error(
+          `Escrow expiry cleanup failed: ${(err as Error)?.message ?? 'unknown'}`,
+        );
+      });
+    }, CLEANUP_INTERVAL_MS);
+  }
+
+  /** Release the cleanup timer to prevent memory leaks on module teardown. */
+  onModuleDestroy(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+  }
 
   /**
    * Create an escrow transaction: lock the payer's coins until the payee
@@ -226,12 +252,14 @@ export class EscrowService {
 
   /**
    * List escrow transactions for the calling user as either payer or payee.
+   * Payload size control (#2396): hard-capped at MAX_LIST_LIMIT items per page.
    */
   async listEscrows(
     userId: string,
     limit: number = 20,
     offset: number = 0,
   ): Promise<{ escrows: EscrowTransaction[]; total: number }> {
+    const cappedLimit = Math.min(Math.max(limit, 1), MAX_LIST_LIMIT);
     const supabase = this.supabaseService.getClient();
 
     const { data, error, count } = await supabase
@@ -239,7 +267,7 @@ export class EscrowService {
       .select('*', { count: 'exact' })
       .or(`payer_id.eq.${userId},payee_id.eq.${userId}`)
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .range(offset, offset + cappedLimit - 1);
 
     if (error) {
       throw new BadRequestException('Failed to fetch escrow transactions.');
@@ -267,5 +295,49 @@ export class EscrowService {
     }
 
     return data;
+  }
+
+  /**
+   * Periodically refund held escrows that have been dormant beyond a configurable
+   * threshold to prevent stale escrows from accumulating indefinitely.
+   * Memory leak audit (#2396): batch-limited to avoid large in-memory result sets.
+   */
+  private async cleanupExpiredEscrows(): Promise<void> {
+    // Stale threshold: escrows held for more than 30 days without release/refund
+    const threshold = new Date(
+      Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    const supabase = this.supabaseService.getClient();
+    let totalRefunded = 0;
+
+    while (true) {
+      const { data: expired, error } = await supabase
+        .from('escrow_transactions')
+        .select('id, payer_id, amount_coins')
+        .eq('status', 'held')
+        .lt('created_at', threshold)
+        .limit(CLEANUP_BATCH_SIZE);
+
+      if (error || !expired || expired.length === 0) break;
+
+      for (const row of expired) {
+        const record = row as { id: string; payer_id: string; amount_coins: number };
+        try {
+          await this.refundEscrow(record.payer_id, record.id);
+          totalRefunded++;
+        } catch (err: unknown) {
+          this.logger.warn(
+            `Cleanup: could not auto-refund escrow ${record.id}: ${(err as Error)?.message ?? 'unknown'}`,
+          );
+        }
+      }
+    }
+
+    if (totalRefunded > 0) {
+      this.logger.log(
+        `Expired escrow cleanup: auto-refunded ${totalRefunded} escrows`,
+      );
+    }
   }
 }

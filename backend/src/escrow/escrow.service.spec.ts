@@ -13,6 +13,7 @@ describe('EscrowService', () => {
   let service: EscrowService;
   let monetisationService: MonetisationService;
   let mockQueryBuilder: any;
+  let module: TestingModule;
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -31,7 +32,7 @@ describe('EscrowService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         EscrowService,
         {
@@ -54,6 +55,11 @@ describe('EscrowService', () => {
     monetisationService = module.get<MonetisationService>(MonetisationService);
 
     jest.clearAllMocks();
+  });
+
+  /** Clean up module to release OnModuleDestroy timer (#2396). */
+  afterEach(async () => {
+    await module.close();
   });
 
   it('should be defined', () => {
