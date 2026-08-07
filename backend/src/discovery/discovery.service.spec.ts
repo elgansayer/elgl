@@ -11,6 +11,11 @@ jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
 
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
+jest.mock('./sanitise-discovery.helper', () => ({
+  sanitiseDiscoveryData: <T>(value: T): T => value,
+}));
+
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
   let mockSupabaseClient: any;

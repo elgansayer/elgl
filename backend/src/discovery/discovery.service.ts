@@ -7,6 +7,7 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
+import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -215,7 +216,7 @@ export class DiscoveryService {
   async getPartnerOfWeekIds(): Promise<string[]> {
     const redis = this.supabaseService.getRedisClient();
     const raw = await redis.get('partner_of_week_ids');
-    return this.parseStringArray(raw);
+    return sanitiseDiscoveryData(this.parseStringArray(raw));
   }
 
   async searchPartners(
@@ -351,7 +352,7 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return this.sortUsers(enriched, query.sort);
+      return sanitiseDiscoveryData(this.sortUsers(enriched, query.sort));
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -360,11 +361,14 @@ export class DiscoveryService {
         search_lon: searchLon,
         radius_m: query.radius_metres || 50000,
         exclude_user_id: currentUserId,
-        filter_native_arr: query.native_languages ? [query.native_languages] : null,
+        filter_native_arr: query.native_languages
+          ? [query.native_languages]
+          : null,
         filter_target: query.target_language || null,
         serious_only: Boolean(query.serious_learner_only),
         filter_level: query.level || null,
-        filter_gender: _currentUserProfile?.is_vip && query.gender ? query.gender : null,
+        filter_gender:
+          _currentUserProfile?.is_vip && query.gender ? query.gender : null,
         filter_age_min: query.age_min ?? null,
         filter_age_max: query.age_max ?? null,
         filter_audio_intro: query.has_audio_intro === true,
@@ -429,8 +433,8 @@ export class DiscoveryService {
       // RPC now handles level, gender, age, and audio_intro filters natively,
       // but interests still needs post-processing since the RPC returns interests column
       if (query.interests) {
-        rpcResults = rpcResults.filter(
-          (u) => u.interests?.includes(query.interests!),
+        rpcResults = rpcResults.filter((u) =>
+          u.interests?.includes(query.interests!),
         );
       }
       const filtered = await this.filterByVoiceRoomActive(
@@ -548,7 +552,7 @@ export class DiscoveryService {
 
     const response = await queryBuilder.limit(50);
     if (response.error || !response.data) {
-      return [];
+      return sanitiseDiscoveryData([]);
     }
     let results = response.data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
@@ -559,7 +563,7 @@ export class DiscoveryService {
       results,
       query.voice_room_active === true,
     );
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   async getRecentNativeSpeakers(currentUserId: string): Promise<UserProfile[]> {
@@ -583,7 +587,7 @@ export class DiscoveryService {
       .limit(10);
 
     if (error || !data) {
-      return [];
+      return sanitiseDiscoveryData([]);
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
@@ -601,7 +605,7 @@ export class DiscoveryService {
       is_partner_of_week: partnerSet.has(u.id),
     }));
 
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   async getSpotlightUsers(currentUserId: string): Promise<UserProfile[]> {
@@ -621,7 +625,7 @@ export class DiscoveryService {
       .limit(5);
 
     if (error || !data) {
-      return [];
+      return sanitiseDiscoveryData([]);
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
@@ -639,7 +643,7 @@ export class DiscoveryService {
       is_partner_of_week: partnerSet.has(u.id),
     }));
 
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   async findByLanguagePair(
@@ -739,7 +743,7 @@ export class DiscoveryService {
         mock,
         query.voice_room_active === true,
       );
-      return mock.slice(offset, offset + limit);
+      return sanitiseDiscoveryData(mock.slice(offset, offset + limit));
     }
 
     let results = response.data as unknown as DiscoveryUser[];
@@ -777,7 +781,7 @@ export class DiscoveryService {
       query.voice_room_active === true,
     );
 
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   private async filterByVoiceRoomActive<T extends UserProfile>(
@@ -983,13 +987,13 @@ export class DiscoveryService {
     }
     const { data, error } = await qb.limit(50);
     if (error || !data) {
-      return [];
+      return sanitiseDiscoveryData([]);
     }
     let results = data as unknown as DiscoveryUser[];
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
-    return results;
+    return sanitiseDiscoveryData(results);
   }
 
   private parseStringArray(raw: string | null): string[] {

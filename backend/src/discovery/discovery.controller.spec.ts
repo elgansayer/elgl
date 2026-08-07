@@ -9,6 +9,11 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 
+// Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
+jest.mock('./sanitise-discovery.helper', () => ({
+  sanitiseDiscoveryData: <T>(value: T): T => value,
+}));
+
 describe('DiscoveryController', () => {
   let controller: DiscoveryController;
   let discoveryService: jest.Mocked<DiscoveryService>;
