@@ -41,8 +41,9 @@
       <app-scrollable-pills
         [pills]="filterPills()"
         [selected]="selectedFilter()"
-        [ariaLabel]="'discovery.filterAriaLabel' | t"
-        (pillPicked)="onFilterSelect($event)"
+        (select)="onFilterSelect($any($event))"
+        role="radiogroup"
+        [attr.aria-label]="'discovery.filterAriaLabel' | t"
       >
       </app-scrollable-pills>
     </div>
@@ -52,9 +53,7 @@
            [title]="'discovery.onboarding.stepLanguagesTitle' | t"
            [text]="'discovery.onboarding.stepLanguagesText' | t"
            stepPosition="bottom"
-           class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4"
-           role="radiogroup"
-           [attr.aria-label]="'discovery.languageFilterLabel' | t">
+           class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4">
       @for (lang of myTargetLangs(); track lang.code) {
         <button
           (click)="setLanguage(lang.code)"
@@ -321,11 +320,11 @@
         {{ 'discovery.matchCount' | t: { count: partners().length } }}
       </div>
       <!-- User Grid: single column mobile, 2 cols tablet, 3 cols desktop -->
-<div joyrideStep="discoveryOnboarding@partnerList"
+      <div joyrideStep="discoveryOnboarding@partnerList"
            [title]="'discovery.onboarding.stepPartnerListTitle' | t"
            [text]="'discovery.onboarding.stepPartnerListText' | t"
            stepPosition="top"
-           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200" role="list" [attr.aria-label]="'discovery.partnerListLabel' | t">
+           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200" role="list" aria-label="{{ 'discovery.partnerListLabel' | t }}">
         @for (partner of partners(); track partner.id; let first = $first) {
           <article
             class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer"
