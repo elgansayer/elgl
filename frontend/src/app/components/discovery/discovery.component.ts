@@ -127,6 +127,20 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
+  onSortChange(event: Event): void {
+    const select = event.target;
+    if (select instanceof HTMLSelectElement) {
+      this.setSort(select.value);
+    }
+  }
+
+  onGenderChange(event: Event): void {
+    const select = event.target;
+    if (select instanceof HTMLSelectElement) {
+      this.setGender(select.value);
+    }
+  }
+
   onAgeRangeChanged(range: AgeRange): void {
     this.ageRangeMin.set(range.min);
     this.ageRangeMax.set(range.max);
