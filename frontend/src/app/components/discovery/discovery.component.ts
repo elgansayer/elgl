@@ -7,6 +7,7 @@ import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile, UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -46,9 +47,14 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
+  private readonly offlineCache = inject(OfflineDiscoveryCacheService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
+
+  /** Whether currently offline and serving cached data */
+  readonly isOffline = computed(() => !this.offlineCache.isOnline());
+  readonly isUsingCachedData = computed(() => this.isOffline() && this.offlineCache.cachedDataAvailable());
 
   readonly partners = signal<
     (UserProfile & {
