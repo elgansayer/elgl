@@ -60,6 +60,8 @@ describe('ModerationController', () => {
       expect(moderationService.getItems).toHaveBeenCalledWith(
         'profile',
         'pending',
+        undefined,
+        undefined,
       );
       expect(result).toEqual(items);
     });
@@ -71,6 +73,8 @@ describe('ModerationController', () => {
 
       expect(moderationService.getItems).toHaveBeenCalledWith(
         'moment',
+        undefined,
+        undefined,
         undefined,
       );
     });

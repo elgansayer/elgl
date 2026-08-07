@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
@@ -26,59 +26,26 @@ export interface ModerationDegradedResponse {
   error?: string;
 }
 
-const DATING_FLAGS: ReadonlyArray<string> = [
-  'dating',
-  'date',
-  'relationship',
-  'boyfriend',
-  'girlfriend',
-  'love',
-  'marry',
-  'marriage',
-  'romance',
-  'romantic',
-  'sex',
-  'hookup',
-  'flirt',
-  'hot',
-  'sexy',
-  'single',
-  'looking for',
-  'meetup',
-  'in a relationship',
-  'partner',
-  'romantically',
-  'kiss',
-  'kissing',
-  'date me',
-  'looking for a man',
-  'looking for a woman',
-  'man for me',
-  'woman for me',
-  'marry me',
-  'fwb',
-  'friends with benefits',
-  'casual sex',
-  'affair',
-  'dinner',
-  'coffee',
-  'drinks',
-  'hang out',
-  'meet up',
-  'hook up',
-  'one night',
-  'sexting',
-  'daddy',
-  'mommy',
-  'horny',
-] as const;
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 200;
 
-const DATING_REGEXPS: ReadonlyArray<RegExp> = [...new Set(DATING_FLAGS)].map(
-  (flag) => {
-    const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`\\b${escaped}\\b`, 'i');
-  },
-);
+// Pre-compiled dating-behaviour detection regex patterns to avoid
+// re-compilation on every analyseUserForDatingBehaviour() call.
+const DATING_FLAGS = [
+  'dating', 'date', 'relationship', 'boyfriend', 'girlfriend', 'love',
+  'marry', 'marriage', 'romance', 'romantic', 'sex', 'hookup', 'flirt',
+  'hot', 'sexy', 'single', 'looking for', 'meetup', 'in a relationship',
+  'partner', 'romantically', 'kiss', 'kissing', 'date me',
+  'looking for a man', 'looking for a woman', 'man for me', 'woman for me',
+  'marry me', 'fwb', 'friends with benefits', 'casual sex', 'affair',
+  'dinner', 'coffee', 'drinks', 'hang out', 'meet up', 'hook up',
+  'one night', 'sexting', 'daddy', 'mommy', 'horny',
+];
+
+const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map((flag) => {
+  const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { flag, regex: new RegExp(`\\b${escaped}\\b`, 'i') };
+});
 
 @Injectable()
 export class ModerationService {
@@ -92,7 +59,12 @@ export class ModerationService {
   async getItems(
     type: 'moment' | 'profile',
     status?: string,
+    page?: number,
+    pageSize?: number,
   ): Promise<ModerationItem[]> {
+    const limit = Math.min(pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = ((page ?? 1) - 1) * limit;
+
     let query = this.supabase
       .from('reports')
       .select(
@@ -101,23 +73,19 @@ export class ModerationService {
         status,
         reason_category,
         created_at,
+        reporter_id,
+        reported_user_id,
         reported_moment_id,
         description,
         reporter:reporter_id ( id, display_name ),
         reported_user:reported_user_id ( id, display_name )
       `,
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (status) {
       query = query.eq('status', status);
-    }
-
-    // DB-level filtering: profile type requires reported_user_id, moment type requires reported_moment_id
-    if (type === 'profile') {
-      query = query.not('reported_user_id', 'is', null);
-    } else {
-      query = query.not('reported_moment_id', 'is', null);
     }
 
     try {
@@ -144,27 +112,32 @@ export class ModerationService {
         };
       });
 
-      // Batch-fetch moment content for all moment items in a single query
-      if (type !== 'profile') {
-        const momentIds = items
-          .map((item) => item.reportedMomentId)
-          .filter((id): id is string => id != null);
-
-        if (momentIds.length > 0) {
-          const momentContentMap = await this.batchGetMomentContent(momentIds);
-          for (const item of items) {
-            if (item.reportedMomentId) {
-              const moment = momentContentMap.get(item.reportedMomentId);
-              if (moment) {
-                item.moment_content = moment.content_text;
-                item.momentAuthorName = moment.authorName;
-              }
-            }
-          }
-        }
+      if (type === 'profile') {
+        return items.filter((item) => item.reported_user != null);
       }
 
-      return items;
+      // Batch-fetch moment content for all moment reports in a single
+      // round-trip to avoid the N+1 query anti-pattern.
+      const momentItems = items.filter((item) => item.reportedMomentId != null);
+
+      if (momentItems.length === 0) {
+        return [];
+      }
+
+      const momentIds = momentItems.map((item) => item.reportedMomentId as string);
+      const momentMap = await this.batchGetMomentContent(momentIds);
+
+      return momentItems.map((item) => {
+        const moment = momentMap.get(item.reportedMomentId as string);
+        if (moment) {
+          return {
+            ...item,
+            moment_content: moment.content_text,
+            momentAuthorName: moment.authorName,
+          };
+        }
+        return item;
+      });
     } catch (err) {
       this.logger.warn(
         'Failed to fetch moderation items, returning empty result',
@@ -177,10 +150,7 @@ export class ModerationService {
   private async batchGetMomentContent(
     momentIds: string[],
   ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
-    const result = new Map<
-      string,
-      { content_text: string; authorName: string | null }
-    >();
+    const result = new Map<string, { content_text: string; authorName: string | null }>();
 
     const { data, error } = await this.supabase
       .from('moments')
@@ -188,16 +158,15 @@ export class ModerationService {
       .in('id', momentIds);
 
     if (error || !data) {
+      this.logger.warn(`Failed to batch-fetch moment content: ${error?.message ?? 'no data'}`);
       return result;
     }
 
-    const rows = data as Array<{
+    for (const row of data as Array<{
       id: string;
-      content_text: string;
-      author: { display_name?: string } | null;
-    }>;
-
-    for (const row of rows) {
+      content_text?: string;
+      author?: { display_name?: string } | null;
+    }>) {
       result.set(row.id, {
         content_text: row.content_text ?? '',
         authorName: row.author?.display_name ?? null,
@@ -312,7 +281,7 @@ export class ModerationService {
 
       const { data: moments } = await this.supabase
         .from('moments')
-        .select('content_text')
+        .select('id, content_text')
         .eq('author_id', userId)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -328,26 +297,25 @@ export class ModerationService {
       const fullText = (combinedText + ' ' + momentText).toLowerCase();
 
       const flags: string[] = [];
-      const uniqueFlags = [...new Set(DATING_FLAGS)];
 
-      for (let i = 0; i < uniqueFlags.length; i++) {
-        if (DATING_REGEXPS[i].test(fullText)) {
-          flags.push(uniqueFlags[i]);
+      for (const { flag, regex } of DATING_REGEXES) {
+        if (regex.test(fullText)) {
+          flags.push(flag);
         }
       }
 
-      const matchedFlags = [...new Set(flags)];
-      const hitRatio = matchedFlags.length / uniqueFlags.length;
+      const uniqueFlags = [...new Set(flags)];
+      const hitRatio = uniqueFlags.length / DATING_REGEXES.length;
       const riskScore = Math.min(
         100,
         Math.round(
           hitRatio * 100 +
-            (matchedFlags.length > 5 ? 20 : 0) +
-            (matchedFlags.length > 10 ? 10 : 0),
+            (uniqueFlags.length > 5 ? 20 : 0) +
+            (uniqueFlags.length > 10 ? 10 : 0),
         ),
       );
 
-      return { riskScore, flags: matchedFlags };
+      return { riskScore, flags: uniqueFlags };
     } catch (err) {
       this.logger.warn(`Failed to analyse user ${userId}, degraded`, err);
       return { riskScore: 0, flags: [] };
