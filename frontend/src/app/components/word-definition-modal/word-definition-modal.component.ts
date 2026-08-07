@@ -1,6 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, OnInit, inject, signal, input, output } from '@angular/core';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { Component, inject, signal, input, output, effect, ErrorHandler } from '@angular/core';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -10,8 +9,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
   templateUrl: './word-definition-modal.component.html',
   styleUrls: ['./word-definition-modal.component.scss'],
 })
-export class WordDefinitionModalComponent implements OnInit {
+export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
+  private errorHandler = inject(ErrorHandler);
 
   wordToken = input.required<string>();
   contextSentence = input<string>('');
@@ -25,31 +25,33 @@ export class WordDefinitionModalComponent implements OnInit {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
-  async ngOnInit(): Promise<void> {
-    const status = this.vocabStore.getWordStatus(this.wordToken());
-    if (status.flashcard) {
-      this.existingCard.set(status.flashcard);
-    }
-    await this.fetchDefinition();
+  constructor() {
+    // Auto-fetch definition when word token changes, replacing ngOnInit
+    effect(() => {
+      const token = this.wordToken();
+      const target = this.targetLanguage();
+      const status = this.vocabStore.getWordStatus(token);
+      if (status.flashcard) {
+        this.existingCard.set(status.flashcard);
+      }
+      void this.fetchDefinition(token, target);
+    });
   }
 
-  async fetchDefinition(): Promise<void> {
+  async fetchDefinition(wordToken: string, targetLang: string): Promise<void> {
     this.isLoading.set(true);
     try {
-      const res = await this.vocabStore.translateWordOrSentence(
-        this.wordToken(),
-        this.targetLanguage(),
-      );
+      const res = await this.vocabStore.translateWordOrSentence(wordToken, targetLang);
       this.translationResult.set(res);
     } catch (e) {
-      console.error('Failed to translate word token:', e);
+      this.reportError('fetchDefinition', e);
       // Fallback display
       this.translationResult.set({
-        original_text: this.wordToken(),
-        translated_text: `Translation of "${this.wordToken()}"`,
+        original_text: wordToken,
+        translated_text: `Translation of "${wordToken}"`,
         detected_language: 'auto',
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
-        transliteration: this.wordToken(),
+        transliteration: wordToken,
       });
     } finally {
       this.isLoading.set(false);
@@ -60,7 +62,7 @@ export class WordDefinitionModalComponent implements OnInit {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
       const audio = new Audio(url);
-      audio.play().catch((e) => console.error('Audio playback error:', e));
+      audio.play().catch((e) => this.reportError('playAudio', e));
     }
   }
 
@@ -96,7 +98,7 @@ export class WordDefinitionModalComponent implements OnInit {
         }
       }
     } catch (e) {
-      console.error('Failed to update word status:', e);
+      this.reportError('setLevel', e);
       showToast('Error updating SRS review schedule.');
     } finally {
       this.isSaving.set(false);
@@ -106,5 +108,14 @@ export class WordDefinitionModalComponent implements OnInit {
 
   close(): void {
     this.closed.emit();
+  }
+
+  private reportError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    const srsError = new Error(`[SRS:WordDefinition] ${operation} failed: ${message}`);
+    if (err instanceof Error && err.stack) {
+      srsError.stack = err.stack;
+    }
+    this.errorHandler.handleError(srsError);
   }
 }
