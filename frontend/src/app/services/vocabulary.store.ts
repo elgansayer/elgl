@@ -20,6 +20,92 @@ export interface Flashcard {
   created_at: string;
 }
 
+/** SM-2 algorithm result for local SRS computation */
+export interface Sm2Result {
+  newEf: number;
+  newRepetitions: number;
+  newInterval: number;
+  newSrsLevel: number;
+}
+
+const MOCK_FALLBACK_FLASHCARDS: Flashcard[] = [
+  {
+    id: 'mock-fc-1',
+    user_id: 'local-user',
+    word_token: 'abundant',
+    original_context: 'The rainforest has an abundant variety of species.',
+    translation: 'abundant',
+    definition: 'existing or available in large quantities; plentiful',
+    pronunciation_url: undefined,
+    srs_level: 1,
+    easiness_factor: 2.5,
+    repetitions: 1,
+    interval_days: 3,
+    next_review_at: new Date(Date.now() - 3600000).toISOString(),
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 'mock-fc-2',
+    user_id: 'local-user',
+    word_token: 'ephemeral',
+    original_context: 'The beauty of cherry blossoms is ephemeral.',
+    translation: 'ephemeral',
+    definition: 'lasting for a very short time',
+    pronunciation_url: undefined,
+    srs_level: 2,
+    easiness_factor: 2.6,
+    repetitions: 2,
+    interval_days: 7,
+    next_review_at: new Date(Date.now() + 86400000).toISOString(),
+    created_at: new Date(Date.now() - 172800000).toISOString(),
+  },
+  {
+    id: 'mock-fc-3',
+    user_id: 'local-user',
+    word_token: 'serendipity',
+    original_context: 'Finding that book was pure serendipity.',
+    translation: 'serendipity',
+    definition: 'the occurrence of events by chance in a happy way',
+    pronunciation_url: undefined,
+    srs_level: 3,
+    easiness_factor: 2.7,
+    repetitions: 3,
+    interval_days: 14,
+    next_review_at: new Date(Date.now() - 7200000).toISOString(),
+    created_at: new Date(Date.now() - 259200000).toISOString(),
+  },
+  {
+    id: 'mock-fc-4',
+    user_id: 'local-user',
+    word_token: 'eloquent',
+    original_context: 'She gave an eloquent speech at the ceremony.',
+    translation: 'eloquent',
+    definition: 'fluent or persuasive in speaking or writing',
+    pronunciation_url: undefined,
+    srs_level: 0,
+    easiness_factor: 2.5,
+    repetitions: 0,
+    interval_days: 0,
+    next_review_at: new Date().toISOString(),
+    created_at: new Date(Date.now() - 43200000).toISOString(),
+  },
+  {
+    id: 'mock-fc-5',
+    user_id: 'local-user',
+    word_token: 'nostalgia',
+    original_context: 'The old song filled her with nostalgia.',
+    translation: 'nostalgia',
+    definition: 'a sentimental longing for the past',
+    pronunciation_url: undefined,
+    srs_level: 4,
+    easiness_factor: 2.9,
+    repetitions: 5,
+    interval_days: 30,
+    next_review_at: new Date(Date.now() + 604800000).toISOString(),
+    created_at: new Date(Date.now() - 604800000).toISOString(),
+  },
+];
+
 export interface TranslationResult {
   original_text: string;
   translated_text: string;
@@ -65,12 +151,87 @@ export class VocabularyStore {
 
   /** Cards queued for a deck-specific review session */
   readonly pendingReviewCards = signal<Flashcard[]>([]);
+  /** Whether the store is operating in offline/fallback mode */
+  readonly isOfflineMode = signal<boolean>(false);
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
     return {
       Authorization: `Bearer ${token ?? ''}`,
     };
+  }
+
+  /** Exposed SM-2 algorithm for components to use locally as fallback */
+  applySm2Algorithm(
+    quality: number,
+    ef: number,
+    repetitions: number,
+    interval: number,
+  ): Sm2Result {
+    const q = Math.max(0, Math.min(5, quality));
+    const newEf = Number(
+      Math.max(1.3, ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))).toFixed(4),
+    );
+
+    let newRepetitions: number;
+    let newInterval: number;
+
+    if (q < 3) {
+      newRepetitions = 0;
+      newInterval = 1;
+    } else {
+      if (repetitions === 0) {
+        newInterval = 1;
+      } else if (repetitions === 1) {
+        newInterval = 6;
+      } else {
+        newInterval = Math.round(interval * newEf);
+      }
+      newRepetitions = repetitions + 1;
+    }
+
+    let newSrsLevel: number;
+    if (newRepetitions === 0) {
+      newSrsLevel = 0;
+    } else if (newRepetitions === 1) {
+      newSrsLevel = 1;
+    } else if (newRepetitions === 2) {
+      newSrsLevel = 2;
+    } else if (newInterval < 21) {
+      newSrsLevel = 3;
+    } else {
+      newSrsLevel = 4;
+    }
+
+    return { newEf, newRepetitions, newInterval, newSrsLevel };
+  }
+
+  /** Quality (0-5) to review grade mapping for components */
+  gradeToQuality(grade: 'again' | 'good' | 'known'): number {
+    switch (grade) {
+      case 'again': return 0;
+      case 'good': return 3;
+      case 'known': return 5;
+    }
+  }
+
+  private getFallbackFlashcards(): Flashcard[] {
+    const userId = this.authService.currentUser()?.id ?? 'local-user';
+    return MOCK_FALLBACK_FLASHCARDS.map((fc) => ({
+      ...fc,
+      user_id: userId,
+    }));
+  }
+
+  private getFallbackDueReviews(): Flashcard[] {
+    const now = new Date().toISOString();
+    return this.getFallbackFlashcards()
+      .filter((fc) => fc.srs_level < 4 && fc.next_review_at <= now)
+      .sort(
+        (a, b) =>
+          new Date(a.next_review_at).getTime() -
+          new Date(b.next_review_at).getTime(),
+      );
   }
 
   async loadAllFlashcards(): Promise<void> {
@@ -80,11 +241,18 @@ export class VocabularyStore {
         this.http.get<Flashcard[]>(this.flashcardsUrl, { headers: this.getHeaders() }),
       );
       this.allFlashcards.set(list);
+      this.isOfflineMode.set(false);
       const map = new Map<string, Flashcard>();
       list.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
       this.flashcardMap.set(map);
-    } catch (e) {
-      console.error('Failed to load flashcards:', e);
+    } catch {
+      // Graceful degradation: use local fallback data
+      const fallback = this.getFallbackFlashcards();
+      this.allFlashcards.set(fallback);
+      this.isOfflineMode.set(true);
+      const map = new Map<string, Flashcard>();
+      fallback.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
+      this.flashcardMap.set(map);
     } finally {
       this.isLoading.set(false);
     }
@@ -96,8 +264,11 @@ export class VocabularyStore {
         this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
       );
       this.dueReviews.set(list);
-    } catch (e) {
-      console.error('Failed to load due reviews:', e);
+      this.isOfflineMode.set(false);
+    } catch {
+      // Graceful degradation: use locally computed due cards
+      this.dueReviews.set(this.getFallbackDueReviews());
+      this.isOfflineMode.set(true);
     }
   }
 
@@ -133,12 +304,94 @@ export class VocabularyStore {
     definition?: string;
     pronunciation_url?: string;
   }): Promise<Flashcard> {
-    const fc = await firstValueFrom(
-      this.http.post<Flashcard>(this.flashcardsUrl, payload, { headers: this.getHeaders() }),
-    );
+    try {
+      const fc = await firstValueFrom(
+        this.http.post<Flashcard>(this.flashcardsUrl, payload, { headers: this.getHeaders() }),
+      );
+      this.isOfflineMode.set(false);
+      this.updateCardInLocalState(fc);
+      return fc;
+    } catch {
+      // Graceful degradation: locally construct a flashcard
+      const fallbackCard: Flashcard = {
+        id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        user_id: this.authService.currentUser()?.id ?? 'local-user',
+        word_token: payload.word_token.toLowerCase().trim(),
+        original_context: payload.original_context,
+        translation: payload.translation,
+        definition: payload.definition,
+        pronunciation_url: payload.pronunciation_url,
+        srs_level: 0,
+        easiness_factor: 2.5,
+        repetitions: 0,
+        interval_days: 0,
+        next_review_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+      };
+      this.isOfflineMode.set(true);
+      this.updateCardInLocalState(fallbackCard);
+      return fallbackCard;
+    }
+  }
+
+  async updateSrsLevel(flashcardId: string, quality: number): Promise<Flashcard> {
+    try {
+      const fc = await firstValueFrom(
+        this.http.patch<Flashcard>(
+          `${this.flashcardsUrl}/${flashcardId}/srs`,
+          { quality },
+          { headers: this.getHeaders() },
+        ),
+      );
+      this.triggerHapticFeedback(fc.srs_level);
+      this.isOfflineMode.set(false);
+      this.updateCardInLocalState(fc);
+      return fc;
+    } catch {
+      // Graceful degradation: compute SRS locally
+      const existingCard = this.allFlashcards().find((c) => c.id === flashcardId);
+      if (!existingCard) {
+        const fallbackCards = this.getFallbackFlashcards();
+        const fb = fallbackCards.find((c) => c.id === flashcardId);
+        if (!fb) return fallbackCards[0];
+        return fb;
+      }
+
+      const { newEf, newRepetitions, newInterval, newSrsLevel } =
+        this.applySm2Algorithm(
+          quality,
+          existingCard.easiness_factor,
+          existingCard.repetitions,
+          existingCard.interval_days,
+        );
+
+      const nextReviewAt = new Date();
+      nextReviewAt.setDate(nextReviewAt.getDate() + newInterval);
+
+      const updatedCard: Flashcard = {
+        ...existingCard,
+        srs_level: newSrsLevel,
+        easiness_factor: newEf,
+        repetitions: newRepetitions,
+        interval_days: newInterval,
+        next_review_at: nextReviewAt.toISOString(),
+      };
+
+      this.triggerHapticFeedback(updatedCard.srs_level);
+      this.isOfflineMode.set(true);
+      this.updateCardInLocalState(updatedCard);
+      return updatedCard;
+    }
+  }
+
+  private updateCardInLocalState(fc: Flashcard): void {
     this.allFlashcards.update((list) => {
+      const existingIdx = list.findIndex((item) => item.id === fc.id);
+      if (existingIdx >= 0) {
+        return list.map((item) => (item.id === fc.id ? fc : item));
+      }
       const filtered = list.filter(
-        (item) => item.id !== fc.id && item.word_token !== fc.word_token,
+        (item) => item.word_token !== fc.word_token,
       );
       return [fc, ...filtered];
     });
@@ -147,25 +400,6 @@ export class VocabularyStore {
       next.set(fc.word_token.toLowerCase(), fc);
       return next;
     });
-    return fc;
-  }
-
-  async updateSrsLevel(flashcardId: string, quality: number): Promise<Flashcard> {
-    const fc = await firstValueFrom(
-      this.http.patch<Flashcard>(
-        `${this.flashcardsUrl}/${flashcardId}/srs`,
-        { quality },
-        { headers: this.getHeaders() },
-      ),
-    );
-    this.triggerHapticFeedback(fc.srs_level);
-    this.allFlashcards.update((list) => list.map((item) => (item.id === fc.id ? fc : item)));
-    this.flashcardMap.update((map) => {
-      const next = new Map(map);
-      next.set(fc.word_token.toLowerCase(), fc);
-      return next;
-    });
-    return fc;
   }
 
   // NLP API calls

@@ -163,6 +163,13 @@ type ReviewGrade = 'again' | 'good' | 'known';
                 </button>
               </div>
             }
+
+            <!-- Offline mode indicator -->
+            @if (vocabStore.isOfflineMode()) {
+              <div class="rounded-app bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-center text-xs text-amber-400 font-bold">
+                {{ 'review.offlineMode' | t }}
+              </div>
+            }
           </div>
         }
       }
@@ -337,16 +344,14 @@ export class FlashcardReviewComponent {
     const card = this.currentCard();
     if (!card) return;
 
-    const newLevel = this.computeNewLevel(card.srs_level, grade);
-
     this.sessionStats.update((s) => ({ ...s, [grade]: s[grade] + 1 }));
 
-    // Persist review to backend
     this.isSaving.set(true);
     try {
-      await this.vocabStore.updateSrsLevel(card.id, newLevel);
+      const quality = this.vocabStore.gradeToQuality(grade);
+      await this.vocabStore.updateSrsLevel(card.id, quality);
     } catch {
-      // Silently fail - the UI has already optimistically updated
+      // Silently handled - updateSrsLevel has its own graceful degradation
     } finally {
       this.isSaving.set(false);
     }
@@ -372,16 +377,5 @@ export class FlashcardReviewComponent {
     audio.play().catch(() => {
       // Audio playback failed silently
     });
-  }
-
-  private computeNewLevel(currentLevel: number, grade: ReviewGrade): number {
-    switch (grade) {
-      case 'again':
-        return 0;
-      case 'good':
-        return currentLevel < 3 ? currentLevel + 1 : 3;
-      case 'known':
-        return 4;
-    }
   }
 }

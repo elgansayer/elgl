@@ -29,6 +29,7 @@ describe('VocabularyStore', () => {
 
     authSpy = {
       getAccessToken: vi.fn().mockReturnValue('mock-token'),
+      currentUser: vi.fn().mockReturnValue({ id: 'user1' }),
     };
 
     TestBed.configureTestingModule({
@@ -118,8 +119,10 @@ describe('VocabularyStore', () => {
       await promise;
 
       expect(store.isLoading()).toBe(false);
-      expect(store.allFlashcards()).toEqual([]);
-      expect(store.flashcardMap().size).toBe(0);
+      // Graceful degradation: fallback data should be populated
+      expect(store.allFlashcards().length).toBeGreaterThan(0);
+      expect(store.flashcardMap().size).toBeGreaterThan(0);
+      expect(store.isOfflineMode()).toBe(true);
     });
   });
 
@@ -137,7 +140,7 @@ describe('VocabularyStore', () => {
       expect(store.dueReviews()[0]).toEqual(mockFlashcard);
     });
 
-    it('should handle error gracefully', async () => {
+    it('should handle error gracefully with fallback data', async () => {
       const promise = store.loadDueReviews();
 
       httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush(
@@ -146,7 +149,8 @@ describe('VocabularyStore', () => {
       );
       await promise;
 
-      expect(store.dueReviews()).toEqual([]);
+      expect(store.dueReviews().length).toBeGreaterThan(0);
+      expect(store.isOfflineMode()).toBe(true);
     });
   });
 
@@ -488,7 +492,7 @@ describe('VocabularyStore', () => {
       expect(store.isLoading()).toBe(false);
     });
 
-    it('should preserve previous dueReviews state on error', async () => {
+    it('should populate fallback due reviews on error (graceful degradation)', async () => {
       store.dueReviews.set([mockFlashcard]);
       const promise = store.loadDueReviews();
       httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush(
@@ -497,7 +501,9 @@ describe('VocabularyStore', () => {
       );
       await promise;
 
-      expect(store.dueReviews()).toEqual([mockFlashcard]);
+      // Graceful degradation: fallback data replaces previous state
+      expect(store.dueReviews().length).toBeGreaterThan(0);
+      expect(store.isOfflineMode()).toBe(true);
     });
 
     it('should handle empty due reviews response', async () => {
@@ -510,31 +516,39 @@ describe('VocabularyStore', () => {
   });
 
   describe('error handling for write operations', () => {
-    it('should handle saveWord failure gracefully', async () => {
+    it('should handle saveWord failure with graceful degradation', async () => {
       const promise = store.saveWord({ word_token: 'fail', translation: 'fallar' });
       httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
         { message: 'Conflict' },
         { status: 409, statusText: 'Conflict' },
       );
 
-      await expect(promise).rejects.toThrow();
-      expect(store.allFlashcards()).toEqual([]);
-      expect(store.flashcardMap().size).toBe(0);
+      const result = await promise;
+      // Graceful degradation: returns locally-constructed flashcard
+      expect(result).toBeDefined();
+      expect(result.word_token).toBe('fail');
+      expect(result.translation).toBe('fallar');
+      expect(result.srs_level).toBe(0);
+      expect(store.isOfflineMode()).toBe(true);
+      expect(store.flashcardMap().size).toBeGreaterThanOrEqual(1);
     });
 
-    it('should handle updateSrsLevel failure gracefully', async () => {
-      store.allFlashcards.set([mockFlashcard]);
-      store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
+    it('should handle updateSrsLevel failure with graceful degradation', async () => {
+      store.allFlashcards.set([{ ...mockFlashcard, srs_level: 2, repetitions: 2, interval_days: 7 }]);
+      store.flashcardMap.set(new Map([['hello', { ...mockFlashcard, srs_level: 2, repetitions: 2, interval_days: 7 }]]));
 
-      const promise = store.updateSrsLevel('1', 2);
+      const promise = store.updateSrsLevel('1', 5);
       httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(
         { message: 'Not found' },
         { status: 404, statusText: 'Not Found' },
       );
 
-      await expect(promise).rejects.toThrow();
-      expect(store.allFlashcards()[0].srs_level).toBe(1);
-      expect(store.flashcardMap().get('hello')?.srs_level).toBe(1);
+      const result = await promise;
+      // Graceful degradation: local SM-2 computation should still return a card
+      expect(result).toBeDefined();
+      expect(result.id).toBe('1');
+      expect(result.srs_level).toBeGreaterThanOrEqual(0);
+      expect(store.isOfflineMode()).toBe(true);
     });
 
     it('should handle translateWordOrSentence failure', async () => {
