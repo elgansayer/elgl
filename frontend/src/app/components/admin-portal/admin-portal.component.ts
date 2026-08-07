@@ -5,11 +5,21 @@ import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
+<<<<<<< HEAD
   imports: [TranslatePipe, DatePipe, AppCardComponent, AppPillComponent],
+=======
+<<<<<<< HEAD
+  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+=======
+  imports: [TranslatePipe, AppCardComponent, AppPillComponent],
+>>>>>>> origin/main
+>>>>>>> origin/main
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })

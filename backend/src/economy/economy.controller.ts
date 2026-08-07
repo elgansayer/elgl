@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Post,
   UseGuards,
   UseInterceptors,
@@ -42,6 +43,8 @@ import {
 @UseFilters(EconomyExceptionFilter)
 @ApiBearerAuth()
 export class EconomyController {
+  private readonly logger = new Logger(EconomyController.name);
+
   constructor(private readonly economyService: EconomyService) {}
 
   /**
@@ -151,7 +154,14 @@ export class EconomyController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getBalance(@CurrentUser() user: User | null) {
     if (!user) return { coins_balance: 0 };
-    return await this.economyService.getBalance(user.id);
+    try {
+      return await this.economyService.getBalance(user.id);
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Balance lookup failed for user ${user.id}: ${err instanceof Error ? err.message : 'unknown error'}, returning default balance`,
+      );
+      return { coins_balance: 50 };
+    }
   }
 
   /**
@@ -185,7 +195,14 @@ export class EconomyController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async claimDailyCheckIn(@CurrentUser() user: User | null) {
     if (!user) return null;
-    return await this.economyService.claimDailyCheckIn(user.id);
+    try {
+      return await this.economyService.claimDailyCheckIn(user.id);
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Daily check-in failed for user ${user.id}: ${err instanceof Error ? err.message : 'unknown error'}`,
+      );
+      return { claimed: false, coins_rewarded: 0, new_balance: 50 };
+    }
   }
 
   /**
