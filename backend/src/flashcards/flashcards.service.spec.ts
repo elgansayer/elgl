@@ -3,6 +3,7 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
+<<<<<<< HEAD
 import { Flashcard } from './interfaces/flashcard.interface';
 import { CreateFlashcardDto } from './dto/flashcard.dto';
 
@@ -101,6 +102,15 @@ describe('FlashcardsService', () => {
   let mockLogger: MockLogger;
   let mockMetricsService: MockMetricsService;
   let mockRedisClient: MockRedisClient;
+=======
+
+describe('FlashcardsService', () => {
+  let service: FlashcardsService;
+  let mockSupabaseClient: Record<string, unknown>;
+  let mockQueryBuilder: Record<string, unknown>;
+  let mockLogger: Record<string, unknown>;
+  let mockMetricsService: Record<string, unknown>;
+>>>>>>> origin/main
 
   beforeEach(async () => {
     mockLogger = {
@@ -184,20 +194,18 @@ describe('FlashcardsService', () => {
 
   describe('createOrUpdateFlashcard', () => {
     it('should clean word token and upsert flashcard successfully', async () => {
-      const dto: CreateFlashcardDto = {
+      const dto: Record<string, unknown> = {
         word_token: '  BONJOUR  ',
         original_context: 'Bonjour le monde',
         translation: 'Hello',
         definition: 'Greeting',
         pronunciation_url: 'http://audio.mock/b.mp3',
       };
-      const savedCard = mockFlashcard({
+      const savedCard: Record<string, unknown> = {
+        id: 'card-1',
         word_token: 'bonjour',
-        original_context: 'Bonjour le monde',
-        translation: 'Hello',
-        definition: 'Greeting',
-        pronunciation_url: 'http://audio.mock/b.mp3',
-      });
+        ...dto,
+      };
       mockQueryBuilder.single.mockResolvedValue({
         data: savedCard,
         error: null,
@@ -222,7 +230,7 @@ describe('FlashcardsService', () => {
     });
 
     it('should throw Error when upsert fails', async () => {
-      const dto: CreateFlashcardDto = {
+      const dto: Record<string, unknown> = {
         word_token: 'test',
         translation: 'test',
       };
@@ -434,9 +442,8 @@ describe('FlashcardsService', () => {
       // Notice query builds: from().select().eq(user_id).order(). Then if level !== undefined && !isNaN(level), query.eq('srs_level', level).
       // So when query is awaited, it returns whatever eq returns or order returns if eq returns this.
       // Let's set up the promise resolution on queryBuilder itself or mock eq to return a promise when awaited.
-      mockQueryBuilder.then = (
-        resolve: (value: { data: unknown[]; error: null }) => void,
-      ) => resolve({ data: cards, error: null });
+      mockQueryBuilder.then = (resolve: (value: unknown) => void) =>
+        resolve({ data: cards, error: null });
 
       const result = await service.getFlashcards('user-1', 2);
 
@@ -488,6 +495,7 @@ describe('FlashcardsService', () => {
       expect(result).toEqual([]);
     });
   });
+<<<<<<< HEAD
 
   describe('SRS retry integration', () => {
     beforeEach(() => {
@@ -735,4 +743,6 @@ describe('FlashcardsService', () => {
       });
     });
   });
+=======
+>>>>>>> origin/main
 });

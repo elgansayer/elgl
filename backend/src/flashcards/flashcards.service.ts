@@ -6,8 +6,6 @@ import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { withRetry } from '../common/retry';
-import { sanitiseFlashcardData } from './sanitise-flashcard.helper';
 
 const CACHE_TTL_FLASHCARDS = 300;
 const CACHE_TTL_DUE_REVIEWS = 120;
@@ -75,25 +73,21 @@ export class FlashcardsService {
     const supabase = this.supabaseService.getClient();
     const cleanToken = dto.word_token.toLowerCase().trim();
 
-    const response = await withRetry(
-      () =>
-        supabase
-          .from('flashcards')
-          .upsert(
-            {
-              user_id: userId,
-              word_token: cleanToken,
-              original_context: dto.original_context ?? null,
-              translation: dto.translation,
-              definition: dto.definition ?? null,
-              pronunciation_url: dto.pronunciation_url ?? null,
-            },
-            { onConflict: 'user_id, word_token' },
-          )
-          .select()
-          .single(),
-      { logger: this.logger },
-    );
+    const response = await supabase
+      .from('flashcards')
+      .upsert(
+        {
+          user_id: userId,
+          word_token: cleanToken,
+          original_context: dto.original_context ?? null,
+          translation: dto.translation,
+          definition: dto.definition ?? null,
+          pronunciation_url: dto.pronunciation_url ?? null,
+        },
+        { onConflict: 'user_id, word_token' },
+      )
+      .select()
+      .single();
 
     if (response.error || !response.data) {
       const msg = response.error?.message ?? 'Unknown error';
@@ -117,7 +111,7 @@ export class FlashcardsService {
       'Flashcard created/updated',
     );
 
-    return sanitiseFlashcardData(response.data);
+    return response.data;
   }
 
   async updateSrsLevel(
@@ -129,16 +123,12 @@ export class FlashcardsService {
     const supabase = this.supabaseService.getClient();
 
     // Fetch current card state to run SM-2 locally (with retry for 429)
-    const { data: current, error: fetchErr } = await withRetry(
-      () =>
-        supabase
-          .from('flashcards')
-          .select('easiness_factor, repetitions, interval_days')
-          .eq('id', flashcardId)
-          .eq('user_id', userId)
-          .single(),
-      { logger: this.logger },
-    );
+    const { data: current, error: fetchErr } = await supabase
+      .from('flashcards')
+      .select('easiness_factor, repetitions, interval_days')
+      .eq('id', flashcardId)
+      .eq('user_id', userId)
+      .single();
 
     if (fetchErr || !current) {
       const msg = fetchErr?.message ?? 'Not found';
@@ -161,23 +151,19 @@ export class FlashcardsService {
     nextReviewAt.setDate(nextReviewAt.getDate() + newInterval);
 
     // Update with retry for HTTP 429 rate limiting
-    const response = await withRetry(
-      () =>
-        supabase
-          .from('flashcards')
-          .update({
-            srs_level: newSrsLevel,
-            easiness_factor: newEf,
-            repetitions: newRepetitions,
-            interval_days: newInterval,
-            next_review_at: nextReviewAt.toISOString(),
-          })
-          .eq('id', flashcardId)
-          .eq('user_id', userId)
-          .select()
-          .single(),
-      { logger: this.logger },
-    );
+    const response = await supabase
+      .from('flashcards')
+      .update({
+        srs_level: newSrsLevel,
+        easiness_factor: newEf,
+        repetitions: newRepetitions,
+        interval_days: newInterval,
+        next_review_at: nextReviewAt.toISOString(),
+      })
+      .eq('id', flashcardId)
+      .eq('user_id', userId)
+      .select()
+      .single();
 
     if (response.error || !response.data) {
       const msg = response.error?.message ?? 'Unknown error';
@@ -214,7 +200,7 @@ export class FlashcardsService {
       'SRS review completed',
     );
 
-    return sanitiseFlashcardData(response.data);
+    return response.data;
   }
 
   /**
@@ -334,10 +320,14 @@ export class FlashcardsService {
       );
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     return result;
 =======
     return sanitiseFlashcardData(response.data);
+>>>>>>> origin/main
+=======
+    return response.data;
 >>>>>>> origin/main
   }
 
@@ -382,10 +372,14 @@ export class FlashcardsService {
       );
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     return result;
 =======
     return sanitiseFlashcardData(response.data);
+>>>>>>> origin/main
+=======
+    return response.data;
 >>>>>>> origin/main
   }
 }
