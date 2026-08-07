@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { Logger } from '@nestjs/common';
 
 describe('SafetyService', () => {
   let service: SafetyService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockMetricsService: any;
 
   beforeEach(async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
@@ -25,6 +27,16 @@ describe('SafetyService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    mockMetricsService = {
+      recordTsReportSubmitted: jest.fn(),
+      recordTsBlockCreated: jest.fn(),
+      recordTsBlockRemoved: jest.fn(),
+      setTsPendingReports: jest.fn(),
+      setTsActiveBlocksTotal: jest.fn(),
+      recordTsModerationAction: jest.fn(),
+      recordTsDatingRiskScore: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SafetyService,
@@ -33,6 +45,10 @@ describe('SafetyService', () => {
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();
@@ -86,6 +102,9 @@ describe('SafetyService', () => {
         context_url: dto.context_url,
         status: 'pending',
       });
+      expect(mockMetricsService.recordTsReportSubmitted).toHaveBeenCalledWith(
+        dto.reason_category,
+      );
       expect(result).toEqual({ id: 'report-id' });
       logSpy.mockRestore();
     });
