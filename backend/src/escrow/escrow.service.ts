@@ -8,6 +8,7 @@ import {
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { MetricsService } from '../metrics/metrics.service';
 import {
   CreateEscrowDto,
   DisputeEscrowDto,
@@ -48,6 +49,7 @@ export class EscrowService {
     private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly usersService: UsersService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async createEscrow(
@@ -130,6 +132,8 @@ export class EscrowService {
       `Escrow ${escrowData.id} created: ${senderId} -> ${dto.partner_id}, ${dto.amount} coins`,
     );
 
+    this.metricsService.recordEscrowCreated(dto.service_type ?? 'other');
+
     return {
       id: escrowData.id,
       status: 'pending',
@@ -195,6 +199,13 @@ export class EscrowService {
     }
 
     this.logger.info(`Escrow ${dto.escrow_id} released.`);
+
+    this.metricsService.recordEscrowReleased();
+    if (escrowData.created_at) {
+      const durationMs =
+        Date.now() - new Date(escrowData.created_at).getTime();
+      this.metricsService.recordEscrowResolutionDuration(durationMs / 1000);
+    }
 
     return {
       id: dto.escrow_id,
@@ -265,6 +276,13 @@ export class EscrowService {
 
     this.logger.info(`Escrow ${dto.escrow_id} refunded.`);
 
+    this.metricsService.recordEscrowRefunded();
+    if (escrowData.created_at) {
+      const durationMs =
+        Date.now() - new Date(escrowData.created_at).getTime();
+      this.metricsService.recordEscrowResolutionDuration(durationMs / 1000);
+    }
+
     return {
       id: dto.escrow_id,
       status: 'refunded',
@@ -324,6 +342,8 @@ export class EscrowService {
     this.logger.warn(
       `Escrow ${dto.escrow_id} disputed by ${callerId}: ${dto.reason}`,
     );
+
+    this.metricsService.recordEscrowDisputed();
 
     return updated;
   }
@@ -388,6 +408,13 @@ export class EscrowService {
         `Dispute for escrow ${dto.escrow_id} resolved: released to receiver.`,
       );
 
+      this.metricsService.recordEscrowReleased();
+      if (escrowData.created_at) {
+        const durationMs =
+          Date.now() - new Date(escrowData.created_at).getTime();
+        this.metricsService.recordEscrowResolutionDuration(durationMs / 1000);
+      }
+
       return {
         id: dto.escrow_id,
         status: 'released',
@@ -432,6 +459,13 @@ export class EscrowService {
     this.logger.info(
       `Dispute for escrow ${dto.escrow_id} resolved: refunded to sender.`,
     );
+
+    this.metricsService.recordEscrowRefunded();
+    if (escrowData.created_at) {
+      const durationMs =
+        Date.now() - new Date(escrowData.created_at).getTime();
+      this.metricsService.recordEscrowResolutionDuration(durationMs / 1000);
+    }
 
     return {
       id: dto.escrow_id,

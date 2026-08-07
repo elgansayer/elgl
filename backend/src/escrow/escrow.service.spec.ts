@@ -7,6 +7,7 @@ import {
 import { EscrowService } from './escrow.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('EscrowService', () => {
   let service: EscrowService;
@@ -51,6 +52,16 @@ describe('EscrowService', () => {
           provide: UsersService,
           useValue: {
             getProfile: jest.fn().mockResolvedValue(null),
+          },
+        },
+        {
+          provide: MetricsService,
+          useValue: {
+            recordEscrowCreated: jest.fn(),
+            recordEscrowReleased: jest.fn(),
+            recordEscrowRefunded: jest.fn(),
+            recordEscrowDisputed: jest.fn(),
+            recordEscrowResolutionDuration: jest.fn(),
           },
         },
       ],

@@ -1,0 +1,100 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for Escrow Payments. All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Escrow] High dispute rate",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_escrow_dispute_rate{*} > 0.15",
+      "message": "{{#is_alert}}\nThe escrow dispute rate has exceeded 15% over the last 30 minutes. This may indicate a rise in fraudulent activity, service delivery issues, or user confusion about the escrow system.\n\n**Current value:** {{value}}\n**Threshold:** 0.15 (15%)\n\n**Actions:**\n1. Check for a spike in disputes by service type or user segment.\n2. Investigate recent disputed escrows for common patterns.\n3. Review recent platform changes that may impact escrow expectations.\n4. Consider raising awareness of escrow terms for affected users.\n{{/is_alert}}\n\n{{#is_warning}}\nEscrow dispute rate approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:payments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.15,
+          "warning": 0.08
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Escrow] Large value held in escrow",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_escrows_value_held{*} > 50000",
+      "message": "{{#is_alert}}\nThe total coin value held in pending escrows has exceeded 50000 over the last 10 minutes. This indicates a large volume of uncompleted transactions.\n\n**Current value:** {{value}}\n**Threshold:** 50000\n\n**Actions:**\n1. Check the number of pending escrows and their age distribution.\n2. Investigate whether a service outage or user behaviour change is preventing releases.\n3. Review the escrows_stuck_pending metric for aged transactions.\n{{/is_alert}}\n\n{{#is_warning}}\nEscrow held value approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:payments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 50000,
+          "warning": 25000
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Escrow] High number of stuck pending escrows",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_escrows_stuck_pending{*} > 100",
+      "message": "{{#is_alert}}\nMore than 100 escrows have been in pending status for over 24 hours. This indicates transactions are not being released or refunded in a timely manner.\n\n**Current value:** {{value}}\n**Threshold:** 100\n\n**Actions:**\n1. Check for user complaints about stuck payments.\n2. Verify that release/refund API endpoints are responding normally.\n3. Investigate whether specific service types are disproportionately affected.\n4. Consider automated reminders for senders with long-pending escrows.\n{{/is_alert}}\n\n{{#is_warning}}\nStuck pending escrows approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:payments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 360,
+        "thresholds": {
+          "critical": 100,
+          "warning": 50
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Escrow] Escrow creation activity dropped to zero",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_escrow_created_total{*} by {service_type}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo escrow creation events have been recorded in the last 30 minutes. This could indicate a complete outage of the escrow creation pipeline or zero user engagement.\n\n**Actions:**\n1. Check the escrow API health endpoint.\n2. Verify the NestJS backend is running and the Supabase connection is healthy.\n3. Check for deployment or infrastructure incidents.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:payments", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 30,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Escrow] Escrow resolution latency high",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_escrow_resolution_duration_seconds{*} > 86400",
+      "message": "{{#is_alert}}\nThe average escrow resolution time (creation to release/refund) has exceeded 24 hours over the last 30 minutes. Long resolution times degrade user trust in the payment system.\n\n**Current value:** {{value}}s\n**Threshold:** 86400s (24 hours)\n\n**Actions:**\n1. Check for a buildup of pending escrows.\n2. Investigate whether dispute resolution is bottlenecked.\n3. Review user support tickets related to payment delays.\n{{/is_alert}}\n\n{{#is_warning}}\nEscrow resolution latency approaching threshold.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:payments", "severity:warning"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 360,
+        "thresholds": {
+          "critical": 86400,
+          "warning": 43200
+        },
+        "timeout_h": 0
+      }
+    }
+  ]
+}
