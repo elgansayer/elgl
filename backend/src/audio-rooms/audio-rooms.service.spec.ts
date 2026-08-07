@@ -413,7 +413,7 @@ describe('AudioRoomsService', () => {
 
   describe('listActiveRooms', () => {
     it('should return empty array when no active rooms found', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: [],
         error: null,
       });
@@ -431,7 +431,7 @@ describe('AudioRoomsService', () => {
         { id: 'host-1', display_name: 'Host One', avatar_url: 'one.png' },
       ];
 
-      mockQueryBuilder.limit.mockResolvedValueOnce({
+      mockQueryBuilder.range.mockResolvedValueOnce({
         data: activeRooms,
         error: null,
       });
@@ -458,7 +458,7 @@ describe('AudioRoomsService', () => {
 
   describe('listActiveRoomsByLanguage', () => {
     it('should return empty array when no active rooms', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: [],
         error: null,
       });
@@ -494,7 +494,7 @@ describe('AudioRoomsService', () => {
         { id: 'host-3', display_name: 'Host Three', avatar_url: 'three.png' },
       ];
 
-      mockQueryBuilder.limit.mockResolvedValueOnce({
+      mockQueryBuilder.range.mockResolvedValueOnce({
         data: activeRooms,
         error: null,
       });

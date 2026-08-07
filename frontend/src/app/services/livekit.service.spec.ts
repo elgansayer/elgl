@@ -156,7 +156,17 @@ describe('LivekitService', () => {
       expect(req.request.method).toBe('POST');
       req.flush({ token: 'test-token' });
       const room = await roomPromise;
-      expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token');
+      expect(mockRoomConnect).toHaveBeenCalledWith(
+        environment.liveKitUrl,
+        'test-token',
+        expect.objectContaining({
+          rtcConfig: expect.objectContaining({
+            iceServers: expect.arrayContaining([
+              expect.objectContaining({ urls: expect.stringContaining('stun:') }),
+            ]),
+          }),
+        }),
+      );
       expect(room).toBe(fakeRoom);
       expect(internals(service).room).toEqual(fakeRoom);
     });

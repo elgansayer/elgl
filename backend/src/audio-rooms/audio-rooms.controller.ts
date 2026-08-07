@@ -108,11 +108,15 @@ export class AudioRoomsController {
     @Query('type') partyType?: string,
     @Query('topic') topic?: string,
     @Query('level') level?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ): Promise<AudioRoomRecord[]> {
     return await this.audioRoomsService.listActiveRooms(
       partyType,
       topic,
       level,
+      limit ? parseInt(limit, 10) : undefined,
+      offset ? parseInt(offset, 10) : undefined,
     );
   }
 

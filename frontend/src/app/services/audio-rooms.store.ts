@@ -829,6 +829,19 @@ export class AudioRoomsStore {
   }
 
   leaveRoom(): void {
+    // Stop local camera track to free camera resource
+    const localTrack = this.localVideoTrack();
+    if (localTrack) {
+      localTrack.stop();
+      this.localVideoTrack.set(null);
+    }
+
+    // Detach all remote video tracks before clearing the map
+    for (const track of this.remoteVideoTracksByIdentity().values()) {
+      track.detach();
+    }
+    this.remoteVideoTracksByIdentity.set(new Map());
+
     if (this.livekitRoom) {
       this.livekitRoom.disconnect();
       this.livekitRoom = null;
@@ -843,7 +856,5 @@ export class AudioRoomsStore {
     this.stageInfo.set(null);
     this.stageParticipants.set([]);
     this.audienceCount.set(0);
-    this.localVideoTrack.set(null);
-    this.remoteVideoTracksByIdentity.set(new Map());
   }
 }

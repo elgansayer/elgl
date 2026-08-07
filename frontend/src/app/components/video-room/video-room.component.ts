@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, viewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, effect, viewChild, ElementRef, DestroyRef } from '@angular/core';
 import { VideoTrack } from 'livekit-client';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
@@ -167,6 +167,7 @@ import { AuthService } from '../../services/auth.service';
 export class VideoRoomComponent {
   readonly store = inject(AudioRoomsStore);
   private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly showInvitePicker = signal(false);
 
@@ -224,23 +225,46 @@ export class VideoRoomComponent {
 
   readonly hasCoHostVideo = computed(() => !!this.coHostVideoTrackOrDefault());
 
+  /** Tracks the last attached host track so we can detach it on destroy. */
+  private lastHostTrack: VideoTrack | null = null;
+  /** Tracks the last attached co-host track so we can detach it on destroy. */
+  private lastCoHostTrack: VideoTrack | null = null;
+
   constructor() {
     effect(() => {
       const track = this.hostVideoTrackOrDefault();
       const videoEl = this.hostVideoRef()?.nativeElement;
-      this.attach(track, videoEl);
+      this.attach(track, videoEl, 'host');
     });
 
     effect(() => {
       const track = this.coHostVideoTrackOrDefault();
       const videoEl = this.coHostVideoRef()?.nativeElement;
-      this.attach(track, videoEl);
+      this.attach(track, videoEl, 'coHost');
+    });
+
+    // Detach tracks from video elements when component is destroyed to prevent
+    // stale references to destroyed DOM nodes.
+    this.destroyRef.onDestroy(() => {
+      if (this.lastHostTrack) {
+        this.lastHostTrack.detach();
+        this.lastHostTrack = null;
+      }
+      if (this.lastCoHostTrack) {
+        this.lastCoHostTrack.detach();
+        this.lastCoHostTrack = null;
+      }
     });
   }
 
-  private attach(track: VideoTrack | null, videoEl: HTMLVideoElement | undefined): void {
+  private attach(track: VideoTrack | null, videoEl: HTMLVideoElement | undefined, role: 'host' | 'coHost'): void {
     if (track && videoEl) {
       track.attach(videoEl);
+    }
+    if (role === 'host') {
+      this.lastHostTrack = track;
+    } else {
+      this.lastCoHostTrack = track;
     }
   }
 

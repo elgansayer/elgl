@@ -129,10 +129,15 @@ export class LivekitService {
   }
 
   leaveRoom(): void {
+    if (this._localAudioTrack) {
+      this._localAudioTrack.stop();
+      this._localAudioTrack = null;
+    }
     if (this.room) {
       this.room.disconnect();
       this.room = null;
     }
-    this._localAudioTrack = null;
+    this._muted = false;
+    this._speakerphone = false;
   }
 }
