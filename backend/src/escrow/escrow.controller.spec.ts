@@ -1,35 +1,76 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { EscrowController } from './escrow.controller';
 import { EscrowService } from './escrow.service';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
-import { UnauthorizedException } from '@nestjs/common';
 
 describe('EscrowController', () => {
   let controller: EscrowController;
-  let escrowService: EscrowService;
+  let mockEscrowService: Record<string, jest.Mock>;
+
+  const mockUserId = '12345678-1234-1234-1234-123456789012';
+  const mockPayeeId = '87654321-4321-4321-4321-210987654321';
+  const mockTransactionId = '99999999-9999-9999-9999-999999999999';
+
+  const mockRequest = {
+    user: { sub: mockUserId },
+  };
 
   beforeEach(async () => {
+    mockEscrowService = {
+      holdCoins: jest.fn().mockResolvedValue({
+        success: true,
+        transaction_id: mockTransactionId,
+        degraded: false,
+      }),
+      releaseCoins: jest.fn().mockResolvedValue({
+        success: true,
+        transaction_id: mockTransactionId,
+        degraded: false,
+      }),
+      refundCoins: jest.fn().mockResolvedValue({
+        id: mockTransactionId,
+        status: 'refunded',
+        degraded: false,
+      }),
+      cancelEscrow: jest.fn().mockResolvedValue({
+        id: mockTransactionId,
+        status: 'cancelled',
+        degraded: false,
+      }),
+      getTransaction: jest.fn().mockResolvedValue({
+        id: mockTransactionId,
+        payer_id: mockUserId,
+        payee_id: mockPayeeId,
+        amount_coins: 50,
+        status: 'held',
+        degraded: false,
+      }),
+      listTransactions: jest.fn().mockResolvedValue([]),
+      getCircuitBreakerStatus: jest.fn().mockReturnValue({
+        service: 'escrow',
+        isOpen: false,
+        failureCount: 0,
+        cooldownUntil: 0,
+        totalFailures: 0,
+        totalSuccesses: 0,
+      }),
+      resetCircuitBreaker: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EscrowController],
       providers: [
         {
           provide: EscrowService,
-          useValue: {
-            createEscrow: jest.fn(),
-            releaseEscrow: jest.fn(),
-            refundEscrow: jest.fn(),
-            getEscrow: jest.fn(),
-            listEscrows: jest.fn(),
-          },
+          useValue: mockEscrowService,
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: jest.fn().mockResolvedValue(true) })
       .compile();
 
     controller = module.get<EscrowController>(EscrowController);
-    escrowService = module.get<EscrowService>(EscrowService);
   });
 
   afterEach(() => {
@@ -40,106 +81,112 @@ describe('EscrowController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('create', () => {
-    it('should throw UnauthorizedException if no user', async () => {
-      await expect(
-        controller.create({ user: undefined } as never, { payee_id: 'payee-1', amount_coins: 100 }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
+  describe('holdCoins', () => {
+    it('should call service.holdCoins with correct params', async () => {
+      const dto = {
+        payee_id: mockPayeeId,
+        amount_coins: 50,
+        reason: 'Test',
+      };
 
-    it('should call service createEscrow with user ID and DTO', async () => {
-      const dto = { payee_id: 'payee-1', amount_coins: 100 };
-      const result = { id: 'escrow-1', status: 'held', amount_coins: 100, payer_balance: 50 };
-      (escrowService.createEscrow as jest.Mock).mockResolvedValue(result);
-
-      const response = await controller.create({ user: { id: 'payer-1' } } as never, dto);
-
-      expect(escrowService.createEscrow).toHaveBeenCalledWith('payer-1', dto);
-      expect(response).toEqual(result);
+      const result = await controller.holdCoins(mockRequest, dto);
+      expect(mockEscrowService.holdCoins).toHaveBeenCalledWith(mockUserId, dto);
+      expect(result.success).toBe(true);
+      expect(result.transaction_id).toBe(mockTransactionId);
     });
   });
 
-  describe('release', () => {
-    it('should throw UnauthorizedException if no user', async () => {
-      await expect(
-        controller.release({ user: undefined } as never, { escrow_id: 'escrow-1' }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('should call service releaseEscrow with user ID and escrow ID', async () => {
-      const dto = { escrow_id: 'escrow-1' };
-      const result = { id: 'escrow-1', status: 'released', amount_coins: 100, payee_balance: 200 };
-      (escrowService.releaseEscrow as jest.Mock).mockResolvedValue(result);
-
-      const response = await controller.release({ user: { id: 'payer-1' } } as never, dto);
-
-      expect(escrowService.releaseEscrow).toHaveBeenCalledWith('payer-1', 'escrow-1');
-      expect(response).toEqual(result);
+  describe('releaseCoins', () => {
+    it('should call service.releaseCoins with correct params', async () => {
+      const dto = { transaction_id: mockTransactionId };
+      const result = await controller.releaseCoins(mockRequest, dto);
+      expect(mockEscrowService.releaseCoins).toHaveBeenCalledWith(
+        mockTransactionId,
+        mockUserId,
+      );
+      expect(result.success).toBe(true);
     });
   });
 
-  describe('refund', () => {
-    it('should throw UnauthorizedException if no user', async () => {
-      await expect(
-        controller.refund({ user: undefined } as never, { escrow_id: 'escrow-1' }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('should call service refundEscrow with user ID and escrow ID', async () => {
-      const dto = { escrow_id: 'escrow-1' };
-      const result = { id: 'escrow-1', status: 'refunded', amount_coins: 100, payer_balance: 150 };
-      (escrowService.refundEscrow as jest.Mock).mockResolvedValue(result);
-
-      const response = await controller.refund({ user: { id: 'payer-1' } } as never, dto);
-
-      expect(escrowService.refundEscrow).toHaveBeenCalledWith('payer-1', 'escrow-1');
-      expect(response).toEqual(result);
+  describe('refundCoins', () => {
+    it('should call service.refundCoins with correct params', async () => {
+      const dto = { transaction_id: mockTransactionId, reason: 'Changed mind' };
+      const result = await controller.refundCoins(mockRequest, dto);
+      expect(mockEscrowService.refundCoins).toHaveBeenCalledWith(
+        mockTransactionId,
+        mockUserId,
+        'Changed mind',
+      );
+      expect(result.status).toBe('refunded');
     });
   });
 
-  describe('list', () => {
-    it('should throw UnauthorizedException if no user', async () => {
-      await expect(
-        controller.list({ user: undefined } as never, '10', '0'),
-      ).rejects.toThrow(UnauthorizedException);
+  describe('cancelEscrow', () => {
+    it('should call service.cancelEscrow with correct params', async () => {
+      const dto = { transaction_id: mockTransactionId };
+      const result = await controller.cancelEscrow(mockRequest, dto);
+      expect(mockEscrowService.cancelEscrow).toHaveBeenCalledWith(
+        mockTransactionId,
+        mockUserId,
+      );
+      expect(result.status).toBe('cancelled');
     });
+  });
 
-    it('should call service listEscrows with default pagination', async () => {
-      const result = { escrows: [], total: 0 };
-      (escrowService.listEscrows as jest.Mock).mockResolvedValue(result);
-
-      const response = await controller.list({ user: { id: 'payer-1' } } as never);
-
-      expect(escrowService.listEscrows).toHaveBeenCalledWith('payer-1', 20, 0);
-      expect(response).toEqual(result);
+  describe('listTransactions', () => {
+    it('should call service.listTransactions with defaults', async () => {
+      await controller.listTransactions(
+        mockRequest,
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
+        mockUserId,
+        undefined,
+        20,
+        0,
+      );
     });
 
     it('should parse limit and offset query params', async () => {
-      const result = { escrows: [], total: 0 };
-      (escrowService.listEscrows as jest.Mock).mockResolvedValue(result);
-
-      const response = await controller.list({ user: { id: 'payer-1' } } as never, '5', '10');
-
-      expect(escrowService.listEscrows).toHaveBeenCalledWith('payer-1', 5, 10);
-      expect(response).toEqual(result);
+      await controller.listTransactions(mockRequest, 'held', '10', '5');
+      expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
+        mockUserId,
+        'held',
+        10,
+        5,
+      );
     });
   });
 
-  describe('getById', () => {
-    it('should throw UnauthorizedException if no user', async () => {
-      await expect(
-        controller.getById({ user: undefined } as never, 'escrow-1'),
-      ).rejects.toThrow(UnauthorizedException);
+  describe('getTransaction', () => {
+    it('should call service.getTransaction with correct params', async () => {
+      const result = await controller.getTransaction(
+        mockRequest,
+        mockTransactionId,
+      );
+      expect(mockEscrowService.getTransaction).toHaveBeenCalledWith(
+        mockTransactionId,
+        mockUserId,
+      );
+      expect(result.id).toBe(mockTransactionId);
     });
+  });
 
-    it('should call service getEscrow with user ID and escrow ID', async () => {
-      const result = { id: 'escrow-1', payer_id: 'payer-1', payee_id: 'payee-1', amount_coins: 50, status: 'held' };
-      (escrowService.getEscrow as jest.Mock).mockResolvedValue(result);
+  describe('getCircuitBreakerStatus', () => {
+    it('should return circuit breaker status', () => {
+      const result = controller.getCircuitBreakerStatus();
+      expect(mockEscrowService.getCircuitBreakerStatus).toHaveBeenCalled();
+      expect(result.service).toBe('escrow');
+    });
+  });
 
-      const response = await controller.getById({ user: { id: 'payer-1' } } as never, 'escrow-1');
-
-      expect(escrowService.getEscrow).toHaveBeenCalledWith('payer-1', 'escrow-1');
-      expect(response).toEqual(result);
+  describe('resetCircuitBreaker', () => {
+    it('should call reset on service', () => {
+      const result = controller.resetCircuitBreaker();
+      expect(mockEscrowService.resetCircuitBreaker).toHaveBeenCalled();
+      expect(result.reset).toBe(true);
     });
   });
 });

@@ -66,6 +66,21 @@
       }
     },
     {
+      "name": "api-economy",
+      "urls": [
+        "/api/economy/catalog",
+        "/api/economy/balance",
+        "/api/economy/packages",
+        "/api/economy/sticker-packs"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 30,
+        "maxAge": "12h",
+        "timeout": "10s"
+      }
+    },
+    {
       "name": "api-freshness",
       "urls": [
         "/api/messages/**",

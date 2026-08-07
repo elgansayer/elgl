@@ -10,6 +10,17 @@ export interface SrsErrorContext {
   srsLevel?: number;
 }
 
+class SrsContextError extends Error {
+  readonly srsContext: SrsErrorContext;
+  constructor(message: string, srsContext: SrsErrorContext, stack?: string) {
+    super(message);
+    this.srsContext = srsContext;
+    if (stack) {
+      this.stack = stack;
+    }
+  }
+}
+
 @Component({
   selector: 'app-srs-error-boundary',
   standalone: true,
@@ -67,7 +78,7 @@ export class SrsErrorBoundaryComponent {
   readonly context = input<SrsErrorContext>({ component: 'unknown' });
   readonly showReportButton = input(true);
   readonly retry = output<void>();
-  readonly report = output<SrsErrorContext>();
+  readonly reportError = output<SrsErrorContext>();
 
   readonly hasError = signal(false);
   readonly errorMessage = signal('');
@@ -102,12 +113,17 @@ export class SrsErrorBoundaryComponent {
     );
     enrichedError.name = 'SrsManualReport';
     this.reportErrorInternal(enrichedError);
-    this.report.emit(this.context());
+    this.reportError.emit(this.context());
   }
 
   private reportErrorInternal(error: Error): void {
     const ctx = this.context();
-    (error as Error & { srsContext?: SrsErrorContext }).srsContext = ctx;
-    this.errorHandler.handleError(error);
+    const enriched = new SrsContextError(
+      error.message,
+      ctx,
+      error.stack,
+    );
+    enriched.name = error.name;
+    this.errorHandler.handleError(enriched);
   }
 }

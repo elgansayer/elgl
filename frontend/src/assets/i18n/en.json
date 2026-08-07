@@ -741,6 +741,7 @@
   "doodle.title": "\ud83c\udfa8 Interactive Doodle Pad",
   "downloadUpdate": "Download update",
   "economy.buyCoinsError": "Could not start coin checkout right now.",
+  "economy.giftQueuedOffline": "📡 You are offline - your gift has been queued and will be sent when you reconnect.",
   "economy.purchaseConfirmError": "Could not confirm coin purchase. Please contact support if you were charged.",
   "economy.purchaseSuccessToast": "\ud83c\udf89 Successfully purchased {{coins}} coins! Your new balance is {{newBalance}} coins.",
   "enable_biometric": "Enable Biometric Lock",
@@ -1592,6 +1593,7 @@
   "start_recording": "Start Recording",
   "sticker.notEnoughCoins": "Not Enough Coins",
   "sticker.purchaseSuccess": "Purchase Success",
+  "sticker.queuedOffline": "📡 You are offline - your sticker purchase has been queued and will be processed when you reconnect.",
   "stop_recording": "Stop Recording",
   "streak.celebration.subtitle": "Subtitle",
   "streak.celebration.title": "Title",
@@ -1831,6 +1833,7 @@
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "wordModal.translationLabel": "Translation",
   "escrow.createError": "Failed to create escrow payment. Please try again.",
   "escrow.fundError": "Failed to fund escrow payment.",
@@ -1864,3 +1867,11 @@
   "wordModal.translationLabel": "Translation"
 >>>>>>> origin/main
 }
+=======
+  "wordModal.translationLabel": "Translation",
+  "errorBoundary.title": "Something went wrong",
+  "errorBoundary.message": "We had trouble loading the coin economy. Your balance is safe.",
+  "errorBoundary.retry": "Try Again",
+  "errorBoundary.report": "Report Issue"
+}
+>>>>>>> origin/main
