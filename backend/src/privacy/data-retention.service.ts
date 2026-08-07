@@ -100,7 +100,7 @@ export class DataRetentionService {
     }
 
     for (const user of usersToDelete) {
-      const userId = (user as { id: string }).id;
+      const userId = user.id;
       try {
         // Delete user's personal data from all tables
         await this.wipeUserData(userId);
@@ -141,44 +141,69 @@ export class DataRetentionService {
 
   /**
    * Remove all personal data for a user from related tables.
+   *
+   * Covers the full Virtual Coin Economy surface area so that no PII or
+   * financial-linkable records survive the GDPR deletion. Receipt tokens
+   * and transaction IDs are destroyed; coin balances are already zeroed
+   * on the anonymised user row.
    */
   private async wipeUserData(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    // Delete chat messages
+    // Chat / social content
     await supabase.from('chat_messages').delete().eq('sender_id', userId);
-
-    // Delete moments
     await supabase.from('moments').delete().eq('author_id', userId);
-
-    // Delete moment comments
     await supabase
       .from('moment_comments')
       .delete()
       .eq('author_id', userId);
 
-    // Delete flashcards
+    // Flashcards / decks
     await supabase.from('flashcards').delete().eq('user_id', userId);
-
-    // Delete decks
     await supabase.from('decks').delete().eq('user_id', userId);
 
-    // Delete favourites
+    // Favourites
     await supabase.from('favourites').delete().eq('user_id', userId);
 
-    // Delete blocks (both directions)
+    // Blocks (both directions)
     await supabase.from('blocks').delete().eq('blocker_id', userId);
     await supabase.from('blocks').delete().eq('blocked_id', userId);
 
-    // Delete login history
+    // Login history
     await supabase.from('login_history').delete().eq('user_id', userId);
 
-    // Delete reports
+    // Reports
     await supabase.from('reports').delete().eq('reporter_id', userId);
 
-    // Delete notifications
+    // Notifications
     await supabase
       .from('notifications')
+      .delete()
+      .eq('recipient_id', userId);
+
+    // --- Virtual Coin Economy ---
+    // Coin purchases (receipt tokens, transaction IDs -- PII under GDPR)
+    await supabase.from('coin_purchases').delete().eq('user_id', userId);
+
+    // Gift transactions (both sent and received)
+    await supabase
+      .from('gift_transactions')
+      .delete()
+      .eq('sender_id', userId);
+    await supabase
+      .from('gift_transactions')
+      .delete()
+      .eq('receiver_id', userId);
+
+    // Sticker pack ownership
+    await supabase
+      .from('user_sticker_packs')
+      .delete()
+      .eq('user_id', userId);
+
+    // User statistics (may contain coin-related aggregated data)
+    await supabase
+      .from('user_statistics')
       .delete()
       .eq('user_id', userId);
 

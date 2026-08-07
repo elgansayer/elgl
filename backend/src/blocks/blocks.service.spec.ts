@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BlocksService } from './blocks.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 describe('BlocksService', () => {
   let service: BlocksService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockMetricsService: any;
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -21,6 +23,16 @@ describe('BlocksService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    mockMetricsService = {
+      recordTsReportSubmitted: jest.fn(),
+      recordTsBlockCreated: jest.fn(),
+      recordTsBlockRemoved: jest.fn(),
+      setTsPendingReports: jest.fn(),
+      setTsActiveBlocksTotal: jest.fn(),
+      recordTsModerationAction: jest.fn(),
+      recordTsDatingRiskScore: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BlocksService,
@@ -29,6 +41,10 @@ describe('BlocksService', () => {
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();

@@ -1,4 +1,4 @@
-import { Component, computed, output, signal, inject, resource } from '@angular/core';
+import { Component, computed, output, signal, inject, resource, input } from '@angular/core';
 import { QuizService } from '../../services/quiz.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -10,8 +10,14 @@ import { showToast } from '../../services/toast.service';
   template: `
     <!-- Loading State -->
     @if (loading()) {
-      <div class="flex flex-col items-center justify-center p-12" role="status" aria-label="{{ 'diagnosticQuiz.loading' | t }}">
-        <div class="w-12 h-12 border-4 border-purple-500/30 border-t-purple-400 rounded-full animate-spin mb-4"></div>
+      <div
+        class="flex flex-col items-center justify-center p-12"
+        role="status"
+        aria-label="{{ 'diagnosticQuiz.loading' | t }}"
+      >
+        <div
+          class="w-12 h-12 border-4 border-purple-500/30 border-t-purple-400 rounded-full animate-spin mb-4"
+        ></div>
         <p class="text-purple-300/70 text-sm">{{ 'diagnosticQuiz.loading' | t }}</p>
       </div>
     }
@@ -20,11 +26,13 @@ import { showToast } from '../../services/toast.service';
     @if (error()) {
       <div class="text-center p-12" role="alert">
         <span class="text-5xl block mb-4">&#x26A0;&#xFE0F;</span>
-        <h3 class="text-xl font-semibold text-purple-200 mb-2">{{ 'diagnosticQuiz.errorTitle' | t }}</h3>
+        <h3 class="text-xl font-semibold text-purple-200 mb-2">
+          {{ 'diagnosticQuiz.errorTitle' | t }}
+        </h3>
         <p class="text-purple-300/60 text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
         <button
           type="button"
-          (click)="reloadQuestions('en')"
+          (click)="reloadQuestions()"
           class="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
         >
           {{ 'diagnosticQuiz.retry' | t }}
@@ -45,11 +53,22 @@ import { showToast } from '../../services/toast.service';
             <h2 class="text-xl font-bold text-purple-100 text-start">
               {{ 'diagnosticQuiz.title' | t }}
             </h2>
-            <span class="text-sm text-purple-300/50 bg-purple-500/10 px-3 py-1 rounded-full text-end">
-              {{ 'diagnosticQuiz.questionCounter' | t: { current: currentQuestionNumber(), total: totalQuestions() } }}
+            <span
+              class="text-sm text-purple-300/50 bg-purple-500/10 px-3 py-1 rounded-full text-end"
+            >
+              {{
+                'diagnosticQuiz.questionCounter'
+                  | t: { current: currentQuestionNumber(), total: totalQuestions() }
+              }}
             </span>
           </div>
-          <div class="w-full bg-[#0f0f23] rounded-full h-2 overflow-hidden" role="progressbar" [attr.aria-valuenow]="progressPercentage()" aria-valuemin="0" aria-valuemax="100">
+          <div
+            class="w-full bg-[#0f0f23] rounded-full h-2 overflow-hidden"
+            role="progressbar"
+            [attr.aria-valuenow]="progressPercentage()"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
             <div
               class="h-2 rounded-full transition-all duration-500 ease-out"
               [style.width.%]="progressPercentage()"
@@ -77,20 +96,28 @@ import { showToast } from '../../services/toast.service';
                   [class.shadow-lg]="isSelected"
                   [class.shadow-purple-500/20]="isSelected"
                   [attr.aria-pressed]="isSelected"
-                  [attr.aria-label]="'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }"
-                  [style.background]="isSelected ? 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.1))' : 'rgba(15,15,35,0.6)'"
+                  [attr.aria-label]="
+                    'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }
+                  "
+                  [style.background]="
+                    isSelected
+                      ? 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.1))'
+                      : 'rgba(15,15,35,0.6)'
+                  "
                 >
                   <span
                     class="text-base font-medium block"
                     [class.text-purple-100]="isSelected"
                     [class.text-purple-300/70]="!isSelected"
                   >
-                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full me-3 text-sm font-bold"
+                    <span
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-full me-3 text-sm font-bold"
                       [class.bg-purple-500]="isSelected"
                       [class.text-white]="isSelected"
                       [class.bg-purple-500/10]="!isSelected"
                       [class.text-purple-300/60]="!isSelected"
-                    >{{ idx + 1 }}</span>
+                      >{{ idx + 1 }}</span
+                    >
                     {{ option.text }}
                   </span>
                 </button>
@@ -100,7 +127,9 @@ import { showToast } from '../../services/toast.service';
         </div>
 
         <!-- Navigation Actions -->
-        <div class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-[#0f0f23]/60 border-t border-purple-500/10">
+        <div
+          class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-[#0f0f23]/60 border-t border-purple-500/10"
+        >
           <button
             type="button"
             (click)="previous()"
@@ -117,10 +146,12 @@ import { showToast } from '../../services/toast.service';
               [disabled]="!canProceed() || isSubmitting()"
               class="px-8 py-3 text-sm font-bold text-white rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a2e]"
               style="background: linear-gradient(135deg, #a855f7, #ec4899); box-shadow: 0 4px 24px rgba(168, 85, 247, 0.3);"
-              [style.opacity]="(!canProceed() || isSubmitting()) ? '0.5' : '1'"
+              [style.opacity]="!canProceed() || isSubmitting() ? '0.5' : '1'"
             >
               @if (isSubmitting()) {
-                <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin me-2 align-middle"></span>
+                <span
+                  class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin me-2 align-middle"
+                ></span>
               }
               {{ 'diagnosticQuiz.submit' | t }}
             </button>
@@ -151,16 +182,16 @@ export class DiagnosticQuizComponent {
   private quizService = inject(QuizService);
   private i18n = inject(I18nService);
 
+  targetLanguage = input<string>('en');
+
   quizCompleted = output<{ score: number; suggestedLevel: string; maxScore: number }>();
 
   currentIndex = signal<number>(0);
   answers = signal<Record<string, number>>({});
   isSubmitting = signal<boolean>(false);
 
-  private loadingLanguage = signal<string>('en');
-
   questionsResource = resource({
-    params: () => ({ language: this.loadingLanguage() }),
+    params: () => ({ language: this.targetLanguage() }),
     loader: async ({ params }) => {
       return await this.quizService.getQuestions(params.language);
     },
@@ -201,8 +232,7 @@ export class DiagnosticQuizComponent {
 
   readonly totalQuestions = computed(() => this.questions().length);
 
-  reloadQuestions(language: string): void {
-    this.loadingLanguage.set(language);
+  reloadQuestions(): void {
     this.currentIndex.set(0);
     this.answers.set({});
     this.questionsResource.reload();

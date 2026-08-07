@@ -13,12 +13,14 @@ import Stripe from 'stripe';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { MetricsService } from '../metrics/metrics.service';
 import {
   PurchaseCoinsDto,
   SendGiftDto,
   UnlockStickerPackDto,
 } from './dto/economy.dto';
 import { sanitiseEconomyData } from './sanitise-economy.helper';
+import { withExponentialBackoff } from '../common/http-retry.helper';
 
 export interface VirtualGiftRow {
   id: string;
@@ -224,6 +226,7 @@ export class EconomyService {
     private readonly centrifugoService: CentrifugoService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly metricsService: MetricsService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY') || '',
@@ -233,30 +236,67 @@ export class EconomyService {
     );
   }
 
+  private static readonly CATALOG_CACHE_KEY = 'economy:catalog';
+  private static readonly CATALOG_CACHE_TTL = 3600;
+  private static readonly STICKER_PACKS_CACHE_PREFIX = 'economy:sticker_packs:';
+  private static readonly STICKER_PACKS_CACHE_TTL = 300;
+
   async getCatalog(): Promise<VirtualGiftRow[]> {
+    const redis = this.supabaseService.getRedisClient();
+
+    const cached = await redis.get(EconomyService.CATALOG_CACHE_KEY);
+    if (cached) {
+      try {
+        const parsed: unknown = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed as VirtualGiftRow[];
+        }
+      } catch {
+        this.logger.warn(
+          'Invalid economy catalog cache entry, falling back to DB',
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('virtual_gifts')
-      .select('*')
-      .order('cost_coins', { ascending: true });
-    const rows = response.data;
-    if (!Array.isArray(rows)) {
-      return sanitiseEconomyData(this.getDefaultGiftCatalog());
-    }
-    const gifts = rows.filter(
-      (item: unknown): item is VirtualGiftRow =>
-        typeof item === 'object' &&
-        item !== null &&
-        'id' in item &&
-        'name' in item &&
-        'icon' in item &&
-        'cost_coins' in item &&
-        'animation_type' in item,
+        const response = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('virtual_gifts')
+        .select('*')
+        .order('cost_coins', { ascending: true })
+      ,
+      'getCatalog',
+      { logger: this.logger },
     );
-    if (gifts.length === 0) {
-      return sanitiseEconomyData(this.getDefaultGiftCatalog());
+    const rows = response.data;
+    let gifts: VirtualGiftRow[];
+    if (!Array.isArray(rows)) {
+      gifts = this.getDefaultGiftCatalog();
+    } else {
+      const filtered = rows.filter(
+        (item: unknown): item is VirtualGiftRow =>
+          typeof item === 'object' &&
+          item !== null &&
+          'id' in item &&
+          'name' in item &&
+          'icon' in item &&
+          'cost_coins' in item &&
+          'animation_type' in item,
+      );
+      gifts = filtered.length > 0 ? filtered : this.getDefaultGiftCatalog();
     }
-    return sanitiseEconomyData(gifts);
+
+    const sanitised = sanitiseEconomyData(gifts);
+
+    void redis.set(
+      EconomyService.CATALOG_CACHE_KEY,
+      JSON.stringify(sanitised),
+      'EX',
+      EconomyService.CATALOG_CACHE_TTL,
+    );
+
+    return sanitised;
   }
 
   private getDefaultGiftCatalog(): VirtualGiftRow[] {
@@ -332,9 +372,11 @@ export class EconomyService {
       cancel_url: `${frontendUrl}/coins/cancel`,
     });
 
-    const { error: insertPendingError } = await supabase
-      .from('coin_purchases')
-      .insert({
+        const { error: insertPendingError } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('coin_purchases')
+        .insert({
         user_id: userId,
         package_id: coinPackage.id,
         coins_added: coinPackage.coins,
@@ -344,7 +386,11 @@ export class EconomyService {
         platform: 'web',
         transaction_id: session.id,
         status: 'pending',
-      });
+        })
+      ,
+      'createCheckoutSession',
+      { logger: this.logger },
+    );
 
     if (insertPendingError) {
       this.logger.error(
@@ -363,11 +409,17 @@ export class EconomyService {
 
   async getBalance(userId: string): Promise<{ coins_balance: number }> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', userId)
-      .single();
+        const response = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('users')
+        .select('coins_balance')
+        .eq('id', userId)
+        .single()
+      ,
+      'getBalance',
+      { logger: this.logger },
+    );
     if (response.error || !response.data) {
       const profile = await this.usersService.getProfile(userId);
       return { coins_balance: profile.coins_balance ?? 50 };
@@ -384,12 +436,18 @@ export class EconomyService {
     coins_rewarded: number;
     new_balance: number;
   }> {
+    const startTime = Date.now();
     const redis = this.supabaseService.getRedisClient();
     const today = new Date().toISOString().slice(0, 10);
     const key = `daily_checkin:${userId}:${today}`;
 
     const alreadyClaimed = await redis.get(key);
     if (alreadyClaimed) {
+      this.metricsService.recordDailyCheckInClaim(false);
+      this.metricsService.observeCoinTransactionLatency(
+        'daily_checkin',
+        (Date.now() - startTime) / 1000,
+      );
       const { coins_balance } = await this.getBalance(userId);
       return { claimed: false, coins_rewarded: 0, new_balance: coins_balance };
     }
@@ -400,12 +458,19 @@ export class EconomyService {
     const newBalance = coins_balance + reward;
 
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('users')
-      .update({ coins_balance: newBalance })
-      .eq('id', userId);
+        const { error } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('users')
+        .update({ coins_balance: newBalance })
+        .eq('id', userId)
+      ,
+      'claimDailyCheckIn',
+      { logger: this.logger },
+    );
 
     if (error) {
+      this.metricsService.recordCoinPurchaseError('daily_checkin', 'supabase_update');
       throw new InternalServerErrorException(
         'Failed to update coin balance for daily check-in',
       );
@@ -414,9 +479,17 @@ export class EconomyService {
     // Set key to expire in 24 hours
     await redis.set(key, '1', 'EX', 86400);
 
+    this.metricsService.recordDailyCheckInClaim(true);
+    this.metricsService.observeCoinTransactionLatency(
+      'daily_checkin',
+      (Date.now() - startTime) / 1000,
+    );
+
     this.logger.debug(
       `User ${userId} claimed daily check-in reward of ${reward} coins.`,
     );
+
+    this.invalidateUserEconomyCaches(userId);
 
     return { claimed: true, coins_rewarded: reward, new_balance: newBalance };
   }
@@ -435,11 +508,13 @@ export class EconomyService {
     userId: string,
     dto: PurchaseCoinsDto,
   ): Promise<{ coins: number; new_balance: number }> {
+    const startTime = Date.now();
     const supabase = this.supabaseService.getClient();
 
     const platform = this.detectPlatform(dto.receipt_token);
 
     if (dto.platform && dto.platform !== platform) {
+      this.metricsService.recordCoinFraudAttempt(platform, 'platform_mismatch');
       throw new BadRequestException(
         `Receipt platform (${platform}) does not match provided platform (${dto.platform})`,
       );
@@ -451,18 +526,25 @@ export class EconomyService {
     });
 
     if (!isReceiptValid) {
+      this.metricsService.recordCoinFraudAttempt(platform, 'invalid_receipt');
       throw new BadRequestException('Invalid purchase receipt');
     }
 
     // For web (Stripe) ensure a pending purchase record was created server-side
     if (platform === 'web') {
       const sessionId = this.extractStripeSessionId(dto.receipt_token);
-      const { data: pendingRecord, error: pendingError } = await supabase
-        .from('coin_purchases')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('receipt_token', sessionId)
-        .maybeSingle();
+            const { data: pendingRecord, error: pendingError } = await withExponentialBackoff(
+        () =>
+          supabase
+          .from('coin_purchases')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('receipt_token', sessionId)
+          .maybeSingle()
+        ,
+        'purchaseCoins',
+        { logger: this.logger },
+      );
 
       if (pendingError) {
         throw new InternalServerErrorException(
@@ -514,12 +596,18 @@ export class EconomyService {
     if (platform === 'web') {
       // Update the existing pending record to completed
       const sessionId = this.extractStripeSessionId(dto.receipt_token);
-      const { data: existingWeb, error: existingWebError } = await supabase
-        .from('coin_purchases')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('receipt_token', sessionId)
-        .maybeSingle();
+            const { data: existingWeb, error: existingWebError } = await withExponentialBackoff(
+        () =>
+          supabase
+          .from('coin_purchases')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('receipt_token', sessionId)
+          .maybeSingle()
+        ,
+        'supabaseOperation',
+        { logger: this.logger },
+      );
 
       if (existingWebError) {
         throw new InternalServerErrorException(
@@ -532,19 +620,26 @@ export class EconomyService {
       }
 
       if (existingWeb.status === 'completed') {
+        this.metricsService.recordCoinFraudAttempt('web', 'duplicate_transaction');
         throw new ConflictException(
           'This transaction has already been processed',
         );
       }
 
-      const { error: updateWebError } = await supabase
-        .from('coin_purchases')
-        .update({
+            const { error: updateWebError } = await withExponentialBackoff(
+        () =>
+          supabase
+          .from('coin_purchases')
+          .update({
           status: 'completed',
           transaction_id: transactionId || sessionId,
-        })
-        .eq('user_id', userId)
-        .eq('receipt_token', sessionId);
+          })
+          .eq('user_id', userId)
+          .eq('receipt_token', sessionId)
+        ,
+        'supabaseOperation',
+        { logger: this.logger },
+      );
 
       if (updateWebError) {
         this.logger.error(
@@ -556,20 +651,29 @@ export class EconomyService {
       }
     } else {
       // ios / android flow: insert a new completed record
-      const { data: existing } = await supabase
-        .from('coin_purchases')
-        .select('id')
-        .eq('transaction_id', transactionId)
-        .maybeSingle();
+            const { data: existing } = await withExponentialBackoff(
+        () =>
+          supabase
+          .from('coin_purchases')
+          .select('id')
+          .eq('transaction_id', transactionId)
+          .maybeSingle()
+        ,
+        'supabaseOperation',
+        { logger: this.logger },
+      );
       if (existing) {
+        this.metricsService.recordCoinFraudAttempt(platform, 'duplicate_transaction');
         throw new ConflictException(
           'This transaction has already been processed',
         );
       }
 
-      const { error: insertError } = await supabase
-        .from('coin_purchases')
-        .insert({
+            const { error: insertError } = await withExponentialBackoff(
+        () =>
+          supabase
+          .from('coin_purchases')
+          .insert({
           user_id: userId,
           package_id: coinPackage.id,
           coins_added: coinPackage.coins,
@@ -579,7 +683,11 @@ export class EconomyService {
           platform,
           transaction_id: transactionId,
           status: 'completed',
-        });
+          })
+        ,
+        'supabaseOperation',
+        { logger: this.logger },
+      );
 
       if (insertError) {
         if (insertError.code === '23505') {
@@ -595,20 +703,32 @@ export class EconomyService {
     }
 
     // Read current balance and credit coins
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', userId)
-      .single();
+        const { data: userData, error: userError } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('users')
+        .select('coins_balance')
+        .eq('id', userId)
+        .single()
+      ,
+      'supabaseOperation',
+      { logger: this.logger },
+    );
 
     if (userError || !userData) {
       // For non-web platforms roll back the purchase record; for web the record
       // is already finalised but we log and return a helpful error.
       if (platform !== 'web') {
-        await supabase
-          .from('coin_purchases')
-          .delete()
-          .eq('transaction_id', transactionId);
+        await withExponentialBackoff(
+          () =>
+            supabase
+            .from('coin_purchases')
+            .delete()
+            .eq('transaction_id', transactionId)
+          ,
+          'supabaseOperation',
+          { logger: this.logger },
+        );
       }
       this.logger.error(
         `Failed to retrieve user balance during purchase for ${userId}.`,
@@ -620,17 +740,29 @@ export class EconomyService {
       typeof userData.coins_balance === 'number' ? userData.coins_balance : 0;
     const newBalance = currentBalance + coinPackage.coins;
 
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ coins_balance: newBalance })
-      .eq('id', userId);
+        const { error: updateError } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('users')
+        .update({ coins_balance: newBalance })
+        .eq('id', userId)
+      ,
+      'supabaseOperation',
+      { logger: this.logger },
+    );
 
     if (updateError) {
       if (platform !== 'web') {
-        await supabase
-          .from('coin_purchases')
-          .delete()
-          .eq('transaction_id', transactionId);
+        await withExponentialBackoff(
+          () =>
+            supabase
+            .from('coin_purchases')
+            .delete()
+            .eq('transaction_id', transactionId)
+          ,
+          'supabaseOperation',
+          { logger: this.logger },
+        );
       }
       this.logger.error(
         `Failed to credit coin balance for user ${userId}: ${updateError.message}`,
@@ -641,7 +773,19 @@ export class EconomyService {
     }
 
     this.logger.info(
-      `User ${userId} received ${coinPackage.coins} coins (transaction ${transactionId})`,
+      `User ${userId} received ${coinPackage.coins} coins (transaction ${(transactionId ?? '').slice(-8) || '[unknown]'})`,
+    );
+
+    this.invalidateUserEconomyCaches(userId);
+    this.metricsService.recordCoinPurchase(
+      platform,
+      coinPackage.id,
+      'success',
+      coinPackage.price,
+    );
+    this.metricsService.observeCoinTransactionLatency(
+      'purchase_coins',
+      (Date.now() - startTime) / 1000,
     );
 
     return {
@@ -704,12 +848,17 @@ export class EconomyService {
       throw new BadRequestException('Apple shared secret not configured');
     }
 
-    const response = await firstValueFrom(
-      this.httpService.post(verificationUrl, {
-        'receipt-data': receiptToken,
-        password: sharedSecret,
-        'exclude-old-transactions': true,
-      }),
+    const response = await withExponentialBackoff(
+      () =>
+        firstValueFrom(
+          this.httpService.post(verificationUrl, {
+            'receipt-data': receiptToken,
+            password: sharedSecret,
+            'exclude-old-transactions': true,
+          }),
+        ),
+      'Apple receipt verification',
+      { logger: this.logger },
     );
 
     const body = response.data as {
@@ -766,12 +915,17 @@ export class EconomyService {
 
     const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
 
-    const response = await firstValueFrom(
-      this.httpService.get(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }),
+    const response = await withExponentialBackoff(
+      () =>
+        firstValueFrom(
+          this.httpService.get(url, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }),
+        ),
+      'Google Play receipt verification',
+      { logger: this.logger },
     );
 
     const body = response.data as {
@@ -814,7 +968,11 @@ export class EconomyService {
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await this.stripe.checkout.sessions.retrieve(sessionId);
+      session = await withExponentialBackoff(
+        () => this.stripe.checkout.sessions.retrieve(sessionId),
+        'Stripe session retrieve',
+        { logger: this.logger },
+      );
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unexpected error';
@@ -887,11 +1045,17 @@ export class EconomyService {
 
     const supabase = this.supabaseService.getClient();
 
-    const giftResponse = await supabase
-      .from('virtual_gifts')
-      .select('*')
-      .eq('id', dto.gift_id)
-      .maybeSingle();
+        const giftResponse = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('virtual_gifts')
+        .select('*')
+        .eq('id', dto.gift_id)
+        .maybeSingle()
+      ,
+      'sendGift',
+      { logger: this.logger },
+    );
     if (!giftResponse || giftResponse.error || !giftResponse.data) {
       throw new NotFoundException(
         `Gift '${dto.gift_id}' not found in catalog.`,
@@ -915,11 +1079,17 @@ export class EconomyService {
     }
 
     // Verify the receiver exists before crediting coins
-    const receiverCheck = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', dto.receiver_id)
-      .maybeSingle();
+        const receiverCheck = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('users')
+        .select('id')
+        .eq('id', dto.receiver_id)
+        .maybeSingle()
+      ,
+      'sendGift',
+      { logger: this.logger },
+    );
     if (receiverCheck.error || !receiverCheck.data) {
       throw new NotFoundException('Receiver user not found.');
     }
@@ -932,10 +1102,16 @@ export class EconomyService {
     const newSenderBalance = senderBalance - gift.cost_coins;
     const newReceiverBalance = receiverBalance + gift.cost_coins;
 
-    const { error: senderUpdateError } = await supabase
-      .from('users')
-      .update({ coins_balance: newSenderBalance })
-      .eq('id', senderId);
+        const { error: senderUpdateError } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('users')
+        .update({ coins_balance: newSenderBalance })
+        .eq('id', senderId)
+      ,
+      'supabaseOperation',
+      { logger: this.logger },
+    );
 
     if (senderUpdateError) {
       throw new InternalServerErrorException(
@@ -943,42 +1119,72 @@ export class EconomyService {
       );
     }
 
-    const { error: receiverUpdateError } = await supabase
-      .from('users')
-      .update({ coins_balance: newReceiverBalance })
-      .eq('id', dto.receiver_id);
+        const { error: receiverUpdateError } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('users')
+        .update({ coins_balance: newReceiverBalance })
+        .eq('id', dto.receiver_id)
+      ,
+      'supabaseOperation',
+      { logger: this.logger },
+    );
 
     if (receiverUpdateError) {
       // Roll back sender's balance
-      await supabase
-        .from('users')
-        .update({ coins_balance: senderBalance })
-        .eq('id', senderId);
+      await withExponentialBackoff(
+        () =>
+          supabase
+          .from('users')
+          .update({ coins_balance: senderBalance })
+          .eq('id', senderId)
+        ,
+        'supabaseOperation',
+        { logger: this.logger },
+      );
       throw new InternalServerErrorException(
         'Failed to credit receiver coin balance.',
       );
     }
 
-    const { error: insertError } = await supabase
-      .from('gift_transactions')
-      .insert({
+        const { error: insertError } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('gift_transactions')
+        .insert({
         sender_id: senderId,
         receiver_id: dto.receiver_id,
         gift_id: gift.id,
         room_id: dto.room_id || null,
         coins_spent: gift.cost_coins,
-      });
+        })
+      ,
+      'supabaseOperation',
+      { logger: this.logger },
+    );
 
     if (insertError) {
       // Rollback both balances
-      await supabase
-        .from('users')
-        .update({ coins_balance: senderBalance })
-        .eq('id', senderId);
-      await supabase
-        .from('users')
-        .update({ coins_balance: receiverBalance })
-        .eq('id', dto.receiver_id);
+      await withExponentialBackoff(
+        () =>
+          supabase
+          .from('users')
+          .update({ coins_balance: senderBalance })
+          .eq('id', senderId)
+        ,
+        'supabaseOperation',
+        { logger: this.logger },
+      );
+      await withExponentialBackoff(
+        () =>
+          supabase
+          .from('users')
+          .update({ coins_balance: receiverBalance })
+          .eq('id', dto.receiver_id)
+        ,
+        'supabaseOperation',
+        { logger: this.logger },
+      );
       throw new InternalServerErrorException(
         'Failed to record gift transaction.',
       );
@@ -1009,6 +1215,14 @@ export class EconomyService {
       void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
     }
 
+    this.invalidateUserEconomyCaches(senderId);
+    this.invalidateUserEconomyCaches(dto.receiver_id);
+    this.metricsService.recordGiftSent(
+      gift.id,
+      gift.animation_type,
+      gift.cost_coins,
+    );
+
     return sanitiseEconomyData({
       success: true,
       coins_remaining: newSenderBalance,
@@ -1027,11 +1241,17 @@ export class EconomyService {
     const supabase = this.supabaseService.getClient();
 
     // 1. Fetch the sticker pack details
-    const packResponse = await supabase
-      .from('sticker_packs')
-      .select('*')
-      .eq('id', dto.pack_id)
-      .single();
+        const packResponse = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('sticker_packs')
+        .select('*')
+        .eq('id', dto.pack_id)
+        .single()
+      ,
+      'unlockStickerPack',
+      { logger: this.logger },
+    );
 
     if (!packResponse.data) {
       throw new NotFoundException(`Sticker pack '${dto.pack_id}' not found.`);
@@ -1052,22 +1272,34 @@ export class EconomyService {
 
     // 3. Deduct coins
     const newBalance = coins_balance - pack.cost_coins;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ coins_balance: newBalance })
-      .eq('id', userId);
+        const { error: updateError } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('users')
+        .update({ coins_balance: newBalance })
+        .eq('id', userId)
+      ,
+      'unlockStickerPack',
+      { logger: this.logger },
+    );
 
     if (updateError) {
       throw new InternalServerErrorException('Failed to deduct coins');
     }
 
     // 4. Record ownership
-    const { error: insertError } = await supabase
-      .from('user_sticker_packs')
-      .insert({
+        const { error: insertError } = await withExponentialBackoff(
+      () =>
+        supabase
+        .from('user_sticker_packs')
+        .insert({
         user_id: userId,
         pack_id: pack.id,
-      });
+        })
+      ,
+      'unlockStickerPack',
+      { logger: this.logger },
+    );
 
     if (insertError) {
       // Note: In a robust system, you'd want to rollback the coin deduction here
@@ -1075,6 +1307,9 @@ export class EconomyService {
         `Failed to record sticker pack ownership for user ${userId}: ${insertError.message}`,
       );
     }
+
+this.invalidateUserEconomyCaches(userId);
+    this.metricsService.recordStickerPurchase(pack.id, pack.cost_coins);
 
     return sanitiseEconomyData({
       success: true,
@@ -1088,6 +1323,33 @@ export class EconomyService {
     owned_pack_ids: string[];
     user_coins: number;
   }> {
+    const redis = this.supabaseService.getRedisClient();
+    const cacheKey = `${EconomyService.STICKER_PACKS_CACHE_PREFIX}${userId}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed: unknown = JSON.parse(cached);
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'packs' in parsed &&
+          'owned_pack_ids' in parsed &&
+          'user_coins' in parsed
+        ) {
+          return parsed as {
+            packs: StickerPackRow[];
+            owned_pack_ids: string[];
+            user_coins: number;
+          };
+        }
+      } catch {
+        this.logger.warn(
+          `Invalid sticker packs cache entry for user ${userId}, falling back to DB`,
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const [packsResponse, ownedResponse, balanceResponse] = await Promise.all([
@@ -1111,19 +1373,44 @@ export class EconomyService {
         'cost_coins' in item,
     );
 
+    let result: {
+      packs: StickerPackRow[];
+      owned_pack_ids: string[];
+      user_coins: number;
+    };
+
     if (packs.length === 0) {
-      return sanitiseEconomyData({
+      result = sanitiseEconomyData({
         packs: this.getDefaultStickerPacks(),
+        owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
+        user_coins: balanceResponse.data?.coins_balance ?? 0,
+      });
+    } else {
+      result = sanitiseEconomyData({
+        packs,
         owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
         user_coins: balanceResponse.data?.coins_balance ?? 0,
       });
     }
 
-    return sanitiseEconomyData({
-      packs,
-      owned_pack_ids: ownedResponse.data?.map((r) => r.pack_id) ?? [],
-      user_coins: balanceResponse.data?.coins_balance ?? 0,
-    });
+    void redis.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      EconomyService.STICKER_PACKS_CACHE_TTL,
+    );
+
+    return result;
+  }
+
+  /**
+   * Invalidates Redis caches related to a user's economy state.
+   * Called after any mutation that changes balances or ownership
+   * (purchaseCoins, sendGift, unlockStickerPack, claimDailyCheckIn).
+   */
+  private invalidateUserEconomyCaches(userId: string): void {
+    const redis = this.supabaseService.getRedisClient();
+    void redis.del(`${EconomyService.STICKER_PACKS_CACHE_PREFIX}${userId}`);
   }
 
   private getDefaultStickerPacks(): StickerPackRow[] {

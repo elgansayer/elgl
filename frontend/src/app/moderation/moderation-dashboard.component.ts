@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { TranslatePipe } from '../services/translate.pipe';
 import { ModerationItem, ModerationService } from './moderation.service';
+import { SanitiseHtmlPipe } from '../pipes/sanitise-html.pipe';
 
 @Component({
   selector: 'app-moderation-dashboard',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe],
   template: `
     <div class="ps-4 pe-4 pt-4 pb-4" role="main" aria-labelledby="moderation-title">
       <h2 id="moderation-title" class="text-2xl font-bold mb-4">{{ 'moderation.title' | t }}</h2>
@@ -32,6 +33,19 @@ import { ModerationItem, ModerationService } from './moderation.service';
         </button>
       </div>
 
+@if (actionError()) {
+        <div class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm" role="alert">
+          {{ actionError() }}
+          <button
+            type="button"
+            class="ms-2 underline hover:no-underline"
+            (click)="actionError.set(null)"
+          >
+            {{ 'moderation.dismiss' | t }}
+          </button>
+        </div>
+      }
+
       <div aria-live="polite">
         @if (items.isLoading()) {
           <p class="text-slate-500" aria-busy="true">{{ 'moderation.loading' | t }}</p>
@@ -42,13 +56,13 @@ import { ModerationItem, ModerationService } from './moderation.service';
           @for (item of items.value(); track item.id) {
             <div class="border border-slate-200 rounded-lg p-4 mb-2" [attr.aria-label]="'moderation.reportItemAria' | t: { id: item.id }">
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reporter' | t }}: </span>{{ item.reporter?.display_name }}
+                <span class="sr-only">{{ 'moderation.reporter' | t }}: </span>{{ item.reporter?.display_name | sanitiseHtml }}
               </p>
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ item.reported_user?.display_name }}
+                <span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ item.reported_user?.display_name | sanitiseHtml }}
               </p>
               <p class="text-sm text-slate-500">
-                <span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason }}
+                <span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason | sanitiseHtml }}
               </p>
 
               @if (analysis()?.userId === item.reported_user?.id) {
@@ -71,37 +85,40 @@ import { ModerationItem, ModerationService } from './moderation.service';
                 </div>
               }
 
-              <div class="mt-3 flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  class="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700"
-                  [attr.aria-label]="'moderation.approveAria' | t: { id: item.id }"
-                  (click)="approve(item)"
-                >
-                  {{ 'moderation.approve' | t }}
-                </button>
-                <button
-                  type="button"
-                  class="rounded bg-rose-600 px-3 py-1 text-white hover:bg-rose-700"
-                  [attr.aria-label]="'moderation.rejectAria' | t: { id: item.id }"
-                  (click)="reject(item)"
-                >
-                  {{ 'moderation.reject' | t }}
-                </button>
-                <button
-                  type="button"
-                  class="rounded border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100"
-                  [attr.aria-label]="'moderation.analyseAria' | t: { user: item.reported_user?.display_name }"
-                  (click)="analyse(item)"
-                >
-                  {{ 'moderation.analyse' | t }}
-                </button>
-              </div>
+<div class="mt-3 flex gap-2 flex-wrap">
+              <button
+                type="button"
+                class="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700 disabled:opacity-50"
+                [disabled]="actionInProgress() === item.id"
+                [attr.aria-label]="'moderation.approveAria' | t: { id: item.id }"
+                (click)="approve(item)"
+              >
+                {{ 'moderation.approve' | t }}
+              </button>
+              <button
+                type="button"
+                class="rounded bg-rose-600 px-3 py-1 text-white hover:bg-rose-700 disabled:opacity-50"
+                [disabled]="actionInProgress() === item.id"
+                [attr.aria-label]="'moderation.rejectAria' | t: { id: item.id }"
+                (click)="reject(item)"
+              >
+                {{ 'moderation.reject' | t }}
+              </button>
+              <button
+                type="button"
+                class="rounded border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                [disabled]="actionInProgress() === item.id"
+                [attr.aria-label]="'moderation.analyseAria' | t: { user: item.reported_user?.display_name }"
+                (click)="analyse(item)"
+              >
+                {{ 'moderation.analyse' | t }}
+              </button>
             </div>
+          </div>
           } @empty {
             <p class="text-slate-500">{{ 'moderation.empty' | t }}</p>
           }
-          </div>
+        </div>
         }
       </div>
     </div>
@@ -120,27 +137,56 @@ export class ModerationDashboardComponent {
     userId: string;
   } | null>(null);
 
+  readonly actionInProgress = signal<string | null>(null);
+  readonly actionError = signal<string | null>(null);
+
+  constructor() {
+    // Clear analysis when switching between profile/moment tabs
+    effect(() => {
+      this.type();
+      this.analysis.set(null);
+    }, { allowSignalWrites: true });
+  }
+
   async approve(item: ModerationItem): Promise<void> {
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
     try {
-      await this.moderationService.approveItem(item.id, item.type);
-      this.items.reload();
-    } catch (err) {
-      console.warn('Approve failed', err);
+      const result = await this.moderationService.approveItem(item.id, item.type);
+      if (result.success) {
+        this.items.reload();
+      } else {
+        this.actionError.set(result.error ?? 'Failed to approve item');
+      }
+    } catch {
+      this.actionError.set('Service temporarily unavailable');
+    } finally {
+      this.actionInProgress.set(null);
     }
   }
 
   async reject(item: ModerationItem): Promise<void> {
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
     try {
-      await this.moderationService.rejectItem(item.id, item.type);
-      this.items.reload();
-    } catch (err) {
-      console.warn('Reject failed', err);
+      const result = await this.moderationService.rejectItem(item.id, item.type);
+      if (result.success) {
+        this.items.reload();
+      } else {
+        this.actionError.set(result.error ?? 'Failed to reject item');
+      }
+    } catch {
+      this.actionError.set('Service temporarily unavailable');
+    } finally {
+      this.actionInProgress.set(null);
     }
   }
 
   async analyse(item: ModerationItem): Promise<void> {
     const userId = item.reported_user?.id;
     if (!userId) return;
+    this.actionInProgress.set(item.id);
+    this.actionError.set(null);
     try {
       const result = await this.moderationService.analyseUser(userId);
       this.analysis.set({
@@ -148,8 +194,10 @@ export class ModerationDashboardComponent {
         flags: result.flags,
         userId,
       });
-    } catch (err) {
-      console.warn('Analyse failed', err);
+    } catch {
+      this.actionError.set('Failed to analyse user');
+    } finally {
+      this.actionInProgress.set(null);
     }
   }
 }

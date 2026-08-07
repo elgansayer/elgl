@@ -7,7 +7,10 @@ import { I18nService } from '../../services/i18n.service';
 describe('LiveChatOverlayComponent', () => {
   let component: LiveChatOverlayComponent;
   let fixture: ComponentFixture<LiveChatOverlayComponent>;
-  let mockCentrifugo: { subscribe: ReturnType<typeof vi.fn>; unsubscribe: ReturnType<typeof vi.fn> };
+  let mockCentrifugo: {
+    subscribe: ReturnType<typeof vi.fn>;
+    unsubscribe: ReturnType<typeof vi.fn>;
+  };
   let mockI18n: { translate: ReturnType<typeof vi.fn> };
 
   async function setup(roomId: string): Promise<void> {
@@ -54,9 +57,7 @@ describe('LiveChatOverlayComponent', () => {
 
   it('should display messages with sender name and text', async () => {
     await setup('test-room');
-    component.messages.set([
-      { id: '1', senderName: 'Alice', text: 'Hello world', timestamp: 1 },
-    ]);
+    component.messages.set([{ id: '1', senderName: 'Alice', text: 'Hello world', timestamp: 1 }]);
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
@@ -66,31 +67,24 @@ describe('LiveChatOverlayComponent', () => {
 
   it('should apply fade-in animation class to messages', async () => {
     await setup('test-room');
-    component.messages.set([
-      { id: '1', senderName: 'Bob', text: 'Hi', timestamp: 1 },
-    ]);
+    component.messages.set([{ id: '1', senderName: 'Bob', text: 'Hi', timestamp: 1 }]);
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.animate-fade-in')).toBeTruthy();
   });
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
   it('should cap messages at 50 via the messages signal cap', async () => {
     await setup('test-room');
     // Push 60 messages, shifting the oldest off when > 50
     for (let i = 0; i < 60; i++) {
       component.messages.update((msgs) => {
-        const next = [...msgs, { id: `msg-${i}`, senderName: 'Test', text: `Text ${i}`, timestamp: Date.now() }];
+        const next = [
+          ...msgs,
+          { id: `msg-${i}`, senderName: 'Test', text: `Text ${i}`, timestamp: Date.now() },
+        ];
         while (next.length > 50) next.shift();
         return next;
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
       });
     }
 
