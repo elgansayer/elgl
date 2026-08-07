@@ -1,3 +1,38 @@
+// Mock jsdom and dompurify to avoid ESM import failures in Jest
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation((_html: string) => ({
+    window: {
+      document: {
+        createElement: jest.fn(),
+        createDocumentFragment: jest.fn(),
+      },
+      Node: {
+        ELEMENT_NODE: 1,
+        TEXT_NODE: 3,
+        DOCUMENT_FRAGMENT_NODE: 11,
+      },
+      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
+    },
+  })),
+}));
+
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: (dirty: string): string => {
+      if (typeof dirty !== 'string') return dirty;
+      return dirty
+        .replace(/<[^>]*>/g, '')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'");
+    },
+    setConfig: jest.fn(),
+  })),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReadingEngineController } from './reading-engine.controller';
 import { ReadingEngineService } from './reading-engine.service';
@@ -5,7 +40,11 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
-import { ReadingResource, ReadingProgress, ReadingTokenBreakdown } from './interfaces/reading.interface';
+import {
+  ReadingResource,
+  ReadingProgress,
+  ReadingTokenBreakdown,
+} from './interfaces/reading.interface';
 
 describe('ReadingEngineController', () => {
   let controller: ReadingEngineController;
@@ -40,7 +79,7 @@ describe('ReadingEngineController', () => {
       .compile();
 
     controller = module.get<ReadingEngineController>(ReadingEngineController);
-    readingService = module.get(ReadingEngineService) as jest.Mocked<ReadingEngineService>;
+    readingService = module.get(ReadingEngineService);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -61,8 +100,13 @@ describe('ReadingEngineController', () => {
         language: 'en',
       };
       const mockResource: ReadingResource = {
-        id: 'res-1', title: 'Test', content: 'Content.', language: 'en',
-        createdBy: 'system', createdAt: '', updatedAt: '',
+        id: 'res-1',
+        title: 'Test',
+        content: 'Content.',
+        language: 'en',
+        createdBy: 'system',
+        createdAt: '',
+        updatedAt: '',
       };
       readingService.createResource.mockResolvedValue(mockResource);
 
@@ -82,7 +126,13 @@ describe('ReadingEngineController', () => {
       const mockList: ReadingResource[] = [];
       readingService.listResources.mockResolvedValue(mockList);
 
-      const result = await controller.listResources('en', 'beginner', 'science', 10, 0);
+      const result = await controller.listResources(
+        'en',
+        'beginner',
+        'science',
+        10,
+        0,
+      );
 
       expect(result).toEqual(mockList);
       expect(readingService.listResources).toHaveBeenCalledWith({
@@ -116,8 +166,13 @@ describe('ReadingEngineController', () => {
   describe('getResource', () => {
     it('delegates to readingService.getResource with the id param', async () => {
       const mockResource: ReadingResource = {
-        id: 'res-1', title: 'T', content: 'C', language: 'en',
-        createdBy: 'u1', createdAt: '', updatedAt: '',
+        id: 'res-1',
+        title: 'T',
+        content: 'C',
+        language: 'en',
+        createdBy: 'u1',
+        createdAt: '',
+        updatedAt: '',
       };
       readingService.getResource.mockResolvedValue(mockResource);
 
@@ -136,8 +191,13 @@ describe('ReadingEngineController', () => {
     it('delegates to readingService.updateResource with id and dto', async () => {
       const dto: UpdateReadingResourceDto = { title: 'Updated' };
       const mockResource: ReadingResource = {
-        id: 'res-1', title: 'Updated', content: 'C', language: 'en',
-        createdBy: 'u1', createdAt: '', updatedAt: '',
+        id: 'res-1',
+        title: 'Updated',
+        content: 'C',
+        language: 'en',
+        createdBy: 'u1',
+        createdAt: '',
+        updatedAt: '',
       };
       readingService.updateResource.mockResolvedValue(mockResource);
 
@@ -169,24 +229,40 @@ describe('ReadingEngineController', () => {
   describe('tokenise', () => {
     it('delegates to readingService.tokenise with id and lang', async () => {
       const breakdown: ReadingTokenBreakdown = {
-        resourceId: 'res-1', language: 'fr', totalTokens: 5, uniqueTokens: 4, tokens: [],
+        resourceId: 'res-1',
+        language: 'fr',
+        totalTokens: 5,
+        uniqueTokens: 4,
+        tokens: [],
       };
       readingService.tokenise.mockResolvedValue(breakdown);
 
       const result = await controller.tokenise('res-1', 'fr');
 
       expect(result).toEqual(breakdown);
-      expect(readingService.tokenise).toHaveBeenCalledWith('user', 'res-1', 'fr');
+      expect(readingService.tokenise).toHaveBeenCalledWith(
+        'user',
+        'res-1',
+        'fr',
+      );
     });
 
     it('passes undefined lang when not provided', async () => {
       readingService.tokenise.mockResolvedValue({
-        resourceId: 'res-1', language: 'en', totalTokens: 0, uniqueTokens: 0, tokens: [],
+        resourceId: 'res-1',
+        language: 'en',
+        totalTokens: 0,
+        uniqueTokens: 0,
+        tokens: [],
       });
 
       await controller.tokenise('res-1');
 
-      expect(readingService.tokenise).toHaveBeenCalledWith('user', 'res-1', undefined);
+      expect(readingService.tokenise).toHaveBeenCalledWith(
+        'user',
+        'res-1',
+        undefined,
+      );
     });
   });
 
@@ -197,8 +273,11 @@ describe('ReadingEngineController', () => {
   describe('getProgress', () => {
     it('delegates to readingService.getProgress', async () => {
       const progress: ReadingProgress = {
-        userId: 'user', wordsRead: 100, articlesCompleted: 5,
-        totalReadingTimeSeconds: 300, fluencyPercentage: 75,
+        userId: 'user',
+        wordsRead: 100,
+        articlesCompleted: 5,
+        totalReadingTimeSeconds: 300,
+        fluencyPercentage: 75,
       };
       readingService.getProgress.mockResolvedValue(progress);
 
@@ -215,10 +294,17 @@ describe('ReadingEngineController', () => {
 
   describe('recordSession', () => {
     it('delegates to readingService.recordSession with body', async () => {
-      const body = { resourceId: 'res-1', wordsRead: 100, durationSeconds: 300 };
+      const body = {
+        resourceId: 'res-1',
+        wordsRead: 100,
+        durationSeconds: 300,
+      };
       const progress: ReadingProgress = {
-        userId: 'user', wordsRead: 100, articlesCompleted: 1,
-        totalReadingTimeSeconds: 300, fluencyPercentage: 50,
+        userId: 'user',
+        wordsRead: 100,
+        articlesCompleted: 1,
+        totalReadingTimeSeconds: 300,
+        fluencyPercentage: 50,
       };
       readingService.recordSession.mockResolvedValue(progress);
 
