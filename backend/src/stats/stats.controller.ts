@@ -8,7 +8,9 @@ export class StatsController {
 
   @UseGuards(SupabaseAuthGuard)
   @Get('me')
-  async getMyStats(@Req() req: { user: { sub: string } }): Promise<MyStatsResponse> {
+  async getMyStats(
+    @Req() req: { user: { sub: string } },
+  ): Promise<MyStatsResponse> {
     const userId = req.user.sub;
     return this.statsService.getStats(userId);
   }

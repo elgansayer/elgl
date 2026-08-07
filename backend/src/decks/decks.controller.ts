@@ -76,7 +76,11 @@ export class DecksController {
     @Body() dto: AddFlashcardToDeckDto,
   ): Promise<{ success: boolean }> {
     if (!user) return { success: false };
-    await this.decksService.addFlashcardToDeck(user.id, deckId, dto.flashcard_id);
+    await this.decksService.addFlashcardToDeck(
+      user.id,
+      deckId,
+      dto.flashcard_id,
+    );
     return { success: true };
   }
 
@@ -87,7 +91,11 @@ export class DecksController {
     @Param('flashcardId') flashcardId: string,
   ): Promise<{ success: boolean }> {
     if (!user) return { success: false };
-    await this.decksService.removeFlashcardFromDeck(user.id, deckId, flashcardId);
+    await this.decksService.removeFlashcardFromDeck(
+      user.id,
+      deckId,
+      flashcardId,
+    );
     return { success: true };
   }
 

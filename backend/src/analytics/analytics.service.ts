@@ -11,19 +11,17 @@ export class AnalyticsService {
   async recordClientError(payload: ClientErrorDto): Promise<void> {
     try {
       const supabase = this.supabaseService.getClient();
-      const { error } = await supabase
-        .from('client_errors')
-        .insert({
-          message: payload.message,
-          name: payload.name ?? 'Error',
-          stack: payload.stack ?? null,
-          component_stack: payload.componentStack ?? null,
-          url: payload.url ?? null,
-          user_agent: payload.userAgent ?? null,
-          metadata: payload.metadata ?? null,
-          stack_frames: payload.stackFrames ?? null,
-          client_timestamp: payload.timestamp ?? new Date().toISOString(),
-        } as never);
+      const { error } = await supabase.from('client_errors').insert({
+        message: payload.message,
+        name: payload.name ?? 'Error',
+        stack: payload.stack ?? null,
+        component_stack: payload.componentStack ?? null,
+        url: payload.url ?? null,
+        user_agent: payload.userAgent ?? null,
+        metadata: payload.metadata ?? null,
+        stack_frames: payload.stackFrames ?? null,
+        client_timestamp: payload.timestamp ?? new Date().toISOString(),
+      } as never);
 
       if (error) {
         this.logger.warn(`Failed to log client error: ${error.message}`);
