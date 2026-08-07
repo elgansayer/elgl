@@ -1,7 +1,8 @@
 import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, input, output, effect, ErrorHandler } from '@angular/core';
+import { Component, inject, signal, computed, input, output, effect, ErrorHandler } from '@angular/core';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
 @Component({
   selector: 'app-word-definition-modal',
@@ -11,6 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
+  private readonly sanitisation = inject(HtmlSanitisationService);
   private errorHandler = inject(ErrorHandler);
 
   wordToken = input.required<string>();
@@ -24,6 +26,8 @@ export class WordDefinitionModalComponent {
   readonly isLoading = signal<boolean>(true);
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
+
+  readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
 
   constructor() {
     // Auto-fetch definition when word token changes, replacing ngOnInit
@@ -42,16 +46,25 @@ export class WordDefinitionModalComponent {
     this.isLoading.set(true);
     try {
       const res = await this.vocabStore.translateWordOrSentence(wordToken, targetLang);
-      this.translationResult.set(res);
+      // Sanitise all user-visible translation result fields
+      this.translationResult.set({
+        ...res,
+        original_text: this.sanitisation.sanitiseText(res.original_text),
+        translated_text: this.sanitisation.sanitiseText(res.translated_text),
+        detected_language: this.sanitisation.sanitiseText(res.detected_language),
+        transliteration: res.transliteration ? this.sanitisation.sanitiseText(res.transliteration) : undefined,
+        definition: res.definition ? this.sanitisation.sanitiseText(res.definition) : undefined,
+        pronunciation_url: res.pronunciation_url ? this.sanitisation.sanitiseUrl(res.pronunciation_url) : undefined,
+      });
     } catch (e) {
       this.reportError('fetchDefinition', e);
       // Fallback display
       this.translationResult.set({
-        original_text: wordToken,
-        translated_text: `Translation of "${wordToken}"`,
+        original_text: this.sanitisation.sanitiseText(wordToken),
+        translated_text: `Translation of "${this.sanitisation.sanitiseText(wordToken)}"`,
         detected_language: 'auto',
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
-        transliteration: wordToken,
+        transliteration: this.sanitisation.sanitiseText(wordToken),
       });
     } finally {
       this.isLoading.set(false);
@@ -61,8 +74,11 @@ export class WordDefinitionModalComponent {
   playAudio(): void {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
-      const audio = new Audio(url);
-      audio.play().catch((e) => this.reportError('playAudio', e));
+      const safeUrl = this.sanitisation.sanitiseUrl(url);
+      if (safeUrl) {
+        const audio = new Audio(safeUrl);
+        audio.play().catch((e) => this.reportError('playAudio', e));
+      }
     }
   }
 
@@ -83,7 +99,7 @@ export class WordDefinitionModalComponent {
       } else {
         const created = await this.vocabStore.saveWord({
           word_token: this.wordToken(),
-          translation: this.translationResult()?.translated_text || `Word: ${this.wordToken()}`,
+          translation: this.translationResult()?.translated_text || `Word: ${this.sanitisation.sanitiseText(this.wordToken())}`,
           original_context: this.contextSentence(),
           definition: this.translationResult()?.definition,
           pronunciation_url: this.translationResult()?.pronunciation_url,
