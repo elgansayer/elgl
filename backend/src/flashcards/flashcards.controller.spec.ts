@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsController } from './flashcards.controller';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CACHE_PRIVATE_NO_STORE, CACHE_PRIVATE_SHORT } from '../common/cache';
 
 describe('FlashcardsController', () => {
   let controller: FlashcardsController;
@@ -136,6 +137,19 @@ describe('FlashcardsController', () => {
       const result = await controller.getDueReviews({ id: 'user-1' } as any);
       expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(cards);
+    });
+  });
+
+  describe('cache headers', () => {
+    it('CACHE_PRIVATE_NO_STORE should forbid CDN and browser caching', () => {
+      expect(CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain('no-store');
+      expect(CACHE_PRIVATE_NO_STORE['CDN-Cache-Control']).toContain('no-store');
+    });
+
+    it('CACHE_PRIVATE_SHORT should allow brief browser cache but forbid CDN', () => {
+      expect(CACHE_PRIVATE_SHORT['Cache-Control']).toContain('private');
+      expect(CACHE_PRIVATE_SHORT['Cache-Control']).toContain('max-age=60');
+      expect(CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain('no-store');
     });
   });
 });

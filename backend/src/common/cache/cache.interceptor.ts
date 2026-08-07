@@ -9,13 +9,13 @@ import { tap } from 'rxjs';
 import { Response } from 'express';
 
 /**
- * Cache-Control constants optimised for Cloudflare edge caching of the
- * Virtual Coin Economy's static and semi-static data.
+ * Cache-Control constants optimised for Cloudflare edge caching.
  *
  * Strategy:
- *  - Gift catalog & coin packages:         long-lived public CDN cache
- *  - User-specific sticker pack ownership: private, no-store
- *  - Balance / mutations:                  no-store (dynamic)
+ *  - Gift catalog & coin packages:          long-lived public CDN cache
+ *  - Sticker packs / semi-static resources:  short-lived public CDN cache
+ *  - User-specific private lists:            short browser cache, no CDN cache
+ *  - Mutations / balance:                    no-store
  */
 export const CACHE_PUBLIC_LONG = {
   'Cache-Control':
@@ -27,6 +27,20 @@ export const CACHE_PUBLIC_SHORT = {
   'Cache-Control':
     'public, max-age=300, s-maxage=1800, stale-while-revalidate=600, stale-if-error=3600',
   'CDN-Cache-Control': 'public, max-age=1800, stale-while-revalidate=600',
+} as const;
+
+/**
+ * Private, user-specific data that is safe to cache briefly in the browser
+ * but MUST NOT be stored by the CDN.  Used for resources like the user's
+ * own flashcard list and due-review queue.
+ *
+ * Browsers may reuse the response for 60 s to avoid repeated page-load
+ * round-trips, while Cloudflare is instructed to bypass its cache so
+ * every user sees only their own data.
+ */
+export const CACHE_PRIVATE_SHORT = {
+  'Cache-Control': 'private, max-age=60, must-revalidate',
+  'CDN-Cache-Control': 'private, no-store',
 } as const;
 
 export const CACHE_PRIVATE_NO_STORE = {

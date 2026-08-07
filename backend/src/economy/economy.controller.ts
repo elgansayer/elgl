@@ -21,7 +21,7 @@ import {
   CACHE_PUBLIC_LONG,
   CACHE_PUBLIC_SHORT,
   CACHE_PRIVATE_NO_STORE,
-} from './cache.interceptor';
+} from '../common/cache';
 
 @Controller('economy')
 @UseGuards(SupabaseAuthGuard)

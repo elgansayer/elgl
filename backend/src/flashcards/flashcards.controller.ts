@@ -7,6 +7,7 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -19,6 +20,11 @@ import {
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  CacheControlInterceptor,
+  CACHE_PRIVATE_NO_STORE,
+  CACHE_PRIVATE_SHORT,
+} from '../common/cache';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { FlashcardsService } from './flashcards.service';
@@ -41,6 +47,7 @@ export class FlashcardsController {
     description: 'Flashcard created or updated successfully.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized -- missing or invalid JWT.' })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async createFlashcard(
     @CurrentUser() user: User | null,
     @Body() dto: CreateFlashcardDto,
@@ -66,6 +73,7 @@ export class FlashcardsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Flashcard not found or does not belong to user.' })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
   async updateSrs(
     @CurrentUser() user: User | null,
     @Param('id') id: string,
@@ -89,6 +97,7 @@ export class FlashcardsController {
   })
   @ApiResponse({ status: 200, description: 'Array of flashcards.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_SHORT))
   async getFlashcards(
     @CurrentUser() user: User | null,
     @Query('level') level?: string,
@@ -109,6 +118,7 @@ export class FlashcardsController {
     description: 'Array of flashcards due for review.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_SHORT))
   async getDueReviews(@CurrentUser() user: User | null): Promise<Flashcard[]> {
     if (!user) return [];
     return await this.flashcardsService.getDueReviews(user.id);
