@@ -82,8 +82,20 @@ describe('BlocksService', () => {
       mockUsersBuilder.then.mockImplementation((resolve: any) =>
         resolve({
           data: [
-            { id: 'blocked-1', display_name: 'User One', avatar_url: null, native_language: 'en', target_languages: ['es'] },
-            { id: 'blocked-2', display_name: 'User Two', avatar_url: '/img.png', native_language: 'fr', target_languages: ['de'] },
+            {
+              id: 'blocked-1',
+              display_name: 'User One',
+              avatar_url: null,
+              native_language: 'en',
+              target_languages: ['es'],
+            },
+            {
+              id: 'blocked-2',
+              display_name: 'User Two',
+              avatar_url: '/img.png',
+              native_language: 'fr',
+              target_languages: ['de'],
+            },
           ],
           error: null,
         }),

@@ -45,7 +45,9 @@ describe('SafetyController', () => {
 
   describe('getReportCategories', () => {
     it('should return categories from service', () => {
-      const categories = [{ value: 'spam', label: 'Spam', icon: '*', description: '...' }];
+      const categories = [
+        { value: 'spam', label: 'Spam', icon: '*', description: '...' },
+      ];
       (safetyService.getCategories as jest.Mock).mockReturnValue(categories);
 
       const result = controller.getReportCategories();
@@ -89,7 +91,9 @@ describe('SafetyController', () => {
   describe('unblockUser', () => {
     it('should call service unblockUser', async () => {
       const dto = { blocked_id: 'bad-2' };
-      (safetyService.unblockUser as jest.Mock).mockResolvedValue({ success: true });
+      (safetyService.unblockUser as jest.Mock).mockResolvedValue({
+        success: true,
+      });
 
       const result = await controller.unblockUser(
         { user: { id: 'user-1' } },
@@ -116,7 +120,9 @@ describe('SafetyController', () => {
       const ids = ['bad-1'];
       (safetyService.getBlockedUserIds as jest.Mock).mockResolvedValue(ids);
 
-      const result = await controller.getBlockedUsers({ user: { id: 'user-1' } });
+      const result = await controller.getBlockedUsers({
+        user: { id: 'user-1' },
+      });
       expect(safetyService.getBlockedUserIds).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(ids);
     });
@@ -152,7 +158,10 @@ describe('SafetyController', () => {
         { user: { id: 'user-1' } },
         'blocked-id',
       );
-      expect(safetyService.isBlocked).toHaveBeenCalledWith('user-1', 'blocked-id');
+      expect(safetyService.isBlocked).toHaveBeenCalledWith(
+        'user-1',
+        'blocked-id',
+      );
       expect(result).toEqual({ blocked: true });
     });
 
@@ -187,13 +196,18 @@ describe('SafetyController', () => {
 
   describe('unblockUserByParam', () => {
     it('should call service unblockUser with param', async () => {
-      (safetyService.unblockUser as jest.Mock).mockResolvedValue({ success: true });
+      (safetyService.unblockUser as jest.Mock).mockResolvedValue({
+        success: true,
+      });
 
       const result = await controller.unblockUserByParam(
         { user: { id: 'user-1' } },
         'blocked-user',
       );
-      expect(safetyService.unblockUser).toHaveBeenCalledWith('user-1', 'blocked-user');
+      expect(safetyService.unblockUser).toHaveBeenCalledWith(
+        'user-1',
+        'blocked-user',
+      );
       expect(result).toEqual({ success: true });
     });
   });
@@ -201,23 +215,31 @@ describe('SafetyController', () => {
   describe('getBlockedAndBlockerIds', () => {
     it('should return union of blocked and blocker IDs', async () => {
       const ids = ['blocked-1', 'blocker-1'];
-      (safetyService.getBlockedAndBlockerIds as jest.Mock).mockResolvedValue(ids);
+      (safetyService.getBlockedAndBlockerIds as jest.Mock).mockResolvedValue(
+        ids,
+      );
 
       const result = await controller.getBlockedAndBlockerIds('user-1');
-      expect(safetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith('user-1');
+      expect(safetyService.getBlockedAndBlockerIds).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(result).toEqual(ids);
     });
   });
 
   describe('getBlockedUserDetails', () => {
     it('should call service getBlockedUserDetails', async () => {
-      const details = [
-        { id: 'b1', display_name: 'Blocked', avatar_url: null },
-      ];
-      (safetyService.getBlockedUserDetails as jest.Mock).mockResolvedValue(details);
+      const details = [{ id: 'b1', display_name: 'Blocked', avatar_url: null }];
+      (safetyService.getBlockedUserDetails as jest.Mock).mockResolvedValue(
+        details,
+      );
 
-      const result = await controller.getBlockedUserDetails({ user: { id: 'user-1' } });
-      expect(safetyService.getBlockedUserDetails).toHaveBeenCalledWith('user-1');
+      const result = await controller.getBlockedUserDetails({
+        user: { id: 'user-1' },
+      });
+      expect(safetyService.getBlockedUserDetails).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(result).toEqual(details);
     });
   });

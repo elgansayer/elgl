@@ -42,7 +42,9 @@ describe('BlocksController', () => {
       const blockedUsers = [
         { id: 'b1', display_name: 'Blocked', avatar_url: null },
       ];
-      (blocksService.getBlockedUsers as jest.Mock).mockResolvedValue(blockedUsers);
+      (blocksService.getBlockedUsers as jest.Mock).mockResolvedValue(
+        blockedUsers,
+      );
 
       const user = { id: 'user-1' } as any;
       const result = await controller.getBlockedUsers(user);
@@ -60,19 +62,24 @@ describe('BlocksController', () => {
 
   describe('unblockUser', () => {
     it('should call service unblockUser when user is authenticated', async () => {
-      (blocksService.unblockUser as jest.Mock).mockResolvedValue({ success: true });
+      (blocksService.unblockUser as jest.Mock).mockResolvedValue({
+        success: true,
+      });
 
       const user = { id: 'user-1' } as any;
       const result = await controller.unblockUser(user, 'blocked-user');
 
-      expect(blocksService.unblockUser).toHaveBeenCalledWith('user-1', 'blocked-user');
+      expect(blocksService.unblockUser).toHaveBeenCalledWith(
+        'user-1',
+        'blocked-user',
+      );
       expect(result).toEqual({ success: true });
     });
 
     it('should throw UnauthorizedException when user is null', async () => {
-      await expect(controller.unblockUser(null, 'blocked-user')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        controller.unblockUser(null, 'blocked-user'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });

@@ -87,7 +87,10 @@ describe('ModerationService', () => {
     });
 
     it('should throw NotFoundException when insert fails', async () => {
-      mockQueryBuilder._response = { data: null, error: { message: 'db error' } };
+      mockQueryBuilder._response = {
+        data: null,
+        error: { message: 'db error' },
+      };
 
       await expect(
         service.reportUser('reporter-1', {
@@ -102,10 +105,15 @@ describe('ModerationService', () => {
     it('should update report status to approved', async () => {
       mockQueryBuilder._response = { error: null };
 
-      const result = await service.approveItem({ itemId: 'report-1', type: 'profile' });
+      const result = await service.approveItem({
+        itemId: 'report-1',
+        type: 'profile',
+      });
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
-      expect(mockQueryBuilder.update).toHaveBeenCalledWith({ status: 'approved' });
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        status: 'approved',
+      });
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'report-1');
       expect(result).toEqual({ success: true });
     });
@@ -186,8 +194,14 @@ describe('ModerationService', () => {
         description: 'Bad behaviour',
         reportedMomentId: null,
       });
-      expect(result[0].reporter).toEqual({ id: 'rep-1', display_name: 'Reporter' });
-      expect(result[0].reported_user).toEqual({ id: 'bad-1', display_name: 'Bad User' });
+      expect(result[0].reporter).toEqual({
+        id: 'rep-1',
+        display_name: 'Reporter',
+      });
+      expect(result[0].reported_user).toEqual({
+        id: 'bad-1',
+        display_name: 'Bad User',
+      });
     });
 
     it('should filter by status when status is provided', async () => {
@@ -201,7 +215,9 @@ describe('ModerationService', () => {
     it('should throw NotFoundException when query errors', async () => {
       mockQueryBuilder._response = { error: { message: 'fail' } };
 
-      await expect(service.getItems('profile')).rejects.toThrow(NotFoundException);
+      await expect(service.getItems('profile')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should return empty array when data is null', async () => {
@@ -362,7 +378,8 @@ describe('ModerationService', () => {
 
     it('should cap riskScore at 100 with many flags', async () => {
       // Use large number of dating keywords to approach cap
-      const datingText = 'dating date relationship boyfriend girlfriend love marry marriage romance romantic sex hookup flirt hot sexy single looking for a man date me kiss kissing partner fwb friends with benefits casual sex hook up one night meet up meetup hang out dinner coffee romantic romantically sexting horny daddy mommy hot sexy';
+      const datingText =
+        'dating date relationship boyfriend girlfriend love marry marriage romance romantic sex hookup flirt hot sexy single looking for a man date me kiss kissing partner fwb friends with benefits casual sex hook up one night meet up meetup hang out dinner coffee romantic romantically sexting horny daddy mommy hot sexy';
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: {
           ...mockUser,

@@ -57,7 +57,10 @@ describe('ModerationController', () => {
 
       const result = await controller.getItems('profile', 'pending');
 
-      expect(moderationService.getItems).toHaveBeenCalledWith('profile', 'pending');
+      expect(moderationService.getItems).toHaveBeenCalledWith(
+        'profile',
+        'pending',
+      );
       expect(result).toEqual(items);
     });
 
@@ -66,21 +69,29 @@ describe('ModerationController', () => {
 
       await controller.getItems('moment');
 
-      expect(moderationService.getItems).toHaveBeenCalledWith('moment', undefined);
+      expect(moderationService.getItems).toHaveBeenCalledWith(
+        'moment',
+        undefined,
+      );
     });
   });
 
   describe('reportUser', () => {
     it('should call service reportUser with reporter id and dto', async () => {
       const dto = { reportedUserId: 'bad-user', reasonCategory: 'spam' };
-      (moderationService.reportUser as jest.Mock).mockResolvedValue({ id: 'report-1' });
+      (moderationService.reportUser as jest.Mock).mockResolvedValue({
+        id: 'report-1',
+      });
 
       const result = await controller.reportUser(
         { user: { id: 'reporter-1' } },
         dto,
       );
 
-      expect(moderationService.reportUser).toHaveBeenCalledWith('reporter-1', dto);
+      expect(moderationService.reportUser).toHaveBeenCalledWith(
+        'reporter-1',
+        dto,
+      );
       expect(result).toEqual({ id: 'report-1' });
     });
   });
@@ -88,7 +99,9 @@ describe('ModerationController', () => {
   describe('approve', () => {
     it('should call service approveItem with dto', async () => {
       const dto = { itemId: 'report-1', type: 'profile' };
-      (moderationService.approveItem as jest.Mock).mockResolvedValue({ success: true });
+      (moderationService.approveItem as jest.Mock).mockResolvedValue({
+        success: true,
+      });
 
       const result = await controller.approve(dto);
 
@@ -100,7 +113,9 @@ describe('ModerationController', () => {
   describe('reject', () => {
     it('should call service rejectItem with dto', async () => {
       const dto = { itemId: 'report-1', type: 'moment', reason: 'violation' };
-      (moderationService.rejectItem as jest.Mock).mockResolvedValue({ success: true });
+      (moderationService.rejectItem as jest.Mock).mockResolvedValue({
+        success: true,
+      });
 
       const result = await controller.reject(dto);
 
@@ -112,11 +127,15 @@ describe('ModerationController', () => {
   describe('analyseUser', () => {
     it('should call service analyseUserForDatingBehaviour with userId', async () => {
       const analysis = { riskScore: 30, flags: ['love'] };
-      (moderationService.analyseUserForDatingBehaviour as jest.Mock).mockResolvedValue(analysis);
+      (
+        moderationService.analyseUserForDatingBehaviour as jest.Mock
+      ).mockResolvedValue(analysis);
 
       const result = await controller.analyseUser('user-1');
 
-      expect(moderationService.analyseUserForDatingBehaviour).toHaveBeenCalledWith('user-1');
+      expect(
+        moderationService.analyseUserForDatingBehaviour,
+      ).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(analysis);
     });
   });
