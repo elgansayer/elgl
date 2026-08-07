@@ -22,7 +22,6 @@ export class LivekitService {
   private _localAudioTrack: LocalTrack | null = null;
   private _muted = false;
   private _speakerphone = false;
-  private e2eeWorker: Worker | null = null;
 
   private createRoom(options: RoomOptions): Room {
     return new Room(options);
@@ -59,13 +58,12 @@ export class LivekitService {
 
     if (e2eeKey) {
       const keyProvider = new ExternalE2EEKeyProvider();
-      this.e2eeWorker = new Worker(new URL('./livekit-e2ee.worker', import.meta.url), {
-        type: 'module',
-      });
       roomOptions = {
         e2ee: {
           keyProvider,
-          worker: this.e2eeWorker,
+          worker: new Worker(new URL('./livekit-e2ee.worker', import.meta.url), {
+            type: 'module',
+          }),
         },
       };
       await keyProvider.setKey(e2eeKey);
@@ -136,9 +134,5 @@ export class LivekitService {
       this.room = null;
     }
     this._localAudioTrack = null;
-    if (this.e2eeWorker) {
-      this.e2eeWorker.terminate();
-      this.e2eeWorker = null;
-    }
   }
 }
