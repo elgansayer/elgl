@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MonitoringService } from '../monitoring/monitoring.service';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -41,6 +42,15 @@ describe('AdminService', () => {
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
             getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+          },
+        },
+        {
+          provide: MonitoringService,
+          useValue: {
+            recordAdminAction: jest.fn(),
+            recordLoginHistoryAccess: jest.fn(),
+            collectModerationQueueMetrics: jest.fn(),
+            collectAdminDashboardMetrics: jest.fn(),
           },
         },
       ],

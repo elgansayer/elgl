@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import Redis from 'ioredis';
 import { SupabaseService, type UsersRow } from '../supabase/supabase.service';
+import { MonitoringService } from '../monitoring/monitoring.service';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { ToggleVipDto } from './dto/toggle-vip.dto';
 import {
@@ -26,7 +27,10 @@ const CACHE_PREFIX_LOGIN_HISTORY = 'admin:login-history:';
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly monitoringService: MonitoringService,
+  ) {}
 
   private getRedis(): Redis {
     return this.supabaseService.getRedisClient();
@@ -168,6 +172,12 @@ export class AdminService {
       );
     }
 
+    this.monitoringService.recordAdminAction({
+      actionType: 'vip_change',
+      count: 1,
+      timeWindowSeconds: 0,
+    });
+
     await this.invalidateUserListCaches();
     await this.invalidateLoginHistoryCache(userId);
 
@@ -175,6 +185,7 @@ export class AdminService {
   }
 
   async getLoginHistory(userId: string): Promise<LoginHistoryEntry[]> {
+    this.monitoringService.recordLoginHistoryAccess();
     const cacheKey = `${CACHE_PREFIX_LOGIN_HISTORY}${userId}`;
 
     try {
@@ -239,6 +250,12 @@ export class AdminService {
       throw new NotFoundException(`Unable to ban user ${targetUserId}`);
     }
 
+    this.monitoringService.recordAdminAction({
+      actionType: 'ban',
+      count: 1,
+      timeWindowSeconds: 0,
+    });
+
     await this.invalidateUserListCaches();
     await this.invalidateBlocksListCaches();
     await this.invalidateLoginHistoryCache(targetUserId);
@@ -259,6 +276,12 @@ export class AdminService {
       );
       throw new NotFoundException(`Unable to warn user ${targetUserId}`);
     }
+
+    this.monitoringService.recordAdminAction({
+      actionType: 'warn',
+      count: 1,
+      timeWindowSeconds: 0,
+    });
 
     await this.invalidateUserListCaches();
     await this.invalidateLoginHistoryCache(targetUserId);
