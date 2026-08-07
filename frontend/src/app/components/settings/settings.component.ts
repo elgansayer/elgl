@@ -12,7 +12,6 @@ import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 import { LinkedAccountsService, LinkedAccount } from '../../services/linked-accounts.service';
 import { I18nService } from '../../services/i18n.service';
-
 @Component({
   selector: 'app-settings',
   imports: [FormsModule, TranslatePipe, RouterModule],
