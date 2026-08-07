@@ -1,54 +1,106 @@
-<div class="max-w-md mx-auto ps-4 pe-4 pt-6 pb-10">
-  <h1 class="text-2xl font-semibold text-slate-200 mb-4">
-    {{ 'notification_settings.title' | t }}
-  </h1>
-  <p class="text-slate-400 mb-6">
-    {{ 'notification_settings.subtitle' | t }}
-  </p>
+<div class="app-screen bg-surface-50">
+  <header class="app-header">
+    <button (click)="goBack()" class="app-button-icon" [attr.aria-label]="'common.back' | t">
+      <span class="text-xl">&#8592;</span>
+    </button>
+    <h1 class="app-header-title">{{ 'notification_settings.title' | t }}</h1>
+    <div class="w-10"></div>
+  </header>
 
-  <div class="mb-5">
-    <label class="block text-slate-300 mb-2" for="customToneUrl">
-      {{ 'notification_settings.custom_tone_label' | t }}
-    </label>
-    <input
-      id="customToneUrl"
-      type="url"
-      class="w-full rounded-md border border-slate-700 bg-slate-900 ps-3 pe-3 py-2 text-slate-200 focus:border-indigo-400 focus:outline-none"
-      [attr.placeholder]="'notification_settings.custom_tone_placeholder' | t"
-      [value]="customToneUrl()"
-      (input)="onToneInput($event)"
-    />
-  </div>
+  <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
+    @if (loading()) {
+      <div class="app-empty-state">{{ 'common.loading' | t }}</div>
+    } @else {
+      @if (error()) {
+        <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          {{ error() }}
+        </div>
+      }
 
-  <div class="mb-5">
-    <label class="block text-slate-300 mb-2" for="vibrationPattern">
-      {{ 'notification_settings.vibration_pattern_label' | t }}
-    </label>
-    <input
-      id="vibrationPattern"
-      type="text"
-      class="w-full rounded-md border border-slate-700 bg-slate-900 ps-3 pe-3 py-2 text-slate-200 focus:border-indigo-400 focus:outline-none"
-      [attr.placeholder]="'notification_settings.vibration_pattern_placeholder' | t"
-      [value]="vibrationPatternText()"
-      (input)="onVibrationInput($event)"
-    />
-    <p class="text-xs text-slate-500 mt-1">
-      {{ 'notification_settings.vibration_pattern_hint' | t }}
-    </p>
-  </div>
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'notification_settings.section_title' | t }}
+        </h2>
+        <p class="text-xs text-text-secondary">
+          {{ 'notification_settings.section_description' | t }}
+        </p>
 
-  <button
-    type="button"
-    class="w-full rounded-md bg-indigo-600 ps-4 pe-4 py-2 font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
-    [disabled]="!saveAvailable()"
-    (click)="savePreferences()"
-   [attr.aria-label]="'common.save' | t">
-    {{ 'common.save' | t }}
-  </button>
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
+          @for (item of settings(); track item.category) {
+            <div class="p-4 space-y-4">
+              <div class="flex items-center gap-3">
+                <span class="text-lg" aria-hidden="true">
+                  @switch (item.icon) {
+                    @case ('direct-message') { &#128172; }
+                    @case ('heart') { &#10084;&#65039; }
+                    @case ('microphone') { &#127908; }
+                    @case ('person-add') { &#128100; }
+                    @case ('phone') { &#128222; }
+                    @case ('comment') { &#128488;&#65039; }
+                    @case ('edit') { &#9999;&#65039; }
+                    @case ('gift') { &#127873; }
+                    @case ('eye') { &#128065;&#65039; }
+                    @case ('book') { &#128218; }
+                    @case ('handshake') { &#129309; }
+                    @default { &#128276; }
+                  }
+                </span>
+                <span class="text-sm font-medium text-text-primary flex-1">
+                  {{ item.labelKey | t }}
+                </span>
+              </div>
 
-  @if (saved()) {
-    <p class="mt-4 text-green-400">
-      {{ 'notification_settings.saved_message' | t }}
-    </p>
-  }
+              <div class="flex items-center gap-6">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="form-checkbox h-4 w-4 rounded accent-indigo-500"
+                    [checked]="item.push"
+                    (change)="togglePush(item)"
+                  />
+                  <span class="text-xs text-text-secondary">
+                    {{ 'notification_settings.push_alerts' | t }}
+                  </span>
+                </label>
+
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="form-checkbox h-4 w-4 rounded accent-indigo-500"
+                    [checked]="item.badges"
+                    (change)="toggleBadges(item)"
+                  />
+                  <span class="text-xs text-text-secondary">
+                    {{ 'notification_settings.badges' | t }}
+                  </span>
+                </label>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <div class="pt-4">
+        @if (saved()) {
+          <p class="mb-3 text-green-400 text-sm">
+            {{ 'notification_settings.saved_message' | t }}
+          </p>
+        }
+
+        <button
+          type="button"
+          class="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+          [disabled]="saving()"
+          (click)="savePreferences()"
+          [attr.aria-label]="'common.save' | t"
+        >
+          @if (saving()) {
+            {{ 'common.saving' | t }}
+          } @else {
+            {{ 'common.save' | t }}
+          }
+        </button>
+      </div>
+    }
+  </main>
 </div>

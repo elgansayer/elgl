@@ -7,6 +7,7 @@ export interface CategoryPreference {
   push: boolean;
   email: boolean;
   in_app: boolean;
+  badges: boolean;
 }
 
 export interface NotificationPreferences {
@@ -41,7 +42,7 @@ export type NotificationCategory = keyof Omit<
   | 'vibrationPattern'
 >;
 
-export type NotificationChannel = 'push' | 'email' | 'in_app';
+export type NotificationChannel = 'push' | 'email' | 'in_app' | 'badges';
 
 @Injectable({
   providedIn: 'root',
