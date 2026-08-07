@@ -18,6 +18,9 @@ describe('AdminController', () => {
             listUsers: jest.fn(),
             setVipStatus: jest.fn(),
             getLoginHistory: jest.fn(),
+            banUser: jest.fn(),
+            warnUser: jest.fn(),
+            unbanUser: jest.fn(),
           },
         },
       ],
@@ -80,6 +83,42 @@ describe('AdminController', () => {
 
       expect(adminService.getLoginHistory).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(history);
+    });
+  });
+
+  describe('banUser', () => {
+    it('calls AdminService.banUser with target and admin user IDs', async () => {
+      (adminService.banUser as jest.Mock).mockResolvedValue(undefined);
+      const req = { user: { sub: 'admin-1' } };
+
+      const result = await controller.banUser('user-1', req);
+
+      expect(adminService.banUser).toHaveBeenCalledWith('user-1', 'admin-1');
+      expect(result).toEqual({ message: 'User banned' });
+    });
+  });
+
+  describe('warnUser', () => {
+    it('calls AdminService.warnUser with target and admin user IDs', async () => {
+      (adminService.warnUser as jest.Mock).mockResolvedValue(undefined);
+      const req = { user: { sub: 'admin-1' } };
+
+      const result = await controller.warnUser('user-1', req);
+
+      expect(adminService.warnUser).toHaveBeenCalledWith('user-1', 'admin-1');
+      expect(result).toEqual({ message: 'User warned' });
+    });
+  });
+
+  describe('unbanUser', () => {
+    it('calls AdminService.unbanUser with target and admin user IDs', async () => {
+      (adminService.unbanUser as jest.Mock).mockResolvedValue(undefined);
+      const req = { user: { sub: 'admin-1' } };
+
+      const result = await controller.unbanUser('user-1', req);
+
+      expect(adminService.unbanUser).toHaveBeenCalledWith('user-1', 'admin-1');
+      expect(result).toEqual({ message: 'User unbanned' });
     });
   });
 });

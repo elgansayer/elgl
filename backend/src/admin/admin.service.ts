@@ -9,7 +9,7 @@ import {
 } from './interfaces/admin-user.interface';
 
 const SUMMARY_COLUMNS =
-  'id, display_name, avatar_url, native_languages, target_languages, is_vip, vip_tier, is_admin, coins_balance, study_streak_days, last_active_at, created_at';
+  'id, display_name, avatar_url, native_languages, target_languages, is_vip, vip_tier, is_admin, coins_balance, study_streak_days, last_active_at, created_at, is_banned, warning_count';
 
 @Injectable()
 export class AdminService {
@@ -98,30 +98,63 @@ export class AdminService {
 
   async banUser(targetUserId: string, adminUserId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.from('blocks').insert({
-      blocker_id: adminUserId,
-      blocked_id: targetUserId,
-    });
+    const { error } = await supabase
+      .from('users')
+      .update({ is_banned: true })
+      .eq('id', targetUserId);
+
     if (error) {
       this.logger.error(`Failed to ban user ${targetUserId}: ${error.message}`);
       throw new NotFoundException(`Unable to ban user ${targetUserId}`);
     }
+
+    this.logger.log(`User ${targetUserId} banned by admin ${adminUserId}`);
   }
 
   async warnUser(targetUserId: string, adminUserId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.from('reports').insert({
-      reporter_id: adminUserId,
-      reported_user_id: targetUserId,
-      reason_category: 'admin_warning',
-      description: 'Admin warning',
-      status: 'open',
-    });
+
+    // Get current warning count, then increment
+    const { data: current } = await supabase
+      .from('users')
+      .select('warning_count')
+      .eq('id', targetUserId)
+      .single();
+
+    const newCount =
+      ((current as { warning_count: number } | null)?.warning_count ?? 0) + 1;
+
+    const { error } = await supabase
+      .from('users')
+      .update({ warning_count: newCount })
+      .eq('id', targetUserId);
+
     if (error) {
       this.logger.error(
         `Failed to warn user ${targetUserId}: ${error.message}`,
       );
       throw new NotFoundException(`Unable to warn user ${targetUserId}`);
     }
+
+    this.logger.log(
+      `User ${targetUserId} warned by admin ${adminUserId} (count: ${newCount})`,
+    );
+  }
+
+  async unbanUser(targetUserId: string, adminUserId: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ is_banned: false })
+      .eq('id', targetUserId);
+
+    if (error) {
+      this.logger.error(
+        `Failed to unban user ${targetUserId}: ${error.message}`,
+      );
+      throw new NotFoundException(`Unable to unban user ${targetUserId}`);
+    }
+
+    this.logger.log(`User ${targetUserId} unbanned by admin ${adminUserId}`);
   }
 }

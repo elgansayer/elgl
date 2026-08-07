@@ -11,6 +11,8 @@ export interface AdminUserSummary {
   study_streak_days?: number | null;
   last_active_at?: string | null;
   created_at?: string | null;
+  is_banned?: boolean | null;
+  warning_count?: number | null;
 }
 
 export interface AdminUserListResult {

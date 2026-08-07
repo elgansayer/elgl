@@ -17,6 +17,8 @@ export interface AdminUserSummary {
   study_streak_days: number;
   last_active_at?: string | null;
   created_at: string;
+  is_banned?: boolean;
+  warning_count?: number;
 }
 
 export interface AdminUserListResult {
@@ -194,6 +196,16 @@ export class AdminService {
     return firstValueFrom(
       this.http.post<{ message: string }>(
         `${this.baseUrl}/users/${userId}/warn`,
+        {},
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  async unbanUser(userId: string): Promise<{ message: string }> {
+    return firstValueFrom(
+      this.http.post<{ message: string }>(
+        `${this.baseUrl}/users/${userId}/unban`,
         {},
         { headers: this.getHeaders() },
       ),

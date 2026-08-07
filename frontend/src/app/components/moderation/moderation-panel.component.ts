@@ -1,9 +1,9 @@
 import {Component, inject, signal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
-import { AppCardComponent } from '../primitives/card/card.component';
+import { I18nService } from '../../services/i18n.service';
+import { AdminService } from '../../services/admin.service';
+import { showToast, showErrorToast } from '../../services/toast.service';
 import {
   ModerationService,
   ModerationItem,
@@ -12,18 +12,21 @@ import {
 
 @Component({
   selector: 'app-moderation-panel',
-  imports: [CommonModule, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  standalone: true,
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './moderation-panel.html',
 })
 export class ModerationPanelComponent {
   private readonly moderationService = inject(ModerationService);
+  private readonly adminService = inject(AdminService);
+  private readonly i18n = inject(I18nService);
 
   currentFilter = signal<'moment' | 'profile'>('moment');
   items = signal<ModerationItem[]>([]);
-  loading = signal(true);
-  loadError = signal<string | null>(null);
+  loading = signal(false);
   analysisResult = signal<UserAnalysisResult | null>(null);
   analysing = signal(false);
+  moderatingUserId = signal<string | null>(null);
 
   constructor() {
     this.loadItems();
@@ -36,13 +39,9 @@ export class ModerationPanelComponent {
 
   private async loadItems() {
     this.loading.set(true);
-    this.loadError.set(null);
     try {
       const items = await this.moderationService.getItems(this.currentFilter());
       this.items.set(items);
-    } catch {
-      this.loadError.set('Failed to load items');
-      this.items.set([]);
     } finally {
       this.loading.set(false);
     }
@@ -56,6 +55,32 @@ export class ModerationPanelComponent {
   async reject(item: ModerationItem) {
     await this.moderationService.rejectItem(item.id, item.type);
     this.loadItems();
+  }
+
+  async banReportedUser(userId: string) {
+    if (!userId || this.moderatingUserId()) return;
+    this.moderatingUserId.set(userId);
+    try {
+      await this.adminService.banUser(userId);
+      showToast(this.i18n.translate('admin.userBanned'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('admin.banFailed'));
+    } finally {
+      this.moderatingUserId.set(null);
+    }
+  }
+
+  async warnReportedUser(userId: string) {
+    if (!userId || this.moderatingUserId()) return;
+    this.moderatingUserId.set(userId);
+    try {
+      await this.adminService.warnUser(userId);
+      showToast(this.i18n.translate('admin.warningIssued'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('admin.warningFailed'));
+    } finally {
+      this.moderatingUserId.set(null);
+    }
   }
 
   async analyseUserProfile(userId: string) {

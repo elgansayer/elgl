@@ -168,4 +168,117 @@ describe('AdminService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('banUser', () => {
+    it('sets is_banned to true on the target user', async () => {
+      const chain = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+      };
+      mockSupabaseClient.from.mockReturnValueOnce(chain);
+
+      await service.banUser('user-1', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(chain.update).toHaveBeenCalledWith({ is_banned: true });
+    });
+
+    it('throws NotFoundException when the update fails', async () => {
+      const chain = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          error: { message: 'not found' },
+        }),
+      };
+      mockSupabaseClient.from.mockReturnValueOnce(chain);
+
+      await expect(service.banUser('missing-user', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('warnUser', () => {
+    it('increments warning_count on the target user', async () => {
+      // The service calls from('users') twice - once for select, once for update
+      // Create two separate query builders to handle each chain
+      const selectChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { warning_count: 2 },
+          error: null,
+        }),
+      };
+
+      const updateChain = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+      };
+
+      mockSupabaseClient.from
+        .mockReturnValueOnce(selectChain)
+        .mockReturnValueOnce(updateChain);
+
+      await service.warnUser('user-1', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
+      expect(updateChain.update).toHaveBeenCalledWith({ warning_count: 3 });
+    });
+
+    it('throws NotFoundException when the update fails', async () => {
+      const selectChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { warning_count: 0 },
+          error: null,
+        }),
+      };
+
+      const updateChain = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'not found' },
+        }),
+      };
+
+      mockSupabaseClient.from
+        .mockReturnValueOnce(selectChain)
+        .mockReturnValueOnce(updateChain);
+
+      await expect(service.warnUser('missing-user', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('unbanUser', () => {
+    it('sets is_banned to false on the target user', async () => {
+      const chain = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+      };
+      mockSupabaseClient.from.mockReturnValueOnce(chain);
+
+      await service.unbanUser('user-1', 'admin-1');
+
+      expect(chain.update).toHaveBeenCalledWith({ is_banned: false });
+    });
+
+    it('throws NotFoundException when the update fails', async () => {
+      const chain = {
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          error: { message: 'not found' },
+        }),
+      };
+      mockSupabaseClient.from.mockReturnValueOnce(chain);
+
+      await expect(
+        service.unbanUser('missing-user', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });

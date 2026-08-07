@@ -69,4 +69,14 @@ export class AdminController {
     await this.adminService.warnUser(id, adminUserId);
     return { message: 'User warned' };
   }
+
+  @Post('users/:id/unban')
+  async unbanUser(
+    @Param('id') id: string,
+    @Req() req: AuthRequest,
+  ): Promise<{ message: string }> {
+    const adminUserId = req.user.sub;
+    await this.adminService.unbanUser(id, adminUserId);
+    return { message: 'User unbanned' };
+  }
 }

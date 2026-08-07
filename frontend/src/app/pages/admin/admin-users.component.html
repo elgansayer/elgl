@@ -97,21 +97,51 @@
                 {{ user.last_active_at ? (user.last_active_at | date: 'medium') : '-' }}
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
-                <button
-                  type="button"
-                  (click)="openHistory(user)"
-                  class="btn btn-sm rounded border border-slate-300 px-3 py-1 me-2 hover:bg-slate-100"
-                >
-                  {{ 'admin.users.loginHistory' | t }}
-                </button>
-                <button
-                  type="button"
-                  (click)="toggleVip(user)"
-                  [disabled]="isVipUpdating() === user.id"
-                  class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50"
-                >
-                  {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
-                </button>
+                <div class="flex gap-1 flex-wrap">
+                  <button
+                    type="button"
+                    (click)="openHistory(user)"
+                    class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
+                  >
+                    {{ 'admin.users.loginHistory' | t }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="toggleVip(user)"
+                    [disabled]="isVipUpdating() === user.id"
+                    class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50"
+                  >
+                    {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="warnUser(user)"
+                    [disabled]="isModerating() === user.id"
+                    class="btn btn-sm rounded border border-yellow-500 px-3 py-1 text-yellow-600 hover:bg-yellow-50 disabled:opacity-50"
+                    [title]="'admin.warnTooltip' | t: { count: user.warning_count ?? 0 }"
+                  >
+                    {{ 'admin.warnButton' | t }} @if (user.warning_count) { ({{ user.warning_count }}) }
+                  </button>
+                  @if (user.is_banned) {
+                    <button
+                      type="button"
+                      (click)="unbanUser(user)"
+                      [disabled]="isModerating() === user.id"
+                      class="btn btn-sm rounded border border-green-500 px-3 py-1 text-green-600 hover:bg-green-50 disabled:opacity-50"
+                    >
+                      {{ 'admin.unbanButton' | t }}
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      (click)="banUser(user)"
+                      [disabled]="isModerating() === user.id"
+                      class="btn btn-sm rounded border border-red-500 px-3 py-1 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {{ 'admin.banButton' | t }}
+                    </button>
+                  }
+                </div>
               </td>
             </tr>
           } @empty {

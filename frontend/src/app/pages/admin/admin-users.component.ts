@@ -1,7 +1,9 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-users',
@@ -11,6 +13,7 @@ import { AdminService, AdminUserSummary } from '../../services/admin.service';
 })
 export class AdminUsersComponent {
   private adminService = inject(AdminService);
+  private readonly i18n = inject(I18nService);
 
   readonly searchTerm = signal('');
   readonly page = signal(1);
@@ -39,6 +42,7 @@ export class AdminUsersComponent {
   readonly selectedUserId = signal<string | null>(null);
   readonly showHistory = signal(false);
   readonly isVipUpdating = signal<string | null>(null);
+  readonly isModerating = signal<string | null>(null);
 
   private readonly historyResource = resource({
     params: () => this.selectedUserId(),
@@ -92,6 +96,62 @@ export class AdminUsersComponent {
       this.isVipUpdating.set(null);
       this.refreshToken.update((v) => v + 1);
     }
+  }
+
+  async banUser(user: AdminUserSummary): Promise<void> {
+    if (this.isModerating()) return;
+    this.isModerating.set(user.id);
+    try {
+      await this.adminService.banUser(user.id);
+      this.updateUserInList(user.id, { is_banned: true });
+      showToast(this.i18n.translate('admin.userBanned'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('admin.banFailed'));
+    } finally {
+      this.isModerating.set(null);
+      this.refreshToken.update((v) => v + 1);
+    }
+  }
+
+  async unbanUser(user: AdminUserSummary): Promise<void> {
+    if (this.isModerating()) return;
+    this.isModerating.set(user.id);
+    try {
+      await this.adminService.unbanUser(user.id);
+      this.updateUserInList(user.id, { is_banned: false });
+      showToast(this.i18n.translate('admin.userUnbanned'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('admin.unbanFailed'));
+    } finally {
+      this.isModerating.set(null);
+      this.refreshToken.update((v) => v + 1);
+    }
+  }
+
+  async warnUser(user: AdminUserSummary): Promise<void> {
+    if (this.isModerating()) return;
+    this.isModerating.set(user.id);
+    try {
+      await this.adminService.warnUser(user.id);
+      const newCount = (user.warning_count ?? 0) + 1;
+      this.updateUserInList(user.id, { warning_count: newCount });
+      showToast(this.i18n.translate('admin.warningIssued'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('admin.warningFailed'));
+    } finally {
+      this.isModerating.set(null);
+      this.refreshToken.update((v) => v + 1);
+    }
+  }
+
+  private updateUserInList(userId: string, patch: Partial<AdminUserSummary>): void {
+    this.usersResource.update((prev) => {
+      if (!prev) return prev;
+      const list = prev.users.map((u) =>
+        u.id === userId ? { ...u, ...patch } : u,
+      );
+      return { ...prev, users: list };
+    });
   }
 
   openHistory(user: AdminUserSummary): void {
