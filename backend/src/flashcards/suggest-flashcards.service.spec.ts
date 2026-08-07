@@ -13,6 +13,7 @@ interface MockLogger {
 interface MockQueryBuilder {
   select: jest.Mock;
   eq: jest.Mock;
+  limit: jest.Mock;
   then?: jest.Mock;
 }
 
@@ -37,6 +38,7 @@ describe('SuggestFlashcardsService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {
@@ -126,6 +128,7 @@ describe('SuggestFlashcardsService', () => {
 
     it('should exclude known words when user_id is provided and exclude_known is not false', async () => {
       mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.limit.mockReturnThis();
       mockQueryBuilder.then = (
         resolve: (value: { data: unknown[]; error: null }) => void,
       ) =>
@@ -143,6 +146,7 @@ describe('SuggestFlashcardsService', () => {
       expect(mockQueryBuilder.select).toHaveBeenCalledWith('word_token');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('srs_level', 4);
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(5000);
       // Known words should be excluded
       expect(result.suggestions).not.toContain('hello');
       expect(result.suggestions).not.toContain('world');
@@ -177,6 +181,7 @@ describe('SuggestFlashcardsService', () => {
 
     it('should handle known words query returning null data gracefully', async () => {
       mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.limit.mockReturnThis();
       mockQueryBuilder.then = (
         resolve: (value: { data: null; error: null }) => void,
       ) => resolve({ data: null, error: null });

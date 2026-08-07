@@ -81,12 +81,18 @@ export class VocabularyStore {
     };
   }
 
-  async loadAllFlashcards(): Promise<void> {
+  async loadAllFlashcards(limit = 100, offset = 0): Promise<void> {
     this.isLoading.set(true);
     try {
-      const list = await firstValueFrom(
-        this.http.get<Flashcard[]>(this.flashcardsUrl, { headers: this.getHeaders() }),
+      const response = await firstValueFrom(
+        this.http.get<{ data: Flashcard[]; total: number }>(
+          `${this.flashcardsUrl}?limit=${limit}&offset=${offset}`,
+          { headers: this.getHeaders() },
+        ),
       );
+      // Handle both paginated { data, total } and legacy flat array responses
+      const rawList = response?.data ?? (response as unknown as Flashcard[]);
+      const list = Array.isArray(rawList) ? rawList : [];
       const sanitised = this.sanitiseFlashcards(list);
       this.allFlashcards.set(sanitised);
       const map = new Map<string, Flashcard>();
@@ -113,11 +119,17 @@ export class VocabularyStore {
     }
   }
 
-  async loadDueReviews(): Promise<void> {
+  async loadDueReviews(limit = 100, offset = 0): Promise<void> {
     try {
-      const list = await firstValueFrom(
-        this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
+      const response = await firstValueFrom(
+        this.http.get<{ data: Flashcard[]; total: number }>(
+          `${this.flashcardsUrl}/due?limit=${limit}&offset=${offset}`,
+          { headers: this.getHeaders() },
+        ),
       );
+      // Handle both paginated { data, total } and legacy flat array responses
+      const rawList = response?.data ?? (response as unknown as Flashcard[]);
+      const list = Array.isArray(rawList) ? rawList : [];
       const sanitised = this.sanitiseFlashcards(list);
       this.dueReviews.set(sanitised);
       // Cache for offline access

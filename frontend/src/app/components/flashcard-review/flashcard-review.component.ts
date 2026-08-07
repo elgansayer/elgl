@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler } from '@angular/core';
+import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler, DestroyRef } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
@@ -342,6 +342,10 @@ export class FlashcardReviewComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
   private errorHandler = inject(ErrorHandler);
+  private destroyRef = inject(DestroyRef);
+
+  /** Track active Audio objects for cleanup to prevent memory leaks */
+  private activeAudioObjects: HTMLAudioElement[] = [];
 
   readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
 
@@ -409,6 +413,11 @@ export class FlashcardReviewComponent {
         }, 0);
       }
     });
+
+    // Clean up audio objects when component is destroyed to prevent memory leaks
+    this.destroyRef.onDestroy(() => {
+      this.cleanupAudioObjects();
+    });
   }
 
   private async loadReviewData(): Promise<void> {
@@ -467,9 +476,34 @@ export class FlashcardReviewComponent {
   playAudio(url: string, event: MouseEvent): void {
     event.stopPropagation();
     const audio = new Audio(url);
+    this.activeAudioObjects.push(audio);
+    audio.addEventListener('ended', () => this.removeAudioObject(audio));
+    audio.addEventListener('error', () => this.removeAudioObject(audio));
     audio.play().catch(() => {
-      // Audio playback failed silently
+      // Audio playback failed silently; clean up
+      this.removeAudioObject(audio);
     });
+  }
+
+  /** Stop and release all active audio objects to prevent memory leaks */
+  private cleanupAudioObjects(): void {
+    for (const audio of this.activeAudioObjects) {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+    }
+    this.activeAudioObjects = [];
+  }
+
+  /** Remove a single audio object from the active tracking array */
+  private removeAudioObject(audio: HTMLAudioElement): void {
+    const idx = this.activeAudioObjects.indexOf(audio);
+    if (idx > -1) {
+      this.activeAudioObjects.splice(idx, 1);
+    }
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
   }
 
   private computeNewLevel(currentLevel: number, grade: ReviewGrade): number {

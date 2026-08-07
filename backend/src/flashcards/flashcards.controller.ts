@@ -114,7 +114,7 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'List flashcards for the authenticated user',
     description:
-      'Returns all flashcards owned by the user, ordered by creation date descending. Optionally filters by SRS level (0-4).',
+      'Returns flashcards owned by the user, ordered by creation date descending, with pagination. Optionally filters by SRS level (0-4).',
   })
   @ApiQuery({
     name: 'level',
@@ -123,15 +123,34 @@ export class FlashcardsController {
       'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
     example: '2',
   })
-  @ApiResponse({ status: 200, description: 'Array of flashcards.' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of flashcards to return (1-500, default 100).',
+    example: '50',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: 'Number of flashcards to skip for pagination (default 0).',
+    example: '0',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated flashcards with total count.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getFlashcards(
     @CurrentUser() user: User | null,
     @Query('level') level?: string,
-  ): Promise<Flashcard[]> {
-    if (!user) return [];
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<{ data: Flashcard[]; total: number }> {
+    if (!user) return { data: [], total: 0 };
     const lvlNum = level !== undefined ? parseInt(level, 10) : undefined;
-    return await this.flashcardsService.getFlashcards(user.id, lvlNum);
+    const limitNum = limit !== undefined ? parseInt(limit, 10) : 100;
+    const offsetNum = offset !== undefined ? parseInt(offset, 10) : 0;
+    return await this.flashcardsService.getFlashcards(user.id, lvlNum, limitNum, offsetNum);
   }
 
   @Get('due')
@@ -143,15 +162,33 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'Get flashcards due for review',
     description:
-      'Returns flashcards with srs_level < 4 whose next_review_at <= now. Ordered by next_review_at ascending (most overdue first).',
+      'Returns flashcards with srs_level < 4 whose next_review_at <= now, with pagination. Ordered by next_review_at ascending (most overdue first).',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of flashcards to return (1-500, default 100).',
+    example: '50',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: 'Number of flashcards to skip for pagination (default 0).',
+    example: '0',
   })
   @ApiResponse({
     status: 200,
-    description: 'Array of flashcards due for review.',
+    description: 'Paginated flashcards due for review.',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async getDueReviews(@CurrentUser() user: User | null): Promise<Flashcard[]> {
-    if (!user) return [];
-    return await this.flashcardsService.getDueReviews(user.id);
+  async getDueReviews(
+    @CurrentUser() user: User | null,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<{ data: Flashcard[]; total: number }> {
+    if (!user) return { data: [], total: 0 };
+    const limitNum = limit !== undefined ? parseInt(limit, 10) : 100;
+    const offsetNum = offset !== undefined ? parseInt(offset, 10) : 0;
+    return await this.flashcardsService.getDueReviews(user.id, limitNum, offsetNum);
   }
 }

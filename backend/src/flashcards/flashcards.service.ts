@@ -252,98 +252,139 @@ export class FlashcardsService {
     };
   }
 
-  async getFlashcards(userId: string, level?: number): Promise<Flashcard[]> {
+  async getFlashcards(
+    userId: string,
+    level?: number,
+    limit = 100,
+    offset = 0,
+  ): Promise<{ data: Flashcard[]; total: number }> {
+    // Use Redis cache only for the default first page (no pagination offset)
+    // to keep cache invalidation simple while preventing unbounded payloads
+    const isFirstPage = offset === 0 && limit === 100;
     const cacheKey =
-      level !== undefined && !isNaN(level)
+      isFirstPage && level !== undefined && !isNaN(level)
         ? `${FLASHCARD_LIST_CACHE_PREFIX}${userId}:level:${level}`
-        : `${FLASHCARD_LIST_CACHE_PREFIX}${userId}`;
+        : isFirstPage
+          ? `${FLASHCARD_LIST_CACHE_PREFIX}${userId}`
+          : null;
 
-    // Check Redis cache first
-    const redis = this.getRedis();
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      try {
-        const parsed: unknown = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          return parsed as Flashcard[];
+    // Check Redis cache first (only for default first page)
+    if (cacheKey) {
+      const redis = this.getRedis();
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        try {
+          const parsed: unknown = JSON.parse(cached);
+          if (parsed && typeof parsed === 'object' && 'data' in (parsed as Record<string, unknown>) && 'total' in (parsed as Record<string, unknown>)) {
+            return parsed as { data: Flashcard[]; total: number };
+          }
+        } catch {
+          this.logger.warn(
+            { cacheKey },
+            'Failed to parse cached flashcard list, falling back to database',
+          );
         }
-      } catch {
-        this.logger.warn(
-          { cacheKey },
-          'Failed to parse cached flashcard list, falling back to database',
-        );
       }
     }
 
     const supabase = this.supabaseService.getClient();
+
+    // Clamp pagination parameters to safe bounds
+    const safeLimit = Math.max(1, Math.min(limit, 500));
+    const safeOffset = Math.max(0, offset);
+
     let query = supabase
       .from('flashcards')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(safeOffset, safeOffset + safeLimit - 1);
 
     if (level !== undefined && !isNaN(level)) {
       query = query.eq('srs_level', level);
     }
 
     const response = await query;
-    if (response.error || !response.data) {
-      return [];
+    if (response.error) {
+      return { data: [], total: 0 };
     }
 
-    // Cache the result in Redis
-    void redis.set(
-      cacheKey,
-      JSON.stringify(response.data),
-      'EX',
-      FLASHCARD_LIST_CACHE_TTL,
-    );
+    const result = { data: response.data ?? [], total: response.count ?? 0 };
 
-    return response.data;
+    // Cache the first page result in Redis
+    if (cacheKey) {
+      const redis = this.getRedis();
+      void redis.set(
+        cacheKey,
+        JSON.stringify(result),
+        'EX',
+        FLASHCARD_LIST_CACHE_TTL,
+      );
+    }
+
+    return result;
   }
 
-  async getDueReviews(userId: string): Promise<Flashcard[]> {
-    const cacheKey = `${DUE_REVIEWS_CACHE_PREFIX}${userId}`;
+  async getDueReviews(
+    userId: string,
+    limit = 100,
+    offset = 0,
+  ): Promise<{ data: Flashcard[]; total: number }> {
+    // Use Redis cache only for default first page
+    const isFirstPage = offset === 0 && limit === 100;
+    const cacheKey = isFirstPage ? `${DUE_REVIEWS_CACHE_PREFIX}${userId}` : null;
 
-    // Check Redis cache first
-    const redis = this.getRedis();
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      try {
-        const parsed: unknown = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          return parsed as Flashcard[];
+    if (cacheKey) {
+      const redis = this.getRedis();
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        try {
+          const parsed: unknown = JSON.parse(cached);
+          if (parsed && typeof parsed === 'object' && 'data' in (parsed as Record<string, unknown>) && 'total' in (parsed as Record<string, unknown>)) {
+            return parsed as { data: Flashcard[]; total: number };
+          }
+        } catch {
+          this.logger.warn(
+            { cacheKey },
+            'Failed to parse cached due reviews, falling back to database',
+          );
         }
-      } catch {
-        this.logger.warn(
-          { cacheKey },
-          'Failed to parse cached due reviews, falling back to database',
-        );
       }
     }
 
     const supabase = this.supabaseService.getClient();
+
+    // Clamp pagination parameters to safe bounds
+    const safeLimit = Math.max(1, Math.min(limit, 500));
+    const safeOffset = Math.max(0, offset);
+
     const response = await supabase
       .from('flashcards')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
       .lt('srs_level', 4)
       .lte('next_review_at', new Date().toISOString())
-      .order('next_review_at', { ascending: true });
+      .order('next_review_at', { ascending: true })
+      .range(safeOffset, safeOffset + safeLimit - 1);
 
-    if (response.error || !response.data) {
-      return [];
+    if (response.error) {
+      return { data: [], total: 0 };
     }
 
-    // Cache the result in Redis (short TTL since due reviews change frequently)
-    void redis.set(
-      cacheKey,
-      JSON.stringify(response.data),
-      'EX',
-      DUE_REVIEWS_CACHE_TTL,
-    );
+    const result = { data: response.data ?? [], total: response.count ?? 0 };
 
-    return response.data;
+    // Cache the first page result in Redis (short TTL since due reviews change frequently)
+    if (cacheKey) {
+      const redis = this.getRedis();
+      void redis.set(
+        cacheKey,
+        JSON.stringify(result),
+        'EX',
+        DUE_REVIEWS_CACHE_TTL,
+      );
+    }
+
+    return result;
   }
 
   /**

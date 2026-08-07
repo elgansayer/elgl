@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -15,6 +16,7 @@ export class CreateFlashcardDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   word_token!: string;
 
   @ApiPropertyOptional({
@@ -23,6 +25,7 @@ export class CreateFlashcardDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   original_context?: string;
 
   @ApiProperty({
@@ -32,6 +35,7 @@ export class CreateFlashcardDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(500)
   translation!: string;
 
   @ApiPropertyOptional({
@@ -40,6 +44,7 @@ export class CreateFlashcardDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   definition?: string;
 
   @ApiPropertyOptional({
@@ -48,6 +53,7 @@ export class CreateFlashcardDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(2048)
   pronunciation_url?: string;
 }
 

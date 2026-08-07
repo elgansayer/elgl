@@ -50,7 +50,8 @@ export class SrsMetricsAggregator {
       const { data: efData } = await supabase
         .from('flashcards')
         .select('easiness_factor')
-        .not('easiness_factor', 'is', null);
+        .not('easiness_factor', 'is', null)
+        .limit(10000);
       if (efData && efData.length > 0) {
         const avgEf =
           efData.reduce((sum, row) => sum + (row.easiness_factor ?? 2.5), 0) /

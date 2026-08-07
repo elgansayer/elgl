@@ -152,48 +152,63 @@ describe('FlashcardsController', () => {
   });
 
   describe('getFlashcards', () => {
-    it('should return empty array if user is not provided', async () => {
+    it('should return empty data with total 0 if user is not provided', async () => {
       const result = await controller.getFlashcards(null);
-      expect(result).toEqual([]);
+      expect(result).toEqual({ data: [], total: 0 });
       expect(flashcardsService.getFlashcards).not.toHaveBeenCalled();
     });
 
-    it('should call service getFlashcards with parsed integer level', async () => {
-      const cards: Flashcard[] = [mockFlashcard()];
-      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
+    it('should call service getFlashcards with parsed integer level and default pagination', async () => {
+      const resultPayload = { data: [mockFlashcard()], total: 1 };
+      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(resultPayload);
 
       const result = await controller.getFlashcards(mockUser(), '3');
-      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3);
-      expect(result).toEqual(cards);
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', 3, 100, 0);
+      expect(result).toEqual(resultPayload);
     });
 
     it('should call service getFlashcards with undefined level when not provided', async () => {
-      const cards: Flashcard[] = [mockFlashcard()];
-      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(cards);
+      const resultPayload = { data: [mockFlashcard()], total: 1 };
+      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(resultPayload);
 
       const result = await controller.getFlashcards(mockUser());
-      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith(
-        'user-1',
-        undefined,
-      );
-      expect(result).toEqual(cards);
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', undefined, 100, 0);
+      expect(result).toEqual(resultPayload);
+    });
+
+    it('should pass limit and offset query params to service', async () => {
+      const resultPayload = { data: [], total: 0 };
+      (flashcardsService.getFlashcards as jest.Mock).mockResolvedValue(resultPayload);
+
+      const result = await controller.getFlashcards(mockUser(), undefined, '50', '10');
+      expect(flashcardsService.getFlashcards).toHaveBeenCalledWith('user-1', undefined, 50, 10);
+      expect(result).toEqual(resultPayload);
     });
   });
 
   describe('getDueReviews', () => {
-    it('should return empty array if user is not provided', async () => {
+    it('should return empty data with total 0 if user is not provided', async () => {
       const result = await controller.getDueReviews(null);
-      expect(result).toEqual([]);
+      expect(result).toEqual({ data: [], total: 0 });
       expect(flashcardsService.getDueReviews).not.toHaveBeenCalled();
     });
 
-    it('should call service getDueReviews when user is provided', async () => {
-      const cards: Flashcard[] = [mockFlashcard({ id: 'card-due' })];
-      (flashcardsService.getDueReviews as jest.Mock).mockResolvedValue(cards);
+    it('should call service getDueReviews when user is provided with default pagination', async () => {
+      const resultPayload = { data: [mockFlashcard({ id: 'card-due' })], total: 1 };
+      (flashcardsService.getDueReviews as jest.Mock).mockResolvedValue(resultPayload);
 
       const result = await controller.getDueReviews(mockUser());
-      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1');
-      expect(result).toEqual(cards);
+      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1', 100, 0);
+      expect(result).toEqual(resultPayload);
+    });
+
+    it('should pass limit and offset query params to service', async () => {
+      const resultPayload = { data: [], total: 0 };
+      (flashcardsService.getDueReviews as jest.Mock).mockResolvedValue(resultPayload);
+
+      const result = await controller.getDueReviews(mockUser(), '50', '10');
+      expect(flashcardsService.getDueReviews).toHaveBeenCalledWith('user-1', 50, 10);
+      expect(result).toEqual(resultPayload);
     });
   });
 });
