@@ -38,6 +38,8 @@ import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
+import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
+import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -58,8 +60,10 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     ThemeSelectorComponent,
     FontScaleSliderComponent,
     AppLanguageSelectorComponent,
-GiftAnimationOverlayComponent,
+    GiftAnimationOverlayComponent,
     ForcedUpdateModalComponent,
+    NoNetworkBannerComponent,
+    DesktopSidebarComponent,
   ],
   templateUrl: './app.component.html',
   host: {
@@ -228,6 +232,23 @@ export class AppComponent implements OnInit {
             roomName,
             isVideoCall,
           });
+        }
+
+        // Update unread counters for real-time chat messages
+        if (eventType === 'new_message') {
+          this.unreadCounter.incrementChatUnread();
+        }
+
+        // Update unread counters for real-time notifications
+        if (
+          eventType === 'follow' ||
+          eventType === 'like_profile' ||
+          eventType === 'like_moment' ||
+          eventType === 'comment_moment' ||
+          eventType === 'profile_visit' ||
+          eventType === 'system'
+        ) {
+          this.unreadCounter.incrementNotificationUnread();
         }
       });
 

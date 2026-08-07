@@ -67,7 +67,7 @@
             [class.text-text-primary]="isFollowing()"
             [class.border]="isFollowing()"
             [class.border-surface-100]="isFollowing()"
-          >
+           [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t">
             {{ (isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t }}
           </button>
         </div>

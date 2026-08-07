@@ -539,6 +539,8 @@
   "settings.appearanceSection": "外観",
   "settings.accentColor": "アクセントカラー",
   "settings.accentColorDesc": "アプリの外観をカスタマイズします。",
+  "settings.customColourLabel": "カスタムカラー",
+  "settings.customColourPlaceholder": "ヘキサカラコードを入力、例: #ff6b6b",
   "settings.vipRequired": "VIP限定",
   "settings.privacySection": "プライバシー設定",
   "settings.hideLocation": "ディスカバリーで位置情報を隠す",
@@ -575,7 +577,7 @@
   "system.memberRemoved": "メンバーが削除されました",
   "system.announcement": "📢 {{message}}",
   "dailyLoginModal.title": "デイリー報酬！",
-  "dailyLoginModal.body": "本日ログインして {coins} コインを獲得しました。",
+  "dailyLoginModal.body": "本日ログインして {{coins}} コインを獲得しました。",
   "dailyLoginModal.cta": "ありがとう！",
   "nav.notifications": "通知",
   "nav.compose": "作成",
@@ -597,7 +599,5 @@
   "auth.resetPassword.error": "パスワードのリセットに失敗しました。トークンが無効か期限切れです。",
   "auth.resetPassword.backToHome": "ホームに戻る",
   "common.pleaseWait": "お待ちください...",
-  "common.submit": "送信",
-  "restore_purchases": "購入を復元",
-  "restoring": "復元中..."
+  "common.submit": "送信"
 }
