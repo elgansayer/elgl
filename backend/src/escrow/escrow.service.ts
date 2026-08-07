@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import {
@@ -36,6 +37,7 @@ export class EscrowService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly circuitBreaker: CircuitBreakerService,
+    private readonly crashReportService: CrashReportService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -176,11 +178,29 @@ export class EscrowService {
       .single();
 
     if (txError || !txRow) {
-      // Refund the deducted coins on failure
-      await supabase
-        .from('users')
-        .update({ coins_balance: payerBalance })
-        .eq('id', payerId);
+      // Refund the deducted coins on failure -- critical rollback boundary
+      try {
+        await supabase
+          .from('users')
+          .update({ coins_balance: payerBalance })
+          .eq('id', payerId);
+      } catch (rollbackError) {
+        await this.crashReportService.reportCrash({
+          operation: 'holdCoins_rollback',
+          user_id: payerId,
+          error_type: 'RollbackFailure',
+          error_message: `Failed to rollback coin deduction after escrow creation failure: ${String(rollbackError)}`,
+          context: {
+            payer_id: payerId,
+            payee_id: dto.payee_id,
+            amount: dto.amount_coins,
+            original_balance: payerBalance,
+          },
+        });
+        throw new InternalServerErrorException(
+          'Critical error: coin deduction could not be rolled back. Please contact support.',
+        );
+      }
       this.logger.error(
         `Failed to create escrow transaction: ${txError?.message}`,
       );
