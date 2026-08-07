@@ -1,4 +1,4 @@
-import { Component, inject, signal, resource } from '@angular/core';
+import { Component, inject, signal, resource, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ModerationService,
@@ -15,11 +15,13 @@ import { TranslatePipe } from '../services/translate.pipe';
     <div class="min-h-screen bg-surface p-6 text-on-surface">
       <h1 class="mb-4 text-2xl font-bold">{{ 'moderation.title' | t }}</h1>
 
-      <div class="mb-4 flex gap-2">
+      <div class="mb-4 flex gap-2" role="tablist">
         <button
           class="rounded-t-lg px-4 py-2"
           [class.bg-primary]="type() === 'profile'"
           (click)="setType('profile')"
+          role="tab"
+          [attr.aria-selected]="type() === 'profile' ? 'true' : 'false'"
         >
           {{ 'moderation.profiles' | t }}
         </button>
@@ -27,6 +29,8 @@ import { TranslatePipe } from '../services/translate.pipe';
           class="rounded-t-lg px-4 py-2"
           [class.bg-primary]="type() === 'moment'"
           (click)="setType('moment')"
+          role="tab"
+          [attr.aria-selected]="type() === 'moment' ? 'true' : 'false'"
         >
           {{ 'moderation.moments' | t }}
         </button>
@@ -59,15 +63,15 @@ import { TranslatePipe } from '../services/translate.pipe';
         </button>
       </div>
 
-      @if (items.isLoading()) {
+      @if (loading()) {
         <p>{{ 'moderation.loading' | t }}</p>
-      } @else if (items.error()) {
-        <p>{{ 'moderation.error' | t }}</p>
-      } @else if (items.value()?.length === 0) {
+      } @else if (loadError()) {
+        <p class="text-red-500">{{ loadError() }}</p>
+      } @else if (filteredItems().length === 0) {
         <p>{{ 'moderation.noItems' | t }}</p>
       } @else {
         <ul class="space-y-4">
-          @for (item of items.value(); track item.id) {
+          @for (item of filteredItems(); track item.id) {
             <li class="rounded bg-elevated p-4">
               <div class="flex items-center justify-between">
                 <span class="font-semibold">{{ 'moderation.reason' | t }}: {{ item.reason }}</span>
@@ -130,18 +134,25 @@ export class ModerationQueueComponent {
   readonly type = signal<'moment' | 'profile'>('profile');
   readonly status = signal<string | undefined>(undefined);
 
-  readonly items = resource({
+  readonly itemsResource = resource({
     params: () => ({ type: this.type(), status: this.status() }),
-    loader: (param: {
-      request?: { type?: string; status?: string };
-      params?: { type?: string; status?: string };
-    }) => {
-      const request = param.request ?? param.params;
-      if (!request) return this.moderationService.getItems('profile');
-      const type =
-        request.type === 'moment' || request.type === 'profile' ? request.type : 'profile';
-      return this.moderationService.getItems(type, request.status);
+    loader: ({ params }) => {
+      const itemType = params.type === 'moment' || params.type === 'profile' ? params.type : 'profile';
+      return this.moderationService.getItems(itemType, params.status);
     },
+  });
+
+  readonly loading = this.itemsResource.isLoading;
+  readonly loadError = computed(() => {
+    const err = this.itemsResource.error();
+    return err ? 'moderation.error' : null;
+  });
+
+  readonly filteredItems = computed(() => {
+    const items = this.itemsResource.value() ?? [];
+    const currentStatus = this.status();
+    if (!currentStatus) return items;
+    return items.filter((i) => i.status === currentStatus);
   });
 
   readonly analysisResult = signal<UserAnalysisResult | null>(null);
@@ -158,12 +169,12 @@ export class ModerationQueueComponent {
 
   async approve(item: ModerationItem): Promise<void> {
     await this.moderationService.approveItem(item.id, item.type);
-    this.items.reload();
+    this.itemsResource.reload();
   }
 
   async reject(item: ModerationItem): Promise<void> {
     await this.moderationService.rejectItem(item.id, item.type);
-    this.items.reload();
+    this.itemsResource.reload();
   }
 
   async analyse(item: ModerationItem): Promise<void> {

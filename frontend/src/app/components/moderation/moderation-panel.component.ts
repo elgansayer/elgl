@@ -1,4 +1,4 @@
-import {Component, inject, signal} from '@angular/core';
+import { Component, inject, signal, resource, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
@@ -19,43 +19,38 @@ export class ModerationPanelComponent {
   private readonly moderationService = inject(ModerationService);
 
   currentFilter = signal<'moment' | 'profile'>('moment');
-  items = signal<ModerationItem[]>([]);
-  loading = signal(true);
   loadError = signal<string | null>(null);
   analysisResult = signal<UserAnalysisResult | null>(null);
   analysing = signal(false);
 
-  constructor() {
-    this.loadItems();
-  }
+  private readonly itemsResource = resource({
+    params: () => ({ filter: this.currentFilter() }),
+    loader: async ({ params }) => {
+      this.loadError.set(null);
+      try {
+        return await this.moderationService.getItems(params.filter);
+      } catch {
+        this.loadError.set('Failed to load items');
+        return [];
+      }
+    },
+  });
+
+  readonly items = computed(() => this.itemsResource.value() ?? []);
+  readonly loading = this.itemsResource.isLoading;
 
   filterByType(type: 'moment' | 'profile') {
     this.currentFilter.set(type);
-    this.loadItems();
-  }
-
-  private async loadItems() {
-    this.loading.set(true);
-    this.loadError.set(null);
-    try {
-      const items = await this.moderationService.getItems(this.currentFilter());
-      this.items.set(items);
-    } catch {
-      this.loadError.set('Failed to load items');
-      this.items.set([]);
-    } finally {
-      this.loading.set(false);
-    }
   }
 
   async approve(item: ModerationItem) {
     await this.moderationService.approveItem(item.id, item.type);
-    this.loadItems();
+    this.itemsResource.reload();
   }
 
   async reject(item: ModerationItem) {
     await this.moderationService.rejectItem(item.id, item.type);
-    this.loadItems();
+    this.itemsResource.reload();
   }
 
   async analyseUserProfile(userId: string) {
