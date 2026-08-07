@@ -3,6 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '@nestjs/common';
 import { CallsService } from './calls.service';
 
+const mockPinoLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+  trace: jest.fn(),
+};
+
 describe('CallsService', () => {
   let service: CallsService;
 
@@ -22,6 +30,10 @@ describe('CallsService', () => {
               return map[key];
             }),
           },
+        },
+        {
+          provide: 'PinoLogger:CallsService',
+          useValue: mockPinoLogger,
         },
       ],
     }).compile();

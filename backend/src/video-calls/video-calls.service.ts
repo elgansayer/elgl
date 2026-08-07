@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import {
   AccessToken,
   RoomServiceClient,
@@ -11,7 +12,11 @@ import { randomUUID as uuidv4 } from 'crypto';
 export class VideoCallsService {
   private roomService: RoomServiceClient;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @InjectPinoLogger(VideoCallsService.name)
+    private readonly logger: PinoLogger,
+  ) {
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
       this.configService.get<string>('LIVEKIT_API_KEY'),
@@ -30,7 +35,19 @@ export class VideoCallsService {
       maxParticipants: 2,
     };
 
-    await this.roomService.createRoom(createOptions);
+    try {
+      await this.roomService.createRoom(createOptions);
+      this.logger.info(
+        { roomName, userId },
+        `Video classroom "${roomName}" created by user ${userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        { error, roomName, userId },
+        `Failed to create video classroom "${roomName}"`,
+      );
+      throw error;
+    }
 
     const token = await this.generateToken(userId, roomName, true);
 
@@ -41,8 +58,20 @@ export class VideoCallsService {
     userId: string,
     roomName: string,
   ): Promise<{ token: string; roomName: string }> {
-    const token = await this.generateToken(userId, roomName, true);
-    return { token, roomName };
+    try {
+      const token = await this.generateToken(userId, roomName, true);
+      this.logger.info(
+        { roomName, userId },
+        `User ${userId} joined video classroom "${roomName}"`,
+      );
+      return { token, roomName };
+    } catch (error) {
+      this.logger.error(
+        { error, roomName, userId },
+        `Failed to join video classroom "${roomName}"`,
+      );
+      throw error;
+    }
   }
 
   private async generateToken(

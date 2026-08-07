@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
@@ -69,7 +70,11 @@ interface AuthUser {
 @Controller('audio-rooms')
 @UseGuards(SupabaseAuthGuard)
 export class AudioRoomsController {
-  constructor(private readonly audioRoomsService: AudioRoomsService) {}
+  constructor(
+    private readonly audioRoomsService: AudioRoomsService,
+    @InjectPinoLogger(AudioRoomsController.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   @Post('create')
   @HttpCode(HttpStatus.CREATED)

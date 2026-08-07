@@ -8,9 +8,10 @@ import { AudioRoomsController } from './audio-rooms.controller';
 import { AudioRoomsService } from './audio-rooms.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
+import { SharedLoggerModule } from '../common/logger/logger.module';
 
 @Module({
-  imports: [UsersModule, ChatModule, NlpModule],
+  imports: [UsersModule, ChatModule, NlpModule, SharedLoggerModule],
   controllers: [AudioRoomsController],
   providers: [
     AudioRoomsService,
