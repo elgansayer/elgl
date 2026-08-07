@@ -1838,8 +1838,7 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-  "wordModal.translationLabel": "Translation"
-,
+  "wordModal.translationLabel": "Translation",
   "escrow.title": "Escrow Payments",
   "escrow.offlineBanner": "You are offline. Escrow operations will be queued.",
   "escrow.syncPending": "Sync {{count}} pending operation(s)",
@@ -1859,6 +1858,6 @@
   "escrow.status.refunded": "Refunded",
   "escrow.status.disputed": "Disputed",
   "escrow.status.cancelled": "Cancelled",
-  "common.back": "Back",
-  "common.loading": "Loading..."
+  "economy.offlinePurchaseUnavailable": "Purchases are not available while offline. Please check your internet connection.",
+  "economy.offlineGiftQueued": "Gift has been queued and will be sent when your connection is restored."
 }
