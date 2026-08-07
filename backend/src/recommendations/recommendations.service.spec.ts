@@ -8,6 +8,13 @@ import { MatchmakingCrashReportService } from './matchmaking-crash-report.servic
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
 
+jest.mock('../common/retry', () => ({
+  withRetry: jest.fn((fn: () => unknown) => fn()),
+  isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
+}));
+
+import { withRetry } from '../common/retry';
+
 type QueryChainMock = {
   select: jest.Mock;
   eq: jest.Mock;
