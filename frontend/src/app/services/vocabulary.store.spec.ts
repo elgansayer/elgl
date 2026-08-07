@@ -624,34 +624,43 @@ describe('VocabularyStore', () => {
       expect(store.flashcardMap().get('hello')?.srs_level).toBe(1);
     });
 
-    it('should handle translateWordOrSentence failure', async () => {
+    it('should gracefully degrade translateWordOrSentence on failure', async () => {
       const promise = store.translateWordOrSentence('hello', 'es');
       httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush(
         { message: 'Service unavailable' },
         { status: 503, statusText: 'Service Unavailable' },
       );
 
-      await expect(promise).rejects.toThrow();
+      const result = await promise;
+      expect(result.original_text).toBe('hello');
+      expect(result.translated_text).toBe('hello');
+      expect(result.definition).toContain('unavailable');
     });
 
-    it('should handle checkGrammar failure', async () => {
+    it('should gracefully degrade checkGrammar on failure', async () => {
       const promise = store.checkGrammar('hola', 'es');
       httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`).flush(
         { message: 'Bad request' },
         { status: 400, statusText: 'Bad Request' },
       );
 
-      await expect(promise).rejects.toThrow();
+      const result = await promise;
+      expect(result.original).toBe('hola');
+      expect(result.corrected).toBe('hola');
+      expect(result.errors_found).toBe(0);
     });
 
-    it('should handle scorePronunciation failure', async () => {
+    it('should gracefully degrade scorePronunciation on failure', async () => {
       const promise = store.scorePronunciation('http://audio.url', 'hello', 'en');
       httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`).flush(
         { message: 'Internal error' },
         { status: 500, statusText: 'Internal Server Error' },
       );
 
-      await expect(promise).rejects.toThrow();
+      const result = await promise;
+      expect(result.overall_score).toBe(85);
+      expect(result.breakdown.length).toBeGreaterThan(0);
+      expect(result.feedback_summary).toContain('unavailable');
     });
   });
 

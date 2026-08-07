@@ -66,4 +66,125 @@ describe('DataScrubbingService', () => {
       expect(() => service.scrubLoginHistory([])).not.toThrow();
     });
   });
+
+  describe('scrubReceiptToken', () => {
+    it('returns null for null/undefined/empty input', () => {
+      expect(service.scrubReceiptToken(null)).toBeNull();
+      expect(service.scrubReceiptToken(undefined)).toBeNull();
+      expect(service.scrubReceiptToken('')).toBeNull();
+    });
+
+    it('returns null for tokens of 4 characters or fewer', () => {
+      expect(service.scrubReceiptToken('abc')).toBeNull();
+      expect(service.scrubReceiptToken('abcd')).toBeNull();
+    });
+
+    it('preserves only the last 4 characters with asterisks', () => {
+      expect(service.scrubReceiptToken('cs_live_a1b2c3d4e5f6g7h8')).toBe('***g7h8');
+      expect(service.scrubReceiptToken('ios_MIIaVeryLongBase64String==')).toBe('***ng==');
+    });
+
+    it('handles Stripe session ID format', () => {
+      const result = service.scrubReceiptToken('cs_test_a1iKdJfRjLpWm7NqXv3Z');
+      expect(result).toBe('***Xv3Z');
+      expect(result).not.toContain('cs_test');
+    });
+
+    it('handles Apple receipt data', () => {
+      const appleReceipt = 'MIJ8dGVzdC1yZWNlaXB0LWRhdGEtaGVyZQ==';
+      expect(service.scrubReceiptToken(appleReceipt)).toBe('***ZQ==');
+    });
+
+    it('trims whitespace before scrubbing', () => {
+      expect(service.scrubReceiptToken('  cs_live_abcdefgh  ')).toBe('***efgh');
+    });
+  });
+
+  describe('scrubCoinPurchaseRecords', () => {
+    it('scrubs receipt_token on every entry in place', () => {
+      const records = [
+        {
+          id: '1',
+          receipt_token: 'cs_live_a1b2c3d4e5f6',
+          transaction_id: 'txn_123',
+          platform: 'web',
+        },
+        {
+          id: '2',
+          receipt_token: 'ios_MIIaVeryLongBase64String==',
+          transaction_id: 'txn_456',
+          platform: 'ios',
+        },
+        { id: '3', receipt_token: null, transaction_id: 'txn_789' },
+        { id: '4' },
+      ];
+
+      service.scrubCoinPurchaseRecords(records);
+
+      expect(records[0].receipt_token).toBe('***e5f6');
+      expect(records[1].receipt_token).toBe('***ng==');
+      expect(records[2].receipt_token).toBeNull();
+      expect(records[3].receipt_token).toBeUndefined();
+
+      // transaction_id should be preserved (opaque provider IDs)
+      expect(records[0].transaction_id).toBe('txn_123');
+      expect(records[1].transaction_id).toBe('txn_456');
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubCoinPurchaseRecords([])).not.toThrow();
+    });
+  });
+
+  describe('scrubEconomyRecord', () => {
+    it('scrubs receipt_token and ip_address in a single record', () => {
+      const record = {
+        receipt_token: 'cs_live_abcdefghijklmnop',
+        ip_address: '203.0.113.42',
+        sender_id: 'user-sender-uuid',
+        receiver_id: 'user-receiver-uuid',
+      };
+
+      service.scrubEconomyRecord(record);
+
+      expect(record.receipt_token).toBe('***mnop');
+      expect(record.ip_address).toBe('203.0.113.0');
+      // sender_id / receiver_id are internal UUIDs; pass through
+      expect(record.sender_id).toBe('user-sender-uuid');
+      expect(record.receiver_id).toBe('user-receiver-uuid');
+    });
+
+    it('handles null fields gracefully', () => {
+      const record = {
+        receipt_token: null,
+        ip_address: null,
+        sender_id: null,
+        receiver_id: null,
+      };
+
+      expect(() => service.scrubEconomyRecord(record)).not.toThrow();
+      expect(record.receipt_token).toBeNull();
+      expect(record.ip_address).toBeNull();
+    });
+  });
+
+  describe('scrubGiftTransactionRecords', () => {
+    it('passes through sender_id and receiver_id unmodified (documented policy)', () => {
+      const records = [
+        { sender_id: 'sender-1', receiver_id: 'receiver-1' },
+        { sender_id: 'sender-2', receiver_id: 'receiver-2' },
+      ];
+
+      service.scrubGiftTransactionRecords(records);
+
+      expect(records[0].sender_id).toBe('sender-1');
+      expect(records[0].receiver_id).toBe('receiver-1');
+      expect(records[1].sender_id).toBe('sender-2');
+      expect(records[1].receiver_id).toBe('receiver-2');
+    });
+
+    it('handles an empty array gracefully', () => {
+      expect(() => service.scrubGiftTransactionRecords([])).not.toThrow();
+    });
+  });
 });
