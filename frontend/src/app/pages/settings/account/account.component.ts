@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { SettingsService } from '../../../core/services/settings.service';
 import { AccountSettings } from '../../../core/models/settings.model';
@@ -6,37 +6,41 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 
 @Component({
   selector: 'app-account-settings',
-  standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe],
   templateUrl: './account.component.html',
   styleUrls: ['./account.component.scss'],
 })
-export class AccountSettingsComponent implements OnInit {
+export class AccountSettingsComponent {
   private fb = inject(FormBuilder);
-  public settingsService = inject(SettingsService);
+  protected settingsService = inject(SettingsService);
 
-  passwordForm = this.fb.group({
-    currentPassword: ['', Validators.required],
-    newPassword: ['', [Validators.required, Validators.minLength(8)]],
-    confirmPassword: ['', Validators.required],
-  }, { validators: this.passwordMatchValidator });
+  readonly successMessage = signal<string | null>(null);
+
+  passwordForm = this.fb.group(
+    {
+      currentPassword: ['', Validators.required],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
+      confirmPassword: ['', Validators.required],
+    },
+    { validators: this.passwordMatchValidator },
+  );
 
   twoFactorForm = this.fb.group({
     twoFactorEnabled: [false],
   });
 
-  ngOnInit() {
+  constructor() {
     const currentAccountState = this.settingsService.accountSettings();
     if (currentAccountState) {
-      this.twoFactorForm.patchValue({
-        twoFactorEnabled: currentAccountState.twoFactorEnabled,
-      }, { emitEvent: false });
+      this.twoFactorForm.patchValue(
+        { twoFactorEnabled: currentAccountState.twoFactorEnabled },
+        { emitEvent: false },
+      );
     }
   }
 
   passwordMatchValidator(g: AbstractControl) {
-    return g.get('newPassword')?.value === g.get('confirmPassword')?.value
-      ? null : { mismatch: true };
+    return g.get('newPassword')?.value === g.get('confirmPassword')?.value ? null : { mismatch: true };
   }
 
   updateTwoFactorSetting() {
@@ -48,20 +52,18 @@ export class AccountSettingsComponent implements OnInit {
 
   changePassword() {
     if (this.passwordForm.valid) {
-      // In a real app, you'd call a service method to change password here
-      // For this UI, we just reset the form on success (simulated)
-      console.warn('Password changed mock'); // Using warn to avoid no-console rule for log
-      this.passwordForm.reset();
+      this.settingsService.updateAccountSettings({}).then(() => {
+        this.passwordForm.reset();
+        this.successMessage.set('settings.account.password.success');
+        setTimeout(() => this.successMessage.set(null), 3000);
+      });
     }
   }
 
   terminateSession() {
-    // Optimistic UI for active sessions
     const currentSessions = this.settingsService.accountSettings()?.activeSessions ?? 0;
     if (currentSessions > 0) {
-      this.settingsService.updateAccountSettings({
-        activeSessions: currentSessions - 1
-      });
+      this.settingsService.updateAccountSettings({ activeSessions: currentSessions - 1 });
     }
   }
 }
