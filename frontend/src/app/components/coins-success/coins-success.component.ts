@@ -43,6 +43,10 @@ export class CoinsSuccessComponent {
 
   readonly status = signal<'pending' | 'confirmed' | 'failed'>('pending');
 
+  // Imperative init required: route.queryParams is an Observable<Params> that
+  // emits once per navigation. Using resource() here would require converting to
+  // a signal first, but the route snapshot is already available synchronously.
+  // This is the one-off imperative pattern permitted by AGENTS.md §5.3.
   constructor() {
     void this.init();
   }

@@ -9,6 +9,8 @@ import {
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { RestorePurchasesButtonComponent } from '../restore-purchases-button/restore-purchases-button.component';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -17,14 +19,15 @@ import { environment } from '../../../environments/environment';
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     RestorePurchasesButtonComponent,
+    TranslatePipe,
   ],
   template: `
     <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-12 px-4">
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-12">
-          <h1 class="text-4xl font-bold text-white mb-4">Choose Your Plan</h1>
+          <h1 class="text-4xl font-bold text-white mb-4">{{ 'subscription.plans.title' | t }}</h1>
           <p class="text-slate-300 text-lg">
-            Unlock premium features to accelerate your language learning
+            {{ 'subscription.plans.subtitle' | t }}
           </p>
         </div>
 
@@ -39,7 +42,7 @@ import { environment } from '../../../environments/environment';
               "
               class="px-6 py-2 rounded-full font-medium transition-all duration-200"
             >
-              Monthly
+              {{ 'subscription.plans.intervalMonthly' | t }}
             </button>
             <button
               (click)="billingInterval.set('year')"
@@ -50,8 +53,8 @@ import { environment } from '../../../environments/environment';
               "
               class="px-6 py-2 rounded-full font-medium transition-all duration-200"
             >
-              Yearly
-              <span class="text-xs ms-1 text-green-400">Save 48%</span>
+              {{ 'subscription.plans.intervalYearly' | t }}
+              <span class="text-xs ms-1 text-green-400">{{ 'subscription.plans.savePercent' | t }}</span>
             </button>
           </div>
         </div>
@@ -82,8 +85,7 @@ import { environment } from '../../../environments/environment';
                   </div>
                   @if (billingInterval() === 'year' && plan.price_usd > 0) {
                     <p class="text-green-400 text-sm mt-1">
-                      {{ plan.price_ukp }} UKP / &#36;{{ plan.price_usd }} USD per month if paid
-                      monthly
+                      {{ 'subscription.plans.yearlyEquivalent' | t: { price_ukp: plan.price_ukp, price_usd: plan.price_usd } }}
                     </p>
                   }
                 </div>
@@ -110,7 +112,7 @@ import { environment } from '../../../environments/environment';
 
                 @if (plan.price_usd === 0) {
                   <app-button-secondary [disabled]="true" customClass="w-full">
-                    Current Plan
+                    {{ 'subscription.plans.currentPlan' | t }}
                   </app-button-secondary>
                 } @else {
                   <app-button-primary
@@ -119,9 +121,9 @@ import { environment } from '../../../environments/environment';
                     customClass="w-full"
                   >
                     @if (loading()) {
-                      Processing...
+                      {{ 'subscription.plans.processing' | t }}
                     } @else {
-                      Get Started
+                      {{ 'subscription.plans.getStarted' | t }}
                     }
                   </app-button-primary>
                 }
@@ -132,7 +134,7 @@ import { environment } from '../../../environments/environment';
       </div>
       <div class="mt-6 text-center">
         <p class="text-xs text-slate-400 mb-2">
-          Already purchased? Restore your previous purchases below.
+          {{ 'subscription.plans.restorePrompt' | t }}
         </p>
         <app-restore-purchases-button />
       </div>
@@ -150,6 +152,7 @@ export class SubscriptionPlansComponent {
   private plansService = inject(SubscriptionPlansService);
   private http = inject(HttpClient);
   private router = inject(Router);
+  private i18n = inject(I18nService);
 
   readonly plans = signal<SubscriptionPlan[]>([]);
   readonly billingInterval = signal<'month' | 'year'>('month');
@@ -161,7 +164,7 @@ export class SubscriptionPlansComponent {
         const plans = await this.plansService.getAllPlans();
         this.plans.set(plans);
       } catch (err) {
-        console.error('Failed to load plans', err);
+        // Plans load failure is non-blocking; the empty state handles this gracefully.
       }
     },
   });
@@ -175,7 +178,7 @@ export class SubscriptionPlansComponent {
   }
 
   getDisplayPrice(plan: SubscriptionPlan): string {
-    if (plan.price_usd === 0) return 'Free';
+    if (plan.price_usd === 0) return this.i18n.translate('subscription.plans.free');
     if (this.billingInterval() === 'year') {
       return '£50 / $63 USD';
     }
@@ -195,8 +198,7 @@ export class SubscriptionPlansComponent {
         ),
       );
       window.location.href = response.sessionUrl;
-    } catch (err) {
-      console.error('Failed to create checkout session', err);
+    } catch {
       this.loading.set(false);
     }
   }
