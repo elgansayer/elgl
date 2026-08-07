@@ -9,25 +9,6 @@ import { tap } from 'rxjs';
 import { Response } from 'express';
 
 /**
-<<<<<<< HEAD
- * Cloudflare edge-caching directives optimised for Escrow Payments.
- *
- * Strategy:
- *  - Escrow reads (list, get by ID): user-specific data, never cached at the
- *    CDN edge. Browsers must revalidate on every request via max-age=0,
- *    must-revalidate. Cloudflare CDN is instructed not to store via
- *    CDN-Cache-Control: private, no-store.
- *  - Escrow mutations (create, release, refund): never cached anywhere.
- *
- * Every response includes Vary: Authorization so that intermediaries
- * (Cloudflare, proxy layers) never serve a cached response across
- * different authenticated users.
- */
-export const ESCROW_CACHE_PRIVATE_SHORT = {
-  'Cache-Control': 'private, max-age=0, must-revalidate',
-  'CDN-Cache-Control': 'private, no-store',
-  'Vary': 'Authorization',
-=======
  * Cloudflare edge-caching constants optimised for Escrow Payments.
  *
  * Strategy:
@@ -54,13 +35,11 @@ export const ESCROW_CACHE_PRIVATE_SHORT = {
   'CDN-Cache-Control': 'private, max-age=120, stale-while-revalidate=300',
   'Vary': 'Authorization, Accept-Encoding',
   'Cache-Tag': 'escrow-transactions-v1',
->>>>>>> origin/main
 } as const;
 
 export const ESCROW_CACHE_PRIVATE_NO_STORE = {
-  'Cache-Control': 'private, no-store',
+  'Cache-Control': 'private, no-store, no-cache, must-revalidate',
   'CDN-Cache-Control': 'private, no-store',
-  'Vary': 'Authorization',
 } as const;
 
 @Injectable()
@@ -79,11 +58,7 @@ export class EscrowCacheInterceptor implements NestInterceptor {
         error: () => {
           response.setHeader('Cache-Control', 'private, no-store');
           response.setHeader('CDN-Cache-Control', 'private, no-store');
-<<<<<<< HEAD
-          response.setHeader('Vary', 'Authorization');
-=======
           response.removeHeader('Cache-Tag');
->>>>>>> origin/main
         },
       }),
     );
