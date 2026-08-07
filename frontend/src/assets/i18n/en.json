@@ -1454,6 +1454,7 @@
   "restoring": "Restoring",
   "review.error.gradeFailed": "Failed to save your review",
   "review.error.loadFailed": "Failed to load review cards",
+  "review.degradedBanner": "Running in degraded mode. Some features may be temporarily limited.",
   "rooms.roomChat.broadcastAiBtn": "Broadcast AI Caption",
   "rooms.roomChat.broadcastBtn": "Broadcast caption",
   "rooms.roomChat.empty": "No messages in this live room yet. Say hello to the stage speakers!",

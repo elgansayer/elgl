@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SrsOfflineService } from './srs-offline.service';
+import { SrsCircuitBreakerService } from './srs-circuit-breaker.service';
 import { HtmlSanitisationService } from './html-sanitisation.service';
 
 export interface Flashcard {
@@ -57,6 +58,7 @@ export class VocabularyStore {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private srsOffline = inject(SrsOfflineService);
+  private circuitBreaker = inject(SrsCircuitBreakerService);
   private errorHandler = inject(ErrorHandler);
   private htmlSanitiser = inject(HtmlSanitisationService);
   private flashcardsUrl = `${environment.apiUrl}/flashcards`;
@@ -74,6 +76,11 @@ export class VocabularyStore {
   readonly hasMoreFlashcards = signal<boolean>(true);
   /** Current page offset for paginated flashcard loading. */
   private flashcardPage = 0;
+
+  /** Whether the SRS backend is in a degraded state (circuit breaker open or unreachable) */
+  readonly isDegraded = signal(false);
+  /** Human-readable reason for the current degraded state */
+  readonly degradedReason = signal('');
 
   /** Cards queued for a deck-specific review session */
   readonly pendingReviewCards = signal<Flashcard[]>([]);
@@ -94,29 +101,34 @@ export class VocabularyStore {
    */
   async loadAllFlashcards(): Promise<void> {
     this.isLoading.set(true);
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', String(VocabularyStore.FLASHCARDS_PAGE_SIZE));
-      params.set('offset', '0');
-      const list = await firstValueFrom(
-        this.http.get<Flashcard[]>(`${this.flashcardsUrl}?${params.toString()}`, {
-          headers: this.getHeaders(),
-        }),
-      );
-      const sanitised = this.sanitiseFlashcards(list);
-      this.allFlashcards.set(sanitised);
-      this.flashcardPage = 0;
-      this.hasMoreFlashcards.set(sanitised.length >= VocabularyStore.FLASHCARDS_PAGE_SIZE);
-      const map = new Map<string, Flashcard>();
-      sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
-      this.flashcardMap.set(map);
-      // Cache for offline access
-      this.srsOffline.cacheFlashcards(sanitised).catch(() => undefined);
-    } catch (e) {
-      // Report error for crash tracking
-      this.reportSrsError('loadAllFlashcards', e);
-      // Offline fallback - serve from local cache
-      if (!navigator.onLine) {
+    const degradedCtx = { degraded: false, reason: '' };
+
+    await this.circuitBreaker.executeWithBreaker(
+      'srs-flashcards-list',
+      async () => {
+        const params = new URLSearchParams();
+        params.set('limit', String(VocabularyStore.FLASHCARDS_PAGE_SIZE));
+        params.set('offset', '0');
+        const list = await firstValueFrom(
+          this.http.get<Flashcard[]>(`${this.flashcardsUrl}?${params.toString()}`, {
+            headers: this.getHeaders(),
+          }),
+        );
+        const sanitised = this.sanitiseFlashcards(list);
+        this.allFlashcards.set(sanitised);
+        this.flashcardPage = 0;
+        this.hasMoreFlashcards.set(sanitised.length >= VocabularyStore.FLASHCARDS_PAGE_SIZE);
+        const map = new Map<string, Flashcard>();
+        sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
+        this.flashcardMap.set(map);
+        // Cache for offline access
+        this.srsOffline.cacheFlashcards(sanitised).catch(() => undefined);
+        this.isDegraded.set(false);
+        this.degradedReason.set('');
+      },
+      async () => {
+        // Graceful degradation: serve from local cache
+        this.reportSrsError('loadAllFlashcards', new Error(degradedCtx.reason || 'Circuit breaker / network error'));
         const cached = await this.srsOffline.getCachedFlashcards();
         if (cached.length > 0) {
           const sanitised = this.sanitiseFlashcards(cached);
@@ -126,10 +138,13 @@ export class VocabularyStore {
           sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
           this.flashcardMap.set(map);
         }
-      }
-    } finally {
-      this.isLoading.set(false);
-    }
+        this.isDegraded.set(true);
+        this.degradedReason.set(degradedCtx.reason || 'Flashcard data may be stale');
+      },
+      degradedCtx,
+    );
+
+    this.isLoading.set(false);
   }
 
   /**
@@ -182,25 +197,29 @@ export class VocabularyStore {
   }
 
   async loadDueReviews(): Promise<void> {
-    try {
-      const list = await firstValueFrom(
-        this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
-      );
-      const sanitised = this.sanitiseFlashcards(list);
-      this.dueReviews.set(sanitised);
-      // Cache for offline access
-      this.srsOffline.cacheDueReviews(sanitised).catch(() => undefined);
-    } catch (e) {
-      // Report error for crash tracking
-      this.reportSrsError('loadDueReviews', e);
-      // Offline fallback
-      if (!navigator.onLine) {
+    const degradedCtx = { degraded: false, reason: '' };
+
+    await this.circuitBreaker.executeWithBreaker(
+      'srs-due-reviews',
+      async () => {
+        const list = await firstValueFrom(
+          this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
+        );
+        const sanitised = this.sanitiseFlashcards(list);
+        this.dueReviews.set(sanitised);
+        this.srsOffline.cacheDueReviews(sanitised).catch(() => undefined);
+      },
+      async () => {
+        this.reportSrsError('loadDueReviews', new Error(degradedCtx.reason || 'Circuit breaker / network error'));
         const cached = await this.srsOffline.getCachedDueReviews();
         if (cached.length > 0) {
           this.dueReviews.set(this.sanitiseFlashcards(cached));
         }
-      }
-    }
+        this.isDegraded.set(true);
+        this.degradedReason.set(degradedCtx.reason || 'Due reviews may be stale');
+      },
+      degradedCtx,
+    );
   }
 
   getWordStatus(word: string): {
@@ -258,26 +277,31 @@ export class VocabularyStore {
     const current = this.allFlashcards().find((f) => f.id === flashcardId);
     const newLevel = current ? this.estimateNewLevel(current.srs_level, quality) : 0;
 
-    try {
-      const fc = await firstValueFrom(
-        this.http.patch<Flashcard>(
-          `${this.flashcardsUrl}/${flashcardId}/srs`,
-          { quality },
-          { headers: this.getHeaders() },
-        ),
-      );
-      const sanitised = this.sanitiseFlashcard(fc);
-      this.triggerHapticFeedback(sanitised.srs_level);
-      this.allFlashcards.update((list) => list.map((item) => (item.id === sanitised.id ? sanitised : item)));
-      this.flashcardMap.update((map) => {
-        const next = new Map(map);
-        next.set(sanitised.word_token.toLowerCase(), sanitised);
-        return next;
-      });
-      return sanitised;
-    } catch {
-      // Offline - queue the review and optimistically update local state
-      if (!navigator.onLine) {
+    const degradedCtx = { degraded: false, reason: '' };
+
+    return this.circuitBreaker.executeWithBreaker(
+      'srs-update-level',
+      async () => {
+        const fc = await firstValueFrom(
+          this.http.patch<Flashcard>(
+            `${this.flashcardsUrl}/${flashcardId}/srs`,
+            { quality },
+            { headers: this.getHeaders() },
+          ),
+        );
+        const sanitised = this.sanitiseFlashcard(fc);
+        this.triggerHapticFeedback(sanitised.srs_level);
+        this.allFlashcards.update((list) => list.map((item) => (item.id === sanitised.id ? sanitised : item)));
+        this.flashcardMap.update((map) => {
+          const next = new Map(map);
+          next.set(sanitised.word_token.toLowerCase(), sanitised);
+          return next;
+        });
+        return sanitised;
+      },
+      async () => {
+        // Graceful degradation: queue offline and optimistically update
+        this.reportSrsError('updateSrsLevel', new Error(degradedCtx.reason || 'Circuit breaker / network error'));
         await this.srsOffline.queueSrsReview(flashcardId, quality, newLevel);
         this.triggerHapticFeedback(newLevel);
         // Optimistically update local state
@@ -294,12 +318,15 @@ export class VocabularyStore {
           }
           return next;
         });
+        this.isDegraded.set(true);
+        this.degradedReason.set(degradedCtx.reason || 'Review queued offline');
         // Return the optimistically updated card
         const updated = this.allFlashcards().find((f) => f.id === flashcardId);
-        if (updated) return updated;
-      }
-      throw new Error('Failed to update SRS level');
-    }
+        if (!updated) throw new Error('Failed to update SRS level - card not found');
+        return updated;
+      },
+      degradedCtx,
+    );
   }
 
   /**

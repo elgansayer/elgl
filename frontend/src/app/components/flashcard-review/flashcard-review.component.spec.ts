@@ -35,6 +35,10 @@ describe('FlashcardReviewComponent', () => {
           useValue: {
             pendingReviewCards: () => MOCK_CARDS,
             updateSrsLevel: () => Promise.resolve({ ...MOCK_CARD }),
+            loadAllFlashcards: () => Promise.resolve(),
+            loadDueReviews: () => Promise.resolve(),
+            isDegraded: () => false,
+            degradedReason: () => '',
           },
         },
       ],

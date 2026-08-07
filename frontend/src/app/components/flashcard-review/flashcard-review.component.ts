@@ -19,6 +19,15 @@ type ReviewGrade = 'again' | 'good' | 'known';
       (retry)="handleRetry()"
     >
     <div class="mx-auto max-w-md space-y-6 pb-20 pt-4">
+      <!-- Graceful degradation banner -->
+      @if (isDegraded()) {
+        <div class="rounded-sheet border border-amber-500/30 bg-amber-500/10 p-3 text-center" role="status" aria-live="polite">
+          <p class="text-xs font-bold text-amber-400">{{ 'review.degradedBanner' | t }}</p>
+          @if (degradedReason()) {
+            <p class="mt-1 text-[11px] text-text-muted">{{ degradedReason() }}</p>
+          }
+        </div>
+      }
       @if (isLoading()) {
         <!-- Skeleton loading state -->
         <section class="app-card app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
@@ -360,6 +369,9 @@ export class FlashcardReviewComponent {
   readonly isSaving = signal(false);
   readonly isLoading = signal(false);
   readonly loadError = signal(false);
+  /** True when the SRS backend is degraded (circuit breaker open, offline queue in use) */
+  readonly isDegraded = signal(false);
+  readonly degradedReason = signal('');
 
   readonly currentCard = computed(() => this.reviewCards()[this.currentIndex()] ?? null);
   readonly isComplete = computed(
@@ -422,6 +434,9 @@ export class FlashcardReviewComponent {
     } finally {
       this.isLoading.set(false);
     }
+    // Mirror the store's degraded state
+    this.isDegraded.set(this.vocabStore.isDegraded());
+    this.degradedReason.set(this.vocabStore.degradedReason());
   }
 
   flipCard(): void {
