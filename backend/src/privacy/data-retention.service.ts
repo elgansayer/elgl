@@ -100,7 +100,7 @@ export class DataRetentionService {
     }
 
     for (const user of usersToDelete) {
-      const userId = (user as { id: string }).id;
+      const userId = user.id;
       try {
         // Delete user's personal data from all tables
         await this.wipeUserData(userId);
@@ -140,15 +140,25 @@ export class DataRetentionService {
   }
 
   /**
+<<<<<<< HEAD
    * Remove ALL personal data for a user from related tables.
    *
    * GDPR "right to erasure" -- comprehensively wipes every user-owned record
    * across the LingQ Reading Engine (flashcards/decks), chat, moments,
    * gamification, social graphs, notifications, monetisation, and security.
+=======
+   * Remove all personal data for a user from related tables.
+   *
+   * Covers the full Virtual Coin Economy surface area so that no PII or
+   * financial-linkable records survive the GDPR deletion. Receipt tokens
+   * and transaction IDs are destroyed; coin balances are already zeroed
+   * on the anonymised user row.
+>>>>>>> origin/main
    */
   private async wipeUserData(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
+<<<<<<< HEAD
     // --- LingQ Reading Engine / SRS ---
     // Delete deck_flashcards junction rows for user's decks first (FK cascade handles
     // most, but explicit deletion ensures clean wipe regardless of cascade config).
@@ -224,11 +234,40 @@ export class DataRetentionService {
 
     // --- Security & audit ---
     await supabase.from('login_history').delete().eq('user_id', userId);
+=======
+    // Chat / social content
+    await supabase.from('chat_messages').delete().eq('sender_id', userId);
+    await supabase.from('moments').delete().eq('author_id', userId);
+    await supabase
+      .from('moment_comments')
+      .delete()
+      .eq('author_id', userId);
+
+    // Flashcards / decks
+    await supabase.from('flashcards').delete().eq('user_id', userId);
+    await supabase.from('decks').delete().eq('user_id', userId);
+
+    // Favourites
+    await supabase.from('favourites').delete().eq('user_id', userId);
+
+    // Blocks (both directions)
+    await supabase.from('blocks').delete().eq('blocker_id', userId);
+    await supabase.from('blocks').delete().eq('blocked_id', userId);
+
+    // Login history
+    await supabase.from('login_history').delete().eq('user_id', userId);
+
+    // Reports
+>>>>>>> origin/main
     await supabase.from('reports').delete().eq('reporter_id', userId);
     await supabase.from('safety_reports').delete().eq('reporter_id', userId);
     await supabase.from('password_reset_tokens').delete().eq('user_id', userId);
 
+<<<<<<< HEAD
     // --- Notifications ---
+=======
+    // Notifications
+>>>>>>> origin/main
     await supabase
       .from('notifications')
       .delete()
@@ -238,6 +277,36 @@ export class DataRetentionService {
       .delete()
       .eq('actor_id', userId);
 
+<<<<<<< HEAD
     this.logger.log(`Wiped all personal data for user ${userId}`);
+=======
+    // --- Virtual Coin Economy ---
+    // Coin purchases (receipt tokens, transaction IDs -- PII under GDPR)
+    await supabase.from('coin_purchases').delete().eq('user_id', userId);
+
+    // Gift transactions (both sent and received)
+    await supabase
+      .from('gift_transactions')
+      .delete()
+      .eq('sender_id', userId);
+    await supabase
+      .from('gift_transactions')
+      .delete()
+      .eq('receiver_id', userId);
+
+    // Sticker pack ownership
+    await supabase
+      .from('user_sticker_packs')
+      .delete()
+      .eq('user_id', userId);
+
+    // User statistics (may contain coin-related aggregated data)
+    await supabase
+      .from('user_statistics')
+      .delete()
+      .eq('user_id', userId);
+
+    this.logger.log(`Wiped personal data for user ${userId}`);
+>>>>>>> origin/main
   }
 }

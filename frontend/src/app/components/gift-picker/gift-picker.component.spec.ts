@@ -77,6 +77,18 @@ describe('GiftPickerComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-, border-s, border-e)', () => {
+    const modal = fixture.nativeElement.querySelector('.max-w-lg');
+    expect(modal).toBeTruthy();
+    const html = modal.outerHTML;
+    expect(html).not.toMatch(/\bpl-\d/);
+    expect(html).not.toMatch(/\bpr-\d/);
+    expect(html).not.toMatch(/\bml-\d/);
+    expect(html).not.toMatch(/\bmr-\d/);
+    expect(html).not.toMatch(/\bborder-l\b/);
+    expect(html).not.toMatch(/\bborder-r\b/);
+  });
+
   it('should display the receiver name in select prompt', () => {
     const promptEl = fixture.debugElement.query(By.css('.space-y-3 span.text-xs'));
     expect(promptEl).not.toBeNull();

@@ -10,17 +10,6 @@ export interface SrsErrorContext {
   srsLevel?: number;
 }
 
-class SrsContextError extends Error {
-  readonly srsContext: SrsErrorContext;
-  constructor(message: string, srsContext: SrsErrorContext, stack?: string) {
-    super(message);
-    this.srsContext = srsContext;
-    if (stack) {
-      this.stack = stack;
-    }
-  }
-}
-
 @Component({
   selector: 'app-srs-error-boundary',
   standalone: true,
@@ -118,12 +107,7 @@ export class SrsErrorBoundaryComponent {
 
   private reportErrorInternal(error: Error): void {
     const ctx = this.context();
-    const enriched = new SrsContextError(
-      error.message,
-      ctx,
-      error.stack,
-    );
-    enriched.name = error.name;
+    const enriched = Object.assign(error, { srsContext: ctx });
     this.errorHandler.handleError(enriched);
   }
 }

@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { AdminBlocksComponent } from './admin-blocks.component';
 import { AdminService, AdminBlockEntry, AdminBlocksListResult } from '../../services/admin.service';
