@@ -4,6 +4,7 @@ import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { PinoLogger } from 'nestjs-pino';
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -90,6 +91,16 @@ describe('DiscoveryService', () => {
         {
           provide: AudioRoomsService,
           useValue: mockAudioRoomsService,
+        },
+        {
+          provide: `PinoLogger:${DiscoveryService.name}`,
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+            trace: jest.fn(),
+          },
         },
       ],
     }).compile();
