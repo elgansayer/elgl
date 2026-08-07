@@ -56,11 +56,12 @@
         "/api/discovery/**",
         "/api/moments/feed**",
         "/api/users/profile/**",
-        "/api/languages/**"
+        "/api/languages/**",
+        "/api/escrow/**"
       ],
       "cacheConfig": {
         "strategy": "performance",
-        "maxSize": 100,
+        "maxSize": 150,
         "maxAge": "1h",
         "timeout": "5s"
       }
@@ -127,7 +128,8 @@
     "/chat/**",
     "/profile/**",
     "/settings/**",
-    "/admin/**"
+    "/admin/**",
+    "/escrow"
   ],
   "navigationRequestStrategy": "performance"
 }
