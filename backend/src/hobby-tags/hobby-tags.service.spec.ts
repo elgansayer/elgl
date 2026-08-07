@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { HobbyTagsService } from './hobby-tags.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 function makeBuilder(response: unknown) {
   const builder: any = {};
-  for (const method of ['insert', 'select', 'eq', 'order', 'single', 'delete', 'update']) {
+  for (const method of ['insert', 'select', 'eq', 'order', 'single', 'delete', 'update', 'in']) {
     builder[method] = jest.fn().mockReturnValue(builder);
   }
-  // For .select().eq().eq().single() etc., the final call needs to resolve
   builder.then = (
     resolve: (value: unknown) => void,
     reject?: (reason: unknown) => void,
@@ -20,6 +20,7 @@ describe('HobbyTagsService', () => {
   let service: HobbyTagsService;
   let mockSupabaseClient: any;
   let mockSupabaseService: { getClient: jest.Mock };
+  let mockConfigService: { get: jest.Mock };
 
   beforeEach(async () => {
     mockSupabaseClient = {
@@ -28,11 +29,15 @@ describe('HobbyTagsService', () => {
     mockSupabaseService = {
       getClient: jest.fn().mockReturnValue(mockSupabaseClient),
     };
+    mockConfigService = {
+      get: jest.fn().mockReturnValue(null),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HobbyTagsService,
         { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -242,7 +247,7 @@ describe('HobbyTagsService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should return empty array when no vocabulary matches language', async () => {
+    it('should return empty array when no vocabulary matches language and no base vocab', async () => {
       const userHobbyTags = [
         {
           id: 'ut-1',
@@ -250,8 +255,8 @@ describe('HobbyTagsService', () => {
           hobby_tag_id: '1',
           hobby_tag: {
             id: '1',
-            name: 'Cooking',
-            icon: '🍳',
+            name: 'CustomTagNoBase',
+            icon: '🎯',
             target_vocabulary: [
               { word: 'recipe', translation: 'receta', language: 'es' },
             ],
@@ -265,7 +270,7 @@ describe('HobbyTagsService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should handle null target_vocabulary gracefully', async () => {
+    it('should handle null target_vocabulary gracefully and no base vocab', async () => {
       const userHobbyTags = [
         {
           id: 'ut-1',
@@ -273,8 +278,8 @@ describe('HobbyTagsService', () => {
           hobby_tag_id: '1',
           hobby_tag: {
             id: '1',
-            name: 'Reading',
-            icon: '📚',
+            name: 'CustomTagNoBase',
+            icon: '🎯',
             target_vocabulary: null,
           },
         },
@@ -284,6 +289,57 @@ describe('HobbyTagsService', () => {
 
       const result = await service.getVocabularyForUser('u1', 'es');
       expect(result).toEqual([]);
+    });
+
+    it('should dynamically translate using base vocabulary when no cached translation exists for language', async () => {
+      const userHobbyTags = [
+        {
+          id: 'ut-1',
+          user_id: 'u1',
+          hobby_tag_id: '1',
+          proficiency_level: 2,
+          hobby_tag: {
+            id: '1',
+            name: 'Cooking',
+            category: 'Food',
+            icon: '🍳',
+            target_vocabulary: [
+              { word: 'recipe', translation: 'receta', language: 'es' },
+            ],
+          },
+        },
+      ];
+
+      mockConfigService.get.mockReturnValue('mock-deepl-key');
+
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            translations: [
+              { text: '레시피' },
+              { text: '재료' },
+              { text: '끓이다' },
+              { text: '썰다' },
+              { text: '굽다' },
+            ],
+          }),
+      });
+      globalThis.fetch = fetchMock as any;
+
+      const builder = makeBuilder({ data: userHobbyTags, error: null });
+      const updateBuilder = makeBuilder({ data: null, error: null });
+      mockSupabaseClient.from
+        .mockReturnValueOnce(builder)   // get user hobby tags
+        .mockReturnValue(updateBuilder); // subsequent from() for cache update
+
+      const result = await service.getVocabularyForUser('u1', 'ko');
+      expect(result).toHaveLength(5);
+      expect(result[0].word).toBe('recipe');
+      expect(result[0].translation).toBe('레시피');
+      expect(result[1].word).toBe('ingredient');
+      expect(result[1].translation).toBe('재료');
+      expect(result[0].hobbyTagName).toBe('Cooking');
     });
 
     it('should skip user tags with null hobby_tag', async () => {
