@@ -10,7 +10,6 @@ type DeckView = 'list' | 'detail';
 
 const DECK_COLOURS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
 const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '📖', '🎓', '🌟', '💡', '🗣️', '📝', '🎵', '🏆'];
-const DRAG_THRESHOLD_PX = 60;
 
 @Component({
   selector: 'app-flashcard-deck',
@@ -57,7 +56,7 @@ const DRAG_THRESHOLD_PX = 60;
             <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
               <h4 class="text-sm font-bold text-text-primary">{{ 'deck.createTitle' | t }}</h4>
               <div>
-                <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</label>
+                <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</span>
                 <input
                   [(ngModel)]="newDeckName"
                   [placeholder]="'deck.namePlaceholder' | t"
@@ -66,7 +65,7 @@ const DRAG_THRESHOLD_PX = 60;
                 />
               </div>
               <div>
-                <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</label>
+                <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</span>
                 <input
                   [(ngModel)]="newDeckDescription"
                   [placeholder]="'deck.descriptionPlaceholder' | t"
@@ -76,7 +75,7 @@ const DRAG_THRESHOLD_PX = 60;
               </div>
               <div class="flex flex-wrap gap-3">
                 <div class="min-w-[120px]">
-                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</label>
+                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</span>
                   <div class="flex flex-wrap gap-1.5">
                     @for (c of deckColourOptions; track c) {
                       <button
@@ -88,12 +87,12 @@ const DRAG_THRESHOLD_PX = 60;
                         [class.border-white]="newDeckColour() === c"
                         [class.border-transparent]="newDeckColour() !== c"
                         [attr.aria-label]="'deck.colourAriaLabel' | t: { colour: c }"
-                      ></button>
+                      ><span class="sr-only">{{ c }}</span></button>
                     }
                   </div>
                 </div>
                 <div class="min-w-[120px]">
-                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</label>
+                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</span>
                   <div class="flex flex-wrap gap-1.5">
                     @for (ic of deckIconOptions; track ic) {
                       <button
@@ -232,16 +231,16 @@ const DRAG_THRESHOLD_PX = 60;
               <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
                 <h4 class="text-sm font-bold text-text-primary">{{ 'deck.editTitle' | t }}</h4>
                 <div>
-                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</label>
+                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</span>
                   <input [(ngModel)]="editDeckName" class="app-input w-full" maxlength="60" />
                 </div>
                 <div>
-                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</label>
+                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</span>
                   <input [(ngModel)]="editDeckDescription" class="app-input w-full" maxlength="120" />
                 </div>
                 <div class="flex flex-wrap gap-3">
                   <div class="min-w-[120px]">
-                    <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</label>
+                    <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</span>
                     <div class="flex flex-wrap gap-1.5">
                       @for (c of deckColourOptions; track c) {
                         <button
@@ -252,12 +251,12 @@ const DRAG_THRESHOLD_PX = 60;
                           [class.scale-125]="editDeckColour() === c"
                           [class.border-white]="editDeckColour() === c"
                           [class.border-transparent]="editDeckColour() !== c"
-                        ></button>
+                        ><span class="sr-only">{{ c }}</span></button>
                       }
                     </div>
                   </div>
                   <div class="min-w-[120px]">
-                    <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</label>
+                    <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</span>
                     <div class="flex flex-wrap gap-1.5">
                       @for (ic of deckIconOptions; track ic) {
                         <button
@@ -519,7 +518,7 @@ export class FlashcardDeckComponent {
     }
   }
 
-  startDeckReview(deck: Deck): void {
+  startDeckReview(_deck: Deck): void {
     // Set pending review cards in the vocab store and navigate to review page
     this.vocabStore.pendingReviewCards.set([...this.deckCards()]);
     void this.router.navigate(['/review']);
