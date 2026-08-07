@@ -115,7 +115,11 @@ describe('LiveChatOverlayComponent', () => {
       overlayComponent.inputText.set('Hello world');
       overlayComponent.sendMessage();
     }
+<<<<<<< HEAD
     expect(mockCentrifugo['publish']).toHaveBeenCalledWith('room_test-room', {
+=======
+    expect(mockCentrifugo.publish).toHaveBeenCalledWith('room_test-room', {
+>>>>>>> origin/main
       type: 'text',
       content: 'Hello world',
       senderName: 'TestUser',
@@ -134,7 +138,11 @@ describe('LiveChatOverlayComponent', () => {
       overlayComponent.inputText.set('   ');
       overlayComponent.sendMessage();
     }
+<<<<<<< HEAD
     expect(mockCentrifugo['publish']).not.toHaveBeenCalled();
+=======
+    expect(mockCentrifugo.publish).not.toHaveBeenCalled();
+>>>>>>> origin/main
   });
 
   it('should cap messages at 50', () => {
@@ -145,7 +153,11 @@ describe('LiveChatOverlayComponent', () => {
     expect(overlayComponent).toBeTruthy();
     if (overlayComponent) {
       overlayComponent.messages.set(
+<<<<<<< HEAD
         Array.from({ length: 50 }, (_, i) => ({
+=======
+        Array.from({ length: 50 }, (_, _i) => ({
+>>>>>>> origin/main
           id: `msg-\x24{i}`,
           senderId: 'u1',
           senderName: 'Test',
