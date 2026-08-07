@@ -35,7 +35,11 @@ interface EscrowRow {
   imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
   templateUrl: './escrow-payments.component.html',
 })
+<<<<<<< HEAD
 export class EscrowPaymentsComponent {
+=======
+export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
+>>>>>>> origin/main
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
@@ -53,11 +57,16 @@ export class EscrowPaymentsComponent {
   readonly showCreateForm = signal(false);
   readonly showDisputeForm = signal<string | null>(null);
 
-  readonly createForm = signal({
+  readonly createForm = signal<{
+    partner_id: string;
+    amount: number;
+    description: string;
+    service_type: EscrowServiceType;
+  }>({
     partner_id: '',
     amount: 0,
     description: '',
-    service_type: 'other' as EscrowServiceType,
+    service_type: 'other',
   });
 
   readonly disputeReason = signal('');

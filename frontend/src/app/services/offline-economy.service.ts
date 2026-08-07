@@ -198,7 +198,7 @@ export class OfflineEconomyService {
 
   // --- Generic IDB helpers ---
 
-  private putInStore(storeName: string, value: Record<string, unknown>): Promise<void> {
+  private putInStore(storeName: string, value: object): Promise<void> {
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);

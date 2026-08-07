@@ -168,12 +168,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
           class="relative z-10 flex flex-col items-center gap-3"
           [class.animate-zoom-in]="animationService.isVisible()"
         >
-          <div class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-8 py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2">
-            <span class="text-7xl filter drop-shadow-lg">{{ anim.giftIcon }}</span>
-            <h3 class="text-2xl font-black tracking-wide text-center">
+          <div class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-4 sm:px-8 py-4 sm:py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 max-w-[90vw]">
+            <span class="text-5xl sm:text-7xl filter drop-shadow-lg">{{ anim.giftIcon }}</span>
+            <h3 class="text-lg sm:text-2xl font-black tracking-wide text-center">
               {{ 'gift.broadcastTitle' | t: { giftName: anim.giftName } }}
             </h3>
-            <p class="text-sm font-extrabold text-amber-100 text-center">              {{
+            <p class="text-xs sm:text-sm font-extrabold text-amber-100 text-center">              {{
                 'gift.broadcastDesc'
                   | t
                     : {
