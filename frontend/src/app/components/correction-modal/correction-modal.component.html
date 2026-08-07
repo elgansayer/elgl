@@ -56,9 +56,9 @@
           [ngModel]="correctedText()"
           (ngModelChange)="correctedText.set($event)"
           rows="3"
-          placeholder="Edit sentence to correct grammar, spelling, or natural phrasing..."
+          [placeholder]="'correction.editPlaceholder' | t"
           class="w-full bg-surface-300 border border-neon-blue/40 rounded-2xl p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-neon-blue resize-none"
-         [attr.aria-label]="'Edit sentence to correct grammar, spelling, or natural phrasing...'">
+         [attr.aria-label]="'correction.editPlaceholder' | t">
         </textarea>
       </div>
 
@@ -82,9 +82,9 @@
           type="text"
           [ngModel]="explanation()"
           (ngModelChange)="explanation.set($event)"
-          placeholder="Explain grammar rule, nuance, or native alternative..."
+          [placeholder]="'correction.explainPlaceholder' | t"
           class="w-full bg-surface-300 border border-surface-100 rounded-2xl px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-surface-100"
-         [attr.aria-label]="'Explain grammar rule, nuance, or native alternative...'"/>
+         [attr.aria-label]="'correction.explainPlaceholder' | t"/>
       </div>
     </div>
 
