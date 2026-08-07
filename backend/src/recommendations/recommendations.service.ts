@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
+import { withRetry } from '../common/retry';
 import { MOCK_USERS } from '../mock-data';
 
 export interface RecommendedUserDto {
@@ -51,10 +52,13 @@ export class RecommendationsService {
     const redis = this.supabaseService.getRedisClient();
 
     try {
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('id, native_language, target_languages')
-        .eq('privacy_hide_from_search', false);
+      const { data: users, error } = await withRetry(
+        () =>
+          supabase
+            .from('users')
+            .select('id, native_language, target_languages')
+            .eq('privacy_hide_from_search', false),
+      );
 
       if (error || !users) {
         throw new Error(`Failed to fetch users: ${error?.message}`);
@@ -67,17 +71,20 @@ export class RecommendationsService {
         const nativeLang = user.native_language as string | null;
 
         // Find language exchange partners: native in user's target AND learning user's native
-        const { data: matches } = await supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .neq('id', user.id)
-          .eq('privacy_hide_from_search', false)
-          .in('native_language', targetLanguages)
-          .contains('target_languages', nativeLang ? [nativeLang] : [])
-          .order('is_serious_learner', { ascending: false })
-          .limit(DAILY_LIMIT);
+        const { data: matches } = await withRetry(
+          () =>
+            supabase
+              .from('users')
+              .select(
+                'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+              )
+              .neq('id', user.id)
+              .eq('privacy_hide_from_search', false)
+              .in('native_language', targetLanguages)
+              .contains('target_languages', nativeLang ? [nativeLang] : [])
+              .order('is_serious_learner', { ascending: false })
+              .limit(DAILY_LIMIT),
+        );
 
         if (matches && matches.length > 0) {
           const dtos: RecommendedUserDto[] = (matches as UserRow[]).map(
@@ -254,10 +261,10 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: ownTags, error: tagsError } = await supabase
-      .from('user_interests')
-      .select('tag')
-      .eq('user_id', userId);
+    const { data: ownTags, error: tagsError } = await withRetry(
+      () =>
+        supabase.from('user_interests').select('tag').eq('user_id', userId),
+    );
 
     if (tagsError) {
       throw new Error(tagsError.message);
@@ -276,11 +283,14 @@ export class RecommendationsService {
       return [];
     }
 
-    const { data: shared, error: sharedError } = await supabase
-      .from('user_interests')
-      .select('user_id, tag')
-      .in('tag', tags)
-      .neq('user_id', userId);
+    const { data: shared, error: sharedError } = await withRetry(
+      () =>
+        supabase
+          .from('user_interests')
+          .select('user_id, tag')
+          .in('tag', tags)
+          .neq('user_id', userId),
+    );
 
     if (sharedError) {
       throw new Error(sharedError.message);
@@ -304,13 +314,16 @@ export class RecommendationsService {
 
     const candidateIds = Array.from(sharedCount.keys());
 
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select(
-        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-      )
-      .in('id', candidateIds)
-      .eq('privacy_hide_from_search', false);
+    const { data: users, error: usersError } = await withRetry(
+      () =>
+        supabase
+          .from('users')
+          .select(
+            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+          )
+          .in('id', candidateIds)
+          .eq('privacy_hide_from_search', false),
+    );
 
     if (usersError) {
       throw new Error(usersError.message);
@@ -346,11 +359,14 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('native_language, target_languages')
-      .eq('id', userId)
-      .maybeSingle();
+    const { data: user, error: userError } = await withRetry(
+      () =>
+        supabase
+          .from('users')
+          .select('native_language, target_languages')
+          .eq('id', userId)
+          .maybeSingle(),
+    );
 
     if (userError || !user) {
       throw new Error(
@@ -369,17 +385,20 @@ export class RecommendationsService {
       return [];
     }
 
-    const { data: matches, error: matchError } = await supabase
-      .from('users')
-      .select(
-        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-      )
-      .neq('id', userId)
-      .eq('privacy_hide_from_search', false)
-      .in('native_language', targetLanguages)
-      .contains('target_languages', [nativeLang])
-      .order('is_serious_learner', { ascending: false })
-      .limit(FALLBACK_LIMIT);
+    const { data: matches, error: matchError } = await withRetry(
+      () =>
+        supabase
+          .from('users')
+          .select(
+            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+          )
+          .neq('id', userId)
+          .eq('privacy_hide_from_search', false)
+          .in('native_language', targetLanguages)
+          .contains('target_languages', [nativeLang])
+          .order('is_serious_learner', { ascending: false })
+          .limit(FALLBACK_LIMIT),
+    );
 
     if (matchError) {
       throw new Error(matchError.message);
@@ -408,15 +427,18 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: users, error } = await supabase
-      .from('users')
-      .select(
-        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-      )
-      .neq('id', userId)
-      .eq('privacy_hide_from_search', false)
-      .order('study_streak_days', { ascending: false })
-      .limit(FALLBACK_LIMIT);
+    const { data: users, error } = await withRetry(
+      () =>
+        supabase
+          .from('users')
+          .select(
+            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+          )
+          .neq('id', userId)
+          .eq('privacy_hide_from_search', false)
+          .order('study_streak_days', { ascending: false })
+          .limit(FALLBACK_LIMIT),
+    );
 
     if (error) {
       throw new Error(error.message);
