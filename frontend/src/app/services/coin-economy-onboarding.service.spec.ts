@@ -15,14 +15,14 @@ describe('CoinEconomyOnboardingService', () => {
   });
 
   it('should return false for isCompleted when not set', () => {
-    expect(service.isCompleted()).toBeFalse();
-    expect(service.isTourInProgress()).toBeFalse();
+    expect(service.isCompleted()).toBe(false);
+    expect(service.isTourInProgress()).toBe(false);
   });
 
   it('should return true for isCompleted after markComplete', () => {
     service.markComplete();
-    expect(service.isCompleted()).toBeTrue();
-    expect(service.isTourInProgress()).toBeFalse();
+    expect(service.isCompleted()).toBe(true);
+    expect(service.isTourInProgress()).toBe(false);
   });
 
   it('should have six step names', () => {
@@ -36,11 +36,11 @@ describe('CoinEconomyOnboardingService', () => {
   });
 
   it('should track isTourInProgress signal', () => {
-    expect(service.isTourInProgress()).toBeFalse();
+    expect(service.isTourInProgress()).toBe(false);
     service.isTourInProgress.set(true);
-    expect(service.isTourInProgress()).toBeTrue();
+    expect(service.isTourInProgress()).toBe(true);
     service.isTourInProgress.set(false);
-    expect(service.isTourInProgress()).toBeFalse();
+    expect(service.isTourInProgress()).toBe(false);
   });
 
   it('should persist completion to localStorage', () => {
@@ -50,10 +50,10 @@ describe('CoinEconomyOnboardingService', () => {
 
   it('should reset the onboarding state', () => {
     service.markComplete();
-    expect(service.isCompleted()).toBeTrue();
+    expect(service.isCompleted()).toBe(true);
     service.reset();
-    expect(service.isCompleted()).toBeFalse();
-    expect(service.isTourInProgress()).toBeFalse();
+    expect(service.isCompleted()).toBe(false);
+    expect(service.isTourInProgress()).toBe(false);
     expect(window.localStorage.getItem('hellotalk_coin_economy_onboarding_done')).toBeNull();
   });
 });

@@ -9,6 +9,7 @@ import { CrashReportService } from './crash-report.service';
 import { EscrowService } from './escrow.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { CreateEscrowHoldDto } from './dto/escrow.dto';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
@@ -64,12 +65,22 @@ describe('EscrowService', () => {
       }),
     };
 
+    const mockMetricsService = {
+      recordEscrowCreated: jest.fn(),
+      recordEscrowReleased: jest.fn(),
+      recordEscrowRefunded: jest.fn(),
+      recordEscrowCancelled: jest.fn(),
+      recordEscrowAutoRefunded: jest.fn(),
+      recordEscrowDegradedOperation: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EscrowService,
         CircuitBreakerService,
         { provide: SupabaseService, useValue: mockSupabaseService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: MetricsService, useValue: mockMetricsService },
         {
           provide: CrashReportService,
           useValue: {

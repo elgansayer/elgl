@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
+import { MetricsService } from '../metrics/metrics.service';
 import Redis from 'ioredis';
 import {
   EscrowTransaction,
@@ -49,6 +50,7 @@ export class EscrowService {
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly crashReportService: CrashReportService,
     private readonly configService: ConfigService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   /**
@@ -229,6 +231,9 @@ export class EscrowService {
       `Escrow hold: ${dto.amount_coins} coins from ${payerId} to ${dto.payee_id} for "${dto.reason}"`,
     );
 
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowCreated(dto.amount_coins);
+
     return txRow;
   }
 
@@ -259,6 +264,7 @@ export class EscrowService {
         'escrow_degraded_queue',
         JSON.stringify(degradedRecord),
       );
+      this.metricsService.recordEscrowDegradedOperation();
     } catch (redisError: unknown) {
       this.logger.error(
         `Failed to enqueue degraded escrow: ${redisError instanceof Error ? redisError.message : String(redisError)}`,
@@ -404,6 +410,9 @@ export class EscrowService {
       `Escrow released: ${transactionId} - ${tx.amount_coins} coins to ${tx.payee_id}`,
     );
 
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowReleased(tx.amount_coins);
+
     return updated;
   }
 
@@ -540,6 +549,9 @@ export class EscrowService {
           `Escrow refunded: ${transactionId} - ${tx.amount_coins} coins to ${tx.payer_id}`,
         );
 
+        // Record metric for Datadog alerting (#2381)
+        this.metricsService.recordEscrowRefunded(tx.amount_coins, reason || 'manual');
+
         return updated;
       },
       async () => {
@@ -666,7 +678,74 @@ export class EscrowService {
 
     this.logger.log(`Escrow cancelled: ${transactionId}`);
 
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowCancelled(tx.amount_coins);
+
     this.invalidateEscrowCaches(transactionId, tx.payer_id, tx.payee_id);
+
+    return this.toResponse(updated);
+  }
+
+  /**
+   * File a dispute against an escrow transaction.
+   * Either party can dispute a held escrow. Updates status to 'disputed'
+   * and stores the dispute reason with optional evidence.
+   */
+  async disputeEscrow(
+    transactionId: string,
+    userId: string,
+    reason: string,
+    evidence?: string,
+  ): Promise<EscrowTransactionResponse> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: txRow, error: txError } = await supabase
+      .from('escrow_transactions' as never)
+      .select('*')
+      .eq('id', transactionId)
+      .single();
+
+    if (txError || !txRow) {
+      throw new NotFoundException('Escrow transaction not found');
+    }
+
+    const tx = txRow as EscrowTransaction;
+
+    if (tx.payer_id !== userId && tx.payee_id !== userId) {
+      throw new BadRequestException('Not authorised to dispute this escrow');
+    }
+
+    if (tx.status !== 'held') {
+      throw new ConflictException(
+        `Cannot dispute escrow in '${tx.status}' status. Only held escrows can be disputed.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await supabase
+      .from('escrow_transactions' as never)
+      .update({
+        status: 'disputed' as EscrowStatus,
+        reason: `${tx.reason ?? ''}\n[DISPUTE by ${userId}: ${reason}]`.trim(),
+        metadata: {
+          ...(tx.metadata as Record<string, unknown> ?? {}),
+          dispute_initiator: userId,
+          dispute_filed_at: now,
+          dispute_evidence: evidence ?? null,
+        },
+      } as never)
+      .eq('id', transactionId)
+      .select('*')
+      .single();
+
+    if (updateError || !updated) {
+      this.logger.error(
+        `Failed to update escrow ${transactionId} status to disputed: ${updateError?.message ?? 'invalid data returned'}`,
+      );
+      throw new InternalServerErrorException('Failed to file dispute');
+    }
+
+    this.logger.log(`Escrow disputed: ${transactionId} by user ${userId}`);
 
     return this.toResponse(updated);
   }

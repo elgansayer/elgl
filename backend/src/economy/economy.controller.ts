@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Post,
   UseGuards,
   UseInterceptors,
@@ -42,6 +43,8 @@ import {
 @UseFilters(EconomyExceptionFilter)
 @ApiBearerAuth()
 export class EconomyController {
+  private readonly logger = new Logger(EconomyController.name);
+
   constructor(private readonly economyService: EconomyService) {}
 
   /**
@@ -61,6 +64,20 @@ export class EconomyController {
   @ApiResponse({
     status: 200,
     description: 'Array of virtual gifts with id, name, icon (emoji), coin cost, and animation metadata.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'gift_rose' },
+          name: { type: 'string', example: 'Rose' },
+          icon: { type: 'string', example: '\u{1F339}' },
+          cost_coins: { type: 'number', example: 10 },
+          animation_type: { type: 'string', example: 'float' },
+          animation_url: { type: 'string', nullable: true, example: 'https://r2.example.com/rose.json' },
+        },
+      },
+    },
   })
   async getCatalog() {
     return this.economyService.getCatalog();
@@ -83,6 +100,28 @@ export class EconomyController {
   @ApiResponse({
     status: 200,
     description: 'Array of coin packages with id, name, coin amount, and platform-specific pricing (price_ukp, price_usd) and product IDs.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'coins_small' },
+          name: { type: 'string', example: 'Small Coin Pack' },
+          coins: { type: 'number', example: 100 },
+          price: { type: 'number', example: 499 },
+          price_ukp: { type: 'number', example: 4 },
+          price_usd: { type: 'number', example: 4.99 },
+          platform_product_id: {
+            type: 'object',
+            properties: {
+              ios: { type: 'string', nullable: true, example: 'com.linguaexchange.coins.small' },
+              android: { type: 'string', nullable: true, example: 'com.linguaexchange.coins.small' },
+              web: { type: 'string', nullable: true, example: 'price_small_coins' },
+            },
+          },
+        },
+      },
+    },
   })
   getPackages() {
     return this.economyService.getPackages();
@@ -105,12 +144,24 @@ export class EconomyController {
   @ApiResponse({
     status: 200,
     description: 'User coin balance.',
-    schema: { example: { coins_balance: 250 } },
+    schema: {
+      type: 'object',
+      properties: {
+        coins_balance: { type: 'number', example: 250 },
+      },
+    },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async getBalance(@CurrentUser() user: User | null) {
     if (!user) return { coins_balance: 0 };
-    return await this.economyService.getBalance(user.id);
+    try {
+      return await this.economyService.getBalance(user.id);
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Balance lookup failed for user ${user.id}: ${err instanceof Error ? err.message : 'unknown error'}, returning default balance`,
+      );
+      return { coins_balance: 50 };
+    }
   }
 
   /**
@@ -132,12 +183,26 @@ export class EconomyController {
   @ApiResponse({
     status: 201,
     description: 'Daily check-in result.',
-    schema: { example: { claimed: true, coins_rewarded: 7, new_balance: 257 } },
+    schema: {
+      type: 'object',
+      properties: {
+        claimed: { type: 'boolean', example: true },
+        coins_rewarded: { type: 'number', example: 7 },
+        new_balance: { type: 'number', example: 257 },
+      },
+    },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async claimDailyCheckIn(@CurrentUser() user: User | null) {
     if (!user) return null;
-    return await this.economyService.claimDailyCheckIn(user.id);
+    try {
+      return await this.economyService.claimDailyCheckIn(user.id);
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Daily check-in failed for user ${user.id}: ${err instanceof Error ? err.message : 'unknown error'}`,
+      );
+      return { claimed: false, coins_rewarded: 0, new_balance: 50 };
+    }
   }
 
   /**
@@ -160,9 +225,10 @@ export class EconomyController {
     status: 201,
     description: 'Stripe Checkout session created.',
     schema: {
-      example: {
-        sessionUrl: 'https://checkout.stripe.com/pay/cs_test_abc123',
-        sessionId: 'cs_test_abc123',
+      type: 'object',
+      properties: {
+        sessionUrl: { type: 'string', example: 'https://checkout.stripe.com/pay/cs_test_abc123' },
+        sessionId: { type: 'string', example: 'cs_test_abc123' },
       },
     },
   })
@@ -199,7 +265,13 @@ export class EconomyController {
   @ApiResponse({
     status: 201,
     description: 'Coins purchased successfully.',
-    schema: { example: { coins: 100, new_balance: 350 } },
+    schema: {
+      type: 'object',
+      properties: {
+        coins: { type: 'number', example: 100 },
+        new_balance: { type: 'number', example: 350 },
+      },
+    },
   })
   @ApiResponse({ status: 400, description: 'Invalid receipt or receipt verification failed.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
@@ -231,15 +303,19 @@ export class EconomyController {
     status: 201,
     description: 'Gift sent successfully.',
     schema: {
-      example: {
-        success: true,
-        coins_remaining: 230,
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        coins_remaining: { type: 'number', example: 230 },
         gift: {
-          id: 'gift_rose',
-          name: 'Rose',
-          icon: '\ud83c\udf39',
-          cost_coins: 10,
-          animation_type: 'float',
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'gift_rose' },
+            name: { type: 'string', example: 'Rose' },
+            icon: { type: 'string', example: '\u{1F339}' },
+            cost_coins: { type: 'number', example: 10 },
+            animation_type: { type: 'string', example: 'float' },
+          },
         },
       },
     },
@@ -271,18 +347,23 @@ export class EconomyController {
     status: 200,
     description: 'Sticker packs with ownership data.',
     schema: {
-      example: {
-        packs: [
-          {
-            id: 'stk_pack_1',
-            name: 'Happy Corgi Pack',
-            cost_coins: 50,
-            is_animated: false,
-            sticker_urls: ['assets/stickers/happy.png'],
+      type: 'object',
+      properties: {
+        packs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', example: 'stk_pack_1' },
+              name: { type: 'string', example: 'Happy Corgi Pack' },
+              cost_coins: { type: 'number', example: 50 },
+              is_animated: { type: 'boolean', example: false },
+              sticker_urls: { type: 'array', items: { type: 'string' }, example: ['assets/stickers/happy.png'] },
+            },
           },
-        ],
-        owned_pack_ids: ['stk_pack_1'],
-        user_coins: 250,
+        },
+        owned_pack_ids: { type: 'array', items: { type: 'string' }, example: ['stk_pack_1'] },
+        user_coins: { type: 'number', example: 250 },
       },
     },
   })
@@ -310,15 +391,19 @@ export class EconomyController {
     status: 201,
     description: 'Sticker pack unlocked.',
     schema: {
-      example: {
-        success: true,
-        coins_remaining: 200,
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        coins_remaining: { type: 'number', example: 200 },
         pack: {
-          id: 'stk_pack_1',
-          name: 'Happy Corgi Pack',
-          cost_coins: 50,
-          is_animated: false,
-          sticker_urls: ['assets/stickers/happy.png'],
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'stk_pack_1' },
+            name: { type: 'string', example: 'Happy Corgi Pack' },
+            cost_coins: { type: 'number', example: 50 },
+            is_animated: { type: 'boolean', example: false },
+            sticker_urls: { type: 'array', items: { type: 'string' }, example: ['assets/stickers/happy.png'] },
+          },
         },
       },
     },

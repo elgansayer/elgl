@@ -53,6 +53,17 @@ prometheus_scrape:
       - hellotalk_reading_engine_session_duration_seconds: histogram
       - hellotalk_reading_engine_words_looked_up_total: counter
       - hellotalk_reading_engine_daily_active_readers: gauge
+      # Escrow Payment metrics (Datadog custom metrics, #2381)
+      - hellotalk_escrow_transactions_created_total: counter
+      - hellotalk_escrow_transactions_released_total: counter
+      - hellotalk_escrow_transactions_refunded_total: counter
+      - hellotalk_escrow_transactions_cancelled_total: counter
+      - hellotalk_escrow_total_held: gauge
+      - hellotalk_escrow_total_coins_held: gauge
+      - hellotalk_escrow_amount_per_transaction: histogram
+      - hellotalk_escrow_stale_held_count: gauge
+      - hellotalk_escrow_auto_refund_total: counter
+      - hellotalk_escrow_degraded_queue_size: gauge
       # Infrastructure metrics
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter
