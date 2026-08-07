@@ -1,4 +1,4 @@
-<div class="inline leading-relaxed select-text font-medium text-base">
+<div class="inline leading-relaxed select-text font-medium text-base" role="text" [attr.aria-label]="'tokenisedText.textContentAriaLabel' | t">
   @for (token of tokens(); track token.index) {
     <span
       (click)="onTokenClick(token)"
@@ -6,8 +6,9 @@
       (keydown.space)="onTokenClick(token); $event.preventDefault()"
       [attr.tabindex]="token.isWordLike ? 0 : null"
       [attr.role]="token.isWordLike ? 'button' : null"
+      [attr.aria-label]="token.isWordLike ? ('tokenisedText.lookupWordAriaLabel' | t: { word: token.segment }) : null"
       [class]="
-        'transition-colors rounded px-0.5 ' +
+        'transition-colors rounded px-0.5 focus-visible:outline-2 focus-visible:outline-primary ' +
         (token.isWordLike ? vocabStore.getWordStatus(token.segment).colorClass : '')
       "
     >
@@ -15,7 +16,7 @@
     </span>
   }
   @if (transliteration()) {
-    <div class="transliteration mt-1 text-xs leading-snug text-slate-500" dir="ltr">
+    <div class="transliteration mt-1 text-xs leading-snug text-slate-500" dir="ltr" [attr.aria-label]="'tokenisedText.transliterationAriaLabel' | t: { text: transliteration() }">
       {{ transliteration() }}
     </div>
   }

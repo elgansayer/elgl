@@ -1,18 +1,12 @@
 import { showToast } from '../../services/toast.service';
-<<<<<<< HEAD
 import { Component, inject, signal, computed, input, output, effect, ErrorHandler } from '@angular/core';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
-=======
-import { Component, OnInit, inject, signal, input, output, computed, viewChild, ErrorHandler } from '@angular/core';
-import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
-import { TranslatePipe } from '../../services/translate.pipe';
 import {
   SrsErrorBoundaryComponent,
   SrsErrorContext,
 } from '../srs-error-boundary/srs-error-boundary.component';
->>>>>>> origin/main
 
 @Component({
   selector: 'app-word-definition-modal',
@@ -66,6 +60,7 @@ import {
                     (click)="setLevel(0)"
                     [disabled]="isSaving()"
                     class="flex-1 rounded-app bg-rose-500/20 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/30 disabled:opacity-50"
+                    [attr.aria-label]="'wordModal.resetBtn' | t"
                   >
                     {{ 'wordModal.resetBtn' | t }}
                   </button>
@@ -73,6 +68,7 @@ import {
                     (click)="setLevel(1)"
                     [disabled]="isSaving()"
                     class="flex-1 rounded-app bg-amber-500/20 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500/30 disabled:opacity-50"
+                    [attr.aria-label]="'wordModal.learningBtn' | t"
                   >
                     {{ 'wordModal.learningBtn' | t }}
                   </button>
@@ -80,6 +76,7 @@ import {
                     (click)="setLevel(4)"
                     [disabled]="isSaving()"
                     class="flex-1 rounded-app bg-emerald-500/20 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50"
+                    [attr.aria-label]="'wordModal.knownBtn' | t"
                   >
                     {{ 'wordModal.knownBtn' | t }}
                   </button>
@@ -99,7 +96,7 @@ import {
     `,
   ],
 })
-export class WordDefinitionModalComponent implements OnInit {
+export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
   private readonly sanitisation = inject(HtmlSanitisationService);
   private errorHandler = inject(ErrorHandler);
@@ -116,18 +113,6 @@ export class WordDefinitionModalComponent implements OnInit {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
-<<<<<<< HEAD
-  readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
-
-  constructor() {
-    // Auto-fetch definition when word token changes, replacing ngOnInit
-    effect(() => {
-      const token = this.wordToken();
-      const target = this.targetLanguage();
-      const status = this.vocabStore.getWordStatus(token);
-=======
-  readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
-
   readonly errorContext = computed<SrsErrorContext>(() => ({
     component: 'word-definition-modal',
     operation: 'lookup',
@@ -138,17 +123,17 @@ export class WordDefinitionModalComponent implements OnInit {
     },
   }));
 
-  async ngOnInit(): Promise<void> {
-    try {
-      const status = this.vocabStore.getWordStatus(this.wordToken());
->>>>>>> origin/main
+  constructor() {
+    // Auto-fetch definition when word token changes
+    effect(() => {
+      const token = this.wordToken();
+      const target = this.targetLanguage();
+      const status = this.vocabStore.getWordStatus(token);
       if (status.flashcard) {
         this.existingCard.set(status.flashcard);
       }
-      await this.fetchDefinition();
-    } catch (err) {
-      this.handleError(err, 'init');
-    }
+      this.fetchDefinition().catch((err) => this.handleError(err, 'init'));
+    });
   }
 
   handleRetry(): void {
@@ -158,9 +143,10 @@ export class WordDefinitionModalComponent implements OnInit {
   async fetchDefinition(): Promise<void> {
     this.isLoading.set(true);
     try {
-<<<<<<< HEAD
-      const res = await this.vocabStore.translateWordOrSentence(wordToken, targetLang);
-      // Sanitise all user-visible translation result fields
+      const res = await this.vocabStore.translateWordOrSentence(
+        this.wordToken(),
+        this.targetLanguage(),
+      );
       this.translationResult.set({
         ...res,
         original_text: this.sanitisation.sanitiseText(res.original_text),
@@ -170,29 +156,13 @@ export class WordDefinitionModalComponent implements OnInit {
         definition: res.definition ? this.sanitisation.sanitiseText(res.definition) : undefined,
         pronunciation_url: res.pronunciation_url ? this.sanitisation.sanitiseUrl(res.pronunciation_url) : undefined,
       });
-    } catch (e) {
-      this.reportError('fetchDefinition', e);
-      // Fallback display
-      this.translationResult.set({
-        original_text: this.sanitisation.sanitiseText(wordToken),
-        translated_text: `Translation of "${this.sanitisation.sanitiseText(wordToken)}"`,
-        detected_language: 'auto',
-        definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
-        transliteration: this.sanitisation.sanitiseText(wordToken),
-=======
-      const res = await this.vocabStore.translateWordOrSentence(
-        this.wordToken(),
-        this.targetLanguage(),
-      );
-      this.translationResult.set(res);
     } catch (err) {
       this.translationResult.set({
-        original_text: this.wordToken(),
-        translated_text: `Translation of "${this.wordToken()}"`,
+        original_text: this.sanitisation.sanitiseText(this.wordToken()),
+        translated_text: `Translation of "${this.sanitisation.sanitiseText(this.wordToken())}"`,
         detected_language: 'auto',
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
-        transliteration: this.wordToken(),
->>>>>>> origin/main
+        transliteration: this.sanitisation.sanitiseText(this.wordToken()),
       });
       this.handleError(err, 'fetchDefinition');
     } finally {
@@ -203,18 +173,11 @@ export class WordDefinitionModalComponent implements OnInit {
   playAudio(): void {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
-<<<<<<< HEAD
       const safeUrl = this.sanitisation.sanitiseUrl(url);
       if (safeUrl) {
         const audio = new Audio(safeUrl);
-        audio.play().catch((e) => this.reportError('playAudio', e));
+        audio.play().catch((err) => this.handleError(err, 'playAudio'));
       }
-=======
-      const audio = new Audio(url);
-      audio.play().catch((err) => {
-        this.handleError(err, 'playAudio');
-      });
->>>>>>> origin/main
     }
   }
 
@@ -260,10 +223,13 @@ export class WordDefinitionModalComponent implements OnInit {
 
   private handleError(err: unknown, operation: string): void {
     const error = err instanceof Error ? err : new Error(String(err));
-    this.errorBoundary()?.captureError(error, undefined, {
-      operation,
-      wordToken: this.wordToken(),
-      srsLevel: this.existingCard()?.srs_level,
-    });
+    const errorBoundary = document.querySelector('app-srs-error-boundary') as unknown as { captureError: (error: Error, userMessage?: string, extra?: Record<string, unknown>) => void } | null;
+    if (errorBoundary?.captureError) {
+      errorBoundary.captureError(error, undefined, {
+        operation,
+        wordToken: this.wordToken(),
+        srsLevel: this.existingCard()?.srs_level,
+      });
+    }
   }
 }

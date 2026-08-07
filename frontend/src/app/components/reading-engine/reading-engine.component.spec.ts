@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
@@ -7,7 +7,10 @@ import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 
 class I18nStub {
-  translate(key: string): string {
+  translate(key: string, params?: Record<string, unknown>): string {
+    if (params) {
+      return `${key} ${JSON.stringify(params)}`;
+    }
     return key;
   }
 }
@@ -67,7 +70,6 @@ describe('ReadingEngineComponent', () => {
   });
 
   it('should signal isLoading when resource is loading', () => {
-    // Resource starts loading asynchronously
     expect(component.isLoading()).toBeDefined();
   });
 
@@ -144,5 +146,37 @@ describe('ReadingEngineComponent', () => {
 
   it('should return empty distinct topics when no articles loaded', () => {
     expect(component.distinctTopics()).toEqual([]);
+  });
+
+  describe('keyboard navigation', () => {
+    it('should have tabIds array with correct ids', () => {
+      const tabIds = (component as unknown as { tabIds: readonly string[] }).tabIds;
+      expect(tabIds).toEqual(['tab-articles', 'tab-vocabulary', 'tab-history']);
+    });
+
+    it('should call preventDefault on arrow key handlers', () => {
+      const event = new KeyboardEvent('keydown', { key: 'ArrowLeft' });
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+      component.focusPreviousTab(event);
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('readonly properties', () => {
+    it('should have isLoading signal that returns boolean', () => {
+      const loading = component.isLoading();
+      expect(typeof loading).toBe('boolean');
+    });
+
+    it('should have hasError signal that returns boolean', () => {
+      const hasErr = component.hasError();
+      expect(typeof hasErr).toBe('boolean');
+    });
+
+    it('should have hasNoArticles signal that returns boolean', () => {
+      const hasNo = component.hasNoArticles();
+      expect(typeof hasNo).toBe('boolean');
+    });
   });
 });

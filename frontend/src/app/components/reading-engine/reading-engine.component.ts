@@ -28,45 +28,67 @@ interface ReadingArticle {
         <h1 class="app-section-title">{{ 'readingEngine.title' | t }}</h1>
         <p class="app-muted">{{ 'readingEngine.subtitle' | t }}</p>
       </div>
-      <span class="app-chip bg-primary/20 text-primary font-bold text-xs">
+      <span class="app-chip bg-primary/20 text-primary font-bold text-xs" aria-live="polite">
         {{ 'readingEngine.vocabularyCount' | t: { count: vocabularyCount() } }}
       </span>
     </div>
 
     <nav class="flex gap-2 border-b border-surface-100 pb-2" role="tablist" [attr.aria-label]="'readingEngine.tabNavAriaLabel' | t">
       <button type="button" role="tab"
+        id="tab-articles"
+        aria-controls="panel-articles"
         [attr.aria-selected]="activeTab() === 'articles'"
+        [attr.tabindex]="activeTab() === 'articles' ? 0 : -1"
         (click)="activeTab.set('articles')"
+        (keydown.arrowLeft)="focusPreviousTab($event)"
+        (keydown.arrowRight)="focusNextTab($event)"
+        (keydown.home)="focusFirstTab($event)"
+        (keydown.end)="focusLastTab($event)"
         [class.bg-primary]="activeTab() === 'articles'" [class.text-white]="activeTab() === 'articles'"
         [class.bg-surface-300]="activeTab() !== 'articles'" [class.text-text-secondary]="activeTab() !== 'articles'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-4 py-2 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary">
         {{ 'readingEngine.tab.articles' | t }}
       </button>
       <button type="button" role="tab"
+        id="tab-vocabulary"
+        aria-controls="panel-vocabulary"
         [attr.aria-selected]="activeTab() === 'vocabulary'"
+        [attr.tabindex]="activeTab() === 'vocabulary' ? 0 : -1"
         (click)="activeTab.set('vocabulary')"
+        (keydown.arrowLeft)="focusPreviousTab($event)"
+        (keydown.arrowRight)="focusNextTab($event)"
+        (keydown.home)="focusFirstTab($event)"
+        (keydown.end)="focusLastTab($event)"
         [class.bg-primary]="activeTab() === 'vocabulary'" [class.text-white]="activeTab() === 'vocabulary'"
         [class.bg-surface-300]="activeTab() !== 'vocabulary'" [class.text-text-secondary]="activeTab() !== 'vocabulary'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-4 py-2 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary">
         {{ 'readingEngine.tab.vocabulary' | t }}
       </button>
       <button type="button" role="tab"
+        id="tab-history"
+        aria-controls="panel-history"
         [attr.aria-selected]="activeTab() === 'history'"
+        [attr.tabindex]="activeTab() === 'history' ? 0 : -1"
         (click)="activeTab.set('history')"
+        (keydown.arrowLeft)="focusPreviousTab($event)"
+        (keydown.arrowRight)="focusNextTab($event)"
+        (keydown.home)="focusFirstTab($event)"
+        (keydown.end)="focusLastTab($event)"
         [class.bg-primary]="activeTab() === 'history'" [class.text-white]="activeTab() === 'history'"
         [class.bg-surface-300]="activeTab() !== 'history'" [class.text-text-secondary]="activeTab() !== 'history'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
+        class="rounded-app px-4 py-2 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary">
         {{ 'readingEngine.tab.history' | t }}
       </button>
     </nav>
   </header>
 
   @if (activeTab() === 'articles') {
+    <section id="panel-articles" role="tabpanel" aria-labelledby="tab-articles" [attr.tabindex]="0">
     @if (selectedArticle(); as article) {
       <div class="space-y-4">
         <button type="button" (click)="backToList()"
-          class="app-button-secondary text-xs font-bold flex items-center gap-1.5"
-          [attr.aria-label]="'readingEngine.backToList' | t">
+          class="app-button-secondary text-xs font-bold flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-primary"
+          [attr.aria-label]="('readingEngine.backToArticleList' | t: { title: article.title })">
           <span aria-hidden="true">&larr;</span>
           {{ 'readingEngine.backToList' | t }}
         </button>
@@ -80,7 +102,8 @@ interface ReadingArticle {
               [class.text-amber-400]="article.difficulty === 'intermediate'"
               [class.bg-rose-500/20]="article.difficulty === 'advanced'"
               [class.text-rose-400]="article.difficulty === 'advanced'"
-              class="rounded-app px-2 py-0.5 text-[11px] font-bold">
+              class="rounded-app px-2 py-0.5 text-[11px] font-bold"
+              role="status">
               {{ 'readingEngine.difficulty.' + article.difficulty | t }}
             </span>
             <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[11px] font-bold text-text-secondary">
@@ -93,16 +116,16 @@ interface ReadingArticle {
           <h2 class="text-lg font-black text-text-primary">{{ article.title }}</h2>
         </div>
 
-        <div class="app-card app-padded space-y-3">
+        <article class="app-card app-padded space-y-3" [attr.aria-label]="('readingEngine.articleContentAriaLabel' | t: { title: article.title })" role="article">
           <p class="text-base leading-relaxed text-text-primary whitespace-pre-line">{{ article.content }}</p>
-        </div>
+        </article>
 
         <div class="flex flex-wrap gap-2">
-          <button type="button" class="app-button-secondary text-xs font-bold"
-            [attr.aria-label]="'readingEngine.saveArticle' | t">
+          <button type="button" class="app-button-secondary text-xs font-bold focus-visible:outline-2 focus-visible:outline-primary"
+            [attr.aria-label]="'readingEngine.saveArticleAriaLabel' | t: { title: article.title }">
             {{ 'readingEngine.saveArticle' | t }}
           </button>
-          <button type="button" (click)="backToList()" class="app-button-secondary text-xs font-bold"
+          <button type="button" (click)="backToList()" class="app-button-secondary text-xs font-bold focus-visible:outline-2 focus-visible:outline-primary"
             [attr.aria-label]="'readingEngine.nextArticle' | t">
             {{ 'readingEngine.nextArticle' | t }}
           </button>
@@ -111,9 +134,9 @@ interface ReadingArticle {
     } @else {
       <!-- Loading skeleton state -->
       @if (isLoading() && !hasError()) {
-        <section class="space-y-4" role="status" [attr.aria-label]="'readingEngine.loadingArticles' | t">
+        <section class="space-y-4" role="status" aria-busy="true" [attr.aria-label]="'readingEngine.loadingArticles' | t">
           @for (i of [1, 2, 3]; track i) {
-            <div class="app-card app-padded space-y-3">
+            <div class="app-card app-padded space-y-3" aria-hidden="true">
               <app-skeleton-loader [height]="'20px'" [width]="'60%'" [borderRadius]="'6px'"></app-skeleton-loader>
               <app-skeleton-loader [height]="'14px'" [width]="'90%'" [borderRadius]="'4px'"></app-skeleton-loader>
               <app-skeleton-loader [height]="'14px'" [width]="'75%'" [borderRadius]="'4px'"></app-skeleton-loader>
@@ -128,57 +151,64 @@ interface ReadingArticle {
 
       <!-- Error state -->
       @if (hasError()) {
-        <app-empty-state
-          [icon]="'&#x26A0;&#xFE0F;'"
-          [title]="'readingEngine.errorTitle' | t"
-          [description]="'readingEngine.errorDescription' | t"
-          [actionLabel]="'readingEngine.retryAction' | t"
-          (actionClicked)="retryLoad()">
-        </app-empty-state>
+        <div role="alert">
+          <app-empty-state
+            [icon]="'&#x26A0;&#xFE0F;'"
+            [title]="'readingEngine.errorTitle' | t"
+            [description]="'readingEngine.errorDescription' | t"
+            [actionLabel]="'readingEngine.retryAction' | t"
+            (actionClicked)="retryLoad()">
+          </app-empty-state>
+        </div>
       }
 
       <!-- Filter controls -->
       @if (!isLoading() && !hasError() && articlesResource.value()) {
         <div class="flex flex-wrap items-center gap-3" role="group" [attr.aria-label]="'readingEngine.filterControlsAriaLabel' | t">
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] font-bold text-text-muted">{{ 'readingEngine.filterDifficulty' | t }}</span>
+          <fieldset class="flex items-center gap-1.5 border-0 p-0" role="radiogroup" [attr.aria-label]="'readingEngine.filterDifficultyAriaLabel' | t">
+            <legend class="sr-only">{{ 'readingEngine.filterDifficulty' | t }}</legend>
             <button type="button" (click)="setFilter(null)"
+              role="radio" [attr.aria-checked]="!filterDifficulty()"
               [class.bg-primary]="!filterDifficulty()" [class.text-white]="!filterDifficulty()"
               [class.bg-surface-300]="filterDifficulty()"
-              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary">
               {{ 'readingEngine.filterAll' | t }}
             </button>
             @for (diff of ['beginner', 'intermediate', 'advanced']; track diff) {
               <button type="button" (click)="setFilter(diff)"
+                role="radio" [attr.aria-checked]="filterDifficulty() === diff"
                 [class.bg-primary]="filterDifficulty() === diff" [class.text-white]="filterDifficulty() === diff"
                 [class.bg-surface-300]="filterDifficulty() !== diff"
-                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary">
                 {{ 'readingEngine.difficulty.' + diff | t }}
               </button>
             }
-          </div>
+          </fieldset>
 
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] font-bold text-text-muted">{{ 'readingEngine.filterTopic' | t }}</span>
+          <fieldset class="flex items-center gap-1.5 border-0 p-0" role="radiogroup" [attr.aria-label]="'readingEngine.filterTopicAriaLabel' | t">
+            <legend class="sr-only">{{ 'readingEngine.filterTopic' | t }}</legend>
             <button type="button" (click)="setTopicFilter(null)"
+              role="radio" [attr.aria-checked]="!filterTopic()"
               [class.bg-primary]="!filterTopic()" [class.text-white]="!filterTopic()"
               [class.bg-surface-300]="filterTopic()"
-              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary">
               {{ 'readingEngine.filterAll' | t }}
             </button>
             @for (topic of distinctTopics(); track topic) {
               <button type="button" (click)="setTopicFilter(topic)"
+                role="radio" [attr.aria-checked]="filterTopic() === topic"
                 [class.bg-primary]="filterTopic() === topic" [class.text-white]="filterTopic() === topic"
                 [class.bg-surface-300]="filterTopic() !== topic"
-                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
+                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary">
                 {{ 'readingEngine.topic.' + topic | t }}
               </button>
             }
-          </div>
+          </fieldset>
 
           @if (filterDifficulty() || filterTopic()) {
             <button type="button" (click)="clearFilters()"
-              class="text-[11px] font-bold text-primary hover:underline">
+              class="text-[11px] font-bold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+              [attr.aria-label]="'readingEngine.clearFiltersAriaLabel' | t">
               {{ 'readingEngine.clearFilters' | t }}
             </button>
           }
@@ -198,41 +228,45 @@ interface ReadingArticle {
 
       <!-- Article list -->
       @if (!isLoading() && !hasError() && filteredArticles().length > 0) {
-        <div class="space-y-3" role="list" [attr.aria-label]="'readingEngine.articleListAriaLabel' | t">
+        <ul class="space-y-3 list-none p-0 m-0" role="list" [attr.aria-label]="'readingEngine.articleListAriaLabel' | t">
           @for (article of filteredArticles(); track article.id) {
-            <button type="button" role="listitem"
-              (click)="selectArticle(article.id)"
-              class="app-card app-padded w-full text-start space-y-2 hover:bg-surface-300 transition-colors cursor-pointer border border-transparent hover:border-surface-100"
-              [attr.aria-label]="'readingEngine.openArticleAriaLabel' | t: { title: article.title }">
-              <div class="flex flex-wrap items-center gap-2">
-                <span
-                  [class.bg-emerald-500/20]="article.difficulty === 'beginner'"
-                  [class.text-emerald-400]="article.difficulty === 'beginner'"
-                  [class.bg-amber-500/20]="article.difficulty === 'intermediate'"
-                  [class.text-amber-400]="article.difficulty === 'intermediate'"
-                  [class.bg-rose-500/20]="article.difficulty === 'advanced'"
-                  [class.text-rose-400]="article.difficulty === 'advanced'"
-                  class="rounded-app px-2 py-0.5 text-[11px] font-bold">
-                  {{ 'readingEngine.difficulty.' + article.difficulty | t }}
-                </span>
-                <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[11px] font-bold text-text-secondary">
-                  {{ 'readingEngine.topic.' + article.topic | t }}
-                </span>
-                <span class="ms-auto text-[11px] text-text-muted">
-                  {{ 'readingEngine.wordCountShort' | t: { count: article.wordCount } }}
-                </span>
-              </div>
-              <h3 class="text-sm font-bold text-text-primary">{{ article.title }}</h3>
-              <p class="text-xs text-text-secondary line-clamp-2">{{ article.content }}</p>
-            </button>
+            <li role="listitem">
+              <button type="button"
+                (click)="selectArticle(article.id)"
+                class="app-card app-padded w-full text-start space-y-2 hover:bg-surface-300 transition-colors cursor-pointer border border-transparent hover:border-surface-100 focus-visible:outline-2 focus-visible:outline-primary"
+                [attr.aria-label]="('readingEngine.openArticleAriaLabel' | t: { title: article.title, difficulty: ('readingEngine.difficulty.' + article.difficulty | t), topic: ('readingEngine.topic.' + article.topic | t) })"
+                [attr.aria-describedby]="'article-desc-' + article.id">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    [class.bg-emerald-500/20]="article.difficulty === 'beginner'"
+                    [class.text-emerald-400]="article.difficulty === 'beginner'"
+                    [class.bg-amber-500/20]="article.difficulty === 'intermediate'"
+                    [class.text-amber-400]="article.difficulty === 'intermediate'"
+                    [class.bg-rose-500/20]="article.difficulty === 'advanced'"
+                    [class.text-rose-400]="article.difficulty === 'advanced'"
+                    class="rounded-app px-2 py-0.5 text-[11px] font-bold">
+                    {{ 'readingEngine.difficulty.' + article.difficulty | t }}
+                  </span>
+                  <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[11px] font-bold text-text-secondary">
+                    {{ 'readingEngine.topic.' + article.topic | t }}
+                  </span>
+                  <span class="ms-auto text-[11px] text-text-muted">
+                    {{ 'readingEngine.wordCountShort' | t: { count: article.wordCount } }}
+                  </span>
+                </div>
+                <h3 class="text-sm font-bold text-text-primary">{{ article.title }}</h3>
+                <p [id]="'article-desc-' + article.id" class="text-xs text-text-secondary line-clamp-2">{{ article.content }}</p>
+              </button>
+            </li>
           }
-        </div>
+        </ul>
       }
     }
+    </section>
   }
 
   @if (activeTab() === 'vocabulary') {
-    <section class="space-y-4">
+    <section id="panel-vocabulary" role="tabpanel" aria-labelledby="tab-vocabulary" [attr.tabindex]="0" class="space-y-4">
       <div class="app-card app-padded space-y-3">
         <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.vocabularyTabTitle' | t }}</h3>
         <p class="app-muted">{{ 'readingEngine.vocabularyTabDescription' | t }}</p>
@@ -255,7 +289,7 @@ interface ReadingArticle {
   }
 
   @if (activeTab() === 'history') {
-    <section class="space-y-4">
+    <section id="panel-history" role="tabpanel" aria-labelledby="tab-history" [attr.tabindex]="0" class="space-y-4">
       <div class="app-card app-padded space-y-3">
         <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.historyTabTitle' | t }}</h3>
         <p class="app-muted">{{ 'readingEngine.historyTabDescription' | t }}</p>
@@ -279,6 +313,17 @@ interface ReadingArticle {
       }
       .reading-engine {
         min-height: 60vh;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
       }
     `,
   ],
@@ -353,6 +398,41 @@ export class ReadingEngineComponent {
   retryLoad(): void {
     this.fetchError.set(null);
     this.articlesResource.reload();
+  }
+
+  private readonly tabIds: readonly string[] = ['tab-articles', 'tab-vocabulary', 'tab-history'];
+
+  focusPreviousTab(event: KeyboardEvent): void {
+    event.preventDefault();
+    const currentTab = document.activeElement;
+    if (!currentTab) return;
+    const currentIdx = this.tabIds.findIndex((id) => id === (currentTab as HTMLElement).id);
+    const prevIdx = currentIdx <= 0 ? this.tabIds.length - 1 : currentIdx - 1;
+    this.focusTabById(this.tabIds[prevIdx]);
+  }
+
+  focusNextTab(event: KeyboardEvent): void {
+    event.preventDefault();
+    const currentTab = document.activeElement;
+    if (!currentTab) return;
+    const currentIdx = this.tabIds.findIndex((id) => id === (currentTab as HTMLElement).id);
+    const nextIdx = currentIdx >= this.tabIds.length - 1 ? 0 : currentIdx + 1;
+    this.focusTabById(this.tabIds[nextIdx]);
+  }
+
+  focusFirstTab(event: KeyboardEvent): void {
+    event.preventDefault();
+    this.focusTabById(this.tabIds[0]);
+  }
+
+  focusLastTab(event: KeyboardEvent): void {
+    event.preventDefault();
+    this.focusTabById(this.tabIds[this.tabIds.length - 1]);
+  }
+
+  private focusTabById(id: string): void {
+    const el = document.getElementById(id);
+    el?.focus();
   }
 
   private async fetchArticles(): Promise<ReadingArticle[]> {
