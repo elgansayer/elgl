@@ -40,7 +40,12 @@ import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
+<<<<<<< HEAD
 import { NetworkStatusService } from './services/network-status.service';
+=======
+import { TourService } from './services/tour.service';
+import { JoyrideDirective } from 'ngx-joyride';
+>>>>>>> origin/main
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -53,6 +58,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     RouterLink,
     RouterLinkActive,
     TranslatePipe,
+    JoyrideDirective,
     IncomingCallModalComponent,
     ToastComponent,
     ReportUserModalComponent,
@@ -77,10 +83,11 @@ export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
 
   public startProductTour(): void {
-    // Placeholder method for the interactive product tour feature.
+    this.tourService.startEconomyTour();
   }
   authService = inject(AuthService);
   economyStore = inject(EconomyStore);
+  private tourService = inject(TourService);
   centrifugeService = inject(CentrifugeService);
   fcmService = inject(FcmService);
   private safetyService = inject(SafetyService);
@@ -94,7 +101,6 @@ export class AppComponent implements OnInit {
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
   private platformId = inject(PLATFORM_ID);
-  private readonly networkStatus = inject(NetworkStatusService);
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -146,14 +152,6 @@ export class AppComponent implements OnInit {
       this.destroyRef.onDestroy(() =>
         doc.removeEventListener('visibilitychange', handleVisibility),
       );
-    });
-
-    // Sync offline economy actions when connectivity is restored
-    effect(() => {
-      const isOnline = this.networkStatus.isOnline();
-      if (isOnline && this.authService.isAuthenticated()) {
-        this.economyStore.syncPendingActions().catch(() => undefined);
-      }
     });
 
     // Font scale is applied globally by FontScaleService via effect()

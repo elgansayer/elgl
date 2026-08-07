@@ -157,6 +157,7 @@ All endpoints are rate-limited via \`@nestjs/throttler\`. Check individual endpo
     .addTag('Admin - Users', 'Administrative user management operations')
     .addTag('Admin - Blocks', 'Administrative block management operations')
     .addTag('Moderation', 'Content moderation and reporting operations')
+    .addTag('Escrow Payments', 'Escrow-based coin payment transactions between users with circuit breaker resilience')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, documentFactory);

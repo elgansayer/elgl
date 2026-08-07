@@ -63,9 +63,9 @@
               </div>
             }
             <div>
-              <p class="font-medium text-text-primary">{{ entry.blocked_name ?? 'Unknown' }}</p>
+<p class="font-medium text-text-primary">{{ (entry.blocked_name ?? 'Unknown') | sanitiseHtml }}</p>
               <p class="text-sm text-text-secondary">
-                {{ 'admin.blocks.blockedBy' | t }}: {{ entry.blocker_name ?? 'Unknown' }}
+                {{ 'admin.blocks.blockedBy' | t }}: {{ (entry.blocker_name ?? 'Unknown') | sanitiseHtml }}
               </p>
             </div>
           </div>
