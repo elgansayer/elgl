@@ -14,6 +14,7 @@ describe('RoomChatComponent', () => {
   };
 
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     centrifugoMock = {
       subscribeLiveRoom: vi.fn(),
       unsubscribeLiveRoom: vi.fn(),
