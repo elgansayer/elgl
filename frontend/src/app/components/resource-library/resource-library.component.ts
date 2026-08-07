@@ -9,15 +9,15 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, TranslatePipe, FormsModule],
   template: `
-    <div class="p-2 sm:p-4 md:p-6 max-w-5xl mx-auto">
-      <h1 class="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">{{ 'resource_library.title' | t }}</h1>
+    <div class="p-4">
+      <h1 class="text-xl font-bold mb-4">{{ 'resource_library.title' | t }}</h1>
 
       <!-- Filter controls -->
-      <div class="mb-3 sm:mb-4 flex flex-wrap gap-1.5 sm:gap-2">
+      <div class="mb-4 flex flex-wrap gap-2">
         <select
           [(ngModel)]="filterTopic"
           name="filterTopic"
-          class="p-1.5 sm:p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-xs sm:text-sm min-h-[40px] sm:min-h-0"
+          class="p-2 border rounded"
         >
           <option value="">{{ 'resource_library.all_topics' | t }}</option>
           <option value="grammar">{{ 'resource_library.topic_grammar' | t }}</option>
@@ -28,7 +28,7 @@ import { FormsModule } from '@angular/forms';
         <select
           [(ngModel)]="filterDifficulty"
           name="filterDifficulty"
-          class="p-1.5 sm:p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-xs sm:text-sm min-h-[40px] sm:min-h-0"
+          class="p-2 border rounded"
         >
           <option value="">{{ 'resource_library.all_difficulties' | t }}</option>
           <option value="beginner">{{ 'resource_library.difficulty_beginner' | t }}</option>
@@ -37,20 +37,20 @@ import { FormsModule } from '@angular/forms';
         </select>
         <button
           (click)="applyFilter()"
-          class="bg-blue-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-app text-xs sm:text-sm font-semibold min-h-[40px] sm:min-h-0"
+          class="bg-blue-600 text-white px-4 py-2 rounded"
         >
           {{ 'resource_library.filter' | t }}
         </button>
       </div>
 
       <!-- Group by controls -->
-      <div class="mb-3 sm:mb-4 flex flex-wrap gap-1.5 sm:gap-2 items-center">
-        <span class="text-xs sm:text-sm font-semibold text-text-secondary">{{ 'resource_library.group_label' | t }}</span>
+      <div class="mb-4 flex flex-wrap gap-2 items-center">
+        <span class="text-sm font-semibold">{{ 'resource_library.group_label' | t }}</span>
         <button
           (click)="groupBy.set('none')"
           [class.bg-blue-600]="groupBy() === 'none'"
           [class.text-white]="groupBy() === 'none'"
-          class="px-2 sm:px-3 py-1 rounded-app border border-surface-200 text-xs sm:text-sm text-text-primary min-h-[36px] sm:min-h-0"
+          class="px-3 py-1 rounded border me-2"
         >
           {{ 'resource_library.group_none' | t }}
         </button>
@@ -58,7 +58,7 @@ import { FormsModule } from '@angular/forms';
           (click)="groupBy.set('topic')"
           [class.bg-blue-600]="groupBy() === 'topic'"
           [class.text-white]="groupBy() === 'topic'"
-          class="px-2 sm:px-3 py-1 rounded-app border border-surface-200 text-xs sm:text-sm text-text-primary min-h-[36px] sm:min-h-0"
+          class="px-3 py-1 rounded border me-2"
         >
           {{ 'resource_library.group_by_topic' | t }}
         </button>
@@ -66,84 +66,78 @@ import { FormsModule } from '@angular/forms';
           (click)="groupBy.set('difficulty')"
           [class.bg-blue-600]="groupBy() === 'difficulty'"
           [class.text-white]="groupBy() === 'difficulty'"
-          class="px-2 sm:px-3 py-1 rounded-app border border-surface-200 text-xs sm:text-sm text-text-primary min-h-[36px] sm:min-h-0"
+          class="px-3 py-1 rounded border"
         >
           {{ 'resource_library.group_by_difficulty' | t }}
         </button>
       </div>
 
       <!-- Create / Edit form -->
-      <form (ngSubmit)="onSubmit()" class="mb-4 sm:mb-6 space-y-2 border border-surface-100 bg-surface-300 p-3 sm:p-4 rounded-card">
+      <form (ngSubmit)="onSubmit()" class="mb-6 space-y-2 border p-4 rounded">
         <input
           [(ngModel)]="newTitle"
           name="title"
           placeholder="{{ 'resource_library.title_placeholder' | t }}"
-          class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
+          class="w-full p-2 border rounded"
           required
         />
         <textarea
           [(ngModel)]="newDescription"
           name="description"
           placeholder="{{ 'resource_library.description_placeholder' | t }}"
-          class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
-          rows="2"
+          class="w-full p-2 border rounded"
         ></textarea>
         <input
           [(ngModel)]="newUrl"
           name="url"
           type="url"
           placeholder="{{ 'resource_library.url_placeholder' | t }}"
-          class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
+          class="w-full p-2 border rounded"
           required
         />
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input
-            [(ngModel)]="newCategory"
-            name="category"
-            placeholder="{{ 'resource_library.category_placeholder' | t }}"
-            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
-          />
-          <select
-            [(ngModel)]="newType"
-            name="type"
-            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
-          >
-            <option value="">{{ 'resource_library.type_placeholder' | t }}</option>
-            <option value="post">{{ 'resource_library.type_post' | t }}</option>
-            <option value="tip">{{ 'resource_library.type_tip' | t }}</option>
-          </select>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <select
-            [(ngModel)]="newTopic"
-            name="newTopic"
-            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
-          >
-            <option value="">{{ 'resource_library.topic_placeholder' | t }}</option>
-            <option value="grammar">{{ 'resource_library.topic_grammar' | t }}</option>
-            <option value="vocabulary">{{ 'resource_library.topic_vocabulary' | t }}</option>
-            <option value="pronunciation">{{ 'resource_library.topic_pronunciation' | t }}</option>
-            <option value="reading">{{ 'resource_library.topic_reading' | t }}</option>
-          </select>
-          <select
-            [(ngModel)]="newDifficulty"
-            name="newDifficulty"
-            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
-          >
-            <option value="">{{ 'resource_library.difficulty_placeholder' | t }}</option>
-            <option value="beginner">{{ 'resource_library.difficulty_beginner' | t }}</option>
-            <option value="intermediate">{{ 'resource_library.difficulty_intermediate' | t }}</option>
-            <option value="advanced">{{ 'resource_library.difficulty_advanced' | t }}</option>
-          </select>
-        </div>
+        <input
+          [(ngModel)]="newCategory"
+          name="category"
+          placeholder="{{ 'resource_library.category_placeholder' | t }}"
+          class="w-full p-2 border rounded"
+        />
+        <select
+          [(ngModel)]="newType"
+          name="type"
+          class="w-full p-2 border rounded"
+        >
+          <option value="">{{ 'resource_library.type_placeholder' | t }}</option>
+          <option value="post">{{ 'resource_library.type_post' | t }}</option>
+          <option value="tip">{{ 'resource_library.type_tip' | t }}</option>
+        </select>
+        <select
+          [(ngModel)]="newTopic"
+          name="newTopic"
+          class="w-full p-2 border rounded"
+        >
+          <option value="">{{ 'resource_library.topic_placeholder' | t }}</option>
+          <option value="grammar">{{ 'resource_library.topic_grammar' | t }}</option>
+          <option value="vocabulary">{{ 'resource_library.topic_vocabulary' | t }}</option>
+          <option value="pronunciation">{{ 'resource_library.topic_pronunciation' | t }}</option>
+          <option value="reading">{{ 'resource_library.topic_reading' | t }}</option>
+        </select>
+        <select
+          [(ngModel)]="newDifficulty"
+          name="newDifficulty"
+          class="w-full p-2 border rounded"
+        >
+          <option value="">{{ 'resource_library.difficulty_placeholder' | t }}</option>
+          <option value="beginner">{{ 'resource_library.difficulty_beginner' | t }}</option>
+          <option value="intermediate">{{ 'resource_library.difficulty_intermediate' | t }}</option>
+          <option value="advanced">{{ 'resource_library.difficulty_advanced' | t }}</option>
+        </select>
         <textarea
           [(ngModel)]="newContent"
           name="content"
           placeholder="{{ 'resource_library.content_placeholder' | t }}"
-          class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
-          rows="2"
+          class="w-full p-2 border rounded"
         ></textarea>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-app text-sm font-semibold min-h-[44px]">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">
           {{ 'resource_library.save' | t }}
         </button>
       </form>
@@ -152,29 +146,27 @@ import { FormsModule } from '@angular/forms';
         @if (filteredResources(); as items) {
           <div class="space-y-2">
             @for (resource of items; track resource.id) {
-              <div class="border border-surface-100 bg-surface-300 rounded-card p-2 sm:p-3 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                <div class="min-w-0 flex-1">
-                  <a [href]="resource.url" target="_blank" class="text-blue-400 underline text-sm sm:text-base font-semibold break-all">{{ resource.title }}</a>
-                  <p class="text-xs sm:text-sm text-text-secondary mt-0.5">{{ resource.description }}</p>
-                  <div class="flex flex-wrap gap-1 mt-1">
-                    @if (resource.type) {
-                      <span class="text-2xs sm:text-xs font-semibold bg-surface-200 text-text-secondary rounded px-1.5 py-0.5">{{ resource.type }}</span>
-                    }
-                    <span class="text-2xs sm:text-xs text-text-muted">{{ resource.category }}</span>
-                    @if (resource.topic) {
-                      <span class="text-2xs sm:text-xs font-semibold bg-blue-500/20 text-blue-400 rounded px-1.5 py-0.5">{{ resource.topic }}</span>
-                    }
-                    @if (resource.difficulty) {
-                      <span class="text-2xs sm:text-xs font-semibold bg-emerald-500/20 text-emerald-400 rounded px-1.5 py-0.5">{{ resource.difficulty }}</span>
-                    }
-                  </div>
+              <div class="border rounded p-3 flex justify-between items-start">
+                <div>
+                  <a [href]="resource.url" target="_blank" class="text-blue-500 underline">{{ resource.title }}</a>
+                  <p class="text-sm text-gray-600">{{ resource.description }}</p>
+                  @if (resource.type) {
+                    <span class="text-xs font-semibold bg-gray-200 rounded px-1 py-0.5">{{ resource.type }}</span>
+                  }
                   @if (resource.content) {
-                    <p class="text-2xs sm:text-xs text-text-muted mt-1 italic line-clamp-2">{{ resource.content }}</p>
+                    <p class="text-xs text-gray-500 mt-1 italic">{{ resource.content | slice:0:100 }}{{ resource.content.length > 100 ? '...' : '' }}</p>
+                  }
+                  <span class="text-xs text-gray-400">{{ resource.category }}</span>
+                  @if (resource.topic) {
+                    <span class="text-xs font-semibold bg-blue-100 text-blue-700 rounded px-1 py-0.5 ms-1">{{ resource.topic }}</span>
+                  }
+                  @if (resource.difficulty) {
+                    <span class="text-xs font-semibold bg-green-100 text-green-700 rounded px-1 py-0.5 ms-1">{{ resource.difficulty }}</span>
                   }
                 </div>
-                <div class="flex gap-2 self-end sm:self-start flex-shrink-0">
-                  <button (click)="onEdit(resource)" class="text-amber-400 text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200">{{ 'resource_library.edit' | t }}</button>
-                  <button (click)="onDelete(resource.id)" class="text-red-400 text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200">{{ 'resource_library.delete' | t }}</button>
+                <div class="flex gap-2">
+                  <button (click)="onEdit(resource)" class="text-yellow-500">{{ 'resource_library.edit' | t }}</button>
+                  <button (click)="onDelete(resource.id)" class="text-red-500">{{ 'resource_library.delete' | t }}</button>
                 </div>
               </div>
             }
@@ -183,33 +175,31 @@ import { FormsModule } from '@angular/forms';
       } @else {
         @if (collectionGroups(); as groups) {
           @for (group of groups; track group.key) {
-            <div class="mb-3 sm:mb-4">
-              <h2 class="font-semibold text-base sm:text-lg mb-2 text-text-primary">{{ group.key | t }}</h2>
+            <div class="mb-4">
+              <h2 class="font-semibold text-lg mb-2">{{ group.key | t }}</h2>
               <div class="space-y-2">
                 @for (resource of group.items; track resource.id) {
-                  <div class="border border-surface-100 bg-surface-300 rounded-card p-2 sm:p-3 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                    <div class="min-w-0 flex-1">
-                      <a [href]="resource.url" target="_blank" class="text-blue-400 underline text-sm sm:text-base font-semibold break-all">{{ resource.title }}</a>
-                      <p class="text-xs sm:text-sm text-text-secondary mt-0.5">{{ resource.description }}</p>
-                      <div class="flex flex-wrap gap-1 mt-1">
-                        @if (resource.type) {
-                          <span class="text-2xs sm:text-xs font-semibold bg-surface-200 text-text-secondary rounded px-1.5 py-0.5">{{ resource.type }}</span>
-                        }
-                        <span class="text-2xs sm:text-xs text-text-muted">{{ resource.category }}</span>
-                        @if (resource.topic) {
-                          <span class="text-2xs sm:text-xs font-semibold bg-blue-500/20 text-blue-400 rounded px-1.5 py-0.5">{{ resource.topic }}</span>
-                        }
-                        @if (resource.difficulty) {
-                          <span class="text-2xs sm:text-xs font-semibold bg-emerald-500/20 text-emerald-400 rounded px-1.5 py-0.5">{{ resource.difficulty }}</span>
-                        }
-                      </div>
+                  <div class="border rounded p-3 flex justify-between items-start">
+                    <div>
+                      <a [href]="resource.url" target="_blank" class="text-blue-500 underline">{{ resource.title }}</a>
+                      <p class="text-sm text-gray-600">{{ resource.description }}</p>
+                      @if (resource.type) {
+                        <span class="text-xs font-semibold bg-gray-200 rounded px-1 py-0.5">{{ resource.type }}</span>
+                      }
                       @if (resource.content) {
-                        <p class="text-2xs sm:text-xs text-text-muted mt-1 italic line-clamp-2">{{ resource.content }}</p>
+                        <p class="text-xs text-gray-500 mt-1 italic">{{ resource.content | slice:0:100 }}{{ resource.content.length > 100 ? '...' : '' }}</p>
+                      }
+                      <span class="text-xs text-gray-400">{{ resource.category }}</span>
+                      @if (resource.topic) {
+                        <span class="text-xs font-semibold bg-blue-100 text-blue-700 rounded px-1 py-0.5 ms-1">{{ resource.topic }}</span>
+                      }
+                      @if (resource.difficulty) {
+                        <span class="text-xs font-semibold bg-green-100 text-green-700 rounded px-1 py-0.5 ms-1">{{ resource.difficulty }}</span>
                       }
                     </div>
-                    <div class="flex gap-2 self-end sm:self-start flex-shrink-0">
-                      <button (click)="onEdit(resource)" class="text-amber-400 text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200">{{ 'resource_library.edit' | t }}</button>
-                      <button (click)="onDelete(resource.id)" class="text-red-400 text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200">{{ 'resource_library.delete' | t }}</button>
+                    <div class="flex gap-2">
+                      <button (click)="onEdit(resource)" class="text-yellow-500">{{ 'resource_library.edit' | t }}</button>
+                      <button (click)="onDelete(resource.id)" class="text-red-500">{{ 'resource_library.delete' | t }}</button>
                     </div>
                   </div>
                 }
