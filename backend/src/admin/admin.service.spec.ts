@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { DataScrubbingService } from '../privacy/data-scrubbing.service';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -33,6 +34,30 @@ describe('AdminService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    const mockScrubbingService = {
+      scrubIpAddress: jest.fn((raw: string | null | undefined) => {
+        if (!raw) return null;
+        // Simple mock: zero last octet for IPv4-like strings
+        const parts = raw.trim().split('.');
+        if (parts.length === 4) {
+          return `${parts[0]}.${parts[1]}.${parts[2]}.0`;
+        }
+        return raw.trim();
+      }),
+      scrubLoginHistory: jest.fn(
+        (entries: Array<{ ip_address?: string | null }>) => {
+          for (const entry of entries) {
+            if (entry.ip_address) {
+              const parts = entry.ip_address.trim().split('.');
+              if (parts.length === 4) {
+                entry.ip_address = `${parts[0]}.${parts[1]}.${parts[2]}.0`;
+              }
+            }
+          }
+        },
+      ),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
@@ -42,6 +67,10 @@ describe('AdminService', () => {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
             getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
+        },
+        {
+          provide: DataScrubbingService,
+          useValue: mockScrubbingService,
         },
       ],
     }).compile();

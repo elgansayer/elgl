@@ -13,36 +13,36 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [FormsModule, TranslatePipe],
   template: `
-    <div class="p-4 bg-surface rounded-xl">
-      <h2 class="text-lg font-semibold mb-2">
-        {{ 'suggest_flashcards.title' | t }}
-      </h2>
-      <textarea
-        [(ngModel)]="messageInput"
-        placeholder="{{ 'suggest_flashcards.placeholder' | t }}"
-        rows="3"
-        class="w-full border rounded p-2 bg-background text-foreground"
-      ></textarea>
-      <button
-        (click)="manualSuggest()"
-        class="mt-2 btn-primary"
-        [disabled]="!messageInput()"
-      >
-        {{ 'suggest_flashcards.suggest_button' | t }}
-      </button>
-      @if (loading()) {
-        <p>{{ 'suggest_flashcards.loading' | t }}</p>
-      }
-      @if (suggestions().length > 0) {
-        <ul class="mt-4 list-disc ps-5">
-          @for (word of suggestions(); track word) {
-            <li class="text-sm">{{ word }}</li>
-          }
-        </ul>
-      }
-      @if (error()) {
-        <p class="text-red-500 mt-2">{{ error() }}</p>
-      }
+    <div class="mx-auto max-w-2xl space-y-4 pb-20 pt-4">
+      <section class="app-card app-padded space-y-4">
+        <h2 class="app-section-title">{{ 'suggest_flashcards.title' | t }}</h2>
+        <textarea
+          [(ngModel)]="messageInput"
+          [placeholder]="'suggest_flashcards.placeholder' | t"
+          rows="3"
+          class="app-textarea"
+        ></textarea>
+        <button
+          (click)="manualSuggest()"
+          class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold disabled:opacity-60"
+          [disabled]="!messageInput()"
+        >
+          {{ 'suggest_flashcards.suggest_button' | t }}
+        </button>
+        @if (loading()) {
+          <p class="app-muted">{{ 'suggest_flashcards.loading' | t }}</p>
+        }
+        @if (suggestions().length > 0) {
+          <ul class="mt-4 list-disc ps-5">
+            @for (word of suggestions(); track word) {
+              <li class="text-sm text-text-primary">{{ word }}</li>
+            }
+          </ul>
+        }
+        @if (error()) {
+          <p class="mt-2 text-xs font-bold text-rose-400">{{ error() }}</p>
+        }
+      </section>
     </div>
   `,
 })
@@ -52,30 +52,27 @@ export class SuggestFlashcardsComponent {
   private authService = inject(AuthService);
 
   /** Optional external message to auto‑suggest (e.g., from chat) */
-  externalMessage = input<string>('');
-  externalUserId = input<string | undefined>(undefined);
-  externalTargetLanguage = input<string | undefined>(undefined);
+  readonly externalMessage = input<string>('');
+  readonly externalUserId = input<string | undefined>(undefined);
+  readonly externalTargetLanguage = input<string | undefined>(undefined);
 
-  messageInput = signal<string>('');
-  suggestions = signal<string[]>([]);
-  loading = signal<boolean>(false);
-  error = signal<string | null>(null);
+  readonly messageInput = signal<string>('');
+  readonly suggestions = signal<string[]>([]);
+  readonly loading = signal<boolean>(false);
+  readonly error = signal<string | null>(null);
 
-  constructor() {
-    effect(() => {
-      const msg = this.externalMessage();
-      if (msg && msg.trim()) {
-        // Auto‑suggest when a parent provides a new message
-        this.runSuggest(msg, this.externalUserId(), this.externalTargetLanguage());
-      }
-    });
-  }
+  private readonly autoSuggestEffect = effect(() => {
+    const msg = this.externalMessage();
+    if (msg && msg.trim()) {
+      void this.runSuggest(msg, this.externalUserId(), this.externalTargetLanguage());
+    }
+  });
 
   /** Called when the user clicks the button */
   async manualSuggest(): Promise<void> {
     const msg = this.messageInput().trim();
     if (!msg) return;
-    this.runSuggest(msg);
+    void this.runSuggest(msg);
   }
 
   private async runSuggest(
