@@ -6,8 +6,6 @@ import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
-import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
-import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 type DeckView = 'list' | 'detail';
 
@@ -17,7 +15,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -129,30 +127,15 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 
           <!-- Deck Grid -->
           @if (isLoading()) {
-            <!-- Skeleton Loader -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" role="status" aria-busy="true" [attr.aria-label]="'deck.loading' | t">
-              @for (i of [1, 2, 3]; track i) {
-                <div class="rounded-card border border-surface-100 p-4 space-y-3">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <app-skeleton-loader height="24px" width="24px" borderRadius="50%" variant="circle" />
-                      <app-skeleton-loader height="16px" width="100px" borderRadius="4px" />
-                    </div>
-                    <app-skeleton-loader height="16px" width="16px" borderRadius="4px" />
-                  </div>
-                  <app-skeleton-loader height="12px" width="60%" borderRadius="3px" />
-                  <div class="flex gap-2">
-                    <app-skeleton-loader height="20px" width="60px" borderRadius="10px" />
-                  </div>
-                </div>
-              }
+            <div class="py-12 text-center" role="status" aria-busy="true">
+              <p class="app-muted text-sm">{{ 'deck.loading' | t }}</p>
             </div>
           } @else if (decks().length === 0) {
-            <app-empty-state
-              icon="&#128214;"
-              [title]="'deck.emptyTitle' | t"
-              [description]="'deck.emptyDesc' | t"
-            />
+            <div class="app-empty-state py-12 text-center" role="status">
+              <p class="text-3xl mb-3" aria-hidden="true">📚</p>
+              <p class="font-bold text-text-primary">{{ 'deck.emptyTitle' | t }}</p>
+              <p class="app-muted text-xs mt-1">{{ 'deck.emptyDesc' | t }}</p>
+            </div>
           } @else {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               @for (deck of decks(); track deck.id) {

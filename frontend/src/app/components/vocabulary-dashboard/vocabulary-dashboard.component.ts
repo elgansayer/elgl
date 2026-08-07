@@ -1,54 +1,43 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
-import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
-  imports: [TranslatePipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   template: `
     <div class="mx-auto w-full max-w-md ps-6 pe-6 sm:max-w-lg">
       <h2 class="text-2xl font-bold text-slate-100">{{ 'vocabulary.title' | t }}</h2>
       <p class="mt-1 text-sm text-slate-400">{{ 'vocabulary.subtitle' | t }}</p>
 
-      @if (isLoading()) {
-        <!-- Skeleton Loader -->
-        <div class="mt-8 space-y-6" role="status" aria-label="{{ 'review.loading' | t }}">
-          <app-skeleton-loader height="20px" width="60%" borderRadius="4px" />
-          <div class="rounded-2xl border border-slate-700 bg-surface-800 p-6 space-y-4">
-            <app-skeleton-loader height="28px" width="50%" borderRadius="6px" />
-            <app-skeleton-loader height="16px" width="80%" borderRadius="4px" />
-            <div class="flex justify-center pt-2 w-full">
-              <app-skeleton-loader height="14rem" width="100%" borderRadius="16px" />
-            </div>
-            <div class="flex justify-center gap-3 pt-3">
-              <app-skeleton-loader height="36px" width="80px" borderRadius="9999px" />
-              <app-skeleton-loader height="36px" width="80px" borderRadius="9999px" />
-              <app-skeleton-loader height="36px" width="80px" borderRadius="9999px" />
-            </div>
-          </div>
-        </div>
-      } @else if (isComplete()) {
+      <div class="mt-8 flex items-center justify-between">
+        <span class="text-sm text-slate-300">{{
+          'vocabulary.cardCounter' | t: { current: currentIndex() + 1, total: cardCount() }
+        }}</span>
+        <button type="button" (click)="restart()" class="btn-secondary text-sm">{{
+          'vocabulary.restart' | t
+        }}</button>
+      </div>
+
+      @if (cardCount() === 0) {
         <app-empty-state
-          icon="📚"
+          [icon]="'📚'"
           [title]="'vocabulary.noDue' | t"
-          [actionLabel]="'vocabulary.restart' | t"
-          (actionClicked)="restart()"
-          customClass="mt-12"
+          [description]="'vocabulary.noSaved' | t"
+          [customClass]="'mt-12'"
         />
-      } @else {
-        <div class="mt-8 flex items-center justify-between">
-          <span class="text-sm text-slate-300">{{
-            'vocabulary.cardCounter' | t: { current: currentIndex() + 1, total: cardCount() }
-          }}</span>
-          <button type="button" (click)="restart()" class="btn-secondary text-sm">{{
+      } @else if (isComplete()) {
+        <div class="mt-12 rounded-2xl border border-slate-700 bg-surface-800 p-8 text-center">
+          <p class="text-lg font-medium text-slate-100">🎉 {{ 'vocabulary.noDue' | t }}</p>
+          <button type="button" (click)="restart()" class="mt-4 btn-secondary">{{
             'vocabulary.restart' | t
           }}</button>
         </div>
-
+      } @else {
         @if (currentCard(); as card) {
           <div class="mt-4">
             <div
@@ -182,7 +171,6 @@ export class VocabularyDashboardComponent {
   readonly currentIndex = signal(0);
   readonly isFlipped = signal(false);
   readonly grades = signal<Record<ReviewGrade, number>>({ again: 0, good: 0, known: 0 });
-  readonly isLoading = signal(false);
 
   readonly cardCount = computed(() => this.deck().length);
   readonly currentCard = computed(() => this.deck()[this.currentIndex()] ?? null);
