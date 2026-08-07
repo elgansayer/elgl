@@ -1,51 +1,60 @@
-export const MOCK_USERS = Array.from({ length: 150 }, (_, i) => {
-  const nativeLangs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
-  const targetLangs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
 
-  const native = nativeLangs[Math.floor(Math.random() * nativeLangs.length)];
-  const targets = [targetLangs[Math.floor(Math.random() * targetLangs.length)]];
-  if (Math.random() > 0.5 && targets[0] !== 'en') targets.push('en');
+import { Deck } from './decks/interfaces/deck.interface';
 
-  const names = [
-    'Sakura',
-    'Min-jun',
-    'Emma',
-    'Liam',
-    'Olivia',
-    'Noah',
-    'Ava',
-    'Oliver',
-    'Isabella',
-    'Elijah',
-    'Lars',
-    'Astrid',
-    'Yuki',
-    'Kenji',
-    'Satoshi',
-    'Mei',
-    'Hiroshi',
-    'Jin',
-    'Ji-eun',
-    'Hassan',
-    'Fatima',
-    'Omar',
-    'Aisha',
-    'Carlos',
-    'Maria',
-  ];
-  const name = names[Math.floor(Math.random() * names.length)];
-
-  return {
-    id: `fake-${i + 1}`,
-    display_name: `${name}${i + 1}`,
-    native_languages: native,
-    target_languages: targets,
-    bio_text: `Hi! I want to learn ${targets.join(', ').toUpperCase()} and I can teach ${native.toUpperCase()}. Let's chat!`,
-    avatar_url: `https://i.pravatar.cc/150?u=fake-${i + 1}`,
-    is_vip: Math.random() > 0.8,
-    study_streak_days: Math.floor(Math.random() * 50),
-    correction_ratio: Number((0.5 + Math.random() * 0.5).toFixed(2)),
-    is_serious_learner: Math.random() > 0.6,
-    created_at: new Date().toISOString(),
-  };
-});
+export const MOCK_DECKS: Deck[] = [
+  {
+    id: 'mock-deck-1',
+    user_id: 'fake-1',
+    name: 'Essential Spanish Verbs',
+    description: 'Core verbs for everyday conversation',
+    colour: '#6366f1',
+    icon: '📚',
+    card_count: 12,
+    created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'mock-deck-2',
+    user_id: 'fake-1',
+    name: 'Travel Phrases',
+    description: 'Must-know phrases for travelling',
+    colour: '#ec4899',
+    icon: '✈️',
+    card_count: 8,
+    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'mock-deck-3',
+    user_id: 'fake-1',
+    name: 'Food & Cooking',
+    description: null,
+    colour: '#f59e0b',
+    icon: '🍳',
+    card_count: 5,
+    created_at: new Date(Date.now() - 14 * 86400000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'mock-deck-4',
+    user_id: 'fake-1',
+    name: 'Business Japanese',
+    description: 'Formal expressions and keigo',
+    colour: '#10b981',
+    icon: '💼',
+    card_count: 20,
+    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'mock-deck-5',
+    user_id: 'fake-1',
+    name: 'Slang & Idioms',
+    description: 'Sound like a native speaker',
+    colour: '#8b5cf6',
+    icon: '💬',
+    card_count: 15,
+    created_at: new Date(Date.now() - 21 * 86400000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
