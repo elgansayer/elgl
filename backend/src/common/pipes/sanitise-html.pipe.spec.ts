@@ -123,4 +123,44 @@ describe('SanitiseHtmlPipe', () => {
       confirmPassword: 'my<secret>password',
     });
   });
+
+  it('should skip sanitisation for stack trace fields preserving angle brackets', () => {
+    const input = {
+      message: '<script>alert("xss")</script>user',
+      stack: 'TypeError: foo\n    at <anonymous> (app.ts:10:5)',
+      componentStack: '<anonymous>\n    at AppComponent',
+      stackFrames: [
+        {
+          functionName: '<anonymous>',
+          fileName: 'app.component.ts',
+          source: 'app.component.ts:42:10',
+        },
+      ],
+      safeField: '<b>bold text</b>',
+    };
+    const result = pipe.transform(input, mockMetadata) as Record<string, unknown>;
+    expect(result['message']).toBe('user');
+    expect(result['stack']).toBe('TypeError: foo\n    at <anonymous> (app.ts:10:5)');
+    expect(result['componentStack']).toBe('<anonymous>\n    at AppComponent');
+    expect(result['stackFrames']).toEqual([
+      {
+        functionName: '<anonymous>',
+        fileName: 'app.component.ts',
+        source: 'app.component.ts:42:10',
+      },
+    ]);
+    expect(result['safeField']).toBe('<b>bold text</b>');
+  });
+
+  it('should exempt rawBody and signedPayload from sanitisation', () => {
+    const input = {
+      message: '<script>alert("xss")</script>',
+      rawBody: '{"data":"<event>payload</event>"}',
+      signedPayload: '<sig>abc123</sig>',
+    };
+    const result = pipe.transform(input, mockMetadata) as Record<string, unknown>;
+    expect(result['message']).toBe('');
+    expect(result['rawBody']).toBe('{"data":"<event>payload</event>"}');
+    expect(result['signedPayload']).toBe('<sig>abc123</sig>');
+  });
 });

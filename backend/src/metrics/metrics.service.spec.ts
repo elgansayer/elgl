@@ -16,6 +16,7 @@ describe('MetricsService', () => {
     expect(service).toBeDefined();
   });
 
+<<<<<<< HEAD
   it('should return Prometheus content type', () => {
     const contentType = service.getContentType();
     expect(contentType).toContain('text/plain');
@@ -41,5 +42,33 @@ describe('MetricsService', () => {
   it('should expose WebSocket connections gauge', () => {
     expect(service.websocketConnections).toBeDefined();
     service.websocketConnections.set(5);
+=======
+  it('should return metrics string from getMetrics()', async () => {
+    const metrics = await service.getMetrics();
+    expect(typeof metrics).toBe('string');
+    expect(metrics.length).toBeGreaterThan(0);
+  });
+
+  it('should increment active connections', () => {
+    service.incrementActiveConnections();
+    // No error means success; gauge is incremented internally
+    expect(true).toBe(true);
+  });
+
+  it('should decrement active connections', () => {
+    service.incrementActiveConnections();
+    service.decrementActiveConnections();
+    expect(true).toBe(true);
+  });
+
+  it('should record HTTP request metrics without throwing', () => {
+    service.recordHttpRequest('GET', '/api/test', 200, 0.05);
+    expect(true).toBe(true);
+  });
+
+  it('should expose a registry', () => {
+    const registry = service.getRegister();
+    expect(registry).toBeDefined();
+>>>>>>> origin/main
   });
 });

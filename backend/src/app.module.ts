@@ -158,8 +158,12 @@ import { MetricsModule } from './metrics/metrics.module';
             AssessmentsModule,
             AnalyticsModule,
 <<<<<<< HEAD
+<<<<<<< HEAD
     MetricsModule,
 =======
+>>>>>>> origin/main
+=======
+            MetricsModule,
 >>>>>>> origin/main
   ],
   controllers: [AppController],
