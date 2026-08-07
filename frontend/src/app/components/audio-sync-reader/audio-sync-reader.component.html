@@ -1,14 +1,15 @@
 <div class="app-card app-padded space-y-3 sm:space-y-4">
-  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 pb-3">
+  <!-- Header: Title + Play controls -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 border-b border-surface-100 pb-2 sm:pb-3">
     <div>
       <h3 class="text-sm sm:text-base font-black text-text-primary">{{ title() | t }}</h3>
-      <p class="text-[11px] sm:text-xs text-text-secondary">
+      <p class="text-2xs sm:text-xs text-text-secondary mt-0.5">
         {{ 'audioSync.immersionDescription' | t }}
       </p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 self-start sm:self-auto">
       @if (isVip()) {
-        <span class="app-chip bg-amber-500/20 text-amber-400 font-bold text-[10px] sm:text-xs">{{
+        <span class="app-chip bg-amber-500/20 text-amber-400 font-bold text-2xs sm:text-xs">{{
           'common.vipStdLabel' | t
         }}</span>
       }
@@ -18,8 +19,8 @@
         [class.text-white]="!isPlaying()"
         [class.bg-amber-600]="isPlaying()"
         [class.text-white]="isPlaying()"
-        class="rounded-app px-3 sm:px-4 py-2.5 sm:py-2 text-[11px] sm:text-xs font-black transition-colors shadow-sm flex items-center gap-1.5 min-h-[44px] sm:min-h-0"
-       [attr.aria-label]="isPlaying() ? ('audioSync.pauseImmersionAudio' | t) : ('audioSync.playAudioLesson' | t)">
+        class="rounded-app ps-3 pe-3 sm:ps-4 sm:pe-4 pt-1.5 pb-1.5 sm:pt-2 sm:pb-2 text-2xs sm:text-xs font-black transition-colors shadow-sm flex items-center gap-1 sm:gap-1.5 min-h-[40px] sm:min-h-0"
+       [attr.aria-label]="'audioSync.pauseImmersionAudio' | t">
         <span>{{
           isPlaying()
             ? ('audioSync.pauseImmersionAudio' | t)
@@ -29,11 +30,13 @@
     </div>
   </div>
 
+  <!-- Tokenised reading area -->
   <div
-    class="px-3 sm:px-4 pt-3 pb-3 rounded-card bg-surface-300 border border-surface-100 leading-relaxed text-sm sm:text-base select-text font-medium"
+    class="ps-3 pe-3 sm:ps-4 sm:pe-4 pt-2 sm:pt-3 pb-2 sm:pb-3 rounded-card bg-surface-300 border border-surface-100 leading-relaxed text-sm sm:text-base select-text font-medium max-h-[60vh] sm:max-h-[50vh] overflow-y-auto"
   >
     @for (token of tokens(); track token.index) {
       <span
+        class="inline-block leading-7 sm:leading-8"
         (click)="onTokenClick(token)"
         (keydown.enter)="onTokenClick(token)"
         (keydown.space)="onTokenClick(token); $event.preventDefault()"
@@ -52,6 +55,7 @@
     }
   </div>
 
+  <!-- Word definition panel -->
   @if (selectedToken(); as sel) {
     <div class="pt-2 border-t border-surface-100">
       <app-word-definition-modal
