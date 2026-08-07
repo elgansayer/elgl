@@ -26,7 +26,8 @@ export class CreateFlashcardDto {
   original_context?: string;
 
   @ApiProperty({
-    description: "Translation of the word token into the user's native language",
+    description:
+      "Translation of the word token into the user's native language",
     example: 'hello',
   })
   @IsString()
