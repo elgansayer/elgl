@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
+import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 import { MOCK_USERS } from '../mock-data';
 
 type DiscoveryUser = UserProfile & {
@@ -34,6 +36,7 @@ export class DiscoveryService {
 
   constructor(
     private readonly audioRoomsService: AudioRoomsService,
+    private readonly cloudflareCacheService: CloudflareCacheService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
   ) {}
@@ -71,6 +74,11 @@ export class DiscoveryService {
         604800,
       );
       this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
+
+      // Purge Cloudflare edge cache for the old POTW list across all PoPs
+      await this.cloudflareCacheService.purgeByCacheTags([
+        DISCOVERY_CACHE_TAG_POTW,
+      ]);
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
     }

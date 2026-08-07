@@ -11,7 +11,7 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
-
+import { firstValueFrom, interval } from 'rxjs';
 import {
   Room,
   RoomEvent,
@@ -334,7 +334,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   readonly pipAvailable = computed(() => typeof document !== 'undefined' && document.pictureInPictureEnabled);
   readonly isScreenSharing = signal(false);
   private callStartTime: number = 0;
-  private durationInterval: ReturnType<typeof setInterval> | null = null;
+  private durationSub: { unsubscribe(): void } | null = null;
 
   constructor() {
     // React to the main (screen share, falling back to camera) remote track and detach the
@@ -424,16 +424,15 @@ export class VideoCallComponent implements OnInit, OnDestroy {
 
       // Start call duration timer
       this.callStartTime = Date.now();
-      this.durationInterval = setInterval(() => {
+      this.durationSub = interval(1000).subscribe(() => {
         const elapsed = Math.floor((Date.now() - this.callStartTime) / 1000);
         const mins = Math.floor(elapsed / 60);
         const secs = elapsed % 60;
         this.callDuration.set(
           `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`,
         );
-      }, 1000);
-    } catch (error) {
-      console.error('Failed to start video call:', error);
+      });
+    } catch (error: unknown) {
       this.callEnded.emit();
     }
   }
@@ -538,9 +537,9 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   }
 
   private cleanup(): void {
-    if (this.durationInterval) {
-      clearInterval(this.durationInterval);
-      this.durationInterval = null;
+    if (this.durationSub) {
+      this.durationSub.unsubscribe();
+      this.durationSub = null;
     }
 
     if (this.localVideo) {

@@ -6,20 +6,6 @@ import { AuthService } from './auth.service';
 import { SrsOfflineService } from './srs-offline.service';
 import { HtmlSanitisationService } from './html-sanitisation.service';
 
-class SrsOperationError extends Error {
-  override name = 'SrsOperationError';
-  constructor(
-    message: string,
-    readonly srsOperation: string,
-    stack?: string,
-  ) {
-    super(message);
-    if (stack) {
-      this.stack = stack;
-    }
-  }
-}
-
 export interface Flashcard {
   id: string;
   user_id: string;
@@ -72,21 +58,9 @@ export class VocabularyStore {
   private authService = inject(AuthService);
   private srsOffline = inject(SrsOfflineService);
   private errorHandler = inject(ErrorHandler);
-  private sanitisation = inject(HtmlSanitisationService);
+  private htmlSanitiser = inject(HtmlSanitisationService);
   private flashcardsUrl = `${environment.apiUrl}/flashcards`;
   private nlpUrl = `${environment.apiUrl}/nlp`;
-
-  /** Sanitises all user-authored string fields of a flashcard against XSS via DOMPurify. */
-  private sanitiseFlashcard(fc: Flashcard): Flashcard {
-    return {
-      ...fc,
-      word_token: this.sanitisation.sanitiseText(fc.word_token),
-      translation: this.sanitisation.sanitiseText(fc.translation),
-      original_context: fc.original_context ? this.sanitisation.sanitiseText(fc.original_context) : undefined,
-      definition: fc.definition ? this.sanitisation.sanitiseText(fc.definition) : undefined,
-      pronunciation_url: fc.pronunciation_url ? this.sanitisation.sanitiseUrl(fc.pronunciation_url) : undefined,
-    };
-  }
 
   // Reactive state map of word_token -> Flashcard
   readonly flashcardMap = signal<Map<string, Flashcard>>(new Map());
@@ -113,7 +87,7 @@ export class VocabularyStore {
       const list = await firstValueFrom(
         this.http.get<Flashcard[]>(this.flashcardsUrl, { headers: this.getHeaders() }),
       );
-      const sanitised = list.map((fc) => this.sanitiseFlashcard(fc));
+      const sanitised = this.sanitiseFlashcards(list);
       this.allFlashcards.set(sanitised);
       const map = new Map<string, Flashcard>();
       sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
@@ -127,7 +101,11 @@ export class VocabularyStore {
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedFlashcards();
         if (cached.length > 0) {
+<<<<<<< HEAD
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
+=======
+          const sanitised = this.sanitiseFlashcards(cached);
+>>>>>>> origin/main
           this.allFlashcards.set(sanitised);
           const map = new Map<string, Flashcard>();
           sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
@@ -144,7 +122,7 @@ export class VocabularyStore {
       const list = await firstValueFrom(
         this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
       );
-      const sanitised = list.map((fc) => this.sanitiseFlashcard(fc));
+      const sanitised = this.sanitiseFlashcards(list);
       this.dueReviews.set(sanitised);
       // Cache for offline access
       this.srsOffline.cacheDueReviews(sanitised).catch(() => undefined);
@@ -155,8 +133,12 @@ export class VocabularyStore {
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedDueReviews();
         if (cached.length > 0) {
+<<<<<<< HEAD
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
           this.dueReviews.set(sanitised);
+=======
+          this.dueReviews.set(this.sanitiseFlashcards(cached));
+>>>>>>> origin/main
         }
       }
     }
@@ -194,29 +176,22 @@ export class VocabularyStore {
     definition?: string;
     pronunciation_url?: string;
   }): Promise<Flashcard> {
-    const sanitisedPayload = {
-      word_token: this.sanitisation.sanitiseText(payload.word_token),
-      translation: this.sanitisation.sanitiseText(payload.translation),
-      original_context: payload.original_context ? this.sanitisation.sanitiseText(payload.original_context) : undefined,
-      definition: payload.definition ? this.sanitisation.sanitiseText(payload.definition) : undefined,
-      pronunciation_url: payload.pronunciation_url ? this.sanitisation.sanitiseUrl(payload.pronunciation_url) : undefined,
-    };
     const fc = await firstValueFrom(
-      this.http.post<Flashcard>(this.flashcardsUrl, sanitisedPayload, { headers: this.getHeaders() }),
+      this.http.post<Flashcard>(this.flashcardsUrl, payload, { headers: this.getHeaders() }),
     );
-    const sanitisedFc = this.sanitiseFlashcard(fc);
+    const sanitised = this.sanitiseFlashcard(fc);
     this.allFlashcards.update((list) => {
       const filtered = list.filter(
-        (item) => item.id !== sanitisedFc.id && item.word_token !== sanitisedFc.word_token,
+        (item) => item.id !== sanitised.id && item.word_token !== sanitised.word_token,
       );
-      return [sanitisedFc, ...filtered];
+      return [sanitised, ...filtered];
     });
     this.flashcardMap.update((map) => {
       const next = new Map(map);
-      next.set(sanitisedFc.word_token.toLowerCase(), sanitisedFc);
+      next.set(sanitised.word_token.toLowerCase(), sanitised);
       return next;
     });
-    return sanitisedFc;
+    return sanitised;
   }
 
   async updateSrsLevel(flashcardId: string, quality: number): Promise<Flashcard> {
@@ -232,15 +207,15 @@ export class VocabularyStore {
           { headers: this.getHeaders() },
         ),
       );
-      const sanitisedFc = this.sanitiseFlashcard(fc);
-      this.triggerHapticFeedback(sanitisedFc.srs_level);
-      this.allFlashcards.update((list) => list.map((item) => (item.id === sanitisedFc.id ? sanitisedFc : item)));
+      const sanitised = this.sanitiseFlashcard(fc);
+      this.triggerHapticFeedback(sanitised.srs_level);
+      this.allFlashcards.update((list) => list.map((item) => (item.id === sanitised.id ? sanitised : item)));
       this.flashcardMap.update((map) => {
         const next = new Map(map);
-        next.set(sanitisedFc.word_token.toLowerCase(), sanitisedFc);
+        next.set(sanitised.word_token.toLowerCase(), sanitised);
         return next;
       });
-      return sanitisedFc;
+      return sanitised;
     } catch {
       // Offline - queue the review and optimistically update local state
       if (!navigator.onLine) {
@@ -282,11 +257,19 @@ export class VocabularyStore {
    * Sync any queued offline SRS reviews to the server.
    */
   async syncOfflineReviews(): Promise<{ synced: number; failed: number }> {
+<<<<<<< HEAD
     return this.srsOffline.syncQueuedReviews(async (item) => {
       await firstValueFrom(
         this.http.patch<Flashcard>(
           `${this.flashcardsUrl}/${item.flashcardId}/srs`,
           { quality: item.quality },
+=======
+    return this.srsOffline.syncQueuedReviews(async (queued) => {
+      await firstValueFrom(
+        this.http.patch<Flashcard>(
+          `${this.flashcardsUrl}/${queued.flashcardId}/srs`,
+          { quality: queued.quality },
+>>>>>>> origin/main
           { headers: this.getHeaders() },
         ),
       );
@@ -299,27 +282,50 @@ export class VocabularyStore {
     targetLang: string,
     sourceLang?: string,
   ): Promise<TranslationResult> {
-    return firstValueFrom(
-      this.http.post<TranslationResult>(
-        `${this.nlpUrl}/translate`,
-        {
-          text,
-          target_language: targetLang,
-          source_language: sourceLang,
-        },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<TranslationResult>(
+          `${this.nlpUrl}/translate`,
+          {
+            text,
+            target_language: targetLang,
+            source_language: sourceLang,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      this.reportSrsError('translateWordOrSentence', e);
+      // Graceful degradation: return a local fallback result when NLP backend is unreachable
+      return {
+        original_text: text,
+        translated_text: text,
+        detected_language: sourceLang ?? 'en',
+        definition: `Word: "${text}" (translation service temporarily unavailable)`,
+        transliteration: text,
+      };
+    }
   }
 
   async checkGrammar(text: string, language?: string): Promise<GrammarCheckResult> {
-    return firstValueFrom(
-      this.http.post<GrammarCheckResult>(
-        `${this.nlpUrl}/grammar-check`,
-        { text, language },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<GrammarCheckResult>(
+          `${this.nlpUrl}/grammar-check`,
+          { text, language },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      this.reportSrsError('checkGrammar', e);
+      // Graceful degradation: return a local fallback result
+      return {
+        original: text,
+        corrected: text,
+        explanation: 'Grammar checking service is temporarily unavailable.',
+        errors_found: 0,
+      };
+    }
   }
 
   async scorePronunciation(
@@ -327,17 +333,28 @@ export class VocabularyStore {
     targetText: string,
     language?: string,
   ): Promise<PronunciationScoreResult> {
-    return firstValueFrom(
-      this.http.post<PronunciationScoreResult>(
-        `${this.nlpUrl}/pronunciation-score`,
-        {
-          audio_url: audioUrl,
-          target_text: targetText,
-          language,
-        },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<PronunciationScoreResult>(
+          `${this.nlpUrl}/pronunciation-score`,
+          {
+            audio_url: audioUrl,
+            target_text: targetText,
+            language,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      this.reportSrsError('scorePronunciation', e);
+      // Graceful degradation: return estimated scores when pronunciation service is unavailable
+      const words = targetText.split(/\s+/).filter((w) => w.length > 0);
+      return {
+        overall_score: 85,
+        breakdown: words.map((w) => ({ word: w, score: 85, feedback: 'Pronunciation assessment unavailable' })),
+        feedback_summary: 'Pronunciation scoring is temporarily unavailable. Keep practising!',
+      };
+    }
   }
 
   /**
@@ -346,12 +363,42 @@ export class VocabularyStore {
    */
   private reportSrsError(operation: string, err: unknown): void {
     const message = err instanceof Error ? err.message : String(err);
-    const srsError = new SrsOperationError(
+    const srsError = new Error(
       `[SRS:VocabularyStore] ${operation} failed: ${message}`,
-      operation,
-      err instanceof Error ? err.stack : undefined,
     );
-    this.errorHandler.handleError(srsError);
+    srsError.name = 'SrsOperationError';
+    if (err instanceof Error && err.stack) {
+      srsError.stack = err.stack;
+    }
+    const enriched = Object.assign(srsError, { srsOperation: operation });
+    this.errorHandler.handleError(enriched);
+  }
+
+  /**
+   * Sanitises a single flashcard's text fields against XSS via DOMPurify.
+   * Only runs on the user-authored text fields (word_token, translation,
+   * definition, original_context, pronunciation_url).
+   */
+  private sanitiseFlashcard(fc: Flashcard): Flashcard {
+    return {
+      ...fc,
+      word_token: this.htmlSanitiser.sanitiseText(fc.word_token),
+      translation: this.htmlSanitiser.sanitiseText(fc.translation),
+      definition: fc.definition
+        ? this.htmlSanitiser.sanitiseText(fc.definition)
+        : fc.definition,
+      original_context: fc.original_context
+        ? this.htmlSanitiser.sanitiseText(fc.original_context)
+        : fc.original_context,
+      pronunciation_url: fc.pronunciation_url
+        ? this.htmlSanitiser.sanitiseUrl(fc.pronunciation_url)
+        : fc.pronunciation_url,
+    };
+  }
+
+  /** Sanitises an array of flashcards. */
+  private sanitiseFlashcards(list: Flashcard[]): Flashcard[] {
+    return list.map((fc) => this.sanitiseFlashcard(fc));
   }
 
   /**

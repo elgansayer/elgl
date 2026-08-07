@@ -95,7 +95,6 @@ import {
 })
 export class WordDefinitionModalComponent implements OnInit {
   readonly vocabStore = inject(VocabularyStore);
-  private readonly sanitisation = inject(HtmlSanitisationService);
   private errorHandler = inject(ErrorHandler);
 
   wordToken = input.required<string>();
@@ -110,7 +109,11 @@ export class WordDefinitionModalComponent implements OnInit {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
+<<<<<<< HEAD
 readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
+=======
+  readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
+>>>>>>> origin/main
 
   readonly errorContext = computed<SrsErrorContext>(() => ({
     component: 'word-definition-modal',
@@ -183,7 +186,7 @@ readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
       } else {
         const created = await this.vocabStore.saveWord({
           word_token: this.wordToken(),
-          translation: this.translationResult()?.translated_text || `Word: ${this.sanitisation.sanitiseText(this.wordToken())}`,
+          translation: this.translationResult()?.translated_text || `Word: ${this.wordToken()}`,
           original_context: this.contextSentence(),
           definition: this.translationResult()?.definition,
           pronunciation_url: this.translationResult()?.pronunciation_url,

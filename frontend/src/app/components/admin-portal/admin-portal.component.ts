@@ -1,5 +1,5 @@
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, resource, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
@@ -11,7 +11,11 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
+<<<<<<< HEAD
   imports: [DatePipe, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+=======
+  imports: [CommonModule, TranslatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+>>>>>>> origin/main
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
@@ -50,6 +54,10 @@ export class AdminPortalComponent {
 
   onSearchInput(value: string): void {
     this.searchTerm.set(value);
+  }
+
+  retryLoad(): void {
+    this.usersResource.reload();
   }
 
   runSearch(): void {
