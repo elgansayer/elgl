@@ -12,6 +12,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { MediaService } from './media.service';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
+import { VoiceNoteUploadDto } from './dto/voice-note-upload.dto';
 
 @Controller('media')
 @UseGuards(SupabaseAuthGuard)
@@ -31,11 +32,16 @@ export class MediaController {
   async uploadVoiceNote(
     @Req() req: { user: { id: string } },
     @UploadedFile() file: Express.Multer.File,
+    @Body() dto: VoiceNoteUploadDto,
   ): Promise<{ url: string }> {
     if (!file) {
       throw new BadRequestException('No audio file uploaded');
     }
-    return this.mediaService.uploadAndCompressVoiceNote(req.user.id, file);
+    return this.mediaService.uploadAndCompressVoiceNote(
+      req.user.id,
+      file,
+      dto.format || 'ogg',
+    );
   }
 
   @Post('cover/confirm')
