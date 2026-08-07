@@ -5,6 +5,8 @@ import { VideoClassroomErrorHandlerService } from '../../services/video-classroo
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { firstValueFrom, interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
@@ -12,9 +14,9 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent],
+  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   templateUrl: './classrooms-marketplace.html',
-  styleUrl: './classrooms-marketplace.scss',
+  styles: [''],
 })
 export class ClassroomsMarketplace implements OnInit {
   private store = inject(AudioRoomsStore);
