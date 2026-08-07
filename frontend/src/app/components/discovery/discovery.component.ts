@@ -106,7 +106,21 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly ageRangeMin = signal<number>(18);
   readonly ageRangeMax = signal<number>(100);
 
+  readonly filtersExpanded = signal<boolean>(true);
   readonly voiceRoomActive = signal<boolean>(false);
+
+  readonly activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.selectedTargetLanguage()) count++;
+    if (this.selectedGender()) count++;
+    if (this.selectedFilter() !== 'all') count++;
+    if (this.selectedSort() !== 'best_match') count++;
+    if (this.ageRangeMin() !== 18 || this.ageRangeMax() !== 100) count++;
+    if (this.selectedDistanceKm() !== 50) count++;
+    if (this.seriousLearnerMode()) count++;
+    if (this.voiceRoomActive()) count++;
+    return count;
+  });
   readonly selectedSort = signal<string>('best_match');
   readonly sortOptions = computed(() => {
     this.i18n.translations();
@@ -236,6 +250,10 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  toggleFiltersExpanded(): void {
+    this.filtersExpanded.update((v) => !v);
   }
 
   toggleVoiceRoomActive(): void {
