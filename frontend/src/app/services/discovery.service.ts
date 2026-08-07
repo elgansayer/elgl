@@ -9,6 +9,7 @@ import { SafetyService } from './safety.service';
 import { UserProfile, UserService } from './user.service';
 import { ChatService, ChatMessage } from './chat.service';
 import { OfflineDiscoveryCacheService } from './offline-discovery-cache.service';
+import { MatchmakingAlgorithmService } from './matchmaking-algorithm.service';
 
 export interface SearchFilterParams {
   latitude?: number;
@@ -47,6 +48,7 @@ export class DiscoveryService {
   private chatService = inject(ChatService);
   private userService = inject(UserService);
   private offlineCache = inject(OfflineDiscoveryCacheService);
+  private matchmakingAlgorithm = inject(MatchmakingAlgorithmService);
   private baseUrl = `${environment.apiUrl}/discovery`;
 
   private getHeaders() {
@@ -145,12 +147,23 @@ export class DiscoveryService {
     if (!isOnline) {
       const cached = await this.offlineCache.getCachedSearchResults(filtersKey);
       if (cached && cached.length > 0) {
-        return this.enrichPartners(cached, filters);
+        return this.enrichPartnersFallback(cached, filters);
       }
-      // Fall back to all cached partners when no specific search results cached
+      // Fall back to all cached partners and apply client-side matchmaking algorithm
       const allCached = await this.offlineCache.getAllCachedPartners();
       if (allCached.length > 0) {
-        return this.enrichPartners(allCached, filters);
+        return this.enrichPartnersFallback(allCached, filters);
+      }
+      // Ultimate fallback: mock data with algorithm-based ranking
+      const currentUser = this.authService.currentUser();
+      if (currentUser?.id) {
+        const profile = await this.userService.getMyProfile().catch((): UserProfile | null => null);
+        if (profile) {
+          const scored = this.matchmakingAlgorithm.scoreAndRank(profile, MOCK_PARTNERS);
+          const scoreFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored, filters);
+          const fallbackUsers = scoreFiltered.map((s) => s.partner);
+          return this.enrichPartnersFallback(fallbackUsers, filters);
+        }
       }
       return MOCK_PARTNERS;
     }
@@ -215,6 +228,43 @@ export class DiscoveryService {
     }
 
     return enriched;
+  }
+
+  /**
+   * Offline enrichment path that uses client-side matchmaking algorithm to
+   * score and rank cached partners. Skips server-dependent operations
+   * (partner-of-week flags) but still filters blocked users from cached data.
+   */
+  private async enrichPartnersFallback(
+    users: UserProfile[],
+    filters: SearchFilterParams & { serious_learner_mode?: boolean },
+  ): Promise<UserProfile[]> {
+    const currentUser = this.authService.currentUser();
+
+    // Filter out blocked users from cached data
+    let filtered = users;
+    if (currentUser?.id) {
+      const blockedIds = await this.safetyService
+        .getBlockedAndBlockerIds(currentUser.id)
+        .catch((): string[] => []);
+      if (blockedIds.length > 0) {
+        filtered = filtered.filter((user) => !blockedIds.includes(user.id));
+      }
+    }
+
+    // Apply client-side matchmaking algorithm scoring when we have user profile data
+    if (currentUser?.id) {
+      const profile = await this.userService
+        .getMyProfile()
+        .catch((): UserProfile | null => null);
+      if (profile) {
+        const scored = this.matchmakingAlgorithm.scoreAndRank(profile, filtered);
+        const rankFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored, filters);
+        return rankFiltered.map((s) => s.partner);
+      }
+    }
+
+    return filtered;
   }
 
   async searchByCountryCity(country?: string, city?: string): Promise<UserProfile[]> {
