@@ -20,6 +20,7 @@ import { RouterLink } from '@angular/router';
 import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range-slider.component';
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-discovery',
@@ -35,6 +36,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     AgeRangeSliderComponent,
     DistanceSliderComponent,
     AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -58,6 +60,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     })[]
   >([]);
   readonly isLoading = signal<boolean>(true);
+  readonly searchError = signal<boolean>(false);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 
@@ -91,6 +94,18 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
   readonly voiceRoomActive = signal<boolean>(false);
   readonly selectedSort = signal<string>('best_match');
+  readonly hasActiveFilters = computed(() =>
+    this.selectedNativeLanguage() !== '' ||
+    this.selectedTargetLanguage() !== '' ||
+    this.selectedGender() !== '' ||
+    this.seriousLearnerOnly() ||
+    this.voiceRoomActive() ||
+    this.selectedProficiencyLevel() !== '' ||
+    this.selectedSort() !== 'best_match' ||
+    this.selectedDistanceKm() !== 50 ||
+    this.ageRangeMin() !== 18 ||
+    this.ageRangeMax() !== 100
+  );
   readonly sortOptions = computed(() => {
     this.i18n.translations();
     return [
@@ -178,6 +193,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
   async searchPartners(): Promise<void> {
     this.isLoading.set(true);
+    this.searchError.set(false);
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
@@ -216,6 +232,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       this.partners.set(mapped);
     } catch (e) {
       console.error('Partner search failed:', e);
+      this.searchError.set(true);
     } finally {
       this.isLoading.set(false);
     }

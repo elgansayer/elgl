@@ -214,15 +214,70 @@
   <!-- Content States -->
   <main class="p-0">
     @if (isLoading()) {
-      <app-empty-state [title]="'discovery.searching' | t" [customClass]="'py-16'">
-      </app-empty-state>
-    } @else if (partners().length === 0) {
+      <!-- Skeleton Loader Cards - mirroring the partner card layout -->
+      <div class="divide-y divide-surface-200" aria-busy="true" aria-label="Loading partners">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="flex items-center justify-between gap-3 p-4 bg-surface-500" aria-hidden="true">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <!-- Avatar skeleton -->
+              <app-skeleton-loader
+                [height]="'56px'"
+                [width]="'56px'"
+                [borderRadius]="'50%'"
+                [variant]="'circle'"
+              />
+              <div class="min-w-0 flex-1 space-y-2">
+                <!-- Name skeleton -->
+                <div class="flex items-center gap-2">
+                  <app-skeleton-loader [height]="'16px'" [width]="'120px'" [borderRadius]="'8px'" />
+                  <app-skeleton-loader [height]="'14px'" [width]="'40px'" [borderRadius]="'999px'" />
+                </div>
+                <!-- Fluency indicator skeleton -->
+                <div class="flex gap-1.5">
+                  <app-skeleton-loader [height]="'12px'" [width]="'40%'" [borderRadius]="'4px'" [variant]="'text'" />
+                </div>
+                <!-- Bio / status skeleton -->
+                <app-skeleton-loader [height]="'12px'" [width]="'60%'" [borderRadius]="'4px'" [variant]="'text'" />
+                <div class="flex gap-3">
+                  <app-skeleton-loader [height]="'10px'" [width]="'20%'" [borderRadius]="'4px'" [variant]="'text'" />
+                  <app-skeleton-loader [height]="'10px'" [width]="'25%'" [borderRadius]="'4px'" [variant]="'text'" />
+                </div>
+              </div>
+            </div>
+            <!-- Action button skeleton -->
+            <app-skeleton-loader [height]="'40px'" [width]="'40px'" [borderRadius]="'50%'" [variant]="'circle'" />
+          </div>
+        }
+      </div>
+    } @else if (searchError()) {
       <app-empty-state
-        [illustration]="'/assets/illustrations/no-users-nearby.svg'"
-        [title]="'discovery.noUsersNearby' | t"
-        [description]="'discovery.noUsersHint' | t"
+        [icon]="'⚠️'"
+        [title]="'discovery.searchErrorTitle' | t"
+        [description]="'discovery.searchErrorHint' | t"
+        [actionLabel]="'discovery.retrySearch' | t"
+        (actionClicked)="searchPartners()"
+        [customClass]="'py-16'"
       >
       </app-empty-state>
+    } @else if (partners().length === 0) {
+      @if (hasActiveFilters()) {
+        <app-empty-state
+          [illustration]="'/assets/illustrations/no-users-nearby.svg'"
+          [title]="'discovery.noUsersNearby' | t"
+          [description]="'discovery.noUsersHint' | t"
+          [actionLabel]="'discovery.resetFilters' | t"
+          (actionClicked)="resetFilters()"
+        >
+        </app-empty-state>
+      } @else {
+        <app-empty-state
+          [icon]="'🌍'"
+          [title]="'discovery.noPartnersYet' | t"
+          [description]="'discovery.noPartnersYetHint' | t"
+          [customClass]="'py-16'"
+        >
+        </app-empty-state>
+      }
     } @else {
       <!-- User List -->
       <div class="divide-y divide-surface-200">

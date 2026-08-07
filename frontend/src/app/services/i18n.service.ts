@@ -358,6 +358,11 @@ export class I18nService {
     'discovery.genderMale': 'Male',
     'discovery.genderFemale': 'Female',
     'discovery.genderVipRequired': 'VIP required to filter by gender',
+    'discovery.searchErrorTitle': 'Something Went Wrong',
+    'discovery.searchErrorHint': 'We couldn\'t load partner results right now. Please check your connection and try again.',
+    'discovery.retrySearch': 'Try Again',
+    'discovery.noPartnersYet': 'No Partners Yet',
+    'discovery.noPartnersYetHint': 'There are no language partners available at the moment. Check back soon as new learners join every day!',
 
     // Moments Feed Component
     'moments.title': 'Moments',

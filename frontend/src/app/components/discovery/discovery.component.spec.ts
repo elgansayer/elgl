@@ -660,4 +660,108 @@ describe('DiscoveryComponent', () => {
       expect(button.getAttribute('aria-pressed')).toBe('true');
     });
   });
+
+  describe('empty states and skeleton loaders', () => {
+    it('should render skeleton loaders when isLoading is true', async () => {
+      mockDiscoveryService.findPartners.mockReturnValue(
+        new Promise(() => {
+          /* never resolves */
+        }),
+      );
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const container = fixture.nativeElement.querySelector('[aria-busy="true"]');
+      expect(container).toBeTruthy();
+
+      const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+
+    it('should set searchError when findPartners rejects', async () => {
+      mockDiscoveryService.findPartners.mockRejectedValue(new Error('search failed'));
+
+      await init();
+
+      expect(component.searchError()).toBe(true);
+    });
+
+    it('should render error state when searchError is true', async () => {
+      mockDiscoveryService.findPartners.mockRejectedValue(new Error('search failed'));
+
+      await init();
+
+      expect(component.searchError()).toBe(true);
+      const emptyStateEl = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyStateEl).toBeTruthy();
+      const actionButton = emptyStateEl?.querySelector('button');
+      expect(actionButton).toBeTruthy();
+    });
+
+    it('should show noPartnersYet state when no results and no active filters', async () => {
+      mockDiscoveryService.findPartners.mockResolvedValue([]);
+
+      await init();
+      // Reset all filters to defaults so hasActiveFilters is false
+      component.resetFilters();
+      await flush();
+
+      expect(component.partners().length).toBe(0);
+      expect(component.hasActiveFilters()).toBe(false);
+
+      const emptyStateEl = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyStateEl).toBeTruthy();
+    });
+
+    it('should show filters empty state when results are empty but filters are active', async () => {
+      mockDiscoveryService.findPartners.mockResolvedValue([]);
+      component.onFilterSelect('serious');
+      await init();
+
+      expect(component.partners().length).toBe(0);
+      expect(component.hasActiveFilters()).toBe(true);
+
+      const emptyStateEl = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyStateEl).toBeTruthy();
+    });
+
+    it('should clear searchError when retrying search', async () => {
+      mockDiscoveryService.findPartners.mockRejectedValue(new Error('search failed'));
+      await init();
+      expect(component.searchError()).toBe(true);
+
+      mockDiscoveryService.findPartners.mockResolvedValue([makePartner()]);
+      await component.searchPartners();
+      expect(component.searchError()).toBe(false);
+      expect(component.isLoading()).toBe(false);
+    });
+
+    it('should have hasActiveFilters false with default filter values', async () => {
+      await init();
+      // Use resetFilters to ensure defaults
+      component.resetFilters();
+      await flush();
+
+      expect(component.hasActiveFilters()).toBe(false);
+    });
+
+    it('should have hasActiveFilters true when target language selected', async () => {
+      await init();
+
+      component.setLanguage('JA');
+      await flush();
+
+      expect(component.hasActiveFilters()).toBe(true);
+    });
+
+    it('should have hasActiveFilters true when serious filter active', async () => {
+      await init();
+
+      component.onFilterSelect('serious');
+      await flush();
+
+      expect(component.hasActiveFilters()).toBe(true);
+    });
+  });
 });
