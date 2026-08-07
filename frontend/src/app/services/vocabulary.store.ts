@@ -1,8 +1,9 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { SrsOfflineService } from './srs-offline.service';
 
 export interface Flashcard {
   id: string;
@@ -54,6 +55,7 @@ export interface PronunciationScoreResult {
 export class VocabularyStore {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private srsOffline = inject(SrsOfflineService);
   private flashcardsUrl = `${environment.apiUrl}/flashcards`;
   private nlpUrl = `${environment.apiUrl}/nlp`;
 
@@ -65,6 +67,9 @@ export class VocabularyStore {
 
   /** Cards queued for a deck-specific review session */
   readonly pendingReviewCards = signal<Flashcard[]>([]);
+
+  /** Whether the device is currently offline (used for UI indicators) */
+  readonly isOffline = computed(() => !navigator.onLine);
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -83,8 +88,24 @@ export class VocabularyStore {
       const map = new Map<string, Flashcard>();
       list.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
       this.flashcardMap.set(map);
+<<<<<<< HEAD
     } catch {
       // Failed to load flashcards - silently handled
+=======
+      // Cache for offline access
+      this.srsOffline.cacheFlashcards(list).catch(() => undefined);
+    } catch {
+      // Offline fallback - serve from local cache
+      if (!navigator.onLine) {
+        const cached = await this.srsOffline.getCachedFlashcards();
+        if (cached.length > 0) {
+          this.allFlashcards.set(cached);
+          const map = new Map<string, Flashcard>();
+          cached.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
+          this.flashcardMap.set(map);
+        }
+      }
+>>>>>>> origin/main
     } finally {
       this.isLoading.set(false);
     }
@@ -96,8 +117,21 @@ export class VocabularyStore {
         this.http.get<Flashcard[]>(`${this.flashcardsUrl}/due`, { headers: this.getHeaders() }),
       );
       this.dueReviews.set(list);
+<<<<<<< HEAD
     } catch {
       // Failed to load due reviews - silently handled
+=======
+      // Cache for offline access
+      this.srsOffline.cacheDueReviews(list).catch(() => undefined);
+    } catch {
+      // Offline fallback
+      if (!navigator.onLine) {
+        const cached = await this.srsOffline.getCachedDueReviews();
+        if (cached.length > 0) {
+          this.dueReviews.set(cached);
+        }
+      }
+>>>>>>> origin/main
     }
   }
 
@@ -151,21 +185,76 @@ export class VocabularyStore {
   }
 
   async updateSrsLevel(flashcardId: string, quality: number): Promise<Flashcard> {
-    const fc = await firstValueFrom(
-      this.http.patch<Flashcard>(
-        `${this.flashcardsUrl}/${flashcardId}/srs`,
-        { quality },
-        { headers: this.getHeaders() },
-      ),
-    );
-    this.triggerHapticFeedback(fc.srs_level);
-    this.allFlashcards.update((list) => list.map((item) => (item.id === fc.id ? fc : item)));
-    this.flashcardMap.update((map) => {
-      const next = new Map(map);
-      next.set(fc.word_token.toLowerCase(), fc);
-      return next;
+    // Compute new SRS level locally for offline queueing
+    const current = this.allFlashcards().find((f) => f.id === flashcardId);
+    const newLevel = current ? this.estimateNewLevel(current.srs_level, quality) : 0;
+
+    try {
+      const fc = await firstValueFrom(
+        this.http.patch<Flashcard>(
+          `${this.flashcardsUrl}/${flashcardId}/srs`,
+          { quality },
+          { headers: this.getHeaders() },
+        ),
+      );
+      this.triggerHapticFeedback(fc.srs_level);
+      this.allFlashcards.update((list) => list.map((item) => (item.id === fc.id ? fc : item)));
+      this.flashcardMap.update((map) => {
+        const next = new Map(map);
+        next.set(fc.word_token.toLowerCase(), fc);
+        return next;
+      });
+      return fc;
+    } catch {
+      // Offline - queue the review and optimistically update local state
+      if (!navigator.onLine) {
+        await this.srsOffline.queueSrsReview(flashcardId, quality, newLevel);
+        this.triggerHapticFeedback(newLevel);
+        // Optimistically update local state
+        this.allFlashcards.update((list) =>
+          list.map((item) =>
+            item.id === flashcardId ? { ...item, srs_level: newLevel } : item,
+          ),
+        );
+        this.flashcardMap.update((map) => {
+          const next = new Map(map);
+          const card = next.get(current?.word_token?.toLowerCase() ?? '');
+          if (card) {
+            next.set(card.word_token.toLowerCase(), { ...card, srs_level: newLevel });
+          }
+          return next;
+        });
+        // Return the optimistically updated card
+        const updated = this.allFlashcards().find((f) => f.id === flashcardId);
+        if (updated) return updated;
+      }
+      throw new Error('Failed to update SRS level');
+    }
+  }
+
+  /**
+   * Estimate the new SRS level based on quality for offline use.
+   * SM-2 approximation used locally.
+   */
+  private estimateNewLevel(currentLevel: number, quality: number): number {
+    if (quality < 3) return 0;
+    if (quality >= 4 && currentLevel >= 3) return 4;
+    return Math.min(4, currentLevel + 1);
+  }
+
+  /**
+   * Sync any queued offline SRS reviews to the server.
+   */
+  async syncOfflineReviews(): Promise<{ synced: number; failed: number }> {
+    return this.srsOffline.syncQueuedReviews(async (queued) => {
+      await firstValueFrom(
+        this.http.patch<Flashcard>(
+          `${this.flashcardsUrl}/${queued.flashcardId}/srs`,
+          { quality: queued.quality },
+          { headers: this.getHeaders() },
+        ),
+      );
     });
-    return fc;
   }
 
   // NLP API calls
