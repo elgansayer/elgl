@@ -1,8 +1,8 @@
-<div class="max-w-5xl mx-auto ps-4 pe-4 pt-6 pb-6">
-  <h1 class="text-2xl font-bold mb-1">{{ 'admin.title' | t }}</h1>
+<div class="max-w-5xl mx-auto ps-4 pe-4 pt-6 pb-6" role="main" aria-labelledby="admin-title">
+  <h1 id="admin-title" class="text-2xl font-bold mb-1">{{ 'admin.title' | t }}</h1>
   <p class="text-sm text-text-secondary mb-4">{{ 'admin.subtitle' | t }}</p>
 
-  <form class="flex gap-2 mb-4" (submit)="$event.preventDefault(); runSearch()">
+  <form class="flex gap-2 mb-4" (submit)="$event.preventDefault(); runSearch()" role="search" [attr.aria-label]="'admin.searchLabel' | t">
     <label class="sr-only" for="admin-user-search">{{ 'admin.searchLabel' | t }}</label>
     <input
       id="admin-user-search"
@@ -17,39 +17,42 @@
     </button>
   </form>
 
+  <div aria-live="polite">
   @if (errorMessage()) {
     <p role="alert" class="text-rose-500 text-sm mb-4">{{ errorMessage() }}</p>
   }
 
   @if (isLoading()) {
-    <p class="text-text-secondary">{{ 'admin.loading' | t }}</p>
+    <p class="text-text-secondary" aria-busy="true">{{ 'admin.loading' | t }}</p>
   } @else if (users().length === 0) {
     <p class="text-text-secondary">{{ 'admin.empty' | t }}</p>
   } @else {
-    <div class="space-y-3" role="table" [attr.aria-label]="'admin.title' | t">
+    <div class="space-y-3" role="table" [attr.aria-label]="'admin.userTableAria' | t">
+      <div role="rowgroup">
       @for (user of users(); track user.id) {
         <app-card variant="default" padding="md">
           <div class="flex flex-wrap items-center gap-3" role="row">
-            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-surface-100 overflow-hidden" role="cell">
               @if (user.avatar_url) {
                 <img loading="lazy" [src]="user.avatar_url" alt="" class="w-full h-full object-cover" />
               } @else {
                 <div
                   class="w-full h-full flex items-center justify-center text-text-secondary text-sm"
+                  aria-hidden="true"
                 >
                   {{ displayNameFor(user).charAt(0) }}
                 </div>
               }
             </div>
 
-            <div class="flex-1 min-w-[10rem]">
+            <div class="flex-1 min-w-[10rem]" role="cell">
               <p class="font-semibold">{{ displayNameFor(user) }}</p>
               <p class="text-xs text-text-secondary">
                 {{ 'admin.joined' | t: { date: (user.created_at | date) } }}
               </p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2" role="cell">
               @if (user.is_admin) {
                 <app-pill colour="info" size="sm" [label]="'admin.badgeAdmin' | t" />
               }
@@ -100,17 +103,17 @@
           </div>
 
           <details class="mt-3" (toggle)="onLoginHistoryToggle(user, $any($event.target).open)">
-            <summary class="cursor-pointer text-sm text-primary select-none">
+            <summary class="cursor-pointer text-sm text-primary select-none" [attr.aria-expanded]="$any($event.target).open ? 'true' : 'false'">
               {{ 'admin.viewLoginHistory' | t }}
             </summary>
 
             <div class="mt-2 ps-4 border-s border-surface-100">
               @if (loginHistoryLoadingId() === user.id) {
-                <p class="text-xs text-text-secondary">{{ 'admin.loginHistoryLoading' | t }}</p>
+                <p class="text-xs text-text-secondary" aria-busy="true">{{ 'admin.loginHistoryLoading' | t }}</p>
               } @else if (!loginHistoryByUser()[user.id] || loginHistoryByUser()[user.id].length === 0) {
                 <p class="text-xs text-text-secondary">{{ 'admin.loginHistoryEmpty' | t }}</p>
               } @else {
-                <ul class="space-y-1">
+                <ul class="space-y-1" role="list">
                   @for (entry of loginHistoryByUser()[user.id]; track entry.id) {
                     <li class="text-xs text-text-secondary">
                       {{ entry.created_at | date: 'medium' }}
@@ -128,6 +131,7 @@
           </details>
         </app-card>
       }
+      </div>
     </div>
 
     <nav
@@ -139,16 +143,21 @@
         class="app-pill border border-surface-100"
         [disabled]="page() <= 1"
         (click)="goToPage(-1)"
-       [attr.aria-label]="'admin.prevPage' | t">
+        [attr.aria-label]="'admin.prevPage' | t"
+      >
         {{ 'admin.prevPage' | t }}
       </button>
-      <span class="text-sm text-text-secondary">
+      <span class="text-sm text-text-secondary" role="status">
         {{ 'admin.pageIndicator' | t: { page: page(), totalPages: totalPages() } }}
       </span>
       <button
         type="button"
         class="app-pill border border-surface-100"
         [disabled]="page() >= totalPages()"
+<<<<<<< HEAD
+=======
+        [attr.aria-label]="'admin.nextPage' | t"
+>>>>>>> origin/main
         (click)="goToPage(1)"
         [attr.aria-label]="'admin.nextPage' | t"
       >
@@ -156,4 +165,5 @@
       </button>
     </nav>
   }
+  </div>
 </div>
