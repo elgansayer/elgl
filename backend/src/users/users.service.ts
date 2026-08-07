@@ -704,6 +704,7 @@ export class UsersService {
     privacy_hide_vip_status?: boolean;
     incognito_visits?: boolean;
     status_visibility?: string;
+    profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   }> {
     const profile = await this.getProfile(userId);
     const privacyRecord = profile as unknown as Record<string, unknown>;
@@ -728,6 +729,9 @@ export class UsersService {
       status_visibility:
         (profile as unknown as { status_visibility?: string })
           .status_visibility ?? 'public',
+      profile_visibility:
+        (privacyRecord.profile_visibility as
+          'everyone' | 'vips_only' | 'hidden' | undefined) ?? 'everyone',
     };
   }
 
@@ -982,6 +986,7 @@ export class UsersService {
       incognito_visits?: boolean;
       privacy_hide_vip_status?: boolean;
       status_visibility?: string;
+      profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
     },
     isVip: boolean,
   ): Promise<UserProfile> {
@@ -1008,6 +1013,8 @@ export class UsersService {
       updatePayload.privacy_hide_vip_status = settings.privacy_hide_vip_status;
     if (settings.status_visibility !== undefined)
       updatePayload.status_visibility = settings.status_visibility;
+    if (settings.profile_visibility !== undefined)
+      updatePayload.profile_visibility = settings.profile_visibility;
 
     const { error: privacyUpdateError } = await supabase
       .from('users')

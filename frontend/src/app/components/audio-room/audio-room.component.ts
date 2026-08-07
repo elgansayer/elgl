@@ -21,6 +21,7 @@ import {
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
 import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
+import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -35,6 +36,7 @@ import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component'
     AudioEqualizerComponent,
     QuickPollFormComponent,
     QuickPollDisplayComponent,
+    LiveChatOverlayComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -162,9 +164,12 @@ export class AudioRoomComponent implements OnInit {
     await this.store.muteSpeaker(targetUserId);
   }
 
+  async unmute(targetUserId: string): Promise<void> {
+    await this.store.unmuteSpeaker(targetUserId);
+  }
+
   async kick(targetUserId: string): Promise<void> {
-    // Kicking off stage is functionally demoting them back to a listener
-    await this.store.demoteSpeaker(targetUserId);
+    await this.store.kickSpeaker(targetUserId);
   }
 
   async archive(): Promise<void> {

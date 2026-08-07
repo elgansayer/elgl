@@ -598,11 +598,13 @@
   "auth.resetPassword.backToHome": "ホームに戻る",
   "common.pleaseWait": "お待ちください...",
   "common.submit": "送信",
-  "profile.audioIntroCardTitle": "音声自己紹介",
+"profile.audioIntroCardTitle": "音声自己紹介",
   "profile.audioIntroHint": "30秒の音声で自己紹介を録音して、パートナーにあなたの声を聞かせましょう。",
   "profile.audioIntroRecord": "録音する",
   "profile.audioIntroRerecord": "再録音",
   "profile.audioIntroStop": "録音停止",
   "profile.audioIntroSave": "保存する",
-  "profile.audioIntroSaved": "音声紹介を保存しました！"
+  "profile.audioIntroSaved": "音声紹介を保存しました！",
+"restore_purchases": "購入を復元",
+  "restoring": "復元中..."
 }

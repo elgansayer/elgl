@@ -505,11 +505,13 @@
   "auth.resetPassword.backToHome": "العودة إلى الصفحة الرئيسية",
   "common.pleaseWait": "يرجى الانتظار...",
   "common.submit": "إرسال",
-  "profile.audioIntroCardTitle": "مقدمة صوتية",
+"profile.audioIntroCardTitle": "مقدمة صوتية",
   "profile.audioIntroHint": "سجل مقدمة قصيرة مدتها 30 ثانية ليدع الشركاء يستمعون إلى صوتك.",
   "profile.audioIntroRecord": "تسجيل المقدمة",
   "profile.audioIntroRerecord": "إعادة التسجيل",
   "profile.audioIntroStop": "إيقاف التسجيل",
   "profile.audioIntroSave": "حفظ المقدمة",
-  "profile.audioIntroSaved": "تم حفظ المقدمة الصوتية!"
+  "profile.audioIntroSaved": "تم حفظ المقدمة الصوتية!",
+"restore_purchases": "استعادة المشتريات",
+  "restoring": "جارٍ الاستعادة..."
 }

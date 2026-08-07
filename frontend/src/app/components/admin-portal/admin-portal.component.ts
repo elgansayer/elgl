@@ -5,6 +5,7 @@ import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
+import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
@@ -24,6 +25,7 @@ export class AdminPortalComponent implements OnInit {
   readonly isLoading = signal<boolean>(true);
   readonly errorMessage = signal<string>('');
   readonly vipUpdatingId = signal<string | null>(null);
+  readonly moderationActingId = signal<string | null>(null);
   readonly loginHistoryByUser = signal<Record<string, LoginHistoryEntry[]>>({});
   readonly loginHistoryLoadingId = signal<string | null>(null);
 
@@ -95,5 +97,33 @@ export class AdminPortalComponent implements OnInit {
 
   displayNameFor(user: AdminUserSummary): string {
     return user.display_name || this.i18n.translate('common.unknownUser');
+  }
+
+  async handleWarn(user: AdminUserSummary): Promise<void> {
+    const name = this.displayNameFor(user);
+    if (!confirm(this.i18n.translate('admin.warnConfirm', { name }))) return;
+    this.moderationActingId.set(user.id);
+    try {
+      await this.adminService.warnUser(user.id);
+      showToast(this.i18n.translate('admin.warningIssued'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('admin.warningFailed'));
+    } finally {
+      this.moderationActingId.set(null);
+    }
+  }
+
+  async handleBan(user: AdminUserSummary): Promise<void> {
+    const name = this.displayNameFor(user);
+    if (!confirm(this.i18n.translate('admin.banConfirm', { name }))) return;
+    this.moderationActingId.set(user.id);
+    try {
+      await this.adminService.banUser(user.id);
+      showToast(this.i18n.translate('admin.userBanned'), 'success');
+    } catch {
+      showErrorToast(this.i18n.translate('admin.banFailed'));
+    } finally {
+      this.moderationActingId.set(null);
+    }
   }
 }
