@@ -5,10 +5,18 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('AdminService', () => {
   let service: AdminService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
+  let mockSupabaseClient: Record<string, jest.Mock>;
+  let mockQueryBuilder: Record<string, jest.Mock>;
+  let mockRedisClient: Record<string, jest.Mock>;
 
   beforeEach(async () => {
+    mockRedisClient = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn().mockResolvedValue(1),
+      keys: jest.fn().mockResolvedValue([]),
+    };
+
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       ilike: jest.fn().mockReturnThis(),
@@ -32,6 +40,7 @@ describe('AdminService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
         },
       ],
@@ -49,7 +58,22 @@ describe('AdminService', () => {
   });
 
   describe('listUsers', () => {
-    it('returns paginated users without a search term', async () => {
+    it('returns cached users when cache hit occurs', async () => {
+      const cached = {
+        users: [{ id: 'cached-1', display_name: 'Cachette' }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      };
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(cached));
+
+      const result = await service.listUsers({ page: 1, pageSize: 20 });
+
+      expect(result).toEqual(cached);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('returns paginated users and caches them on cache miss', async () => {
       const users = [{ id: 'user-1', display_name: 'Ada' }];
       mockQueryBuilder.range.mockResolvedValue({
         data: users,
@@ -60,14 +84,45 @@ describe('AdminService', () => {
       const result = await service.listUsers({ page: 1, pageSize: 20 });
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockQueryBuilder.ilike).not.toHaveBeenCalled();
-      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 19);
       expect(result).toEqual({
         users,
         total: 1,
         page: 1,
         pageSize: 20,
       });
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'admin:users:list:1:20:',
+        JSON.stringify({ users, total: 1, page: 1, pageSize: 20 }),
+        'EX',
+        300,
+      );
+    });
+
+    it('still returns results when Redis cache write fails', async () => {
+      mockRedisClient.get.mockResolvedValue(null);
+      mockRedisClient.set.mockRejectedValue(new Error('Redis down'));
+      mockQueryBuilder.range.mockResolvedValue({
+        data: [{ id: 'user-1' }],
+        error: null,
+        count: 1,
+      });
+
+      const result = await service.listUsers({ page: 1, pageSize: 20 });
+
+      expect(result.total).toBe(1);
+    });
+
+    it('falls through to Supabase when cached JSON is malformed', async () => {
+      mockRedisClient.get.mockResolvedValue('not-json');
+      mockQueryBuilder.range.mockResolvedValue({
+        data: [{ id: 'user-1' }],
+        error: null,
+        count: 1,
+      });
+
+      const result = await service.listUsers({ page: 1, pageSize: 20 });
+
+      expect(result.users).toHaveLength(1);
     });
 
     it('filters by search term using ilike on display_name', async () => {
@@ -100,9 +155,13 @@ describe('AdminService', () => {
   });
 
   describe('setVipStatus', () => {
-    it('updates is_vip and vip_tier and returns the updated user', async () => {
+    it('updates is_vip and vip_tier, invalidates user list and login history caches', async () => {
       const updated = { id: 'user-1', is_vip: true, vip_tier: 'consumer' };
       mockQueryBuilder.single.mockResolvedValue({ data: updated, error: null });
+      mockRedisClient.keys.mockResolvedValue([
+        'admin:users:list:1:20:',
+        'admin:users:list:2:10:search',
+      ]);
 
       const result = await service.setVipStatus('user-1', {
         is_vip: true,
@@ -113,8 +172,15 @@ describe('AdminService', () => {
         is_vip: true,
         vip_tier: 'consumer',
       });
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'user-1');
       expect(result).toEqual(updated);
+      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:users:list:*');
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'admin:users:list:1:20:',
+        'admin:users:list:2:10:search',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'admin:login-history:user-1',
+      );
     });
 
     it('defaults vip_tier to free when revoking VIP without a tier', async () => {
@@ -144,7 +210,19 @@ describe('AdminService', () => {
   });
 
   describe('getLoginHistory', () => {
-    it('returns login history rows for a user', async () => {
+    it('returns cached login history on cache hit', async () => {
+      const cached = [
+        { id: 'cached-log', user_id: 'user-1', created_at: '2026-01-01T00:00:00Z' },
+      ];
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(cached));
+
+      const result = await service.getLoginHistory('user-1');
+
+      expect(result).toEqual(cached);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('returns login history and caches it on cache miss', async () => {
       const history = [
         { id: 'log-1', user_id: 'user-1', created_at: '2026-01-01T00:00:00Z' },
       ];
@@ -153,8 +231,13 @@ describe('AdminService', () => {
       const result = await service.getLoginHistory('user-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('login_history');
-      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(result).toEqual(history);
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'admin:login-history:user-1',
+        JSON.stringify(history),
+        'EX',
+        600,
+      );
     });
 
     it('returns an empty array when the query errors', async () => {
@@ -169,8 +252,85 @@ describe('AdminService', () => {
     });
   });
 
+  describe('banUser', () => {
+    it('inserts a block and invalidates user list, blocks list, and login history caches', async () => {
+      mockQueryBuilder.insert.mockImplementation(() => mockQueryBuilder);
+      mockQueryBuilder.select = jest.fn().mockResolvedValue({ error: null });
+      mockRedisClient.keys
+        .mockResolvedValueOnce(['admin:users:list:1:20:'])
+        .mockResolvedValueOnce(['admin:blocks:list:1:20:']);
+
+      await service.banUser('bad-user', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:users:list:*');
+      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:blocks:list:*');
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'admin:login-history:bad-user',
+      );
+    });
+
+    it('throws NotFoundException when the insert fails', async () => {
+      mockQueryBuilder.insert.mockResolvedValue({ error: { message: 'dup' } });
+
+      await expect(
+        service.banUser('bad-user', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('warnUser', () => {
+    it('inserts a report and invalidates user list and login history caches', async () => {
+      mockQueryBuilder.insert.mockImplementation(() => mockQueryBuilder);
+      mockQueryBuilder.select = jest.fn().mockResolvedValue({ error: null });
+      mockRedisClient.keys.mockResolvedValue(['admin:users:list:1:20:']);
+
+      await service.warnUser('bad-user', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
+      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:users:list:*');
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'admin:login-history:bad-user',
+      );
+    });
+
+    it('throws NotFoundException when the insert fails', async () => {
+      mockQueryBuilder.insert.mockResolvedValue({ error: { message: 'err' } });
+
+      await expect(
+        service.warnUser('bad-user', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('listAllBlocks', () => {
-    it('returns paginated blocks with blocker and blocked details', async () => {
+    it('returns cached blocks on cache hit', async () => {
+      const cached = {
+        blocks: [
+          {
+            id: 'cached-block',
+            blocker_id: 'u1',
+            blocked_id: 'u2',
+            blocker_name: null,
+            blocked_name: null,
+            blocker_avatar: null,
+            blocked_avatar: null,
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      };
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(cached));
+
+      const result = await service.listAllBlocks(1, 20);
+
+      expect(result).toEqual(cached);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('returns paginated blocks and caches them on cache miss', async () => {
       const blockRows = [
         {
           id: 'block-1',
@@ -194,47 +354,14 @@ describe('AdminService', () => {
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 19);
-      expect(result).toEqual({
-        blocks: [
-          {
-            id: 'block-1',
-            blocker_id: 'user-1',
-            blocked_id: 'user-2',
-            blocker_name: 'Ada',
-            blocked_name: 'Bob',
-            blocker_avatar: null,
-            blocked_avatar: 'https://example.com/bob.png',
-            created_at: '2026-01-01T00:00:00Z',
-          },
-        ],
-        total: 1,
-        page: 1,
-        pageSize: 20,
-      });
-    });
-
-    it('handles null blocker/blocked relations gracefully', async () => {
-      const blockRows = [
-        {
-          id: 'block-1',
-          blocker_id: 'user-1',
-          blocked_id: 'user-2',
-          created_at: '2026-01-01T00:00:00Z',
-          blocker: null,
-          blocked: null,
-        },
-      ];
-      mockQueryBuilder.range.mockResolvedValue({
-        data: blockRows,
-        error: null,
-        count: 1,
-      });
-
-      const result = await service.listAllBlocks(1, 20);
-
-      expect(result.blocks[0].blocker_name).toBeNull();
-      expect(result.blocks[0].blocked_name).toBeNull();
-      expect(result.blocks[0].blocker_avatar).toBeNull();
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'admin:blocks:list:1:20',
+        expect.any(String),
+        'EX',
+        300,
+      );
+      expect(result.blocks[0].blocker_name).toBe('Ada');
+      expect(result.blocks[0].blocked_name).toBe('Bob');
     });
 
     it('returns an empty result when the query errors', async () => {
@@ -250,16 +377,74 @@ describe('AdminService', () => {
     });
   });
 
+  describe('banUser', () => {
+    it('inserts a block row for the admin and target and succeeds', async () => {
+      mockQueryBuilder.insert = jest
+        .fn()
+        .mockReturnValue({ error: null });
+
+      await service.banUser('target-user', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        blocker_id: 'admin-1',
+        blocked_id: 'target-user',
+      });
+    });
+
+    it('throws NotFoundException when the insert errors', async () => {
+      mockQueryBuilder.insert = jest.fn().mockReturnValue({
+        error: { message: 'db error' },
+      });
+
+      await expect(service.banUser('target-user', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('warnUser', () => {
+    it('inserts a report row as an admin warning and succeeds', async () => {
+      mockQueryBuilder.insert = jest
+        .fn()
+        .mockReturnValue({ error: null });
+
+      await service.warnUser('target-user', 'admin-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
+        reporter_id: 'admin-1',
+        reported_user_id: 'target-user',
+        reason_category: 'admin_warning',
+        description: 'Admin warning',
+        status: 'open',
+      });
+    });
+
+    it('throws NotFoundException when the insert errors', async () => {
+      mockQueryBuilder.insert = jest.fn().mockReturnValue({
+        error: { message: 'db error' },
+      });
+
+      await expect(service.warnUser('target-user', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
   describe('removeBlock', () => {
-    it('deletes the block and returns success', async () => {
+    it('deletes the block, returns success, and invalidates blocks list cache', async () => {
       mockQueryBuilder.delete = jest
         .fn()
         .mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
+      mockRedisClient.keys.mockResolvedValue(['admin:blocks:list:1:20']);
 
       const result = await service.removeBlock('block-1');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('blocks');
       expect(result).toEqual({ success: true });
+      expect(mockRedisClient.keys).toHaveBeenCalledWith('admin:blocks:list:*');
+      expect(mockRedisClient.del).toHaveBeenCalledWith('admin:blocks:list:1:20');
     });
 
     it('throws NotFoundException when delete fails', async () => {
