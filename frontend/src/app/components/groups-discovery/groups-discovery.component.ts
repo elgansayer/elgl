@@ -15,7 +15,6 @@ interface DiscoverableGroup {
 
 @Component({
   selector: 'app-groups-discovery',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div class="p-4">

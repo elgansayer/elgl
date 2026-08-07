@@ -40,6 +40,8 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
   styleUrls: ['./discovery.component.scss'],
 })
 export class DiscoveryComponent implements OnInit, OnDestroy {
+  // NOTE: ngOnInit/ngOnDestroy permitted here per AGENTS.md 5.3 exception -
+  // audio playback uses imperative HTMLAudioElement API requiring manual teardown.
   private readonly discoveryService = inject(DiscoveryService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
