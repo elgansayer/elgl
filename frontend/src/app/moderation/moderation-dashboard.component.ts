@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import { Component, inject, signal } from '@angular/core';
+=======
+import { CommonModule } from '@angular/common';
+import { Component, effect, inject, signal } from '@angular/core';
+>>>>>>> origin/main
 import { TranslatePipe } from '../services/translate.pipe';
 import { AppEmptyStateComponent } from '../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../components/primitives/skeleton-loader/skeleton-loader.component';
@@ -150,6 +155,14 @@ export class ModerationDashboardComponent {
 
   readonly actionInProgress = signal<string | null>(null);
   readonly actionError = signal<string | null>(null);
+
+  constructor() {
+    // Clear analysis when switching between profile/moment tabs
+    effect(() => {
+      this.type();
+      this.analysis.set(null);
+    }, { allowSignalWrites: true });
+  }
 
   async approve(item: ModerationItem): Promise<void> {
     this.actionInProgress.set(item.id);

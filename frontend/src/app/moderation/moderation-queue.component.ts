@@ -57,8 +57,10 @@ export class ModerationQueueComponent {
     this.analysisResult.set(null);
   }
 
-  setStatus(status: string): void {
-    this.status.set(status || undefined);
+  setStatus(newStatus: string): void {
+    this.status.set(newStatus || undefined);
+    // Clear analysis when switching status filter
+    this.analysisResult.set(null);
   }
 
   async approve(item: ModerationItem): Promise<void> {
@@ -109,9 +111,8 @@ export class ModerationQueueComponent {
     this.analysisLoading.set(true);
     this.analysisResult.set(null);
     try {
-      this.analysisResult.set(
-        await this.moderationService.getUserRiskAnalysis(userId),
-      );
+      const result = await this.moderationService.getUserRiskAnalysis(userId);
+      this.analysisResult.set(result);
     } catch {
       this.actionError.set('Failed to analyse user');
     } finally {
