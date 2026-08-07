@@ -362,4 +362,32 @@ describe('UserService', () => {
       ).toBeNull();
     });
   });
+
+  describe('downloadMyData', () => {
+    it('should GET /users/me/export and trigger a browser download', async () => {
+      const mockExportData = { profile: { id: 'user-1' }, moments: [] };
+      const resultPromise = service.downloadMyData();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/export`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+      req.flush(mockExportData);
+
+      await resultPromise;
+      // The method creates a Blob and triggers a download via a temporary anchor element.
+      // It should not throw.
+    });
+
+    it('should throw an error when the export endpoint fails', async () => {
+      const resultPromise = service.downloadMyData();
+
+      const req = httpMock.expectOne(`${baseUrl}/me/export`);
+      req.flush('Server error', {
+        status: 500,
+        statusText: 'Internal Server Error',
+      });
+
+      await expect(resultPromise).rejects.toThrow();
+    });
+  });
 });
