@@ -27,6 +27,16 @@
   html[dir='rtl'] {
     text-align: start;
   }
+
+  /* Global keyboard focus-visible ring for all interactive elements */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-surface-500;
+  }
+
+  /* Remove focus ring for mouse clicks, keeping it for keyboard only */
+  :focus:not(:focus-visible) {
+    @apply outline-none ring-0 ring-offset-0;
+  }
 }
 
 /* UI Primitives */

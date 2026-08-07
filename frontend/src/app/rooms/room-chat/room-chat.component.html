@@ -22,12 +22,12 @@
       (input)="onInput($event)"
       placeholder="{{ 'roomChat.placeholder' | t }}"
       class="flex-1 rounded-full bg-white/10 px-4 py-2 text-sm outline-none focus:bg-white/20"
-    />
+     [attr.aria-label]=\"'roomChat.send' | t\"/>
     <button
       type="submit"
       class="rounded-full bg-purple-500 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
       [disabled]="!inputText().trim()"
-    >
+     [attr.aria-label]="'roomChat.send' | t">
       {{ 'roomChat.send' | t }}
     </button>
   </form>

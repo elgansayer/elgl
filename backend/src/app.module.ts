@@ -55,7 +55,6 @@ import { MilestonesModule } from './milestones/milestones.module';
 import { StudyBuddiesModule } from './study-buddies/study-buddies.module';
 import { AudioIntroModule } from './audio-intro/audio-intro.module';
 import { StatsModule } from './stats/stats.module';
-import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
 import { EventsModule } from './events/events.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { LinkPreviewModule } from './link-preview/link-preview.module';
@@ -71,6 +70,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 import { AssessmentsModule } from './assessments/assessments.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -143,7 +143,6 @@ import { AssessmentsModule } from './assessments/assessments.module';
     StudyBuddiesModule,
     AudioIntroModule,
     StatsModule,
-    ScheduledDeletionModule,
     EventsModule,
     LessonsModule,
     LinkPreviewModule,
@@ -156,8 +155,9 @@ import { AssessmentsModule } from './assessments/assessments.module';
     LanguageIslandsModule,
     EmailModule,
     PasswordResetModule,
-	    AssessmentsModule,
-	    AnalyticsModule,
+            AssessmentsModule,
+            AnalyticsModule,
+            MetricsModule,
   ],
   controllers: [AppController],
   providers: [

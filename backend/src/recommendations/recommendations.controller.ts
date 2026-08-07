@@ -23,4 +23,12 @@ export class RecommendationsController {
     const userId = req.user!.id;
     return this.recommendationsService.getRecommendations(userId);
   }
+
+  @Get('daily')
+  async getDaily(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<RecommendedUserDto[]> {
+    const userId = req.user!.id;
+    return this.recommendationsService.getDailyRecommendations(userId);
+  }
 }

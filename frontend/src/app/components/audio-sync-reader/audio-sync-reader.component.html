@@ -19,7 +19,7 @@
         [class.bg-amber-600]="isPlaying()"
         [class.text-white]="isPlaying()"
         class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors shadow-sm flex items-center gap-1.5"
-      >
+       [attr.aria-label]="'audioSync.pauseImmersionAudio' | t">
         <span>{{
           isPlaying()
             ? ('audioSync.pauseImmersionAudio' | t)
