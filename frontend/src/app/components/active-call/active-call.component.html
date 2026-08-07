@@ -15,17 +15,17 @@
   </div>
 
   <!-- Bottom controls -->
-  <div class="flex items-center justify-center gap-x-8 w-full">
+  <div class="flex items-center justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 w-full">
 
     <!-- Mute / Unmute button -->
     <div class="flex flex-col items-center">
       <button
-        class="flex flex-col items-center bg-gray-800 rounded-full p-4 w-16 h-16 justify-center"
+        class="flex flex-col items-center bg-gray-800 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onToggleMute()"
         [class.bg-red-800]="isMuted()"
         [attr.aria-label]="(isMuted() ? 'voip.unmute' : 'voip.mute') | t"
       >
-        <span class="text-white text-2xl">
+        <span class="text-white text-xl sm:text-2xl">
           {{ isMuted() ? '🔇' : '🎤' }}
         </span>
       </button>
@@ -37,12 +37,12 @@
     <!-- Speakerphone button -->
     <div class="flex flex-col items-center">
       <button
-        class="flex flex-col items-center bg-gray-800 rounded-full p-4 w-16 h-16 justify-center"
+        class="flex flex-col items-center bg-gray-800 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onToggleSpeaker()"
         [class.bg-blue-800]="isSpeakerphone()"
         [attr.aria-label]="(isSpeakerphone() ? 'voip.speaker_off' : 'voip.speaker_on') | t"
       >
-        <span class="text-white text-2xl">
+        <span class="text-white text-xl sm:text-2xl">
           {{ isSpeakerphone() ? '🔊' : '🔉' }}
         </span>
       </button>
@@ -54,11 +54,11 @@
     <!-- End call button -->
     <div class="flex flex-col items-center">
       <button
-        class="flex flex-col items-center bg-red-700 hover:bg-red-600 rounded-full p-4 w-16 h-16 justify-center"
+        class="flex flex-col items-center bg-red-700 hover:bg-red-600 rounded-full p-3 sm:p-4 w-14 h-14 sm:w-16 sm:h-16 justify-center"
         (click)="onEndCall()"
         [attr.aria-label]="'voip.endCall' | t"
       >
-        <span class="text-white text-2xl">📞</span>
+        <span class="text-white text-xl sm:text-2xl">📞</span>
       </button>
       <span class="text-xs text-gray-300 mt-2">{{ 'voip.endCall' | t }}</span>
     </div>

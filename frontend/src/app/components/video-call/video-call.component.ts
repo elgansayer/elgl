@@ -57,7 +57,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
           @if (remoteCameraTrack()) {
             <div
-              class="absolute bottom-4 start-4 w-24 h-36 rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
+              class="absolute bottom-4 start-4 w-16 h-24 sm:w-20 sm:h-32 md:w-24 md:h-36 rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
             >
               <video #remoteCameraVideo autoplay playsinline class="w-full h-full object-cover" [attr.aria-label]="'video_call.remote_camera_aria' | t"></video>
             </div>
@@ -66,7 +66,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
         <!-- Local Camera Preview (PiP overlay) -->
         <div
-          class="absolute top-4 end-4 w-32 h-48 rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
+          class="absolute top-4 end-4 w-20 h-32 sm:w-28 sm:h-44 md:w-32 md:h-48 rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
           role="region"
           [attr.aria-label]="'video_call.local_video_aria' | t"
         >
@@ -107,13 +107,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
 
       <!-- Controls bar -->
-      <div class="bg-gray-900/95 backdrop-blur-sm px-6 py-4 flex items-center justify-center gap-4" role="toolbar" [attr.aria-label]="'video_call.controls_toolbar_aria' | t">
+      <div class="bg-gray-900/95 backdrop-blur-sm px-2 sm:px-4 md:px-6 py-3 sm:py-4 flex items-center justify-center gap-1 sm:gap-2 md:gap-4" role="toolbar" [attr.aria-label]="'video_call.controls_toolbar_aria' | t">
         <!-- Mute/Unmute Audio -->
         <app-button-secondary
           [customClass]="
             isAudioMuted()
-              ? 'bg-red-500 hover:bg-red-600 rounded-full w-14 h-14'
-              : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
+              ? 'bg-red-500 hover:bg-red-600 rounded-full w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14'
+              : 'bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14'
           "
           [ariaLabel]="
             (isAudioMuted() ? 'video_call.unmute_audio_aria' : 'video_call.mute_audio_aria') | t
@@ -124,7 +124,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           @if (isAudioMuted()) {
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6 text-white"
+              class="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -145,7 +145,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           } @else {
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6 text-white"
+              class="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -164,8 +164,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <app-button-secondary
           [customClass]="
             isVideoMuted()
-              ? 'bg-red-500 hover:bg-red-600 rounded-full w-14 h-14'
-              : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
+              ? 'bg-red-500 hover:bg-red-600 rounded-full w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14'
+              : 'bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14'
           "
           [ariaLabel]="
             (isVideoMuted() ? 'video_call.unmute_video_aria' : 'video_call.mute_video_aria') | t
@@ -176,7 +176,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           @if (isVideoMuted()) {
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6 text-white"
+              class="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -192,7 +192,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           } @else {
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6 text-white"
+              class="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -211,8 +211,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <app-button-secondary
           [customClass]="
             isScreenSharing()
-              ? 'bg-green-500 hover:bg-green-600 rounded-full w-14 h-14'
-              : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
+              ? 'bg-green-500 hover:bg-green-600 rounded-full w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14'
+              : 'bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14'
           "
           [ariaLabel]="
             (isScreenSharing()
@@ -224,7 +224,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6 text-white"
+            class="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -240,8 +240,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <app-button-secondary
             [customClass]="
               isInPip()
-                ? 'bg-blue-500 hover:bg-blue-600 rounded-full w-14 h-14'
-                : 'bg-white/20 hover:bg-white/30 rounded-full w-14 h-14'
+                ? 'bg-blue-500 hover:bg-blue-600 rounded-full w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14'
+                : 'bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14'
             "
             [ariaLabel]="
               (isInPip() ? 'video_call.exit_pip_aria' : 'video_call.enter_pip_aria') | t
@@ -251,7 +251,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6 text-white"
+              class="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -267,13 +267,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <!-- End Call -->
         <app-gradient-button
           size="md"
-          [customClass]="'rounded-full w-16 h-16 bg-red-600 hover:bg-red-700'"
+          [customClass]="'rounded-full w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-red-600 hover:bg-red-700'"
           [ariaLabel]="'video_call.end_call_aria' | t"
           (clicked)="endCall()"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-7 w-7 text-white"
+            class="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

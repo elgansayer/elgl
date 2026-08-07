@@ -17,8 +17,8 @@ import { AuthService } from '../../services/auth.service';
         role="region"
       >
         <!-- Room Header -->
-        <div class="flex justify-between items-center mb-4 text-white">
-          <h2 class="text-xl font-bold">{{ room.title }}</h2>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4 text-white">
+          <h2 class="text-lg sm:text-xl font-bold truncate">{{ room.title }}</h2>
 
           @if (isHost() && !hasCoHost()) {
             @if (eligibleSpeakers().length > 0) {
@@ -27,7 +27,7 @@ import { AuthService } from '../../services/auth.service';
                 [attr.aria-label]="'videoRoom.inviteCoHostAria' | t"
                 [attr.aria-expanded]="showInvitePicker()"
                 [attr.aria-haspopup]="'listbox'"
-                class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-white"
+                class="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-white self-start sm:self-auto"
               >
                 {{ 'audioRoom.inviteCoHostBtn' | t }}
               </button>
