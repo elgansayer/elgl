@@ -29,8 +29,8 @@
         <button
           (click)="showAdminPanel.set(!showAdminPanel())"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'Admin'">
-          Admin
+         [attr.aria-label]="'chatRoom.adminBtn' | t">
+          {{ 'chatRoom.adminBtn' | t }}
         </button>
       }
       <button
@@ -70,41 +70,41 @@
     <div
       class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
     >
-      <h3 class="text-sm font-bold text-text-primary">Group Admin Settings</h3>
+      <h3 class="text-sm font-bold text-text-primary">{{ 'chatRoom.adminPanelTitle' | t }}</h3>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newGroupName"
-          placeholder="New Group Name"
+          [placeholder]="'chatRoom.newGroupPlaceholder' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'New Group Name'"/>
-        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'Rename'">
-          Rename
+         [attr.aria-label]="'chatRoom.newGroupPlaceholder' | t"/>
+        <button (click)="renameGroup()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.renameBtn' | t">
+          {{ 'chatRoom.renameBtn' | t }}
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="newMemberId"
-          placeholder="User ID to Add"
+          [placeholder]="'chatRoom.userIdAddPlaceholder' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'User ID to Add'"/>
-        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'Add Member'">
-          Add Member
+         [attr.aria-label]="'chatRoom.userIdAddPlaceholder' | t"/>
+        <button (click)="addMember()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'chatRoom.addMemberBtn' | t">
+          {{ 'chatRoom.addMemberBtn' | t }}
         </button>
       </div>
       <div class="flex gap-2">
         <input
           type="text"
           [(ngModel)]="memberToRemoveId"
-          placeholder="User ID to Remove"
+          [placeholder]="'chatRoom.userIdRemovePlaceholder' | t"
           class="app-input flex-1 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'User ID to Remove'"/>
+         [attr.aria-label]="'chatRoom.userIdRemovePlaceholder' | t"/>
         <button
           (click)="removeMember()"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
-         [attr.aria-label]="'Remove Member'">
-          Remove Member
+         [attr.aria-label]="'chatRoom.removeMemberBtn' | t">
+          {{ 'chatRoom.removeMemberBtn' | t }}
         </button>
       </div>
     </div>

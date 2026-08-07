@@ -1,4 +1,4 @@
-import { Injectable, inject, OnDestroy } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Location, DOCUMENT } from '@angular/common';
 
@@ -76,7 +76,7 @@ function tryParseHellotalkUri(uri: string): ParsedDeepLink | null {
 }
 
 @Injectable({ providedIn: 'root' })
-export class DeepLinkService implements OnDestroy {
+export class DeepLinkService {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly document = inject(DOCUMENT);
@@ -215,9 +215,5 @@ export class DeepLinkService implements OnDestroy {
       default:
         return null;
     }
-  }
-
-  ngOnDestroy(): void {
-    // Global listeners cleaned up on app teardown.
   }
 }
