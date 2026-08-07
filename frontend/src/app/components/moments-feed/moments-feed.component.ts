@@ -22,6 +22,7 @@ import {
 } from '../primitives/language-picker/language-picker.component';
 import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 import { DraftService } from '../../services/draft.service';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -39,6 +40,7 @@ import { DraftService } from '../../services/draft.service';
     LanguagePickerComponent,
     TextToSpeechComponent,
     LikedByModalComponent,
+    AppEmptyStateComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -450,6 +452,7 @@ export class MomentsFeedComponent {
       mediaUrls: this.newMediaUrls().length > 0 ? this.newMediaUrls() : undefined,
       mediaType: this.newMediaType(),
       targetLanguage: this.newTargetLanguage(),
+      voiceDurationSec: this.newVoiceDurationSec,
     });
   }
 
@@ -462,5 +465,6 @@ export class MomentsFeedComponent {
       this.newMediaType.set(draft.mediaType ?? 'images');
     }
     if (draft.targetLanguage) this.newTargetLanguage.set(draft.targetLanguage);
+    if (draft.voiceDurationSec !== undefined) this.newVoiceDurationSec = draft.voiceDurationSec;
   }
 }

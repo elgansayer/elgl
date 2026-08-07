@@ -629,7 +629,7 @@ export class AudioRoomsStore {
 
   async tipHost(roomId: string, amountCoins: number): Promise<boolean> {
     try {
-      const res = await firstValueFrom(
+      await firstValueFrom(
         this.http.post<{
           tip_id: string;
           amount_coins: number;
