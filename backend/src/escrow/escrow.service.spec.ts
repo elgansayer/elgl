@@ -78,6 +78,15 @@ describe('EscrowService', () => {
             resolveReport: jest.fn().mockResolvedValue(true),
           },
         },
+        {
+          provide: 'PinoLogger:EscrowService',
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

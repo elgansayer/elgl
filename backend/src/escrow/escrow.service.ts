@@ -3,9 +3,9 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { ConfigService } from '@nestjs/config';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -32,13 +32,14 @@ const SERVICE_NAME = 'escrow';
 
 @Injectable()
 export class EscrowService {
-  private readonly logger = new Logger(EscrowService.name);
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly crashReportService: CrashReportService,
     private readonly configService: ConfigService,
+    @InjectPinoLogger(EscrowService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   /**
@@ -209,7 +210,7 @@ export class EscrowService {
       );
     }
 
-    this.logger.log(
+    this.logger.info(
       `Escrow hold: ${dto.amount_coins} coins from ${payerId} to ${dto.payee_id} for "${dto.reason}"`,
     );
 
@@ -376,7 +377,7 @@ export class EscrowService {
       throw new InternalServerErrorException('Failed to update escrow status');
     }
 
-    this.logger.log(
+    this.logger.info(
       `Escrow released: ${transactionId} - ${tx.amount_coins} coins to ${tx.payee_id}`,
     );
 
@@ -512,7 +513,7 @@ export class EscrowService {
           );
         }
 
-        this.logger.log(
+        this.logger.info(
           `Escrow refunded: ${transactionId} - ${tx.amount_coins} coins to ${tx.payer_id}`,
         );
 
@@ -638,7 +639,7 @@ export class EscrowService {
       throw new InternalServerErrorException('Failed to cancel escrow');
     }
 
-    this.logger.log(`Escrow cancelled: ${transactionId}`);
+    this.logger.info(`Escrow cancelled: ${transactionId}`);
 
     return this.toResponse(updated);
   }
