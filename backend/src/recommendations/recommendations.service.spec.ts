@@ -224,26 +224,299 @@ describe('RecommendationsService', () => {
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toEqual([]);
     });
+
+    it('should fall back to language exchange when Redis fails', async () => {
+      mockRedis.get.mockRejectedValue(new Error('Connection refused'));
+
+      // Mock the language exchange fallback chain
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['es'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'partner-1',
+          display_name: 'Partner 1',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 30,
+          correction_ratio: 0.95,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('partner-1');
+    });
   });
 
-  describe('getRecommendations (interest-based)', () => {
-    it('should return empty array when user has no tags', async () => {
-      const chain = makeQueryChain();
-      chain._setResolve([]);
-      mockFrom.mockReturnValueOnce(chain);
+  describe('getRecommendations (graceful degradation)', () => {
+    it('should return interest-based results when available', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([{ tag: 'sports' }, { tag: 'music' }]);
+
+      const sharedChain = makeQueryChain();
+      sharedChain._setResolve([
+        { user_id: 'candidate-1', tag: 'sports' },
+        { user_id: 'candidate-1', tag: 'music' },
+      ]);
+
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        {
+          id: 'candidate-1',
+          display_name: 'Candidate 1',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 15,
+          correction_ratio: 0.9,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(sharedChain)
+        .mockReturnValueOnce(usersChain);
 
       const result = await service.getRecommendations('user-123');
-      expect(result).toEqual([]);
+      expect(result).toHaveLength(1);
+      expect(result[0].sharedInterests).toBe(2);
     });
 
-    it('should throw on tag fetch error', async () => {
-      const chain = makeQueryChain();
-      chain._setResolve(null, { message: 'tags error' });
-      mockFrom.mockReturnValueOnce(chain);
+    it('should fall back to language exchange when interests return empty', async () => {
+      // Tier 1: tags chain returns no tags
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
 
-      await expect(service.getRecommendations('user-123')).rejects.toThrow(
-        'tags error',
-      );
+      // Tier 2: language exchange chain
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['es'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'lang-partner',
+          display_name: 'Lang Partner',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 20,
+          correction_ratio: 0.88,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain);
+
+      const result = await service.getRecommendations('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('lang-partner');
+    });
+
+    it('should fall back to active users when interests and language exchange both return empty', async () => {
+      // Tier 1: tags chain returns no tags
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
+
+      // Tier 2: user has no target languages
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: null,
+      });
+
+      // Tier 3: active users chain
+      const activeChain = makeQueryChain();
+      activeChain._setResolve([
+        {
+          id: 'active-user',
+          display_name: 'Active User',
+          avatar_url: null,
+          native_language: 'fr',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 50,
+          correction_ratio: 0.95,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendations('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('active-user');
+    });
+
+    it('should fall back to mock data when all tiers fail', async () => {
+      // Tier 1: tags error
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve(null, { message: 'DB error' });
+
+      // Tier 2: user lookup error
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'DB error' });
+
+      // Tier 3: active users error
+      const activeChain = makeQueryChain();
+      activeChain._setResolve(null, { message: 'DB error' });
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendations('user-123');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].matchTier).toBe('mock');
+    });
+  });
+
+  describe('getRecommendationsWithFallback', () => {
+    it('should return interest-based results tagged with matchTier', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([{ tag: 'sports' }]);
+
+      const sharedChain = makeQueryChain();
+      sharedChain._setResolve([{ user_id: 'c-1', tag: 'sports' }]);
+
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        {
+          id: 'c-1',
+          display_name: 'C1',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 10,
+          correction_ratio: 0.8,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(sharedChain)
+        .mockReturnValueOnce(usersChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].matchTier).toBe('interest');
+      expect(result[0].id).toBe('c-1');
+    });
+
+    it('should fall back to language exchange when interests returns empty', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['es'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'lang-p',
+          display_name: 'Lang P',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: false,
+          study_streak_days: 5,
+          correction_ratio: 0.7,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].matchTier).toBe('language_exchange');
+      expect(result[0].id).toBe('lang-p');
+    });
+
+    it('should fall back to active users when tiers 1 and 2 produce empty', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve([]);
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: null,
+        target_languages: null,
+      });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve([
+        {
+          id: 'active-u',
+          display_name: 'Active U',
+          avatar_url: null,
+          native_language: 'de',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 40,
+          correction_ratio: 0.9,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].matchTier).toBe('active_users');
+      expect(result[0].id).toBe('active-u');
+    });
+
+    it('should fall back to mock data when all real tiers fail', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve(null, { message: 'Interests DB down' });
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'Users DB down' });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve(null, { message: 'Users DB down' });
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      const result = await service.getRecommendationsWithFallback('user-123');
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].matchTier).toBe('mock');
     });
   });
 });

@@ -6,22 +6,6 @@ import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
-import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
-import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-
-class SrsDeckError extends Error {
-  override name = 'SrsDeckError';
-  constructor(
-    message: string,
-    readonly srsOperation: string,
-    stack?: string,
-  ) {
-    super(message);
-    if (stack) {
-      this.stack = stack;
-    }
-  }
-}
 
 type DeckView = 'list' | 'detail';
 
@@ -31,7 +15,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -143,29 +127,15 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 
           <!-- Deck Grid -->
           @if (isLoading()) {
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" role="status" aria-busy="true" aria-label="{{ 'deck.loading' | t }}">
-              @for (_ of [0, 1, 2]; track _) {
-                <div class="rounded-card border border-surface-100 p-4 space-y-3">
-                  <div class="h-1 w-full rounded-t-card bg-surface-100"></div>
-                  <div class="flex items-center gap-2 pt-2">
-                    <app-skeleton-loader [height]="'1.75rem'" [width]="'1.75rem'" [borderRadius]="'8px'" />
-                    <div class="flex-1 space-y-1.5">
-                      <app-skeleton-loader [height]="'14px'" [width]="'70%'" [borderRadius]="'6px'" />
-                      <app-skeleton-loader [height]="'11px'" [width]="'50%'" [borderRadius]="'6px'" />
-                    </div>
-                  </div>
-                  <app-skeleton-loader [height]="'18px'" [width]="'60px'" [borderRadius]="'999px'" />
-                </div>
-              }
+            <div class="py-12 text-center" role="status" aria-busy="true">
+              <p class="app-muted text-sm">{{ 'deck.loading' | t }}</p>
             </div>
           } @else if (decks().length === 0) {
-            <app-empty-state
-              [icon]="'📚'"
-              [title]="'deck.emptyTitle' | t"
-              [description]="'deck.emptyDesc' | t"
-              [actionLabel]="'deck.createBtn' | t"
-              (actionClicked)="toggleCreateForm()"
-            />
+            <div class="app-empty-state py-12 text-center" role="status">
+              <p class="text-3xl mb-3" aria-hidden="true">📚</p>
+              <p class="font-bold text-text-primary">{{ 'deck.emptyTitle' | t }}</p>
+              <p class="app-muted text-xs mt-1">{{ 'deck.emptyDesc' | t }}</p>
+            </div>
           } @else {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               @for (deck of decks(); track deck.id) {
@@ -323,11 +293,9 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               <div class="app-card app-padded space-y-3">
                 <h4 class="text-sm font-bold text-text-primary">{{ 'deck.addCardsTitle' | t }}</h4>
                 @if (availableFlashcards().length === 0) {
-                  <app-empty-state
-                    [icon]="'📇'"
-                    [description]="'deck.noCardsAvailable' | t"
-                    [customClass]="'py-4 border-0'"
-                  />
+                  <div class="app-empty-state py-4" role="status">
+                    <p class="text-xs text-text-secondary">{{ 'deck.noCardsAvailable' | t }}</p>
+                  </div>
                 } @else {
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                     @for (fc of availableFlashcards(); track fc.id) {
@@ -357,11 +325,9 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
                   {{ 'deck.cardsInDeck' | t: { count: deckCards().length } }}
                 </h4>
                 @if (deckCards().length === 0) {
-                  <app-empty-state
-                    [icon]="'🃏'"
-                    [description]="'deck.noCardsInDeck' | t"
-                    [customClass]="'py-4 border-0'"
-                  />
+                  <div class="app-empty-state py-4">
+                    <p class="text-xs text-text-secondary">{{ 'deck.noCardsInDeck' | t }}</p>
+                  </div>
                 } @else {
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     @for (fc of deckCards(); track fc.id) {
@@ -453,12 +419,15 @@ export class FlashcardDeckComponent {
 
   private reportDeckError(operation: string, err: unknown): void {
     const message = err instanceof Error ? err.message : String(err);
-    const deckError = new SrsDeckError(
+    const deckError = new Error(
       `[SRS:flashcard-deck] ${operation} failed: ${message}`,
-      operation,
-      err instanceof Error ? err.stack : undefined,
     );
-    this.errorHandler.handleError(deckError);
+    deckError.name = 'SrsDeckError';
+    if (err instanceof Error && err.stack) {
+      deckError.stack = err.stack;
+    }
+    const enriched = Object.assign(deckError, { srsOperation: operation });
+    this.errorHandler.handleError(enriched);
   }
 
   constructor() {
