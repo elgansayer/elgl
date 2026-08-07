@@ -225,7 +225,7 @@ export class EconomyStore {
     } catch (e: unknown) {
       console.error('Send gift error:', e);
       const message = e instanceof Error ? e.message : String(e);
-      showToast(message || 'Failed to send virtual gift. Ensure you have sufficient coin balance.');
+      showToast(message || this.i18n.translate('economy.sendGiftError'));
       return false;
     }
   }
@@ -251,7 +251,7 @@ export class EconomyStore {
       window.location.href = res.sessionUrl;
     } catch (e) {
       console.error('VIP upgrade error:', e);
-      showToast('Failed to start VIP checkout. Please try again.');
+      showToast(this.i18n.translate('economy.vipUpgradeError'));
     }
   }
 
@@ -327,8 +327,7 @@ export class EconomyStore {
       console.error('Generate API key error:', e);
       const message = e instanceof Error ? e.message : String(e);
       showToast(
-        message ||
-          'Failed to generate API key. Requires Developer Tier subscription (20 UKP / $26 USD per month).',
+        message || this.i18n.translate('economy.apiKeyGenerationError'),
       );
       return null;
     }
@@ -343,12 +342,10 @@ export class EconomyStore {
           { headers: this.getHeaders() },
         ),
       );
-      showToast(
-        '🛡️ Thank you. Your report has been submitted to our Trust & Safety moderation team for review within 24 hours.',
-      );
+      showToast(this.i18n.translate('safety.reportSubmitted'));
     } catch (e) {
       console.error('Report user error:', e);
-      showToast('Failed to submit report.');
+      showToast(this.i18n.translate('safety.reportError'));
     }
   }
 
@@ -364,12 +361,10 @@ export class EconomyStore {
       const set = new Set(this.blockedUserIds());
       set.add(blockedId);
       this.blockedUserIds.set(set);
-      showToast(
-        '🚫 User blocked. All posts, moments, and direct messages from this user are now hidden across the platform.',
-      );
+      showToast(this.i18n.translate('safety.userBlocked'));
     } catch (e) {
       console.error('Block user error:', e);
-      showToast('Failed to block user.');
+      showToast(this.i18n.translate('safety.blockError'));
     }
   }
 
@@ -481,7 +476,7 @@ export class EconomyStore {
     return this.stickerPacks()
       .filter((pack) => pack.owned && pack.sticker_urls && pack.sticker_urls.length > 0)
       .flatMap((pack) =>
-        pack.sticker_urls.map((url) => ({
+        pack.sticker_urls!.map((url) => ({
           id: `${pack.id}_${url.split('/').pop() ?? url}`,
           url,
           pack_name: pack.name,

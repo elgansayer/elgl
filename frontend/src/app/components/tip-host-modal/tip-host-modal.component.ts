@@ -42,12 +42,12 @@ import { EconomyStore } from '../../services/economy.store';
         </div>
 
         <!-- Preset amounts -->
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           @for (amount of presetAmounts(); track amount) {
             <button
               (click)="selectAmount(amount)"
               [class]="
-                'p-4 rounded-2xl border-2 transition-all font-extrabold text-center ' +
+                'p-3 sm:p-4 rounded-2xl border-2 transition-all font-extrabold text-center text-sm sm:text-base ' +
                 (selectedAmount() === amount
                   ? 'border-amber-500 bg-amber-500/20 text-amber-500'
                   : 'border-surface-100 bg-surface-300 text-text-primary hover:border-amber-500/50')

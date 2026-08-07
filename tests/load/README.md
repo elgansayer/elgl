@@ -19,6 +19,9 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:trust-safe
 
 # Run the Spam Detection load test
 API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detection
+
+# Run the Escrow Payments load test
+API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-payments
 ```
 
 ## Test Scripts
@@ -30,6 +33,8 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detec
 | `test:trust-safety:report` | (output + HTML) | Runs the Trust & Safety test and generates an HTML report |
 | `test:srs-flashcards` | `srs-flashcards.load.yml` | SRS flashcard creation, review (SM-2), and retrieval load testing |
 | `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
+| `test:escrow-payments` | `escrow-payments.load.yml` | Load tests the Escrow Payments endpoints |
+| `test:escrow-payments:report` | (output + HTML) | Runs the Escrow Payments test and generates an HTML report |
 
 ## Configuration
 
@@ -89,3 +94,14 @@ Both test scripts include the following phases:
 - `GET /flashcards` - List all flashcards for the authenticated user
 - `GET /flashcards?level=<n>` - List flashcards filtered by SRS level (0-4)
 - `GET /flashcards/due` - Get flashcards currently due for review
+
+### Escrow Payments (`/escrow`)
+- `GET /escrow/transactions` - List paginated user escrow transactions with status/sort filters
+- `POST /escrow/transactions` - Create a new escrow transaction with milestones
+- `GET /escrow/transactions/:id` - Get details for a single escrow transaction
+- `GET /escrow/transactions/:id/status` - Check escrow transaction status
+- `POST /escrow/transactions/:id/release` - Release escrow milestone payment
+- `POST /escrow/transactions/:id/refund` - Refund escrow transaction to payer
+- `POST /escrow/transactions/:id/dispute` - File a dispute for an escrow transaction
+- `POST /escrow/transactions/:id/cancel` - Cancel a pending escrow transaction
+- `GET /escrow/summary` - Get escrow summary statistics

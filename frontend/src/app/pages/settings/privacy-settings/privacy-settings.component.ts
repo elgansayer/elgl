@@ -35,6 +35,11 @@ export class PrivacySettingsComponent {
 
   // Profile visibility
   readonly profileVisibility = signal<'everyone' | 'vips_only' | 'hidden'>('everyone');
+  readonly visibilityOptions: Array<{ value: 'everyone' | 'vips_only' | 'hidden'; key: string }> = [
+    { value: 'everyone', key: 'privacy.everyone' },
+    { value: 'vips_only', key: 'privacy.vipsOnly' },
+    { value: 'hidden', key: 'privacy.hidden' },
+  ];
 
   // Granular visibility settings (who can see what)
   readonly privacyLastSeen = signal('everyone');
