@@ -592,6 +592,20 @@ export const routes: Routes = [
     title: 'My Subscription - HelloTalk',
   },
   {
+    path: 'escrow',
+    loadComponent: () =>
+      import('./pages/escrow/escrow.component').then((m) => m.EscrowComponent),
+    title: 'Escrow Payments - HelloTalk',
+  },
+  {
+    path: 'escrow/:id',
+    loadComponent: () =>
+      import('./pages/escrow-detail/escrow-detail.component').then(
+        (m) => m.EscrowDetailComponent,
+      ),
+    title: 'Escrow Details - HelloTalk',
+  },
+  {
     path: 'account/deletion',
     loadComponent: () =>
       import('./components/account-deletion/account-deletion.component').then(
