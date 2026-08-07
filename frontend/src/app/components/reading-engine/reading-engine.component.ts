@@ -5,6 +5,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { NetworkStatusService } from '../../services/network-status.service';
+import { OfflineReadingService } from '../../services/offline-reading.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { environment } from '../../environments/environment';
@@ -24,258 +26,7 @@ interface ReadingArticle {
   selector: 'app-reading-engine',
   standalone: true,
   imports: [TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
-  template: `<div class="reading-engine mx-auto max-w-4xl space-y-6 pb-20 pt-4">
-  <!-- Header & Tab Navigation -->
-  <header class="app-card app-padded space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h1 class="app-section-title">{{ 'readingEngine.title' | t }}</h1>
-        <p class="app-muted">{{ 'readingEngine.subtitle' | t }}</p>
-      </div>
-      <span class="app-chip bg-primary/20 text-primary font-bold text-xs">
-        {{ 'readingEngine.vocabularyCount' | t: { count: vocabularyCount() } }}
-      </span>
-    </div>
-
-    <nav class="flex gap-2 border-b border-surface-100 pb-2" role="tablist" [attr.aria-label]="'readingEngine.tabNavAriaLabel' | t">
-      <button type="button" role="tab"
-        [attr.aria-selected]="activeTab() === 'articles'"
-        (click)="activeTab.set('articles')"
-        [class.bg-primary]="activeTab() === 'articles'" [class.text-white]="activeTab() === 'articles'"
-        [class.bg-surface-300]="activeTab() !== 'articles'" [class.text-text-secondary]="activeTab() !== 'articles'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
-        {{ 'readingEngine.tab.articles' | t }}
-      </button>
-      <button type="button" role="tab"
-        [attr.aria-selected]="activeTab() === 'vocabulary'"
-        (click)="activeTab.set('vocabulary')"
-        [class.bg-primary]="activeTab() === 'vocabulary'" [class.text-white]="activeTab() === 'vocabulary'"
-        [class.bg-surface-300]="activeTab() !== 'vocabulary'" [class.text-text-secondary]="activeTab() !== 'vocabulary'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
-        {{ 'readingEngine.tab.vocabulary' | t }}
-      </button>
-      <button type="button" role="tab"
-        [attr.aria-selected]="activeTab() === 'history'"
-        (click)="activeTab.set('history')"
-        [class.bg-primary]="activeTab() === 'history'" [class.text-white]="activeTab() === 'history'"
-        [class.bg-surface-300]="activeTab() !== 'history'" [class.text-text-secondary]="activeTab() !== 'history'"
-        class="rounded-app px-4 py-2 text-xs font-bold transition-colors">
-        {{ 'readingEngine.tab.history' | t }}
-      </button>
-    </nav>
-  </header>
-
-  @if (activeTab() === 'articles') {
-    @if (selectedArticle(); as article) {
-      <div class="space-y-4">
-        <button type="button" (click)="backToList()"
-          class="app-button-secondary text-xs font-bold flex items-center gap-1.5"
-          [attr.aria-label]="'readingEngine.backToList' | t">
-          <span aria-hidden="true">&larr;</span>
-          {{ 'readingEngine.backToList' | t }}
-        </button>
-
-        <div class="app-card app-padded space-y-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <span
-              [class.bg-emerald-500/20]="article.difficulty === 'beginner'"
-              [class.text-emerald-400]="article.difficulty === 'beginner'"
-              [class.bg-amber-500/20]="article.difficulty === 'intermediate'"
-              [class.text-amber-400]="article.difficulty === 'intermediate'"
-              [class.bg-rose-500/20]="article.difficulty === 'advanced'"
-              [class.text-rose-400]="article.difficulty === 'advanced'"
-              class="rounded-app px-2 py-0.5 text-[11px] font-bold">
-              {{ 'readingEngine.difficulty.' + article.difficulty | t }}
-            </span>
-            <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[11px] font-bold text-text-secondary">
-              {{ 'readingEngine.topic.' + article.topic | t }}
-            </span>
-            <span class="text-[11px] text-text-muted">
-              {{ 'readingEngine.wordCount' | t: { count: article.wordCount } }}
-            </span>
-          </div>
-          <h2 class="text-lg font-black text-text-primary">{{ article.title | sanitiseHtml }}</h2>
-        </div>
-
-        <div class="app-card app-padded space-y-3">
-          <p class="text-base leading-relaxed text-text-primary whitespace-pre-line">{{ article.content | sanitiseHtml }}</p>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <button type="button" class="app-button-secondary text-xs font-bold"
-            [attr.aria-label]="'readingEngine.saveArticle' | t">
-            {{ 'readingEngine.saveArticle' | t }}
-          </button>
-          <button type="button" (click)="backToList()" class="app-button-secondary text-xs font-bold"
-            [attr.aria-label]="'readingEngine.nextArticle' | t">
-            {{ 'readingEngine.nextArticle' | t }}
-          </button>
-        </div>
-      </div>
-    } @else {
-      <!-- Loading skeleton state -->
-      @if (isLoading() && !hasError()) {
-        <section class="space-y-4" role="status" [attr.aria-label]="'readingEngine.loadingArticles' | t">
-          @for (i of [1, 2, 3]; track i) {
-            <div class="app-card app-padded space-y-3">
-              <app-skeleton-loader [height]="'20px'" [width]="'60%'" [borderRadius]="'6px'"></app-skeleton-loader>
-              <app-skeleton-loader [height]="'14px'" [width]="'90%'" [borderRadius]="'4px'"></app-skeleton-loader>
-              <app-skeleton-loader [height]="'14px'" [width]="'75%'" [borderRadius]="'4px'"></app-skeleton-loader>
-              <div class="flex gap-2 pt-1">
-                <app-skeleton-loader [height]="'22px'" [width]="'64px'" [borderRadius]="'12px'"></app-skeleton-loader>
-                <app-skeleton-loader [height]="'22px'" [width]="'80px'" [borderRadius]="'12px'"></app-skeleton-loader>
-              </div>
-            </div>
-          }
-        </section>
-      }
-
-      <!-- Error state -->
-      @if (hasError()) {
-        <app-empty-state
-          [icon]="'&#x26A0;&#xFE0F;'"
-          [title]="'readingEngine.errorTitle' | t"
-          [description]="'readingEngine.errorDescription' | t"
-          [actionLabel]="'readingEngine.retryAction' | t"
-          (actionClicked)="retryLoad()">
-        </app-empty-state>
-      }
-
-      <!-- Filter controls -->
-      @if (!isLoading() && !hasError() && articlesResource.value()) {
-        <div class="flex flex-wrap items-center gap-3" role="group" [attr.aria-label]="'readingEngine.filterControlsAriaLabel' | t">
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] font-bold text-text-muted">{{ 'readingEngine.filterDifficulty' | t }}</span>
-            <button type="button" (click)="setFilter(null)"
-              [class.bg-primary]="!filterDifficulty()" [class.text-white]="!filterDifficulty()"
-              [class.bg-surface-300]="filterDifficulty()"
-              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
-              {{ 'readingEngine.filterAll' | t }}
-            </button>
-            @for (diff of ['beginner', 'intermediate', 'advanced']; track diff) {
-              <button type="button" (click)="setFilter(diff)"
-                [class.bg-primary]="filterDifficulty() === diff" [class.text-white]="filterDifficulty() === diff"
-                [class.bg-surface-300]="filterDifficulty() !== diff"
-                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
-                {{ 'readingEngine.difficulty.' + diff | t }}
-              </button>
-            }
-          </div>
-
-          <div class="flex items-center gap-1.5">
-            <span class="text-[11px] font-bold text-text-muted">{{ 'readingEngine.filterTopic' | t }}</span>
-            <button type="button" (click)="setTopicFilter(null)"
-              [class.bg-primary]="!filterTopic()" [class.text-white]="!filterTopic()"
-              [class.bg-surface-300]="filterTopic()"
-              class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
-              {{ 'readingEngine.filterAll' | t }}
-            </button>
-            @for (topic of distinctTopics(); track topic) {
-              <button type="button" (click)="setTopicFilter(topic)"
-                [class.bg-primary]="filterTopic() === topic" [class.text-white]="filterTopic() === topic"
-                [class.bg-surface-300]="filterTopic() !== topic"
-                class="rounded-app px-2.5 py-1 text-[11px] font-bold transition-colors">
-                {{ 'readingEngine.topic.' + topic | t }}
-              </button>
-            }
-          </div>
-
-          @if (filterDifficulty() || filterTopic()) {
-            <button type="button" (click)="clearFilters()"
-              class="text-[11px] font-bold text-primary hover:underline">
-              {{ 'readingEngine.clearFilters' | t }}
-            </button>
-          }
-        </div>
-      }
-
-      <!-- Empty state: no articles match filters -->
-      @if (hasNoArticles() && !hasError() && !isLoading()) {
-        <app-empty-state
-          [icon]="'&#x1F4ED;'"
-          [title]="'readingEngine.noArticlesTitle' | t"
-          [description]="'readingEngine.noArticlesDescription' | t"
-          [actionLabel]="'readingEngine.clearFilters' | t"
-          (actionClicked)="clearFilters()">
-        </app-empty-state>
-      }
-
-      <!-- Article list -->
-      @if (!isLoading() && !hasError() && filteredArticles().length > 0) {
-        <div class="space-y-3" role="list" [attr.aria-label]="'readingEngine.articleListAriaLabel' | t">
-          @for (article of filteredArticles(); track article.id) {
-            <button type="button" role="listitem"
-              (click)="selectArticle(article.id)"
-              class="app-card app-padded w-full text-start space-y-2 hover:bg-surface-300 transition-colors cursor-pointer border border-transparent hover:border-surface-100"
-              [attr.aria-label]="'readingEngine.openArticleAriaLabel' | t: { title: article.title }">
-              <div class="flex flex-wrap items-center gap-2">
-                <span
-                  [class.bg-emerald-500/20]="article.difficulty === 'beginner'"
-                  [class.text-emerald-400]="article.difficulty === 'beginner'"
-                  [class.bg-amber-500/20]="article.difficulty === 'intermediate'"
-                  [class.text-amber-400]="article.difficulty === 'intermediate'"
-                  [class.bg-rose-500/20]="article.difficulty === 'advanced'"
-                  [class.text-rose-400]="article.difficulty === 'advanced'"
-                  class="rounded-app px-2 py-0.5 text-[11px] font-bold">
-                  {{ 'readingEngine.difficulty.' + article.difficulty | t }}
-                </span>
-                <span class="rounded-app bg-surface-300 px-2 py-0.5 text-[11px] font-bold text-text-secondary">
-                  {{ 'readingEngine.topic.' + article.topic | t }}
-                </span>
-                <span class="ms-auto text-[11px] text-text-muted">
-                  {{ 'readingEngine.wordCountShort' | t: { count: article.wordCount } }}
-                </span>
-              </div>
-              <h3 class="text-sm font-bold text-text-primary">{{ article.title | sanitiseHtml }}</h3>
-              <p class="text-xs text-text-secondary line-clamp-2">{{ article.content | sanitiseHtml }}</p>
-            </button>
-          }
-        </div>
-      }
-    }
-  }
-
-  @if (activeTab() === 'vocabulary') {
-    <section class="space-y-4">
-      <div class="app-card app-padded space-y-3">
-        <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.vocabularyTabTitle' | t }}</h3>
-        <p class="app-muted">{{ 'readingEngine.vocabularyTabDescription' | t }}</p>
-      </div>
-
-      @if (vocabularyCount() === 0) {
-        <app-empty-state
-          [icon]="'&#x1F4DA;'"
-          [title]="'readingEngine.noVocabularyTitle' | t"
-          [description]="'readingEngine.noVocabularyDescription' | t"
-          [actionLabel]="'readingEngine.browseArticlesAction' | t"
-          (actionClicked)="activeTab.set('articles')">
-        </app-empty-state>
-      } @else {
-        <div class="app-card app-padded space-y-2">
-          <p class="text-sm font-bold text-text-primary">{{ 'readingEngine.vocabularyPlaceholder' | t }}</p>
-        </div>
-      }
-    </section>
-  }
-
-  @if (activeTab() === 'history') {
-    <section class="space-y-4">
-      <div class="app-card app-padded space-y-3">
-        <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.historyTabTitle' | t }}</h3>
-        <p class="app-muted">{{ 'readingEngine.historyTabDescription' | t }}</p>
-      </div>
-
-      <app-empty-state
-        [icon]="'&#x1F4D6;'"
-        [title]="'readingEngine.noHistoryTitle' | t"
-        [description]="'readingEngine.noHistoryDescription' | t"
-        [actionLabel]="'readingEngine.browseArticlesAction' | t"
-        (actionClicked)="activeTab.set('articles')">
-      </app-empty-state>
-    </section>
-  }
-</div>
-`,
+  template: '',
   styles: [
     `
       :host {
@@ -291,6 +42,8 @@ export class ReadingEngineComponent {
   private i18n = inject(I18nService);
   private vocabStore = inject(VocabularyStore);
   private http = inject(HttpClient);
+  private networkStatus = inject(NetworkStatusService);
+  private offlineReading = inject(OfflineReadingService);
   private readingApiUrl = `${environment.apiUrl}/reading`;
 
   readonly activeTab = signal<'articles' | 'vocabulary' | 'history'>('articles');
@@ -299,6 +52,10 @@ export class ReadingEngineComponent {
   readonly filterTopic = signal<string | null>(null);
 
   readonly fetchError = signal<string | null>(null);
+  readonly readingHistory = signal<{ articleId: string; title: string; difficulty: string; topic: string; readAt: number }[]>([]);
+
+  readonly isOffline = computed(() => !this.networkStatus.isOnline());
+  readonly cachedArticlesCount = signal(0);
 
   readonly articlesResource = resource<ReadingArticle[], unknown>({
     loader: async () => this.fetchArticles(),
@@ -337,6 +94,14 @@ export class ReadingEngineComponent {
   selectArticle(id: string): void {
     this.selectedArticleId.set(id);
     this.fetchError.set(null);
+
+    const articles = this.articlesResource.value();
+    const article = articles?.find((a) => a.id === id);
+    if (article) {
+      this.offlineReading
+        .recordReadingHistory(article.id, article.title, article.difficulty, article.topic)
+        .catch(() => undefined);
+    }
   }
 
   backToList(): void {
@@ -361,6 +126,25 @@ export class ReadingEngineComponent {
     this.articlesResource.reload();
   }
 
+  formatReadDate(timestamp: number): string {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  async loadReadingHistory(): Promise<void> {
+    try {
+      const entries = await this.offlineReading.getReadingHistory();
+      this.readingHistory.set(entries);
+    } catch {
+      this.readingHistory.set([]);
+    }
+  }
+
   private async fetchArticles(): Promise<ReadingArticle[]> {
     try {
       const params = new URLSearchParams();
@@ -371,8 +155,29 @@ export class ReadingEngineComponent {
           `${this.readingApiUrl}/resources?${params.toString()}`,
         ),
       );
-      return list ?? [];
+      const articles = list ?? [];
+
+      this.offlineReading.cacheArticles(articles).catch(() => undefined);
+      this.cachedArticlesCount.set(articles.length);
+
+      return articles;
     } catch {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const cached = await this.offlineReading.getCachedArticles();
+        if (cached.length > 0) {
+          this.cachedArticlesCount.set(cached.length);
+          return cached.map((c) => ({
+            id: c.id,
+            title: c.title,
+            content: c.content,
+            language: c.language,
+            difficulty: c.difficulty as ReadingArticle['difficulty'],
+            topic: c.topic,
+            audioUrl: c.audioUrl,
+            wordCount: c.wordCount,
+          }));
+        }
+      }
       this.fetchError.set(this.i18n.translate('readingEngine.fetchError'));
       return [];
     }

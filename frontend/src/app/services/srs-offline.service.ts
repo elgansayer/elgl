@@ -1,237 +1,184 @@
-import { Injectable } from '@angular/core';
-import type { Flashcard } from './vocabulary.store';
+import { Injectable, signal } from '@angular/core';
 
-interface SrsReviewQueueItem {
-  id?: number;
+interface QueuedReviewPayload {
   flashcardId: string;
   quality: number;
   newLevel: number;
-  timestamp: number;
+  timestamp: string;
 }
 
-const DB_NAME = 'srs-offline-db';
+const DB_NAME = 'hellotalk_srs_offline';
 const DB_VERSION = 1;
-const FLASHCARDS_STORE = 'flashcards';
-const DUE_REVIEWS_STORE = 'due-reviews';
-const REVIEW_QUEUE_STORE = 'review-queue';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class SrsOfflineService {
   private db: IDBDatabase | null = null;
-  private dbReady: Promise<IDBDatabase>;
+  private initPromise: Promise<void> | null = null;
+
+  readonly pendingSyncCount = signal(0);
 
   constructor() {
-    this.dbReady = this.openDatabase();
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      this.initPromise = this.initDB();
+      this.initPromise
+        .then(() => this.refreshPendingCount())
+        .catch(() => undefined);
+    }
   }
 
-  private openDatabase(): Promise<IDBDatabase> {
+  private initDB(): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains(FLASHCARDS_STORE)) {
-          db.createObjectStore(FLASHCARDS_STORE, { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains(DUE_REVIEWS_STORE)) {
-          db.createObjectStore(DUE_REVIEWS_STORE, { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains(REVIEW_QUEUE_STORE)) {
-          db.createObjectStore(REVIEW_QUEUE_STORE, {
-            keyPath: 'id',
-            autoIncrement: true,
-          });
-        }
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
       };
-      request.onsuccess = (event) => {
-        this.db = (event.target as IDBOpenDBRequest).result;
-        resolve(this.db);
-      };
-      request.onerror = (event) => {
-        console.error(
-          'Failed to open IndexedDB for SRS offline storage',
-          (event.target as IDBOpenDBRequest).error,
-        );
-        reject((event.target as IDBOpenDBRequest).error);
+      request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+        const target = event.target;
+        if (!target || typeof target !== 'object' || !('result' in target)) return;
+        const db = target.result as IDBDatabase;
+        if (!db.objectStoreNames.contains('flashcards')) {
+          db.createObjectStore('flashcards', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('due_reviews')) {
+          db.createObjectStore('due_reviews', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('sync_queue')) {
+          db.createObjectStore('sync_queue', { keyPath: 'id' });
+        }
       };
     });
   }
 
-  private async getDb(): Promise<IDBDatabase> {
-    if (this.db) return this.db;
-    return this.dbReady;
+  private async ensureDB(): Promise<IDBDatabase> {
+    if (this.initPromise) await this.initPromise;
+    if (!this.db) throw new Error('IndexedDB not initialised');
+    return this.db;
   }
 
-  private async putAll(storeName: string, items: Flashcard[]): Promise<void> {
-    const db = await this.getDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readwrite');
-      const store = tx.objectStore(storeName);
-      // Clear existing entries then add all
-      const clearReq = store.clear();
-      clearReq.onsuccess = () => {
-        let remaining = items.length;
-        if (remaining === 0) {
-          resolve();
-          return;
-        }
-        for (const item of items) {
-          const addReq = store.add(item);
-          addReq.onsuccess = () => {
-            remaining--;
-            if (remaining === 0) resolve();
-          };
-          addReq.onerror = () => reject(addReq.error);
-        }
-      };
-      clearReq.onerror = () => reject(clearReq.error);
-      tx.onerror = () => reject(tx.error);
-    });
+  private isAvailable(): boolean {
+    return typeof window !== 'undefined' && !!window.indexedDB;
   }
 
-  private async getAll<T>(storeName: string): Promise<T[]> {
-    const db = await this.getDb();
+  async cacheFlashcards(list: unknown[]): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    await this.clearStore(db, 'flashcards');
+    const store = db.transaction('flashcards', 'readwrite').objectStore('flashcards');
+    for (const item of list) {
+      await this.putInStore(store, item as Record<string, unknown>);
+    }
+  }
+
+  async getCachedFlashcards(): Promise<unknown[]> {
+    if (!this.isAvailable()) return [];
+    const db = await this.ensureDB();
+    return this.getAllFromStore(db, 'flashcards');
+  }
+
+  async cacheDueReviews(list: unknown[]): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    await this.clearStore(db, 'due_reviews');
+    const store = db.transaction('due_reviews', 'readwrite').objectStore('due_reviews');
+    for (const item of list) {
+      await this.putInStore(store, item as Record<string, unknown>);
+    }
+  }
+
+  async getCachedDueReviews(): Promise<unknown[]> {
+    if (!this.isAvailable()) return [];
+    const db = await this.ensureDB();
+    return this.getAllFromStore(db, 'due_reviews');
+  }
+
+  async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    const id = 'srs_review_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const payload: QueuedReviewPayload & { id: string } = {
+      id,
+      flashcardId,
+      quality,
+      newLevel,
+      timestamp: new Date().toISOString(),
+    };
+    const store = db.transaction('sync_queue', 'readwrite').objectStore('sync_queue');
+    await this.putInStore(store, payload as unknown as Record<string, unknown>);
+    await this.refreshPendingCount();
+  }
+
+  async syncQueuedReviews(
+    syncCallback: (queued: QueuedReviewPayload) => Promise<void>,
+  ): Promise<{ synced: number; failed: number }> {
+    if (!this.isAvailable()) return { synced: 0, failed: 0 };
+    const db = await this.ensureDB();
+    const items = await this.getAllFromStore(db, 'sync_queue');
+    if (items.length === 0) return { synced: 0, failed: 0 };
+
+    let synced = 0;
+    let failed = 0;
+
+    for (const item of items) {
+      const queued = item as unknown as QueuedReviewPayload & { id: string };
+      try {
+        await syncCallback(queued);
+        await this.deleteFromStore(db, 'sync_queue', queued.id);
+        synced++;
+      } catch {
+        failed++;
+      }
+    }
+
+    await this.refreshPendingCount();
+    return { synced, failed };
+  }
+
+  private async refreshPendingCount(): Promise<void> {
+    try {
+      const db = await this.ensureDB();
+      const items = await this.getAllFromStore(db, 'sync_queue');
+      this.pendingSyncCount.set(items.length);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  private putInStore(store: IDBObjectStore, value: Record<string, unknown>): Promise<void> {
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readonly');
-      const store = tx.objectStore(storeName);
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result as T[]);
+      const req = store.put(value);
+      req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
   }
 
-  async cacheFlashcards(list: Flashcard[]): Promise<void> {
-    try {
-      await this.putAll(FLASHCARDS_STORE, list);
-    } catch (error) {
-      console.warn(
-        'Failed to cache flashcards in IndexedDB',
-        (error as Error).message,
-      );
-    }
+  private getAllFromStore(db: IDBDatabase, storeName: string): Promise<unknown[]> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readonly').objectStore(storeName);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
   }
 
-  async getCachedFlashcards(): Promise<Flashcard[]> {
-    try {
-      return await this.getAll<Flashcard>(FLASHCARDS_STORE);
-    } catch {
-      return [];
-    }
+  private deleteFromStore(db: IDBDatabase, storeName: string, key: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readwrite').objectStore(storeName);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
   }
 
-  async cacheDueReviews(list: Flashcard[]): Promise<void> {
-    try {
-      await this.putAll(DUE_REVIEWS_STORE, list);
-    } catch (error) {
-      console.warn(
-        'Failed to cache due reviews in IndexedDB',
-        (error as Error).message,
-      );
-    }
-  }
-
-  async getCachedDueReviews(): Promise<Flashcard[]> {
-    try {
-      return await this.getAll<Flashcard>(DUE_REVIEWS_STORE);
-    } catch {
-      return [];
-    }
-  }
-
-  async queueSrsReview(
-    flashcardId: string,
-    quality: number,
-    newLevel: number,
-  ): Promise<void> {
-    try {
-      const db = await this.getDb();
-      return new Promise((resolve) => {
-        const tx = db.transaction(REVIEW_QUEUE_STORE, 'readwrite');
-        const store = tx.objectStore(REVIEW_QUEUE_STORE);
-        const item: SrsReviewQueueItem = {
-          flashcardId,
-          quality,
-          newLevel,
-          timestamp: Date.now(),
-        };
-        const req = store.add(item);
-        req.onsuccess = () => resolve();
-        req.onerror = () => {
-          console.warn(
-            'Failed to queue SRS review in IndexedDB',
-            req.error?.message,
-          );
-          resolve(); // resolve anyway, don't block on queue failure
-        };
-      });
-    } catch (error) {
-      console.warn(
-        'Failed to queue SRS review',
-        (error as Error).message,
-      );
-    }
-  }
-
-  async syncQueuedReviews(
-    processor: (item: SrsReviewQueueItem) => Promise<void>,
-  ): Promise<{ synced: number; failed: number }> {
-    let synced = 0;
-    let failed = 0;
-
-    try {
-      const db = await this.getDb();
-      const items = await this.getAll<SrsReviewQueueItem>(REVIEW_QUEUE_STORE);
-
-      for (const item of items) {
-        if (!item.id) continue;
-        try {
-          await processor(item);
-          // Remove from queue on success
-          await new Promise<void>((resolve, reject) => {
-            const tx = db.transaction(REVIEW_QUEUE_STORE, 'readwrite');
-            const store = tx.objectStore(REVIEW_QUEUE_STORE);
-            const delReq = store.delete(item.id!);
-            delReq.onsuccess = () => resolve();
-            delReq.onerror = () => reject(delReq.error);
-          });
-          synced++;
-        } catch {
-          failed++;
-          console.warn(
-            `Failed to sync queued SRS review for flashcard ${item.flashcardId}`,
-          );
-        }
-      }
-    } catch (error) {
-      console.error(
-        'Failed to sync review queue',
-        (error as Error).message,
-      );
-    }
-
-    return { synced, failed };
-  }
-
-  async clearAll(): Promise<void> {
-    try {
-      const db = await this.getDb();
-      for (const storeName of [
-        FLASHCARDS_STORE,
-        DUE_REVIEWS_STORE,
-        REVIEW_QUEUE_STORE,
-      ]) {
-        await new Promise<void>((resolve, reject) => {
-          const tx = db.transaction(storeName, 'readwrite');
-          const objStore = tx.objectStore(storeName);
-          const req = objStore.clear();
-          req.onsuccess = () => resolve();
-          req.onerror = () => reject(req.error);
-        });
-      }
-    } catch (error) {
-      console.warn(
-        'Failed to clear SRS offline storage',
-        (error as Error).message,
-      );
-    }
+  private clearStore(db: IDBDatabase, storeName: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const store = db.transaction(storeName, 'readwrite').objectStore(storeName);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
   }
 }
