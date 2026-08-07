@@ -7,7 +7,14 @@
     "day": "day",
     "days": "days"
   },
+  "common": {
+    "loading": "Loading...",
+    "back": "Back"
+  },
   "settings": {
+    "linkBtn": "Link",
+    "unlinkBtn": "Unlink",
+    "linkedAccountsSection": "Linked Accounts",
     "linkedAccounts": {
       "title": "Linked Accounts",
       "subtitle": "Connect your social accounts to sign in with multiple providers and keep your account secure.",
