@@ -6,6 +6,7 @@ import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { withRetry } from '../common/retry';
+import { sanitiseFlashcardData } from './sanitise-flashcard.helper';
 
 @Injectable()
 export class FlashcardsService {
@@ -63,7 +64,7 @@ export class FlashcardsService {
       'Flashcard created/updated',
     );
 
-    return response.data;
+    return sanitiseFlashcardData(response.data);
   }
 
   async updateSrsLevel(
@@ -157,7 +158,7 @@ export class FlashcardsService {
       'SRS review completed',
     );
 
-    return response.data;
+    return sanitiseFlashcardData(response.data);
   }
 
   /**
@@ -249,7 +250,7 @@ export class FlashcardsService {
     if (response.error || !response.data) {
       return [];
     }
-    return response.data;
+    return sanitiseFlashcardData(response.data);
   }
 
   async getDueReviews(userId: string): Promise<Flashcard[]> {
@@ -265,6 +266,6 @@ export class FlashcardsService {
     if (response.error || !response.data) {
       return [];
     }
-    return response.data;
+    return sanitiseFlashcardData(response.data);
   }
 }
