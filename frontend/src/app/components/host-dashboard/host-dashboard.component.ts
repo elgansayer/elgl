@@ -10,11 +10,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-host-dashboard',
   imports: [AppCardComponent, AppSkeletonLoaderComponent, TranslatePipe],
   template: `
-    <app-card
+    <app-card role="region" [attr.aria-label]="'host_dashboard.cardLabel' | t"
       variant="elevated"
       padding="md"
       customClass="bg-slate-800 text-white flex flex-row items-center justify-between gap-4 border border-slate-700"
     >
+<<<<<<< HEAD
       @if (isLoading()) {
         <div class="flex flex-row items-center justify-between gap-4 w-full" aria-hidden="true">
           <div class="flex flex-col items-start gap-1.5">
@@ -38,8 +39,17 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
             <span class="text-xl font-bold">{{ viewerCount() }}</span>
           </div>
+=======
+      <!-- Viewer Count -->
+      <div class="flex flex-col items-start">
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.viewer_count' | t }}</span>
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true"></div>
+          <span class="text-xl font-bold">{{ viewerCount() }}</span>
+>>>>>>> origin/main
         </div>
 
+<<<<<<< HEAD
         <!-- Earned Coins -->
         <div class="flex flex-col items-start border-s border-slate-700 ps-4">
           <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.coins_earned' | t }}</span>
@@ -47,6 +57,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-yellow-400 text-xl">{{ 'host_dashboard.coinIcon' | t }}</span>
             <span class="text-xl font-bold text-yellow-400">{{ earnedCoins() }}</span>
           </div>
+=======
+      <!-- Earned Coins -->
+      <div class="flex flex-col items-start border-s border-slate-700 ps-4">
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.coins_earned' | t }}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-yellow-400 text-xl" aria-hidden="true">{{ 'host_dashboard.coinIcon' | t }}</span>
+          <span class="text-xl font-bold text-yellow-400">{{ earnedCoins() }}</span>
+>>>>>>> origin/main
         </div>
 
         <!-- Uptime -->

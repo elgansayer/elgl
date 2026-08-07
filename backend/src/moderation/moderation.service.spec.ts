@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
 import { ModerationService } from './moderation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -12,6 +11,8 @@ describe('ModerationService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      not: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       insert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
@@ -49,8 +50,8 @@ describe('ModerationService', () => {
   });
 
   describe('reportUser', () => {
-    it('should insert a report and return data', async () => {
-      mockQueryBuilder._response = { data: { id: 'report-1' }, error: null };
+    it('should insert a report and return success', async () => {
+      mockQueryBuilder._response = { error: null };
 
       const dto = {
         reportedUserId: 'bad-user',
@@ -68,11 +69,11 @@ describe('ModerationService', () => {
         description: 'Being abusive',
         status: 'pending',
       });
-      expect(result).toEqual({ id: 'report-1' });
+      expect(result).toEqual({ success: true });
     });
 
     it('should insert a report without description when description is undefined', async () => {
-      mockQueryBuilder._response = { data: { id: 'report-2' }, error: null };
+      mockQueryBuilder._response = { error: null };
 
       const dto = { reportedUserId: 'bad-user', reasonCategory: 'spam' };
       await service.reportUser('reporter-1', dto);
@@ -86,18 +87,21 @@ describe('ModerationService', () => {
       });
     });
 
-    it('should throw NotFoundException when insert fails', async () => {
+    it('should return degraded response when insert fails', async () => {
       mockQueryBuilder._response = {
         data: null,
         error: { message: 'db error' },
       };
 
-      await expect(
-        service.reportUser('reporter-1', {
-          reportedUserId: 'bad-user',
-          reasonCategory: 'spam',
-        }),
-      ).rejects.toThrow(NotFoundException);
+      const result = await service.reportUser('reporter-1', {
+        reportedUserId: 'bad-user',
+        reasonCategory: 'spam',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Failed to create report',
+      });
     });
   });
 
@@ -118,12 +122,18 @@ describe('ModerationService', () => {
       expect(result).toEqual({ success: true });
     });
 
-    it('should throw NotFoundException when update fails', async () => {
+    it('should return degraded response when update fails', async () => {
       mockQueryBuilder._response = { error: { message: 'db error' } };
 
-      await expect(
-        service.approveItem({ itemId: 'report-1', type: 'profile' }),
-      ).rejects.toThrow(NotFoundException);
+      const result = await service.approveItem({
+        itemId: 'report-1',
+        type: 'profile',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Failed to approve item',
+      });
     });
   });
 
@@ -157,12 +167,18 @@ describe('ModerationService', () => {
       });
     });
 
-    it('should throw NotFoundException when update fails', async () => {
+    it('should return degraded response when update fails', async () => {
       mockQueryBuilder._response = { error: { message: 'db error' } };
 
-      await expect(
-        service.rejectItem({ itemId: 'report-1', type: 'profile' }),
-      ).rejects.toThrow(NotFoundException);
+      const result = await service.rejectItem({
+        itemId: 'report-1',
+        type: 'profile',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Failed to reject item',
+      });
     });
   });
 
@@ -173,8 +189,6 @@ describe('ModerationService', () => {
         status: 'pending',
         reason_category: 'harassment',
         created_at: '2026-01-01',
-        reporter_id: 'rep-1',
-        reported_user_id: 'bad-1',
         reported_moment_id: null,
         description: 'Bad behaviour',
         reporter: { id: 'rep-1', display_name: 'Reporter' },
@@ -186,6 +200,11 @@ describe('ModerationService', () => {
       const result = await service.getItems('profile');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
+      expect(mockQueryBuilder.not).toHaveBeenCalledWith(
+        'reported_user_id',
+        'is',
+        null,
+      );
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
         id: 'report-1',
@@ -212,12 +231,12 @@ describe('ModerationService', () => {
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('status', 'pending');
     });
 
-    it('should throw NotFoundException when query errors', async () => {
+    it('should return empty array when query errors (graceful degradation)', async () => {
       mockQueryBuilder._response = { error: { message: 'fail' } };
 
-      await expect(service.getItems('profile')).rejects.toThrow(
-        NotFoundException,
-      );
+      const result = await service.getItems('profile');
+
+      expect(result).toEqual([]);
     });
 
     it('should return empty array when data is null', async () => {
@@ -227,14 +246,12 @@ describe('ModerationService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should hydrate moment reports with moment content', async () => {
+    it('should hydrate moment reports with batched moment content', async () => {
       const reportRow = {
         id: 'report-2',
         status: 'pending',
         reason_category: 'spam',
         created_at: '2026-01-01',
-        reporter_id: 'rep-1',
-        reported_user_id: null,
         reported_moment_id: 'moment-1',
         description: null,
         reporter: null,
@@ -245,12 +262,14 @@ describe('ModerationService', () => {
 
       const momentBuilder = {
         select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
-          data: {
-            content_text: 'Hello world',
-            author: { display_name: 'Moment Author' },
-          },
+        in: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'moment-1',
+              content_text: 'Hello world',
+              author: { display_name: 'Moment Author' },
+            },
+          ],
           error: null,
         }),
       };
@@ -267,6 +286,7 @@ describe('ModerationService', () => {
         moment_content: 'Hello world',
         momentAuthorName: 'Moment Author',
       });
+      expect(momentBuilder.in).toHaveBeenCalledWith('id', ['moment-1']);
     });
 
     it('should handle missing moment content gracefully', async () => {
@@ -275,8 +295,6 @@ describe('ModerationService', () => {
         status: 'pending',
         reason_category: 'spam',
         created_at: '2026-01-01',
-        reporter_id: 'rep-1',
-        reported_user_id: null,
         reported_moment_id: 'moment-missing',
         description: null,
         reporter: null,
@@ -287,8 +305,7 @@ describe('ModerationService', () => {
 
       const momentBuilder = {
         select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
+        in: jest.fn().mockResolvedValue({
           data: null,
           error: { message: 'not found' },
         }),
@@ -300,7 +317,9 @@ describe('ModerationService', () => {
       });
 
       const result = await service.getItems('moment');
-      expect(result).toHaveLength(0);
+      // Item still returned but without hydrated moment content
+      expect(result).toHaveLength(1);
+      expect(result[0].moment_content).toBeUndefined();
     });
   });
 
@@ -353,15 +372,16 @@ describe('ModerationService', () => {
       expect(result.flags.length).toBeGreaterThan(0);
     });
 
-    it('should throw NotFoundException when user is not found', async () => {
+    it('should return zero risk score when user is not found (graceful degradation)', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'not found' },
       });
 
-      await expect(
-        service.analyseUserForDatingBehaviour('missing-user'),
-      ).rejects.toThrow(NotFoundException);
+      const result =
+        await service.analyseUserForDatingBehaviour('missing-user');
+
+      expect(result).toEqual({ riskScore: 0, flags: [] });
     });
 
     it('should handle empty moments gracefully', async () => {

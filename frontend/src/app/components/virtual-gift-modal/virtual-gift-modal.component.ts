@@ -49,15 +49,16 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
             (click)="toggleCoinPackages()"
             class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow"
           >
-            {{ (showCoinPackages ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
+            {{ (showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
           </button>
         </div>
 
-        @if (showCoinPackages) {
+        @if (showCoinPackages()) {
           <div class="space-y-3 animate-fadeIn">
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.bundlePrompt' | t
             }}</span>
+<<<<<<< HEAD
             @if (economyStore.coinPackages().length === 0) {
               <app-empty-state
                 icon="&#x1FA99;"
@@ -69,6 +70,28 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
                 @for (pkg of economyStore.coinPackages(); track pkg.id) {
                   <div
                     class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
+=======
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              @for (pkg of economyStore.coinPackages(); track pkg.id) {
+                <div
+                  class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
+                >
+                  <div class="flex items-center gap-3">
+                    <span class="text-2xl">🪙</span>
+                    <div>
+                      <span class="font-black text-sm text-text-primary">{{
+                        'giftModal.package.' + pkg.id + '.title'
+                          | t: { coins: pkg.coins, name: pkg.name }
+                      }}</span>
+                      <span class="text-xs text-text-secondary block">{{
+                        'giftModal.package.' + pkg.id + '.desc' | t
+                      }}</span>
+                    </div>
+                  </div>
+                  <button
+                    (click)="buyCoins(pkg.id)"
+                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
+>>>>>>> origin/main
                   >
                     <div class="flex items-center gap-3">
                       <span class="text-2xl">🪙</span>
@@ -95,11 +118,12 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
           </div>
         }
 
-        @if (!showCoinPackages) {
+        @if (!showCoinPackages()) {
           <div class="space-y-3">
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.selectPrompt' | t: { name: receiverName() }
             }}</span>
+<<<<<<< HEAD
             @if (isCatalogLoading()) {
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" aria-hidden="true">
                 @for (sk of skeletonCount(); track sk) {
@@ -143,6 +167,33 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
                 }
               </div>
             }
+=======
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              @for (gift of economyStore.catalog(); track gift.id) {
+                <button
+                  type="button"
+                  (click)="selectGift(gift)"
+                  [disabled]="gift.cost_coins > effectiveBalance()"
+                  [class]="
+                    'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
+                    (selectedGift()?.id === gift.id
+                      ? 'border-primary bg-primary/5 shadow-md scale-105'
+                      : gift.cost_coins > effectiveBalance()
+                        ? 'border-surface-100 bg-surface-300 opacity-40 cursor-not-allowed'
+                        : 'border-surface-100 hover:border-primary/50 bg-surface-300 cursor-pointer')
+                  "
+                >
+                  <span class="text-3xl block">{{ gift.icon }}</span>
+                  <span class="font-bold text-xs text-text-primary block truncate w-full">{{
+                    gift.name
+                  }}</span>
+                  <span class="text-[11px] font-extrabold text-amber-600">{{
+                    'giftModal.giftCost' | t: { cost: gift.cost_coins }
+                  }}</span>
+                </button>
+              }
+            </div>
+>>>>>>> origin/main
           </div>
         }
 
@@ -153,21 +204,27 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
           >
             {{ 'giftModal.cancelBtn' | t }}
           </button>
-          @if (!showCoinPackages) {
-            <button
-              [disabled]="!selectedGift || isSending"
-              (click)="confirmSend()"
-              class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
-            >
-              {{
-                isSending
-                  ? ('giftModal.sendingBtn' | t)
-                  : selectedGift
-                    ? ('giftModal.sendBtnText'
-                      | t: { icon: selectedGift.icon, cost: selectedGift.cost_coins })
-                    : ('giftModal.selectGift' | t)
-              }}
-            </button>
+          @if (!showCoinPackages()) {
+            @if (selectedGift(); as gift) {
+              <button
+                [disabled]="isSending()"
+                (click)="confirmSend()"
+                class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+              >
+                {{
+                  isSending()
+                    ? ('giftModal.sendingBtn' | t)
+                    : ('giftModal.sendBtnText' | t: { icon: gift.icon, cost: gift.cost_coins })
+                }}
+              </button>
+            } @else {
+              <button
+                disabled
+                class="px-6 py-2 bg-primary opacity-50 text-white rounded-xl font-extrabold text-xs shadow"
+              >
+                {{ 'giftModal.selectGift' | t }}
+              </button>
+            }
           }
         </div>
       </div>
@@ -181,15 +238,22 @@ export class VirtualGiftModalComponent {
   closed = output<void>();
 
   readonly economyStore = inject(EconomyStore);
-  selectedGift: VirtualGift | null = null;
-  showCoinPackages = false;
-  isSending = false;
-  deductedAmount = signal(0);
 
+<<<<<<< HEAD
   readonly isCatalogLoading = computed(() => this.economyStore.isLoading());
   readonly skeletonCount = computed(() => Array.from({ length: 6 }, (_, i) => i));
 
   effectiveBalance = (): number => this.economyStore.coinsBalance() - this.deductedAmount();
+=======
+  readonly selectedGift = signal<VirtualGift | null>(null);
+  readonly showCoinPackages = signal(false);
+  readonly isSending = signal(false);
+  readonly deductedAmount = signal(0);
+
+  readonly effectiveBalance = computed(
+    (): number => this.economyStore.coinsBalance() - this.deductedAmount(),
+  );
+>>>>>>> origin/main
 
   private ensureDataLoaded(): void {
     if (this.economyStore.catalog().length === 0) {
@@ -198,9 +262,9 @@ export class VirtualGiftModalComponent {
   }
 
   toggleCoinPackages(): void {
-    this.showCoinPackages = !this.showCoinPackages;
+    this.showCoinPackages.update((v) => !v);
     this.ensureDataLoaded();
-    if (this.showCoinPackages && this.economyStore.coinPackages().length === 0) {
+    if (this.showCoinPackages() && this.economyStore.coinPackages().length === 0) {
       void this.economyStore.loadCoinPackages();
     }
   }
@@ -210,15 +274,15 @@ export class VirtualGiftModalComponent {
   }
 
   selectGift(gift: VirtualGift): void {
-    this.selectedGift = gift;
+    this.selectedGift.set(gift);
     // Auto-deduction: preview the remaining balance after the gift cost
     this.deductedAmount.set(gift.cost_coins);
   }
 
   async confirmSend(): Promise<void> {
-    if (!this.selectedGift) return;
-    this.isSending = true;
-    const gift = this.selectedGift;
+    const gift = this.selectedGift();
+    if (!gift) return;
+    this.isSending.set(true);
     try {
       const ok = await this.economyStore.sendGift(
         this.receiverId(),
@@ -234,7 +298,7 @@ export class VirtualGiftModalComponent {
         this.closed.emit();
       }
     } finally {
-      this.isSending = false;
+      this.isSending.set(false);
     }
   }
 }

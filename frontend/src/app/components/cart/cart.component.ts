@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { JoyrideDirective } from 'ngx-joyride';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
@@ -17,10 +18,16 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
+<<<<<<< HEAD
   imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+=======
+  imports: [JoyrideDirective, TranslatePipe],
+>>>>>>> origin/main
   template: `
-    <div class="p-4">
-      <h1 class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
+    <div class="max-w-2xl mx-auto p-4">
+      <span joyrideStep="economyTour@cartLink" [text]="'tour.cartLinkDesc' | t" stepPosition="bottom">
+        <h1 class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
+      </span>
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }

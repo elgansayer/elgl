@@ -230,20 +230,31 @@ export class AdminService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(
-          catchError(() =>
-            of({ blocks: [], total: 0, page, pageSize }),
-          ),
-        ),
+        .pipe(catchError(() => of({ blocks: [], total: 0, page, pageSize }))),
     );
   }
 
   async removeBlock(blockId: string): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.delete<{ success: boolean }>(
-        `${this.baseUrl}/blocks/${blockId}`,
-        { headers: this.getHeaders() },
-      ),
+      this.http.delete<{ success: boolean }>(`${this.baseUrl}/blocks/${blockId}`, {
+        headers: this.getHeaders(),
+      }),
     );
   }
+
+  async listBlockedUsers(): Promise<AdminBlockEntry[]> {
+    const result = await this.listAllBlocks(1, 100);
+    return result.blocks;
+  }
+
+  async adminUnblockUser(userId: string): Promise<{ success: boolean }> {
+    const blocks = await this.listBlockedUsers();
+    const block = blocks.find((b) => b.blocked_id === userId);
+    if (!block) {
+      throw new Error('Block not found');
+    }
+    return this.removeBlock(block.id);
+  }
 }
+
+export type AdminBlockedUser = AdminBlockEntry;
