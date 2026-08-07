@@ -3,7 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
-import { scrubCoinPurchasesForArchive } from '../economy/sanitise-economy.helper';
+import {
+  scrubCoinPurchasesForArchive,
+  scrubEscrowTransactionsForArchive,
+} from '../economy/sanitise-economy.helper';
 
 @Injectable()
 export class PrivacyService {
@@ -221,6 +224,24 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
 
+    // 10) Escrow transactions (GDPR right of access: user's payment escrow history)
+    const { data: userEscrowPayer } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payer_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: userEscrowPayee } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payee_id', userId)
+      .order('created_at', { ascending: false });
+
+    const escrowTransactions = [
+      ...(userEscrowPayer ?? []),
+      ...(userEscrowPayee ?? []),
+    ];
+
     return {
       export_generated_at: new Date().toISOString(),
       user_profile: userProfile ?? null,
@@ -234,6 +255,10 @@ export class PrivacyService {
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
+      escrow_transactions: scrubEscrowTransactionsForArchive(
+        escrowTransactions,
+        userId,
+      ),
     };
   }
 }

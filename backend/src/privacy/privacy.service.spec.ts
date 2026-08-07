@@ -21,7 +21,7 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
       const scrubbed = { ...record };
       for (const key of ['receipt_token', 'transaction_id']) {
         if (typeof scrubbed[key] === 'string') {
-          const val = scrubbed[key] as string;
+          const val = scrubbed[key];
           scrubbed[key] =
             val.length < 8
               ? '[REDACTED-SHORT-TOKEN]'
@@ -32,9 +32,7 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
     },
   ),
   scrubCoinPurchasesForArchive: jest.fn(
-    (
-      records: unknown[] | null | undefined,
-    ): unknown[] | null | undefined => {
+    (records: unknown[] | null | undefined): unknown[] | null | undefined => {
       if (records == null || !Array.isArray(records)) return records;
       return records.map((record) => {
         if (record !== null && typeof record === 'object') {
@@ -42,7 +40,7 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
           const scrubbed = { ...r };
           for (const key of ['receipt_token', 'transaction_id']) {
             if (typeof scrubbed[key] === 'string') {
-              const val = scrubbed[key] as string;
+              const val = scrubbed[key];
               scrubbed[key] =
                 val.length < 8
                   ? '[REDACTED-SHORT-TOKEN]'
@@ -55,6 +53,49 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
       });
     },
   ),
+  scrubEscrowTransactionForArchive: jest.fn(
+    (
+      record: Record<string, unknown> | null | undefined,
+    ): Record<string, unknown> | null | undefined => {
+      if (record == null) return record;
+      const scrubbed = { ...record };
+      scrubbed['payer_id'] = '00000000-0000-0000-0000-000000000000';
+      scrubbed['payee_id'] = '00000000-0000-0000-0000-000000000000';
+      if (typeof scrubbed['description'] === 'string') {
+        scrubbed['description'] = null;
+      }
+      if (typeof scrubbed['reference_id'] === 'string') {
+        scrubbed['reference_id'] = null;
+      }
+      return scrubbed;
+    },
+  ),
+  scrubEscrowTransactionsForArchive: jest.fn(
+    (
+      records: unknown[] | null | undefined,
+      userId: string,
+    ): Record<string, unknown>[] => {
+      if (records == null || !Array.isArray(records)) return [];
+      return records.map((record) => {
+        if (record !== null && typeof record === 'object') {
+          const r = record as Record<string, unknown>;
+          const scrubbed = { ...r };
+          scrubbed['payer_id'] =
+            r['payer_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['payee_id'] =
+            r['payee_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['description'] = null;
+          scrubbed['reference_id'] = null;
+          return scrubbed;
+        }
+        return record as Record<string, unknown>;
+      });
+    },
+  ),
 }));
 
 describe('PrivacyService', () => {
@@ -62,21 +103,11 @@ describe('PrivacyService', () => {
   const mockFrom = jest.fn();
   const mockSelect = jest.fn();
   const mockEq = jest.fn();
-  const mockSingle = jest.fn();
   const mockOrder = jest.fn();
   const mockInsert = jest.fn();
   const mockUpdate = jest.fn();
   const mockUpload = jest.fn();
   const mockGetPublicUrl = jest.fn();
-
-  // Helper function to create a fresh mock chain that returns resolved data.
-  const makeEqMock = (resolveData: unknown) =>
-    jest.fn().mockResolvedValue({ data: resolveData, error: null });
-
-  const makeOrderMock = (resolveData: unknown) =>
-    jest.fn().mockReturnValue({
-      eq: makeEqMock(resolveData),
-    });
 
   beforeEach(async () => {
     jest.clearAllMocks();

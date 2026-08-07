@@ -1202,6 +1202,48 @@ export class UsersService {
       );
     }
 
+    // GDPR: scrub escrow_transactions records for the deleted user.
+    // Rather than deleting escrow records (which would break the financial
+    // ledger for the counterparty), we anonymise user identifiers and scrub
+    // free-text fields.
+    const DELETED_USER_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
+
+    const now = new Date().toISOString();
+
+    // Anonymise escrow records where the user was the payer
+    const { error: escrowPayerError } = await supabase
+      .from('escrow_transactions')
+      .update({
+        payer_id: DELETED_USER_PLACEHOLDER,
+        description: null,
+        reference_id: null,
+        updated_at: now,
+      })
+      .eq('payer_id', userId);
+
+    if (escrowPayerError) {
+      Logger.warn(
+        `Failed to anonymise payer escrow records for user ${userId}: ${escrowPayerError.message}`,
+      );
+    }
+
+    // Anonymise escrow records where the user was the payee
+    const { error: escrowPayeeError } = await supabase
+      .from('escrow_transactions')
+      .update({
+        payee_id: DELETED_USER_PLACEHOLDER,
+        description: null,
+        reference_id: null,
+        updated_at: now,
+      })
+      .eq('payee_id', userId);
+
+    if (escrowPayeeError) {
+      Logger.warn(
+        `Failed to anonymise payee escrow records for user ${userId}: ${escrowPayeeError.message}`,
+      );
+    }
+
     // Finally delete the user profile
     const { error: userError } = await supabase
       .from('users')
