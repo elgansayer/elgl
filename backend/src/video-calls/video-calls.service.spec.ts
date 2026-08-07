@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { VideoCallsService } from './video-calls.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 
 const mockCreateRoom = jest.fn().mockResolvedValue({});
@@ -24,14 +25,35 @@ jest.mock('crypto', () => ({
   randomUUID: jest.fn(() => `mock-uuid-${counter++}`),
 }));
 
+type MockPinoLogger = Record<'info' | 'error' | 'warn' | 'debug' | 'trace', jest.Mock>;
+
 describe('VideoCallsService', () => {
   let service: VideoCallsService;
+  let mockMetricsService: Record<string, jest.Mock>;
+  let mockLogger: MockPinoLogger;
 
   beforeEach(async () => {
     mockCreateRoom.mockClear().mockResolvedValue({});
     mockAddGrant.mockClear();
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
     counter = 0;
+
+    mockMetricsService = {
+      recordVideoRoomCreated: jest.fn(),
+      recordVideoRoomJoin: jest.fn(),
+      recordVideoRoomCreationError: jest.fn(),
+      setVideoRoomActive: jest.fn(),
+      setVideoRoomParticipants: jest.fn(),
+      recordVideoRoomEmptyTimeout: jest.fn(),
+    };
+
+    mockLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      trace: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -47,6 +69,8 @@ describe('VideoCallsService', () => {
             }),
           },
         },
+        { provide: MetricsService, useValue: mockMetricsService },
+        { provide: 'PinoLogger:VideoCallsService', useValue: mockLogger },
       ],
     }).compile();
 
@@ -94,15 +118,28 @@ describe('VideoCallsService', () => {
         token: 'mock-livekit-jwt',
         roomName: 'video_mock-uuid-0',
       });
+
+      expect(mockMetricsService.recordVideoRoomCreated).toHaveBeenCalledWith(
+        'success',
+        expect.any(Number),
+      );
     });
 
-    it('should propagate errors from LiveKit createRoom', async () => {
+    it('should propagate errors from LiveKit createRoom and record metrics', async () => {
       mockCreateRoom.mockRejectedValueOnce(
         new Error('LiveKit connection refused'),
       );
 
       await expect(service.createRoom('user-456')).rejects.toThrow(
         'LiveKit connection refused',
+      );
+
+      expect(mockMetricsService.recordVideoRoomCreated).toHaveBeenCalledWith(
+        'error',
+        expect.any(Number),
+      );
+      expect(mockMetricsService.recordVideoRoomCreationError).toHaveBeenCalledWith(
+        'Error',
       );
     });
 
@@ -116,7 +153,7 @@ describe('VideoCallsService', () => {
   });
 
   describe('joinRoom', () => {
-    it('should generate a token for an existing room', async () => {
+    it('should generate a token for an existing room and record join metric', async () => {
       const result = await service.joinRoom('user-456', 'video-abc');
 
       expect(AccessToken).toHaveBeenCalledWith(
@@ -142,6 +179,8 @@ describe('VideoCallsService', () => {
         token: 'mock-livekit-jwt',
         roomName: 'video-abc',
       });
+
+      expect(mockMetricsService.recordVideoRoomJoin).toHaveBeenCalled();
     });
 
     it('should not call createRoom when joining', async () => {

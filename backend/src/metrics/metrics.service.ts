@@ -84,6 +84,15 @@ export class MetricsService {
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
 
+  // Video Classroom (LiveKit) metrics
+  readonly videoRoomCreated: Counter<string>;
+  readonly videoRoomJoin: Counter<string>;
+  readonly videoRoomActive: Gauge<string>;
+  readonly videoRoomParticipants: Gauge<string>;
+  readonly videoRoomCreationDuration: Histogram<string>;
+  readonly videoRoomCreationErrors: Counter<string>;
+  readonly videoRoomEmptyTimeout: Counter<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -517,6 +526,54 @@ export class MetricsService {
       help: 'Rolling success rate of tier-1 (interest-based) matchmaking, 0-1',
       registers: [this.register],
     });
+
+    // --- Video Classroom (LiveKit) Metrics ---
+
+    this.videoRoomCreated = new Counter({
+      name: 'hellotalk_video_room_created_total',
+      help: 'Total number of video classrooms (LiveKit rooms) created',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.videoRoomJoin = new Counter({
+      name: 'hellotalk_video_room_join_total',
+      help: 'Total number of video classroom join events',
+      registers: [this.register],
+    });
+
+    this.videoRoomActive = new Gauge({
+      name: 'hellotalk_video_room_active',
+      help: 'Number of currently active video classrooms (LiveKit rooms)',
+      registers: [this.register],
+    });
+
+    this.videoRoomParticipants = new Gauge({
+      name: 'hellotalk_video_room_participants',
+      help: 'Total number of participants across all active video classrooms',
+      registers: [this.register],
+    });
+
+    this.videoRoomCreationDuration = new Histogram({
+      name: 'hellotalk_video_room_creation_duration_seconds',
+      help: 'Time taken to create a video classroom (LiveKit room)',
+      labelNames: ['result'],
+      registers: [this.register],
+      buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+    });
+
+    this.videoRoomCreationErrors = new Counter({
+      name: 'hellotalk_video_room_creation_errors_total',
+      help: 'Total number of video classroom creation errors',
+      labelNames: ['error_type'],
+      registers: [this.register],
+    });
+
+    this.videoRoomEmptyTimeout = new Counter({
+      name: 'hellotalk_video_room_empty_timeout_total',
+      help: 'Total number of video classrooms that timed out (emptied)',
+      registers: [this.register],
+    });
   }
 
   recordHttpRequest(
@@ -811,6 +868,33 @@ export class MetricsService {
 
   setEscrowStaleHeldCount(count: number): void {
     this.escrowStaleHeldCount.set(count);
+  }
+
+  // --- Video Classroom (LiveKit) metric helpers ---
+
+  recordVideoRoomCreated(result: 'success' | 'error', durationSeconds: number = 0): void {
+    this.videoRoomCreated.inc({ result });
+    this.videoRoomCreationDuration.observe({ result }, durationSeconds);
+  }
+
+  recordVideoRoomJoin(): void {
+    this.videoRoomJoin.inc();
+  }
+
+  setVideoRoomActive(count: number): void {
+    this.videoRoomActive.set(count);
+  }
+
+  setVideoRoomParticipants(count: number): void {
+    this.videoRoomParticipants.set(count);
+  }
+
+  recordVideoRoomCreationError(errorType: string): void {
+    this.videoRoomCreationErrors.inc({ error_type: errorType });
+  }
+
+  recordVideoRoomEmptyTimeout(): void {
+    this.videoRoomEmptyTimeout.inc();
   }
 
   getRegister(): Registry {

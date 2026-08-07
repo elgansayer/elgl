@@ -81,6 +81,14 @@ prometheus_scrape:
       - hellotalk_coin_purchase_errors_total: counter
       - hellotalk_coin_fraud_attempts_total: counter
       - hellotalk_coin_transaction_latency_seconds: histogram
+      # Video Classroom (LiveKit) metrics (#2230)
+      - hellotalk_video_room_created_total: counter
+      - hellotalk_video_room_join_total: counter
+      - hellotalk_video_room_active: gauge
+      - hellotalk_video_room_participants: gauge
+      - hellotalk_video_room_creation_duration_seconds: histogram
+      - hellotalk_video_room_creation_errors_total: counter
+      - hellotalk_video_room_empty_timeout_total: counter
       # Node.js default metrics (prefixed with hellotalk_)
       - hellotalk_nodejs_heap_size_total_bytes: gauge
       - hellotalk_nodejs_heap_size_used_bytes: gauge

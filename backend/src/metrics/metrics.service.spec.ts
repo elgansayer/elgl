@@ -437,4 +437,58 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
     });
   });
+
+  describe('Video Classroom (LiveKit) metrics', () => {
+    it('should record video room created (success)', () => {
+      expect(() =>
+        service.recordVideoRoomCreated('success', 0.5),
+      ).not.toThrow();
+    });
+
+    it('should record video room created (error)', () => {
+      expect(() =>
+        service.recordVideoRoomCreated('error', 1.2),
+      ).not.toThrow();
+    });
+
+    it('should record video room join', () => {
+      expect(() => service.recordVideoRoomJoin()).not.toThrow();
+    });
+
+    it('should set video room active gauge', () => {
+      expect(() => service.setVideoRoomActive(15)).not.toThrow();
+    });
+
+    it('should set video room participants gauge', () => {
+      expect(() => service.setVideoRoomParticipants(30)).not.toThrow();
+    });
+
+    it('should record video room creation error', () => {
+      expect(() =>
+        service.recordVideoRoomCreationError('LiveKitError'),
+      ).not.toThrow();
+    });
+
+    it('should record video room empty timeout', () => {
+      expect(() => service.recordVideoRoomEmptyTimeout()).not.toThrow();
+    });
+
+    it('should include video classroom metrics in getMetrics output', async () => {
+      service.recordVideoRoomCreated('success', 0.3);
+      service.recordVideoRoomJoin();
+      service.setVideoRoomActive(5);
+      service.setVideoRoomParticipants(10);
+      service.recordVideoRoomCreationError('ConnectionError');
+      service.recordVideoRoomEmptyTimeout();
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_video_room_created_total');
+      expect(metrics).toContain('hellotalk_video_room_join_total');
+      expect(metrics).toContain('hellotalk_video_room_active');
+      expect(metrics).toContain('hellotalk_video_room_participants');
+      expect(metrics).toContain('hellotalk_video_room_creation_duration_seconds');
+      expect(metrics).toContain('hellotalk_video_room_creation_errors_total');
+      expect(metrics).toContain('hellotalk_video_room_empty_timeout_total');
+    });
+  });
 });
