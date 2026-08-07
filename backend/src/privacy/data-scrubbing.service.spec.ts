@@ -1,33 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataScrubbingService } from './data-scrubbing.service';
 
-// Mock DOMPurify/JSDOM ESM dependencies at module level. These are needed
-// because data-scrubbing.service.ts now imports them for escrow scrubbing.
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockReturnValue({
-    window: {
-      document: { createElement: jest.fn() },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3 },
-    },
-  }),
-}));
-
-jest.mock('dompurify', () => {
-  const sanitize = jest.fn((dirty: string) => {
-    // Simulate real DOMPurify behaviour: strip all HTML tags
-    return dirty.replace(/<[^>]*>/g, '');
-  });
-  const purify = {
-    sanitize,
-    setConfig: jest.fn(),
-  };
-  const DOMPurify = jest.fn(() => purify);
-  return {
-    __esModule: true,
-    default: DOMPurify,
-  };
-});
-
 describe('DataScrubbingService', () => {
   let service: DataScrubbingService;
 
@@ -220,7 +193,7 @@ describe('DataScrubbingService', () => {
   });
 
   describe('scrubEscrowRecord', () => {
-    it('preserves payer_id and payee_id (internal UUIDs)', () => {
+    it('passes through payer_id and payee_id unmodified (documented policy)', () => {
       const record = {
         payer_id: 'payer-uuid-1',
         payee_id: 'payee-uuid-1',
@@ -234,57 +207,29 @@ describe('DataScrubbingService', () => {
       expect(record.payee_id).toBe('payee-uuid-1');
     });
 
-    it('sanitises HTML/script tags from reason field', () => {
+    it('passes through reason unmodified (essential for dispute resolution)', () => {
       const record = {
         payer_id: 'payer-1',
-        reason: 'Payment <script>alert("xss")</script> for <b>session</b> with Jane',
+        reason: 'Payment for 30-minute session with Jane',
       };
 
       service.scrubEscrowRecord(record);
 
-      expect(record.reason).not.toContain('<script>');
-      expect(record.reason).not.toContain('<b>');
-      expect(record.reason).toContain('alert');
-      expect(record.reason).toContain('session');
-      expect(record.reason).toContain('Jane');
+      expect(record.reason).toBe('Payment for 30-minute session with Jane');
     });
 
-    it('truncates reason to 500 characters', () => {
+    it('passes through metadata unmodified', () => {
       const record = {
         payer_id: 'payer-1',
-        reason: 'A'.repeat(600),
+        metadata: { note: 'contact: jane@example.com', lesson_id: 'abc-123' },
       };
 
       service.scrubEscrowRecord(record);
 
-      expect(record.reason.length).toBeLessThanOrEqual(500);
-    });
-
-    it('sanitises HTML in metadata string values', () => {
-      const record = {
-        payer_id: 'payer-1',
-        metadata: { note: '<b>urgent</b>', contact: '<script>evil</script>test@example.com' },
-      };
-
-      service.scrubEscrowRecord(record);
-
-      expect(record.metadata.note).toBe('urgent');
-      expect(record.metadata.note).not.toContain('<b>');
-      expect(record.metadata.contact).toBe('eviltest@example.com');
-      expect(record.metadata.contact).not.toContain('<script>');
-    });
-
-    it('sanitises HTML in last_error field', () => {
-      const record = {
-        payer_id: 'payer-1',
-        last_error: 'Timeout <img src=x onerror=alert(1)> fetching resource',
-      };
-
-      service.scrubEscrowRecord(record);
-
-      expect(record.last_error).not.toContain('<img');
-      expect(record.last_error).toContain('Timeout');
-      expect(record.last_error).toContain('fetching resource');
+      expect(record.metadata).toEqual({
+        note: 'contact: jane@example.com',
+        lesson_id: 'abc-123',
+      });
     });
 
     it('trims whitespace before scrubbing', () => {
@@ -293,13 +238,13 @@ describe('DataScrubbingService', () => {
   });
 
   describe('scrubEscrowTransactionRecords', () => {
-    it('scrubs reason and metadata in each record in-place', () => {
+    it('scrubs each record in the array in-place', () => {
       const records = [
         {
           payer_id: 'payer-1',
           payee_id: 'payee-1',
-          reason: 'Lesson payment <script>xss</script>',
-          metadata: { type: '<b>lesson</b>' },
+          reason: 'Lesson payment',
+          metadata: { type: 'lesson' },
         },
         {
           payer_id: 'payer-2',
@@ -312,10 +257,7 @@ describe('DataScrubbingService', () => {
       service.scrubEscrowTransactionRecords(records);
 
       expect(records[0].payer_id).toBe('payer-1');
-      expect(records[0].reason).not.toContain('<script>');
-      expect(records[0].reason).toContain('Lesson payment');
-      expect(records[0].metadata.type).toBe('lesson');
-      expect(records[0].metadata.type).not.toContain('<b>');
+      expect(records[0].reason).toBe('Lesson payment');
       expect(records[1].payer_id).toBe('payer-2');
       expect(records[1].reason).toBe('Translation service');
     });

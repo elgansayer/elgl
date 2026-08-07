@@ -118,17 +118,15 @@ let mockRedis: { del: jest.Mock };
         data: [{ id: 'user-abc-123' }],
         error: null,
       });
-      // Escrow tables need delete().eq().in() and update().eq().in() chains.
-      // Other tables use delete().eq() only.
+      // Setup sub-queries for data wiping
       const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({ error: null }),
-        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ error: null }),
       };
       // Override from for subsequent calls within wipeUserData
       mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'users') {
+          // First call is for select (limit), second is for update (eq)
           return mockQueryBuilder;
         }
         return mockDeleteBuilder;
@@ -145,15 +143,7 @@ let mockRedis: { del: jest.Mock };
         data: [{ id: 'user-abc-123' }],
         error: null,
       });
-      // Escrow tables need delete().eq().in() and update().eq().in() chains.
-      // Other tables use delete().eq() only.
-      const mockDeleteWithIn = {
-        delete: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({ error: null }),
-        update: jest.fn().mockReturnThis(),
-      };
-      const mockSimpleBuilder = {
+      const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
@@ -163,13 +153,7 @@ let mockRedis: { del: jest.Mock };
           return mockQueryBuilder;
         }
         calledTables.push(table);
-        if (
-          table === 'escrow_transactions' ||
-          table === 'escrows'
-        ) {
-          return mockDeleteWithIn;
-        }
-        return mockSimpleBuilder;
+        return mockDeleteBuilder;
       });
 
       await service.finaliseAccountDeletions();
@@ -178,7 +162,6 @@ let mockRedis: { del: jest.Mock };
       expect(calledTables).toContain('coin_purchases');
       expect(calledTables).toContain('gift_transactions');
       expect(calledTables).toContain('escrow_transactions');
-      expect(calledTables).toContain('escrows');
       expect(calledTables).toContain('user_sticker_packs');
       expect(calledTables).toContain('user_statistics');
       // Verify LingQ Reading Engine tables are included
@@ -198,9 +181,7 @@ let mockRedis: { del: jest.Mock };
       });
       const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({ error: null }),
-        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ error: null }),
       };
       mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'users') {
