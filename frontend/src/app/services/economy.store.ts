@@ -480,7 +480,7 @@ export class EconomyStore {
           id: `${pack.id}_${url.split('/').pop() ?? url}`,
           url,
           pack_name: pack.name,
-          is_animated: pack.is_animated ?? url.endsWith('.webm') || url.endsWith('.json'),
+          is_animated: pack.is_animated ?? (url.endsWith('.webm') || url.endsWith('.json')),
         })),
       );
   });

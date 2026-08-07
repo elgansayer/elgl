@@ -36,6 +36,7 @@ describe('VideoRoomComponent', () => {
       currentRoom: currentRoomSignal,
       hostVideoTrack: signal(null),
       coHostVideoTrack: signal(null),
+      localVideoTrack: signal(null),
       inviteCoHost: vi.fn().mockResolvedValue(undefined),
       removeCoHost: vi.fn().mockResolvedValue(undefined),
     } as unknown as Mocked<Partial<AudioRoomsStore>>;
