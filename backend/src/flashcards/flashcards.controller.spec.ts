@@ -52,6 +52,7 @@ describe('FlashcardsController', () => {
       updateSrsLevel: jest.fn(),
       getFlashcards: jest.fn(),
       getDueReviews: jest.fn(),
+      purgeSrsCache: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
