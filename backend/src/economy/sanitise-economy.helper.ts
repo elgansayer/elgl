@@ -22,7 +22,6 @@ strictPurify.setConfig({
   KEEP_CONTENT: false,
   RETURN_DOM: false,
   RETURN_DOM_FRAGMENT: false,
-  RETURN_DOM_IMPORT: false,
   WHOLE_DOCUMENT: false,
   SANITIZE_DOM: true,
   SANITIZE_NAMED_PROPS: true,
