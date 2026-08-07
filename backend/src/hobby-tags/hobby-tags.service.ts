@@ -94,6 +94,16 @@ const TAG_BASE_VOCABULARY: Record<string, BaseVocabularyItem[]> = {
   ],
 };
 
+function isTargetVocabularyItem(value: unknown): value is TargetVocabularyItem {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'word' in value &&
+    'translation' in value &&
+    'language' in value
+  );
+}
+
 @Injectable()
 export class HobbyTagsService {
   private readonly logger = new Logger(HobbyTagsService.name);
@@ -333,15 +343,7 @@ export class HobbyTagsService {
         ? hobbyTag.target_vocabulary
         : [];
       const targetVocab: TargetVocabularyItem[] = rawVocab.filter(
-        (item: unknown): item is TargetVocabularyItem => {
-          return (
-            typeof item === 'object' &&
-            item !== null &&
-            'word' in item &&
-            'translation' in item &&
-            'language' in item
-          );
-        },
+        isTargetVocabularyItem,
       );
 
       const cachedVocab = targetVocab.filter((v) => v.language === language);
@@ -425,17 +427,19 @@ export class HobbyTagsService {
 
         const updatedVocab = [...tnt.existingVocab, ...newVocabItems];
 
-        setImmediate(async () => {
-          try {
-            await supabase
-              .from('hobby_tags')
-              .update({ target_vocabulary: updatedVocab })
-              .eq('id', tnt.hobbyTagId);
-          } catch (err) {
-            this.logger.warn(
-              `Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`,
-            );
-          }
+        setImmediate(() => {
+          void (async () => {
+            try {
+              await supabase
+                .from('hobby_tags')
+                .update({ target_vocabulary: updatedVocab })
+                .eq('id', tnt.hobbyTagId);
+            } catch (err) {
+              this.logger.warn(
+                `Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`,
+              );
+            }
+          })();
         });
       }
     }
