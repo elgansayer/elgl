@@ -9,6 +9,8 @@ import {
   AdminUserSummary,
   AdminBlockEntry,
   AdminBlocksListResult,
+  AdminReportEntry,
+  AdminReportsListResult,
   LoginHistoryEntry,
 } from './interfaces/admin-user.interface';
 
@@ -17,10 +19,12 @@ const SUMMARY_COLUMNS =
 
 const CACHE_TTL_USERS = 300;
 const CACHE_TTL_BLOCKS = 300;
+const CACHE_TTL_REPORTS = 300;
 const CACHE_TTL_LOGIN_HISTORY = 600;
 
 const CACHE_PREFIX_USERS = 'admin:users:list:';
 const CACHE_PREFIX_BLOCKS = 'admin:blocks:list:';
+const CACHE_PREFIX_REPORTS = 'admin:reports:list:';
 const CACHE_PREFIX_LOGIN_HISTORY = 'admin:login-history:';
 
 @Injectable()
@@ -47,10 +51,7 @@ export class AdminService {
         );
       }
     } catch (err) {
-      this.logger.error(
-        'Failed to invalidate admin user list caches',
-        err,
-      );
+      this.logger.error('Failed to invalidate admin user list caches', err);
     }
   }
 
@@ -65,10 +66,22 @@ export class AdminService {
         );
       }
     } catch (err) {
-      this.logger.error(
-        'Failed to invalidate admin blocks list caches',
-        err,
-      );
+      this.logger.error('Failed to invalidate admin blocks list caches', err);
+    }
+  }
+
+  private async invalidateReportsListCaches(): Promise<void> {
+    try {
+      const redis = this.getRedis();
+      const keys = await redis.keys(`${CACHE_PREFIX_REPORTS}*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        this.logger.log(
+          `Invalidated ${keys.length} admin reports list cache key(s)`,
+        );
+      }
+    } catch (err) {
+      this.logger.error('Failed to invalidate admin reports list caches', err);
     }
   }
 
@@ -131,7 +144,7 @@ export class AdminService {
     }
 
     const result: AdminUserListResult = {
-      users: (data ?? []) as unknown as AdminUserSummary[],
+      users: data ?? [],
       total: count ?? 0,
       page,
       pageSize,
@@ -215,7 +228,7 @@ export class AdminService {
     const result = data ?? [];
 
     // GDPR: scrub IP addresses before returning to the admin dashboard
-    this.scrubbingService.scrubLoginHistory(result as Array<{ ip_address?: string | null }>);
+    this.scrubbingService.scrubLoginHistory(result);
 
     try {
       const redis = this.getRedis();
@@ -226,10 +239,7 @@ export class AdminService {
         CACHE_TTL_LOGIN_HISTORY,
       );
     } catch (err) {
-      this.logger.warn(
-        `Failed to cache login history for user ${userId}`,
-        err,
-      );
+      this.logger.warn(`Failed to cache login history for user ${userId}`, err);
     }
 
     return result;
@@ -268,6 +278,7 @@ export class AdminService {
     }
 
     await this.invalidateUserListCaches();
+    await this.invalidateReportsListCaches();
     await this.invalidateLoginHistoryCache(targetUserId);
   }
 
@@ -342,14 +353,99 @@ export class AdminService {
 
     try {
       const redis = this.getRedis();
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL_BLOCKS);
+    } catch (err) {
+      this.logger.warn('Failed to cache admin blocks list', err);
+    }
+
+    return result;
+  }
+
+  async listReports(
+    page = 1,
+    pageSize = 20,
+    statusFilter?: string,
+  ): Promise<AdminReportsListResult> {
+    const status = statusFilter ?? '';
+    const cacheKey = `${CACHE_PREFIX_REPORTS}${page}:${pageSize}:${status}`;
+
+    try {
+      const redis = this.getRedis();
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        const parsed: unknown = JSON.parse(cached);
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'reports' in parsed &&
+          'total' in parsed
+        ) {
+          return parsed as AdminReportsListResult;
+        }
+      }
+    } catch (err) {
+      this.logger.warn('Failed to read admin reports list from cache', err);
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let request = supabase
+      .from('reports')
+      .select(
+        'id, reporter_id, reported_user_id, reason_category, description, status, created_at, reported:reported_user_id ( display_name ), reporter:reporter_id ( display_name )',
+        { count: 'exact' },
+      );
+
+    if (statusFilter) {
+      request = request.eq('status', statusFilter);
+    }
+
+    const { data, error, count } = await request
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      this.logger.warn(`Failed to list reports: ${error.message}`);
+      return { reports: [], total: 0, page, pageSize };
+    }
+
+    const reports: AdminReportEntry[] = (data ?? []).map(
+      (row: Record<string, unknown>) => {
+        const reported = row.reported as { display_name?: string } | null;
+        const reporter = row.reporter as { display_name?: string } | null;
+        return {
+          id: row.id as string,
+          reporter_id: row.reporter_id as string | null,
+          reported_user_id: row.reported_user_id as string,
+          reason_category: row.reason_category as string,
+          description: row.description as string | null,
+          status: row.status as string,
+          reported_name: reported?.display_name ?? null,
+          reporter_name: reporter?.display_name ?? null,
+          created_at: row.created_at as string,
+        };
+      },
+    );
+
+    const result: AdminReportsListResult = {
+      reports,
+      total: count ?? 0,
+      page,
+      pageSize,
+    };
+
+    try {
+      const redis = this.getRedis();
       await redis.set(
         cacheKey,
         JSON.stringify(result),
         'EX',
-        CACHE_TTL_BLOCKS,
+        CACHE_TTL_REPORTS,
       );
     } catch (err) {
-      this.logger.warn('Failed to cache admin blocks list', err);
+      this.logger.warn('Failed to cache admin reports list', err);
     }
 
     return result;
