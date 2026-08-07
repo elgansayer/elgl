@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 interface ChatRoomPreview {
   id: string;
@@ -26,7 +27,7 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent],
   templateUrl: './chat-list.component.html',
 })
 export class ChatListComponent implements OnInit {
