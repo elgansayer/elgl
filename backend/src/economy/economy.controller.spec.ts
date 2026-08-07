@@ -27,6 +27,7 @@ import { Logger } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
+import { CoinEconomyHealthService } from './coin-economy-health.service';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -51,6 +52,23 @@ describe('EconomyController', () => {
             sendGift: jest.fn(),
             getStickerPacks: jest.fn(),
             unlockStickerPack: jest.fn(),
+          },
+        },
+        {
+          provide: CoinEconomyHealthService,
+          useValue: {
+            getHealthSnapshot: jest.fn().mockResolvedValue({
+              overall: 'healthy',
+              timestamp: new Date().toISOString(),
+              dependencies: {},
+              circuitBreakers: {},
+              degradedFeatures: [],
+              uptimeSeconds: 3600,
+            }),
+            getDegradedFeatures: jest.fn().mockReturnValue([]),
+            markFeatureDegraded: jest.fn(),
+            clearFeatureDegradation: jest.fn(),
+            isFeatureDegraded: jest.fn().mockReturnValue(false),
           },
         },
         {
@@ -327,6 +345,31 @@ describe('EconomyController', () => {
         proto.sendGift,
       );
       expect(metadata).toEqual({ maxRequests: 10, windowSeconds: 60 });
+    });
+  });
+
+  describe('getHealth', () => {
+    it('should return health snapshot from health service', async () => {
+      const mockSnapshot = {
+        overall: 'healthy' as const,
+        timestamp: '2026-08-07T12:00:00.000Z',
+        dependencies: {
+          redis: { status: 'healthy' as const, latencyMs: 1, lastChecked: '2026-08-07T12:00:00.000Z' },
+          supabase: { status: 'healthy' as const, latencyMs: 2, lastChecked: '2026-08-07T12:00:00.000Z' },
+          stripe: { status: 'healthy' as const, latencyMs: 50, lastChecked: '2026-08-07T12:00:00.000Z' },
+          centrifugo: { status: 'healthy' as const, latencyMs: 3, lastChecked: '2026-08-07T12:00:00.000Z' },
+        },
+        circuitBreakers: {},
+        degradedFeatures: [] as string[],
+        uptimeSeconds: 3600,
+      };
+
+      const healthService = (controller as unknown as { healthService: CoinEconomyHealthService }).healthService;
+      (healthService.getHealthSnapshot as jest.Mock).mockResolvedValue(mockSnapshot);
+
+      const result = await controller.getHealth();
+      expect(result).toEqual(mockSnapshot);
+      expect(healthService.getHealthSnapshot).toHaveBeenCalled();
     });
   });
 });
