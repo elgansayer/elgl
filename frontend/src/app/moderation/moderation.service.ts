@@ -1,7 +1,8 @@
 import { inject, Injectable, resource, ResourceRef, Signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, catchError, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { withRetry } from '../services/http-retry';
 
 export interface ModerationItem {
   id: string;
@@ -54,11 +55,18 @@ export class ModerationService {
     if (status) {
       params = params.set('status', status);
     }
-    return firstValueFrom(
-      this.http
-        .get<ModerationItem[]>(`${environment.apiUrl}/moderation/items`, { params })
-        .pipe(catchError(() => of(FALLBACK_ITEMS))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<ModerationItem[]>(
+            `${environment.apiUrl}/moderation/items`,
+            { params },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_ITEMS;
+    }
   }
 
   async reportUser(
@@ -66,29 +74,36 @@ export class ModerationService {
     reasonCategory: string,
     description?: string,
   ): Promise<ModerationActionResponse> {
-    return firstValueFrom(
-      this.http
-        .post<ModerationActionResponse>(`${environment.apiUrl}/moderation/report`, {
-          reportedUserId,
-          reasonCategory,
-          description,
-        })
-        .pipe(catchError(() => of(FALLBACK_FAILED_RESPONSE))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${environment.apiUrl}/moderation/report`,
+            { reportedUserId, reasonCategory, description },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
   async approveItem(
     itemId: string,
     type: 'moment' | 'profile',
   ): Promise<ModerationActionResponse> {
-    return firstValueFrom(
-      this.http
-        .post<ModerationActionResponse>(`${environment.apiUrl}/moderation/approve`, {
-          itemId,
-          type,
-        })
-        .pipe(catchError(() => of(FALLBACK_FAILED_RESPONSE))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${environment.apiUrl}/moderation/approve`,
+            { itemId, type },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
   async rejectItem(
@@ -96,22 +111,31 @@ export class ModerationService {
     type: 'moment' | 'profile',
     reason?: string,
   ): Promise<ModerationActionResponse> {
-    return firstValueFrom(
-      this.http
-        .post<ModerationActionResponse>(`${environment.apiUrl}/moderation/reject`, {
-          itemId,
-          type,
-          reason,
-        })
-        .pipe(catchError(() => of(FALLBACK_FAILED_RESPONSE))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.post<ModerationActionResponse>(
+            `${environment.apiUrl}/moderation/reject`,
+            { itemId, type, reason },
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_FAILED_RESPONSE;
+    }
   }
 
   async analyseUser(userId: string): Promise<ModerationAnalysis> {
-    return firstValueFrom(
-      this.http
-        .get<ModerationAnalysis>(`${environment.apiUrl}/moderation/analyse/${userId}`)
-        .pipe(catchError(() => of(FALLBACK_ANALYSIS))),
-    );
+    try {
+      return await withRetry(() =>
+        firstValueFrom(
+          this.http.get<ModerationAnalysis>(
+            `${environment.apiUrl}/moderation/analyse/${userId}`,
+          ),
+        ),
+      );
+    } catch {
+      return FALLBACK_ANALYSIS;
+    }
   }
 }
