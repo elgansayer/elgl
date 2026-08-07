@@ -3,6 +3,7 @@ import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 
 describe('DiscoveryController', () => {
   let controller: DiscoveryController;
@@ -37,6 +38,8 @@ describe('DiscoveryController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(DiscoveryRateLimiterGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
