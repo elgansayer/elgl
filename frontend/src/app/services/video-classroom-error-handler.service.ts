@@ -18,6 +18,8 @@ export interface VideoClassroomCrashContext {
 }
 
 const MAX_RECENT_CRASHES = 10;
+const MAX_STACK_LENGTH = 2000;
+const MAX_MESSAGE_LENGTH = 500;
 
 @Injectable({
   providedIn: 'root',
@@ -39,10 +41,13 @@ export class VideoClassroomErrorHandlerService {
    * Report a video-classroom-specific crash with rich context.
    */
   reportVideoClassroomCrash(error: Error, context?: VideoClassroomCrashContext): void {
+    const rawStack = error.stack ?? '';
     const payload = {
-      message: error.message || 'Unknown video classroom crash',
+      message: (error.message || 'Unknown video classroom crash').slice(0, MAX_MESSAGE_LENGTH),
       name: error.name || 'VideoClassroomError',
-      stack: error.stack ?? undefined,
+      stack: rawStack.length > MAX_STACK_LENGTH
+        ? rawStack.slice(0, MAX_STACK_LENGTH) + '...'
+        : rawStack || undefined,
       url: typeof window !== 'undefined' ? window.location.href : '',
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
       timestamp: new Date().toISOString(),
