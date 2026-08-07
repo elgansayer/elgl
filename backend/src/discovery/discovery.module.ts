@@ -5,12 +5,17 @@ import { SafetyModule } from '../safety/safety.module';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
+import { MatchmakingCacheInvalidationService } from './matchmaking-cache-invalidation.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
   imports: [AudioRoomsModule, UsersModule, SafetyModule, SupabaseModule],
   controllers: [DiscoveryController],
-  providers: [DiscoveryService, DiscoveryRateLimiterGuard],
-  exports: [DiscoveryService],
+  providers: [
+    DiscoveryService,
+    DiscoveryRateLimiterGuard,
+    MatchmakingCacheInvalidationService,
+  ],
+  exports: [DiscoveryService, MatchmakingCacheInvalidationService],
 })
 export class DiscoveryModule {}
