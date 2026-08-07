@@ -11,7 +11,13 @@ describe('LegalService', () => {
         LegalService,
         {
           provide: ConfigService,
-          useValue: { get: jest.fn().mockReturnValue('2026-07-01') },
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'SUPABASE_URL') return null;
+              if (key === 'SUPABASE_SERVICE_KEY') return null;
+              return '2026-07-01';
+            }),
+          },
         },
       ],
     }).compile();
@@ -24,8 +30,8 @@ describe('LegalService', () => {
   });
 
   describe('getTermsOfService', () => {
-    it('should return the Terms of Service document with all sections', () => {
-      const result = service.getTermsOfService();
+    it('should return the Terms of Service document with all sections (fallback)', async () => {
+      const result = await service.getTermsOfService();
 
       expect(result.title).toBe('Terms of Service');
       expect(result.lastUpdated).toBe('2026-07-01');
@@ -47,19 +53,26 @@ describe('LegalService', () => {
           LegalService,
           {
             provide: ConfigService,
-            useValue: { get: jest.fn((key: string) => key === 'TOS_EFFECTIVE_DATE' ? '2026-09-01' : null) },
+            useValue: {
+              get: jest.fn((key: string) => {
+                if (key === 'TOS_EFFECTIVE_DATE') return '2026-09-01';
+                if (key === 'SUPABASE_URL') return null;
+                if (key === 'SUPABASE_SERVICE_KEY') return null;
+                return null;
+              }),
+            },
           },
         ],
       }).compile();
       const customService = moduleRef.get(LegalService);
-      const result = customService.getTermsOfService();
+      const result = await customService.getTermsOfService();
       expect(result.lastUpdated).toBe('2026-09-01');
     });
   });
 
   describe('getPrivacyPolicy', () => {
-    it('should return the Privacy Policy document with all sections', () => {
-      const result = service.getPrivacyPolicy();
+    it('should return the Privacy Policy document with all sections (fallback)', async () => {
+      const result = await service.getPrivacyPolicy();
 
       expect(result.title).toBe('Privacy Policy');
       expect(result.lastUpdated).toBe('2026-07-01');
@@ -80,12 +93,19 @@ describe('LegalService', () => {
           LegalService,
           {
             provide: ConfigService,
-            useValue: { get: jest.fn((key: string) => key === 'PRIVACY_EFFECTIVE_DATE' ? '2026-08-15' : null) },
+            useValue: {
+              get: jest.fn((key: string) => {
+                if (key === 'PRIVACY_EFFECTIVE_DATE') return '2026-08-15';
+                if (key === 'SUPABASE_URL') return null;
+                if (key === 'SUPABASE_SERVICE_KEY') return null;
+                return null;
+              }),
+            },
           },
         ],
       }).compile();
       const customService = moduleRef.get(LegalService);
-      const result = customService.getPrivacyPolicy();
+      const result = await customService.getPrivacyPolicy();
       expect(result.lastUpdated).toBe('2026-08-15');
     });
   });
