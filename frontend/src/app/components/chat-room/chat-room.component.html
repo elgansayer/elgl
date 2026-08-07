@@ -326,24 +326,27 @@
       <input
         type="text"
         [(ngModel)]="originalText"
+        (ngModelChange)="saveChatDrafts()"
         [placeholder]="'chatRoom.originalSentence' | t"
         class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
        [attr.aria-label]="'text input'"/>
       <input
         type="text"
         [(ngModel)]="correctedText"
+        (ngModelChange)="saveChatDrafts()"
         [placeholder]="'chatRoom.correctedSentence' | t"
         class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
        [attr.aria-label]="'text input'"/>
       <input
         type="text"
         [(ngModel)]="explanationText"
+        (ngModelChange)="saveChatDrafts()"
         [placeholder]="'chatRoom.explanation' | t"
         class="app-input w-full bg-surface-200 border-amber-500/30 pt-2 pb-2"
        [attr.aria-label]="'text input'"/>
       <div class="flex gap-2">
         <button
-          (click)="showCorrectionForm.set(false)"
+          (click)="showCorrectionForm.set(false); saveChatDrafts()"
           class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
          [attr.aria-label]="'chatRoom.cancelBtn' | t">
           {{ 'chatRoom.cancelBtn' | t }}

@@ -452,6 +452,7 @@ export class MomentsFeedComponent {
       mediaUrls: this.newMediaUrls().length > 0 ? this.newMediaUrls() : undefined,
       mediaType: this.newMediaType(),
       targetLanguage: this.newTargetLanguage(),
+      voiceDurationSec: this.newVoiceDurationSec,
     });
   }
 
@@ -464,5 +465,6 @@ export class MomentsFeedComponent {
       this.newMediaType.set(draft.mediaType ?? 'images');
     }
     if (draft.targetLanguage) this.newTargetLanguage.set(draft.targetLanguage);
+    if (draft.voiceDurationSec !== undefined) this.newVoiceDurationSec = draft.voiceDurationSec;
   }
 }
