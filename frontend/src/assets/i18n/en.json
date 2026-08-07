@@ -1823,5 +1823,9 @@
   "wordModal.saveLearningBtn": "🟡 Save to learning",
   "wordModal.srsStatus": "Spaced repetition status: {{status}}",
   "wordModal.title": "Dictionary Definition",
-  "wordModal.translationLabel": "Translation"
+  "wordModal.translationLabel": "Translation",
+  "errorBoundary.title": "Something went wrong",
+  "errorBoundary.message": "We had trouble loading the coin economy. Your balance is safe.",
+  "errorBoundary.retry": "Try Again",
+  "errorBoundary.report": "Report Issue"
 }

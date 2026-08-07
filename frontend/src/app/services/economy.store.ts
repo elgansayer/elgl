@@ -9,6 +9,7 @@ import { I18nService } from './i18n.service';
 import { GiftAnimationService, GiftAnimationType } from './gift-animation.service';
 import { OfflineEconomyService } from './offline-economy.service';
 import { NetworkStatusService } from './network-status.service';
+import { EconomyErrorHandlerService } from './economy-error-handler.service';
 
 export interface VirtualGift {
   id: string;
@@ -78,6 +79,7 @@ export class EconomyStore {
   private giftAnimationService = inject(GiftAnimationService);
   private offlineEconomy = inject(OfflineEconomyService);
   private networkStatus = inject(NetworkStatusService);
+  private economyErrorHandler = inject(EconomyErrorHandlerService);
   private baseUrl = `${environment.apiUrl}/economy`;
   private monetisationUrl = `${environment.apiUrl}/monetisation`;
   private safetyUrl = `${environment.apiUrl}/safety`;
@@ -145,7 +147,7 @@ export class EconomyStore {
         }
       }
     } catch (e) {
-      console.error('Error loading economy/safety data:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadInitialData', coinBalance: this.coinsBalance() });
       // Try offline fallback on error
       try {
         const [cachedCatalog, cachedBalance] = await Promise.all([
@@ -184,7 +186,7 @@ export class EconomyStore {
       }
       return res;
     } catch (e) {
-      console.error('Daily check-in error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'claimDailyCheckIn', coinBalance: this.coinsBalance() });
       return null;
     }
   }
@@ -207,7 +209,7 @@ export class EconomyStore {
         }
       }
     } catch (e) {
-      console.error('Load coin packages error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadCoinPackages' });
       // Fallback to cache on error
       try {
         const cached = await this.offlineEconomy.getCachedCoinPackages();
@@ -241,7 +243,7 @@ export class EconomyStore {
       }
       window.location.href = res.sessionUrl;
     } catch (e) {
-      console.error('Coin checkout error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'buyCoins', coinBalance: this.coinsBalance() });
       showToast(this.i18n.translate('economy.buyCoinsError'));
     }
   }
@@ -264,7 +266,7 @@ export class EconomyStore {
       );
       return true;
     } catch (e) {
-      console.error('Coin purchase confirmation error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'confirmCoinPurchase', coinBalance: this.coinsBalance() });
       showToast(this.i18n.translate('economy.purchaseConfirmError'));
       return false;
     }
@@ -301,7 +303,7 @@ export class EconomyStore {
       await this.offlineEconomy.cacheBalance(res.coins_remaining).catch(() => undefined);
       return true;
     } catch (e: unknown) {
-      console.error('Send gift error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'sendGift', coinBalance: this.coinsBalance() });
       const message = e instanceof Error ? e.message : String(e);
       showToast(message || this.i18n.translate('economy.sendGiftError'));
       return false;
@@ -328,7 +330,7 @@ export class EconomyStore {
       }
       window.location.href = res.sessionUrl;
     } catch (e) {
-      console.error('VIP upgrade error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'upgradeVip', coinBalance: this.coinsBalance() });
       showToast(this.i18n.translate('economy.vipUpgradeError'));
     }
   }
@@ -342,7 +344,7 @@ export class EconomyStore {
       );
       this.developerStats.set(res);
     } catch (e) {
-      console.error('Load dev analytics error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadDeveloperAnalytics' });
     }
   }
 
@@ -355,7 +357,7 @@ export class EconomyStore {
       );
       this.diagnosticLogs.set(logs.map((log) => this.mapDiagnosticLog(log)));
     } catch (e) {
-      console.error('Load diagnostic logs error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadDiagnosticLogs' });
       this.diagnosticLogs.set([]);
     }
   }
@@ -383,7 +385,7 @@ export class EconomyStore {
       const mapped = this.mapDiagnosticLog(created);
       this.diagnosticLogs.update((current) => [mapped, ...current].slice(0, 20));
     } catch (e) {
-      console.error('Create diagnostic log error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'createDiagnosticLog' });
     }
   }
 
@@ -402,7 +404,7 @@ export class EconomyStore {
       );
       return res.api_key;
     } catch (e: unknown) {
-      console.error('Generate API key error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'generateApiKey' });
       const message = e instanceof Error ? e.message : String(e);
       showToast(
         message || this.i18n.translate('economy.apiKeyGenerationError'),
@@ -422,7 +424,7 @@ export class EconomyStore {
       );
       showToast(this.i18n.translate('safety.reportSubmitted'));
     } catch (e) {
-      console.error('Report user error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'reportUser' });
       showToast(this.i18n.translate('safety.reportError'));
     }
   }
@@ -441,7 +443,7 @@ export class EconomyStore {
       this.blockedUserIds.set(set);
       showToast(this.i18n.translate('safety.userBlocked'));
     } catch (e) {
-      console.error('Block user error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'blockUser' });
       showToast(this.i18n.translate('safety.blockError'));
     }
   }
@@ -522,7 +524,7 @@ export class EconomyStore {
         }
       }
     } catch (e) {
-      console.error('Load sticker packs error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'loadStickerPacks', coinBalance: this.coinsBalance() });
       // Fallback to cache on error
       try {
         const cached = await this.offlineEconomy.getCachedStickerPacks();
@@ -576,7 +578,7 @@ export class EconomyStore {
       }
       return false;
     } catch (e) {
-      console.error('Unlock sticker pack error:', e);
+      this.economyErrorHandler.reportEconomyCrash(e instanceof Error ? e : new Error(String(e)), { action: 'unlockStickerPack', coinBalance: this.coinsBalance() });
       showToast(this.i18n.translate('sticker.notEnoughCoins'));
       return false;
     }
