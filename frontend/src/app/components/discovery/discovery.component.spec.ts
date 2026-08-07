@@ -130,6 +130,42 @@ describe('DiscoveryComponent', () => {
     expect(component.isLoading()).toBe(false);
   });
 
+  it('should render skeleton loaders while loading', async () => {
+    // Don't resolve findPartners to keep isLoading = true
+    let resolveSearch: (value: unknown) => void;
+    const searchPromise = new Promise((resolve) => {
+      resolveSearch = resolve;
+    });
+    mockDiscoveryService.findPartners.mockReturnValue(searchPromise);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const skeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(component.isLoading()).toBe(true);
+
+    // Resolve and verify skeletons disappear
+    resolveSearch!([]);
+    await flush();
+
+    const postLoadSkeletons = fixture.nativeElement.querySelectorAll('app-skeleton-loader');
+    expect(postLoadSkeletons.length).toBe(0);
+  });
+
+  it('should render empty state with map icon and reset button when no partners found', async () => {
+    mockDiscoveryService.findPartners.mockResolvedValue([]);
+    await init();
+
+    const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+    expect(emptyState).toBeTruthy();
+
+    // Should show a reset button
+    const button = emptyState?.querySelector('button');
+    expect(button).toBeTruthy();
+  });
+
   it('should populate target languages and restore serious learner mode from profile', async () => {
     mockUserService.getMyProfile.mockResolvedValue({
       target_languages: ['JA', 'FR'],

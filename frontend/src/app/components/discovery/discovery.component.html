@@ -245,16 +245,56 @@
   <!-- Content States -->
   <main class="p-0">
     @if (isLoading()) {
-      <section aria-live="polite" aria-busy="true">
-        <app-empty-state [title]="'discovery.searching' | t" [customClass]="'py-16'" role="status">
-        </app-empty-state>
+      <!-- Skeleton Loader Grid - mirrors partner card layout -->
+      <section aria-live="polite" aria-busy="true" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <div class="flex items-center gap-3 p-4 bg-surface-500" role="status" [attr.aria-label]="'discovery.loadingSkeleton' | t">
+            <!-- Avatar skeleton -->
+            <app-skeleton-loader
+              [height]="'64px'"
+              [width]="'64px'"
+              [borderRadius]="'50%'"
+              [variant]="'circle'"
+            ></app-skeleton-loader>
+            <!-- Text content skeletons -->
+            <div class="flex flex-col gap-2 flex-1 min-w-0">
+              <app-skeleton-loader
+                [height]="'16px'"
+                [width]="'60%'"
+                [borderRadius]="'8px'"
+                [variant]="'rect'"
+              ></app-skeleton-loader>
+              <app-skeleton-loader
+                [height]="'12px'"
+                [width]="'80%'"
+                [borderRadius]="'6px'"
+                [variant]="'rect'"
+              ></app-skeleton-loader>
+              <app-skeleton-loader
+                [height]="'12px'"
+                [width]="'40%'"
+                [borderRadius]="'6px'"
+                [variant]="'rect'"
+              ></app-skeleton-loader>
+            </div>
+            <!-- Action button skeleton -->
+            <app-skeleton-loader
+              [height]="'36px'"
+              [width]="'36px'"
+              [borderRadius]="'50%'"
+              [variant]="'circle'"
+            ></app-skeleton-loader>
+          </div>
+        }
       </section>
     } @else if (partners().length === 0) {
       <section aria-live="polite">
         <app-empty-state
-          [illustration]="'/assets/illustrations/no-users-nearby.svg'"
+          [icon]="'🗺️'"
           [title]="'discovery.noUsersNearby' | t"
           [description]="'discovery.noUsersHint' | t"
+          [actionLabel]="'discovery.resetFilters' | t"
+          (actionClicked)="resetFilters()"
         >
         </app-empty-state>
       </section>

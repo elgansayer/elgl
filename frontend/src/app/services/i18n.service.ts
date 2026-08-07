@@ -295,6 +295,7 @@ export class I18nService {
     'discovery.off': 'Off',
     'discovery.resetFilters': 'Reset filters',
     'discovery.searching': 'Searching partners...',
+    'discovery.loadingSkeleton': 'Loading partner cards...',
     'discovery.noMatches': 'No partner matches yet.',
     'discovery.tryBroadening': 'Try broadening distance or language filters.',
     'discovery.matchCount': '{{count}} partner match(es)',
