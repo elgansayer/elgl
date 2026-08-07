@@ -5,13 +5,18 @@ import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { MOCK_FLASHCARDS } from '../mock-data';
 =======
 <<<<<<< HEAD
-import { MetricsService } from '../metrics/metrics.service';
 =======
-import { withRetry } from '../common/retry';
 >>>>>>> origin/main
+import { MetricsService } from '../metrics/metrics.service';
+import { withRetry } from '../common/retry';
+<<<<<<< HEAD
+>>>>>>> origin/main
+>>>>>>> origin/main
+=======
 >>>>>>> origin/main
 
 @Injectable()
@@ -280,7 +285,11 @@ export class FlashcardsService {
     // Record SRS review metrics
     const reviewDurationSeconds = (Date.now() - reviewStartTime) / 1000;
     const result = dto.quality >= 3 ? 'pass' : 'fail';
-    this.metricsService.recordSrsReviewCompleted(dto.quality, result, reviewDurationSeconds);
+    this.metricsService.recordSrsReviewCompleted(
+      dto.quality,
+      result,
+      reviewDurationSeconds,
+    );
 
     this.logger.info(
       {
