@@ -30,6 +30,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CrashReportService } from './crash-report.service';
 import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
+import { CrashReportService } from './crash-report.service';
 import {
   AcknowledgeCrashReportDto,
   CreateEscrowHoldDto,
