@@ -46,7 +46,7 @@ export function isRateLimitError(error: unknown): boolean {
  * @throws The original error if all retry attempts are exhausted.
  */
 export async function withRetry<T>(
-  operation: () => Promise<T>,
+  operation: () => PromiseLike<T>,
   options: RetryOptions = {},
 ): Promise<T> {
   const { maxRetries = 3, baseDelayMs = 500, logger } = options;
