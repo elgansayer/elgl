@@ -197,6 +197,14 @@ export const routes: Routes = [
     title: 'Chat Backup & Restore - HelloTalk',
   },
   {
+    path: 'settings/linked-accounts',
+    loadComponent: () =>
+      import('./pages/settings/linked-accounts/linked-accounts.component').then(
+        (m) => m.LinkedAccountsComponent,
+      ),
+    title: 'Linked Accounts - HelloTalk',
+  },
+  {
     path: 'developer',
     loadComponent: () =>
       import('./components/developer-dashboard/developer-dashboard.component').then(

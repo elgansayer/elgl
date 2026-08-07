@@ -83,7 +83,7 @@ export class SettingsService {
             },
           },
           social: {
-            profileVisibility: 'Everyone',
+            profileVisibility: 'Everyone', // 'Everyone' | 'VipsOnly' | 'Hidden'
             status: 'Online',
             customStatus: {
               emoji: '🌸',

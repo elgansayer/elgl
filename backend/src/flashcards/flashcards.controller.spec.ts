@@ -72,8 +72,8 @@ describe('FlashcardsController', () => {
     });
 
     it('should call service updateSrsLevel when user is provided', async () => {
-      const dto: any = { srs_level: 2 };
-      const card: any = { id: 'card-1', srs_level: 2 };
+      const dto: any = { quality: 3 };
+      const card: any = { id: 'card-1', srs_level: 1 };
       (flashcardsService.updateSrsLevel as jest.Mock).mockResolvedValue(card);
 
       const result = await controller.updateSrs(

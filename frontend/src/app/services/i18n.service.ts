@@ -159,6 +159,7 @@ export class I18nService {
     'common.vipStdLabel': '8 UKP / $10 USD VIP',
     'common.signOut': 'Sign out',
     'common.demoActive': 'Demo / Mock Auth Active',
+    'gift.broadcastAnnouncement': '{{sender}} sent a {{giftName}} gift',
     'gift.broadcastTitle': '{{giftName}} Broadcast!',
     'gift.broadcastDesc': '🎉 {{sender}} gifted {{receiver}} a {{giftName}}! (🪙 {{cost}} Coins)',
 
@@ -806,6 +807,7 @@ export class I18nService {
     'profile.saveChangesBtn': 'Save changes',
     'profile.updateSuccess': 'Profile updated successfully.',
     'profile.visibilityLabel': 'Who can see my profile',
+    'profile.visibilityDescription': 'Control who can view your profile on HelloTalk.',
     'profile.visibility.everyone': 'Everyone',
     'profile.visibility.vipsOnly': 'VIPs only',
     'profile.visibility.hidden': 'Hidden',
@@ -1329,6 +1331,8 @@ export class I18nService {
     // Language Settings Page
     'languageSettings.title': 'Language Settings',
     'languageSettings.description': 'Choose the UI language independently of your study target.',
+    'languageSettings.interfaceLanguage': 'Interface Language',
+    'languageSettings.interfaceLanguageDescription': 'This changes the language used for buttons, menus, and labels throughout the app. It does not affect your study languages.',
     'languageSettings.selectLabel': 'Select interface language',
     'languageSettings.applyBtn': 'Apply',
     'languageSettings.currentLang': 'Current: {{name}}',
@@ -1369,6 +1373,25 @@ export class I18nService {
     'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
 
     'culturalGuide.title': 'Cultural Etiquette Guide',
+    'settings.linkedAccountsSection': 'Linked Accounts',
+    'settings.linkedAccounts.title': 'Linked Accounts',
+    'settings.linkedAccounts.subtitle': 'Connect your social accounts to sign in with multiple providers and keep your account secure.',
+    'settings.linkedAccounts.active': 'Connected',
+    'settings.linkedAccounts.inactive': 'Not connected',
+    'settings.linkedAccounts.unlink': 'Unlink',
+    'settings.linkedAccounts.none': 'No accounts linked yet.',
+    'settings.linkedAccounts.linkGoogle': 'Link Google',
+    'settings.linkedAccounts.linkApple': 'Link Apple',
+    'settings.linkedAccounts.linkEmail': 'Link Email',
+    'settings.linkedAccounts.linkFacebook': 'Link Facebook',
+    'settings.linkedAccounts.linkTwitter': 'Link X (Twitter)',
+    'settings.linkedAccounts.linkSuccess': 'Account linked successfully.',
+    'settings.linkedAccounts.unlinkSuccess': 'Account unlinked successfully.',
+    'settings.linkedAccounts.linkFailed': 'Failed to link account.',
+    'settings.linkedAccounts.unlinkFailed': 'Failed to unlink account.',
+    'settings.linkBtn': 'Link',
+    'settings.unlinkBtn': 'Unlink',
+    'settings.linked': 'Linked',
     'settings.subscriptionSection': 'Subscription',
     'settings.mySubscription': 'My Subscription',
     'settings.hideExactLocation': 'Hide exact location',
@@ -1381,11 +1404,31 @@ export class I18nService {
     'settings.off': 'Off',
     'settings.appearanceSection': 'Appearance',
     'settings.fontScale': 'Text size',
+<<<<<<< HEAD
     'settings.fontSize': 'Font Size',
     'settings.accentColor': 'Accent Colour',
     'settings.accentColorDesc': 'Choose a custom accent colour for the app (VIP only).',
     'settings.vipRequired': 'VIP',
     'settings.saveBtn': 'Save',
+=======
+    'settings.fontSize': 'Font size',
+    'settings.themeLabel': 'Theme',
+    'settings.themeDescription': 'Choose between light, dark, or follow your system settings',
+    'settings.compactMode': 'Compact mode',
+    'settings.compactModeDescription': 'Reduce spacing and use a denser layout',
+    'settings.messageDisplay': 'Message display',
+    'settings.messageDisplayDescription': 'Cozy mode shows avatars, compact hides them',
+    'settings.messageDisplayCozy': 'Cozy',
+    'settings.messageDisplayCompact': 'Compact',
+    'settings.reduceMotion': 'Reduce motion',
+    'settings.reduceMotionDescription': 'Minimise animations throughout the app',
+    'settings.accentColor': 'Accent colour',
+    'settings.accentColorDesc': 'Personalise your app accent colour',
+    'settings.vipRequired': 'VIP',
+    'settings.saveBtn': 'Save',
+    'settings.saved': 'Saved',
+    'settings.appearanceSection': 'Appearance',
+>>>>>>> origin/main
     'settings.languageSection': 'Language',
     'settings.languageSelectLabel': 'Interface language',
     'settings.languageChangeDescription':
@@ -1427,6 +1470,9 @@ export class I18nService {
     'home.dailyTip.title': 'Daily learning tip',
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
+
+    // Link Preview
+    'linkPreview.openLink': 'Open link: {title}',
   };
 
   readonly translations = signal<Record<string, string>>({ ...this.baseDictionary });

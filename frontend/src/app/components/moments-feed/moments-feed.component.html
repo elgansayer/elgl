@@ -355,7 +355,7 @@
                     <button
                       (click)="cancelReply(moment.id)"
                       class="text-xs text-text-muted hover:text-white font-bold"
-                      aria-label="Cancel reply"
+                      [attr.aria-label]="'moments.cancelReply' | t"
                     >
                       ✕
                     </button>
