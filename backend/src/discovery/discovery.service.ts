@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
@@ -36,6 +37,7 @@ export class DiscoveryService {
     private readonly audioRoomsService: AudioRoomsService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
@@ -69,6 +71,7 @@ export class DiscoveryService {
         'EX',
         604800,
       );
+      this.metricsService.recordDiscoveryPartnerOfWeekCalculated();
       this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
@@ -133,6 +136,7 @@ export class DiscoveryService {
         }
       }
       this.logger.log('Finished daily partner recommendations calculation.');
+      this.metricsService.recordDiscoveryRecommendationsCalculated();
     } catch (err) {
       this.logger.error('Error calculating daily recommendations', err);
     }
@@ -150,6 +154,8 @@ export class DiscoveryService {
     _currentUserProfile: UserProfile | null,
     query: SearchQueryDto,
   ): Promise<UserProfile[]> {
+    const startTime = Date.now();
+    const endpoint = 'partners';
     const supabase = this.supabaseService.getClient();
 
     const blockedIds =
@@ -258,7 +264,10 @@ export class DiscoveryService {
     }
 
     // Function that enriches and sorts results with Partner of the Week flag
-    const enrich = async (users: UserProfile[]): Promise<UserProfile[]> => {
+    const enrich = async (
+      users: UserProfile[],
+      mockUsed: boolean = false,
+    ): Promise<UserProfile[]> => {
       let filtered = users;
       // Apply advanced filters (learning_goals, availability)
       if (
@@ -278,7 +287,23 @@ export class DiscoveryService {
         ...u,
         is_partner_of_week: partnerSet.has(u.id),
       }));
-      return this.sortUsers(enriched, query.sort);
+      const result = this.sortUsers(enriched, query.sort);
+
+      // Record metrics
+      this.metricsService.recordDiscoverySearch(endpoint);
+      this.metricsService.observeDiscoverySearchLatency(
+        endpoint,
+        (Date.now() - startTime) / 1000,
+      );
+      this.metricsService.observeDiscoverySearchResultsCount(
+        endpoint,
+        result.length,
+      );
+      if (mockUsed) {
+        this.metricsService.recordDiscoveryMockDataServed(endpoint);
+      }
+
+      return result;
     };
 
     if (searchLat !== undefined && searchLon !== undefined) {
@@ -307,7 +332,7 @@ export class DiscoveryService {
             mockData,
             query.voice_room_active === true,
           );
-          return enrich(filtered);
+          return enrich(filtered, true);
         }
         let fallbackResults: DiscoveryUser[] = (
           fallbackRes.data as unknown as DiscoveryUser[]
@@ -417,7 +442,7 @@ export class DiscoveryService {
         mockData,
         query.voice_room_active === true,
       );
-      return enrich(filtered);
+      return enrich(filtered, true);
     }
     let results: DiscoveryUser[] = (
       response.data as unknown as DiscoveryUser[]

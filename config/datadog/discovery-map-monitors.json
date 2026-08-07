@@ -1,0 +1,129 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for the Discovery Map. All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Discovery] No partner searches in last 10 minutes",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_discovery_searches_total{*} by {endpoint}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo discovery partner searches have been executed in the last 10 minutes. This could indicate a complete outage of the Discovery API or zero user engagement.\n\n**Endpoint:** {{endpoint.name}}\n\n**Actions:**\n1. Check the Discovery API health endpoint.\n2. Verify the NestJS backend is running and the Supabase connection is healthy.\n3. Check for deployment or infrastructure incidents.\n4. Verify the frontend Discovery tab is loading correctly.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 10,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Discovery] Partner search latency spike",
+      "type": "query alert",
+      "query": "avg(last_5m):avg:hellotalk_discovery_search_latency_seconds{*} by {endpoint} > 5",
+      "message": "{{#is_alert}}\nThe average discovery partner search latency has exceeded 5 seconds over the last 5 minutes. This may indicate Supabase query slowdown, the PostGIS RPC function timing out, or Redis cache unavailability.\n\n**Current value:** {{value}}s\n**Threshold:** 5s\n**Endpoint:** {{endpoint.name}}\n\n**Actions:**\n1. Check Supabase / PostgreSQL query performance for the `search_nearby_users` RPC.\n2. Verify Redis cache is available for partner_of_week and daily_recommendations lookups.\n3. Inspect the `users` table for missing indexes on native_languages, target_languages.\n4. Check Datadog APM traces for the slowest queries.\n{{/is_alert}}\n\n{{#is_warning}}\nSearch latency elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 5,
+          "warning": 2
+        }
+      }
+    },
+    {
+      "name": "[Discovery] High rate limit exceeded rate",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_discovery_rate_limit_exceeded_total{*} by {endpoint}.as_count() > 20",
+      "message": "{{#is_alert}}\nMore than 20 discovery requests have been rate-limited in the last 10 minutes. This suggests users are experiencing degraded discovery experience, potentially due to aggressive client-side polling or an abusive actor.\n\n**Current value:** {{value}}\n**Threshold:** 20\n**Endpoint:** {{endpoint.name}}\n\n**Actions:**\n1. Check if a specific user is triggering excessive requests.\n2. Review rate limit configuration for the affected endpoint.\n3. Investigate whether the frontend is polling too aggressively.\n4. Consider increasing VIP rate limits if legitimate usage is being throttled.\n{{/is_alert}}\n\n{{#is_warning}}\nRate limit exceeded count elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        }
+      }
+    },
+    {
+      "name": "[Discovery] High mock data fallback rate",
+      "type": "query alert",
+      "query": "avg(last_10m):(avg:hellotalk_discovery_mock_data_served_total{*} by {endpoint}.as_count() / avg:hellotalk_discovery_searches_total{*} by {endpoint}.as_count()) > 0.3",
+      "message": "{{#is_alert}}\nMore than 30% of discovery searches are falling back to mock data over the last 10 minutes. This indicates the Supabase database or the PostGIS RPC function is frequently unavailable.\n\n**Current ratio:** {{value}}\n**Threshold:** 0.30\n**Endpoint:** {{endpoint.name}}\n\n**Actions:**\n1. Check Supabase connection health and pool utilisation.\n2. Verify the `search_nearby_users` PostGIS RPC is deployed and running.\n3. Inspect the `users` table for data integrity issues.\n4. Check for recent database migrations that may have broken queries.\n{{/is_alert}}\n\n{{#is_warning}}\nMock data fallback rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:critical"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.3,
+          "warning": 0.1
+        }
+      }
+    },
+    {
+      "name": "[Discovery] Daily recommendations cron not running",
+      "type": "query alert",
+      "query": "avg(last_1d):avg:hellotalk_discovery_recommendations_calculated_total{*} <= 0",
+      "message": "{{#is_alert}}\nThe daily discovery recommendations cron job has not completed in the last 24 hours. Users may be seeing stale or missing personalised recommendations.\n\n**Actions:**\n1. Check the NestJS scheduler logs for `calculateDailyRecommendations`.\n2. Verify the cron expression is configured correctly (EVERY_DAY_AT_MIDNIGHT).\n3. Check if the Supabase connection was available during the scheduled run.\n4. Manually trigger the calculation if needed.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:critical"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 120,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Discovery] Partner of the Week cron not running",
+      "type": "query alert",
+      "query": "avg(last_7d):avg:hellotalk_discovery_partner_of_week_calculated_total{*} <= 0",
+      "message": "{{#is_alert}}\nThe Partner of the Week calculation cron job has not completed in the last 7 days. The weekly spotlight feature may not be updating.\n\n**Actions:**\n1. Check the NestJS scheduler logs for `calculatePartnerOfWeek`.\n2. Verify the cron expression is configured correctly (Sunday at midnight).\n3. Check if no users qualified (correction_ratio > 0.5) and whether seed data is available.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 120,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    },
+    {
+      "name": "[Discovery] Zero search results returned",
+      "type": "query alert",
+      "query": "avg(last_15m):avg:hellotalk_discovery_search_results_count{*} by {endpoint}.as_count() <= 0",
+      "message": "{{#is_alert}}\nDiscovery searches are completing but returning zero results for all requests over the last 15 minutes. This suggests the user database may be empty, all users have privacy_hide_from_search enabled, or a query filter is incorrectly excluding all results.\n\n**Endpoint:** {{endpoint.name}}\n\n**Actions:**\n1. Verify the `users` table contains searchable profiles.\n2. Check if a recent deployment changed the default query filters.\n3. Ensure mock data is available as a fallback for empty result sets.\n4. Review the Supabase Row-Level Security policies for the `users` table.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0
+        }
+      }
+    }
+  ]
+}

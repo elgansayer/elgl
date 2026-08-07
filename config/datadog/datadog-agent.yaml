@@ -64,6 +64,14 @@ prometheus_scrape:
       - hellotalk_escrow_stale_held_count: gauge
       - hellotalk_escrow_auto_refund_total: counter
       - hellotalk_escrow_degraded_queue_size: gauge
+      # Discovery Map metrics (Datadog custom metrics)
+      - hellotalk_discovery_searches_total: counter
+      - hellotalk_discovery_search_latency_seconds: histogram
+      - hellotalk_discovery_rate_limit_exceeded_total: counter
+      - hellotalk_discovery_mock_data_served_total: counter
+      - hellotalk_discovery_recommendations_calculated_total: counter
+      - hellotalk_discovery_partner_of_week_calculated_total: counter
+      - hellotalk_discovery_search_results_count: histogram
       # Infrastructure metrics
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter

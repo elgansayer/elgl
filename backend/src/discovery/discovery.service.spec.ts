@@ -4,6 +4,7 @@ import { DiscoveryService } from './discovery.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -17,6 +18,7 @@ describe('DiscoveryService', () => {
   let mockRedisSet: jest.Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
+  let mockMetricsService: any;
 
   function createMockQueryBuilder() {
     const builder: any = {};
@@ -73,6 +75,16 @@ describe('DiscoveryService', () => {
       getActiveHostIds: jest.fn().mockResolvedValue([]),
     };
 
+    mockMetricsService = {
+      recordDiscoverySearch: jest.fn(),
+      observeDiscoverySearchLatency: jest.fn(),
+      recordDiscoveryRateLimitExceeded: jest.fn(),
+      recordDiscoveryMockDataServed: jest.fn(),
+      recordDiscoveryRecommendationsCalculated: jest.fn(),
+      recordDiscoveryPartnerOfWeekCalculated: jest.fn(),
+      observeDiscoverySearchResultsCount: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
@@ -90,6 +102,10 @@ describe('DiscoveryService', () => {
         {
           provide: AudioRoomsService,
           useValue: mockAudioRoomsService,
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();

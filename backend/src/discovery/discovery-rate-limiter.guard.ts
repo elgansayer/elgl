@@ -9,6 +9,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { Request } from 'express';
 
 export const DISCOVERY_RATE_LIMIT_KEY = 'discovery-rate-limit';
@@ -35,6 +36,7 @@ export class DiscoveryRateLimiterGuard implements CanActivate {
     private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly reflector: Reflector,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -77,6 +79,8 @@ export class DiscoveryRateLimiterGuard implements CanActivate {
           options.windowSeconds,
           await redis.ttl(key),
         );
+
+        this.metricsService.recordDiscoveryRateLimitExceeded(handlerName);
 
         this.logger.warn(
           {

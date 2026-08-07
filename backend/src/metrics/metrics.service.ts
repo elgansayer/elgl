@@ -61,6 +61,15 @@ export class MetricsService {
   readonly escrowAutoRefundCount: Counter<string>;
   readonly escrowDegradedQueueSize: Gauge<string>;
 
+  // Discovery Map metrics
+  readonly discoverySearchesTotal: Counter<string>;
+  readonly discoverySearchLatency: Histogram<string>;
+  readonly discoveryRateLimitExceeded: Counter<string>;
+  readonly discoveryMockDataServed: Counter<string>;
+  readonly discoveryRecommendationsCalculated: Counter<string>;
+  readonly discoveryPartnerOfWeekCalculated: Counter<string>;
+  readonly discoverySearchResultsCount: Histogram<string>;
+
   // Virtual Coin Economy metrics
   readonly coinPurchaseTotal: Counter<string>;
   readonly coinPurchaseValue: Counter<string>;
@@ -370,6 +379,57 @@ export class MetricsService {
       name: 'hellotalk_escrow_degraded_queue_size',
       help: 'Number of escrow operations queued in the degraded (fallback) queue',
       registers: [this.register],
+    });
+
+    // --- Discovery Map Metrics ---
+
+    this.discoverySearchesTotal = new Counter({
+      name: 'hellotalk_discovery_searches_total',
+      help: 'Total number of discovery partner searches executed',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+    });
+
+    this.discoverySearchLatency = new Histogram({
+      name: 'hellotalk_discovery_search_latency_seconds',
+      help: 'Latency of discovery partner search operations',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    });
+
+    this.discoveryRateLimitExceeded = new Counter({
+      name: 'hellotalk_discovery_rate_limit_exceeded_total',
+      help: 'Number of discovery requests rejected due to rate limiting',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+    });
+
+    this.discoveryMockDataServed = new Counter({
+      name: 'hellotalk_discovery_mock_data_served_total',
+      help: 'Number of discovery requests that fell back to mock data (DB unavailable)',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+    });
+
+    this.discoveryRecommendationsCalculated = new Counter({
+      name: 'hellotalk_discovery_recommendations_calculated_total',
+      help: 'Number of daily recommendations calculation runs completed',
+      registers: [this.register],
+    });
+
+    this.discoveryPartnerOfWeekCalculated = new Counter({
+      name: 'hellotalk_discovery_partner_of_week_calculated_total',
+      help: 'Number of Partner of the Week calculation runs completed',
+      registers: [this.register],
+    });
+
+    this.discoverySearchResultsCount = new Histogram({
+      name: 'hellotalk_discovery_search_results_count',
+      help: 'Distribution of number of users returned per discovery search',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+      buckets: [0, 1, 5, 10, 20, 50, 100],
     });
 
     // --- Virtual Coin Economy Metrics ---
@@ -700,6 +760,36 @@ export class MetricsService {
 
   setEscrowStaleHeldCount(count: number): void {
     this.escrowStaleHeldCount.set(count);
+  }
+
+  // --- Discovery Map Metric Recording Methods ---
+
+  recordDiscoverySearch(endpoint: string): void {
+    this.discoverySearchesTotal.labels(endpoint).inc();
+  }
+
+  observeDiscoverySearchLatency(endpoint: string, durationSeconds: number): void {
+    this.discoverySearchLatency.labels(endpoint).observe(durationSeconds);
+  }
+
+  recordDiscoveryRateLimitExceeded(endpoint: string): void {
+    this.discoveryRateLimitExceeded.labels(endpoint).inc();
+  }
+
+  recordDiscoveryMockDataServed(endpoint: string): void {
+    this.discoveryMockDataServed.labels(endpoint).inc();
+  }
+
+  recordDiscoveryRecommendationsCalculated(): void {
+    this.discoveryRecommendationsCalculated.inc();
+  }
+
+  recordDiscoveryPartnerOfWeekCalculated(): void {
+    this.discoveryPartnerOfWeekCalculated.inc();
+  }
+
+  observeDiscoverySearchResultsCount(endpoint: string, count: number): void {
+    this.discoverySearchResultsCount.labels(endpoint).observe(count);
   }
 
   getRegister(): Registry {

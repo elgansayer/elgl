@@ -8,6 +8,7 @@ import {
   DiscoveryRateLimitOptions,
 } from './discovery-rate-limiter.guard';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { ExecutionContext } from '@nestjs/common';
 
 describe('DiscoveryRateLimiterGuard', () => {
@@ -17,6 +18,7 @@ describe('DiscoveryRateLimiterGuard', () => {
   let supabaseService: jest.Mocked<Pick<SupabaseService, 'getRedisClient' | 'getClient'>>;
   let reflector: jest.Mocked<Pick<Reflector, 'get'>>;
   let logger: jest.Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
+  let metricsService: jest.Mocked<Pick<MetricsService, 'recordDiscoveryRateLimitExceeded'>>;
 
   function createMockExecutionContext(
     userId: string | undefined,
@@ -70,10 +72,15 @@ describe('DiscoveryRateLimiterGuard', () => {
       error: jest.fn(),
     };
 
+    metricsService = {
+      recordDiscoveryRateLimitExceeded: jest.fn(),
+    };
+
     guard = new DiscoveryRateLimiterGuard(
       logger as unknown as PinoLogger,
       supabaseService as unknown as SupabaseService,
       reflector as unknown as Reflector,
+      metricsService as unknown as MetricsService,
     );
   });
 
