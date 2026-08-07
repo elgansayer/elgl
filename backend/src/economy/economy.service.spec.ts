@@ -37,10 +37,10 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EconomyService } from './economy.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { PinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
+import { DatadogMetricsService } from '../metrics/datadog-metrics.service';
 import { of } from 'rxjs';
 import type Stripe from 'stripe';
 
@@ -130,6 +130,16 @@ describe('EconomyService', () => {
           useValue: {
             post: jest.fn(),
             get: jest.fn(),
+          },
+        },
+        {
+          provide: DatadogMetricsService,
+          useValue: {
+            increment: jest.fn(),
+            gauge: jest.fn(),
+            timing: jest.fn(),
+            event: jest.fn(),
+            isEnabled: jest.fn().mockReturnValue(false),
           },
         },
       ],

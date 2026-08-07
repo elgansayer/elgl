@@ -13,6 +13,7 @@ import Stripe from 'stripe';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
+import { DatadogMetricsService } from '../metrics/datadog-metrics.service';
 import {
   PurchaseCoinsDto,
   SendGiftDto,
@@ -224,6 +225,7 @@ export class EconomyService {
     private readonly centrifugoService: CentrifugoService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly datadog: DatadogMetricsService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY') || '',
@@ -355,6 +357,11 @@ export class EconomyService {
       );
     }
 
+    this.datadog.increment('economy.coin_checkout.created', {
+      package_id: coinPackage.id,
+      coins: String(coinPackage.coins),
+    });
+
     return {
       sessionUrl: session.url || '',
       sessionId: session.id,
@@ -451,6 +458,10 @@ export class EconomyService {
     });
 
     if (!isReceiptValid) {
+      this.datadog.increment('economy.coin_purchase.failure', {
+        platform,
+        reason: 'invalid_receipt',
+      });
       throw new BadRequestException('Invalid purchase receipt');
     }
 
@@ -495,6 +506,10 @@ export class EconomyService {
     );
 
     if (!verifiedReceipt.valid) {
+      this.datadog.increment('economy.coin_purchase.failure', {
+        platform,
+        reason: 'receipt_verification_failed',
+      });
       throw new BadRequestException('Receipt verification failed');
     }
 
@@ -642,6 +657,24 @@ export class EconomyService {
 
     this.logger.info(
       `User ${userId} received ${coinPackage.coins} coins (transaction ${transactionId})`,
+    );
+
+    this.datadog.increment('economy.coin_purchase.success', {
+      platform,
+      package_id: coinPackage.id,
+    });
+    this.datadog.gauge('economy.coin_purchase.coins_added', coinPackage.coins, {
+      platform,
+      package_id: coinPackage.id,
+    });
+    this.datadog.increment(
+      'economy.coins.total_revenue',
+      {
+        platform,
+        amount_paid: String(coinPackage.price),
+        currency: 'usd',
+      },
+      coinPackage.price,
     );
 
     return {
@@ -1009,6 +1042,14 @@ export class EconomyService {
       void this.centrifugoService.publish(`room_${dto.room_id}`, giftEvent);
     }
 
+    this.datadog.increment('economy.gift.sent', {
+      gift_id: gift.id,
+      room: dto.room_id ? 'true' : 'false',
+    });
+    this.datadog.gauge('economy.gift.coins_spent', gift.cost_coins, {
+      gift_id: gift.id,
+    });
+
     return sanitiseEconomyData({
       success: true,
       coins_remaining: newSenderBalance,
@@ -1075,6 +1116,13 @@ export class EconomyService {
         `Failed to record sticker pack ownership for user ${userId}: ${insertError.message}`,
       );
     }
+
+    this.datadog.increment('economy.sticker_pack.unlocked', {
+      pack_id: pack.id,
+    });
+    this.datadog.gauge('economy.sticker_pack.coins_spent', pack.cost_coins, {
+      pack_id: pack.id,
+    });
 
     return sanitiseEconomyData({
       success: true,
