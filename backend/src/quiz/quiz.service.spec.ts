@@ -76,8 +76,16 @@ describe('QuizService', () => {
 
     it('should return A2 for low beginner scores', () => {
       const result = service.evaluateResults('en', {
-        q1: 1, q2: 1, q3: 1, q4: 1, q5: 1,
-        q6: 1, q7: 1, q8: 1, q9: 1, q10: 1,
+        q1: 1,
+        q2: 1,
+        q3: 1,
+        q4: 1,
+        q5: 1,
+        q6: 1,
+        q7: 1,
+        q8: 1,
+        q9: 1,
+        q10: 1,
       });
       expect(result.suggestedCefr).toBe('A2');
       expect(result.percentage).toBe(25);
@@ -85,8 +93,16 @@ describe('QuizService', () => {
 
     it('should return C2 for very high scores', () => {
       const result = service.evaluateResults('en', {
-        q1: 4, q2: 4, q3: 4, q4: 4, q5: 4,
-        q6: 4, q7: 4, q8: 4, q9: 4, q10: 4,
+        q1: 4,
+        q2: 4,
+        q3: 4,
+        q4: 4,
+        q5: 4,
+        q6: 4,
+        q7: 4,
+        q8: 4,
+        q9: 4,
+        q10: 4,
       });
       expect(result.suggestedCefr).toBe('C2');
       expect(result.percentage).toBeGreaterThanOrEqual(90);
@@ -94,8 +110,16 @@ describe('QuizService', () => {
 
     it('should return B2 for mid-range scores', () => {
       const result = service.evaluateResults('en', {
-        q1: 3, q2: 3, q3: 2, q4: 3, q5: 2,
-        q6: 3, q7: 2, q8: 3, q9: 3, q10: 2,
+        q1: 3,
+        q2: 3,
+        q3: 2,
+        q4: 3,
+        q5: 2,
+        q6: 3,
+        q7: 2,
+        q8: 3,
+        q9: 3,
+        q10: 2,
       });
       expect(result.suggestedCefr).toBe('B2');
     });
@@ -111,8 +135,16 @@ describe('QuizService', () => {
 
     it('should provide skill breakdown', () => {
       const result = service.evaluateResults('en', {
-        q1: 4, q2: 3, q3: 2, q4: 4, q5: 3,
-        q6: 2, q7: 1, q8: 3, q9: 4, q10: 2,
+        q1: 4,
+        q2: 3,
+        q3: 2,
+        q4: 4,
+        q5: 3,
+        q6: 2,
+        q7: 1,
+        q8: 3,
+        q9: 4,
+        q10: 2,
       });
       expect(result.skillBreakdown).toBeDefined();
       expect(result.skillBreakdown['speaking']).toBeDefined();
@@ -125,8 +157,16 @@ describe('QuizService', () => {
 
     it('should include a description in the result', () => {
       const result = service.evaluateResults('en', {
-        q1: 4, q2: 4, q3: 4, q4: 4, q5: 4,
-        q6: 4, q7: 4, q8: 4, q9: 4, q10: 4,
+        q1: 4,
+        q2: 4,
+        q3: 4,
+        q4: 4,
+        q5: 4,
+        q6: 4,
+        q7: 4,
+        q8: 4,
+        q9: 4,
+        q10: 4,
       });
       expect(result.description).toBeDefined();
       expect(result.description.length).toBeGreaterThan(0);
