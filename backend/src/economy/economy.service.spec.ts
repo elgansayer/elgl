@@ -14,6 +14,8 @@ describe('EconomyService', () => {
   let centrifugoService: CentrifugoService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let module: TestingModule;
+  let mockRedisClient: { get: jest.Mock; set: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -30,13 +32,19 @@ describe('EconomyService', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    mockRedisClient = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+    };
+
+    module = await Test.createTestingModule({
       providers: [
         EconomyService,
         {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
@@ -348,6 +356,53 @@ describe('EconomyService', () => {
       );
 
       expect(mockQueryBuilder.insert).not.toHaveBeenCalled();
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('claimDailyCheckIn', () => {
+    beforeEach(() => {
+      mockRedisClient.get.mockResolvedValue(null);
+      mockRedisClient.set.mockResolvedValue('OK');
+    });
+
+    it('should grant between 5 and 10 coins on first daily check-in', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', coins_balance: 100 },
+        error: null,
+      });
+
+      const result = await service.claimDailyCheckIn('user-1');
+
+      expect(result.claimed).toBe(true);
+      expect(result.coins_rewarded).toBeGreaterThanOrEqual(5);
+      expect(result.coins_rewarded).toBeLessThanOrEqual(10);
+      expect(result.new_balance).toBe(100 + result.coins_rewarded);
+      expect(mockRedisClient.get).toHaveBeenCalled();
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        expect.stringContaining('daily_checkin:user-1:'),
+        '1',
+        'EX',
+        86400,
+      );
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        coins_balance: result.new_balance,
+      });
+    });
+
+    it('should not grant coins when user already claimed today', async () => {
+      mockRedisClient.get.mockResolvedValue('1');
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'user-1', coins_balance: 100 },
+        error: null,
+      });
+
+      const result = await service.claimDailyCheckIn('user-1');
+
+      expect(result.claimed).toBe(false);
+      expect(result.coins_rewarded).toBe(0);
+      expect(result.new_balance).toBe(100);
+      expect(mockRedisClient.set).not.toHaveBeenCalled();
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
     });
   });
