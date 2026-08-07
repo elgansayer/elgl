@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EscrowController } from './escrow.controller';
+import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
 <<<<<<< HEAD
 import { EscrowRateLimiterGuard } from './escrow-rate-limiter.guard';

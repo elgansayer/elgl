@@ -26,13 +26,11 @@ export class NotificationsInboxComponent {
   readonly unreadCount = signal<number>(0);
 
   readonly notificationsResource = resource({
-    params: () => ({ tab: this.selectedTab() }),
-    loader: ({ params }) => this.loadNotifications(params.tab),
+    params: () => this.selectedTab(),
+    loader: ({ params: tab }) => this.loadNotifications(tab),
   });
 
-  readonly notifications = computed(
-    () => this.notificationsResource.value() ?? [],
-  );
+  readonly notifications = computed(() => this.notificationsResource.value() ?? []);
 
   readonly isLoading = this.notificationsResource.isLoading;
 
@@ -47,9 +45,7 @@ export class NotificationsInboxComponent {
     ];
   });
 
-  private async loadNotifications(
-    tab: NotificationTab,
-  ): Promise<InAppNotification[]> {
+  private async loadNotifications(tab: NotificationTab): Promise<InAppNotification[]> {
     const [list, unread] = await Promise.all([
       this.notificationService.getNotifications(tab),
       this.notificationService.getUnreadCount(),

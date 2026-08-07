@@ -1,5 +1,6 @@
 import { showToast } from '../../services/toast.service';
 import { Component, OnInit, inject, signal, input, output } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 

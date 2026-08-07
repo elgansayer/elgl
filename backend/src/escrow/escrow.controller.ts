@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -71,7 +72,10 @@ export class EscrowController {
 @UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class EscrowController {
-  constructor(private readonly escrowService: EscrowService) {}
+  constructor(
+    private readonly escrowService: EscrowService,
+    private readonly crashReportService: CrashReportService,
+  ) {}
 
   @Post('hold')
   @HttpCode(HttpStatus.CREATED)
