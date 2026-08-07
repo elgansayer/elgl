@@ -645,8 +645,8 @@ export class ChatService {
     name: string,
     memberIds: string[],
   ): Promise<ChatRoomRecord> {
-    if (memberIds.length > 49) {
-      throw new Error('Group cannot exceed 50 members');
+    if (memberIds.length > 50) {
+      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
     }
 
     const supabase = this.supabaseService.getClient();
