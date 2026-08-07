@@ -1,7 +1,7 @@
 import { Component, input, computed, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { interval, switchMap, startWith } from 'rxjs';
+import { interval, from, switchMap, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HostDashboardService } from '../../services/host-dashboard.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -55,7 +55,7 @@ export class HostDashboardComponent {
   private readonly poll = toSignal(
     interval(10_000).pipe(
       startWith(0),
-      switchMap(() => this.service.getDashboardStats(this.roomId())),
+      switchMap(() => from(this.service.getDashboardStats(this.roomId()))),
     ),
     { initialValue: { viewerCount: 0, earnedCoins: 0, startTime: new Date() } },
   );
