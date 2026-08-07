@@ -13,6 +13,9 @@ import {
   EscrowOperation,
 } from './escrow-offline.service';
 
+// Re-export EscrowRow as EscrowTransaction for backward compatibility
+export type EscrowTransaction = EscrowRow;
+
 /**
  * Escrow Payments service.
  *
@@ -37,6 +40,11 @@ export class EscrowService {
 
   /** Count of pending offline operations for UI badges */
   readonly pendingOperationCount = this.offlineStore.pendingOperationCount;
+
+  /** Alias for listUserEscrows used by existing pages */
+  async listEscrows(status?: string): Promise<EscrowRow[]> {
+    return this.listUserEscrows(status);
+  }
 
   /**
    * Creates a new escrow. If offline, queues the operation and returns a
