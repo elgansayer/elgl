@@ -6,7 +6,7 @@ import { A11yClickableDirective } from './a11y-clickable';
 @Component({
   standalone: true,
   imports: [A11yClickableDirective],
-  template: `<div (click)="counter = counter + 1" (keydown)="onKey()" appA11yClickable data-testid="clickable">Click me</div>`,
+  template: `<div tabindex="0" (click)="counter = counter + 1" (keydown)="onKey()" appA11yClickable data-testid="clickable">Click me</div>`,
 })
 class TestHostComponent {
   counter = 0;

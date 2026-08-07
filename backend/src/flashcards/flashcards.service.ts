@@ -4,11 +4,8 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { XpService } from '../xp/xp.service';
-<<<<<<< HEAD
 import { MetricsService } from '../metrics/metrics.service';
-=======
 import { withRetry } from '../common/retry';
->>>>>>> origin/main
 
 @Injectable()
 export class FlashcardsService {
@@ -143,7 +140,11 @@ export class FlashcardsService {
     // Record SRS review metrics
     const reviewDurationSeconds = (Date.now() - reviewStartTime) / 1000;
     const result = dto.quality >= 3 ? 'pass' : 'fail';
-    this.metricsService.recordSrsReviewCompleted(dto.quality, result, reviewDurationSeconds);
+    this.metricsService.recordSrsReviewCompleted(
+      dto.quality,
+      result,
+      reviewDurationSeconds,
+    );
 
     this.logger.info(
       {

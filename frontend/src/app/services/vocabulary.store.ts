@@ -5,6 +5,20 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { SrsOfflineService } from './srs-offline.service';
 
+class SrsOperationError extends Error {
+  override name = 'SrsOperationError';
+  constructor(
+    message: string,
+    readonly srsOperation: string,
+    stack?: string,
+  ) {
+    super(message);
+    if (stack) {
+      this.stack = stack;
+    }
+  }
+}
+
 export interface Flashcard {
   id: string;
   user_id: string;
@@ -202,7 +216,7 @@ export class VocabularyStore {
       return fc;
     } catch {
       // Offline - queue the review and optimistically update local state
-      if (!navigator.onLine) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         await this.srsOffline.queueSrsReview(flashcardId, quality, newLevel);
         this.triggerHapticFeedback(newLevel);
         // Optimistically update local state
@@ -304,14 +318,12 @@ export class VocabularyStore {
    * Replaces console.error so all SRS failures are tracked centrally.
    */
   private reportSrsError(operation: string, err: unknown): void {
-    const srsError = new Error(
-      `[SRS:VocabularyStore] ${operation} failed: ${(err as Error)?.message ?? String(err)}`,
+    const message = err instanceof Error ? err.message : String(err);
+    const srsError = new SrsOperationError(
+      `[SRS:VocabularyStore] ${operation} failed: ${message}`,
+      operation,
+      err instanceof Error ? err.stack : undefined,
     );
-    srsError.name = 'SrsOperationError';
-    if (err instanceof Error && err.stack) {
-      srsError.stack = err.stack;
-    }
-    (srsError as Error & { srsOperation?: string }).srsOperation = operation;
     this.errorHandler.handleError(srsError);
   }
 
