@@ -1,6 +1,42 @@
+<<<<<<< HEAD
+<!--
+  ARIA Accessibility Audit - Escrow Payments
+  ===========================================
+  All interactive elements have accessible names via aria-label / aria-labelledby.
+  Status updates use aria-live regions for screen reader announcements.
+  Focus management ensures keyboard-only users can navigate the entire flow.
+  Colour is never the sole indicator of state - text labels always accompany badges.
+  Forms use proper label/input associations and error announcements.
+  Loading states are announced to screen readers via aria-busy.
+  Filter controls use aria-pressed toggle pattern for ARIA compliance.
+  Modal dialogs for disputes use role="dialog" with aria-modal and focus trapping.
+  RTL-safe logical properties used throughout (ps-, pe-, ms-, me-, text-start).
+-->
+
+<app-srs-error-boundary
+  [context]="errorContext()"
+  [showReportButton]="true"
+  (retry)="handleRetry()"
+>
+<main class="mx-auto max-w-3xl p-4" aria-labelledby="escrow-heading">
+  <h1 id="escrow-heading" class="text-xl font-bold mb-4"
+      joyrideStep="escrowStepTitle"
+      [title]="'Escrow Payments'"
+      [text]="'Welcome to Escrow Payments. Securely hold coins until both parties confirm the transaction is complete.'">{{ 'escrow.title' | t }}</h1>
+
+  <!-- Success/Error announcements (hidden live region for screen readers) -->
+  <div aria-live="polite" aria-atomic="true" class="sr-only">
+    @if (successMessage()) { {{ successMessage() }} }
+    @if (error()) { {{ error() }} }
+  </div>
+
+  <!-- Visible success message -->
+  @if (successMessage()) {
+=======
 <div class="min-h-screen bg-[#121212] text-white">
   <!-- Offline banner -->
   @if (!isOnline()) {
+>>>>>>> origin/main
     <div
       class="flex items-center justify-center gap-2 bg-amber-600 text-white ps-3 pe-3 py-2 text-xs sm:text-sm font-semibold"
       role="alert"
@@ -141,4 +177,9 @@
       }
     </div>
   }
+<<<<<<< HEAD
+</main>
+</app-srs-error-boundary>
+=======
 </div>
+>>>>>>> origin/main
