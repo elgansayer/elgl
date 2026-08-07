@@ -8,7 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       (click)="dismiss.emit()"
-      (keydown)="dismiss.emit()"
+      (keydown.escape)="dismiss.emit()"
       tabindex="0"
     >
       <div
