@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { JoyrideDirective } from 'ngx-joyride';
+import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonComponent } from '../../components/primitives/button/button.component';
 import { AppCardComponent } from '../../components/primitives/card/card.component';
@@ -29,7 +29,7 @@ interface FaqItem {
 
 @Component({
   selector: 'app-vip',
-  imports: [JoyrideDirective, TranslatePipe, AppButtonComponent, AppCardComponent, AppPillComponent],
+  imports: [JoyrideModule, TranslatePipe, AppButtonComponent, AppCardComponent, AppPillComponent],
   templateUrl: './vip.component.html',
   styleUrl: './vip.component.scss',
 })

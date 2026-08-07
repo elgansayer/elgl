@@ -6,6 +6,7 @@ import { DiscoveryService } from '../../services/discovery.service';
 import { UserService, UserProfile } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
+import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { provideRouter } from '@angular/router';
 
 class MockAudio {
@@ -85,6 +86,13 @@ describe('DiscoveryComponent', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: SafetyService, useValue: mockSafetyService },
         { provide: AuthService, useValue: mockAuthService },
+        {
+          provide: OfflineDiscoveryCacheService,
+          useValue: {
+            isOnline: signal(true).asReadonly(),
+            cachedDataAvailable: signal(false).asReadonly(),
+          },
+        },
       ],
     }).compileComponents();
 

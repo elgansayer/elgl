@@ -49,6 +49,7 @@ export class DiscoveryService {
       const { data: topUsers, error } = await supabase
         .from('users')
         .select('id')
+        .eq('is_deletion_pending', false)
         .gt('correction_ratio', 0.5)
         .order('correction_ratio', { ascending: false })
         .order('study_streak_days', { ascending: false })
@@ -86,6 +87,7 @@ export class DiscoveryService {
       const { data: users, error } = await supabase
         .from('users')
         .select('id, native_languages, target_languages')
+        .eq('is_deletion_pending', false)
         .limit(1000);
 
       if (error || !users) {
@@ -109,6 +111,7 @@ export class DiscoveryService {
           .select('id')
           .neq('id', user.id)
           .eq('privacy_hide_from_search', false)
+          .eq('is_deletion_pending', false)
           .contains('native_languages', [user.target_languages[0]])
           .contains('target_languages', [user.native_languages[0]])
           .order('study_streak_days', { ascending: false })
@@ -151,6 +154,20 @@ export class DiscoveryService {
     query: SearchQueryDto,
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
+
+    // GDPR audit log: record location-based searches for compliance
+    if (
+      query.latitude !== undefined ||
+      query.longitude !== undefined ||
+      query.country ||
+      query.city
+    ) {
+      this.logger.log(
+        `Discovery location search by user ${currentUserId}: ` +
+          `lat=${query.latitude ?? 'none'}, lon=${query.longitude ?? 'none'}, ` +
+          `country=${query.country ?? 'none'}, city=${query.city ?? 'none'}`,
+      );
+    }
 
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
@@ -196,7 +213,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
 
     if (query.has_audio_intro) {
       queryBuilder = queryBuilder
@@ -287,9 +305,14 @@ export class DiscoveryService {
         search_lon: searchLon,
         radius_m: query.radius_metres || 50000,
         exclude_user_id: currentUserId,
-        filter_native: query.native_languages ? [query.native_languages] : null,
+        filter_native_arr: query.native_languages ? [query.native_languages] : null,
         filter_target: query.target_language || null,
         serious_only: Boolean(query.serious_learner_only),
+        filter_level: query.level || null,
+        filter_gender: _currentUserProfile?.is_vip && query.gender ? query.gender : null,
+        filter_age_min: query.age_min ?? null,
+        filter_age_max: query.age_max ?? null,
+        filter_audio_intro: query.has_audio_intro === true,
       })) as unknown as {
         data: unknown[] | null;
         error: { message?: string } | null;
@@ -348,59 +371,11 @@ export class DiscoveryService {
       if (blockedIds.length > 0) {
         rpcResults = rpcResults.filter((u) => !blockedIds.includes(u.id));
       }
-      if (query.level) {
-        if (rpcResults.length > 0) {
-          const { data: levelData } = await supabase
-            .from('users')
-            .select('id, proficiency_level')
-            .in(
-              'id',
-              rpcResults.map((u) => u.id),
-            );
-          const levelMap = new Map<string, string>(
-            (levelData ?? []).map((u) => [u.id, u.proficiency_level as string]),
-          );
-          rpcResults = rpcResults.filter(
-            (u) => levelMap.get(u.id) === query.level,
-          );
-        } else {
-          rpcResults = rpcResults.filter(
-            (u) => u.proficiency_level === query.level,
-          );
-        }
-      }
+      // RPC now handles level, gender, age, and audio_intro filters natively,
+      // but interests still needs post-processing since the RPC returns interests column
       if (query.interests) {
-        if (rpcResults.length > 0) {
-          const { data: interestData } = await supabase
-            .from('users')
-            .select('id, interests')
-            .in(
-              'id',
-              rpcResults.map((u) => u.id),
-            );
-          const interestMap = new Map<string, string[]>(
-            (interestData ?? []).map((u) => [u.id, u.interests as string[]]),
-          );
-          rpcResults = rpcResults.filter((u) =>
-            interestMap.get(u.id)?.includes(query.interests!),
-          );
-        }
-      }
-      if (_currentUserProfile?.is_vip && query.gender) {
-        rpcResults = rpcResults.filter((u) => u.gender === query.gender);
-      }
-      if (query.age_min !== undefined) {
-        const ageMin = query.age_min;
-        rpcResults = rpcResults.filter((u) => u.age! >= ageMin);
-      }
-      if (query.age_max !== undefined) {
-        const ageMax = query.age_max;
-        rpcResults = rpcResults.filter((u) => u.age! <= ageMax);
-      }
-
-      if (query.has_audio_intro) {
         rpcResults = rpcResults.filter(
-          (u) => u.audio_intro_url && u.audio_intro_url.trim() !== '',
+          (u) => u.interests?.includes(query.interests!),
         );
       }
       const filtered = await this.filterByVoiceRoomActive(
@@ -470,7 +445,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
 
     queryBuilder = queryBuilder
       .not('audio_intro_url', 'is', null)
@@ -548,6 +524,7 @@ export class DiscoveryService {
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -586,6 +563,7 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false)
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -637,7 +615,8 @@ export class DiscoveryService {
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
 
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
@@ -932,6 +911,12 @@ export class DiscoveryService {
     currentUserId: string,
     query: { country?: string; city?: string },
   ): Promise<UserProfile[]> {
+    // GDPR audit log: record location search for compliance
+    this.logger.log(
+      `Discovery country/city search by user ${currentUserId}: ` +
+        `country=${query.country ?? 'none'}, city=${query.city ?? 'none'}`,
+    );
+
     const supabase = this.supabaseService.getClient();
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
@@ -941,7 +926,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .eq('is_deletion_pending', false);
     if (blockedIds.length > 0) {
       qb = qb.not('id', 'in', blockedIds);
     }

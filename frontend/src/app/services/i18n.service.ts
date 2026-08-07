@@ -358,6 +358,8 @@ export class I18nService {
     'discovery.genderMale': 'Male',
     'discovery.genderFemale': 'Female',
     'discovery.genderVipRequired': 'VIP required to filter by gender',
+    'discovery.offlineBanner': 'You are offline',
+    'discovery.offlineCachedData': '\u2013 viewing cached data',
 
     // Moments Feed Component
     'moments.title': 'Moments',
