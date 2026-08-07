@@ -38,7 +38,9 @@ describe('AssessmentsController', () => {
       ];
       service.getQuestions.mockResolvedValue(mockQuestions);
 
-      const result = await controller.getQuestions(undefined as unknown as string);
+      const result = await controller.getQuestions(
+        undefined as unknown as string,
+      );
       expect(result).toEqual(mockQuestions);
       expect(service.getQuestions).toHaveBeenCalledWith('en');
     });

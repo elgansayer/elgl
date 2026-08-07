@@ -95,7 +95,8 @@ describe('PrivacyService', () => {
       const expectedDate = new Date();
       expectedDate.setDate(expectedDate.getDate() + 30);
       const diffDays = Math.abs(
-        (scheduledDate.getTime() - expectedDate.getTime()) / (1000 * 60 * 60 * 24),
+        (scheduledDate.getTime() - expectedDate.getTime()) /
+          (1000 * 60 * 60 * 24),
       );
       expect(diffDays).toBeLessThan(0.01); // Should be within a few seconds
 
@@ -105,7 +106,9 @@ describe('PrivacyService', () => {
     it('should throw BadRequestException on update error', async () => {
       const dto: DeleteAccountDto = { confirm_delete: true };
       const updateError = { message: 'DB error' };
-      mockUpdate.mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: updateError }) });
+      mockUpdate.mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: updateError }),
+      });
 
       await expect(service.deleteAccount('user-1', dto)).rejects.toThrow(
         BadRequestException,
@@ -130,7 +133,9 @@ describe('PrivacyService', () => {
     });
 
     it('should throw BadRequestException on error', async () => {
-      const mockEqCancel = jest.fn().mockResolvedValue({ error: { message: 'DB error' } });
+      const mockEqCancel = jest
+        .fn()
+        .mockResolvedValue({ error: { message: 'DB error' } });
       mockUpdate.mockReturnValue({ eq: mockEqCancel });
 
       await expect(service.cancelDeletion('user-1')).rejects.toThrow(
@@ -160,7 +165,10 @@ describe('PrivacyService', () => {
         eq: jest.fn().mockResolvedValue({ error: null }),
       });
 
-      await service.requestArchive('user-1', { receipt_id: null, app_store: null });
+      await service.requestArchive('user-1', {
+        receipt_id: null,
+        app_store: null,
+      });
 
       expect(mockUpload).toHaveBeenCalled();
       expect(mockInsert).toHaveBeenCalled();
