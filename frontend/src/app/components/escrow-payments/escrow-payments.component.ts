@@ -1,20 +1,12 @@
-<<<<<<< HEAD
-import { Component, inject, signal, computed } from '@angular/core';
-import { DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
-=======
-import { Component, inject, signal, computed, AfterViewInit, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
->>>>>>> origin/main
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
-import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
 
 type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
 type EscrowServiceType = 'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
@@ -38,62 +30,23 @@ interface EscrowRow {
 @Component({
   selector: 'app-escrow-payments',
   standalone: true,
-  imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
+  imports: [FormsModule, DatePipe, TranslatePipe],
   templateUrl: './escrow-payments.component.html',
 })
-<<<<<<< HEAD
-export class EscrowPaymentsComponent {
-  private readonly i18n = inject(I18nService);
-  private readonly router = inject(Router);
-  private readonly escrowService = inject(EscrowService);
-  private readonly network = inject(NetworkStatusService);
-  private readonly onboardingService = inject(EscrowOnboardingService);
-
-  readonly isOnline = this.network.isOnline;
-  readonly escrows = this.escrowService.escrows;
-  readonly loading = this.escrowService.loading;
-  readonly pendingOperationCount = this.escrowService.pendingOperationCount;
-
-  /** Signal to trigger transaction list resource reload after mutations. */
-  private readonly refreshTrigger = signal(0);
-
-  readonly transactions = signal<EscrowRow[]>([]);
-=======
-export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
+export class EscrowPaymentsComponent implements OnInit {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
-  private readonly joyrideService = inject(JoyrideService);
-  private readonly onboardingService = inject(EscrowOnboardingService);
 
   readonly transactions = signal<EscrowRow[]>([]);
   readonly loading = signal(false);
->>>>>>> origin/main
   readonly error = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly statusFilter = signal<StatusFilter>('all');
-  readonly showCreateForm = signal(false);
   readonly showDisputeForm = signal<string | null>(null);
 
-  readonly createForm = signal<{
-    partner_id: string;
-    amount: number;
-    description: string;
-    service_type: EscrowServiceType;
-  }>({
-    partner_id: '',
-    amount: 0,
-    description: '',
-    service_type: 'other',
-  });
-
-<<<<<<< HEAD
-  async loadEscrows(): Promise<void> {
-    await this.escrowService.listUserEscrows();
-=======
   readonly disputeReason = signal('');
   readonly disputeEvidence = signal('');
-  readonly refundReason = signal('');
 
   readonly statusFilters: StatusFilter[] = ['all', 'pending', 'released', 'refunded', 'disputed', 'cancelled'];
 
@@ -102,22 +55,6 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     if (filter === 'all') return this.transactions();
     return this.transactions().filter((tx) => tx.status === filter);
   });
-
-  readonly statusCounts = computed(() => {
-    const txs = this.transactions();
-    return {
-      all: txs.length,
-      pending: txs.filter((tx) => tx.status === 'pending').length,
-      released: txs.filter((tx) => tx.status === 'released').length,
-      refunded: txs.filter((tx) => tx.status === 'refunded').length,
-      disputed: txs.filter((tx) => tx.status === 'disputed').length,
-      cancelled: txs.filter((tx) => tx.status === 'cancelled').length,
-    };
-  });
-
-  readonly pendingCount = computed(() =>
-    this.transactions().filter((tx) => tx.status === 'pending').length,
-  );
 
   async loadTransactions(status?: string): Promise<void> {
     this.loading.set(true);
@@ -139,37 +76,6 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     }
   }
 
-  async createPayment(): Promise<void> {
-    const form = this.createForm();
-    if (!form.partner_id || form.amount <= 0 || !form.description) return;
-
-    this.loading.set(true);
-    this.error.set(null);
-    const token = this.auth.getAccessToken();
-    try {
-      await firstValueFrom(
-        this.http.post(
-          `${environment.apiUrl}/escrow/create`,
-          {
-            partner_id: form.partner_id,
-            amount: form.amount,
-            description: form.description,
-            service_type: form.service_type,
-          },
-          { headers: { Authorization: `Bearer ${token ?? ''}` } },
-        ),
-      );
-      this.successMessage.set(this.i18n.translate('escrow.createSuccess'));
-      this.showCreateForm.set(false);
-      this.createForm.set({ partner_id: '', amount: 0, description: '', service_type: 'other' });
-      await this.loadTransactions();
-    } catch {
-      this.error.set(this.i18n.translate('escrow.createError'));
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
   async releasePayment(escrowId: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
@@ -186,28 +92,6 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
       await this.loadTransactions();
     } catch {
       this.error.set(this.i18n.translate('escrow.releaseError'));
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
-  async refundPayment(escrowId: string): Promise<void> {
-    this.loading.set(true);
-    this.error.set(null);
-    const token = this.auth.getAccessToken();
-    try {
-      await firstValueFrom(
-        this.http.post(
-          `${environment.apiUrl}/escrow/refund`,
-          { escrow_id: escrowId, reason: this.refundReason() || undefined },
-          { headers: { Authorization: `Bearer ${token ?? ''}` } },
-        ),
-      );
-      this.successMessage.set(this.i18n.translate('escrow.refundSuccess'));
-      this.refundReason.set('');
-      await this.loadTransactions();
-    } catch {
-      this.error.set(this.i18n.translate('escrow.refundError'));
     } finally {
       this.loading.set(false);
     }
@@ -242,7 +126,6 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     } finally {
       this.loading.set(false);
     }
->>>>>>> origin/main
   }
 
   setStatusFilter(filter: StatusFilter): void {
@@ -278,46 +161,8 @@ export class EscrowPaymentsComponent implements OnInit, AfterViewInit {
     this.error.set(null);
     this.successMessage.set(null);
   }
-<<<<<<< HEAD
-=======
 
   ngOnInit(): void {
     this.loadTransactions();
   }
-
-  ngAfterViewInit(): void {
-    this.maybeStartTour();
-  }
-
-  private maybeStartTour(): void {
-    if (this.onboardingService.isCompleted()) {
-      return;
-    }
-    if (this.onboardingService.isTourInProgress()) {
-      return;
-    }
-    this.onboardingService.isTourInProgress.set(true);
-
-    setTimeout(() => {
-      const options: JoyrideOptions = {
-        steps: this.onboardingService.stepNames,
-        startWith: 'escrowStepTitle',
-        waitingTime: 100,
-        stepDefaultPosition: 'bottom',
-        themeColor: '#6366f1',
-        showCounter: true,
-        showPrevButton: true,
-      };
-
-      this.joyrideService.startTour(options).subscribe({
-        error: () => {
-          this.onboardingService.isTourInProgress.set(false);
-        },
-        complete: () => {
-          this.onboardingService.markComplete();
-        },
-      });
-    }, 500);
-  }
->>>>>>> origin/main
 }

@@ -109,11 +109,7 @@ export class WordDefinitionModalComponent implements OnInit {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
-<<<<<<< HEAD
-readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
-=======
   readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
->>>>>>> origin/main
 
   readonly errorContext = computed<SrsErrorContext>(() => ({
     component: 'word-definition-modal',

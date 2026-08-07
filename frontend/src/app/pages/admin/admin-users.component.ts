@@ -3,24 +3,15 @@ import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
-<<<<<<< HEAD
 import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
 import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
-=======
-import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
-import { OfflineAdminStorageService } from '../../services/offline-admin-storage.service';
->>>>>>> origin/main
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-<<<<<<< HEAD
-  imports: [CommonModule, AdminOfflineBannerComponent, SanitiseHtmlPipe, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent],
-=======
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
->>>>>>> origin/main
+imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {

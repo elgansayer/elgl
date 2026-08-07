@@ -119,11 +119,7 @@ export class VocabularyStore {
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedFlashcards();
         if (cached.length > 0) {
-<<<<<<< HEAD
-          const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
-=======
           const sanitised = this.sanitiseFlashcards(cached);
->>>>>>> origin/main
           this.allFlashcards.set(sanitised);
           this.hasMoreFlashcards.set(false);
           const map = new Map<string, Flashcard>();
@@ -201,12 +197,7 @@ export class VocabularyStore {
       if (!navigator.onLine) {
         const cached = await this.srsOffline.getCachedDueReviews();
         if (cached.length > 0) {
-<<<<<<< HEAD
-          const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
-          this.dueReviews.set(sanitised);
-=======
           this.dueReviews.set(this.sanitiseFlashcards(cached));
->>>>>>> origin/main
         }
       }
     }
@@ -325,19 +316,11 @@ export class VocabularyStore {
    * Sync any queued offline SRS reviews to the server.
    */
   async syncOfflineReviews(): Promise<{ synced: number; failed: number }> {
-<<<<<<< HEAD
-    return this.srsOffline.syncQueuedReviews(async (item) => {
-      await firstValueFrom(
-        this.http.patch<Flashcard>(
-          `${this.flashcardsUrl}/${item.flashcardId}/srs`,
-          { quality: item.quality },
-=======
     return this.srsOffline.syncQueuedReviews(async (queued) => {
       await firstValueFrom(
         this.http.patch<Flashcard>(
           `${this.flashcardsUrl}/${queued.flashcardId}/srs`,
           { quality: queued.quality },
->>>>>>> origin/main
           { headers: this.getHeaders() },
         ),
       );

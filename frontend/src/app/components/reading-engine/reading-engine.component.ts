@@ -7,7 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 interface ReadingArticle {
   id: string;
