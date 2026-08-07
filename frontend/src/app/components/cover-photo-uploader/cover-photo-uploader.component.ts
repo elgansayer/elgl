@@ -1,6 +1,7 @@
 import { Component, signal, output, input, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
+import { ImageCompressionService } from '../../services/image-compression.service';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -195,6 +196,7 @@ interface CropBox {
 })
 export class CoverPhotoUploaderComponent {
   private http = inject(HttpClient);
+  private imageCompression = inject(ImageCompressionService);
 
   readonly currentCoverUrl = input<string>('');
   readonly coverPhotoUploaded = output<string>();
