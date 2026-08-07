@@ -180,7 +180,7 @@ export class DataRetentionService {
     await supabase
       .from('notifications')
       .delete()
-      .eq('user_id', userId);
+      .eq('recipient_id', userId);
 
     this.logger.log(`Wiped personal data for user ${userId}`);
   }

@@ -75,6 +75,8 @@ export type UsersRow = {
   deletion_requested_at?: string | null;
   deletion_grace_days?: number | null;
   is_deletion_pending?: boolean | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
 };
 
 type AudioRoomsRow = {
@@ -568,6 +570,10 @@ type FlashcardRow = {
   pronunciation_url?: string | null;
   srs_level: number;
   easiness_factor: number;
+<<<<<<< HEAD
+=======
+  repetition_count: number;
+>>>>>>> origin/main
   repetitions: number;
   interval_days: number;
   next_review_at: string;
@@ -1582,6 +1588,48 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      escrow_transactions: {
+        Row: {
+          id: string;
+          payer_id: string;
+          payee_id: string;
+          amount_coins: number;
+          status: 'held' | 'released' | 'refunded' | 'disputed';
+          description: string | null;
+          reference_id: string | null;
+          created_at: string;
+          updated_at: string;
+          released_at: string | null;
+          refunded_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          payer_id: string;
+          payee_id: string;
+          amount_coins: number;
+          status?: 'held' | 'released' | 'refunded' | 'disputed';
+          description?: string | null;
+          reference_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+          refunded_at?: string | null;
+        }>;
+        Update: Partial<{
+          id?: string;
+          payer_id?: string;
+          payee_id?: string;
+          amount_coins?: number;
+          status?: 'held' | 'released' | 'refunded' | 'disputed';
+          description?: string | null;
+          reference_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+          refunded_at?: string | null;
+        }>;
+        Relationships: [];
+      };
       blocks: {
         Row: BlockRow;
         Insert: {
@@ -1901,6 +1949,49 @@ export interface Database {
           deck_id?: string;
           flashcard_id?: string;
           added_at?: string;
+        }>;
+        Relationships: [];
+      };
+      escrow_payments: {
+        Row: {
+          id: string;
+          sender_id: string;
+          recipient_id: string;
+          amount: number;
+          currency: string;
+          status: string;
+          stripe_payment_intent_id: string | null;
+          description: string | null;
+          metadata: string | null;
+          created_at: string;
+          updated_at: string;
+          released_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          sender_id: string;
+          recipient_id: string;
+          amount: number;
+          currency: string;
+          status?: string;
+          stripe_payment_intent_id?: string | null;
+          description?: string | null;
+          metadata?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+        }>;
+        Update: Partial<{
+          sender_id?: string;
+          recipient_id?: string;
+          amount?: number;
+          currency?: string;
+          status?: string;
+          stripe_payment_intent_id?: string | null;
+          description?: string | null;
+          metadata?: string | null;
+          updated_at?: string;
+          released_at?: string | null;
         }>;
         Relationships: [];
       };

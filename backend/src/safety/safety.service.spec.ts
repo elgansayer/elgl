@@ -1,15 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SafetyService } from './safety.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { Logger } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 
 describe('SafetyService', () => {
   let service: SafetyService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockPinoLogger: Record<'info' | 'error' | 'warn' | 'debug', jest.Mock>;
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    mockPinoLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
 
     mockQueryBuilder = {
       insert: jest.fn().mockReturnThis(),
@@ -34,6 +40,10 @@ describe('SafetyService', () => {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
         },
+        {
+          provide: 'PinoLogger:SafetyService',
+          useValue: mockPinoLogger,
+        },
       ],
     }).compile();
 
@@ -41,7 +51,7 @@ describe('SafetyService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -70,10 +80,6 @@ describe('SafetyService', () => {
       });
       mockQueryBuilder._response = { error: null, data: { id: 'report-id' } };
 
-      const logSpy = jest
-        .spyOn((service as any).logger, 'log')
-        .mockImplementation(() => {});
-
       const result = await service.reportUser('user-1', dto);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
@@ -87,7 +93,9 @@ describe('SafetyService', () => {
         status: 'pending',
       });
       expect(result).toEqual({ id: 'report-id' });
-      logSpy.mockRestore();
+      expect(mockPinoLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Report submitted'),
+      );
     });
 
     it('should throw when reporting self', async () => {
@@ -176,10 +184,6 @@ describe('SafetyService', () => {
       // insert succeeds
       mockQueryBuilder._response = { error: null };
 
-      const logSpy = jest
-        .spyOn((service as any).logger, 'log')
-        .mockImplementation(() => {});
-
       const result = await service.blockUser('user-1', {
         blocked_id: 'blocked-user',
       });
@@ -196,9 +200,10 @@ describe('SafetyService', () => {
         blocker_id: 'user-1',
         blocked_id: 'blocked-user',
       });
-      expect(logSpy).toHaveBeenCalledWith('User user-1 blocked blocked-user');
+      expect(mockPinoLogger.info).toHaveBeenCalledWith(
+        'User user-1 blocked blocked-user',
+      );
       expect(result).toEqual({ success: true, blocked_id: 'blocked-user' });
-      logSpy.mockRestore();
     });
 
     it('should throw when blocking self', async () => {

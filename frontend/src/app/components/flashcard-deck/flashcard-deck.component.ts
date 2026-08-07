@@ -418,15 +418,16 @@ export class FlashcardDeckComponent {
   }
 
   private reportDeckError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
     const deckError = new Error(
-      `[SRS:flashcard-deck] ${operation} failed: ${(err as Error)?.message ?? String(err)}`,
+      `[SRS:flashcard-deck] ${operation} failed: ${message}`,
     );
     deckError.name = 'SrsDeckError';
     if (err instanceof Error && err.stack) {
       deckError.stack = err.stack;
     }
-    (deckError as Error & { srsOperation?: string }).srsOperation = operation;
-    this.errorHandler.handleError(deckError);
+    const enriched = Object.assign(deckError, { srsOperation: operation });
+    this.errorHandler.handleError(enriched);
   }
 
   constructor() {

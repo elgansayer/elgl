@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { AdminService } from './admin.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
@@ -9,8 +10,16 @@ describe('AdminService', () => {
   let mockSupabaseClient: Record<string, jest.Mock>;
   let mockQueryBuilder: Record<string, jest.Mock>;
   let mockRedisClient: Record<string, jest.Mock>;
+  let mockPinoLogger: Record<'info' | 'error' | 'warn' | 'debug', jest.Mock>;
 
   beforeEach(async () => {
+    mockPinoLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
+
     mockRedisClient = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue('OK'),
@@ -71,6 +80,10 @@ describe('AdminService', () => {
         {
           provide: DataScrubbingService,
           useValue: mockScrubbingService,
+        },
+        {
+          provide: 'PinoLogger:AdminService',
+          useValue: mockPinoLogger,
         },
       ],
     }).compile();

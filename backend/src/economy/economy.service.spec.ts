@@ -37,7 +37,6 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EconomyService } from './economy.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { PinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -50,7 +49,7 @@ describe('EconomyService', () => {
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let module: TestingModule;
-  let mockRedisClient: { get: jest.Mock; set: jest.Mock };
+  let mockRedisClient: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -70,6 +69,7 @@ describe('EconomyService', () => {
     mockRedisClient = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn().mockResolvedValue(1),
     };
 
     module = await Test.createTestingModule({
@@ -148,6 +148,24 @@ describe('EconomyService', () => {
   });
 
   describe('getCatalog', () => {
+    it('should return cached catalog when available in Redis', async () => {
+      const cachedGifts = [
+        {
+          id: 'gift-1',
+          name: 'Rose',
+          icon: 'rose.png',
+          cost_coins: 10,
+          animation_type: 'float',
+        },
+      ];
+      mockRedisClient.get.mockResolvedValueOnce(JSON.stringify(cachedGifts));
+
+      const result = await service.getCatalog();
+
+      expect(result).toEqual(cachedGifts);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
     it('should return catalog of virtual gifts ordered by cost', async () => {
       const gifts = [
         {
@@ -177,6 +195,12 @@ describe('EconomyService', () => {
         ascending: true,
       });
       expect(result).toEqual(gifts);
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'economy:catalog',
+        JSON.stringify(gifts),
+        'EX',
+        3600,
+      );
     });
 
     it('should return the default gift catalog when virtual gifts response data is null', async () => {
@@ -204,6 +228,7 @@ describe('EconomyService', () => {
           animation_url: 'https://r2.example.com/heart.json',
         },
       ]);
+      expect(mockRedisClient.set).toHaveBeenCalled();
     });
   });
 
@@ -404,10 +429,103 @@ describe('EconomyService', () => {
     });
   });
 
+  describe('getPackages', () => {
+    it('should return all coin packages', () => {
+      const result = service.getPackages();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(4);
+      expect(result[0].id).toBe('coins_small');
+      expect(result[0].coins).toBe(100);
+      expect(result[3].id).toBe('coins_mega');
+      expect(result[3].coins).toBe(3000);
+    });
+
+    it('should include platform_product_id for each package', () => {
+      const result = service.getPackages();
+      for (const pkg of result) {
+        expect(pkg.platform_product_id).toBeDefined();
+        expect(typeof pkg.platform_product_id.ios).toBe('string');
+        expect(typeof pkg.platform_product_id.android).toBe('string');
+        expect(typeof pkg.platform_product_id.web).toBe('string');
+      }
+    });
+  });
+
+  describe('createCheckoutSession', () => {
+    it('should throw NotFoundException when package_id is not found', async () => {
+      await expect(
+        service.createCheckoutSession('user-1', 'non_existent_package'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should create a Stripe session and a pending purchase record', async () => {
+      jest
+        .spyOn(service['stripe'].checkout.sessions, 'create')
+        .mockResolvedValue({
+          id: 'sess_checkout_1',
+          url: 'https://checkout.stripe.com/test/sess_checkout_1',
+        } as unknown as Stripe.Checkout.Session);
+
+      jest
+        .spyOn(service['configService'], 'get')
+        .mockReturnValue('http://localhost:4200');
+
+      mockQueryBuilder.insert.mockResolvedValue({
+        error: null,
+      });
+
+      const result = await service.createCheckoutSession(
+        'user-1',
+        'coins_small',
+      );
+
+      expect(result.sessionId).toBe('sess_checkout_1');
+      expect(result.sessionUrl).toBe(
+        'https://checkout.stripe.com/test/sess_checkout_1',
+      );
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('coin_purchases');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user-1',
+          package_id: 'coins_small',
+          status: 'pending',
+        }),
+      );
+    });
+
+    it('should throw if insert of pending purchase record fails', async () => {
+      jest
+        .spyOn(service['stripe'].checkout.sessions, 'create')
+        .mockResolvedValue({
+          id: 'sess_checkout_2',
+          url: 'https://checkout.stripe.com/test/sess_checkout_2',
+        } as unknown as Stripe.Checkout.Session);
+
+      mockQueryBuilder.insert.mockResolvedValue({
+        error: { message: 'DB error' },
+      });
+
+      await expect(
+        service.createCheckoutSession('user-1', 'coins_small'),
+      ).rejects.toThrow('Failed to initialize purchase session.');
+    });
+  });
+
+  describe('verifyPurchaseReceipt', () => {
+    it('should return true for valid receipts', async () => {
+      const result = await service.verifyPurchaseReceipt({
+        receipt_token: 'test_token',
+        platform: 'ios',
+      });
+      expect(result).toBe(true);
+    });
+  });
+
   describe('claimDailyCheckIn', () => {
     beforeEach(() => {
       mockRedisClient.get.mockResolvedValue(null);
       mockRedisClient.set.mockResolvedValue('OK');
+      mockRedisClient.del.mockResolvedValue(1);
     });
 
     it('should grant between 5 and 10 coins on first daily check-in', async () => {
@@ -432,6 +550,9 @@ describe('EconomyService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         coins_balance: result.new_balance,
       });
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'economy:sticker_packs:user-1',
+      );
     });
 
     it('should not grant coins when user already claimed today', async () => {
@@ -448,6 +569,7 @@ describe('EconomyService', () => {
       expect(result.new_balance).toBe(100);
       expect(mockRedisClient.set).not.toHaveBeenCalled();
       expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
   });
 
@@ -499,7 +621,7 @@ describe('EconomyService', () => {
       );
     });
 
-    it('should transfer coins, save transaction, and publish to room channel when room_id provided', async () => {
+    it('should transfer coins, save transaction, publish to channels, and invalidate caches', async () => {
       const giftRow = {
         id: 'gift-1',
         name: 'Heart',
@@ -568,6 +690,12 @@ describe('EconomyService', () => {
         'room_room-101',
         expectedGiftEvent,
       );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'economy:sticker_packs:sender-1',
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'economy:sticker_packs:receiver-1',
+      );
       expect(result).toEqual({
         success: true,
         coins_remaining: 150,
@@ -622,6 +750,20 @@ describe('EconomyService', () => {
   });
 
   describe('getStickerPacks', () => {
+    it('should return cached sticker packs when available', async () => {
+      const cached = {
+        packs: [{ id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 }],
+        owned_pack_ids: ['stk_pack_1'],
+        user_coins: 300,
+      };
+      mockRedisClient.get.mockResolvedValueOnce(JSON.stringify(cached));
+
+      const result = await service.getStickerPacks('user-1');
+
+      expect(result).toEqual(cached);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
     it('should return packs with ownership information', async () => {
       const mockPacks = [
         {
@@ -675,6 +817,16 @@ describe('EconomyService', () => {
       expect(result.packs).toEqual(mockPacks);
       expect(result.owned_pack_ids).toEqual(['stk_pack_1']);
       expect(result.user_coins).toBe(300);
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        'economy:sticker_packs:user-1',
+        JSON.stringify({
+          packs: mockPacks,
+          owned_pack_ids: ['stk_pack_1'],
+          user_coins: 300,
+        }),
+        'EX',
+        300,
+      );
     });
 
     it('should return default packs when DB returns empty', async () => {
@@ -711,7 +863,7 @@ describe('EconomyService', () => {
   });
 
   describe('unlockStickerPack', () => {
-    it('should unlock a sticker pack and deduct coins', async () => {
+    it('should unlock a sticker pack, deduct coins, and invalidate cache', async () => {
       const pack = {
         id: 'stk_pack_1',
         name: 'Happy Corgi Pack',
@@ -735,6 +887,9 @@ describe('EconomyService', () => {
         user_id: 'user-1',
         pack_id: 'stk_pack_1',
       });
+      expect(mockRedisClient.del).toHaveBeenCalledWith(
+        'economy:sticker_packs:user-1',
+      );
     });
 
     it('should throw NotFoundException when pack does not exist', async () => {
