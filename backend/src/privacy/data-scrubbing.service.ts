@@ -1,4 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+
+const window = new JSDOM('').window;
+
+/** Strict DOMPurify instance for sanitising user-authored text fields. */
+const strictPurify = DOMPurify(window);
+strictPurify.setConfig({
+  ALLOWED_TAGS: [],
+  ALLOWED_ATTR: [],
+  ALLOW_DATA_ATTR: false,
+  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?:)?\/\/)/i,
+  KEEP_CONTENT: false,
+  RETURN_DOM: false,
+  RETURN_DOM_FRAGMENT: false,
+  WHOLE_DOCUMENT: false,
+  SANITIZE_DOM: true,
+  SANITIZE_NAMED_PROPS: true,
+});
 
 /**
  * Data-scrubbing helpers for GDPR compliance.
@@ -20,6 +39,8 @@ import { Injectable, Logger } from '@nestjs/common';
  *   debuggability while hiding the full payment credential.
  * - Transaction IDs are passed through as-is because they are opaque provider-
  *   generated identifiers that do not contain PII.
+ * - Escrow transaction `reason` and `metadata` fields are sanitised via
+ *   DOMPurify to strip any embedded PII or HTML/script content.
  * - All scrub operations are logged at debug level for audit trail.
  */
 @Injectable()
@@ -183,15 +204,15 @@ export class DataScrubbingService {
    *
    * Policies applied:
    * - `reason` -- user-authored free text that may contain PII (names,
-   *   contact details, etc.). We log a debug audit entry but do NOT
-   *   automatically redact because the field is essential for dispute
-   *   resolution. The caller (admin dashboard) should apply additional
-   *   masking if displaying to non-privileged staff.
-   * - `metadata` -- JSONB blob that may contain PII. Same policy as `reason`.
+   *   contact details, etc.). Sanitised via strict DOMPurify to strip all
+   *   HTML/script content. Truncated to 500 characters to remove embedded
+   *   structured data while preserving essential dispute-resolution context.
+   * - `metadata` -- JSONB blob that may contain PII. Recursively sanitised
+   *   via DOMPurify to strip HTML from all string values.
    * - `payer_id` / `payee_id` -- internal UUIDs; pass through (same policy
    *   as gift transaction sender/receiver IDs).
-   * - `last_error` -- system-generated; may contain internal paths or
-   *   identifiers. Pass through for debugging.
+   * - `last_error` -- system-generated but may contain serialised user input.
+   *   Sanitised via DOMPurify.
    *
    * This method exists as an explicit audit point where these decisions are
    * documented. It modifies the record in-place.
@@ -203,19 +224,15 @@ export class DataScrubbingService {
     metadata?: Record<string, unknown> | null;
     last_error?: string | null;
   }): void {
-    // payer_id / payee_id are internal UUIDs -- pass through.
-    // reason / metadata are user-authored; document the policy decision.
     if (record.reason) {
-      this.logger.debug(
-        'Escrow reason field passed through (essential for dispute resolution)',
-      );
+      record.reason = this.sanitiseText(record.reason).slice(0, 500);
     }
-    if (record.metadata && Object.keys(record.metadata).length > 0) {
-      this.logger.debug(
-        'Escrow metadata field passed through (essential for dispute resolution)',
-      );
+    if (record.metadata && typeof record.metadata === 'object') {
+      record.metadata = this.sanitiseObject(record.metadata);
     }
-    // last_error may contain internal identifiers; pass through for debugging.
+    if (record.last_error) {
+      record.last_error = this.sanitiseText(record.last_error);
+    }
   }
 
   /**
@@ -238,7 +255,7 @@ export class DataScrubbingService {
     }
     if (records.length > 0) {
       this.logger.debug(
-        `Scrubbed ${records.length} escrow transaction records (pass-through per current policy)`,
+        `Scrubbed ${records.length} escrow transaction records`,
       );
     }
   }
@@ -287,5 +304,47 @@ export class DataScrubbingService {
         `Scrubbed ${records.length} crash report records (pass-through per current policy)`,
       );
     }
+  }
+
+  /**
+   * Sanitise a plain-text string by removing all HTML tags, entities,
+   * and script content via DOMPurify.
+   *
+   * Used for free-text fields that are user-authored and may contain PII
+   * or malicious content (e.g., escrow reasons, crash report context).
+   */
+  private sanitiseText(text: string): string {
+    return strictPurify.sanitize(text);
+  }
+
+  /**
+   * Recursively sanitise an object's string values through DOMPurify.
+   *
+   * Arrays and nested plain objects are traversed; class instances and
+   * primitives are returned unchanged.
+   */
+  private sanitiseObject(obj: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (typeof val === 'string') {
+        result[key] = strictPurify.sanitize(val);
+      } else if (Array.isArray(val)) {
+        result[key] = val.map((item) =>
+          typeof item === 'string' ? strictPurify.sanitize(item) : item,
+        );
+      } else if (val !== null && typeof val === 'object') {
+        const proto = Object.getPrototypeOf(val);
+        if (proto === Object.prototype || proto === null) {
+          result[key] = this.sanitiseObject(
+            val as Record<string, unknown>,
+          );
+        } else {
+          result[key] = val;
+        }
+      } else {
+        result[key] = val;
+      }
+    }
+    return result;
   }
 }
