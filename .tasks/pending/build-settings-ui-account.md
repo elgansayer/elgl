@@ -1,0 +1,3 @@
+* Priority: High Impact
+* Description: Implement the Account & Security Settings UI.
+* Technical Implementation: Create `AccountSettingsComponent` to handle email management, password updates, 2FA setup flow, and active session viewing. Bind these controls to the `account` portion of the `SettingsState` model via `SettingsService`. Use reactive forms with cross-field validation for password changes. Implement optimistic updates for session termination.
