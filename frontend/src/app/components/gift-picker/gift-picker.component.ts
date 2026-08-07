@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal } from '@angular/core';
+import { Component, input, output, inject, signal, computed } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
@@ -59,7 +59,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.bundlePrompt' | t
             }}</span>
-            <div class="grid grid-cols-1 gap-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               @for (pkg of economyStore.coinPackages(); track pkg.id) {
                 <div
                   class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
@@ -95,13 +95,13 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 'giftModal.selectPrompt' | t: { name: receiverName() }
               }}</span>
             }
-            @if (selectedGift()) {
+            @if (selectedGift(); as gift) {
               <div class="flex items-center gap-3 p-3 bg-primary/5 rounded-2xl border border-primary/20">
-                <span class="text-3xl">{{ selectedGift().icon }}</span>
+                <span class="text-3xl">{{ gift.icon }}</span>
                 <div class="flex-1">
-                  <span class="font-bold text-sm text-text-primary block">{{ selectedGift().name }}</span>
+                  <span class="font-bold text-sm text-text-primary block">{{ gift.name }}</span>
                   <span class="text-xs text-text-secondary">{{
-                    'giftModal.giftCost' | t: { cost: selectedGift().cost_coins }
+                    'giftModal.giftCost' | t: { cost: gift.cost_coins }
                   }}</span>
                 </div>
                 <button
@@ -113,7 +113,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
               </div>
             }
             @if (!selectedGift()) {
-              <div class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto">
+              <div class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto">
                 @for (gift of economyStore.catalog(); track gift.id) {
                   <button
                     type="button"
@@ -148,20 +148,26 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
             {{ 'giftModal.cancelBtn' | t }}
           </button>
           @if (!showCoinPackages()) {
-            <button
-              [disabled]="!selectedGift() || isSending()"
-              (click)="confirmSend()"
-              class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
-            >
-              {{
-                isSending()
-                  ? ('giftModal.sendingBtn' | t)
-                  : selectedGift()
-                    ? ('giftModal.sendBtnText'
-                      | t: { icon: selectedGift().icon, cost: selectedGift().cost_coins })
-                    : ('giftModal.selectGift' | t)
-              }}
-            </button>
+            @if (selectedGift(); as gift) {
+              <button
+                [disabled]="isSending()"
+                (click)="confirmSend()"
+                class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+              >
+                {{
+                  isSending()
+                    ? ('giftModal.sendingBtn' | t)
+                    : ('giftModal.sendBtnText' | t: { icon: gift.icon, cost: gift.cost_coins })
+                }}
+              </button>
+            } @else {
+              <button
+                disabled
+                class="px-6 py-2 bg-primary opacity-50 text-white rounded-xl font-extrabold text-xs shadow"
+              >
+                {{ 'giftModal.selectGift' | t }}
+              </button>
+            }
           }
         </div>
       </div>
@@ -180,12 +186,13 @@ export class GiftPickerComponent {
   closed = output<void>();
 
   readonly economyStore = inject(EconomyStore);
+
   readonly selectedGift = signal<VirtualGift | null>(null);
   readonly showCoinPackages = signal(false);
   readonly isSending = signal(false);
   readonly deductedAmount = signal(0);
 
-  readonly effectiveBalance = () => this.economyStore.coinsBalance() - this.deductedAmount();
+  readonly effectiveBalance = computed(() => this.economyStore.coinsBalance() - this.deductedAmount());
 
   toggleCoinPackages(): void {
     this.showCoinPackages.update((v) => !v);
