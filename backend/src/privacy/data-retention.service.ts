@@ -100,7 +100,7 @@ export class DataRetentionService {
     }
 
     for (const user of usersToDelete) {
-      const userId = (user as { id: string }).id;
+      const userId = user.id;
       try {
         // Delete user's personal data from all tables
         await this.wipeUserData(userId);
@@ -152,10 +152,7 @@ export class DataRetentionService {
     await supabase.from('moments').delete().eq('author_id', userId);
 
     // Delete moment comments
-    await supabase
-      .from('moment_comments')
-      .delete()
-      .eq('author_id', userId);
+    await supabase.from('moment_comments').delete().eq('author_id', userId);
 
     // Delete flashcards
     await supabase.from('flashcards').delete().eq('user_id', userId);
@@ -177,10 +174,7 @@ export class DataRetentionService {
     await supabase.from('reports').delete().eq('reporter_id', userId);
 
     // Delete notifications
-    await supabase
-      .from('notifications')
-      .delete()
-      .eq('recipient_id', userId);
+    await supabase.from('notifications').delete().eq('recipient_id', userId);
 
     this.logger.log(`Wiped personal data for user ${userId}`);
   }

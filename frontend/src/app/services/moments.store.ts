@@ -45,7 +45,7 @@ export interface MomentRecord {
   is_liked_by_me?: boolean;
   comments?: MomentComment[];
 
-  // Translation-related state managed by moments-feed component
+  // Translation cache managed by moments-feed component
   isTranslating?: boolean;
 }
 
@@ -69,7 +69,10 @@ export class MomentsStore {
     };
   }
 
-  async loadFeed(filter?: 'All' | 'Classmates' | 'Following' | 'For You', lang?: string): Promise<void> {
+  async loadFeed(
+    filter?: 'All' | 'Classmates' | 'Following' | 'For You',
+    lang?: string,
+  ): Promise<void> {
     const targetFilter = filter ?? this.activeFilter();
     this.activeFilter.set(targetFilter);
     this.isLoading.set(true);
