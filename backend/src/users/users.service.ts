@@ -380,6 +380,7 @@ export class UsersService {
       privacy_hide_age: false,
       privacy_hide_location: false,
       privacy_hide_from_search: false,
+      matchmaking_consent: false,
       privacy_hide_gender: false,
       privacy_hide_exact_location: false,
       privacy_hide_online_status: false,
@@ -464,6 +465,8 @@ export class UsersService {
       updatePayload.privacy_hide_location = dto.privacy_hide_location;
     if (dto.privacy_hide_from_search !== undefined)
       updatePayload.privacy_hide_from_search = dto.privacy_hide_from_search;
+    if (dto.matchmaking_consent !== undefined)
+      updatePayload.matchmaking_consent = dto.matchmaking_consent;
     if (dto.privacy_hide_gender !== undefined)
       updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
     if (dto.privacy_hide_exact_location !== undefined)

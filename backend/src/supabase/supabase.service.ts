@@ -32,6 +32,7 @@ export type UsersRow = {
   /** @deprecated superseded by native_languages (see migration 013); retained for legacy callers */
   native_language?: string | null;
   privacy_hide_from_search?: boolean | null;
+  matchmaking_consent?: boolean | null;
   incognito_visits?: boolean | null;
   age?: number | null;
   is_deleted?: boolean | null;
