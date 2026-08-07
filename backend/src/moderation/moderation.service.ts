@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { ReportUserDto } from './dto/report-user.dto';
 import { ModerationActionDto } from './dto/moderation-action.dto';
 
@@ -54,8 +55,12 @@ export class ModerationService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
+<<<<<<< HEAD
+    private readonly metricsService: MetricsService,
+=======
     @InjectPinoLogger(ModerationService.name)
     private readonly logger: PinoLogger,
+>>>>>>> origin/main
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -116,8 +121,37 @@ export class ModerationService {
         };
       });
 
+<<<<<<< HEAD
+      // Record pending report count for Datadog monitoring
+      if (!status || status === 'pending') {
+        const pendingCount = status
+          ? items.length
+          : items.filter((item) => item.status === 'pending').length;
+        this.metricsService.setTsPendingReports(pendingCount);
+      }
+
+      // Batch-fetch moment content for all moment items in a single query
+      if (type !== 'profile') {
+        const momentIds = items
+          .map((item) => item.reportedMomentId)
+          .filter((id): id is string => id != null);
+
+        if (momentIds.length > 0) {
+          const momentContentMap = await this.batchGetMomentContent(momentIds);
+          for (const item of items) {
+            if (item.reportedMomentId) {
+              const moment = momentContentMap.get(item.reportedMomentId);
+              if (moment) {
+                item.moment_content = moment.content_text;
+                item.momentAuthorName = moment.authorName;
+              }
+            }
+          }
+        }
+=======
       if (type === 'profile') {
         return items.filter((item) => item.reported_user != null);
+>>>>>>> origin/main
       }
 
       // Batch-fetch moment content for all moment reports in a single
@@ -198,6 +232,7 @@ export class ModerationService {
         return { success: false, error: 'Failed to create report' };
       }
 
+      this.metricsService.recordTsReportSubmitted(dto.reasonCategory);
       return { success: true };
     } catch (err) {
       this.logger.warn(err, 'Failed to create report, degraded');
@@ -205,9 +240,14 @@ export class ModerationService {
     }
   }
 
+<<<<<<< HEAD
+  async approveItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+    const startTime = Date.now();
+=======
   async approveItem(
     dto: ModerationActionDto,
   ): Promise<ModerationDegradedResponse> {
+>>>>>>> origin/main
     try {
       const { error } = await this.supabase
         .from('reports')
@@ -219,6 +259,11 @@ export class ModerationService {
         return { success: false, error: 'Failed to approve item' };
       }
 
+      this.metricsService.recordTsModerationAction(
+        'approve',
+        dto.type,
+        (Date.now() - startTime) / 1000,
+      );
       return { success: true };
     } catch (err) {
       this.logger.warn(err, 'Failed to approve item, degraded');
@@ -226,9 +271,14 @@ export class ModerationService {
     }
   }
 
+<<<<<<< HEAD
+  async rejectItem(dto: ModerationActionDto): Promise<ModerationDegradedResponse> {
+    const startTime = Date.now();
+=======
   async rejectItem(
     dto: ModerationActionDto,
   ): Promise<ModerationDegradedResponse> {
+>>>>>>> origin/main
     try {
       const { error } = await this.supabase
         .from('reports')
@@ -243,6 +293,11 @@ export class ModerationService {
         return { success: false, error: 'Failed to reject item' };
       }
 
+      this.metricsService.recordTsModerationAction(
+        'reject',
+        dto.type,
+        (Date.now() - startTime) / 1000,
+      );
       return { success: true };
     } catch (err) {
       this.logger.warn(err, 'Failed to reject item, degraded');
@@ -323,7 +378,12 @@ export class ModerationService {
         ),
       );
 
+<<<<<<< HEAD
+      this.metricsService.recordTsDatingRiskScore(riskScore);
+      return { riskScore, flags: matchedFlags };
+=======
       return { riskScore, flags: uniqueFlags };
+>>>>>>> origin/main
     } catch (err) {
       this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);
       return { riskScore: 0, flags: [] };

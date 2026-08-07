@@ -1,6 +1,6 @@
 import { Component, inject, resource, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { AdminService } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
