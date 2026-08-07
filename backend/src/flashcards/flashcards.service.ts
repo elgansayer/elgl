@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 import { Flashcard } from './interfaces/flashcard.interface';
@@ -7,6 +8,8 @@ import { XpService } from '../xp/xp.service';
 @Injectable()
 export class FlashcardsService {
   constructor(
+    @InjectPinoLogger(FlashcardsService.name)
+    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
   ) {}
@@ -36,11 +39,20 @@ export class FlashcardsService {
 
     if (response.error || !response.data) {
       const msg = response.error?.message ?? 'Unknown error';
+      this.logger.error(
+        { userId, wordToken: cleanToken, error: msg },
+        'Failed to create/update flashcard',
+      );
       throw new Error(`Failed to create/update flashcard: ${msg}`);
     }
 
     // Award XP for creating a flashcard
     void this.xpService.awardXpForActivity(userId, 'create_flashcard');
+
+    this.logger.info(
+      { userId, wordToken: cleanToken, flashcardId: response.data.id },
+      'Flashcard created/updated',
+    );
 
     return response.data;
   }
@@ -61,8 +73,13 @@ export class FlashcardsService {
       .single();
 
     if (fetchErr || !current) {
+      const msg = fetchErr?.message ?? 'Not found';
+      this.logger.error(
+        { userId, flashcardId, error: msg },
+        'Failed to fetch flashcard for SRS update',
+      );
       throw new Error(
-        `Failed to fetch flashcard for SRS update: ${fetchErr?.message ?? 'Not found'}`,
+        `Failed to fetch flashcard for SRS update: ${msg}`,
       );
     }
 
@@ -93,11 +110,26 @@ export class FlashcardsService {
 
     if (response.error || !response.data) {
       const msg = response.error?.message ?? 'Unknown error';
+      this.logger.error(
+        { userId, flashcardId, error: msg },
+        'Failed to update SRS review level',
+      );
       throw new Error(`Failed to update SRS review level: ${msg}`);
     }
 
     // Award XP for reviewing a flashcard
     void this.xpService.awardXpForActivity(userId, 'review_flashcard');
+
+    this.logger.info(
+      {
+        userId,
+        flashcardId,
+        quality: dto.quality,
+        newSrsLevel,
+        newInterval,
+      },
+      'SRS review completed',
+    );
 
     return response.data;
   }
