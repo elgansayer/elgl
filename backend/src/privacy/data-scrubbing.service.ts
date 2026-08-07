@@ -20,6 +20,10 @@ import { Injectable, Logger } from '@nestjs/common';
  *   debuggability while hiding the full payment credential.
  * - Transaction IDs are passed through as-is because they are opaque provider-
  *   generated identifiers that do not contain PII.
+ * - User profile data exposed in recommendations/matchmaking contexts is
+ *   pseudonymised for admin-audit surfaces: display names are truncated to
+ *   first character + asterisks, avatar URLs are redacted, and language lists
+ *   are passed through (they are public profile fields users consent to share).
  * - All scrub operations are logged at debug level for audit trail.
  */
 @Injectable()
@@ -178,113 +182,135 @@ export class DataScrubbingService {
   }
 
   /**
-   * Scrub a single escrow transaction record for GDPR-safe admin/moderation
-   * display.
+   * Scrub a display name for admin audit surfaces.
    *
-   * Policies applied:
-   * - `reason` -- user-authored free text that may contain PII (names,
-   *   contact details, etc.). We log a debug audit entry but do NOT
-   *   automatically redact because the field is essential for dispute
-   *   resolution. The caller (admin dashboard) should apply additional
-   *   masking if displaying to non-privileged staff.
-   * - `metadata` -- JSONB blob that may contain PII. Same policy as `reason`.
-   * - `payer_id` / `payee_id` -- internal UUIDs; pass through (same policy
-   *   as gift transaction sender/receiver IDs).
-   * - `last_error` -- system-generated; may contain internal paths or
-   *   identifiers. Pass through for debugging.
+   * Preserves the first character and replaces the rest with asterisks
+   * so that admins can still distinguish users without seeing full names.
+   * Names of 2 characters or fewer are fully replaced with asterisks.
    *
-   * This method exists as an explicit audit point where these decisions are
-   * documented. It modifies the record in-place.
+   * Examples:
+   *   "Maria"   → "M****"
+   *   "John"    → "J***"
+   *   "Li"      → "**"
+   *   null      → null
    */
-  scrubEscrowRecord(record: {
-    payer_id?: string | null;
-    payee_id?: string | null;
-    reason?: string | null;
-    metadata?: Record<string, unknown> | null;
-    last_error?: string | null;
-  }): void {
-    // payer_id / payee_id are internal UUIDs -- pass through.
-    // reason / metadata are user-authored; document the policy decision.
-    if (record.reason) {
-      this.logger.debug(
-        'Escrow reason field passed through (essential for dispute resolution)',
-      );
+  scrubDisplayName(raw: string | null | undefined): string | null {
+    if (!raw) {
+      return null;
     }
-    if (record.metadata && Object.keys(record.metadata).length > 0) {
-      this.logger.debug(
-        'Escrow metadata field passed through (essential for dispute resolution)',
-      );
+
+    const trimmed = raw.trim();
+    if (trimmed.length <= 2) {
+      const scrubbed = '*'.repeat(trimmed.length);
+      this.logger.debug('Scrubbed short display name');
+      return scrubbed;
     }
-    // last_error may contain internal identifiers; pass through for debugging.
+
+    const scrubbed = trimmed[0] + '*'.repeat(trimmed.length - 1);
+    this.logger.debug('Scrubbed display name');
+    return scrubbed;
   }
 
   /**
-   * Scrub an array of escrow transaction records in-place for GDPR-safe
-   * admin/moderation display.
+   * Scrub an avatar URL for admin audit surfaces.
    *
-   * Applies `scrubEscrowRecord()` to every entry.
+   * Avatars are direct image URLs that can reveal personally identifiable
+   * photographic data. Under GDPR this is biometric-adjacent PII. In admin
+   * audit contexts we redact the URL entirely, replacing it with a static
+   * indicator that an avatar exists.
+   *
+   * Returns null if the input is null/undefined/empty, otherwise returns
+   * the string "[AVATAR-REDACTED]" to indicate an avatar was present.
    */
-  scrubEscrowTransactionRecords(
+  scrubAvatarUrl(raw: string | null | undefined): string | null {
+    if (!raw) {
+      return null;
+    }
+    this.logger.debug('Scrubbed avatar URL');
+    return '[AVATAR-REDACTED]';
+  }
+
+  /**
+   * Scrub a single user profile entry for admin audit surfaces.
+   *
+   * Applies the following scrubbing policies:
+   * - display_name → pseudonymised (first char + asterisks)
+   * - avatar_url → redacted
+   * - audio_intro_url → redacted
+   * - bio_text → redacted
+   * - location fields → passed through (geo data is not PII at admin level)
+   * - native_language / target_languages → passed through (public consent)
+   * - study/correction stats → passed through (aggregate metrics, not PII)
+   *
+   * Modifies the record in-place for efficiency when processing large arrays.
+   */
+  scrubUserProfileForAdmin(record: {
+    display_name?: string | null;
+    avatar_url?: string | null;
+    audio_intro_url?: string | null;
+    bio_text?: string | null;
+  }): void {
+    if (record.display_name) {
+      record.display_name = this.scrubDisplayName(record.display_name);
+    }
+    if (record.avatar_url) {
+      record.avatar_url = this.scrubAvatarUrl(record.avatar_url);
+    }
+    if (record.audio_intro_url) {
+      record.audio_intro_url = '[AUDIO-REDACTED]';
+    }
+    if (record.bio_text) {
+      record.bio_text = '[BIO-REDACTED]';
+    }
+    this.logger.debug('Scrubbed user profile for admin');
+  }
+
+  /**
+   * Scrub an array of recommendation/matchmaking DTOs for GDPR-safe admin
+   * audit display.
+   *
+   * Recommendation data exposed through admin dashboards or audit logs must
+   * have profile PII pseudonymised. This method applies scrubUserProfileForAdmin
+   * to each entry in-place, plus document-specific scrubbing for matchmaking
+   * context fields.
+   *
+   * Policies for recommendation-specific fields:
+   * - id → passed through (internal UUID, not PII)
+   * - displayName → pseudonymised
+   * - avatarUrl → redacted
+   * - nativeLanguage / targetLanguages → passed through (public profile consent)
+   * - sharedInterests → passed through (aggregate count, not PII)
+   * - isSeriousLearner / studyStreakDays / correctionRatio → passed through
+   * - matchTier → passed through (algorithm metadata)
+   */
+  scrubRecommendationRecords(
     records: Array<{
-      payer_id?: string | null;
-      payee_id?: string | null;
-      reason?: string | null;
-      metadata?: Record<string, unknown> | null;
-      last_error?: string | null;
+      id?: string | null;
+      displayName?: string | null;
+      avatarUrl?: string | null;
+      nativeLanguage?: string | null;
+      targetLanguages?: string[] | null;
+      sharedInterests?: number;
+      isSeriousLearner?: boolean | null;
+      studyStreakDays?: number | null;
+      correctionRatio?: number | null;
+      matchTier?: string;
     }>,
   ): void {
     for (const record of records) {
-      this.scrubEscrowRecord(record);
+      if (record.displayName) {
+        record.displayName = this.scrubDisplayName(record.displayName);
+      }
+      if (record.avatarUrl) {
+        record.avatarUrl = this.scrubAvatarUrl(record.avatarUrl);
+      }
+      // nativeLanguage, targetLanguages pass through – public profile consent
+      // sharedInterests, isSeriousLearner, studyStreakDays, correctionRatio,
+      // matchTier – aggregate/algorithmic data, not PII
     }
     if (records.length > 0) {
       this.logger.debug(
-        `Scrubbed ${records.length} escrow transaction records (pass-through per current policy)`,
-      );
-    }
-  }
-
-  /**
-   * Scrub a crash report record for GDPR-safe admin display.
-   *
-   * Policies:
-   * - `user_id` -- internal UUID; pass through.
-   * - `context` -- may contain PII (e.g., payer IDs, amounts, email
-   *   addresses logged during error handling). We log an audit entry but
-   *   pass through because context is essential for crash resolution.
-   * - `error_message` / `stack_trace` -- system-generated; pass through.
-   */
-  scrubCrashReport(record: {
-    user_id?: string | null;
-    context?: Record<string, unknown> | null;
-    error_message?: string | null;
-    stack_trace?: string | null;
-  }): void {
-    if (record.context && Object.keys(record.context).length > 0) {
-      this.logger.debug(
-        'Crash report context passed through (essential for crash resolution)',
-      );
-    }
-    // user_id is an internal UUID; pass through.
-    // error_message / stack_trace are system-generated; pass through.
-  }
-
-  /**
-   * Scrub an array of crash report records in-place.
-   */
-  scrubCrashReportRecords(
-    records: Array<{
-      user_id?: string | null;
-      context?: Record<string, unknown> | null;
-      error_message?: string | null;
-      stack_trace?: string | null;
-    }>,
-  ): void {
-    for (const record of records) {
-      this.scrubCrashReport(record);
-    }
-    if (records.length > 0) {
-      this.logger.debug(
-        `Scrubbed ${records.length} crash report records (pass-through per current policy)`,
+        `Scrubbed ${records.length} recommendation records for admin audit`,
       );
     }
   }

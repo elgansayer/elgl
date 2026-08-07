@@ -191,138 +191,163 @@ describe('DataScrubbingService', () => {
       expect(() => service.scrubGiftTransactionRecords([])).not.toThrow();
     });
   });
-
-  describe('scrubEscrowRecord', () => {
-    it('passes through payer_id and payee_id unmodified (documented policy)', () => {
-      const record = {
-        payer_id: 'payer-uuid-1',
-        payee_id: 'payee-uuid-1',
-        reason: 'Payment for language lesson',
-        metadata: { lesson_type: 'conversation' },
-      };
-
-      service.scrubEscrowRecord(record);
-
-      expect(record.payer_id).toBe('payer-uuid-1');
-      expect(record.payee_id).toBe('payee-uuid-1');
+  describe('scrubDisplayName', () => {
+    it('returns null for null/undefined/empty input', () => {
+      expect(service.scrubDisplayName(null)).toBeNull();
+      expect(service.scrubDisplayName(undefined)).toBeNull();
+      expect(service.scrubDisplayName('')).toBeNull();
     });
 
-    it('passes through reason unmodified (essential for dispute resolution)', () => {
-      const record = {
-        payer_id: 'payer-1',
-        reason: 'Payment for 30-minute session with Jane',
-      };
-
-      service.scrubEscrowRecord(record);
-
-      expect(record.reason).toBe('Payment for 30-minute session with Jane');
+    it('preserves first character and replaces rest with asterisks', () => {
+      expect(service.scrubDisplayName('Maria')).toBe('M****');
+      expect(service.scrubDisplayName('John')).toBe('J***');
+      expect(service.scrubDisplayName('Alexandre')).toBe('A********');
     });
 
-    it('passes through metadata unmodified', () => {
-      const record = {
-        payer_id: 'payer-1',
-        metadata: { note: 'contact: jane@example.com', lesson_id: 'abc-123' },
-      };
-
-      service.scrubEscrowRecord(record);
-
-      expect(record.metadata).toEqual({
-        note: 'contact: jane@example.com',
-        lesson_id: 'abc-123',
-      });
+    it('fully replaces names of 2 characters or fewer with asterisks', () => {
+      expect(service.scrubDisplayName('Li')).toBe('**');
+      expect(service.scrubDisplayName('A')).toBe('*');
+      expect(service.scrubDisplayName('Bo')).toBe('**');
     });
 
-    it('handles null and undefined fields gracefully', () => {
-      const record = {
-        payer_id: null,
-        payee_id: null,
-        reason: null,
-        metadata: null,
-        last_error: null,
-      };
-
-      expect(() => service.scrubEscrowRecord(record)).not.toThrow();
+    it('trims whitespace before scrubbing', () => {
+      expect(service.scrubDisplayName('  Maria  ')).toBe('M****');
     });
   });
 
-  describe('scrubEscrowTransactionRecords', () => {
-    it('scrubs each record in the array in-place', () => {
-      const records = [
-        {
-          payer_id: 'payer-1',
-          payee_id: 'payee-1',
-          reason: 'Lesson payment',
-          metadata: { type: 'lesson' },
-        },
-        {
-          payer_id: 'payer-2',
-          payee_id: 'payee-2',
-          reason: 'Translation service',
-          metadata: null,
-        },
-      ];
-
-      service.scrubEscrowTransactionRecords(records);
-
-      expect(records[0].payer_id).toBe('payer-1');
-      expect(records[0].reason).toBe('Lesson payment');
-      expect(records[1].payer_id).toBe('payer-2');
-      expect(records[1].reason).toBe('Translation service');
+  describe('scrubAvatarUrl', () => {
+    it('returns null for null/undefined/empty input', () => {
+      expect(service.scrubAvatarUrl(null)).toBeNull();
+      expect(service.scrubAvatarUrl(undefined)).toBeNull();
+      expect(service.scrubAvatarUrl('')).toBeNull();
     });
 
-    it('handles an empty array gracefully', () => {
-      expect(() => service.scrubEscrowTransactionRecords([])).not.toThrow();
+    it('returns redacted marker for any non-empty URL', () => {
+      expect(service.scrubAvatarUrl('https://example.com/avatar.jpg')).toBe(
+        '[AVATAR-REDACTED]',
+      );
+      expect(service.scrubAvatarUrl('http://img/1.png')).toBe(
+        '[AVATAR-REDACTED]',
+      );
     });
   });
 
-  describe('scrubCrashReport', () => {
-    it('passes through user_id and context unmodified', () => {
-      const report = {
-        user_id: 'user-uuid-1',
-        context: { escrow_id: 'esc-123', payer_id: 'payer-1' },
-        error_message: 'Database connection failed',
-        stack_trace: 'Error: connect ECONNREFUSED',
+  describe('scrubUserProfileForAdmin', () => {
+    it('scrubs display_name, avatar_url, audio_intro_url, and bio_text in-place', () => {
+      const record = {
+        display_name: 'Maria',
+        avatar_url: 'https://example.com/avatar.jpg',
+        audio_intro_url: 'https://example.com/intro.mp3',
+        bio_text: 'Hello, I love learning languages!',
       };
 
-      service.scrubCrashReport(report);
+      service.scrubUserProfileForAdmin(record);
 
-      expect(report.user_id).toBe('user-uuid-1');
-      expect(report.context).toEqual({
-        escrow_id: 'esc-123',
-        payer_id: 'payer-1',
-      });
-      expect(report.error_message).toBe('Database connection failed');
-      expect(report.stack_trace).toBe('Error: connect ECONNREFUSED');
+      expect(record.display_name).toBe('M****');
+      expect(record.avatar_url).toBe('[AVATAR-REDACTED]');
+      expect(record.audio_intro_url).toBe('[AUDIO-REDACTED]');
+      expect(record.bio_text).toBe('[BIO-REDACTED]');
     });
 
     it('handles null fields gracefully', () => {
-      const report = {
-        user_id: null,
-        context: null,
-        error_message: null,
-        stack_trace: null,
+      const record = {
+        display_name: null,
+        avatar_url: null,
+        audio_intro_url: null,
+        bio_text: null,
       };
 
-      expect(() => service.scrubCrashReport(report)).not.toThrow();
+      expect(() => service.scrubUserProfileForAdmin(record)).not.toThrow();
+      expect(record.display_name).toBeNull();
+      expect(record.avatar_url).toBeNull();
+      expect(record.audio_intro_url).toBeNull();
+      expect(record.bio_text).toBeNull();
+    });
+
+    it('handles undefined fields gracefully', () => {
+      const record = {} as {
+        display_name?: string | null;
+        avatar_url?: string | null;
+        audio_intro_url?: string | null;
+        bio_text?: string | null;
+      };
+
+      expect(() => service.scrubUserProfileForAdmin(record)).not.toThrow();
+      expect(record.display_name).toBeUndefined();
+      expect(record.avatar_url).toBeUndefined();
     });
   });
 
-  describe('scrubCrashReportRecords', () => {
-    it('scrubs each report in the array in-place', () => {
-      const reports = [
-        { user_id: 'user-1', context: { key: 'val' } },
-        { user_id: 'user-2', context: null },
+  describe('scrubRecommendationRecords', () => {
+    it('scrubs displayName and avatarUrl in-place, passes through other fields', () => {
+      const records = [
+        {
+          id: 'user-1',
+          displayName: 'Maria',
+          avatarUrl: 'https://example.com/avatar.jpg',
+          nativeLanguage: 'en',
+          targetLanguages: ['es', 'fr'],
+          sharedInterests: 3,
+          isSeriousLearner: true,
+          studyStreakDays: 30,
+          correctionRatio: 0.95,
+          matchTier: 'interest',
+        },
+        {
+          id: 'user-2',
+          displayName: 'John',
+          avatarUrl: null,
+          nativeLanguage: 'fr',
+          targetLanguages: ['en'],
+          sharedInterests: 0,
+          isSeriousLearner: false,
+          studyStreakDays: 5,
+          correctionRatio: 0.5,
+          matchTier: 'active_users',
+        },
       ];
 
-      service.scrubCrashReportRecords(reports);
+      service.scrubRecommendationRecords(records);
 
-      expect(reports[0].user_id).toBe('user-1');
-      expect(reports[0].context).toEqual({ key: 'val' });
-      expect(reports[1].user_id).toBe('user-2');
+      expect(records[0].id).toBe('user-1');
+      expect(records[0].displayName).toBe('M****');
+      expect(records[0].avatarUrl).toBe('[AVATAR-REDACTED]');
+      expect(records[0].nativeLanguage).toBe('en');
+      expect(records[0].targetLanguages).toEqual(['es', 'fr']);
+      expect(records[0].sharedInterests).toBe(3);
+      expect(records[0].isSeriousLearner).toBe(true);
+      expect(records[0].studyStreakDays).toBe(30);
+      expect(records[0].correctionRatio).toBe(0.95);
+      expect(records[0].matchTier).toBe('interest');
+
+      expect(records[1].id).toBe('user-2');
+      expect(records[1].displayName).toBe('J***');
+      expect(records[1].avatarUrl).toBeNull();
+      expect(records[1].matchTier).toBe('active_users');
     });
 
     it('handles an empty array gracefully', () => {
-      expect(() => service.scrubCrashReportRecords([])).not.toThrow();
+      expect(() => service.scrubRecommendationRecords([])).not.toThrow();
+    });
+
+    it('handles null displayName fields gracefully', () => {
+      const records = [
+        {
+          id: 'user-3',
+          displayName: null,
+          avatarUrl: null,
+          nativeLanguage: null,
+          targetLanguages: null,
+          sharedInterests: 0,
+          isSeriousLearner: null,
+          studyStreakDays: null,
+          correctionRatio: null,
+        },
+      ];
+
+      expect(() => service.scrubRecommendationRecords(records)).not.toThrow();
+      expect(records[0].displayName).toBeNull();
+      expect(records[0].avatarUrl).toBeNull();
     });
   });
 });
