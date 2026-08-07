@@ -270,4 +270,64 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_reading_engine_ai_request_duration_seconds');
     });
   });
+
+  describe('Escrow metrics', () => {
+    it('should record escrow created', () => {
+      expect(() => service.recordEscrowCreated(100)).not.toThrow();
+    });
+
+    it('should record escrow released', () => {
+      expect(() => service.recordEscrowReleased(50)).not.toThrow();
+    });
+
+    it('should record escrow refunded', () => {
+      expect(() => service.recordEscrowRefunded(75, 'manual')).not.toThrow();
+    });
+
+    it('should record escrow refunded with default reason', () => {
+      expect(() => service.recordEscrowRefunded(75)).not.toThrow();
+    });
+
+    it('should record escrow cancelled', () => {
+      expect(() => service.recordEscrowCancelled(30)).not.toThrow();
+    });
+
+    it('should record escrow auto-refunded', () => {
+      expect(() => service.recordEscrowAutoRefunded(200)).not.toThrow();
+    });
+
+    it('should record degraded operation', () => {
+      expect(() => service.recordEscrowDegradedOperation()).not.toThrow();
+    });
+
+    it('should set escrow degraded queue size', () => {
+      expect(() => service.setEscrowDegradedQueueSize(42)).not.toThrow();
+    });
+
+    it('should set escrow stale held count', () => {
+      expect(() => service.setEscrowStaleHeldCount(5)).not.toThrow();
+    });
+
+    it('should include escrow metrics in getMetrics output', async () => {
+      service.recordEscrowCreated(100);
+      service.recordEscrowReleased(50);
+      service.recordEscrowRefunded(25, 'manual');
+      service.recordEscrowCancelled(10);
+      service.recordEscrowAutoRefunded(30);
+      service.recordEscrowDegradedOperation();
+      service.setEscrowDegradedQueueSize(3);
+      service.setEscrowStaleHeldCount(3);
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_escrow_transactions_created_total');
+      expect(metrics).toContain('hellotalk_escrow_transactions_released_total');
+      expect(metrics).toContain('hellotalk_escrow_transactions_refunded_total');
+      expect(metrics).toContain('hellotalk_escrow_transactions_cancelled_total');
+      expect(metrics).toContain('hellotalk_escrow_total_held');
+      expect(metrics).toContain('hellotalk_escrow_total_coins_held');
+      expect(metrics).toContain('hellotalk_escrow_amount_per_transaction');
+      expect(metrics).toContain('hellotalk_escrow_stale_held_count');
+      expect(metrics).toContain('hellotalk_escrow_auto_refund_total');
+      expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
+    });
+  });
 });

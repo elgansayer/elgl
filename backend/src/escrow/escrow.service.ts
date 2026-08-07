@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
+import { MetricsService } from '../metrics/metrics.service';
 import Redis from 'ioredis';
 import {
   EscrowTransaction,
@@ -49,6 +50,7 @@ export class EscrowService {
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly crashReportService: CrashReportService,
     private readonly configService: ConfigService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   /**
@@ -229,6 +231,9 @@ export class EscrowService {
       `Escrow hold: ${dto.amount_coins} coins from ${payerId} to ${dto.payee_id} for "${dto.reason}"`,
     );
 
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowCreated(dto.amount_coins);
+
     return txRow;
   }
 
@@ -259,6 +264,7 @@ export class EscrowService {
         'escrow_degraded_queue',
         JSON.stringify(degradedRecord),
       );
+      this.metricsService.recordEscrowDegradedOperation();
     } catch (redisError: unknown) {
       this.logger.error(
         `Failed to enqueue degraded escrow: ${redisError instanceof Error ? redisError.message : String(redisError)}`,
@@ -404,6 +410,9 @@ export class EscrowService {
       `Escrow released: ${transactionId} - ${tx.amount_coins} coins to ${tx.payee_id}`,
     );
 
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowReleased(tx.amount_coins);
+
     return updated;
   }
 
@@ -540,6 +549,9 @@ export class EscrowService {
           `Escrow refunded: ${transactionId} - ${tx.amount_coins} coins to ${tx.payer_id}`,
         );
 
+        // Record metric for Datadog alerting (#2381)
+        this.metricsService.recordEscrowRefunded(tx.amount_coins, reason || 'manual');
+
         return updated;
       },
       async () => {
@@ -665,6 +677,9 @@ export class EscrowService {
     }
 
     this.logger.log(`Escrow cancelled: ${transactionId}`);
+
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowCancelled(tx.amount_coins);
 
     this.invalidateEscrowCaches(transactionId, tx.payer_id, tx.payee_id);
 
