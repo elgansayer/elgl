@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, OnInit, inject, signal, input, output } from '@angular/core';
+import { Component, inject, signal, input, output, afterNextRender } from '@angular/core';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -9,7 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   templateUrl: './word-definition-modal.component.html',
   styleUrls: ['./word-definition-modal.component.scss'],
 })
-export class WordDefinitionModalComponent implements OnInit {
+export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
 
   wordToken = input.required<string>();
@@ -24,12 +24,14 @@ export class WordDefinitionModalComponent implements OnInit {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
-  async ngOnInit(): Promise<void> {
-    const status = this.vocabStore.getWordStatus(this.wordToken());
-    if (status.flashcard) {
-      this.existingCard.set(status.flashcard);
-    }
-    await this.fetchDefinition();
+  constructor() {
+    afterNextRender(async () => {
+      const status = this.vocabStore.getWordStatus(this.wordToken());
+      if (status.flashcard) {
+        this.existingCard.set(status.flashcard);
+      }
+      await this.fetchDefinition();
+    });
   }
 
   async fetchDefinition(): Promise<void> {

@@ -1,6 +1,7 @@
-import { Component, inject, signal, computed, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, AfterViewInit, DestroyRef, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { environment } from '../../../environments/environment';
@@ -35,12 +36,13 @@ interface EscrowRow {
   imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
   templateUrl: './escrow-payments.component.html',
 })
-export class EscrowPaymentsComponent implements AfterViewInit {
+export class EscrowPaymentsComponent implements AfterViewInit, OnInit {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
   private readonly joyrideService = inject(JoyrideService);
   private readonly onboardingService = inject(EscrowOnboardingService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly transactions = signal<EscrowRow[]>([]);
   readonly loading = signal(false);
@@ -261,7 +263,7 @@ export class EscrowPaymentsComponent implements AfterViewInit {
     }
     this.onboardingService.isTourInProgress.set(true);
 
-    setTimeout(() => {
+    const timerId = window.setTimeout(() => {
       const options: JoyrideOptions = {
         steps: this.onboardingService.stepNames,
         startWith: 'escrowStepTitle',
@@ -272,14 +274,17 @@ export class EscrowPaymentsComponent implements AfterViewInit {
         showPrevButton: true,
       };
 
-      this.joyrideService.startTour(options).subscribe({
-        error: () => {
-          this.onboardingService.isTourInProgress.set(false);
-        },
-        complete: () => {
-          this.onboardingService.markComplete();
-        },
-      });
+      this.joyrideService.startTour(options)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          error: () => {
+            this.onboardingService.isTourInProgress.set(false);
+          },
+          complete: () => {
+            this.onboardingService.markComplete();
+          },
+        });
     }, 500);
+    this.destroyRef.onDestroy(() => clearTimeout(timerId));
   }
 }

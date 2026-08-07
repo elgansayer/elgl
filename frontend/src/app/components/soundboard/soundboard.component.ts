@@ -6,7 +6,6 @@ import {
     effect,
     DestroyRef,
 } from '@angular/core';
-import { Subject } from 'rxjs';
 
 import { I18nService } from '../../services/i18n.service';
 import { CentrifugoService } from '../../services/centrifugo.service';
@@ -74,11 +73,13 @@ export class SoundboardComponent {
   readonly canPlay = signal(false);
 
   /** List of available sound effects loaded from the backend. */
-  private readonly soundsReloader = new Subject<void>();
   readonly sounds = signal<SoundItem[]>([]);
 
   // --- Audio element used for playback ---
   private playbackAudio: HTMLAudioElement | null = null;
+
+  // Keep track of the current centrifugo subscription to clean up
+  private currentSubscriptionChannel: string | null = null;
 
   constructor() {
     // Determine permissions based on current user
@@ -90,7 +91,7 @@ export class SoundboardComponent {
 
     // Load sounds when component is created and whenever roomId changes
     effect(() => {
-      void this.loadSounds(); // runs in microtask
+      void this.loadSounds();
     });
 
     // Subscribe to Centrifugo events for soundboard playback
@@ -99,6 +100,13 @@ export class SoundboardComponent {
       if (!room) return;
 
       const channel = `room_${room}`;
+
+      // Clean up previous subscription if room changed
+      if (this.currentSubscriptionChannel && this.currentSubscriptionChannel !== channel) {
+        this.centrifugoService.unsubscribe(this.currentSubscriptionChannel);
+      }
+      this.currentSubscriptionChannel = channel;
+
       this.centrifugoService.subscribe(channel, (data: unknown) => {
         if (
           data &&
@@ -118,11 +126,14 @@ export class SoundboardComponent {
           }
         }
       });
+    });
 
-      // Clean up subscription when roomId changes
-      this.centrifugoService.subscribe(channel, () => {
-        // noop; subscription is managed by effect lifecycle
-      });
+    // Clean up centrifugo subscription on destroy
+    this.destroyRef.onDestroy(() => {
+      if (this.currentSubscriptionChannel) {
+        this.centrifugoService.unsubscribe(this.currentSubscriptionChannel);
+        this.currentSubscriptionChannel = null;
+      }
     });
   }
 

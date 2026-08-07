@@ -1,5 +1,5 @@
 import { showToast, showErrorToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
+import { Component, inject, signal, computed, DestroyRef, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -50,7 +50,7 @@ import { DraftService } from '../../services/draft.service';
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
 })
-export class ChatRoomComponent implements OnDestroy {
+export class ChatRoomComponent {
   readonly centrifugeService = inject(CentrifugeService);
   private chatService = inject(ChatService);
   readonly authService = inject(AuthService);
@@ -61,6 +61,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
+  private readonly destroyRef = inject(DestroyRef);
 
   id = input.required<string>();
 
@@ -73,6 +74,18 @@ export class ChatRoomComponent implements OnDestroy {
       }
       this.roomId = roomId;
       void this.initializeRoom();
+    });
+
+    this.destroyRef.onDestroy(() => {
+      // Clean up all pending timers
+      this.pendingTimerIds.forEach((id) => clearTimeout(id));
+      this.pendingTimerIds.clear();
+      // Clean up centrifugo subscription
+      if (this.subscription) {
+        this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
+      }
+      this.typingService.disconnect();
+      this.saveChatDrafts();
     });
   }
 
@@ -163,6 +176,7 @@ export class ChatRoomComponent implements OnDestroy {
   explanationText = '';
 
   private subscription: { unsubscribe: () => void } | null = null;
+  private pendingTimerIds = new Set<number>();
 
   private isChatEventPayload(
     value: unknown,
@@ -264,13 +278,7 @@ export class ChatRoomComponent implements OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    if (this.subscription) {
-      this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
-    }
-    this.typingService.disconnect();
-    this.saveChatDrafts();
-  }
+  
 
   saveChatDrafts(): void {
     this.draftService.saveChatDraft(this.roomId, this.textInput);
@@ -339,7 +347,12 @@ export class ChatRoomComponent implements OnDestroy {
         this.messages.update((list) => [...list, payload.message!]);
       } else if (payload?.typing) {
         this.isTyping.set(true);
-        setTimeout(() => this.isTyping.set(false), 3000);
+        const timerId = window.setTimeout(() => this.isTyping.set(false), 3000);
+        this.pendingTimerIds.add(timerId);
+        // Clean up old timer IDs to avoid memory leak
+        if (this.pendingTimerIds.size > 100) {
+          this.pendingTimerIds.clear();
+        }
       }
     });
 

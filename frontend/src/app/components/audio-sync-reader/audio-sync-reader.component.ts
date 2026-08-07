@@ -1,7 +1,7 @@
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { Component, effect, inject, input, output, signal, OnDestroy } from '@angular/core';
+import { Component, effect, inject, input, output, signal, DestroyRef, OnDestroy } from '@angular/core';
 
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
@@ -23,6 +23,7 @@ export interface TokenSegmentSpan {
 export class AudioSyncReaderComponent implements OnDestroy {
   readonly vocabStore = inject(VocabularyStore);
   private readonly i18n = inject(I18nService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly text = input.required<string>();
   readonly language = input<string>('en-GB');
@@ -45,6 +46,10 @@ export class AudioSyncReaderComponent implements OnDestroy {
       const rawText = this.text();
       const lang = this.language();
       this.parseTokens(rawText, lang);
+    });
+
+    this.destroyRef.onDestroy(() => {
+      this.stopPlayback();
     });
   }
 
