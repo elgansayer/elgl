@@ -11,6 +11,8 @@ describe('ModerationService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      not: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       insert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
@@ -187,8 +189,6 @@ describe('ModerationService', () => {
         status: 'pending',
         reason_category: 'harassment',
         created_at: '2026-01-01',
-        reporter_id: 'rep-1',
-        reported_user_id: 'bad-1',
         reported_moment_id: null,
         description: 'Bad behaviour',
         reporter: { id: 'rep-1', display_name: 'Reporter' },
@@ -200,6 +200,11 @@ describe('ModerationService', () => {
       const result = await service.getItems('profile');
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('reports');
+      expect(mockQueryBuilder.not).toHaveBeenCalledWith(
+        'reported_user_id',
+        'is',
+        null,
+      );
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
         id: 'report-1',
@@ -241,14 +246,12 @@ describe('ModerationService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should hydrate moment reports with moment content', async () => {
+    it('should hydrate moment reports with batched moment content', async () => {
       const reportRow = {
         id: 'report-2',
         status: 'pending',
         reason_category: 'spam',
         created_at: '2026-01-01',
-        reporter_id: 'rep-1',
-        reported_user_id: null,
         reported_moment_id: 'moment-1',
         description: null,
         reporter: null,
@@ -259,12 +262,14 @@ describe('ModerationService', () => {
 
       const momentBuilder = {
         select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
-          data: {
-            content_text: 'Hello world',
-            author: { display_name: 'Moment Author' },
-          },
+        in: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'moment-1',
+              content_text: 'Hello world',
+              author: { display_name: 'Moment Author' },
+            },
+          ],
           error: null,
         }),
       };
@@ -281,6 +286,7 @@ describe('ModerationService', () => {
         moment_content: 'Hello world',
         momentAuthorName: 'Moment Author',
       });
+      expect(momentBuilder.in).toHaveBeenCalledWith('id', ['moment-1']);
     });
 
     it('should handle missing moment content gracefully', async () => {
@@ -289,8 +295,6 @@ describe('ModerationService', () => {
         status: 'pending',
         reason_category: 'spam',
         created_at: '2026-01-01',
-        reporter_id: 'rep-1',
-        reported_user_id: null,
         reported_moment_id: 'moment-missing',
         description: null,
         reporter: null,
@@ -301,8 +305,7 @@ describe('ModerationService', () => {
 
       const momentBuilder = {
         select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
+        in: jest.fn().mockResolvedValue({
           data: null,
           error: { message: 'not found' },
         }),
@@ -314,7 +317,9 @@ describe('ModerationService', () => {
       });
 
       const result = await service.getItems('moment');
-      expect(result).toHaveLength(0);
+      // Item still returned but without hydrated moment content
+      expect(result).toHaveLength(1);
+      expect(result[0].moment_content).toBeUndefined();
     });
   });
 

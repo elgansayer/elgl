@@ -839,6 +839,254 @@ describe('EscrowService', () => {
       expect(result.processed).toBe(0);
       expect(result.failed).toBe(0);
     });
+
+    it('should count corrupt JSON items as failures', async () => {
+      mockRedisClient.lrange.mockResolvedValue(['not-valid-json']);
+      const result = await service.processDegradedQueue();
+      expect(result.processed).toBe(0);
+      expect(result.failed).toBe(1);
+    });
+
+    it('should skip items missing payer_id without counting as failures', async () => {
+      mockRedisClient.lrange.mockResolvedValue([
+        JSON.stringify({
+          id: 'degraded_2',
+          payer_id: null,
+          payee_id: mockPayeeId,
+          amount_coins: 30,
+          status: 'pending',
+          reason: 'No payer',
+          metadata: {},
+        }),
+      ]);
+      const result = await service.processDegradedQueue();
+      expect(result.processed).toBe(0);
+      expect(result.failed).toBe(0);
+    });
+  });
+
+  describe('holdCoins edge cases', () => {
+    it('should rollback deduction when escrow insert fails', async () => {
+      const dto = {
+        payee_id: mockPayeeId,
+        amount_coins: 50,
+        reason: 'Test escrow',
+      };
+
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: { coins_balance: 100 }, error: null })
+        .mockResolvedValueOnce({ data: null, error: { message: 'DB error' } });
+
+      const result = await service.holdCoins(mockUserId, dto);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+
+    it('should handle deduction failure gracefully', async () => {
+      const dto = {
+        payee_id: mockPayeeId,
+        amount_coins: 50,
+        reason: 'Test escrow',
+      };
+
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { coins_balance: 100 },
+        error: null,
+      });
+      // The deduction update should fail
+      mockSupabaseClient.update = jest.fn().mockReturnValue({
+        eq: jest
+          .fn()
+          .mockResolvedValue({ error: { message: 'Update failed' } }),
+      });
+
+      const result = await service.holdCoins(mockUserId, dto);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+  });
+
+  describe('releaseCoins edge cases', () => {
+    const tx = {
+      id: mockTransactionId,
+      payer_id: mockUserId,
+      payee_id: mockPayeeId,
+      amount_coins: 50,
+      status: 'held',
+      reason: 'Test escrow',
+      metadata: {},
+      held_at: new Date().toISOString(),
+      released_at: null,
+      refunded_at: null,
+      cancelled_at: null,
+      retry_count: 0,
+      last_error: null,
+      next_retry_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should degrade when payee not found on release', async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: tx, error: null })
+        .mockResolvedValueOnce({ data: null, error: { message: 'Not found' } });
+
+      const result = await service.releaseCoins(mockTransactionId, mockUserId);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+
+    it('should degrade when credit to payee fails', async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: tx, error: null })
+        .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null });
+
+      mockSupabaseClient.update = jest.fn().mockReturnValue({
+        eq: jest
+          .fn()
+          .mockResolvedValue({ error: { message: 'Credit failed' } }),
+      });
+
+      const result = await service.releaseCoins(mockTransactionId, mockUserId);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+  });
+
+  describe('refundCoins edge cases', () => {
+    const tx = {
+      id: mockTransactionId,
+      payer_id: mockUserId,
+      payee_id: mockPayeeId,
+      amount_coins: 50,
+      status: 'held',
+      reason: 'Test escrow',
+      metadata: {},
+      held_at: new Date().toISOString(),
+      released_at: null,
+      refunded_at: null,
+      cancelled_at: null,
+      retry_count: 0,
+      last_error: null,
+      next_retry_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should degrade when payer not found on refund', async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: tx, error: null })
+        .mockResolvedValueOnce({ data: null, error: null });
+
+      const result = await service.refundCoins(mockTransactionId, mockUserId);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+
+    it('should degrade when status is already released', async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: { ...tx, status: 'released' },
+        error: null,
+      });
+
+      const result = await service.refundCoins(mockTransactionId, mockUserId);
+      expect(result.degraded).toBe(true);
+    }, 15000);
+  });
+
+  describe('cancelEscrow edge cases', () => {
+    const tx = {
+      id: mockTransactionId,
+      payer_id: mockUserId,
+      payee_id: mockPayeeId,
+      amount_coins: 50,
+      status: 'held',
+      reason: 'Test escrow',
+      metadata: {},
+      held_at: new Date().toISOString(),
+      released_at: null,
+      refunded_at: null,
+      cancelled_at: null,
+      retry_count: 0,
+      last_error: null,
+      next_retry_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    it('should handle null payer balance on cancel of held escrow', async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({ data: tx, error: null }) // get tx
+        .mockResolvedValueOnce({ data: null, error: null }) // payer balance is null
+        .mockResolvedValueOnce({
+          data: {
+            ...tx,
+            status: 'cancelled',
+            cancelled_at: new Date().toISOString(),
+          },
+          error: null,
+        }); // update to cancelled
+
+      const result = await service.cancelEscrow(mockTransactionId, mockUserId);
+      expect(result.status).toBe('cancelled');
+    });
+
+    it('should throw when escrow not found on cancel', async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'Not found' },
+      });
+
+      await expect(
+        service.cancelEscrow('non-existent', mockUserId),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('listTransactions edge cases', () => {
+    it('should filter transactions by status', async () => {
+      const tx = {
+        id: mockTransactionId,
+        payer_id: mockUserId,
+        payee_id: mockPayeeId,
+        amount_coins: 50,
+        status: 'released',
+        reason: 'Test',
+        metadata: {},
+        held_at: new Date().toISOString(),
+        released_at: new Date().toISOString(),
+        refunded_at: null,
+        cancelled_at: null,
+        retry_count: 0,
+        last_error: null,
+        next_retry_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const eqMock = jest.fn().mockResolvedValue({ data: [tx], error: null });
+      mockSupabaseClient.range.mockReturnValue({ eq: eqMock });
+
+      const result = await service.listTransactions(
+        mockUserId,
+        'released',
+        20,
+        0,
+      );
+      expect(result.length).toBe(1);
+      expect(result[0].status).toBe('released');
+      expect(eqMock).toHaveBeenCalledWith('status', 'released');
+    });
+
+    it('should handle large offset value', async () => {
+      mockSupabaseClient.range.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      const result = await service.listTransactions(
+        mockUserId,
+        undefined,
+        10,
+        100,
+      );
+      expect(result).toEqual([]);
+    });
   });
 
   describe('getCircuitBreakerStatus', () => {
