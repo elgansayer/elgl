@@ -47,9 +47,8 @@ describe('TrustSafetyModalComponent', () => {
     it('should use i18n translate pipe for user-facing strings', () => {
       const keys = [
         'safety.title', 'safety.subtitle', 'safety.closeBtn',
-        'safety.tabReport', 'safety.tabBlock',
-        'safety.reasonLabel', 'safety.optHarassment', 'safety.optSpam',
-        'safety.optInappropriate', 'safety.optScam', 'safety.optOther',
+        'safety.tabReport', 'safety.tabBlock', 'safety.tabGroupLabel',
+        'safety.reasonLabel',
         'safety.detailsLabel', 'safety.detailsPlaceholder',
         'safety.blockWarning', 'safety.blockList1', 'safety.blockList2', 'safety.blockList3',
         'safety.cancelBtn', 'safety.submitReportBtn', 'safety.confirmBlockBtn',
@@ -57,6 +56,33 @@ describe('TrustSafetyModalComponent', () => {
       for (const key of keys) {
         expect(templateContent).toContain("'" + key + "'");
       }
+    });
+
+    it('should have proper ARIA dialog attributes', () => {
+      expect(templateContent).toContain('role="dialog"');
+      expect(templateContent).toContain('aria-modal="true"');
+      expect(templateContent).toContain('[attr.aria-labelledby]="titleId"');
+    });
+
+    it('should have proper ARIA tablist and tab attributes', () => {
+      expect(templateContent).toContain('role="tablist"');
+      expect(templateContent).toContain('role="tab"');
+      expect(templateContent).toContain('[attr.aria-selected]');
+      expect(templateContent).toContain('[attr.aria-controls]');
+    });
+
+    it('should have proper ARIA tabpanel attributes', () => {
+      expect(templateContent).toContain('role="tabpanel"');
+      expect(templateContent).toContain('[attr.aria-labelledby]="reportTabId"');
+      expect(templateContent).toContain('[attr.aria-labelledby]="blockTabId"');
+    });
+
+    it('should have keyboard escape support on backdrop', () => {
+      expect(templateContent).toContain('(keydown.escape)="closed.emit()"');
+    });
+
+    it('should have backdrop click to close', () => {
+      expect(templateContent).toContain('(click)="closed.emit()"');
     });
 
     it('should not hardcode English user-facing strings', () => {
