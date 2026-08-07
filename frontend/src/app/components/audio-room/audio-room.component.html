@@ -30,6 +30,12 @@
             {{ 'audioRoom.giftHostBtn' | t }}
           </button>
           <button
+            (click)="showTipModal.set(true)"
+            class="rounded-app bg-amber-500 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-amber-950"
+          >
+            {{ 'audioRoom.tipHostBtn' | t }}
+          </button>
+          <button
             (click)="showSafetyModal.set(true)"
             class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
            [attr.aria-label]="'audioRoom.moderateBtn' | t">
@@ -115,7 +121,7 @@
                   <!-- Circular avatar -->
                   <div class="relative mx-auto inline-block">
                     @if (participant.avatar_url) {
-                      <img loading="lazy"
+                      <img
                         [src]="participant.avatar_url"
                         [alt]="participant.display_name"
                         class="mx-auto h-14 w-14 rounded-full object-cover border-2"
@@ -312,6 +318,14 @@
         [roomId]="room.id"
         (closed)="showGiftModal.set(false)"
       ></app-virtual-gift-modal>
+    }
+
+    @if (showTipModal()) {
+      <app-tip-host-modal
+        [roomId]="room.id"
+        [hostName]="room.host?.display_name || ('audioRoom.hostFallback' | t)"
+        (closed)="showTipModal.set(false)"
+      ></app-tip-host-modal>
     }
 
     @if (showSafetyModal()) {

@@ -142,7 +142,7 @@
   "context_menu.speak": "نطق",
   "context_menu.translate": "ترجمة",
   "context_menu.transliterate": "الأحرف اللاتينية",
-  "dailyLoginModal.body": "لقد حصلت على {coins} عملة لتسجيل دخولك اليوم.",
+  "dailyLoginModal.body": "لقد حصلت على {{coins}} عملة لتسجيل دخولك اليوم.",
   "dailyLoginModal.cta": "رائع!",
   "dailyLoginModal.title": "مكافأة يومية!",
   "developer.activeKeyLabel": "مفتاح إنتاج نشط",

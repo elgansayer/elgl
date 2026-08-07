@@ -70,6 +70,11 @@ getAccessToken: vi.fn(() => 'mock-token'),
 
   const unreadCounterMock = {
     totalUnread: vi.fn(() => 0),
+    tabCount: vi.fn(() => 0),
+    set: vi.fn(),
+    increment: vi.fn(),
+    decrement: vi.fn(),
+    resetAll: vi.fn(),
   };
 
   const versionCheckServiceMock = {

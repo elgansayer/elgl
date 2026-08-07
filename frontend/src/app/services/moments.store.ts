@@ -44,8 +44,8 @@ export interface MomentRecord {
   };
   is_liked_by_me?: boolean;
   comments?: MomentComment[];
-  isTranslating?: boolean;
-  translatedText?: string;
+
+  // Translation cache managed by moments-feed component
 }
 
 @Injectable({

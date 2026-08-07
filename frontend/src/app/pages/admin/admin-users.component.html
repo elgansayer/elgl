@@ -71,7 +71,7 @@
             <tr class="hover:bg-slate-50">
               <td class="px-3 py-2">
                 @if (user.avatar_url) {
-                  <img loading="lazy"
+                  <img
                     [src]="user.avatar_url"
                     alt=""
                     class="h-8 w-8 rounded-full object-cover"
@@ -111,6 +111,22 @@
                   class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50"
                  [attr.aria-label]="'admin.users.disableVip' | t">
                   {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
+                </button>
+                <button
+                  type="button"
+                  (click)="warnUser(user)"
+                  [disabled]="isWarning() !== null"
+                  class="btn btn-sm rounded border border-amber-500 text-amber-600 px-3 py-1 hover:bg-amber-50 disabled:opacity-50 ms-2"
+                >
+                  {{ 'admin.users.warn' | t }}
+                </button>
+                <button
+                  type="button"
+                  (click)="banUser(user)"
+                  [disabled]="isBanning() !== null"
+                  class="btn btn-sm rounded border border-red-500 text-red-600 px-3 py-1 hover:bg-red-50 disabled:opacity-50 ms-2"
+                >
+                  {{ 'admin.users.ban' | t }}
                 </button>
               </td>
             </tr>
