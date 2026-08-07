@@ -1724,6 +1724,9 @@ export class I18nService {
     'settings.languageSelectLabel': 'Interface language',
     'settings.languageChangeDescription':
       'Choose the language used throughout HelloTalk. This will update the UI text immediately.',
+    'settings.legalSection': 'Legal',
+    'settings.termsOfService': 'Terms of Service',
+    'settings.privacyPolicy': 'Privacy Policy',
     'settings.messageFiltersSection': 'Message Filters',
     'settings.messageFiltersDescription':
       'Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.',
