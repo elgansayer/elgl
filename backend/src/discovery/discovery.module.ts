@@ -7,15 +7,12 @@ import { DiscoveryService } from './discovery.service';
 import { DiscoveryCacheInvalidationService } from './discovery-cache-invalidation.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { DiscoveryDegradationService } from './discovery-degradation.service';
 
 @Module({
   imports: [AudioRoomsModule, UsersModule, SafetyModule, SupabaseModule],
   controllers: [DiscoveryController],
-  providers: [
-    DiscoveryService,
-    DiscoveryCacheInvalidationService,
-    DiscoveryRateLimiterGuard,
-  ],
-  exports: [DiscoveryService, DiscoveryCacheInvalidationService],
+  providers: [DiscoveryService, DiscoveryRateLimiterGuard, DiscoveryDegradationService],
+  exports: [DiscoveryService, DiscoveryDegradationService],
 })
 export class DiscoveryModule {}

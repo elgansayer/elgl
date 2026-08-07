@@ -1,6 +1,7 @@
 /// <reference types="jest" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryService } from './discovery.service';
+import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
@@ -97,12 +98,23 @@ describe('DiscoveryService', () => {
       providers: [
         DiscoveryService,
         {
-          provide: `PinoLogger:${DiscoveryService.name}`,
+          provide: DiscoveryDegradationService,
           useValue: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
+            executeWithBreaker: jest
+              .fn()
+              .mockImplementation((_svc: string, op: () => Promise<unknown>) =>
+                op(),
+              ),
+            executeWithCascade: jest
+              .fn()
+              .mockImplementation(
+                (_svc: string, primary: () => Promise<unknown>) => primary(),
+              ),
+            recordDegradationEvent: jest.fn(),
+            isAvailable: jest.fn().mockReturnValue(true),
+            recordSuccess: jest.fn(),
+            recordFailure: jest.fn(),
+            getAllBreakerStates: jest.fn().mockReturnValue(new Map()),
           },
         },
         {
