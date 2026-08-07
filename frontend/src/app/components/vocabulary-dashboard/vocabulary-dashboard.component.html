@@ -15,7 +15,8 @@
           [class.bg-surface-200]="activeTab() !== 'review'"
           [class.text-text-secondary]="activeTab() !== 'review'"
           [class.border-surface-100]="activeTab() !== 'review'"
-         [attr.aria-label]="'vocabulary.tabReview' | t">
+          [attr.aria-label]="'vocabulary.tabReview' | t"
+          [attr.aria-pressed]="activeTab() === 'review'">
           {{ 'vocabulary.tabReview' | t: { count: vocabStore.dueReviews().length } }}
         </button>
         <button
@@ -27,7 +28,8 @@
           [class.bg-surface-200]="activeTab() !== 'all'"
           [class.text-text-secondary]="activeTab() !== 'all'"
           [class.border-surface-100]="activeTab() !== 'all'"
-         [attr.aria-label]="'vocabulary.tabDeck' | t">
+          [attr.aria-label]="'vocabulary.tabDeck' | t"
+          [attr.aria-pressed]="activeTab() === 'all'">
           {{ 'vocabulary.tabDeck' | t: { count: vocabStore.allFlashcards().length } }}
         </button>
         <button
@@ -39,7 +41,8 @@
           [class.bg-surface-200]="activeTab() !== 'ai-practice'"
           [class.text-text-secondary]="activeTab() !== 'ai-practice'"
           [class.border-surface-100]="activeTab() !== 'ai-practice'"
-         [attr.aria-label]="'vocabulary.tabAi' | t">
+          [attr.aria-label]="'vocabulary.tabAi' | t"
+          [attr.aria-pressed]="activeTab() === 'ai-practice'">
           {{ 'vocabulary.tabAi' | t }}
         </button>
       </div>
@@ -62,8 +65,12 @@
             class="flip-card w-full cursor-pointer"
             [class.flipped]="isCardFlipped()"
             (click)="flipCard()"
+            (keyup.enter)="flipCard()"
+            (keyup.space)="flipCard(); $event.preventDefault()"
             role="button"
+            tabindex="0"
             [attr.aria-label]="'vocabulary.tapToFlip' | t"
+            [attr.aria-pressed]="isCardFlipped()"
           >
             <div class="flip-card-inner">
               <div class="flip-card-front rounded-sheet border border-amber-500/30 bg-amber-500/10 p-6 text-start shadow-card">

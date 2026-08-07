@@ -121,12 +121,12 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 
           <!-- Deck Grid -->
           @if (isLoading()) {
-            <div class="py-12 text-center">
+            <div class="py-12 text-center" role="status" aria-busy="true">
               <p class="app-muted text-sm">{{ 'deck.loading' | t }}</p>
             </div>
           } @else if (decks().length === 0) {
-            <div class="app-empty-state py-12 text-center">
-              <p class="text-3xl mb-3">📚</p>
+            <div class="app-empty-state py-12 text-center" role="status">
+              <p class="text-3xl mb-3" aria-hidden="true">📚</p>
               <p class="font-bold text-text-primary">{{ 'deck.emptyTitle' | t }}</p>
               <p class="app-muted text-xs mt-1">{{ 'deck.emptyDesc' | t }}</p>
             </div>
@@ -251,6 +251,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
                           [class.scale-125]="editDeckColour() === c"
                           [class.border-white]="editDeckColour() === c"
                           [class.border-transparent]="editDeckColour() !== c"
+                          [attr.aria-label]="'deck.colourAriaLabel' | t: { colour: c }"
                         ><span class="sr-only">{{ c }}</span></button>
                       }
                     </div>
@@ -266,6 +267,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
                           [class.scale-125]="editDeckIcon() === ic"
                           [class.border-white]="editDeckIcon() === ic"
                           [class.border-transparent]="editDeckIcon() !== ic"
+                          [attr.aria-label]="ic"
                         >{{ ic }}</button>
                       }
                     </div>
@@ -285,7 +287,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               <div class="app-card app-padded space-y-3">
                 <h4 class="text-sm font-bold text-text-primary">{{ 'deck.addCardsTitle' | t }}</h4>
                 @if (availableFlashcards().length === 0) {
-                  <div class="app-empty-state py-4">
+                  <div class="app-empty-state py-4" role="status">
                     <p class="text-xs text-text-secondary">{{ 'deck.noCardsAvailable' | t }}</p>
                   </div>
                 } @else {

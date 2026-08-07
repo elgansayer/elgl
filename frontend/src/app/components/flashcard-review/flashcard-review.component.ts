@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, input } from '@angular/core';
+import { Component, inject, signal, computed, input, viewChild, ElementRef, effect } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
@@ -12,22 +12,29 @@ type ReviewGrade = 'again' | 'good' | 'known';
   template: `
     <div class="mx-auto max-w-md space-y-6 pb-20 pt-4">
       <!-- Header with progress -->
-      <section class="app-card app-padded space-y-3">
+      <section class="app-card app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
         <div class="flex items-center justify-between">
           <h2 class="app-section-title">{{ 'review.title' | t }}</h2>
-          <span class="text-xs font-bold text-text-muted">
+          <span class="text-xs font-bold text-text-muted" aria-live="polite">
             {{ 'review.progress' | t: { current: currentIndex() + 1, total: reviewCards().length } }}
           </span>
         </div>
         <!-- Progress bar -->
-        <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-200">
+        <div
+          class="h-1.5 w-full overflow-hidden rounded-full bg-surface-200"
+          role="progressbar"
+          [attr.aria-valuenow]="progressPercent()"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-label]="'review.progressPercent' | t: { percent: progressPercent() }"
+        >
           <div
             class="h-full rounded-full bg-primary transition-all duration-300 ease-out"
             [style.width]="progressPercent() + '%'"
           ></div>
         </div>
         <!-- Session stats -->
-        <div class="flex gap-3 text-xs">
+        <div class="flex gap-3 text-xs" aria-live="polite" aria-atomic="true">
           <span class="rounded-app bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-400">
             {{ 'review.knownCount' | t: { count: sessionStats().known } }}
           </span>
@@ -42,8 +49,12 @@ type ReviewGrade = 'again' | 'good' | 'known';
 
       @if (isComplete()) {
         <!-- Completion state -->
-        <section class="rounded-sheet border border-surface-100 bg-surface-200 p-8 text-center space-y-4">
-          <p class="text-4xl">🎉</p>
+        <section
+          class="rounded-sheet border border-surface-100 bg-surface-200 p-8 text-center space-y-4"
+          role="status"
+          aria-live="polite"
+        >
+          <p class="text-4xl" aria-hidden="true">🎉</p>
           <h3 class="text-xl font-black text-text-primary">{{ 'review.completeTitle' | t }}</h3>
           <p class="text-sm text-text-secondary">{{ 'review.completeDesc' | t }}</p>
           <div class="flex flex-wrap justify-center gap-3 text-xs">
@@ -68,22 +79,24 @@ type ReviewGrade = 'again' | 'good' | 'known';
       } @else {
         <!-- Flashcard -->
         @if (currentCard(); as card) {
-          <div class="space-y-4">
+          <div class="space-y-4" aria-live="assertive" aria-atomic="true">
             <!-- Card -->
             <div
+              #flashcardEl
               class="flip-card cursor-pointer select-none"
               [class.is-flipped]="isFlipped()"
               (click)="flipCard()"
               (keyup.enter)="flipCard()"
-              (keyup.space)="flipCard()"
+              (keyup.space)="flipCard(); $event.preventDefault()"
               role="button"
               tabindex="0"
-              [attr.aria-label]="'review.flipAriaLabel' | t"
+              [attr.aria-label]="(isFlipped() ? 'review.cardFlippedAriaLabel' : 'review.flipAriaLabel') | t: { word: card.word_token }"
               [attr.aria-pressed]="isFlipped()"
+              [attr.aria-describedby]="'card-front-' + card.id + ' card-back-' + card.id"
             >
               <div class="flip-card-inner">
                 <!-- Front -->
-                <div class="flip-card-face flip-card-front">
+                <div class="flip-card-face flip-card-front" [attr.id]="'card-front-' + card.id">
                   <div class="mb-3 flex items-center justify-between text-xs font-bold">
                     <span class="rounded-app bg-primary/20 px-2 py-0.5 text-primary">
                       {{ 'review.levelBadge' | t: { level: card.srs_level } }}
@@ -105,7 +118,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   </p>
                 </div>
                 <!-- Back -->
-                <div class="flip-card-face flip-card-back">
+                <div class="flip-card-face flip-card-back" [attr.id]="'card-back-' + card.id">
                   <div class="mb-3 flex items-center justify-between text-xs font-bold">
                     <span class="rounded-app bg-emerald-500/20 px-2 py-0.5 text-emerald-400">
                       {{ 'review.answerLabel' | t }}
@@ -120,8 +133,10 @@ type ReviewGrade = 'again' | 'good' | 'known';
                       type="button"
                       class="mt-3 rounded-app border border-surface-100 px-3 py-1 text-xs font-bold text-text-secondary hover:bg-surface-300"
                       (click)="playAudio(card.pronunciation_url, $event)"
+                      [attr.aria-label]="'review.playAudioAriaLabel' | t: { word: card.word_token }"
                     >
-                      🔊 {{ 'review.playAudio' | t }}
+                      <span aria-hidden="true">🔊</span>
+                      {{ 'review.playAudio' | t }}
                     </button>
                   }
                 </div>
@@ -130,14 +145,14 @@ type ReviewGrade = 'again' | 'good' | 'known';
 
             <!-- Grading buttons (only visible after flip) -->
             @if (isFlipped()) {
-              <div class="grid grid-cols-4 gap-2 animate-fadeIn">
+              <div class="grid grid-cols-4 gap-2 animate-fadeIn" role="group" [attr.aria-label]="'review.gradingGroupLabel' | t">
                 <button
                   type="button"
                   (click)="gradeReview('again')"
                   class="btn-grade btn-grade-again"
                   [attr.aria-label]="'review.againAriaLabel' | t"
                 >
-                  <span class="block text-lg">↻</span>
+                  <span class="block text-lg" aria-hidden="true">↻</span>
                   <span class="text-xs font-bold">{{ 'review.againBtn' | t }}</span>
                   <span class="text-[10px] opacity-80">{{ 'review.againHint' | t }}</span>
                 </button>
@@ -147,7 +162,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   class="btn-grade btn-grade-good col-span-2"
                   [attr.aria-label]="'review.goodAriaLabel' | t"
                 >
-                  <span class="block text-lg">✓</span>
+                  <span class="block text-lg" aria-hidden="true">✓</span>
                   <span class="text-xs font-bold">{{ 'review.goodBtn' | t }}</span>
                   <span class="text-[10px] opacity-80">{{ nextIntervalHint() }}</span>
                 </button>
@@ -157,7 +172,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                   class="btn-grade btn-grade-known"
                   [attr.aria-label]="'review.knownAriaLabel' | t"
                 >
-                  <span class="block text-lg">★</span>
+                  <span class="block text-lg" aria-hidden="true">★</span>
                   <span class="text-xs font-bold">{{ 'review.knownBtn' | t }}</span>
                   <span class="text-[10px] opacity-80">{{ 'review.knownHint' | t }}</span>
                 </button>
@@ -287,6 +302,8 @@ export class FlashcardReviewComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
 
+  readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
+
   /** Optional input: a specific set of flashcards to review. If omitted, uses pending review cards from store. */
   readonly cards = input<Flashcard[]>([]);
 
@@ -324,7 +341,17 @@ export class FlashcardReviewComponent {
     return this.i18n.translate('review.goodHint', { interval: days });
   });
 
-  constructor() {}
+  constructor() {
+    // After card changes, return focus to flashcard for keyboard navigation
+    effect(() => {
+      if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
+        // Small delay to allow DOM to update
+        setTimeout(() => {
+          this.flashcardEl()?.nativeElement?.focus();
+        }, 0);
+      }
+    });
+  }
 
   flipCard(): void {
     if (this.currentCard()) {
