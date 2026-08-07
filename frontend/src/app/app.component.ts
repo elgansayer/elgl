@@ -34,12 +34,17 @@ import { ForcedUpdateModalComponent } from './components/forced-update-modal/for
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
 import { FontScaleService } from './services/font-scale.service';
+import { ThemeService } from './services/theme.service';
 import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
+<<<<<<< HEAD
+import { UserService } from './services/user.service';
+=======
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
+>>>>>>> origin/main
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -87,6 +92,8 @@ export class AppComponent implements OnInit {
   readonly unreadCounter = inject(UnreadCounterService);
   readonly versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
+  private themeService = inject(ThemeService);
+  private userService = inject(UserService);
   readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
@@ -172,6 +179,14 @@ export class AppComponent implements OnInit {
 
     if (user && token) {
       await this.economyStore.loadInitialData();
+
+      // Load user profile to apply saved accent colour globally
+      try {
+        const profile = await this.userService.getMyProfile();
+        this.themeService.loadFromProfile(profile);
+      } catch {
+        // Silently fail - default accent already applied
+      }
 
       // Load the blocked user list once the user is available
       await this.safetyService.loadBlockedUsers();

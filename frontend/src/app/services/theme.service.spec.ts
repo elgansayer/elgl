@@ -1,8 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';import { ThemeService } from './theme.service';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+import { DOCUMENT } from '@angular/common';
+import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
   let service: ThemeService;
+  let setPropertySpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     TestBed.resetTestingModule();
@@ -15,18 +18,18 @@ describe('ThemeService', () => {
         removeItem: vi.fn(),
         clear: vi.fn(),
       },
-      writable: true
+      writable: true,
     });
 
     // Mock matchMedia
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
-      value: vi.fn().mockImplementation(_query => ({
+      value: vi.fn().mockImplementation((_query) => ({
         matches: false,
         media: _query,
         onchange: null,
-        addListener: vi.fn(), // Deprecated
-        removeListener: vi.fn(), // Deprecated
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
@@ -36,7 +39,19 @@ describe('ThemeService', () => {
     // Mock document.documentElement.classList.toggle
     document.documentElement.classList.toggle = vi.fn();
 
-    TestBed.configureTestingModule({});
+    // Spy on style.setProperty
+    setPropertySpy = vi.fn();
+    Object.defineProperty(document.documentElement, 'style', {
+      value: {
+        setProperty: setPropertySpy,
+        fontSize: '',
+      },
+      writable: true,
+    });
+
+    TestBed.configureTestingModule({
+      providers: [{ provide: DOCUMENT, useValue: document }],
+    });
   });
 
   afterEach(() => {
@@ -88,7 +103,7 @@ describe('ThemeService', () => {
   });
 
   it('should apply dark theme if theme is system and system prefers dark', () => {
-    (window.matchMedia as Mock).mockImplementation(_query => ({
+    (window.matchMedia as Mock).mockImplementation((_query) => ({
       matches: _query === '(prefers-color-scheme: dark)',
       addEventListener: vi.fn(),
     }));
@@ -99,7 +114,7 @@ describe('ThemeService', () => {
   });
 
   it('should apply light theme if theme is system and system prefers light', () => {
-    (window.matchMedia as Mock).mockImplementation(_query => ({
+    (window.matchMedia as Mock).mockImplementation((_query) => ({
       matches: false,
       addEventListener: vi.fn(),
     }));
@@ -111,10 +126,8 @@ describe('ThemeService', () => {
 
   it('should update theme when signal changes due to effect', async () => {
     service = TestBed.inject(ThemeService);
-    // document.documentElement.classList.toggle should have been called with false (system, matchMedia false)
     expect(document.documentElement.classList.toggle).toHaveBeenCalledWith('dark', false);
 
-    // Clear mock to check subsequent calls
     (document.documentElement.classList.toggle as Mock).mockClear();
 
     TestBed.flushEffects();
@@ -129,23 +142,22 @@ describe('ThemeService', () => {
   it('should apply updated theme when system theme changes while in system mode', () => {
     let changeListener: EventListenerOrEventListenerObject | null = null;
 
-    (window.matchMedia as Mock).mockImplementation(_query => ({
+    (window.matchMedia as Mock).mockImplementation((_query) => ({
       matches: false,
       media: _query,
       addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
         if (type === 'change') changeListener = listener;
-      }
+      },
     }));
 
     service = TestBed.inject(ThemeService);
     expect(document.documentElement.classList.toggle).toHaveBeenCalledWith('dark', false);
     (document.documentElement.classList.toggle as Mock).mockClear();
 
-    // Simulate system theme changing to dark
-    (window.matchMedia as Mock).mockImplementation(_query => ({
+    (window.matchMedia as Mock).mockImplementation((_query) => ({
       matches: true,
       media: _query,
-      addEventListener: vi.fn()
+      addEventListener: vi.fn(),
     }));
 
     expect(changeListener).toBeTruthy();
@@ -154,5 +166,52 @@ describe('ThemeService', () => {
     }
 
     expect(document.documentElement.classList.toggle).toHaveBeenCalledWith('dark', true);
+  });
+
+  it('should default accent colour to #4f46e5', () => {
+    service = TestBed.inject(ThemeService);
+
+    expect(service.primaryAccentColor()).toBe('#4f46e5');
+  });
+
+  it('should set primary accent colour and persist to localStorage', () => {
+    service = TestBed.inject(ThemeService);
+    setPropertySpy.mockClear();
+
+    service.setPrimaryAccentColor('#e11d48');
+
+    expect(service.primaryAccentColor()).toBe('#e11d48');
+    expect(window.localStorage.setItem).toHaveBeenCalledWith(
+      'app_primary_accent_color',
+      '#e11d48',
+    );
+  });
+
+  it('should apply accent colour as CSS custom properties', () => {
+    service = TestBed.inject(ThemeService);
+    setPropertySpy.mockClear();
+
+    service.setPrimaryAccentColor('#16a34a');
+
+    TestBed.flushEffects();
+
+    expect(setPropertySpy).toHaveBeenCalledWith('--color-primary-rgb', '22 163 74');
+    expect(setPropertySpy).toHaveBeenCalledWith('--color-primary', '#16a34a');
+  });
+
+  it('should load accent colour from profile', () => {
+    service = TestBed.inject(ThemeService);
+
+    service.loadFromProfile({ primary_accent_color: '#ff0000' });
+
+    expect(service.primaryAccentColor()).toBe('#ff0000');
+  });
+
+  it('should fallback to default accent when profile has no colour', () => {
+    service = TestBed.inject(ThemeService);
+
+    service.loadFromProfile(null);
+
+    expect(service.primaryAccentColor()).toBe('#4f46e5');
   });
 });
