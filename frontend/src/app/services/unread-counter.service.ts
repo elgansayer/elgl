@@ -43,16 +43,15 @@ export class UnreadCounterService {
   }
 
   private updateAppBadge(count: number): void {
-    if (typeof navigator !== 'undefined') {
-      if (count > 0 && this.hasSetAppBadge(navigator)) {
-        navigator.setAppBadge(count).catch((error: unknown) => {
-          console.error('Failed to set app badge:', error);
-        });
-      } else if (count === 0 && this.hasClearAppBadge(navigator)) {
-        navigator.clearAppBadge().catch((error: unknown) => {
-          console.error('Failed to clear app badge:', error);
-        });
-      }
+    if (typeof navigator === 'undefined') return;
+    if (count > 0 && this.hasSetAppBadge(navigator)) {
+      navigator.setAppBadge(count).catch(() => {
+        // Badge API not available in all browsers - silently ignore
+      });
+    } else if (count === 0 && this.hasClearAppBadge(navigator)) {
+      navigator.clearAppBadge().catch(() => {
+        // Badge API not available in all browsers - silently ignore
+      });
     }
   }
 
