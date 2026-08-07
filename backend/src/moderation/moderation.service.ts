@@ -93,9 +93,12 @@ export class ModerationService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly metrics: MetricsService,
+    private readonly metricsService: MetricsService,
+<<<<<<< HEAD
     @InjectPinoLogger(ModerationService.name)
     private readonly logger: PinoLogger,
+=======
+>>>>>>> origin/main
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -398,8 +401,17 @@ this.metrics.recordTsModerationAction(
         ),
       );
 
-      this.metrics.recordTsDatingRiskScore(riskScore);
+      this.metricsService.recordTsDatingRiskScore(riskScore);
+<<<<<<< HEAD
+<<<<<<< HEAD
       return { riskScore, flags: uniqueFlags };
+=======
+      const matchedFlags: string[] = [];
+      return { riskScore, flags: matchedFlags };
+>>>>>>> origin/main
+=======
+      return { riskScore, flags: uniqueFlags };
+>>>>>>> origin/main
     } catch (err) {
       this.logger.warn(err, `Failed to analyse user ${userId}, degraded`);
       return { riskScore: 0, flags: [] };
