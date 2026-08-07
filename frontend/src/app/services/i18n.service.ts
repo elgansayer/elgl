@@ -856,6 +856,7 @@ export class I18nService {
     'profile.saveChangesBtn': 'Save changes',
     'profile.updateSuccess': 'Profile updated successfully.',
     'profile.visibilityLabel': 'Who can see my profile',
+    'profile.visibilityDescription': 'Control who can view your profile on HelloTalk.',
     'profile.visibility.everyone': 'Everyone',
     'profile.visibility.vipsOnly': 'VIPs only',
     'profile.visibility.hidden': 'Hidden',
