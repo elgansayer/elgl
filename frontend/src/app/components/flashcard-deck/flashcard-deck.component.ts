@@ -7,20 +7,6 @@ import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 
-class SrsDeckError extends Error {
-  override name = 'SrsDeckError';
-  constructor(
-    message: string,
-    readonly srsOperation: string,
-    stack?: string,
-  ) {
-    super(message);
-    if (stack) {
-      this.stack = stack;
-    }
-  }
-}
-
 type DeckView = 'list' | 'detail';
 
 const DECK_COLOURS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
@@ -433,12 +419,15 @@ export class FlashcardDeckComponent {
 
   private reportDeckError(operation: string, err: unknown): void {
     const message = err instanceof Error ? err.message : String(err);
-    const deckError = new SrsDeckError(
+    const deckError = new Error(
       `[SRS:flashcard-deck] ${operation} failed: ${message}`,
-      operation,
-      err instanceof Error ? err.stack : undefined,
     );
-    this.errorHandler.handleError(deckError);
+    deckError.name = 'SrsDeckError';
+    if (err instanceof Error && err.stack) {
+      deckError.stack = err.stack;
+    }
+    const enriched = Object.assign(deckError, { srsOperation: operation });
+    this.errorHandler.handleError(enriched);
   }
 
   constructor() {

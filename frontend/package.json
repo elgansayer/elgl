@@ -10,7 +10,7 @@
     "test": "ng test --no-watch",
     "check:control-flow": "if grep -rnE '\\*ngIf|\\*ngFor|\\*ngSwitch|\\*ngSwitchCase|\\*ngSwitchDefault' src --include='*.html'; then echo 'Use Angular control flow syntax only: @if/@for/@switch.' && exit 1; else echo 'Angular control flow check passed.'; fi",
     "check:template-bindings": "if grep -rnE '\\[ngClass\\]|\\[ngStyle\\]' src --include='*.html' --include='*.ts'; then echo 'Use native class/style bindings only.' && exit 1; else echo 'Template binding check passed.'; fi",
-    "check:rtl-logical": "if grep -rnE '\\b(pl-|pr-|ml-|mr-|left-|right-|border-l\\b|border-r\\b)' src --include='*.html' --include='*.ts' --include='*.scss'; then echo 'Use logical direction utilities only: ps/pe/ms/me/border-s/border-e.' && exit 1; else echo 'RTL logical class check passed.'; fi",
+"check:rtl-logical": "if (grep -rnE '\\b(pl-|pr-|ml-|mr-|left-|right-|border-l\\b|border-r\\b)' src --include='*.html' --include='*.ts' --include='*.scss' | grep -v '\\.spec\\.ts:' || grep -rnE '\\b(margin-left|margin-right|padding-left|padding-right|border-left\b|border-right\b)\\s*:' src --include='*.html' --include='*.ts' --include='*.scss' | grep -v '\\.spec\\.ts:'); then echo 'Use logical direction utilities only: ps/pe/ms/me/border-s/border-e or CSS logical properties (margin-inline-start, margin-inline-end, etc.).' && exit 1; else echo 'RTL logical class check passed.'; fi",
     "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical",
     "cypress:open": "cypress open",
     "e2e": "cypress run"

@@ -26,6 +26,27 @@ export interface ModerationDegradedResponse {
   error?: string;
 }
 
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 200;
+
+// Pre-compiled dating-behaviour detection regex patterns to avoid
+// re-compilation on every analyseUserForDatingBehaviour() call.
+const DATING_FLAGS = [
+  'dating', 'date', 'relationship', 'boyfriend', 'girlfriend', 'love',
+  'marry', 'marriage', 'romance', 'romantic', 'sex', 'hookup', 'flirt',
+  'hot', 'sexy', 'single', 'looking for', 'meetup', 'in a relationship',
+  'partner', 'romantically', 'kiss', 'kissing', 'date me',
+  'looking for a man', 'looking for a woman', 'man for me', 'woman for me',
+  'marry me', 'fwb', 'friends with benefits', 'casual sex', 'affair',
+  'dinner', 'coffee', 'drinks', 'hang out', 'meet up', 'hook up',
+  'one night', 'sexting', 'daddy', 'mommy', 'horny',
+];
+
+const DATING_REGEXES: { flag: string; regex: RegExp }[] = DATING_FLAGS.map((flag) => {
+  const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { flag, regex: new RegExp(`\\b${escaped}\\b`, 'i') };
+});
+
 @Injectable()
 export class ModerationService {
   private readonly logger = new Logger(ModerationService.name);
@@ -38,7 +59,12 @@ export class ModerationService {
   async getItems(
     type: 'moment' | 'profile',
     status?: string,
+    page?: number,
+    pageSize?: number,
   ): Promise<ModerationItem[]> {
+    const limit = Math.min(pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = ((page ?? 1) - 1) * limit;
+
     let query = this.supabase
       .from('reports')
       .select(
@@ -55,7 +81,8 @@ export class ModerationService {
         reported_user:reported_user_id ( id, display_name )
       `,
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (status) {
       query = query.eq('status', status);
@@ -89,24 +116,28 @@ export class ModerationService {
         return items.filter((item) => item.reported_user != null);
       }
 
-      // For moment reports, fetch the attached moment content
+      // Batch-fetch moment content for all moment reports in a single
+      // round-trip to avoid the N+1 query anti-pattern.
       const momentItems = items.filter((item) => item.reportedMomentId != null);
 
-      const hydrated: ModerationItem[] = [];
-      for (const item of momentItems) {
-        const moment = await this.getMomentContent(
-          item.reportedMomentId as string,
-        );
+      if (momentItems.length === 0) {
+        return [];
+      }
+
+      const momentIds = momentItems.map((item) => item.reportedMomentId as string);
+      const momentMap = await this.batchGetMomentContent(momentIds);
+
+      return momentItems.map((item) => {
+        const moment = momentMap.get(item.reportedMomentId as string);
         if (moment) {
-          hydrated.push({
+          return {
             ...item,
             moment_content: moment.content_text,
             momentAuthorName: moment.authorName,
-          });
+          };
         }
-      }
-
-      return hydrated;
+        return item;
+      });
     } catch (err) {
       this.logger.warn(
         'Failed to fetch moderation items, returning empty result',
@@ -116,28 +147,33 @@ export class ModerationService {
     }
   }
 
-  private async getMomentContent(
-    momentId: string,
-  ): Promise<{ content_text: string; authorName: string | null } | null> {
+  private async batchGetMomentContent(
+    momentIds: string[],
+  ): Promise<Map<string, { content_text: string; authorName: string | null }>> {
+    const result = new Map<string, { content_text: string; authorName: string | null }>();
+
     const { data, error } = await this.supabase
       .from('moments')
-      .select('content_text, author_id, author:author_id ( display_name )')
-      .eq('id', momentId)
-      .maybeSingle();
+      .select('id, content_text, author_id, author:author_id ( display_name )')
+      .in('id', momentIds);
 
     if (error || !data) {
-      return null;
+      this.logger.warn(`Failed to batch-fetch moment content: ${error?.message ?? 'no data'}`);
+      return result;
     }
 
-    const row = data as {
-      content_text: string;
-      author: { display_name?: string } | null;
-    };
+    for (const row of data as Array<{
+      id: string;
+      content_text?: string;
+      author?: { display_name?: string } | null;
+    }>) {
+      result.set(row.id, {
+        content_text: row.content_text ?? '',
+        authorName: row.author?.display_name ?? null,
+      });
+    }
 
-    return {
-      content_text: row.content_text ?? '',
-      authorName: row.author?.display_name ?? null,
-    };
+    return result;
   }
 
   async reportUser(
@@ -245,7 +281,7 @@ export class ModerationService {
 
       const { data: moments } = await this.supabase
         .from('moments')
-        .select('content_text')
+        .select('id, content_text')
         .eq('author_id', userId)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -260,66 +296,16 @@ export class ModerationService {
 
       const fullText = (combinedText + ' ' + momentText).toLowerCase();
 
-      const datingFlags = [
-        'dating',
-        'date',
-        'relationship',
-        'boyfriend',
-        'girlfriend',
-        'love',
-        'marry',
-        'marriage',
-        'romance',
-        'romantic',
-        'sex',
-        'hookup',
-        'flirt',
-        'hot',
-        'sexy',
-        'single',
-        'looking for',
-        'meetup',
-        'in a relationship',
-        'partner',
-        'romantically',
-        'kiss',
-        'kissing',
-        'date me',
-        'looking for a man',
-        'looking for a woman',
-        'man for me',
-        'woman for me',
-        'marry me',
-        'fwb',
-        'friends with benefits',
-        'casual sex',
-        'affair',
-        'dinner',
-        'coffee',
-        'drinks',
-        'hang out',
-        'meet up',
-        'hook up',
-        'one night',
-        'sexting',
-        'daddy',
-        'mommy',
-        'horny',
-      ];
-
       const flags: string[] = [];
-      const regexFlags = [...new Set(datingFlags)];
 
-      for (const flag of regexFlags) {
-        const escaped = flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+      for (const { flag, regex } of DATING_REGEXES) {
         if (regex.test(fullText)) {
           flags.push(flag);
         }
       }
 
       const uniqueFlags = [...new Set(flags)];
-      const hitRatio = uniqueFlags.length / regexFlags.length;
+      const hitRatio = uniqueFlags.length / DATING_REGEXES.length;
       const riskScore = Math.min(
         100,
         Math.round(

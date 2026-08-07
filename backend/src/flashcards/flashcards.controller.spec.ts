@@ -1,11 +1,33 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { User } from '@supabase/supabase-js';
+
+// Mock jsdom and dompurify to avoid parsing ESM dependencies (transitively imported via FlashcardsService)
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: {
+      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
+      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
+      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
+    },
+  })),
+}));
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: (dirty: string) => {
+      if (typeof dirty !== 'string') return dirty;
+      return dirty.replace(/<[^>]*>/g, '');
+    },
+    setConfig: jest.fn(),
+  })),
+}));
+
 import { FlashcardsController } from './flashcards.controller';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 import { Flashcard } from './interfaces/flashcard.interface';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
+import { User } from '@supabase/supabase-js';
 
 function mockUser(overrides: Partial<User> = {}): User {
   return {
@@ -49,6 +71,7 @@ describe('FlashcardsController', () => {
             updateSrsLevel: jest.fn(),
             getFlashcards: jest.fn(),
             getDueReviews: jest.fn(),
+            purgeSrsCache: jest.fn(),
           },
         },
       ],
@@ -100,6 +123,7 @@ describe('FlashcardsController', () => {
         'user-1',
         dto,
       );
+      expect(flashcardsService.purgeSrsCache).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(card);
     });
   });
