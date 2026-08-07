@@ -15,6 +15,11 @@ export class CommentMentionNotificationListener {
   async handleCommentMention(payload: MomentCommentEvent): Promise<void> {
     const recipientId = payload.momentAuthorId;
 
+    // Guard against self-mentions (commenter mentioning themselves)
+    if (recipientId === payload.commenterId) {
+      return;
+    }
+
     try {
       const shouldSend =
         await this.notificationPreferencesService.shouldSendNotification(
