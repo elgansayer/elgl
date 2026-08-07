@@ -3,24 +3,17 @@ name: AI Auto-Resolver
 on:
   issue_comment:
     types: [created]
-  pull_request_review_comment:
-    types: [created]
-  issues:
-    types: [opened]
 
 concurrency:
-  # Per-issue concurrency: different issues run in parallel, same issue is serialised
-  group: openhands-issue-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  group: openhands-issue-${{ github.event.issue.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   ai-agent:
     if: >
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
-      (github.event_name == 'pull_request') ||
-      (github.event_name == 'issues')
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix'))
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
       pull-requests: write
@@ -30,7 +23,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # ── TIER 1: Claude Code ────────────────────────────────────────────────
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
@@ -40,34 +32,40 @@ jobs:
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           prompt: >
-            Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
+            Resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
             Issue body: "${{ github.event.issue.body }}".
 
-            MANDATORY VERIFICATION GATE — follow these steps IN ORDER:
+            ## INLINE FIX PROTOCOL - check first, do NOT create duplicate fix PRs
+
+            BEFORE writing code, check if an open PR already references this issue:
+              gh pr list --repo ${{ github.repository }} --search "Fixes #${{ github.event.issue.number }} in:body" --state open --json number,headRefName
+            If an existing PR is found:
+              - Check out that PR's branch: gh pr checkout <NUMBER>
+              - If checkout fails (deleted branch): create a new PR instead
+              - If checkout succeeds: apply fixes and commit to that branch, then push
+              - DO NOT create a new PR — fix inline in the existing one
+            If NO existing PR: proceed with creating one at the final step.
+
+            MANDATORY VERIFICATION GATE:
 
             1. Write the code to fix the issue completely.
-            2. Run the full verification suite. This is NOT optional:
+            2. Run the full verification suite:
                - Backend: cd backend && npm run lint && npm run build && npm test
                - Frontend: cd frontend && npm run lint && npx ng build && npm test -- --watch=false
-               - Root: npm run check:constitution 2>/dev/null || true
-            3. If ANY build fails or ANY test fails, FIX THE CODE and re-run from step 2.
-               Do NOT proceed until EVERYTHING passes.
+            3. If ANY build or test fails, FIX IT and re-run from step 2.
             4. Run: npm run check:control-flow 2>/dev/null || true
             5. Run: npm run check:rtl-logical 2>/dev/null || true
             6. Run: npm run check:template-bindings 2>/dev/null || true
             7. Scan ALL changed files for merge conflict markers (<<<<<<<, =======, >>>>>>>).
-               If ANY are found, DELETE them and re-run verification from step 2.
-            8. Only when ALL checks pass: commit with a descriptive message.
-            9. Create a PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
+               If ANY found, DELETE them and re-run verification from step 2.
+            8. Only when ALL checks pass: commit with descriptive message, push.
+               If fixing inline in an existing PR, you are done.
+               If no PR exists: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
 
-            CRITICAL — HARD RULE: You MUST NOT call `gh pr create` unless ALL verification steps pass.
-            If ANY command returns a non-zero exit code, fix the code and re-verify. Keep
-            fixing and re-running until everything passes. Only then create the PR.
-            A PR with failing builds is FORBIDDEN. DO NOT FINISH until the PR is created.
+            HARD RULE: Do NOT call gh pr create unless ALL verification steps pass.
+            A PR with failing builds is FORBIDDEN.
 
-      # Auto-skip: claude-code-action exits 0 even on auth/quota errors.
-      # We check whether a PR was actually created for this issue instead.
-      - name: Check if Claude created a PR
+      - name: Check if Claude created or updated a PR
         id: check_claude
         if: github.event.issue.number != ''
         env:
@@ -81,19 +79,17 @@ jobs:
           COUNT=$(gh pr list --repo ${{ github.repository }} \
             --search "Fixes #${ISSUE} in:body" \
             --state open --json number -q 'length' 2>/dev/null || echo "0")
-          echo "pr_count=$COUNT"
           if [ "$COUNT" -gt 0 ]; then
             echo "pr_exists=true" >> $GITHUB_OUTPUT
-            echo "Claude created a PR — skipping lower tiers."
+            echo "PR exists (created/updated by Claude) - skipping lower tiers."
           else
             echo "pr_exists=false" >> $GITHUB_OUTPUT
-            echo "Claude did NOT create a PR (token exhausted or error) — falling through to Tier 2."
+            echo "No PR found - falling through to Tier 2."
           fi
 
-      # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
+      - name: Tier 2 - OpenHands (DeepSeek V3)
         id: secondary
-        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.pr_exists == 'false'
+        if: steps.primary.outcome == 'failure' || steps.check_claude.outcome == 'failure' || steps.check_claude.outputs.pr_exists == 'false'
         continue-on-error: true
         uses: xinbenlv/openhands-action@v1.0.1
         with:
@@ -101,26 +97,30 @@ jobs:
           llm_model: 'deepseek/deepseek-v4-pro'
           llm_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
           prompt: >
-            Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
+            Resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
             Issue body: "${{ github.event.issue.body }}".
 
-            MANDATORY: Before creating a PR, you MUST run the full verification and fix all failures:
+            ## INLINE FIX PROTOCOL - check first:
+            Check if an open PR already references this issue:
+              gh pr list --repo ${{ github.repository }} --search "Fixes #${{ github.event.issue.number }} in:body" --state open --json number,headRefName
+            If an existing PR is found: checkout its branch, fix inline, commit+push to that branch. Do NOT create a duplicate.
+            If no PR exists: create one at the final step.
 
+            MANDATORY:
             1. Write the code.
             2. cd backend && npm run lint && npm run build && npm test
             3. cd frontend && npm run lint && npx ng build && npm test -- --watch=false
             4. If ANYTHING fails, FIX IT and re-run from step 2.
-            5. Scan for conflict markers (<<<<<<<, =======, >>>>>>>) in ALL changed files. Remove them.
-            6. Only when EVERYTHING passes: commit and create PR:
-               gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
-            HARD RULE: Do NOT call `gh pr create` unless all commands succeed (exit code 0).
-            Fix failures, re-run, repeat until green. A broken PR is FORBIDDEN.
+            5. Remove all conflict markers (<<<<<<<, =======, >>>>>>>).
+            6. Commit and push.
+            7. If no existing PR: gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
+            HARD RULE: Do NOT create PR unless all commands succeed.
+            Fix failures, re-run, repeat until green.
           cli_args: '--max-iterations 50'
           openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
 
-      # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
-      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
+      - name: Tier 3 - OpenHands (Gemini 3.5 Flash)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@v1.0.1
@@ -129,19 +129,16 @@ jobs:
           llm_model: 'gemini/gemini-3.5-flash'
           llm_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: >
-            Please resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
-            Issue body: "${{ github.event.issue.body }}".
+            Resolve issue #${{ github.event.issue.number }}: "${{ github.event.issue.title }}".
 
-            MANDATORY: Before creating a PR:
-            1. Write the code.
-            2. cd backend && npm run build && npm test
-            3. cd frontend && npx ng build && npm test -- --watch=false
-            4. Fix any failures, re-run until everything passes.
-            5. Scan for and remove conflict markers (<<<<<<<, =======, >>>>>>>).
-            6. Commit and create PR:
-               gh pr create --title "Fixes #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" --body "Fixes #${{ github.event.issue.number }}"
-            HARD RULE: Do NOT call `gh pr create` unless all builds+tests pass (exit 0).
-            Fix failures, re-run, repeat. Broken PR is FORBIDDEN.
+            ## INLINE FIX PROTOCOL - check first:
+            Check if an open PR already references this issue.
+            If yes: checkout its branch, fix inline, commit+push. Do NOT create a duplicate.
+            If no: create a new PR.
+
+            MANDATORY: build + test. Fix failures, remove conflict markers.
+            Commit and push. If no existing PR: create one.
+            HARD RULE: Do NOT create PR unless all builds+tests pass.
           cli_args: '--max-iterations 30'
           openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'

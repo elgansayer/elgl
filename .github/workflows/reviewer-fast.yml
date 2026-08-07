@@ -2,13 +2,13 @@ name: AI PR Fast Reviewer
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [synchronize]
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *'
 
 concurrency:
   group: fast-reviewer-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -58,7 +58,7 @@ jobs:
             echo "Clean merge."
             git push origin HEAD 2>/dev/null || true
           else
-            echo "Conflicts detected — aborting merge. NEVER committing conflict markers."
+            echo "Conflicts detected - aborting merge. NEVER committing conflict markers."
             git merge --abort 2>/dev/null || true
             echo "Leaving branch as-is for the AI reviewer to resolve."
           fi
@@ -68,7 +68,7 @@ jobs:
         run: |
           if [ "${{ vars.SKIP_CLAUDE || 'false' }}" = "true" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "SKIP_CLAUDE=true — bypassing Claude, going straight to DeepSeek."
+            echo "SKIP_CLAUDE=true - bypassing Claude, going straight to DeepSeek."
           else
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
@@ -91,11 +91,11 @@ jobs:
 
             MANDATORY GATE:
             1. Review code changes thoroughly.
-            2. cd backend && npm run build && npm test
-            3. cd frontend && npx ng build && npm test -- --watch=false
+            2. cd backend && npm run lint && npm run build && npm test
+            3. cd frontend && npm run lint && npx ng build && npm test -- --watch=false
             4. If ANY build or test fails, FIX IT. Commit + push. Re-run from step 2.
             5. Remove ALL conflict markers from every file.
-            6. Only when EVERYTHING passes: gh pr checks ${{ github.event.pull_request.number }} --watch
+            6. Only when EVERYTHING passes: timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
             7. If green: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
             8. DO NOT FINISH until merged. Never merge broken code.
 
@@ -112,7 +112,7 @@ jobs:
 
       - name: Tier 2 - DeepSeek
         id: secondary
-        if: steps.primary.outcome == 'failure' || steps.primary.outcome == 'skipped' || steps.check_claude.outputs.merged == 'false'
+        if: steps.primary.outcome == 'failure' || steps.primary.outcome == 'skipped' || steps.check_claude.outcome == 'failure' || steps.check_claude.outputs.merged != 'true'
         continue-on-error: true
         uses: xinbenlv/openhands-action@v1.0.1
         with:
@@ -124,8 +124,9 @@ jobs:
           prompt: >
             Review PR #${{ github.event.pull_request.number }}.
 
-            MANDATORY: build + test both backend and frontend. Fix all failures.
+            MANDATORY: lint + build + test both backend and frontend. Fix all failures.
             Remove conflict markers. Only merge when green.
+            timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
             gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
           cli_args: '--max-iterations 80'
 
@@ -140,9 +141,25 @@ jobs:
           openhands_image: 'ghcr.io/all-hands-ai/openhands:0.32'
           runtime_image: 'ghcr.io/all-hands-ai/runtime:0.32-nikolaik'
           prompt: >
-            Review PR #${{ github.event.pull_request.number }}. Build, test, fix, merge.
+            Review PR #${{ github.event.pull_request.number }}. Lint, build, test, fix, merge.
+            timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
             gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
           cli_args: '--max-iterations 40'
+
+      - name: Hard failure gate - PR still open after all tiers
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          STATE=$(gh pr view ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} --json state -q '.state' 2>/dev/null || echo "OPEN")
+          if [ "$STATE" = "OPEN" ]; then
+            echo "All AI reviewer tiers exhausted. PR still open."
+            gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} \
+              --body "All AI reviewer tiers (Claude, DeepSeek, Gemini) exhausted without merging. This PR needs manual review."
+          elif [ "$STATE" = "MERGED" ]; then
+            echo "PR merged successfully."
+          fi
 
   fix_stale_prs:
     if: github.event_name == 'schedule'

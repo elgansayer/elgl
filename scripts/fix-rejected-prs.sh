@@ -1,11 +1,10 @@
 #!/bin/bash
-# fix-rejected-prs.sh — Parallel PR fixer that NEVER commits conflict markers.
+# fix-rejected-prs.sh - Parallel PR rebaser that NEVER commits conflict markers
+# and NEVER auto-merges. Merging is left exclusively to the AI PR reviewer.
 #
 # Strategy: rebase each PR branch onto main. If rebase conflicts, abort and
 # leave the branch as-is for the AI PR reviewer to resolve intelligently.
-# NEVER commits raw conflict markers (<<<<<<<, =======, >>>>>>>).
-#
-# Processes PRs in parallel batches for maximum throughput.
+# NEVER commits raw conflict markers.
 
 set -e
 
@@ -16,8 +15,8 @@ cd "$REPO_DIR"
 
 MAX_PARALLEL="${MAX_PARALLEL_PR_FIXER:-20}"
 
-echo "=== Autonomous PR Fixer & Merger (Zero Conflict Marker Policy) ==="
-echo "Strategy: rebase-only, NEVER commit conflict markers"
+echo "=== Autonomous PR Rebasing ==="
+echo "Strategy: rebase-only, NEVER commit conflict markers, NEVER auto-merge"
 echo "Parallel workers: $MAX_PARALLEL"
 
 git config user.email "swarm@hellotalk.ai" 2>/dev/null || true
@@ -31,7 +30,7 @@ if [ -z "$OPEN_PRS" ]; then
 fi
 
 PR_COUNT=$(echo "$OPEN_PRS" | wc -l)
-echo "Found $PR_COUNT open PR(s). Processing in parallel batches of $MAX_PARALLEL..."
+echo "Found $PR_COUNT open PR(s). Processing..."
 
 process_pr() {
   local pr="$1"
@@ -44,11 +43,10 @@ process_pr() {
     TITLE=$(gh pr view "$pr" --json title -q '.title' 2>/dev/null || echo "Unknown")
     echo "PR #$pr: $TITLE"
 
-    # Each worker needs a fresh worktree to avoid conflicts
     WORKDIR="/tmp/pr_work_${pr}_$$"
     rm -rf "$WORKDIR" 2>/dev/null || true
     git worktree add "$WORKDIR" --detach 2>/dev/null || {
-      echo "⚠ Could not create worktree for PR #$pr — skipping"
+      echo "WARN: Could not create worktree for PR #$pr - skipping"
       return 1
     }
 
@@ -56,39 +54,30 @@ process_pr() {
       cd "$WORKDIR"
 
       git fetch origin "pull/${pr}/head:pr-${pr}" 2>/dev/null || {
-        echo "⚠ Could not fetch PR #$pr — skipping"
+        echo "WARN: Could not fetch PR #$pr - skipping"
         exit 1
       }
       git checkout "pr-${pr}" 2>/dev/null || exit 1
       git fetch origin main
 
-      # ── STEP 1: Try a clean rebase onto main ──────────────────────
       echo "[$pr] Attempting rebase onto origin/main..."
       if git rebase origin/main 2>/dev/null; then
-        echo "[$pr] ✓ Clean rebase - no conflicts."
+        echo "[$pr] Clean rebase - no conflicts."
 
-        if git push origin "pr-${pr}:refs/heads/$(gh pr view "$pr" --json headRefName -q '.headRefName' 2>/dev/null)" --force-with-lease 2>/dev/null; then
-          echo "[$pr] ✓ Pushed rebased branch."
-
-          echo "[$pr] Waiting for checks to complete..."
+        HEAD_REF=$(gh pr view "$pr" --json headRefName -q '.headRefName' 2>/dev/null)
+        if git push origin "pr-${pr}:refs/heads/${HEAD_REF}" --force-with-lease 2>/dev/null; then
+          echo "[$pr] Pushed rebased branch."
+          echo "[$pr] Waiting for checks to pass..."
           gh pr checks "$pr" --watch 2>/dev/null || true
-
-          if gh pr merge "$pr" --squash --delete-branch 2>/dev/null; then
-            echo "[$pr] ✓ Merged successfully."
-          else
-            echo "[$pr] ⚠ Merge failed (checks may have failed) — leaving for AI review."
-          fi
+          echo "[$pr] Checks completed. Leaving for PR reviewer to verify and merge."
+          echo "[$pr] NEVER auto-merging - the PR reviewer must re-verify inline."
         else
-          echo "[$pr] ⚠ Push failed — skipping."
+          echo "[$pr] WARN: Push failed - skipping."
         fi
       else
-        # ── Rebase failed — ABORT, do NOT commit conflict markers ──
-        echo "[$pr] ⚠ Rebase conflicts with main. Aborting rebase."
+        echo "[$pr] WARN: Rebase conflicts with main. Aborting rebase."
         git rebase --abort 2>/dev/null || true
-
         echo "[$pr] Leaving branch as-is for the AI PR reviewer to resolve."
-        echo "[$pr] NEVER committing conflict markers — the reviewer will handle this."
-        echo "[$pr] Run: gh pr checks $pr --watch once resolved."
       fi
     )
     rc=$?
@@ -103,24 +92,19 @@ process_pr() {
 export -f process_pr
 export REPO_DIR
 export GH_TOKEN="${GH_TOKEN:-}"
-export MAX_PARALLEL
 
-# Process PRs in parallel batches
 RUNNING=0
 for pr in $OPEN_PRS; do
   process_pr "$pr" &
   RUNNING=$((RUNNING + 1))
-
   if [ "$RUNNING" -ge "$MAX_PARALLEL" ]; then
     wait -n 2>/dev/null || true
     RUNNING=$((RUNNING - 1))
   fi
 done
 
-# Wait for remaining jobs
-wait
+wait || true
 
-# Clean up any leftover worktrees
 git worktree list --porcelain 2>/dev/null | grep '^worktree /tmp/pr_work_' | cut -d' ' -f2 | while read -r wt; do
   git worktree remove "$wt" --force 2>/dev/null || true
 done

@@ -2,19 +2,17 @@ name: AI PR Reviewer & Fixer
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened]
 
 concurrency:
   group: pr-reviewer-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   review_and_fix:
-    # Guard: only skip if the PR reviewer itself pushed the commit (true self-review loop).
-    # AI-created PRs (openhands-agent, jules, etc.) MUST be reviewed and merged.
-    # WARNING: Do NOT block all [bot] actors — that prevents all AI PRs from being reviewed!
     if: github.actor != 'claude-code[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: write
       pull-requests: write
@@ -27,7 +25,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      # ── TIER 1: Claude Code ────────────────────────────────────────────────
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
@@ -40,7 +37,7 @@ jobs:
             You are the AI PR Reviewer and Fixer.
             Pull Request #${{ github.event.pull_request.number }} has been opened or updated.
 
-            MANDATORY GATE — you MUST verify the code is correct before merging:
+            MANDATORY GATE - you MUST verify the code is correct before merging:
 
             1. Review the code changes in this branch.
             2. Run the FULL verification suite:
@@ -51,15 +48,12 @@ jobs:
             4. Check for merge conflict markers (<<<<<<<, =======, >>>>>>>) in ALL files.
                If found, resolve the markers properly and re-run verification from step 2.
             5. Resolve any merge conflicts with `main` properly.
-            6. CRITICAL: Only when ALL checks pass, execute:
+            6. Only when ALL checks pass:
+               timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
                gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
-               If GitHub blocks the merge because checks are still running:
-               gh pr checks ${{ github.event.pull_request.number }} --watch
-               Then retry: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
 
             NEVER merge a PR with failing builds or tests. Fix everything first.
 
-      # Auto-skip: check if Claude actually merged the PR
       - name: Check if Claude merged the PR
         id: check_claude
         env:
@@ -73,13 +67,12 @@ jobs:
             echo "PR already merged by Claude."
           else
             echo "merged=false" >> $GITHUB_OUTPUT
-            echo "PR not merged — falling through to Tier 2."
+            echo "PR not merged - falling through to Tier 2."
           fi
 
-      # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
+      - name: Tier 2 - OpenHands (DeepSeek V3)
         id: secondary
-        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
+        if: steps.primary.outcome == 'failure' || steps.check_claude.outcome == 'failure' || steps.check_claude.outputs.merged != 'true'
         continue-on-error: true
         uses: xinbenlv/openhands-action@v1.0.1
         with:
@@ -97,13 +90,12 @@ jobs:
             3. Run frontend: cd frontend && npx ng build && npm test -- --watch=false
             4. Fix any failures, re-run until all pass.
             5. Remove all conflict markers. Resolve merge conflicts properly.
-            6. Only when ALL pass: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
-            7. If blocked by checks: gh pr checks ${{ github.event.pull_request.number }} --watch, then retry merge.
+            6. Only when ALL pass: timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
+            7. Then: gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
             HARD RULE: Do NOT merge unless all builds+tests pass. Fix, commit, push to same PR, re-run. Repeat until green.
           cli_args: '--max-iterations 50'
 
-      # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
-      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
+      - name: Tier 3 - OpenHands (Gemini 3.5 Flash)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@v1.0.1
@@ -118,6 +110,22 @@ jobs:
             1. Review code. 2. cd backend && npm run build && npm test
             3. cd frontend && npx ng build && npm test -- --watch=false
             4. Fix all failures, remove conflict markers.
-            5. gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
+            5. timeout 600 gh pr checks ${{ github.event.pull_request.number }} --watch 2>/dev/null || true
+            6. gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
             NEVER merge broken code.
           cli_args: '--max-iterations 30'
+
+      - name: Hard failure gate - PR still open after all tiers
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          STATE=$(gh pr view ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} --json state -q '.state' 2>/dev/null || echo "OPEN")
+          if [ "$STATE" = "OPEN" ]; then
+            echo "All AI reviewer tiers exhausted. PR still open."
+            gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} \
+              --body "All AI reviewer tiers (Claude, DeepSeek, Gemini) exhausted without merging. This PR needs manual review."
+          elif [ "$STATE" = "MERGED" ]; then
+            echo "PR merged successfully."
+          fi
