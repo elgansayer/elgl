@@ -525,11 +525,45 @@ describe('DiscoveryComponent', () => {
   it('should disable the distance slider for non-VIP users', async () => {
     await init();
 
-    const slider = fixture.nativeElement.querySelector('#distance-range-slider');
+    const slider: HTMLInputElement = fixture.nativeElement.querySelector('#distance-range-slider');
     const vipNote = fixture.nativeElement.querySelector('#distanceVipNote');
 
     expect(slider.disabled).toBe(true);
     expect(vipNote).toBeTruthy();
+  });
+
+  it('should have radiogroup role on filter pills', async () => {
+    await init();
+
+    const radiogroup = fixture.nativeElement.querySelector('app-scrollable-pills [role="radiogroup"]');
+    expect(radiogroup).toBeTruthy();
+  });
+
+  it('should have role="list" and accessible label on partner grid', async () => {
+    mockDiscoveryService.findPartners.mockResolvedValue([makePartner({ id: '1' })]);
+    await init();
+
+    const list = fixture.nativeElement.querySelector('[role="list"]');
+    expect(list).toBeTruthy();
+    expect(list.getAttribute('aria-label')).toContain('partner');
+  });
+
+  it('should have aria-live status region for results count', async () => {
+    mockDiscoveryService.findPartners.mockResolvedValue([makePartner({ id: '1' })]);
+    await init();
+
+    const status = fixture.nativeElement.querySelector('[role="status"][aria-live="polite"]');
+    expect(status).toBeTruthy();
+  });
+
+  it('should have aria-pressed on audio intro buttons', async () => {
+    mockDiscoveryService.findPartners.mockResolvedValue([
+      makePartner({ id: '1', audio_intro_url: 'https://example.com/audio.mp3' }),
+    ]);
+    await init();
+
+    const audioBtn = fixture.nativeElement.querySelector('button[aria-pressed]');
+    expect(audioBtn).toBeTruthy();
   });
 
   it('should enable the distance slider and hide VIP note for VIP users', async () => {
