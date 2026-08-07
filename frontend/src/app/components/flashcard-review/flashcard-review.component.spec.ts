@@ -118,4 +118,48 @@ describe('FlashcardReviewComponent', () => {
     // With empty cards, already complete
     expect(component.isComplete()).toBe(true);
   });
+
+  describe('RTL logical CSS properties', () => {
+    it('should not use physical padding utilities (pl-/pr-) in rendered template', () => {
+      const fixture = TestBed.createComponent(FlashcardReviewComponent);
+      fixture.componentRef.setInput('cards', MOCK_CARDS);
+      fixture.detectChanges();
+
+      const component = fixture.componentInstance;
+      component.flipCard();
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toMatch(/\b(pl-\d|pr-\d)\b/);
+    });
+
+    it('should not use physical margin utilities (ml-/mr-)', () => {
+      const fixture = TestBed.createComponent(FlashcardReviewComponent);
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toMatch(/\b(ml-\d|mr-\d)\b/);
+    });
+
+    it('should not contain text-left or text-right classes', () => {
+      const fixture = TestBed.createComponent(FlashcardReviewComponent);
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toContain('text-left');
+      expect(html).not.toContain('text-right');
+    });
+
+    it('should use logical direction utilities (ps-/pe-) from wrapped error boundary', () => {
+      const fixture = TestBed.createComponent(FlashcardReviewComponent);
+      fixture.componentRef.setInput('cards', MOCK_CARDS);
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement.innerHTML;
+      // The srs-error-boundary wrapper provides ps-/pe- logical spacing
+      // and the component itself uses padding-inline in its styles
+      expect(html).not.toMatch(/\b(pl-\d|pr-\d)\b/);
+      expect(html).not.toMatch(/\b(ml-\d|mr-\d)\b/);
+    });
+  });
 });

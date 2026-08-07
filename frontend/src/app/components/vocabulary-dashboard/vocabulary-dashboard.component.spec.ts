@@ -47,4 +47,27 @@ describe('VocabularyDashboardComponent', () => {
     component.grade('good');
     expect(component.currentIndex()).toBe(start + 1);
   });
+
+  describe('RTL logical CSS properties', () => {
+    it('should use logical padding (ps-/pe-) in tab buttons', () => {
+      fixture.detectChanges();
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).toContain('ps-');
+      expect(html).toContain('pe-');
+      expect(html).not.toMatch(/\b(pl-\d|pr-\d)\b/);
+    });
+
+    it('should not use physical margin utilities (ml-/mr-)', () => {
+      fixture.detectChanges();
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toMatch(/\b(ml-\d|mr-\d)\b/);
+    });
+
+    it('should not contain text-left or text-right classes', () => {
+      fixture.detectChanges();
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toContain('text-left');
+      expect(html).not.toContain('text-right');
+    });
+  });
 });

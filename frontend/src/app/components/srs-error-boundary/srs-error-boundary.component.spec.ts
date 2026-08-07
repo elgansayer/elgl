@@ -141,4 +141,47 @@ describe('SrsErrorBoundaryComponent', () => {
   it('should accept context defaults', () => {
     expect(component.context()).toEqual({ component: 'unknown' });
   });
+
+  describe('RTL logical CSS properties', () => {
+    it('should use logical padding (ps-/pe-) instead of physical (pl-/pr-) in error UI', () => {
+      const testError = new Error('Rendering error');
+      component.captureError(testError, 'Custom message');
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement.innerHTML;
+      // Verify logical properties are used for spacing
+      expect(html).toContain('ps-');
+      expect(html).toContain('pe-');
+      // Verify physical properties are NOT used for spacing
+      expect(html).not.toMatch(/\b(pl-\d|pr-\d)\b/);
+    });
+
+    it('should use logical margin (ms-/me-) in error UI', () => {
+      const testError = new Error('Rendering error');
+      component.captureError(testError, 'Custom message');
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toMatch(/\b(ml-\d|mr-\d)\b/);
+    });
+
+    it('should use logical border (border-s/border-e) in error UI', () => {
+      const testError = new Error('Rendering error');
+      component.captureError(testError, 'Custom message');
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toMatch(/\bborder-l(?!-)\b|\bborder-r(?!-)\b/);
+    });
+
+    it('should not contain text-left or text-right classes in error UI', () => {
+      const testError = new Error('Rendering error');
+      component.captureError(testError, 'Custom message');
+      fixture.detectChanges();
+
+      const html = fixture.nativeElement.innerHTML;
+      expect(html).not.toContain('text-left');
+      expect(html).not.toContain('text-right');
+    });
+  });
 });
