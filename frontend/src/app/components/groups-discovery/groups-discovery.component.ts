@@ -1,5 +1,6 @@
 import {Component, signal} from '@angular/core';import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { environment } from '../../../environments/environment';
 
 interface DiscoverableGroup {
@@ -15,8 +16,7 @@ interface DiscoverableGroup {
 
 @Component({
   selector: 'app-groups-discovery',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'groups_discovery_title' | t }}</h1>
@@ -30,7 +30,7 @@ interface DiscoverableGroup {
           @for (group of groups(); track group.id) {
             <div class="bg-slate-800 p-3 rounded-lg flex justify-between items-center">
               <div>
-                <span class="text-white font-semibold">{{ group.name }}</span>
+                <span class="text-white font-semibold">{{ group.name | sanitiseHtml }}</span>
                 <span class="text-slate-400 text-sm ms-2">
                   {{ group.member_count }} / {{ group.max_members }} members
                 </span>

@@ -2,7 +2,6 @@ import { Controller, Post, Body, UseGuards, UseInterceptors, Req } from '@nestjs
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { VideoCallsService } from './video-calls.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { sanitiseVideoCallsData } from './sanitise-video-calls.helper';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import {
@@ -27,10 +26,14 @@ export class VideoCallsController {
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   async startCall(@Req() req: AuthenticatedRequest) {
     const userId = req.user!.id;
+<<<<<<< HEAD
     this.logger.info({ userId }, `Video call start requested by user ${userId}`);
     return sanitiseVideoCallsData(
       await this.videoCallsService.createRoom(userId),
     );
+=======
+    return this.videoCallsService.createRoom(userId);
+>>>>>>> origin/main
   }
 
   @Post('accept')
@@ -40,6 +43,7 @@ export class VideoCallsController {
     @Body('roomName') roomName: string,
   ) {
     const userId = req.user!.id;
+<<<<<<< HEAD
     const sanitisedRoomName = sanitiseVideoCallsData(roomName);
     this.logger.info(
       { userId, roomName: sanitisedRoomName },
@@ -48,5 +52,8 @@ export class VideoCallsController {
     return sanitiseVideoCallsData(
       this.videoCallsService.joinRoom(userId, sanitisedRoomName),
     );
+=======
+    return this.videoCallsService.joinRoom(userId, roomName);
+>>>>>>> origin/main
   }
 }
