@@ -1589,10 +1589,9 @@ export class I18nService {
     'no_network_banner.message': 'No network connection. Please check your internet.',
 
     // Daily login modal
-    'daily_login_modal.title': 'Daily Login Reward',
-    'daily_login_modal.message': 'Come back tomorrow to claim more coins!',
-    'daily_login_modal.coins': '{{coins}} coins',
-    'daily_login_modal.button': 'Claim',
+    'dailyLoginModal.title': 'Daily Reward!',
+    'dailyLoginModal.body': 'You received {{coins}} coins for logging in today.',
+    'dailyLoginModal.cta': 'Awesome!',
     'backupRestore.title': 'Chat Backup & Restore',
     'backupRestore.subtitle': 'Export a JSON backup of your chat history or re-import it later.',
     'backupRestore.selectRoom': 'Select chat room',
