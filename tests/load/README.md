@@ -1,6 +1,6 @@
-# HelloTalk Trust & Safety Load Testing Suite
+# HelloTalk Load Testing Suite
 
-Artillery load-testing suite for HelloTalk's Trust & Safety architecture, covering user reporting, blocking, moderation, and spam detection endpoints.
+Artillery load-testing suite for HelloTalk, covering Trust & Safety, Spam Detection, and Virtual Coin Economy endpoints.
 
 ## Prerequisites
 
@@ -30,6 +30,7 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-pay
 |--------|------|-------------|
 | `test:trust-safety` | `trust-and-safety.load.yml` | Load tests all Safety, Moderation, and Blocks endpoints |
 | `test:spam-detection` | `spam-detection.load.yml` | Load tests the SpamDetectionService `/spam-detection/check` endpoint |
+| `test:economy` | `economy.load.yml` | Load tests the Virtual Coin Economy: gift catalog, coin packages, balance, daily check-in, checkout, purchase, gift sending, sticker packs |
 | `test:trust-safety:report` | (output + HTML) | Runs the Trust & Safety test and generates an HTML report |
 | `test:srs-flashcards` | `srs-flashcards.load.yml` | SRS flashcard creation, review (SM-2), and retrieval load testing |
 | `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
@@ -105,3 +106,14 @@ Both test scripts include the following phases:
 - `POST /escrow/transactions/:id/dispute` - File a dispute for an escrow transaction
 - `POST /escrow/transactions/:id/cancel` - Cancel a pending escrow transaction
 - `GET /escrow/summary` - Get escrow summary statistics
+
+### Economy Module (`/economy`)
+- `GET /economy/catalog` - Virtual gift catalog
+- `GET /economy/packages` - Coin package definitions
+- `GET /economy/balance` - User coin balance
+- `POST /economy/daily-check-in` - Daily check-in claim
+- `POST /economy/create-checkout-session` - Stripe checkout session creation
+- `POST /economy/purchase-coins` - Coin purchase via receipt verification
+- `POST /economy/send-gift` - Send virtual gift to another user
+- `GET /economy/sticker-packs` - Sticker pack storefront
+- `POST /economy/unlock-sticker-pack` - Unlock a sticker pack

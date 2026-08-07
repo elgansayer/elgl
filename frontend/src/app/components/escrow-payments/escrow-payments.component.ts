@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, AfterViewInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -7,6 +7,8 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { JoyrideModule, JoyrideService, JoyrideOptions } from 'ngx-joyride';
+import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
 
 type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
 type EscrowServiceType = 'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
@@ -30,13 +32,15 @@ interface EscrowRow {
 @Component({
   selector: 'app-escrow-payments',
   standalone: true,
-  imports: [FormsModule, DatePipe, TranslatePipe],
+  imports: [FormsModule, DatePipe, TranslatePipe, JoyrideModule],
   templateUrl: './escrow-payments.component.html',
 })
-export class EscrowPaymentsComponent {
+export class EscrowPaymentsComponent implements AfterViewInit {
   private http = inject(HttpClient);
   private auth = inject(AuthService);
   private i18n = inject(I18nService);
+  private readonly joyrideService = inject(JoyrideService);
+  private readonly onboardingService = inject(EscrowOnboardingService);
 
   readonly transactions = signal<EscrowRow[]>([]);
   readonly loading = signal(false);
@@ -242,5 +246,40 @@ export class EscrowPaymentsComponent {
 
   ngOnInit(): void {
     this.loadTransactions();
+  }
+
+  ngAfterViewInit(): void {
+    this.maybeStartTour();
+  }
+
+  private maybeStartTour(): void {
+    if (this.onboardingService.isCompleted()) {
+      return;
+    }
+    if (this.onboardingService.isTourInProgress()) {
+      return;
+    }
+    this.onboardingService.isTourInProgress.set(true);
+
+    setTimeout(() => {
+      const options: JoyrideOptions = {
+        steps: this.onboardingService.stepNames,
+        startWith: 'escrowStepTitle',
+        waitingTime: 100,
+        stepDefaultPosition: 'bottom',
+        themeColor: '#6366f1',
+        showCounter: true,
+        showPrevButton: true,
+      };
+
+      this.joyrideService.startTour(options).subscribe({
+        error: () => {
+          this.onboardingService.isTourInProgress.set(false);
+        },
+        complete: () => {
+          this.onboardingService.markComplete();
+        },
+      });
+    }, 500);
   }
 }

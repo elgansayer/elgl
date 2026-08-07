@@ -304,15 +304,16 @@ export class VocabularyStore {
    * Replaces console.error so all SRS failures are tracked centrally.
    */
   private reportSrsError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
     const srsError = new Error(
-      `[SRS:VocabularyStore] ${operation} failed: ${(err as Error)?.message ?? String(err)}`,
+      `[SRS:VocabularyStore] ${operation} failed: ${message}`,
     );
     srsError.name = 'SrsOperationError';
     if (err instanceof Error && err.stack) {
       srsError.stack = err.stack;
     }
-    (srsError as Error & { srsOperation?: string }).srsOperation = operation;
-    this.errorHandler.handleError(srsError);
+    const enriched = Object.assign(srsError, { srsOperation: operation });
+    this.errorHandler.handleError(enriched);
   }
 
   /**
