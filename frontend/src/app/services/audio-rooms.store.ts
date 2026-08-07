@@ -381,8 +381,10 @@ export class AudioRoomsStore {
         }
       } else if (p.type === 'subtitle' && p.caption) {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
-      } else if (p.type === 'host_tip' && p.tip && isHostTipPayload(p.tip)) {
-        const tip = p.tip;
+      } else if (p.type === 'host_tip') {
+        const d = data as Record<string, unknown>;
+        const tip = d['tip'];
+        if (!tip || !this.isHostTipPayload(tip)) return;
         this.economyStore.triggerPublicGiftAnimation({
           giftId: `tip_${tip.tip_id ?? 'unknown'}`,
           giftName: `${tip.amount_coins} Coins`,
@@ -393,16 +395,18 @@ export class AudioRoomsStore {
           receiverName: 'Host',
           coinValue: tip.amount_coins ?? 0,
         });
-      } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
+      } else if (p.type === 'virtual_gift') {
+        const d = data as Record<string, unknown>;
+        if (!d['icon'] || !d['gift_name']) return;
         this.economyStore.triggerPublicGiftAnimation({
-          giftId: typeof p.gift_id === 'string' ? p.gift_id : 'unknown',
-          giftName: typeof p.gift_name === 'string' ? p.gift_name : 'Gift',
-          giftIcon: typeof p.icon === 'string' ? p.icon : '🎁',
-          animationType: typeof p.animation_type === 'string' ? p.animation_type : 'float',
-          animationUrl: typeof p.animation_url === 'string' ? p.animation_url : undefined,
-          senderName: typeof p.sender_name === 'string' ? p.sender_name : 'Someone',
-          receiverName: typeof p.receiver_name === 'string' ? p.receiver_name : 'Host',
-          coinValue: typeof p.coin_value === 'number' ? p.coin_value : 0,
+          giftId: typeof d['gift_id'] === 'string' ? d['gift_id'] : 'unknown',
+          giftName: typeof d['gift_name'] === 'string' ? d['gift_name'] : 'Gift',
+          giftIcon: typeof d['icon'] === 'string' ? d['icon'] : '🎁',
+          animationType: typeof d['animation_type'] === 'string' ? d['animation_type'] : 'float',
+          animationUrl: typeof d['animation_url'] === 'string' ? d['animation_url'] : undefined,
+          senderName: typeof d['sender_name'] === 'string' ? d['sender_name'] : 'Someone',
+          receiverName: typeof d['receiver_name'] === 'string' ? d['receiver_name'] : 'Host',
+          coinValue: typeof d['coin_value'] === 'number' ? d['coin_value'] : 0,
         });
       } else if (p.type === 'chat_message' && p.message) {
         this.roomMessages.update((list) => [...list.slice(-99), p.message!]);

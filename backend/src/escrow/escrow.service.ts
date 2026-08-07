@@ -1,501 +1,272 @@
 import {
-  BadRequestException,
-  ForbiddenException,
   Injectable,
-  InternalServerErrorException,
+  Logger,
+  BadRequestException,
   NotFoundException,
+  ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
-import { UsersService } from '../users/users.service';
+import { MonetisationService } from '../monetisation/monetisation.service';
 import {
-  CreateEscrowDto,
-  DisputeEscrowDto,
-  RefundEscrowDto,
-  ReleaseEscrowDto,
-  ResolveDisputeDto,
-} from './dto/escrow.dto';
-import {
-  EscrowRow,
-  EscrowCreateResult,
-  EscrowReleaseResult,
-  EscrowRefundResult,
+  EscrowTransaction,
+  EscrowStatus,
+  CreateEscrowResult,
+  ReleaseEscrowResult,
+  RefundEscrowResult,
 } from './interfaces/escrow.interface';
-
-function isEscrowRow(value: unknown): value is EscrowRow {
-  if (typeof value !== 'object' || value === null) return false;
-  if (
-    !('id' in value) ||
-    !('sender_id' in value) ||
-    !('receiver_id' in value) ||
-    !('amount' in value) ||
-    !('status' in value)
-  )
-    return false;
-  return (
-    typeof value.id === 'string' &&
-    typeof value.sender_id === 'string' &&
-    typeof value.receiver_id === 'string' &&
-    typeof value.amount === 'number' &&
-    typeof value.status === 'string'
-  );
-}
+import { CreateEscrowDto } from './dto/escrow.dto';
 
 @Injectable()
 export class EscrowService {
+  private readonly logger = new Logger(EscrowService.name);
+
   constructor(
-    @InjectPinoLogger(EscrowService.name)
-    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
-    private readonly usersService: UsersService,
+    private readonly monetisationService: MonetisationService,
   ) {}
 
+  /**
+   * Create an escrow transaction: lock the payer's coins until the payee
+   * fulfills their obligation or the escrow is refunded.
+   */
   async createEscrow(
-    senderId: string,
+    payerId: string,
     dto: CreateEscrowDto,
-  ): Promise<EscrowCreateResult> {
-    if (senderId === dto.partner_id) {
+  ): Promise<CreateEscrowResult> {
+    if (payerId === dto.payee_id) {
       throw new BadRequestException(
-        'You cannot create an escrow with yourself as the partner.',
+        'You cannot create an escrow with yourself as the payee.',
       );
     }
 
     const supabase = this.supabaseService.getClient();
 
-    // Verify receiver exists
-    const receiverCheck = await supabase
+    // Verify payee exists
+    const { data: payee, error: payeeError } = await supabase
       .from('users')
       .select('id')
-      .eq('id', dto.partner_id)
-      .maybeSingle();
-
-    if (receiverCheck.error || !receiverCheck.data) {
-      throw new NotFoundException('Partner user not found.');
-    }
-
-    // Get sender balance
-    const balanceResponse = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', senderId)
+      .eq('id', dto.payee_id)
       .single();
 
-    const senderBalance = balanceResponse.data?.coins_balance ?? 0;
-
-    if (senderBalance < dto.amount) {
-      throw new BadRequestException(
-        `Insufficient coin balance (${senderBalance} available, ${dto.amount} required).`,
-      );
+    if (payeeError || !payee) {
+      throw new NotFoundException('Payee user not found.');
     }
 
-    // Deduct coins from sender (hold in escrow)
-    const newBalance = senderBalance - dto.amount;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ coins_balance: newBalance })
-      .eq('id', senderId);
+    // Deduct coins from payer (this validates sufficient balance)
+    const payerBalance = await this.monetisationService.deductCoins(
+      payerId,
+      dto.amount_coins,
+    );
 
-    if (updateError) {
-      throw new InternalServerErrorException(
-        'Failed to deduct coins from sender.',
-      );
-    }
-
-    // Create escrow record
-    const escrowPayload = {
-      sender_id: senderId,
-      receiver_id: dto.partner_id,
-      amount: dto.amount,
-      status: 'pending',
-      description: dto.description,
-      service_type: dto.service_type ?? 'other',
-    };
-
-    const { data: escrowData, error: insertError } = await supabase
-      .from('escrows')
-      .insert(escrowPayload)
-      .select('*')
+    // Create the escrow record
+    const { data: escrow, error: escrowError } = await supabase
+      .from('escrow_transactions')
+      .insert({
+        payer_id: payerId,
+        payee_id: dto.payee_id,
+        amount_coins: dto.amount_coins,
+        status: 'held' as EscrowStatus,
+        description: dto.description ?? null,
+        reference_id: dto.reference_id ?? null,
+      })
+      .select(
+        'id, payer_id, payee_id, amount_coins, status, description, reference_id, created_at, updated_at',
+      )
       .single();
 
-    if (insertError || !escrowData || !isEscrowRow(escrowData)) {
-      // Rollback coin deduction
-      await supabase
-        .from('users')
-        .update({ coins_balance: senderBalance })
-        .eq('id', senderId);
-      throw new InternalServerErrorException('Failed to create escrow record.');
+    if (escrowError || !escrow) {
+      // Refund coins if escrow record creation fails
+      this.logger.error(
+        `Failed to create escrow record: ${escrowError?.message}, refunding coins to payer ${payerId}`,
+      );
+      await this.monetisationService.addCoins(payerId, dto.amount_coins);
+      throw new BadRequestException('Failed to create escrow transaction.');
     }
 
-    this.logger.info(
-      `Escrow ${escrowData.id} created: ${senderId} -> ${dto.partner_id}, ${dto.amount} coins`,
+    this.logger.log(
+      `Escrow created: ${escrow.id}, amount=${dto.amount_coins} coins, payer=${payerId}, payee=${dto.payee_id}`,
     );
 
     return {
-      id: escrowData.id,
-      status: 'pending',
-      amount_held: dto.amount,
-      coins_remaining: newBalance,
+      id: escrow.id,
+      status: escrow.status,
+      amount_coins: escrow.amount_coins,
+      payer_balance: payerBalance,
     };
   }
 
+  /**
+   * Release escrowed coins to the payee. Only the payer can release.
+   */
   async releaseEscrow(
-    callerId: string,
-    dto: ReleaseEscrowDto,
-  ): Promise<EscrowReleaseResult> {
-    const supabase = this.supabaseService.getClient();
+    userId: string,
+    escrowId: string,
+  ): Promise<ReleaseEscrowResult> {
+    const escrow = await this.findEscrowOrThrow(escrowId);
 
-    const { data: escrowData, error } = await supabase
-      .from('escrows')
-      .select('*')
-      .eq('id', dto.escrow_id)
-      .single();
-
-    if (error || !escrowData || !isEscrowRow(escrowData)) {
-      throw new NotFoundException(`Escrow '${dto.escrow_id}' not found.`);
-    }
-
-    if (escrowData.status !== 'pending') {
-      throw new BadRequestException(
-        `Escrow cannot be released because it is already ${escrowData.status}.`,
-      );
-    }
-
-    // Only the sender can release the escrow
-    if (escrowData.sender_id !== callerId) {
-      throw new ForbiddenException('Only the sender can release the escrow.');
-    }
-
-    // Credit receiver
-    const { data: receiverData } = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', escrowData.receiver_id)
-      .single();
-
-    const receiverBalance = receiverData?.coins_balance ?? 0;
-    const newReceiverBalance = receiverBalance + escrowData.amount;
-
-    const { error: creditError } = await supabase
-      .from('users')
-      .update({ coins_balance: newReceiverBalance })
-      .eq('id', escrowData.receiver_id);
-
-    if (creditError) {
-      throw new InternalServerErrorException('Failed to credit receiver.');
-    }
-
-    // Update escrow status
-    const { error: updateError } = await supabase
-      .from('escrows')
-      .update({ status: 'released' })
-      .eq('id', dto.escrow_id);
-
-    if (updateError) {
-      throw new InternalServerErrorException('Failed to update escrow status.');
-    }
-
-    this.logger.info(`Escrow ${dto.escrow_id} released.`);
-
-    return {
-      id: dto.escrow_id,
-      status: 'released',
-      amount_released: escrowData.amount,
-      receiver_new_balance: newReceiverBalance,
-    };
-  }
-
-  async refundEscrow(
-    callerId: string,
-    dto: RefundEscrowDto,
-  ): Promise<EscrowRefundResult> {
-    const supabase = this.supabaseService.getClient();
-
-    const { data: escrowData, error } = await supabase
-      .from('escrows')
-      .select('*')
-      .eq('id', dto.escrow_id)
-      .single();
-
-    if (error || !escrowData || !isEscrowRow(escrowData)) {
-      throw new NotFoundException(`Escrow '${dto.escrow_id}' not found.`);
-    }
-
-    if (escrowData.status !== 'pending') {
-      throw new BadRequestException(
-        `Escrow cannot be refunded because it is already ${escrowData.status}.`,
-      );
-    }
-
-    // Only the sender can refund the escrow
-    if (escrowData.sender_id !== callerId) {
-      throw new ForbiddenException('Only the sender can request a refund.');
-    }
-
-    // Refund sender
-    const { data: senderData } = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', escrowData.sender_id)
-      .single();
-
-    const senderBalance = senderData?.coins_balance ?? 0;
-    const newSenderBalance = senderBalance + escrowData.amount;
-
-    const { error: refundError } = await supabase
-      .from('users')
-      .update({ coins_balance: newSenderBalance })
-      .eq('id', escrowData.sender_id);
-
-    if (refundError) {
-      throw new InternalServerErrorException('Failed to refund sender.');
-    }
-
-    // Update escrow status
-    const { error: updateError } = await supabase
-      .from('escrows')
-      .update({
-        status: 'refunded',
-        dispute_reason: dto.reason ?? null,
-      })
-      .eq('id', dto.escrow_id);
-
-    if (updateError) {
-      throw new InternalServerErrorException('Failed to update escrow status.');
-    }
-
-    this.logger.info(`Escrow ${dto.escrow_id} refunded.`);
-
-    return {
-      id: dto.escrow_id,
-      status: 'refunded',
-      amount_refunded: escrowData.amount,
-      sender_new_balance: newSenderBalance,
-    };
-  }
-
-  async disputeEscrow(
-    callerId: string,
-    dto: DisputeEscrowDto,
-  ): Promise<EscrowRow> {
-    const supabase = this.supabaseService.getClient();
-
-    const { data: escrowData, error } = await supabase
-      .from('escrows')
-      .select('*')
-      .eq('id', dto.escrow_id)
-      .single();
-
-    if (error || !escrowData || !isEscrowRow(escrowData)) {
-      throw new NotFoundException(`Escrow '${dto.escrow_id}' not found.`);
-    }
-
-    if (escrowData.status !== 'pending') {
-      throw new BadRequestException(
-        `Escrow cannot be disputed because it is already ${escrowData.status}.`,
-      );
-    }
-
-    const isParticipant =
-      escrowData.sender_id === callerId || escrowData.receiver_id === callerId;
-
-    if (!isParticipant) {
+    if (escrow.payer_id !== userId) {
       throw new ForbiddenException(
-        'Only participants in the escrow can raise a dispute.',
+        'Only the payer can release escrowed funds.',
       );
     }
 
-    const { data: updated, error: updateError } = await supabase
-      .from('escrows')
-      .update({
-        status: 'disputed',
-        dispute_reason: dto.reason,
-        dispute_evidence: dto.evidence ?? null,
-      })
-      .eq('id', dto.escrow_id)
-      .select('*')
-      .single();
-
-    if (updateError || !updated || !isEscrowRow(updated)) {
-      throw new InternalServerErrorException(
-        'Failed to update escrow dispute status.',
+    if (escrow.status !== 'held') {
+      throw new ConflictException(
+        `Escrow is not in 'held' status (current: ${escrow.status}).`,
       );
     }
 
-    this.logger.warn(
-      `Escrow ${dto.escrow_id} disputed by ${callerId}: ${dto.reason}`,
-    );
-
-    return updated;
-  }
-
-  async resolveDispute(
-    adminId: string,
-    dto: ResolveDisputeDto,
-  ): Promise<EscrowReleaseResult | EscrowRefundResult> {
     const supabase = this.supabaseService.getClient();
-
-    const { data: escrowData, error } = await supabase
-      .from('escrows')
-      .select('*')
-      .eq('id', dto.escrow_id)
-      .single();
-
-    if (error || !escrowData || !isEscrowRow(escrowData)) {
-      throw new NotFoundException(`Escrow '${dto.escrow_id}' not found.`);
-    }
-
-    if (escrowData.status !== 'disputed') {
-      throw new BadRequestException(
-        `Only disputed escrows can be resolved. This escrow is ${escrowData.status}.`,
-      );
-    }
-
-    if (dto.resolution === 'release') {
-      // Credit receiver
-      const { data: receiverData } = await supabase
-        .from('users')
-        .select('coins_balance')
-        .eq('id', escrowData.receiver_id)
-        .single();
-
-      const receiverBalance = receiverData?.coins_balance ?? 0;
-      const newReceiverBalance = receiverBalance + escrowData.amount;
-
-      const { error: creditError } = await supabase
-        .from('users')
-        .update({ coins_balance: newReceiverBalance })
-        .eq('id', escrowData.receiver_id);
-
-      if (creditError) {
-        throw new InternalServerErrorException('Failed to credit receiver.');
-      }
-
-      const { error: updateError } = await supabase
-        .from('escrows')
-        .update({
-          status: 'released',
-          admin_note: dto.admin_note ?? null,
-        })
-        .eq('id', dto.escrow_id);
-
-      if (updateError) {
-        throw new InternalServerErrorException(
-          'Failed to update escrow resolution status.',
-        );
-      }
-
-      this.logger.info(
-        `Dispute for escrow ${dto.escrow_id} resolved: released to receiver.`,
-      );
-
-      return {
-        id: dto.escrow_id,
-        status: 'released',
-        amount_released: escrowData.amount,
-        receiver_new_balance: newReceiverBalance,
-      };
-    }
-
-    // Refund sender
-    const { data: senderData } = await supabase
-      .from('users')
-      .select('coins_balance')
-      .eq('id', escrowData.sender_id)
-      .single();
-
-    const senderBalance = senderData?.coins_balance ?? 0;
-    const newSenderBalance = senderBalance + escrowData.amount;
-
-    const { error: refundError } = await supabase
-      .from('users')
-      .update({ coins_balance: newSenderBalance })
-      .eq('id', escrowData.sender_id);
-
-    if (refundError) {
-      throw new InternalServerErrorException('Failed to refund sender.');
-    }
+    const now = new Date().toISOString();
 
     const { error: updateError } = await supabase
-      .from('escrows')
+      .from('escrow_transactions')
       .update({
-        status: 'refunded',
-        admin_note: dto.admin_note ?? null,
+        status: 'released' as EscrowStatus,
+        released_at: now,
+        updated_at: now,
       })
-      .eq('id', dto.escrow_id);
+      .eq('id', escrowId)
+      .eq('status', 'held');
 
     if (updateError) {
-      throw new InternalServerErrorException(
-        'Failed to update escrow resolution status.',
-      );
+      throw new BadRequestException('Failed to release escrow.');
     }
 
-    this.logger.info(
-      `Dispute for escrow ${dto.escrow_id} resolved: refunded to sender.`,
+    const payeeBalance = await this.monetisationService.addCoins(
+      escrow.payee_id,
+      escrow.amount_coins,
+    );
+
+    this.logger.log(
+      `Escrow ${escrowId} released: ${escrow.amount_coins} coins to ${escrow.payee_id}`,
     );
 
     return {
-      id: dto.escrow_id,
-      status: 'refunded',
-      amount_refunded: escrowData.amount,
-      sender_new_balance: newSenderBalance,
+      id: escrowId,
+      status: 'released',
+      amount_coins: escrow.amount_coins,
+      payee_balance: payeeBalance,
     };
   }
 
-  async getEscrow(escrowId: string): Promise<EscrowRow> {
+  /**
+   * Refund escrowed coins back to the payer. Only the payer can refund.
+   * Coins are returned to the original payer.
+   */
+  async refundEscrow(
+    userId: string,
+    escrowId: string,
+  ): Promise<RefundEscrowResult> {
+    const escrow = await this.findEscrowOrThrow(escrowId);
+
+    if (escrow.payer_id !== userId) {
+      throw new ForbiddenException(
+        'Only the payer can refund escrowed funds.',
+      );
+    }
+
+    if (escrow.status !== 'held') {
+      throw new ConflictException(
+        `Escrow is not in 'held' status (current: ${escrow.status}).`,
+      );
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const now = new Date().toISOString();
+
+    const { error: updateError } = await supabase
+      .from('escrow_transactions')
+      .update({
+        status: 'refunded' as EscrowStatus,
+        refunded_at: now,
+        updated_at: now,
+      })
+      .eq('id', escrowId)
+      .eq('status', 'held');
+
+    if (updateError) {
+      throw new BadRequestException('Failed to refund escrow.');
+    }
+
+    const payerBalance = await this.monetisationService.addCoins(
+      escrow.payer_id,
+      escrow.amount_coins,
+    );
+
+    this.logger.log(
+      `Escrow ${escrowId} refunded: ${escrow.amount_coins} coins returned to ${escrow.payer_id}`,
+    );
+
+    return {
+      id: escrowId,
+      status: 'refunded',
+      amount_coins: escrow.amount_coins,
+      payer_balance: payerBalance,
+    };
+  }
+
+  /**
+   * Get a single escrow transaction by ID. The caller must be
+   * either the payer or the payee.
+   */
+  async getEscrow(userId: string, escrowId: string): Promise<EscrowTransaction> {
+    const escrow = await this.findEscrowOrThrow(escrowId);
+
+    if (escrow.payer_id !== userId && escrow.payee_id !== userId) {
+      throw new ForbiddenException(
+        'You are not a participant in this escrow transaction.',
+      );
+    }
+
+    return escrow;
+  }
+
+  /**
+   * List escrow transactions for the calling user as either payer or payee.
+   */
+  async listEscrows(
+    userId: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<{ escrows: EscrowTransaction[]; total: number }> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data, error, count } = await supabase
+      .from('escrow_transactions')
+      .select('*', { count: 'exact' })
+      .or(`payer_id.eq.${userId},payee_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new BadRequestException('Failed to fetch escrow transactions.');
+    }
+
+    return {
+      escrows: (data ?? []) as EscrowTransaction[],
+      total: count ?? 0,
+    };
+  }
+
+  private async findEscrowOrThrow(
+    escrowId: string,
+  ): Promise<EscrowTransaction> {
     const supabase = this.supabaseService.getClient();
 
     const { data, error } = await supabase
-      .from('escrows')
+      .from('escrow_transactions')
       .select('*')
       .eq('id', escrowId)
       .single();
 
-    if (error || !data || !isEscrowRow(data)) {
-      throw new NotFoundException(`Escrow '${escrowId}' not found.`);
+    if (error || !data) {
+      throw new NotFoundException(
+        `Escrow transaction ${escrowId} not found.`,
+      );
     }
 
-    return data;
-  }
-
-  async listUserEscrows(userId: string, status?: string): Promise<EscrowRow[]> {
-    const supabase = this.supabaseService.getClient();
-
-    if (
-      status &&
-      !['pending', 'released', 'refunded', 'disputed', 'cancelled'].includes(
-        status,
-      )
-    ) {
-      throw new BadRequestException(`Invalid escrow status filter: ${status}`);
-    }
-
-    let query = supabase
-      .from('escrows')
-      .select('*')
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .order('created_at', { ascending: false });
-
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new InternalServerErrorException('Failed to retrieve escrows.');
-    }
-
-    const escrows = (data ?? []).filter(
-      (item: unknown): item is EscrowRow =>
-        typeof item === 'object' &&
-        item !== null &&
-        'id' in item &&
-        'sender_id' in item &&
-        'receiver_id' in item &&
-        'amount' in item &&
-        'status' in item,
-    );
-
-    return escrows;
+    return data as EscrowTransaction;
   }
 }
