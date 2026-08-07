@@ -319,6 +319,13 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   private room: Room | null = null;
   private localVideo: LocalVideoTrack | null = null;
   private localAudio: LocalAudioTrack | null = null;
+  // Bound handlers for cleanup to prevent listener leaks
+  private onTrackSubscribedBound: ((track: RemoteTrack) => void) | null = null;
+  private onTrackUnsubscribedBound: ((track: RemoteTrack) => void) | null = null;
+  private onLocalTrackPublishedBound: ((publication: LocalTrackPublication) => void) | null = null;
+  private onLocalTrackUnpublishedBound: ((publication: LocalTrackPublication) => void) | null = null;
+  private onParticipantDisconnectedBound: (() => void) | null = null;
+  private onDisconnectedBound: (() => void) | null = null;
 
   readonly remoteCameraTrack = signal<RemoteTrack | null>(null);
   readonly remoteScreenShareTrack = signal<RemoteTrack | null>(null);
@@ -399,13 +406,20 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         },
       });
 
+      this.onTrackSubscribedBound = this.onTrackSubscribed.bind(this);
+      this.onTrackUnsubscribedBound = this.onTrackUnsubscribed.bind(this);
+      this.onLocalTrackPublishedBound = this.onLocalTrackPublished.bind(this);
+      this.onLocalTrackUnpublishedBound = this.onLocalTrackUnpublished.bind(this);
+      this.onParticipantDisconnectedBound = this.onParticipantDisconnected.bind(this);
+      this.onDisconnectedBound = this.onDisconnected.bind(this);
+
       this.room
-        .on(RoomEvent.TrackSubscribed, this.onTrackSubscribed.bind(this))
-        .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed.bind(this))
-        .on(RoomEvent.LocalTrackPublished, this.onLocalTrackPublished.bind(this))
-        .on(RoomEvent.LocalTrackUnpublished, this.onLocalTrackUnpublished.bind(this))
-        .on(RoomEvent.ParticipantDisconnected, this.onParticipantDisconnected.bind(this))
-        .on(RoomEvent.Disconnected, this.onDisconnected.bind(this));
+        .on(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound)
+        .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound)
+        .on(RoomEvent.LocalTrackPublished, this.onLocalTrackPublishedBound)
+        .on(RoomEvent.LocalTrackUnpublished, this.onLocalTrackUnpublishedBound)
+        .on(RoomEvent.ParticipantDisconnected, this.onParticipantDisconnectedBound)
+        .on(RoomEvent.Disconnected, this.onDisconnectedBound);
 
       await this.room.connect(this.livekitService.getLiveKitUrl(), token);
 
@@ -553,6 +567,30 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
 
     if (this.room) {
+      if (this.onTrackSubscribedBound) {
+        this.room.off(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound);
+        this.onTrackSubscribedBound = null;
+      }
+      if (this.onTrackUnsubscribedBound) {
+        this.room.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+        this.onTrackUnsubscribedBound = null;
+      }
+      if (this.onLocalTrackPublishedBound) {
+        this.room.off(RoomEvent.LocalTrackPublished, this.onLocalTrackPublishedBound);
+        this.onLocalTrackPublishedBound = null;
+      }
+      if (this.onLocalTrackUnpublishedBound) {
+        this.room.off(RoomEvent.LocalTrackUnpublished, this.onLocalTrackUnpublishedBound);
+        this.onLocalTrackUnpublishedBound = null;
+      }
+      if (this.onParticipantDisconnectedBound) {
+        this.room.off(RoomEvent.ParticipantDisconnected, this.onParticipantDisconnectedBound);
+        this.onParticipantDisconnectedBound = null;
+      }
+      if (this.onDisconnectedBound) {
+        this.room.off(RoomEvent.Disconnected, this.onDisconnectedBound);
+        this.onDisconnectedBound = null;
+      }
       this.room.disconnect();
       this.room = null;
     }
