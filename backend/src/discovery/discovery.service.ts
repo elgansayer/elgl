@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
@@ -30,18 +31,18 @@ type DiscoveryUser = UserProfile & {
 
 @Injectable()
 export class DiscoveryService {
-  private readonly logger = new Logger(DiscoveryService.name);
-
   constructor(
     private readonly audioRoomsService: AudioRoomsService,
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
+    @InjectPinoLogger(DiscoveryService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
-    this.logger.log('Starting Partner of the Week calculation...');
+    this.logger.info('Starting Partner of the Week calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -56,8 +57,8 @@ export class DiscoveryService {
 
       if (error || !topUsers || topUsers.length === 0) {
         this.logger.warn(
+          { error: error?.message },
           'No users qualified for Partner of the Week',
-          error?.message,
         );
         return;
       }
@@ -69,16 +70,19 @@ export class DiscoveryService {
         'EX',
         604800,
       );
-      this.logger.log(`Partner of the Week set for ${partnerIds.length} users`);
+      this.logger.info(`Partner of the Week set for ${partnerIds.length} users`);
     } catch (err) {
-      this.logger.error('Error calculating Partner of the Week', err);
+      this.logger.error(
+        { error: err instanceof Error ? err.message : String(err) },
+        'Error calculating Partner of the Week',
+      );
     }
   }
 
   // Daily calculation (existing functionality)
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations() {
-    this.logger.log('Starting daily partner recommendations calculation...');
+    this.logger.info('Starting daily partner recommendations calculation...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
@@ -89,7 +93,10 @@ export class DiscoveryService {
         .limit(1000);
 
       if (error || !users) {
-        this.logger.error('Failed to fetch users for recommendations', error);
+        this.logger.error(
+          { error: error?.message },
+          'Failed to fetch users for recommendations',
+        );
         return;
       }
 
@@ -132,9 +139,12 @@ export class DiscoveryService {
           }
         }
       }
-      this.logger.log('Finished daily partner recommendations calculation.');
+      this.logger.info('Finished daily partner recommendations calculation.');
     } catch (err) {
-      this.logger.error('Error calculating daily recommendations', err);
+      this.logger.error(
+        { error: err instanceof Error ? err.message : String(err) },
+        'Error calculating daily recommendations',
+      );
     }
   }
 
