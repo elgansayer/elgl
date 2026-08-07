@@ -13,6 +13,9 @@ export interface Flashcard {
   definition?: string;
   pronunciation_url?: string;
   srs_level: number;
+  easiness_factor: number;
+  repetitions: number;
+  interval_days: number;
   next_review_at: string;
   created_at: string;
 }
@@ -144,11 +147,11 @@ export class VocabularyStore {
     return fc;
   }
 
-  async updateSrsLevel(flashcardId: string, level: number): Promise<Flashcard> {
+  async updateSrsLevel(flashcardId: string, quality: number): Promise<Flashcard> {
     const fc = await firstValueFrom(
       this.http.patch<Flashcard>(
         `${this.flashcardsUrl}/${flashcardId}/srs`,
-        { srs_level: level },
+        { quality },
         { headers: this.getHeaders() },
       ),
     );
