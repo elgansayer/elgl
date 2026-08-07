@@ -51,7 +51,8 @@ export class RecommendationsService {
         .select(
           'id, native_language, target_languages',
         )
-        .eq('privacy_hide_from_search', false);
+        .eq('privacy_hide_from_search', false)
+        .neq('profile_visibility', 'hidden');
 
       if (error || !users) {
         throw new Error(`Failed to fetch users: ${error?.message}`);
@@ -71,6 +72,7 @@ export class RecommendationsService {
           )
           .neq('id', user.id)
           .eq('privacy_hide_from_search', false)
+          .neq('profile_visibility', 'hidden')
           .in('native_language', targetLanguages)
           .contains(
             'target_languages',
@@ -198,7 +200,8 @@ export class RecommendationsService {
         'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
       )
       .in('id', candidateIds)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
 
     if (usersError) {
       throw new Error(usersError.message);

@@ -196,7 +196,12 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
+
+    if (!_currentUserProfile?.is_vip) {
+      queryBuilder = queryBuilder.neq('profile_visibility', 'vips_only');
+    }
 
     if (query.has_audio_intro) {
       queryBuilder = queryBuilder
@@ -470,7 +475,12 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
+
+    if (!currentUserProfile?.is_vip) {
+      queryBuilder = queryBuilder.neq('profile_visibility', 'vips_only');
+    }
 
     queryBuilder = queryBuilder
       .not('audio_intro_url', 'is', null)
@@ -548,6 +558,7 @@ export class DiscoveryService {
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden')
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -586,6 +597,7 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden')
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -637,7 +649,8 @@ export class DiscoveryService {
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
 
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
@@ -938,7 +951,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
     if (blockedIds.length > 0) {
       qb = qb.not('id', 'in', blockedIds);
     }
