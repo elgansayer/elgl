@@ -255,7 +255,7 @@ export class MomentsFeedComponent {
         original_context: `Moment by ${moment.author?.display_name || this.i18n.translate('common.unknownUser')}`,
         definition: 'Saved full social feed moment to LingQ Spaced Repetition deck.',
       });
-      await this.vocabStore.updateSrsLevel(created.id, 1);
+      await this.vocabStore.updateSrsLevel(created.id, 3);
       showToast(this.i18n.translate('moments.savedLingqAlert', { text: moment.text_content }));
     } catch (e) {
       console.error('Failed to save moment text to LingQ deck:', e);

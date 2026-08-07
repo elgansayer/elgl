@@ -8,7 +8,8 @@ export interface Flashcard {
   pronunciation_url?: string | null;
   srs_level: number | null;
   easiness_factor: number;
-  repetition_count: number;
+  repetitions: number;
+  interval_days: number;
   next_review_at: string;
   created_at: string;
 }
