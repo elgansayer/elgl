@@ -560,6 +560,14 @@ export const routes: Routes = [
     title: 'Study Buddy Matching - HelloTalk',
   },
   {
+    path: 'read',
+    loadComponent: () =>
+      import('./components/reading-engine/reading-engine.component').then(
+        (m) => m.ReadingEngineComponent,
+      ),
+    title: 'LingQ Reading Engine - HelloTalk',
+  },
+  {
     path: 'resource-library',
     loadComponent: () =>
       import('./components/resource-library/resource-library.component').then(
