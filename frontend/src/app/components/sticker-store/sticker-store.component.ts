@@ -17,12 +17,12 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
   ],
   template: `<div class="min-h-screen bg-[#121212]">
   <!-- Header -->
-  <div class="flex items-center justify-between px-4 pt-4 pb-2">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 pt-4 pb-2">
     <div>
-      <h1 class="text-2xl font-bold text-white">{{ 'stickerStore.title' | t }}</h1>
-      <p class="text-sm text-neutral-400 mt-1">{{ 'stickerStore.subtitle' | t }}</p>
+      <h1 class="text-xl sm:text-2xl font-bold text-white">{{ 'stickerStore.title' | t }}</h1>
+      <p class="text-xs sm:text-sm text-neutral-400 mt-1">{{ 'stickerStore.subtitle' | t }}</p>
     </div>
-    <app-pill colour="warning" size="md">
+    <app-pill colour="warning" size="md" class="self-start sm:self-center">
       <span class="flex items-center gap-1 font-semibold">
         <span class="text-lg">&#x1FA99;</span> {{ userCoins() }}
       </span>
@@ -31,11 +31,11 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
   <!-- Category filters -->
   <div class="px-4 pb-4 overflow-x-auto">
-    <div class="flex gap-2">
+    <div class="flex gap-2 min-w-max">
       @for (pill of categoryPills(); track pill.id) {
         <button
           type="button"
-          class="rounded-full px-4 py-2 text-sm font-medium transition-all duration-200"
+          class="rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap"
           [class.bg-indigo-600]="selectedCategory() === pill.id"
           [class.text-white]="selectedCategory() === pill.id"
           [class.bg-neutral-800]="selectedCategory() !== pill.id"
@@ -67,7 +67,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
   <!-- Packs grid -->
   @if (!isLoading() && filteredPacks().length > 0) {
-    <div class="px-4 pb-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div class="px-4 pb-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
       @for (pack of filteredPacks(); track pack.id) {
         <app-card
           variant="elevated"
@@ -77,22 +77,22 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
         >
           <!-- Pack illustration -->
           <div
-            class="relative mb-3 flex h-28 items-center justify-center rounded-xl shadow-lg"
+            class="relative mb-3 flex h-24 sm:h-28 items-center justify-center rounded-xl shadow-lg"
             [class]="'bg-gradient-to-br ' + getPackColour(pack.id)"
           >
-            <span class="text-5xl drop-shadow-lg">{{ getPackIllustration(pack.id) }}</span>
+            <span class="text-4xl sm:text-5xl drop-shadow-lg">{{ getPackIllustration(pack.id) }}</span>
             @if (pack.owned) {
               <div
                 class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50"
               >
-                <span class="rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                <span class="rounded-full bg-emerald-500 px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold text-white shadow-lg">
                   {{ 'stickerStore.ownedBadge' | t }}
                 </span>
               </div>
             }
             @if (pack.is_animated && !pack.owned) {
               <div
-                class="absolute top-2 end-2 rounded-full bg-fuchsia-500 px-2 py-0.5 text-xs font-bold text-white shadow-lg"
+                class="absolute top-1 sm:top-2 end-1 sm:end-2 rounded-full bg-fuchsia-500 px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-bold text-white shadow-lg"
               >
                 {{ 'stickerStore.animatedBadge' | t }}
               </div>
@@ -100,23 +100,23 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
           </div>
 
           <!-- Pack details -->
-          <h3 class="text-sm font-semibold text-white mb-1">{{ pack.name }}</h3>
+          <h3 class="text-xs sm:text-sm font-semibold text-white mb-1 truncate">{{ pack.name }}</h3>
           @if (pack.is_animated) {
-            <p class="text-xs text-fuchsia-400 mb-1">{{ 'stickerStore.animatedDescription' | t }}</p>
+            <p class="text-[10px] sm:text-xs text-fuchsia-400 mb-1">{{ 'stickerStore.animatedDescription' | t }}</p>
           }
 
           <!-- Purchase section -->
           <div class="mt-auto pt-2">
             @if (pack.owned) {
               <div
-                class="flex w-full items-center justify-center rounded-full bg-emerald-500/20 py-2 text-sm font-medium text-emerald-400"
+                class="flex w-full items-center justify-center rounded-full bg-emerald-500/20 py-2 text-xs sm:text-sm font-medium text-emerald-400"
               >
                 {{ 'stickerStore.unlocked' | t }}
               </div>
             } @else {
               <button
                 type="button"
-                class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-2 text-sm font-semibold text-white transition-all disabled:opacity-50"
+                class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-2 text-xs sm:text-sm font-semibold text-white transition-all disabled:opacity-50 active:scale-95"
                 [disabled]="userCoins() < pack.cost_coins || purchasingId() === pack.id"
                 (click)="purchasePack(pack)"
               >

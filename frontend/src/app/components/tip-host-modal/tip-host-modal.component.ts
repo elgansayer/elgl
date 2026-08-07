@@ -9,32 +9,32 @@ import { EconomyStore } from '../../services/economy.store';
   imports: [TranslatePipe, FormsModule],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" (click)="onBackdropClick($event)">
-      <div class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn">
+      <div class="bg-surface-200 rounded-3xl p-4 sm:p-6 max-w-md w-full mx-2 shadow-2xl border border-surface-100 space-y-4 sm:space-y-5 animate-fadeIn">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 class="text-xl font-black text-text-primary">{{ 'audioRoom.tipModalTitle' | t }}</h3>
+            <h3 class="text-lg sm:text-xl font-black text-text-primary">{{ 'audioRoom.tipModalTitle' | t }}</h3>
             <p class="text-xs text-text-secondary">
               {{ 'audioRoom.tipModalSubtitle' | t }}
             </p>
           </div>
           <button
             (click)="closed.emit()"
-            class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            class="text-text-muted hover:text-text-secondary text-lg font-bold p-1"
           >
             ✕
           </button>
         </div>
 
         <!-- Balance -->
-        <div class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between">
+        <div class="bg-amber-500/10 p-3 sm:p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="text-2xl">💰</span>
             <div>
               <span class="text-[10px] uppercase font-black text-amber-400 block">{{
                 'audioRoom.tipBalanceLabel' | t
               }}</span>
-              <span class="text-lg font-extrabold text-amber-950">{{
+              <span class="text-base sm:text-lg font-extrabold text-amber-950">{{
                 economyStore.coinsBalance()
               }} 🪙</span>
             </div>
@@ -59,36 +59,36 @@ import { EconomyStore } from '../../services/economy.store';
         </div>
 
         <!-- Custom amount -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
           <input
             type="number"
             [ngModel]="customAmount()"
             (ngModelChange)="onCustomAmountChange($event)"
             placeholder="Custom amount"
             min="1"
-            class="flex-1 bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary text-sm font-bold focus:border-amber-500 focus:outline-none"
+            class="flex-1 bg-surface-300 border border-surface-100 rounded-xl px-3 sm:px-4 py-3 text-text-primary text-sm font-bold focus:border-amber-500 focus:outline-none min-w-0"
           />
           <button
             (click)="selectAmount(customAmount())"
             [disabled]="!customAmount() || customAmount() < 1"
-            class="px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40"
+            class="px-3 sm:px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40 shrink-0"
           >
             {{ 'audioRoom.tipCustom' | t }}
           </button>
         </div>
 
         <!-- Actions -->
-        <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
+        <div class="flex justify-end gap-2 sm:gap-3 pt-2 border-t border-surface-100">
           <button
             (click)="closed.emit()"
-            class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary"
+            class="px-3 sm:px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary"
           >
             {{ 'audioRoom.tipCancelBtn' | t }}
           </button>
           <button
             [disabled]="!selectedAmount() || selectedAmount()! < 1 || isSending() || selectedAmount()! > economyStore.coinsBalance()"
             (click)="confirmSend()"
-            class="px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+            class="px-4 sm:px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
           >
             {{
               isSending()

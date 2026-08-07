@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     <app-card
       variant="elevated"
       padding="md"
-      customClass="bg-slate-800 text-white flex flex-row items-center justify-between gap-4 border border-slate-700"
+      customClass="bg-slate-800 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border border-slate-700"
     >
       <!-- Viewer Count -->
       <div class="flex flex-col items-start">
@@ -25,7 +25,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
 
       <!-- Earned Coins -->
-      <div class="flex flex-col items-start border-s border-slate-700 ps-4">
+      <div class="flex flex-col items-start border-s-0 sm:border-s border-slate-700 ps-0 sm:ps-4">
         <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.coins_earned' | t }}</span>
         <div class="flex items-center gap-2">
           <span class="text-yellow-400 text-xl">{{ 'host_dashboard.coinIcon' | t }}</span>
@@ -34,7 +34,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
 
       <!-- Uptime -->
-      <div class="flex flex-col items-start border-s border-slate-700 ps-4">
+      <div class="flex flex-col items-start border-s-0 sm:border-s border-slate-700 ps-0 sm:ps-4">
         <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.uptime' | t }}</span>
         <div class="flex items-center gap-2">
           <span class="text-xl font-mono font-bold text-emerald-400">{{ uptime() }}</span>

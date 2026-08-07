@@ -27,19 +27,19 @@ interface CatalogItem {
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
-      <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
         @for (item of items(); track item.id) {
-          <div class="rounded-xl bg-surface p-3 shadow flex flex-col">
-            <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl">
+          <div class="rounded-xl bg-[#1e1e1e] p-3 shadow flex flex-col">
+            <div class="h-24 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl shrink-0">
               {{ item.imageUrl ? '' : '🎁' }}
             </div>
-            <h2 class="font-semibold text-sm sm:text-base truncate">{{ item.name }}</h2>
-            <p class="text-xs opacity-60 line-clamp-2">{{ item.description }}</p>
-            <p class="mt-auto pt-1 font-semibold text-indigo-400 text-sm sm:text-base">
+            <h2 class="font-semibold text-white text-sm truncate">{{ item.name }}</h2>
+            <p class="text-xs text-neutral-400 line-clamp-2 mb-1">{{ item.description }}</p>
+            <p class="mt-auto font-semibold text-indigo-400 text-sm">
               {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
             </p>
             <button
-              class="mt-2 w-full rounded-full bg-indigo-600 py-1.5 text-xs sm:text-sm font-medium hover:bg-indigo-500 transition-colors"
+              class="mt-2 w-full rounded-full bg-indigo-600 py-2 text-xs font-medium hover:bg-indigo-500 active:bg-indigo-700 transition-colors"
               (click)="addToCart(item.id)">
               {{ 'cart.add' | t }}
             </button>
