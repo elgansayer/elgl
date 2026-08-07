@@ -25,6 +25,7 @@ import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component'
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
+import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -33,6 +34,7 @@ import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.comp
     SanitiseHtmlPipe,
     RoomChatComponent,
     VideoRoomComponent,
+    VideoClassroomErrorBoundaryComponent,
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
