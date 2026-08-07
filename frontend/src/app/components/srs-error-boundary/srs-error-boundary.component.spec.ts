@@ -88,7 +88,7 @@ describe('SrsErrorBoundaryComponent', () => {
     expect(mockErrorHandler.handleError).toHaveBeenCalledTimes(1);
     const reportedError = mockErrorHandler.handleError.mock.calls[0][0] as Error;
     expect(reportedError.name).toBe('SrsError');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((reportedError as any).srsContext.component).toBe('unknown');
     expect(reportedError.message).toContain('[SRS:unknown]');
     expect(reportedError.message).toContain('Grading failed');
@@ -100,7 +100,7 @@ describe('SrsErrorBoundaryComponent', () => {
 
     expect(mockErrorHandler.handleError).toHaveBeenCalledTimes(1);
     const reportedError = mockErrorHandler.handleError.mock.calls[0][0] as Error;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const srsCtx = (reportedError as any).srsContext;
     expect(srsCtx.metadata.custom).toBe('metadata');
   });

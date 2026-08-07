@@ -19,7 +19,7 @@ import {
   EscrowReleaseResult,
 } from './interfaces/escrow-transaction.interface';
 import {
-  CreateEscrowHoldDto,
+  CreateEscrowDto,
   EscrowTransactionResponse,
 } from './dto/escrow.dto';
 import { sanitiseEscrowData } from './sanitise-escrow.helper';
@@ -102,7 +102,7 @@ export class EscrowService {
    */
   async holdCoins(
     payerId: string,
-    dto: CreateEscrowHoldDto,
+    dto: CreateEscrowDto,
   ): Promise<EscrowHoldResult> {
     if (dto.payee_id === payerId) {
       throw new BadRequestException('Cannot create escrow with yourself');
@@ -143,7 +143,7 @@ export class EscrowService {
 
   private async performHold(
     payerId: string,
-    dto: CreateEscrowHoldDto,
+    dto: CreateEscrowDto,
   ): Promise<EscrowTransaction> {
     const supabase = this.supabaseService.getClient();
 
@@ -243,7 +243,7 @@ export class EscrowService {
    */
   private async performDegradedHold(
     payerId: string,
-    dto: CreateEscrowHoldDto,
+    dto: CreateEscrowDto,
   ): Promise<EscrowTransaction> {
     const redis = this.supabaseService.getRedisClient();
     const id = `degraded_escrow_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -949,7 +949,7 @@ export class EscrowService {
             record.payee_id
           ) {
             await this.retryWithBackoff(async () => {
-              const dto: CreateEscrowHoldDto = {
+              const dto: CreateEscrowDto = {
                 payee_id: record.payee_id,
                 amount_coins: record.amount_coins,
                 reason: record.reason,

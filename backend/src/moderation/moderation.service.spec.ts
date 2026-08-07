@@ -51,10 +51,13 @@ describe('ModerationService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
+<<<<<<< HEAD
         },
         {
           provide: PinoLogger,
           useValue: mockLogger,
+=======
+>>>>>>> origin/main
         },
       ],
     }).compile();
