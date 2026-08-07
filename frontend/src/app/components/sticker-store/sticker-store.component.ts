@@ -5,6 +5,8 @@ import { EconomyStore, StickerPack } from '../../services/economy.store';
 import { AppCardComponent } from '../primitives/card/card.component';
 
 import { AppPillComponent } from '../primitives/pill/pill.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
@@ -14,6 +16,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     AppCardComponent,
     AppPillComponent,
     AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
   ],
   template: `<div class="min-h-screen bg-[#121212]">
   <!-- Header -->
@@ -48,16 +51,37 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     </div>
   </div>
 
-  <!-- Loading -->
+  <!-- Loading skeleton grid -->
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-20">
-      <div class="h-8 w-8 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent"></div>
-      <span class="ms-3 text-neutral-400">{{ 'common.loading' | t }}</span>
+    <div class="px-4 pb-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      @for (skeleton of skeletons; track skeleton) {
+        <app-card
+          variant="elevated"
+          padding="md"
+          class="flex flex-col space-y-3"
+        >
+          <app-skeleton-loader height="112px" width="100%" borderRadius="12px" />
+          <app-skeleton-loader height="14px" width="70%" borderRadius="4px" />
+          <app-skeleton-loader height="10px" width="50%" borderRadius="4px" />
+          <app-skeleton-loader height="32px" width="100%" borderRadius="9999px" />
+        </app-card>
+      }
     </div>
   }
 
+  <!-- Error state -->
+  @if (!isLoading() && hasError()) {
+    <app-empty-state
+      icon="&#x26A0;&#xFE0F;"
+      [title]="'stickerStore.errorTitle' | t"
+      [description]="'stickerStore.errorDescription' | t"
+      [actionLabel]="'stickerStore.retryBtn' | t"
+      (actionClicked)="retry()"
+    />
+  }
+
   <!-- Empty state -->
-  @if (!isLoading() && filteredPacks().length === 0) {
+  @if (!isLoading() && !hasError() && filteredPacks().length === 0) {
     <app-empty-state
       icon="&#x1F3A8;"
       [title]="'stickerStore.emptyTitle' | t"
@@ -141,7 +165,9 @@ export class StickerStoreComponent {
   private readonly i18n = inject(I18nService);
 
   readonly isLoading = signal<boolean>(true);
+  readonly hasError = signal<boolean>(false);
   readonly purchasingId = signal<string | null>(null);
+  protected readonly skeletons = [1, 2, 3, 4, 5, 6, 7, 8];
 
   private packsResource = resource<
     StickerPack[],
@@ -149,9 +175,13 @@ export class StickerStoreComponent {
   >({
     loader: async () => {
       this.isLoading.set(true);
+      this.hasError.set(false);
       try {
         await this.economyStore.loadStickerPacks();
         return this.economyStore.stickerPacks();
+      } catch {
+        this.hasError.set(true);
+        return [];
       } finally {
         this.isLoading.set(false);
       }
@@ -203,6 +233,10 @@ export class StickerStoreComponent {
       label: this.i18n.translate('sticker.filterPremium'),
     },
   ]);
+
+  retry(): void {
+    this.economyStore.loadStickerPacks();
+  }
 
   getPackIllustration(packId: string): string {
     const map: Record<string, string> = {

@@ -6,6 +6,8 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 interface CatalogItem {
   id: string;
@@ -18,7 +20,7 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [TranslatePipe, RouterLink],
+  imports: [TranslatePipe, RouterLink, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
@@ -27,25 +29,52 @@ interface CatalogItem {
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
-      <div class="grid grid-cols-2 gap-4">
-        @for (item of items(); track item.id) {
-          <div class="rounded-xl bg-surface p-3 shadow">
-            <div class="h-20 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl">
-              {{ item.imageUrl ? '' : '🎁' }}
+      @if (isLoading()) {
+        <div class="grid grid-cols-2 gap-4">
+          @for (skeleton of skeletons; track skeleton) {
+            <div class="rounded-xl bg-surface p-3 shadow space-y-3">
+              <app-skeleton-loader height="80px" width="100%" borderRadius="8px" />
+              <app-skeleton-loader height="14px" width="70%" borderRadius="4px" />
+              <app-skeleton-loader height="10px" width="90%" borderRadius="4px" />
+              <app-skeleton-loader height="24px" width="40%" borderRadius="12px" />
             </div>
-            <h2 class="font-semibold">{{ item.name }}</h2>
-            <p class="text-xs opacity-60">{{ item.description }}</p>
-            <p class="mt-1 font-semibold text-indigo-400">
-              {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
-            </p>
-            <button
-              class="mt-2 w-full rounded-full bg-indigo-600 py-1 text-sm font-medium hover:bg-indigo-500"
-              (click)="addToCart(item.id)">
-              {{ 'cart.add' | t }}
-            </button>
-          </div>
-        }
-      </div>
+          }
+        </div>
+      } @else if (hasError()) {
+        <app-empty-state
+          icon="&#x26A0;&#xFE0F;"
+          [title]="'shop.errorTitle' | t"
+          [description]="'shop.errorDescription' | t"
+          [actionLabel]="'shop.retryBtn' | t"
+          (actionClicked)="retry()"
+        />
+      } @else if (items().length === 0) {
+        <app-empty-state
+          icon="&#x1F6CD;&#xFE0F;"
+          [title]="'shop.emptyTitle' | t"
+          [description]="'shop.emptyDescription' | t"
+        />
+      } @else {
+        <div class="grid grid-cols-2 gap-4">
+          @for (item of items(); track item.id) {
+            <div class="rounded-xl bg-surface p-3 shadow">
+              <div class="h-20 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl">
+                {{ item.imageUrl ? '' : '🎁' }}
+              </div>
+              <h2 class="font-semibold">{{ item.name }}</h2>
+              <p class="text-xs opacity-60">{{ item.description }}</p>
+              <p class="mt-1 font-semibold text-indigo-400">
+                {{ item.price }} {{ 'common.coins' | t }}
+              </p>
+              <button
+                class="mt-2 w-full rounded-full bg-indigo-600 py-1 text-sm font-medium hover:bg-indigo-500"
+                (click)="addToCart(item.id)">
+                {{ 'cart.add' | t }}
+              </button>
+            </div>
+          }
+        </div>
+      }
     </div>
   `,
 })
@@ -54,32 +83,49 @@ export class ShopComponent {
   private authService = inject(AuthService);
   private i18n = inject(I18nService);
 
-  private reload = signal(0);
+  readonly isLoading = signal(true);
+  readonly hasError = signal(false);
   message = signal<string>('');
+  private reloadCounter = signal(0);
+  protected readonly skeletons = [1, 2, 3, 4];
 
   private catalogResource = resource<CatalogItem[], number>({
+    request: () => this.reloadCounter(),
     loader: async () => {
-      const token = this.authService.getAccessToken();
-      const response = await firstValueFrom(
-        this.http.get<CatalogItem[]>(
-          `${environment.apiUrl}/shopping/catalog`,
-          { headers: { Authorization: `Bearer ${token ?? ''}` } },
-        ),
-      );
-      if (!Array.isArray(response)) {
-        throw new Error('Invalid catalog response');
+      this.isLoading.set(true);
+      this.hasError.set(false);
+      try {
+        const token = this.authService.getAccessToken();
+        const response = await firstValueFrom(
+          this.http.get<CatalogItem[]>(
+            `${environment.apiUrl}/shopping/catalog`,
+            { headers: { Authorization: `Bearer ${token ?? ''}` } },
+          ),
+        );
+        if (!Array.isArray(response)) {
+          throw new Error('Invalid catalog response');
+        }
+        return response.map((item) => ({
+          id: String(item.id),
+          name: String(item.name),
+          description: String(item.description),
+          price: Number(item.price),
+          imageUrl: item.imageUrl ? String(item.imageUrl) : undefined,
+        }));
+      } catch {
+        this.hasError.set(true);
+        return [];
+      } finally {
+        this.isLoading.set(false);
       }
-      return response.map((item) => ({
-        id: String(item.id),
-        name: String(item.name),
-        description: String(item.description),
-        price: Number(item.price),
-        imageUrl: item.imageUrl ? String(item.imageUrl) : undefined,
-      }));
     },
   });
 
   items = computed(() => this.catalogResource.value() ?? []);
+
+  retry(): void {
+    this.reloadCounter.update((v) => v + 1);
+  }
 
   async addToCart(itemId: string) {
     const token = this.authService.getAccessToken();
@@ -95,7 +141,6 @@ export class ShopComponent {
         throw new Error('Failed to add item to cart');
       }
       this.message.set(this.i18n.translate('cart.addSuccess'));
-      this.reload.update((v) => v + 1);
     } catch {
       this.message.set(this.i18n.translate('cart.addError', { itemId }));
     }

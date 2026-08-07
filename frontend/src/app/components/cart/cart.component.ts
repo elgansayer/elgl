@@ -5,6 +5,8 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 interface CartItem {
   itemId: string;
@@ -15,15 +17,41 @@ interface CartItem {
 
 @Component({
   selector: 'app-cart',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   template: `
     <div class="p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'cart.title' | t }}</h1>
       @if (message()) {
         <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
       }
-      @if (items().length === 0) {
-        <p class="text-sm opacity-60">{{ 'cart.empty' | t }}</p>
+      @if (isLoading()) {
+        <div class="space-y-3">
+          @for (skeleton of skeletons; track skeleton) {
+            <div class="rounded-xl bg-surface p-3 flex items-center justify-between">
+              <div class="space-y-1 flex-1">
+                <app-skeleton-loader height="16px" width="60%" borderRadius="4px" />
+                <app-skeleton-loader height="12px" width="30%" borderRadius="4px" />
+              </div>
+              <app-skeleton-loader height="24px" width="50px" borderRadius="12px" />
+            </div>
+          }
+        </div>
+      } @else if (hasError()) {
+        <app-empty-state
+          icon="⚠️"
+          [title]="'cart.errorTitle' | t"
+          [description]="'cart.errorDescription' | t"
+          [actionLabel]="'cart.retryBtn' | t"
+          (actionClicked)="retry()"
+        />
+      } @else if (items().length === 0) {
+        <app-empty-state
+          icon="🛒"
+          [title]="'cart.emptyTitle' | t"
+          [description]="'cart.emptyDescription' | t"
+          [actionLabel]="'cart.continueShoppingBtn' | t"
+          (actionClicked)="goToShop()"
+        />
       } @else {
         <ul class="space-y-3">
           @for (item of items(); track item.itemId) {
@@ -37,7 +65,7 @@ interface CartItem {
                 <button
                   class="rounded-full bg-rose-500 px-3 py-1 text-xs font-medium text-white hover:bg-rose-600"
                   (click)="removeItem(item.itemId)"
-                  aria-label="{{ 'cart.removeItem' | t }}"
+                  [attr.aria-label]="'cart.removeItem' | t"
                 >
                   {{ 'cart.remove' | t }}
                 </button>
@@ -63,17 +91,30 @@ export class CartComponent {
   private authService = inject(AuthService);
   private i18n = inject(I18nService);
 
-  private reload = signal(0);
+  readonly isLoading = signal(true);
+  readonly hasError = signal(false);
   message = signal<string>('');
+  private reloadCounter = signal(0);
+  protected readonly skeletons = [1, 2, 3];
 
-  private cartResource = resource<CartItem[], { version: number; token: string | null }>({
+  private cartResource = resource<CartItem[], number>({
+    request: () => this.reloadCounter(),
     loader: async () => {
-      const token = this.authService.getAccessToken();
-      return firstValueFrom(
-        this.http.get<CartItem[]>(`${environment.apiUrl}/shopping/cart`, {
-          headers: { Authorization: `Bearer ${token ?? ''}` },
-        }),
-      );
+      this.isLoading.set(true);
+      this.hasError.set(false);
+      try {
+        const token = this.authService.getAccessToken();
+        return await firstValueFrom(
+          this.http.get<CartItem[]>(`${environment.apiUrl}/shopping/cart`, {
+            headers: { Authorization: `Bearer ${token ?? ''}` },
+          }),
+        );
+      } catch {
+        this.hasError.set(true);
+        return [];
+      } finally {
+        this.isLoading.set(false);
+      }
     },
   });
 
@@ -82,6 +123,14 @@ export class CartComponent {
   totalCoins = computed(() =>
     this.items().reduce((sum: number, item: CartItem) => sum + item.unitPrice * item.quantity, 0),
   );
+
+  retry(): void {
+    this.reloadCounter.update((v) => v + 1);
+  }
+
+  goToShop(): void {
+    window.history.back();
+  }
 
   async removeItem(itemId: string): Promise<void> {
     const token = this.authService.getAccessToken();
@@ -93,7 +142,7 @@ export class CartComponent {
         }),
       );
       this.message.set(this.i18n.translate('cart.removeSuccess'));
-      this.reload.update((v) => v + 1);
+      this.reloadCounter.update((v) => v + 1);
     } catch {
       this.message.set(this.i18n.translate('cart.removeError'));
     }
@@ -110,7 +159,7 @@ export class CartComponent {
         ),
       );
       this.message.set(this.i18n.translate('cart.checkoutSuccess'));
-      this.reload.update((v) => v + 1);
+      this.reloadCounter.update((v) => v + 1);
     } catch {
       this.message.set(this.i18n.translate('cart.checkoutError'));
     }

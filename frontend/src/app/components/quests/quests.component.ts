@@ -1,17 +1,29 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { QuestStore } from '../../services/quests.store';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-quests',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   template: `
     <div class="p-4 bg-surface text-start">
       <h2 class="text-xl font-bold mb-4">{{ 'quests.title' | t }}</h2>
       @if (store.loading()) {
-        <p>{{ 'quests.loading' | t }}</p>
+        <div class="space-y-3">
+          @for (skeleton of skeletons; track skeleton) {
+            <div class="p-3 rounded-lg bg-surface-alt space-y-2.5">
+              <div class="flex justify-between items-center">
+                <app-skeleton-loader height="16px" width="60%" borderRadius="4px" />
+                <app-skeleton-loader height="14px" width="20%" borderRadius="4px" />
+              </div>
+              <app-skeleton-loader height="8px" width="100%" borderRadius="4px" />
+              <app-skeleton-loader height="10px" width="30%" borderRadius="4px" />
+            </div>
+          }
+        </div>
       } @else {
         <ul class="space-y-3">
           @for (quest of store.quests(); track quest.id) {
@@ -37,7 +49,11 @@ import { QuestStore } from '../../services/quests.store';
               </div>
             </li>
           } @empty {
-            <p>{{ 'quests.empty' | t }}</p>
+            <app-empty-state
+              icon="&#x1F3AF;"
+              [title]="'quests.emptyTitle' | t"
+              [description]="'quests.emptyDescription' | t"
+            />
           }
         </ul>
       }
@@ -46,6 +62,7 @@ import { QuestStore } from '../../services/quests.store';
 })
 export class QuestsComponent implements OnInit {
   store = inject(QuestStore);
+  protected readonly skeletons = [1, 2, 3];
 
   ngOnInit(): void {
     this.store.fetchQuests();

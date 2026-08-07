@@ -1,11 +1,13 @@
 import { Component, input, output, inject, signal } from '@angular/core';
 
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+
 import { EconomyStore, VirtualGift } from '../../services/economy.store';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-virtual-gift-modal',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppSkeletonLoaderComponent],
   template: `
     <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div
@@ -57,6 +59,20 @@ import { TranslatePipe } from '../../services/translate.pipe';
               'giftModal.bundlePrompt' | t
             }}</span>
             <div class="grid grid-cols-1 gap-2.5">
+              @if (isLoadingPackages()) {
+                @for (skeleton of packageSkeletons; track skeleton) {
+                  <div class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between">
+                    <div class="flex items-center gap-3 flex-1">
+                      <app-skeleton-loader height="28px" width="28px" borderRadius="50%" variant="circle" />
+                      <div class="flex-1 space-y-1.5">
+                        <app-skeleton-loader height="14px" width="60%" borderRadius="4px" />
+                        <app-skeleton-loader height="10px" width="40%" borderRadius="4px" />
+                      </div>
+                    </div>
+                    <app-skeleton-loader height="28px" width="70px" borderRadius="12px" />
+                  </div>
+                }
+              }
               @for (pkg of economyStore.coinPackages(); track pkg.id) {
                 <div
                   class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
@@ -91,6 +107,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
               'giftModal.selectPrompt' | t: { name: receiverName() }
             }}</span>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              @if (economyStore.catalog().length === 0) {
+                @for (skeleton of giftSkeletons; track skeleton) {
+                  <div class="w-full p-3 rounded-2xl border border-surface-100 bg-surface-300 flex flex-col items-center space-y-1.5">
+                    <app-skeleton-loader height="28px" width="28px" borderRadius="50%" variant="circle" />
+                    <app-skeleton-loader height="12px" width="70%" borderRadius="4px" />
+                    <app-skeleton-loader height="10px" width="50%" borderRadius="4px" />
+                  </div>
+                }
+              }
               @for (gift of economyStore.catalog(); track gift.id) {
                 <button
                   type="button"
@@ -157,6 +182,9 @@ export class VirtualGiftModalComponent {
   showCoinPackages = false;
   isSending = false;
   deductedAmount = signal(0);
+  readonly isLoadingPackages = signal(false);
+  protected readonly giftSkeletons = [1, 2, 3, 4, 5, 6];
+  protected readonly packageSkeletons = [1, 2, 3];
 
   effectiveBalance = (): number => this.economyStore.coinsBalance() - this.deductedAmount();
 
@@ -170,7 +198,8 @@ export class VirtualGiftModalComponent {
     this.showCoinPackages = !this.showCoinPackages;
     this.ensureDataLoaded();
     if (this.showCoinPackages && this.economyStore.coinPackages().length === 0) {
-      void this.economyStore.loadCoinPackages();
+      this.isLoadingPackages.set(true);
+      void this.economyStore.loadCoinPackages().then(() => this.isLoadingPackages.set(false));
     }
   }
 
