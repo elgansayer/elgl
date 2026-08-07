@@ -260,14 +260,14 @@
                 ></app-visual-diff>
               }
               @if (msg.message_type === 'doodle' && msg.media_url) {
-                <img
+                <img loading="lazy"
                   [src]="msg.media_url ?? ''"
                   alt="doodle"
                   class="max-h-52 rounded-xl border border-surface-100"
                 />
               }
               @if (msg.message_type === 'sticker' && msg.media_url) {
-                <img
+                <img loading="lazy"
                   [src]="msg.media_url ?? ''"
                   alt="sticker"
                   class="max-h-32 w-auto object-contain drop-shadow-md"
