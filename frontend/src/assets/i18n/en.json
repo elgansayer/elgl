@@ -747,11 +747,6 @@
   "audioRoom.noRoomsInGroup": "No Rooms In Group",
   "audioRoom.raiseHandBtn": "✋ Raise hand",
   "audioRoom.approveSpeakerModalTitle": "✋ Speaker requests",
-  "audioRoom.approveSpeakerModalDesc": "{{count}} learner(s) are requesting to speak on stage. Approve them to grant microphone access.",
-  "audioRoom.approveSpeakerBtn": "Approve",
-  "audioRoom.wantsStageAccess": "Wants to speak on stage",
-  "audioRoom.noRaisedHands": "No pending speaker requests.",
-  "audioRoom.raisedHandsTitle": "✋ Raised hands",
   "audioRoom.reactionSent": "Reaction Sent",
   "audioRoom.roomTitleLabel": "Room title",
   "audioRoom.roomTitlePlaceholder": "Conversation practice room",
@@ -1203,8 +1198,6 @@
   "discovery.seriousModeDesc": "Serious Mode Desc",
   "discovery.seriousModeToggle": "Serious Mode Toggle",
   "discovery.seriousOnly": "Serious learners only",
-  "discovery.voiceRoomActiveDesc": "Show only users currently hosting voice room streams",
-  "discovery.voiceRoomActiveToggle": "Voice Room Active",
   "discovery.sharedInterests": "You both like {{interests}}",
   "discovery.sortBestMatch": "Sort Best Match",
   "discovery.sortLabel": "Sort Label",
@@ -2207,5 +2200,7 @@
   "quiz.skill.speaking": "Speaking",
   "quiz.skill.listening": "Listening",
   "quiz.skill.grammar": "Grammar",
-  "quiz.skill.vocabulary": "Vocabulary"
+  "quiz.skill.vocabulary": "Vocabulary",
+  "voip.accept": "Accept",
+  "voip.decline": "Decline"
 }
