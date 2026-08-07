@@ -196,7 +196,12 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
+
+    if (!_currentUserProfile?.is_vip) {
+      queryBuilder = queryBuilder.neq('profile_visibility', 'vips_only');
+    }
 
     if (query.has_audio_intro) {
       queryBuilder = queryBuilder
@@ -470,7 +475,12 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
+
+    if (!currentUserProfile?.is_vip) {
+      queryBuilder = queryBuilder.neq('profile_visibility', 'vips_only');
+    }
 
     queryBuilder = queryBuilder
       .not('audio_intro_url', 'is', null)
@@ -524,6 +534,11 @@ export class DiscoveryService {
     if (blockedIds.length > 0) {
       results = results.filter((u) => !blockedIds.includes(u.id));
     }
+    // Apply voice room active filter
+    results = await this.filterByVoiceRoomActive(
+      results,
+      query.voice_room_active === true,
+    );
     return results;
   }
 
@@ -543,6 +558,7 @@ export class DiscoveryService {
       .gt('created_at', sevenDaysAgo.toISOString())
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden')
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -581,6 +597,7 @@ export class DiscoveryService {
       )
       .neq('id', currentUserId)
       .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden')
       .not('native_languages', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -632,7 +649,8 @@ export class DiscoveryService {
         { count: 'exact', head: false },
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
 
     if (blockedIds.length > 0) {
       queryBuilder = queryBuilder.not('id', 'in', blockedIds);
@@ -695,11 +713,15 @@ export class DiscoveryService {
         longitude: undefined,
         radius_metres: undefined,
         sort: sort,
-        voice_room_active: undefined,
+        voice_room_active: query.voice_room_active,
         country: query.country,
         city: query.city,
       };
-      const mock = this.getMockDiscoveryData(mockSearch, blockedIds);
+      let mock = this.getMockDiscoveryData(mockSearch, blockedIds);
+      mock = await this.filterByVoiceRoomActive(
+        mock,
+        query.voice_room_active === true,
+      );
       return mock.slice(offset, offset + limit);
     }
 
@@ -732,13 +754,19 @@ export class DiscoveryService {
       });
     }
 
+    // Apply voice room active filter
+    results = await this.filterByVoiceRoomActive(
+      results,
+      query.voice_room_active === true,
+    );
+
     return results;
   }
 
-  private async filterByVoiceRoomActive(
-    users: UserProfile[],
+  private async filterByVoiceRoomActive<T extends UserProfile>(
+    users: T[],
     voiceRoomActive: boolean,
-  ): Promise<UserProfile[]> {
+  ): Promise<T[]> {
     if (!voiceRoomActive) return users;
     const activeHostIds = await this.audioRoomsService.getActiveHostIds();
     return users.filter((u) => activeHostIds.includes(u.id));
@@ -926,7 +954,8 @@ export class DiscoveryService {
         'id, display_name, native_languages, target_languages, bio_text, avatar_url, audio_intro_url, is_vip, study_streak_days, correction_ratio, is_serious_learner, proficiency_level, created_at, last_active_at',
       )
       .neq('id', currentUserId)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
     if (blockedIds.length > 0) {
       qb = qb.not('id', 'in', blockedIds);
     }

@@ -1,3 +1,27 @@
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: {
+      document: {
+        createElement: jest.fn(),
+        createDocumentFragment: jest.fn(),
+      },
+      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
+      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
+    },
+  })),
+}));
+
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: (dirty: string): string => {
+      if (typeof dirty !== 'string') return dirty;
+      return dirty.replace(/<[^>]*>/g, '');
+    },
+    setConfig: jest.fn(),
+  })),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
@@ -18,6 +42,8 @@ describe('EconomyController', () => {
             getBalance: jest.fn(),
             purchaseCoins: jest.fn(),
             sendGift: jest.fn(),
+            getStickerPacks: jest.fn(),
+            unlockStickerPack: jest.fn(),
           },
         },
       ],
@@ -101,6 +127,41 @@ describe('EconomyController', () => {
 
       const result = await controller.sendGift({ id: 'user-1' } as any, dto);
       expect(economyService.sendGift).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('getStickerPacks', () => {
+    it('should return sticker packs from service', async () => {
+      const response = { packs: [], owned_pack_ids: [], user_coins: 100 };
+      (economyService.getStickerPacks as jest.Mock).mockResolvedValue(response);
+
+      const result = await controller.getStickerPacks({ id: 'user-1' } as any);
+      expect(economyService.getStickerPacks).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('unlockStickerPack', () => {
+    it('should call service unlockStickerPack when user is provided', async () => {
+      const dto = { pack_id: 'stk_pack_1' };
+      const response = {
+        success: true,
+        coins_remaining: 150,
+        pack: { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50 },
+      };
+      (economyService.unlockStickerPack as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.unlockStickerPack(
+        { id: 'user-1' } as any,
+        dto,
+      );
+      expect(economyService.unlockStickerPack).toHaveBeenCalledWith(
+        'user-1',
+        dto,
+      );
       expect(result).toEqual(response);
     });
   });

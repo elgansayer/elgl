@@ -2,13 +2,43 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
+import { MetricsService } from '../metrics/metrics.service';
+
+// Mock the retry module so we can verify it's being used for SRS operations
+jest.mock('../common/retry', () => ({
+  withRetry: jest.fn((fn: () => unknown) => fn()),
+  isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
+}));
+
+import { withRetry } from '../common/retry';
 
 describe('FlashcardsService', () => {
   let service: FlashcardsService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
+  let mockLogger: any;
+  let mockMetricsService: any;
 
   beforeEach(async () => {
+    mockLogger = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+    };
+
+    mockMetricsService = {
+      recordSrsFlashcardCreated: jest.fn(),
+      recordSrsReviewCompleted: jest.fn(),
+      setSrsDueCards: jest.fn(),
+      setSrsAverageEasinessFactor: jest.fn(),
+      setSrsReviewSuccessRate: jest.fn(),
+      setSrsCardsPerLevel: jest.fn(),
+      setSrsCardsStuck: jest.fn(),
+      setSrsDecksTotal: jest.fn(),
+      recordSrsDeckCreated: jest.fn(),
+    };
+
     mockQueryBuilder = {
       upsert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
@@ -28,6 +58,10 @@ describe('FlashcardsService', () => {
       providers: [
         FlashcardsService,
         {
+          provide: 'PinoLogger:FlashcardsService',
+          useValue: mockLogger,
+        },
+        {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
@@ -38,6 +72,10 @@ describe('FlashcardsService', () => {
           useValue: {
             awardXpForActivity: jest.fn(),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();
@@ -82,6 +120,7 @@ describe('FlashcardsService', () => {
         },
         { onConflict: 'user_id, word_token' },
       );
+      expect(mockMetricsService.recordSrsFlashcardCreated).toHaveBeenCalled();
       expect(result).toEqual(savedCard);
     });
 
@@ -147,6 +186,9 @@ describe('FlashcardsService', () => {
         interval_days: 1,
         next_review_at: '2026-07-23T12:00:00.000Z',
       });
+      expect(mockMetricsService.recordSrsReviewCompleted).toHaveBeenCalledWith(
+        5, 'pass', expect.any(Number),
+      );
       expect(result).toEqual(updatedCard);
     });
 
@@ -261,9 +303,7 @@ describe('FlashcardsService', () => {
 
       await expect(
         service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
-      ).rejects.toThrow(
-        'Failed to update SRS review level: Card not found',
-      );
+      ).rejects.toThrow('Failed to update SRS review level: Card not found');
     });
   });
 
@@ -343,6 +383,79 @@ describe('FlashcardsService', () => {
 
       const result = await service.getDueReviews('user-1');
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('SRS retry integration', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should wrap createOrUpdateFlashcard Supabase call with withRetry', async () => {
+      const dto: any = { word_token: 'hello', translation: 'hola' };
+      const savedCard: any = { id: 'card-1', word_token: 'hello' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedCard,
+        error: null,
+      });
+
+      await service.createOrUpdateFlashcard('user-1', dto);
+
+      expect(withRetry).toHaveBeenCalledTimes(1);
+      expect(withRetry).toHaveBeenCalledWith(expect.any(Function), {
+        logger: mockLogger,
+      });
+    });
+
+    it('should wrap updateSrsLevel fetch call with withRetry', async () => {
+      const currentCard = {
+        easiness_factor: 2.5,
+        repetitions: 0,
+        interval_days: 0,
+      };
+      const updatedCard = {
+        id: 'card-1',
+        srs_level: 1,
+        easiness_factor: 2.6,
+        repetitions: 1,
+        interval_days: 1,
+        next_review_at: '2026-07-23T12:00:00.000Z',
+      };
+
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: currentCard, error: null })
+        .mockResolvedValueOnce({ data: updatedCard, error: null });
+
+      await service.updateSrsLevel('user-1', 'card-1', { quality: 5 });
+
+      // withRetry should be called twice: once for fetch, once for update
+      expect(withRetry).toHaveBeenCalledTimes(2);
+      // Both calls should pass the logger
+      const calls = (withRetry as jest.Mock).mock.calls;
+      expect(calls[0][1]).toEqual({ logger: mockLogger });
+      expect(calls[1][1]).toEqual({ logger: mockLogger });
+    });
+
+    it('should not wrap getFlashcards with withRetry', async () => {
+      mockQueryBuilder.order.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      await service.getFlashcards('user-1');
+
+      expect(withRetry).not.toHaveBeenCalled();
+    });
+
+    it('should not wrap getDueReviews with withRetry', async () => {
+      mockQueryBuilder.order.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      await service.getDueReviews('user-1');
+
+      expect(withRetry).not.toHaveBeenCalled();
     });
   });
 });

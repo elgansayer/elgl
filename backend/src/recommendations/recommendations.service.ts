@@ -18,6 +18,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+const DAILY_REDIS_TTL = 86400; // 24 hours
+const DAILY_LIMIT = 10;
+
+interface UserRow {
+  id: string;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  native_language?: string | null;
+  target_languages?: string[] | null;
+  is_serious_learner?: boolean | null;
+  study_streak_days?: number | null;
+  correction_ratio?: number | null;
+  privacy_hide_from_search?: boolean | null;
+}
+
 @Injectable()
 export class RecommendationsService {
   private readonly logger = new Logger(RecommendationsService.name);
@@ -25,17 +40,24 @@ export class RecommendationsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async calculateDailyRecommendations() {
+  async calculateDailyRecommendations(): Promise<void> {
     this.logger.log('Starting daily recommendation calculations...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
     try {
-      // Fetch all active users who are visible in search
       const { data: users, error } = await supabase
         .from('users')
+<<<<<<< HEAD
+        .select(
+          'id, native_language, target_languages',
+        )
+        .eq('privacy_hide_from_search', false)
+        .neq('profile_visibility', 'hidden');
+=======
         .select('id, native_language, target_languages')
         .eq('privacy_hide_from_search', false);
+>>>>>>> origin/main
 
       if (error || !users) {
         throw new Error(`Failed to fetch users: ${error?.message}`);
@@ -45,29 +67,43 @@ export class RecommendationsService {
         const targetLanguages = user.target_languages as string[] | null;
         if (!targetLanguages || targetLanguages.length === 0) continue;
 
-        // Find users who speak the target language natively and are learning the user's native language
+        const nativeLang = user.native_language as string | null;
+
+        // Find language exchange partners: native in user's target AND learning user's native
         const { data: matches } = await supabase
           .from('users')
-          .select('id, is_serious_learner')
+          .select(
+            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+          )
           .neq('id', user.id)
           .eq('privacy_hide_from_search', false)
-          .in('native_language', targetLanguages ?? [])
-          .contains(
-            'target_languages',
-            user.native_language ? [user.native_language] : [],
-          )
+          .neq('profile_visibility', 'hidden')
+          .in('native_language', targetLanguages)
+          .contains('target_languages', nativeLang ? [nativeLang] : [])
           .order('is_serious_learner', { ascending: false })
-          .limit(10);
+          .limit(DAILY_LIMIT);
 
         if (matches && matches.length > 0) {
-          const recommendedIds = matches.map((m) => m.id);
+          const dtos: RecommendedUserDto[] = (matches as UserRow[]).map(
+            (m) => ({
+              id: m.id,
+              displayName: m.display_name ?? null,
+              avatarUrl: m.avatar_url ?? null,
+              nativeLanguage: m.native_language ?? null,
+              targetLanguages: m.target_languages ?? null,
+              sharedInterests: 0,
+              isSeriousLearner: m.is_serious_learner ?? null,
+              studyStreakDays: m.study_streak_days ?? null,
+              correctionRatio: m.correction_ratio ?? null,
+            }),
+          );
 
-          // Cache the top 10 recommendations in Redis for 24 hours
+          // Cache the full top 10 recommendations in Redis for 24 hours
           await redis.set(
-            `recommendations:${user.id}`,
-            JSON.stringify(recommendedIds),
+            `recommendations:daily:${user.id}`,
+            JSON.stringify(dtos),
             'EX',
-            86400, // 24 hours
+            DAILY_REDIS_TTL,
           );
         }
       }
@@ -76,8 +112,26 @@ export class RecommendationsService {
         'Successfully calculated and cached daily recommendations.',
       );
     } catch (error) {
-      this.logger.error('Error calculating recommendations', error);
+      this.logger.error('Error calculating daily recommendations', error);
     }
+  }
+
+  /** Returns cached top 10 language partner recommendations for a user. */
+  async getDailyRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    const redis = this.supabaseService.getRedisClient();
+    const cached = await redis.get(`recommendations:daily:${userId}`);
+    if (!cached) return [];
+    try {
+      const parsed: unknown = JSON.parse(cached);
+      if (Array.isArray(parsed)) {
+        return parsed as RecommendedUserDto[];
+      }
+    } catch {
+      this.logger.warn(
+        `Failed to parse cached daily recommendations for user ${userId}`,
+      );
+    }
+    return [];
   }
 
   async getRecommendations(userId: string): Promise<RecommendedUserDto[]> {
@@ -146,7 +200,8 @@ export class RecommendationsService {
         'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
       )
       .in('id', candidateIds)
-      .eq('privacy_hide_from_search', false);
+      .eq('privacy_hide_from_search', false)
+      .neq('profile_visibility', 'hidden');
 
     if (usersError) {
       throw new Error(usersError.message);

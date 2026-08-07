@@ -257,7 +257,9 @@ export class HobbyTagsService {
     const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
 
     if (!deepLKey) {
-      this.logger.warn('DeepL API key not configured, skipping vocabulary translation');
+      this.logger.warn(
+        'DeepL API key not configured, skipping vocabulary translation',
+      );
       return translations;
     }
 
@@ -426,7 +428,9 @@ export class HobbyTagsService {
               .update({ target_vocabulary: updatedVocab })
               .eq('id', tnt.hobbyTagId);
           } catch (err) {
-            this.logger.warn(`Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`);
+            this.logger.warn(
+              `Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`,
+            );
           }
         });
       }
