@@ -36,6 +36,10 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-pay
 | `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
 | `test:escrow-payments` | `escrow-payments.load.yml` | Load tests the Escrow Payments endpoints |
 | `test:escrow-payments:report` | (output + HTML) | Runs the Escrow Payments test and generates an HTML report |
+| `test:video-classrooms` | `video-classrooms.load.yml` | Load tests the Video Classrooms endpoints (LiveKit room creation and joining) |
+| `test:video-classrooms:report` | (output + HTML) | Runs the Video Classrooms test and generates an HTML report |
+| `test:discovery-map` | `discovery-map.load.yml` | Load tests all Discovery Map endpoints including partner search, language pair matching, location search, audio intros, partner of the week, recent native speakers, and spotlight users |
+| `test:discovery-map:report` | (output + HTML) | Runs the Discovery Map test and generates an HTML report |
 
 ## Configuration
 
@@ -117,3 +121,16 @@ Both test scripts include the following phases:
 - `POST /economy/send-gift` - Send virtual gift to another user
 - `GET /economy/sticker-packs` - Sticker pack storefront
 - `POST /economy/unlock-sticker-pack` - Unlock a sticker pack
+
+### Video Classrooms Module (`/video-calls`)
+- `POST /video-calls/start` - Create a new LiveKit video room and return an access token
+- `POST /video-calls/accept` - Join an existing LiveKit video room with a room name
+
+### Discovery Module (`/discovery`)
+- `GET /discovery/partners` - Personalised partner search with filters (language, location, level, age, gender, interests, availability, serious learner mode)
+- `GET /discovery/partner-of-week` - Partner of the Week cached list
+- `GET /discovery/audio-intros` - Audio intro discovery with language filters
+- `GET /discovery/recent-native-speakers` - Recently joined native speakers
+- `GET /discovery/spotlight` - Spotlight user profiles
+- `GET /discovery/language-pair` - Language pair matching with pagination and sorting
+- `GET /discovery/search-by-location` - Location-based user search by country and city

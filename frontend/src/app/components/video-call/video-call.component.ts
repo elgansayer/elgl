@@ -32,25 +32,25 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-video-call',
   imports: [AppButtonSecondaryComponent, AppGradientButtonComponent, LiveChatOverlayComponent, TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 bg-black flex flex-col">
+    <section class="fixed inset-0 z-50 bg-black flex flex-col" role="dialog" [attr.aria-label]="'video_call.end_call_aria' | t">
       <!-- Remote Video (full screen background) -->
       <div class="flex-1 relative bg-gray-900">
         @if (mainVideoTrack()) {
-          <video #remoteVideo autoplay playsinline class="w-full h-full object-cover"></video>
+          <video #remoteVideo autoplay playsinline class="w-full h-full object-cover" [attr.aria-label]="'video_call.remote_video_aria' | t"></video>
         } @else {
-          <div class="flex items-center justify-center h-full">
+          <div class="flex items-center justify-center h-full" role="img" [attr.aria-label]="'video_call.remote_avatar_aria' | t: { initials: otherUserInitials() }">
             <div class="text-center text-white/60">
-              <div class="text-6xl mb-4">
+              <div class="text-6xl mb-4" aria-hidden="true">
                 {{ otherUserInitials() }}
               </div>
-              <p class="text-xl">{{ 'video_call.waiting_for' | t : { name: otherUserName() } }}</p>
+              <p class="text-xl" aria-live="polite">{{ 'video_call.waiting_for' | t : { name: otherUserName() } }}</p>
             </div>
           </div>
         }
 
         @if (isRemoteScreenSharing()) {
           <div class="absolute top-4 inset-x-0 flex justify-center pointer-events-none">
-            <div class="bg-black/60 px-3 py-1 rounded-lg text-white text-xs backdrop-blur-sm">
+            <div class="bg-black/60 px-3 py-1 rounded-lg text-white text-xs backdrop-blur-sm" role="status" aria-live="polite">
               {{ 'video_call.remote_presenting' | t : { name: otherUserName() } }}
             </div>
           </div>
@@ -59,7 +59,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <div
               class="absolute bottom-4 start-4 w-24 h-36 rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
             >
-              <video #remoteCameraVideo autoplay playsinline class="w-full h-full object-cover"></video>
+              <video #remoteCameraVideo autoplay playsinline class="w-full h-full object-cover" [attr.aria-label]="'video_call.remote_camera_aria' | t"></video>
             </div>
           }
         }
@@ -67,6 +67,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <!-- Local Camera Preview (PiP overlay) -->
         <div
           class="absolute top-4 end-4 w-32 h-48 rounded-xl overflow-hidden shadow-lg border-2 border-white/30"
+          role="region"
+          [attr.aria-label]="'video_call.local_video_aria' | t"
         >
           @if (localVideoTrack()) {
             <video
@@ -78,7 +80,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             ></video>
           } @else {
             <div class="w-full h-full bg-gray-800 flex items-center justify-center">
-              <span class="text-white/40 text-3xl">{{ otherUserInitials() }}</span>
+              <span class="text-white/40 text-3xl" aria-hidden="true">{{ otherUserInitials() }}</span>
             </div>
           }
         </div>
@@ -86,13 +88,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
         @if (isScreenSharing()) {
           <div
             class="absolute bottom-4 end-4 bg-green-600/90 px-3 py-1 rounded-lg text-white text-xs font-semibold"
+            role="status"
+            [attr.aria-label]="'video_call.presenting_badge_aria' | t"
           >
             {{ 'video_call.you_are_presenting' | t }}
           </div>
         }
 
         <!-- Call duration -->
-        <div class="absolute top-4 start-4 text-white/80 text-sm font-mono">
+        <div class="absolute top-4 start-4 text-white/80 text-sm font-mono" role="timer" [attr.aria-label]="'video_call.call_duration_aria' | t">
           {{ callDuration() }}
         </div>
 
@@ -103,7 +107,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
 
       <!-- Controls bar -->
-      <div class="bg-gray-900/95 backdrop-blur-sm px-6 py-4 flex items-center justify-center gap-4">
+      <div class="bg-gray-900/95 backdrop-blur-sm px-6 py-4 flex items-center justify-center gap-4" role="toolbar" [attr.aria-label]="'video_call.controls_toolbar_aria' | t">
         <!-- Mute/Unmute Audio -->
         <app-button-secondary
           [customClass]="
@@ -124,7 +128,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-            >
+             aria-hidden="true">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -145,7 +149,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-            >
+             aria-hidden="true">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -176,7 +180,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-            >
+             aria-hidden="true">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -192,7 +196,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-            >
+             aria-hidden="true">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -225,7 +229,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             viewBox="0 0 24 24"
             stroke="currentColor"
             stroke-width="2"
-          >
+           aria-hidden="true">
             <rect x="2" y="3" width="20" height="14" rx="2" />
             <line x1="8" y1="21" x2="16" y2="21" />
             <line x1="12" y1="17" x2="12" y2="21" />
@@ -252,7 +256,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               viewBox="0 0 24 24"
               stroke="currentColor"
               stroke-width="2"
-            >
+             aria-hidden="true">
               <path d="M15 3h6v6" />
               <path d="M10 14l11-11" />
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -273,7 +277,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-          >
+           aria-hidden="true">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -283,7 +287,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </svg>
         </app-gradient-button>
       </div>
-    </div>
+    </section>
   `,
   styles: [
     `
