@@ -1,43 +1,122 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
+export interface MyStatsResponse {
+  study_hours: number;
+  messages_sent: number;
+  corrections_made: number;
+  weekly_study_hours: { day: string; hours: number }[];
+  activity_breakdown: { label: string; count: number }[];
+}
+
 @Injectable()
 export class StatsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getStats(userId: string): Promise<{
-    translations_count: number;
-    corrections_count: number;
-    moments_count: number;
-  }> {
+  async getStats(userId: string): Promise<MyStatsResponse> {
     const client = this.supabaseService.getClient();
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
 
-    // moments count
-    const { count: momentsCount, error: momentsErr } = await client
-      .from('moments')
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // messages sent count
+    const { count: messagesSent, error: msgErr } = await client
+      .from('chat_messages')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
-    if (momentsErr) {
-      throw new Error(momentsErr.message);
-    }
+      .eq('sender_id', userId);
+    if (msgErr) throw new Error(msgErr.message);
 
-    // corrections count (moment_comments with non-null correction_payload)
-    const { count: correctionsCount, error: corrErr } = await client
-      .from('moment_comments')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .not('correction_payload', 'is', null);
-    if (corrErr) {
-      throw new Error(corrErr.message);
-    }
+    // corrections made: correction_payload in chat_messages + moment_comments
+    const [
+      { count: chatCorrections, error: chatCorrErr },
+      { count: momentCorrections, error: momentCorrErr },
+    ] = await Promise.all([
+      client
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('sender_id', userId)
+        .not('correction_payload', 'is', null),
+      client
+        .from('moment_comments')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .not('correction_payload', 'is', null),
+    ]);
+    if (chatCorrErr) throw new Error(chatCorrErr.message);
+    if (momentCorrErr) throw new Error(momentCorrErr.message);
+    const correctionsMade = (chatCorrections ?? 0) + (momentCorrections ?? 0);
 
-    // translations count – placeholder (table may not exist yet)
-    const translationsCount = 0;
+    // study hours: approximate by counting distinct hours with messages this week
+    const { data: weeklyMessages, error: weeklyErr } = await client
+      .from('chat_messages')
+      .select('created_at')
+      .eq('sender_id', userId)
+      .gte('created_at', weekAgo.toISOString())
+      .order('created_at', { ascending: true });
+    if (weeklyErr) throw new Error(weeklyErr.message);
+
+    const studyHours = this.calculateStudyHours(weeklyMessages ?? []);
+    const weeklyStudyHours = this.buildWeeklyChart(weeklyMessages ?? [], now);
+    const activityBreakdown = this.buildActivityBreakdown(messagesSent ?? 0, correctionsMade);
 
     return {
-      translations_count: translationsCount,
-      corrections_count: correctionsCount ?? 0,
-      moments_count: momentsCount ?? 0,
+      study_hours: studyHours,
+      messages_sent: messagesSent ?? 0,
+      corrections_made: correctionsMade,
+      weekly_study_hours: weeklyStudyHours,
+      activity_breakdown: activityBreakdown,
     };
+  }
+
+  private calculateStudyHours(
+    messages: { created_at: string }[],
+  ): number {
+    if (messages.length === 0) return 0;
+    const distinctHours = new Set<string>();
+    for (const msg of messages) {
+      const d = new Date(msg.created_at);
+      distinctHours.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`);
+    }
+    return distinctHours.size;
+  }
+
+  private buildWeeklyChart(
+    messages: { created_at: string }[],
+    now: Date,
+  ): { day: string; hours: number }[] {
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weeklyMap = new Map<string, Set<string>>();
+    for (const day of dayNames) {
+      weeklyMap.set(day, new Set());
+    }
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    for (const msg of messages) {
+      const d = new Date(msg.created_at);
+      if (d >= weekStart) {
+        const dayName = dayNames[d.getDay()];
+        const hourKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`;
+        weeklyMap.get(dayName)?.add(hourKey);
+      }
+    }
+    return dayNames.map((day) => ({
+      day,
+      hours: weeklyMap.get(day)?.size ?? 0,
+    }));
+  }
+
+  private buildActivityBreakdown(
+    messagesSent: number,
+    correctionsMade: number,
+  ): { label: string; count: number }[] {
+    return [
+      { label: 'Messages Sent', count: messagesSent },
+      { label: 'Corrections Made', count: correctionsMade },
+    ];
   }
 }
