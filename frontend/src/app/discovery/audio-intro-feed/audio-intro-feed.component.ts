@@ -1,14 +1,11 @@
-import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, computed, DestroyRef, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DiscoveryService } from '../../services/discovery.service';
 import { UserProfile } from '../../services/user.service';
-import { resource } from '@angular/core';
 
 @Component({
   selector: 'app-audio-intro-feed',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   template: `
     @if (users.isLoading()) {
       <div class="flex justify-center py-8">
