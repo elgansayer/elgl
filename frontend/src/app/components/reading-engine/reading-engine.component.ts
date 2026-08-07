@@ -1,11 +1,17 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
+<<<<<<< HEAD
 import { firstValueFrom, timer } from 'rxjs';
+=======
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+>>>>>>> origin/main
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { environment } from '../../environments/environment';
 
 interface ReadingArticle {
   id: string;
@@ -288,6 +294,8 @@ interface ReadingArticle {
 export class ReadingEngineComponent {
   private i18n = inject(I18nService);
   private vocabStore = inject(VocabularyStore);
+  private http = inject(HttpClient);
+  private readingApiUrl = `${environment.apiUrl}/reading`;
 
   readonly activeTab = signal<'articles' | 'vocabulary' | 'history'>('articles');
   readonly selectedArticleId = signal<string | null>(null);
@@ -359,6 +367,7 @@ export class ReadingEngineComponent {
 
   private async fetchArticles(): Promise<ReadingArticle[]> {
     try {
+<<<<<<< HEAD
       await firstValueFrom(timer(800));
       return [
         {
@@ -412,6 +421,17 @@ export class ReadingEngineComponent {
           wordCount: 67,
         },
       ];
+=======
+      const params = new URLSearchParams();
+      params.set('limit', '100');
+      params.set('offset', '0');
+      const list = await firstValueFrom(
+        this.http.get<ReadingArticle[]>(
+          `${this.readingApiUrl}/resources?${params.toString()}`,
+        ),
+      );
+      return list ?? [];
+>>>>>>> origin/main
     } catch {
       this.fetchError.set(this.i18n.translate('readingEngine.fetchError'));
       return [];
