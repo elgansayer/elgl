@@ -21,9 +21,7 @@ describe('DecksController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DecksController],
-      providers: [
-        { provide: DecksService, useValue: mockDecksService },
-      ],
+      providers: [{ provide: DecksService, useValue: mockDecksService }],
     })
       .overrideGuard(SupabaseAuthGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
@@ -90,7 +88,9 @@ describe('DecksController', () => {
     it('should add flashcard to deck', async () => {
       mockDecksService.addFlashcardToDeck.mockResolvedValue(undefined);
       const result = await controller.addFlashcard(
-        { id: 'user-1' } as any, 'd1', { flashcard_id: 'fc1' },
+        { id: 'user-1' } as any,
+        'd1',
+        { flashcard_id: 'fc1' },
       );
       expect(result).toEqual({ success: true });
     });
@@ -100,7 +100,10 @@ describe('DecksController', () => {
     it('should return flashcard IDs in the deck', async () => {
       const ids = [{ id: 'fc1' }, { id: 'fc2' }];
       mockDecksService.getDeckFlashcards.mockResolvedValue(ids);
-      const result = await controller.getDeckFlashcards({ id: 'user-1' } as any, 'd1');
+      const result = await controller.getDeckFlashcards(
+        { id: 'user-1' } as any,
+        'd1',
+      );
       expect(result).toEqual(ids);
     });
 

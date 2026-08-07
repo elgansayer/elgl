@@ -85,7 +85,9 @@ export class PrivacyService {
       throw new BadRequestException('Failed to initiate account deletion');
     }
 
-    this.logger.log(`Deletion pending for user ${userId}, scheduled for ${deletionDate.toISOString()}`);
+    this.logger.log(
+      `Deletion pending for user ${userId}, scheduled for ${deletionDate.toISOString()}`,
+    );
   }
 
   async cancelDeletion(userId: string): Promise<void> {
