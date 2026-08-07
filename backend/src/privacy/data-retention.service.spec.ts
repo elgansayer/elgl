@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataRetentionService } from './data-retention.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -6,7 +7,8 @@ describe('DataRetentionService', () => {
   let service: DataRetentionService;
   let mockSupabaseClient: Record<string, jest.Mock>;
   let mockQueryBuilder: Record<string, jest.Mock>;
-  let mockRedis: { del: jest.Mock };
+let mockRedis: { del: jest.Mock };
+  let mockEventEmitter: { emit: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -27,6 +29,7 @@ describe('DataRetentionService', () => {
     mockRedis = {
       del: jest.fn().mockResolvedValue(1),
     };
+    mockEventEmitter = { emit: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -37,6 +40,10 @@ describe('DataRetentionService', () => {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
             getRedisClient: jest.fn().mockReturnValue(mockRedis),
           },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: mockEventEmitter,
         },
       ],
     }).compile();
@@ -131,7 +138,7 @@ describe('DataRetentionService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalled();
     });
 
-    it('wipes coin-economy tables for deleted users', async () => {
+    it('wipes coin-economy and reading-engine tables for deleted users', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: [{ id: 'user-abc-123' }],
         error: null,
@@ -156,6 +163,14 @@ describe('DataRetentionService', () => {
       expect(calledTables).toContain('gift_transactions');
       expect(calledTables).toContain('user_sticker_packs');
       expect(calledTables).toContain('user_statistics');
+      // Verify LingQ Reading Engine tables are included
+      expect(calledTables).toContain('reading_progress');
+      expect(calledTables).toContain('reading_resources');
+      // Verify reading-engine cache invalidation event is emitted
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'reading.user_data_cleared',
+        { userId: 'user-abc-123' },
+      );
     });
 
     it('purges Redis recommendation cache during account deletion', async () => {
