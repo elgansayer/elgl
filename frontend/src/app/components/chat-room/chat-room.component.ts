@@ -84,15 +84,14 @@ export class ChatRoomComponent implements OnDestroy {
   readonly pendingUnlock = signal<boolean>(false);
 
   readonly participants = signal<GroupMember[]>([]);
-
-  readonly drawerParticipants = computed<GroupParticipant[]>(() =>
+  readonly groupParticipants = computed<GroupParticipant[]>(() =>
     this.participants().map((m) => ({
       id: m.user_id,
-      display_name: m.user?.display_name ?? 'Unknown',
+      display_name: m.user?.display_name ?? `User ${m.user_id.slice(0, 6)}`,
       avatar_url: m.user?.avatar_url ?? undefined,
       native_language: m.user?.native_language ?? '',
       target_languages: m.user?.target_languages ?? [],
-      is_vip: false,
+      is_vip: m.user?.is_vip ?? false,
     })),
   );
   readonly blockedUserIds = signal<string[]>([]);

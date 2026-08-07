@@ -286,7 +286,14 @@ describe('GroupsService', () => {
       const members = [
         {
           user_id: 'user-2',
-          user: { id: 'user-2', display_name: 'Ana', avatar_url: null },
+          user: {
+            id: 'user-2',
+            display_name: 'Ana',
+            avatar_url: null,
+            native_language: 'English',
+            target_languages: ['Spanish'],
+            is_vip: false,
+          },
         },
       ];
       tables.chat_room_members.then = jest.fn(
