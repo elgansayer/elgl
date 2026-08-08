@@ -1,7 +1,6 @@
 import { ApplicationConfig, ErrorHandler, inject, isDevMode, APP_INITIALIZER } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors, HttpClient } from '@angular/common/http';
-import { provideClientHydration } from '@angular/platform-browser';
 import { DOCUMENT } from '@angular/common';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -43,7 +42,6 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withFetch(), withInterceptors([retryInterceptor])),
-    provideClientHydration(),
     provideAnimations(),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

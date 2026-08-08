@@ -65,9 +65,9 @@ describe('ImageCompressionService', () => {
     const origGetContext = HTMLCanvasElement.prototype.getContext;
     const origToBlob = HTMLCanvasElement.prototype.toBlob;
 
-    HTMLCanvasElement.prototype.getContext = function () {
-      return mockCtx;
-    };
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, contextId: string, options?: unknown) {
+      return contextId === '2d' ? mockCtx : null;
+    } as typeof HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.toBlob = function (callback: (blob: Blob | null) => void) {
       const blob = new Blob(['mock-jpeg'], { type: 'image/jpeg' });
       callback(blob);

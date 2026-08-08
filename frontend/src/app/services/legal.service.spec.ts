@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { LegalService, LegalDocument } from './legal.service';
 import { environment } from '../../environments/environment';
 
@@ -10,8 +11,7 @@ describe('LegalService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [LegalService],
+      providers: [LegalService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(LegalService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -65,12 +65,7 @@ describe('LegalService', () => {
     const req = httpMock.expectOne(`${baseUrl}/terms`);
     req.error(new ProgressEvent('Network error'));
 
-    try {
-      await resultPromise;
-      fail('Expected fetchTermsOfService to throw');
-    } catch (error) {
-      expect(error).toBeTruthy();
-    }
+    await expect(resultPromise).rejects.toBeTruthy();
   });
 
   it('should handle HTTP errors for Privacy Policy', async () => {
@@ -79,11 +74,6 @@ describe('LegalService', () => {
     const req = httpMock.expectOne(`${baseUrl}/privacy`);
     req.error(new ProgressEvent('Network error'));
 
-    try {
-      await resultPromise;
-      fail('Expected fetchPrivacyPolicy to throw');
-    } catch (error) {
-      expect(error).toBeTruthy();
-    }
+    await expect(resultPromise).rejects.toBeTruthy();
   });
 });
