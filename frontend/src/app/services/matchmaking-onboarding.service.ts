@@ -76,15 +76,15 @@ export class MatchmakingOnboardingService {
     this.isTourInProgress.set(false);
     try {
       window.localStorage.setItem(this.storageKey, 'true');
-    } catch {
-      // storage unavailable, ignore
+    } catch (e) {
+      console.error(e);
     }
   }
 
   isCompleted(): boolean {
     try {
       return window.localStorage.getItem(this.storageKey) === 'true';
-    } catch {
+    } catch (e) {
       return false;
     }
   }
@@ -94,8 +94,8 @@ export class MatchmakingOnboardingService {
     this.isTourInProgress.set(false);
     try {
       window.localStorage.removeItem(this.storageKey);
-    } catch {
-      // storage unavailable, ignore
+    } catch (e) {
+      console.error(e);
     }
   }
 }
