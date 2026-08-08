@@ -35,6 +35,7 @@ class FactoryConfig(BaseModel):
     max_task_minutes: int = 120
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
+    max_parallel_jobs: int = 3
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
     oauth_degraded_hours: int = 24
@@ -54,7 +55,12 @@ class FactoryConfig(BaseModel):
             raise ValueError("factory paths must be absolute")
         return value
 
-    @field_validator("max_task_minutes", "max_conversation_turns", "max_consecutive_failures")
+    @field_validator(
+        "max_task_minutes",
+        "max_conversation_turns",
+        "max_consecutive_failures",
+        "max_parallel_jobs",
+    )
     @classmethod
     def positive_limits(cls, value: int) -> int:
         if value <= 0:
@@ -133,6 +139,7 @@ class FactoryConfig(BaseModel):
                 max_task_minutes=int(env.get("FACTORY_MAX_TASK_MINUTES", "120")),
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
+                max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "3")),
                 cooldown_seconds=int(env.get("FACTORY_COOLDOWN_SECONDS", "60")),
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),

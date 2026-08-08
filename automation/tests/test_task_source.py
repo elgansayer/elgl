@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -25,3 +26,13 @@ def test_stale_lease_is_recovered(tmp_path: Path) -> None:
     now = datetime.now(UTC)
     store.acquire(task, "old", now - timedelta(minutes=2))
     assert store.select([task]) == task
+
+
+def test_parallel_acquisitions_preserve_every_lease(tmp_path: Path) -> None:
+    store = TaskStore(tmp_path)
+    tasks = [Task(str(identifier), "Task", "body", "github", 0) for identifier in range(6)]
+
+    with ThreadPoolExecutor(max_workers=6) as workers:
+        list(workers.map(lambda task: store.acquire(task, "factory"), tasks))
+
+    assert set(store.leases()) == {task.identifier for task in tasks}

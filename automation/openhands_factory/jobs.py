@@ -5,12 +5,15 @@ from __future__ import annotations
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.state import atomic_write_json, read_json
 
 
 class JobStore:
+    _process_lock = Lock()
+
     def __init__(self, path: Path) -> None:
         self.path = path
 
@@ -40,6 +43,13 @@ class JobStore:
             item["updated_at"] = job.updated_at.isoformat()
             serialised.append(item)
         atomic_write_json(self.path, {"jobs": serialised})
+
+    def save_job(self, job: Job) -> None:
+        """Merge one completed worker transition without losing sibling jobs."""
+        with self._process_lock:
+            jobs = self.load()
+            jobs[job.task.identifier] = job
+            self.save(jobs)
 
     def reconcile(self, tasks: list[Task]) -> dict[str, Job]:
         jobs = self.load()
