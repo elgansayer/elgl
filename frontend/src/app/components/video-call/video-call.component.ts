@@ -396,7 +396,12 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
   async ngOnInit(): Promise<void> {
     try {
-      const token = await this.livekitService.getToken(this.roomName(), this.currentUserId());
+      const tokenResult = await this.livekitService.getToken(this.roomName(), this.currentUserId());
+
+      this.livekitService.isDegraded.set(tokenResult.degraded);
+      if (tokenResult.degradationReason) {
+        this.livekitService.degradationReason.set(tokenResult.degradationReason);
+      }
 
       this.room = new Room({
         adaptiveStream: true,
@@ -421,7 +426,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         .on(RoomEvent.ParticipantDisconnected, this.onParticipantDisconnectedBound)
         .on(RoomEvent.Disconnected, this.onDisconnectedBound);
 
-      await this.room.connect(this.livekitService.getLiveKitUrl(), token);
+      await this.room.connect(this.livekitService.getLiveKitUrl(), tokenResult.token);
 
       // Create and publish local tracks using createLocalTracks
       const tracks = await createLocalTracks({ audio: true, video: true });
