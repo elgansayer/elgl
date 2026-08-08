@@ -17,10 +17,6 @@ export interface ChatDraft {
   explanationText?: string;
 }
 
-const CHAT_DRAFT_PREFIX = 'draft_chat_';
-const CHAT_DRAFT_V2_PREFIX = 'draft_chat_v2_';
-const MOMENT_DRAFT_KEY = 'draft_moment';
-
 @Injectable({ providedIn: 'root' })
 export class DraftService {
   private readonly authService = inject(AuthService);
@@ -29,21 +25,21 @@ export class DraftService {
     return typeof localStorage !== 'undefined';
   }
 
-  private getUserPrefix(): string {
+  private getUserSuffix(): string {
     const userId = this.authService.currentUser()?.id;
-    return userId ? `ht_${userId}` : 'ht_anon';
+    return userId ? `_${userId}` : '_anon';
   }
 
   private chatKey(roomId: string): string {
-    return `${this.getUserPrefix()}_${CHAT_DRAFT_PREFIX}${roomId}`;
+    return `hellotalk_chat_draft_${roomId}${this.getUserSuffix()}`;
   }
 
   private chatV2Key(roomId: string): string {
-    return `${this.getUserPrefix()}_${CHAT_DRAFT_V2_PREFIX}${roomId}`;
+    return `hellotalk_chat_draft_v2_${roomId}${this.getUserSuffix()}`;
   }
 
   private momentKey(): string {
-    return `${this.getUserPrefix()}_${MOMENT_DRAFT_KEY}`;
+    return `hellotalk_moment_draft${this.getUserSuffix()}`;
   }
 
   // ---- Chat drafts (legacy: text only) ----
