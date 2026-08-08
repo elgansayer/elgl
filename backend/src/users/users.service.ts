@@ -372,6 +372,7 @@ export class UsersService {
       is_vip: true,
       vip_tier: 'premium',
       coins_balance: 500,
+      auto_play_voice_notes: false,
       chat_enter_to_send: false,
       chat_text_size: 'medium',
       study_streak_days: 15,
@@ -500,6 +501,9 @@ export class UsersService {
 
     if (dto.silence_unknown_callers !== undefined)
       updatePayload.silence_unknown_callers = dto.silence_unknown_callers;
+
+    if (dto.auto_play_voice_notes !== undefined)
+      updatePayload.auto_play_voice_notes = dto.auto_play_voice_notes;
 
     if (dto.sound_effects_enabled !== undefined)
       updatePayload.sound_effects_enabled = dto.sound_effects_enabled;
