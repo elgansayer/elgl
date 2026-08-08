@@ -281,4 +281,124 @@ describe('MomentsFeedComponent', () => {
     expect(component.showTranslationMap()['m1']).toBe(true);
     expect(component.translationCache()['m1']).toBe('Hola');
   });
+
+  describe('Mute Words (issue #1153)', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      component.mutedWords.set([]);
+      component.muteWordInput.set('');
+    });
+
+    it('starts with an empty muted words list', () => {
+      expect(component.mutedWords()).toEqual([]);
+      expect(component.hiddenCount()).toBe(0);
+      expect(component.filteredFeed()).toEqual(testMoments);
+    });
+
+    it('adds a muted word via addMutedWord', () => {
+      component.muteWordInput.set('spam');
+      component.addMutedWord();
+      expect(component.mutedWords()).toContain('spam');
+      expect(component.muteWordInput()).toBe('');
+    });
+
+    it('does not add duplicate muted words', () => {
+      component.muteWordInput.set('spam');
+      component.addMutedWord();
+      component.muteWordInput.set('spam');
+      component.addMutedWord();
+      expect(component.mutedWords().length).toBe(1);
+    });
+
+    it('does not add an empty word', () => {
+      component.muteWordInput.set('  ');
+      component.addMutedWord();
+      expect(component.mutedWords().length).toBe(0);
+    });
+
+    it('removes a muted word', () => {
+      component.muteWordInput.set('spam');
+      component.addMutedWord();
+      component.muteWordInput.set('offensive');
+      component.addMutedWord();
+      expect(component.mutedWords().length).toBe(2);
+      component.removeMutedWord('spam');
+      expect(component.mutedWords()).toEqual(['offensive']);
+    });
+
+    it('clears all muted words', () => {
+      component.muteWordInput.set('spam');
+      component.addMutedWord();
+      component.clearAllMutedWords();
+      expect(component.mutedWords()).toEqual([]);
+    });
+
+    it('filters out moments containing a muted word (case-insensitive)', () => {
+      // Add moment containing the word "spam"
+      const spamMoment: MomentRecord = {
+        id: 'm2',
+        user_id: 'u2',
+        author: { id: 'u2', display_name: 'Bob', avatar_url: '' },
+        text_content: 'This is SPAM content here',
+        created_at: new Date().toISOString(),
+        media_urls: [],
+        media_type: 'none',
+        target_language: 'en',
+        likes_count: 0,
+        comments_count: 0,
+        is_pinned: false,
+        is_liked_by_me: false,
+      };
+      mockMomentsStore.feed.set([...testMoments, spamMoment]);
+      component.muteWordInput.set('spam');
+      component.addMutedWord();
+
+      const filtered = component.filteredFeed();
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].id).toBe('m1');
+    });
+
+    it('reports the correct hidden count', () => {
+      const spamMoment: MomentRecord = {
+        id: 'm2',
+        user_id: 'u2',
+        author: { id: 'u2', display_name: 'Bob', avatar_url: '' },
+        text_content: 'buy cheap stuff',
+        created_at: new Date().toISOString(),
+        media_urls: [],
+        media_type: 'none',
+        target_language: 'en',
+        likes_count: 0,
+        comments_count: 0,
+        is_pinned: false,
+        is_liked_by_me: false,
+      };
+      const spamMoment2: MomentRecord = {
+        id: 'm3',
+        user_id: 'u3',
+        author: { id: 'u3', display_name: 'Carol', avatar_url: '' },
+        text_content: 'buy cheap pills',
+        created_at: new Date().toISOString(),
+        media_urls: [],
+        media_type: 'none',
+        target_language: 'en',
+        likes_count: 0,
+        comments_count: 0,
+        is_pinned: false,
+        is_liked_by_me: false,
+      };
+      mockMomentsStore.feed.set([...testMoments, spamMoment, spamMoment2]);
+      component.muteWordInput.set('cheap');
+      component.addMutedWord();
+
+      expect(component.hiddenCount()).toBe(2);
+      expect(component.filteredFeed().length).toBe(1);
+    });
+
+    it('returns unfiltered feed when muted words list is empty', () => {
+      mockMomentsStore.feed.set(testMoments);
+      expect(component.filteredFeed()).toEqual(testMoments);
+      expect(component.hiddenCount()).toBe(0);
+    });
+  });
 });

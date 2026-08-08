@@ -61,12 +61,85 @@ export class MomentsFeedComponent {
   readonly lightboxImages = signal<string[]>([]);
   readonly lightboxInitialIndex = signal<number>(0);
 
+  private readonly MUTED_WORDS_STORAGE_KEY = 'moments_muted_words';
+
   readonly momentsStore = inject(MomentsStore);
   readonly vocabStore = inject(VocabularyStore);
   readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly draftService = inject(DraftService);
+
+  // Mute Words feature (issue #1153)
+  readonly mutedWords = signal<string[]>(this.loadMutedWordsFromStorage());
+  readonly muteWordInput = signal('');
+  readonly hiddenCount = computed(() => {
+    const words = this.mutedWords();
+    if (!words.length) return 0;
+    const all = this.momentsStore.feed();
+    const lc = words.map(w => w.toLowerCase().trim()).filter(Boolean);
+    if (!lc.length) return 0;
+    return all.filter(m => {
+      const text = (m.text_content || '').toLowerCase();
+      return lc.some(w => text.includes(w));
+    }).length;
+  });
+
+  readonly filteredFeed = computed(() => {
+    const all = this.momentsStore.feed();
+    const words = this.mutedWords();
+    if (!words.length) return all;
+    const lc = words.map(w => w.toLowerCase().trim()).filter(Boolean);
+    if (!lc.length) return all;
+    return all.filter(m => {
+      const text = (m.text_content || '').toLowerCase();
+      return !lc.some(w => text.includes(w));
+    });
+  });
+
+  addMutedWord(): void {
+    const word = this.muteWordInput().trim();
+    if (!word) return;
+    const current = this.mutedWords();
+    if (current.map(w => w.toLowerCase()).includes(word.toLowerCase())) {
+      this.muteWordInput.set('');
+      return;
+    }
+    const next = [...current, word];
+    this.mutedWords.set(next);
+    this.persistMutedWords(next);
+    this.muteWordInput.set('');
+  }
+
+  removeMutedWord(word: string): void {
+    const next = this.mutedWords().filter(w => w !== word);
+    this.mutedWords.set(next);
+    this.persistMutedWords(next);
+  }
+
+  clearAllMutedWords(): void {
+    this.mutedWords.set([]);
+    this.persistMutedWords([]);
+  }
+
+  private loadMutedWordsFromStorage(): string[] {
+    try {
+      const raw = localStorage.getItem(this.MUTED_WORDS_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((w: unknown) => typeof w === 'string' && w.trim()) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private persistMutedWords(words: string[]): void {
+    try {
+      localStorage.setItem(this.MUTED_WORDS_STORAGE_KEY, JSON.stringify(words));
+    } catch {
+      // Silently fail if storage quota exceeded etc.
+    }
+  }
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
@@ -549,7 +622,7 @@ export class MomentsFeedComponent {
     const docHeight = document.documentElement.scrollHeight;
     const winHeight = window.innerHeight;
     if (docHeight - scrollTop - winHeight < 200) {
-      const total = this.momentsStore.feed().length;
+      const total = this.filteredFeed().length;
       if (this.visibleCount() < total) {
         this.visibleCount.update(c => c + this.pageSize);
       }

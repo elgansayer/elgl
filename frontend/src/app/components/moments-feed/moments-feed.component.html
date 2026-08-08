@@ -34,6 +34,59 @@
       (pillPicked)="setFilter($event)"
     >
     </app-scrollable-pills>
+
+    <!-- Mute Words Section (issue #1153) -->
+    <div class="px-4 pb-2">
+      <div class="flex items-center gap-2 mt-2">
+        <input
+          type="text"
+          [ngModel]="muteWordInput()"
+          (ngModelChange)="muteWordInput.set($event)"
+          (keydown.enter)="addMutedWord()"
+          [placeholder]="'moments.muteWordsPlaceholder' | t"
+          class="flex-1 bg-surface-300 border-none rounded-full px-3 py-1 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none"
+          [attr.aria-label]="'moments.muteWordsLabel' | t"
+        />
+        <button
+          (click)="addMutedWord()"
+          class="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full hover:opacity-90 transition-opacity"
+        >
+          {{ 'moments.muteWordsAddBtn' | t }}
+        </button>
+        @if (mutedWords().length > 0) {
+          <button
+            (click)="clearAllMutedWords()"
+            class="text-xs text-text-muted hover:text-red-400 transition-colors px-2 py-0.5"
+            [attr.aria-label]="'moments.muteWordsClearAll' | t"
+          >
+            {{ 'moments.muteWordsClearAll' | t }}
+          </button>
+        }
+      </div>
+      @if (mutedWords().length > 0) {
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          @for (word of mutedWords(); track word) {
+            <span
+              class="inline-flex items-center gap-1 bg-red-500/20 text-red-400 text-[11px] font-bold rounded-full px-2.5 py-0.5 border border-red-500/30"
+            >
+              {{ word }}
+              <button
+                (click)="removeMutedWord(word)"
+                class="text-red-400 hover:text-white transition-colors ms-0.5"
+                [attr.aria-label]="'Remove muted word'"
+              >
+                ✕
+              </button>
+            </span>
+          }
+        </div>
+      }
+      @if (hiddenCount() > 0) {
+        <p class="text-[10px] text-text-muted mt-1.5">
+          {{ 'moments.muteWordsHiddenCount' | t: { count: hiddenCount() } }}
+        </p>
+      }
+    </div>
   </header>
 
   <!-- Compose Form (Collapsible) -->
@@ -144,7 +197,7 @@
       </app-empty-state>
     }
 
-    @if (!momentsStore.isLoading() && momentsStore.feed().length === 0) {
+    @if (!momentsStore.isLoading() && filteredFeed().length === 0 && momentsStore.feed().length === 0) {
       <app-empty-state
         [illustration]="'/assets/illustrations/no-moments.svg'"
         [title]="'moments.noMomentsFound' | t"
@@ -156,7 +209,7 @@
     }
 
     <!-- Moments Feed List -->
-    @for (moment of momentsStore.feed().slice(0, visibleCount()); track moment.id) {
+    @for (moment of filteredFeed().slice(0, visibleCount()); track moment.id) {
       <article
         class="p-4 bg-surface-500 hover:bg-surface-400/50 transition-colors"
         [class.bg-surface-400]="moment.is_pinned"
