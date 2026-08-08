@@ -10,7 +10,7 @@ import { EscrowService } from '../../services/escrow.service';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
 
-describe.skip('EscrowPaymentsComponent', () => {
+describe('EscrowPaymentsComponent', () => {
   let component: EscrowPaymentsComponent;
   let fixture: ComponentFixture<EscrowPaymentsComponent>;
   let mockAuthService: { getAccessToken: ReturnType<typeof vi.fn> };
@@ -83,8 +83,6 @@ describe.skip('EscrowPaymentsComponent', () => {
 
   it('should initialise with default signal values', () => {
     expect(component.selectedStatus()).toBe('all');
-    
-    
     expect(component.actionInProgress()).toBe(false);
     expect(component.error()).toBeNull();
     expect(component.successMessage()).toBeNull();
@@ -98,9 +96,6 @@ describe.skip('EscrowPaymentsComponent', () => {
   });
 
   it('should toggle create form', () => {
-    
-    
-    
   });
 
   it('should return correct status badge class', () => {

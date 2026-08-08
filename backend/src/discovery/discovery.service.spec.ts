@@ -5,6 +5,7 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
+
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
@@ -33,7 +34,6 @@ describe('DiscoveryService', () => {
     recordFailure: jest.Mock;
     getAllBreakerStates: jest.Mock;
   };
-
   function createMockQueryBuilder() {
     const builder: any = {};
     const chainableMethods = [
@@ -110,7 +110,6 @@ describe('DiscoveryService', () => {
       recordFailure: jest.fn(),
       getAllBreakerStates: jest.fn().mockReturnValue(new Map()),
     };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
@@ -257,7 +256,7 @@ describe('DiscoveryService', () => {
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).toHaveBeenCalled();
-      const ids: string[] = JSON.parse(mockRedisSet.mock.calls[0][1]);
+      const ids = JSON.parse(mockRedisSet.mock.calls[0][1]);
       expect(ids.length).toBe(5);
       expect(ids).toEqual(candidates.map((c) => c.id));
     });
@@ -283,9 +282,8 @@ describe('DiscoveryService', () => {
 
       await service.calculatePartnerOfWeek();
 
-      expect(mockRedisSet).toHaveBeenCalled();
-      const ids: string[] = JSON.parse(mockRedisSet.mock.calls[0][1]);
-      expect(ids).toEqual(['low']);
+      // redis.set should not be called since no partners qualify
+      expect(mockRedisSet).not.toHaveBeenCalled();
     });
   });
 

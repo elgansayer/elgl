@@ -485,15 +485,20 @@ export class AudioRoomsStore {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
       } else if (p.type === 'host_tip' && p.tip && this.isHostTipPayload(p.tip)) {
         const tip = p.tip;
+        // Don't replay animation for the sender -- it already fired locally in tipHost()
+        if (tip.sender_user_id === this.authService.currentUser()?.id) {
+          return;
+        }
+        const amount = tip.amount_coins ?? 0;
         this.economyStore.triggerPublicGiftAnimation({
           giftId: `tip_${tip.tip_id ?? 'unknown'}`,
-          giftName: `${tip.amount_coins} Coins`,
-          giftIcon: '🪙',
-          animationType: 'sparkle',
+          giftName: `${amount} Coins`,
+          giftIcon: this.tipIconForAmount(amount),
+          animationType: this.tipAnimationForAmount(amount),
           animationUrl: undefined,
           senderName: tip.sender_name ?? 'Someone',
           receiverName: 'Host',
-          coinValue: tip.amount_coins ?? 0,
+          coinValue: amount,
         });
       } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
         this.economyStore.triggerPublicGiftAnimation({
@@ -791,7 +796,7 @@ export class AudioRoomsStore {
 
   async tipHost(roomId: string, amountCoins: number): Promise<boolean> {
     try {
-      await firstValueFrom(
+      const res = await firstValueFrom(
         this.http.post<{
           tip_id: string;
           amount_coins: number;
@@ -804,6 +809,23 @@ export class AudioRoomsStore {
         ),
       );
       this.economyStore.coinsBalance.update((bal) => bal - amountCoins);
+
+      const user = this.authService.currentUser();
+      const senderName = user?.display_name ?? 'Someone';
+      const animationType = this.tipAnimationForAmount(amountCoins);
+
+      // Fire full-screen SVG animation immediately for the sender
+      this.economyStore.triggerPublicGiftAnimation({
+        giftId: `tip_${res.tip_id}`,
+        giftName: `${amountCoins} Coins`,
+        giftIcon: this.tipIconForAmount(amountCoins),
+        animationType,
+        animationUrl: undefined,
+        senderName,
+        receiverName: 'Host',
+        coinValue: amountCoins,
+      });
+
       showToast(
         this.i18n.translate('audioRoom.tipSentToast', {
           amount: amountCoins,
@@ -816,6 +838,20 @@ export class AudioRoomsStore {
       showToast(message || this.i18n.translate('audioRoom.tipError'));
       return false;
     }
+  }
+
+  private tipAnimationForAmount(amount: number): string {
+    if (amount >= 500) return 'premium';
+    if (amount >= 100) return 'confetti';
+    if (amount >= 50) return 'hearts';
+    return 'sparkle';
+  }
+
+  private tipIconForAmount(amount: number): string {
+    if (amount >= 500) return '💎';
+    if (amount >= 100) return '🎁';
+    if (amount >= 50) return '💝';
+    return '🪙';
   }
 
   async sendRoomChatMessage(text: string): Promise<void> {

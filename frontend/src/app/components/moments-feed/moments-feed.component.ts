@@ -1,5 +1,14 @@
 import { showToast } from '../../services/toast.service';
-import { Component, DestroyRef, inject, signal, computed, resource, effect, afterNextRender } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  inject,
+  signal,
+  computed,
+  resource,
+  effect,
+  afterNextRender,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,6 +18,7 @@ import { MomentsStore, MomentRecord, MomentComment } from '../../services/moment
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
+import { SafetyService } from '../../services/safety.service';
 import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
@@ -64,6 +74,7 @@ export class MomentsFeedComponent {
   readonly momentsStore = inject(MomentsStore);
   readonly vocabStore = inject(VocabularyStore);
   readonly authService = inject(AuthService);
+  private readonly safetyService = inject(SafetyService);
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly draftService = inject(DraftService);
@@ -71,6 +82,33 @@ export class MomentsFeedComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
   readonly visibleCount = signal(15);
+
+  // Mute word filter
+  readonly mutedWords = this.safetyService.mutedWords;
+  readonly showMutePanel = signal<boolean>(false);
+  readonly newMuteWord = signal('');
+
+  readonly feedToDisplay = computed(() => {
+    const raw = this.momentsStore.feed();
+    return this.safetyService.filterMomentsByMutedWords(raw);
+  });
+
+  readonly isFilteringByMutedWords = computed(() => {
+    return (
+      this.mutedWords().length > 0 && this.feedToDisplay().length < this.momentsStore.feed().length
+    );
+  });
+
+  addMutedWord(): void {
+    const word = this.newMuteWord().trim();
+    if (!word) return;
+    this.safetyService.addMutedWord(word);
+    this.newMuteWord.set('');
+  }
+
+  removeMutedWord(word: string): void {
+    this.safetyService.removeMutedWord(word);
+  }
 
   constructor() {
     afterNextRender(() => {
@@ -171,7 +209,12 @@ export class MomentsFeedComponent {
 
   async setFilter(filter: string): Promise<void> {
     this.visibleCount.set(this.pageSize);
-    if (filter === 'All' || filter === 'Classmates' || filter === 'Following' || filter === 'For You') {
+    if (
+      filter === 'All' ||
+      filter === 'Classmates' ||
+      filter === 'Following' ||
+      filter === 'For You'
+    ) {
       await this.momentsStore.loadFeed(filter);
     } else {
       await this.momentsStore.loadFeed('All');
@@ -184,13 +227,13 @@ export class MomentsFeedComponent {
       showToast(this.i18n.translate('moments.maxMediaAlert'));
       return;
     }
-    this.newMediaUrls.update(urls => [...urls, this.tempImageUrlInput.trim()]);
+    this.newMediaUrls.update((urls) => [...urls, this.tempImageUrlInput.trim()]);
     this.newMediaType.set('images');
     this.tempImageUrlInput = '';
   }
 
   removeMedia(index: number): void {
-    this.newMediaUrls.update(urls => {
+    this.newMediaUrls.update((urls) => {
       const copy = [...urls];
       copy.splice(index, 1);
       return copy;
@@ -284,7 +327,10 @@ export class MomentsFeedComponent {
       this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
     } catch (e) {
       console.error('Inline translation error:', e);
-      this.translationCache.update((prev) => ({ ...prev, [cacheKey]: this.i18n.translate('moments.transError') }));
+      this.translationCache.update((prev) => ({
+        ...prev,
+        [cacheKey]: this.i18n.translate('moments.transError'),
+      }));
       this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
     }
   }
@@ -549,9 +595,9 @@ export class MomentsFeedComponent {
     const docHeight = document.documentElement.scrollHeight;
     const winHeight = window.innerHeight;
     if (docHeight - scrollTop - winHeight < 200) {
-      const total = this.momentsStore.feed().length;
+      const total = this.feedToDisplay().length;
       if (this.visibleCount() < total) {
-        this.visibleCount.update(c => c + this.pageSize);
+        this.visibleCount.update((c) => c + this.pageSize);
       }
     }
   };

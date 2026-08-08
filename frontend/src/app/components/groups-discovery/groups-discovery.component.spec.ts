@@ -15,7 +15,7 @@ class MockTranslatePipe implements PipeTransform {
   }
 }
 
-describe.skip('GroupsDiscoveryComponent', () => {
+describe('GroupsDiscoveryComponent', () => {
   let fixture: ComponentFixture<GroupsDiscoveryComponent>;
   let component: GroupsDiscoveryComponent;
   let httpTesting: HttpTestingController;
