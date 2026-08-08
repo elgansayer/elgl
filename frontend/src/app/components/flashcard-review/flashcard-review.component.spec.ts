@@ -4,7 +4,7 @@ import { FlashcardReviewComponent } from './flashcard-review.component';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 
-const MOCK_CARD = { easiness_factor: 2.5, repetitions: 0, interval_days: 0,
+const MOCK_CARD = {
   id: '1',
   user_id: 'u1',
   word_token: 'abundant',
