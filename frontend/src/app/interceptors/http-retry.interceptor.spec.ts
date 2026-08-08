@@ -5,7 +5,7 @@ import {
   HttpResponse,
 } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, Mock } from 'vitest';
 import { httpRetryInterceptor } from './http-retry.interceptor';
 
 describe('httpRetryInterceptor', () => {
@@ -13,7 +13,7 @@ describe('httpRetryInterceptor', () => {
     expect(typeof httpRetryInterceptor).toBe('function');
   });
 
-  it('passes through a successful response immediately', (done) => {
+  it('passes through a successful response immediately', (done: any) => {
     let receivedBody: string | undefined;
 
     const mockNext: HttpHandlerFn = () =>
@@ -36,7 +36,7 @@ describe('httpRetryInterceptor', () => {
     }, 100);
   });
 
-  it('does not retry on a non-429 error (404)', (done) => {
+  it('does not retry on a non-429 error (404)', (done: any) => {
     let caughtError: HttpErrorResponse | undefined;
     let attempts = 0;
 
@@ -71,7 +71,7 @@ describe('httpRetryInterceptor', () => {
     }, 500);
   });
 
-  it('does not retry on non-HttpErrorResponse errors', (done) => {
+  it('does not retry on non-HttpErrorResponse errors', (done: any) => {
     let caughtError: Error | undefined;
     let attempts = 0;
 
@@ -99,7 +99,7 @@ describe('httpRetryInterceptor', () => {
     }, 500);
   });
 
-  it('retries on HTTP 429 and succeeds on a later attempt', (done) => {
+  it('retries on HTTP 429 and succeeds on a later attempt', (done: any) => {
     let attempt = 0;
     let successReceived = false;
 
@@ -135,7 +135,7 @@ describe('httpRetryInterceptor', () => {
     }, 5000);
   }, 8000);
 
-  it('exhausts retries and fails after 3 consecutive 429s', (done) => {
+  it('exhausts retries and fails after 3 consecutive 429s', (done: any) => {
     let attempt = 0;
     let caughtError: HttpErrorResponse | undefined;
 
