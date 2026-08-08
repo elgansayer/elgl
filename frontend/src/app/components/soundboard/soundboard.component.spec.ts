@@ -135,7 +135,7 @@ describe('SoundboardComponent', () => {
     const cbArgs = subscribeFn.mock.calls.find((c: unknown[]) => c[0] === 'room_room-1');
     expect(cbArgs).toBeDefined();
 
-    const callback = cbArgs[1] as (data: unknown) => void;
+    const callback = cbArgs![1] as (data: unknown) => void;
     callback({ type: 'soundboard_play', sound_url: 'https://example.com/remote.mp3' });
 
     expect(audioElements.length).toBe(1);
