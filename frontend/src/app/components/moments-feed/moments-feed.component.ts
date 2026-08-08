@@ -92,7 +92,7 @@ export class MomentsFeedComponent {
   });
 
   readonly hiddenByMuteCount = computed(() => {
-    const total = this.filteredFeed().length;
+    const total = this.momentsStore.feed().length;
     const visible = this.filteredFeed().length;
     return total - visible;
   });
