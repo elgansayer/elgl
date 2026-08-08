@@ -1,6 +1,9 @@
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { AdminService, AdminUserSummary } from './admin.service';
 import { AuthService } from './auth.service';
@@ -67,36 +70,82 @@ describe('AdminService', () => {
     expect(result.total).toBe(1);
   });
 
-  it('falls back to mock data when the users request errors', async () => {
+  it('falls back to mock data when the users request errors with a network error', async () => {
     const promise = service.listUsers('', 1, 20);
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/admin/users?page=1&pageSize=20`,
+    );
     req.error(new ProgressEvent('network error'));
 
     const result = await promise;
     expect(result.users.length).toBeGreaterThan(0);
   });
 
-  it('sends a PATCH request to toggle VIP status', async () => {
-    const promise = service.setVipStatus('user-1', true, 'consumer_8_ukp_10_usd');
+  it('rejects with 403 when listUsers receives a Forbidden response', async () => {
+    const promise = service.listUsers('', 1, 20);
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/vip`);
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/admin/users?page=1&pageSize=20`,
+    );
+    req.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+    await expect(promise).rejects.toBeTruthy();
+  });
+
+  it('rejects with 401 when listUsers receives an Unauthorized response', async () => {
+    const promise = service.listUsers('', 1, 20);
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/admin/users?page=1&pageSize=20`,
+    );
+    req.flush(
+      { message: 'Unauthorized' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    await expect(promise).rejects.toBeTruthy();
+  });
+
+  it('sends a PATCH request to toggle VIP status', async () => {
+    const promise = service.setVipStatus(
+      'user-1',
+      true,
+      'consumer_8_ukp_10_usd',
+    );
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/admin/users/user-1/vip`,
+    );
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({
       is_vip: true,
       vip_tier: 'consumer_8_ukp_10_usd',
     });
-    req.flush({ ...mockUser, is_vip: true, vip_tier: 'consumer_8_ukp_10_usd' });
+    req.flush({
+      ...mockUser,
+      is_vip: true,
+      vip_tier: 'consumer_8_ukp_10_usd',
+    });
 
     const result = await promise;
     expect(result.is_vip).toBe(true);
   });
 
   it('rejects instead of faking success when the VIP toggle request errors', async () => {
-    const promise = service.setVipStatus('user-1', true, 'consumer_8_ukp_10_usd');
+    const promise = service.setVipStatus(
+      'user-1',
+      true,
+      'consumer_8_ukp_10_usd',
+    );
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/vip`);
-    req.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/admin/users/user-1/vip`,
+    );
+    req.flush(
+      { message: 'Forbidden' },
+      { status: 403, statusText: 'Forbidden' },
+    );
 
     await expect(promise).rejects.toBeTruthy();
   });
@@ -104,11 +153,45 @@ describe('AdminService', () => {
   it('fetches login history for a user', async () => {
     const promise = service.getLoginHistory('user-1');
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users/user-1/login-history`);
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/admin/users/user-1/login-history`,
+    );
     expect(req.request.method).toBe('GET');
-    req.flush([{ id: 'log-1', user_id: 'user-1', created_at: new Date().toISOString() }]);
+    req.flush([
+      {
+        id: 'log-1',
+        user_id: 'user-1',
+        created_at: new Date().toISOString(),
+      },
+    ]);
 
     const result = await promise;
     expect(result.length).toBe(1);
+  });
+
+  it('falls back to mock login history on network error', async () => {
+    const promise = service.getLoginHistory('partner-1');
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/admin/users/partner-1/login-history`,
+    );
+    req.error(new ProgressEvent('network error'));
+
+    const result = await promise;
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('rejects login history with 403 when forbidden', async () => {
+    const promise = service.getLoginHistory('user-1');
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/admin/users/user-1/login-history`,
+    );
+    req.flush(
+      { message: 'Forbidden' },
+      { status: 403, statusText: 'Forbidden' },
+    );
+
+    await expect(promise).rejects.toBeTruthy();
   });
 });
