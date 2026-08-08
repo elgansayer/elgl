@@ -392,6 +392,8 @@
                           [id]="'comment-mention-option-' + moment.id + '-' + i"
                           [attr.aria-selected]="i === (mentionActiveIndexMap()[moment.id] ?? 0)"
                           [class.bg-surface-400]="i === (mentionActiveIndexMap()[moment.id] ?? 0)"
+                          (click)="selectMention(moment.id, member)"
+                          (mousedown)="$event.preventDefault()"
                           class="px-3 py-2 text-xs text-text-primary cursor-pointer hover:bg-surface-400 flex items-center gap-2"
                         >
                           @if (member.avatar_url) {

@@ -281,4 +281,87 @@ describe('MomentsFeedComponent', () => {
     expect(component.showTranslationMap()['m1']).toBe(true);
     expect(component.translationCache()['m1']).toBe('Hola');
   });
+
+  // @mention autocomplete tests
+  describe('comment @mention autocomplete', () => {
+    it('detects @mention trigger and stores query', () => {
+      const momentId = 'm1';
+      const input = document.createElement('input');
+      input.value = 'Hello @Ali';
+      input.selectionStart = 10;
+      const event = { target: input } as unknown as Event;
+
+      component.onCommentInput(event, momentId);
+
+      expect(component.mentionQueryMap()[momentId]).toBe('Ali');
+    });
+
+    it('clears mention query when no @ trigger is present', () => {
+      const momentId = 'm1';
+      const input = document.createElement('input');
+      input.value = 'Hello world';
+      input.selectionStart = 11;
+      const event = { target: input } as unknown as Event;
+
+      component.onCommentInput(event, momentId);
+
+      expect(component.mentionQueryMap()[momentId]).toBeNull();
+    });
+
+    it('inserts mention text and clears query on selectMention', () => {
+      const momentId = 'm1';
+      component.commentInputMap[momentId] = 'Hello @Ali';
+      component.mentionRangeStartMap[momentId] = 6;
+      component.mentionRangeEndMap[momentId] = 10;
+      component.mentionQueryMap.update((m) => ({ ...m, [momentId]: 'Ali' }));
+
+      component.selectMention(momentId, {
+        id: 'u2',
+        display_name: 'Alice',
+        avatar_url: null,
+      });
+
+      expect(component.commentInputMap[momentId]).toBe('Hello @Alice ');
+      expect(component.mentionQueryMap()[momentId]).toBeNull();
+    });
+
+    it('does nothing when selectMention is called with undefined', () => {
+      const momentId = 'm1';
+      const before = component.commentInputMap[momentId] ?? '';
+      component.selectMention(momentId, undefined);
+      expect(component.commentInputMap[momentId]).toBe(before);
+    });
+
+    it('starts a reply with correct context', () => {
+      const comment: MomentComment = {
+        id: 'c1',
+        user_id: 'u2',
+        text_content: 'Nice!',
+        created_at: new Date().toISOString(),
+        author: { id: 'u2', display_name: 'Bob', avatar_url: null },
+      };
+
+      component.startReply('m1', comment);
+
+      expect(component.replyingToMap['m1']).toEqual({
+        parentCommentId: 'c1',
+        replyToUserId: 'u2',
+        replyToName: 'Bob',
+      });
+    });
+
+    it('cancels a reply', () => {
+      component.startReply('m1', {
+        id: 'c1',
+        user_id: 'u2',
+        text_content: 'Nice!',
+        created_at: new Date().toISOString(),
+        author: { id: 'u2', display_name: 'Bob', avatar_url: null },
+      });
+      expect(component.replyingToMap['m1']).not.toBeNull();
+
+      component.cancelReply('m1');
+      expect(component.replyingToMap['m1']).toBeNull();
+    });
+  });
 });
