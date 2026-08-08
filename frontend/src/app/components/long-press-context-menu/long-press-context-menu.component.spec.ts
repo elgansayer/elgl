@@ -136,6 +136,18 @@ describe('LongPressContextMenuComponent', () => {
     expect(component.menuVisible()).toBe(false);
   });
 
+  it('should emit explain and close the menu when doExplain is called', () => {
+    vi.spyOn(component.explain, 'emit');
+    component.menuVisible.set(true);
+
+    component.doExplain();
+
+    expect(component.explain.emit).toHaveBeenCalledWith({
+      messageId: 'test-message-id',
+    });
+    expect(component.menuVisible()).toBe(false);
+  });
+
   it('should not render translate, transliterate, speak, or correct actions for non-text messages', () => {
     fixture.componentRef.setInput('messageType', 'voice');
     component.menuVisible.set(true);

@@ -501,6 +501,22 @@ export class ChatService {
   }
 
   /**
+   * Get AI-generated grammar explanation for a correction.
+   */
+  async explainGrammar(
+    original: string,
+    corrected: string,
+  ): Promise<{ original: string; corrected: string; explanation: string }> {
+    return firstValueFrom(
+      this.http.post<{ original: string; corrected: string; explanation: string }>(
+        `${environment.apiUrl}/nlp/explain-grammar`,
+        { original, corrected },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  /**
    * Sends a correction to a message (any user can correct others' messages).
    */
   async correctMessage(

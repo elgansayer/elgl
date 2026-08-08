@@ -75,6 +75,15 @@ import {Component, input, output, signal} from '@angular/core';import { Translat
             </button>
           }
 
+          @if (messageType() === 'correction') {
+            <button
+              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              (click)="doExplain()"
+            >
+              {{ 'context_menu.explain' | t }}
+            </button>
+          }
+
           <button
             class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
             (click)="doFavourite()"
@@ -135,6 +144,7 @@ export class LongPressContextMenuComponent {
   readonly transliterate = output<{ messageId: string; content: string }>();
   readonly speak = output<{ messageId: string; content: string }>();
   readonly correct = output<{ messageId: string; content: string }>();
+  readonly explain = output<{ messageId: string }>();
 
   menuVisible = signal(false);
 
@@ -226,6 +236,11 @@ export class LongPressContextMenuComponent {
 
   doCorrect() {
     this.correct.emit({ messageId: this.messageId(), content: this.messageContent() });
+    this.closeMenu();
+  }
+
+  doExplain() {
+    this.explain.emit({ messageId: this.messageId() });
     this.closeMenu();
   }
 

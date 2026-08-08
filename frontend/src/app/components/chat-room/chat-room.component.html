@@ -172,6 +172,7 @@
             (transliterate)="transliterateMessage(msg)"
             (speak)="speakMessage(msg)"
             (correct)="startCorrection(msg)"
+            (explain)="explainGrammarForMessage(msg)"
           >
             <div
               [id]="'msg-' + msg.id"

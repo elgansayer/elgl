@@ -523,6 +523,26 @@ export class ChatRoomComponent implements OnDestroy {
     this.showCorrectionForm.set(true);
   }
 
+  async explainGrammarForMessage(msg: ChatMessage): Promise<void> {
+    if (msg.message_type !== 'correction' || !msg.correction_payload) return;
+    const payload = msg.correction_payload;
+    try {
+      const result = await this.chatService.explainGrammar(
+        payload.original,
+        payload.corrected,
+      );
+      const updatedPayload = { ...payload, explanation: result.explanation };
+      this.messages.update((list) =>
+        list.map((m) =>
+          m.id === msg.id ? { ...m, correction_payload: updatedPayload } : m,
+        ),
+      );
+    } catch (e) {
+      console.error('Failed to get grammar explanation:', e);
+      showToast(this.i18n.translate('correction.explainError') || 'Failed to get explanation');
+    }
+  }
+
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {
     if (event.blocked) {
       this.blockedUserIds.update((ids) => [...ids, event.senderId]);
