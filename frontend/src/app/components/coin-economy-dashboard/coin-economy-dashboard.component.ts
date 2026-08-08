@@ -1,15 +1,17 @@
-import { Component, inject, AfterViewInit } from '@angular/core';
+import { Component, inject, AfterViewInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { EconomyStore, TransactionRecord } from '../../services/economy.store';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoinEconomyOnboardingService } from '../../services/coin-economy-onboarding.service';
+import { showToast } from '../../services/toast.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppPillComponent } from '../primitives/pill/pill.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { DailyLoginModalComponent } from '../daily-login-modal/daily-login-modal.component';
 
 @Component({
   selector: 'app-coin-economy-dashboard',
@@ -23,8 +25,17 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     AppButtonPrimaryComponent,
     AppSkeletonLoaderComponent,
     AppEmptyStateComponent,
+    DailyLoginModalComponent,
   ],
   template: `<div class="min-h-screen bg-surface-300 text-text-primary">
+  <!-- Daily Login Reward Modal -->
+  @if (showDailyRewardModal()) {
+    <app-daily-login-modal
+      [coins]="dailyRewardCoins()"
+      (closed)="showDailyRewardModal.set(false)"
+    />
+  }
+
   <!-- Header with Coin Balance -->
   <section class="bg-gradient-to-br from-indigo-900/40 via-surface-200 to-surface-300 ps-4 pe-4 pt-8 pb-12 md:ps-8 md:pe-8">
     <div class="max-w-4xl mx-auto">
@@ -221,6 +232,8 @@ export class CoinEconomyDashboardComponent implements AfterViewInit {
   private readonly onboardingService = inject(CoinEconomyOnboardingService);
 
   readonly balance = this.economyStore.coinsBalance;
+  readonly showDailyRewardModal = signal<boolean>(false);
+  readonly dailyRewardCoins = signal<number>(0);
 
   ngAfterViewInit(): void {
     void this.economyStore.loadInitialData();
@@ -240,7 +253,17 @@ export class CoinEconomyDashboardComponent implements AfterViewInit {
   }
 
   async claimDailyReward(): Promise<void> {
-    await this.economyStore.claimDailyCheckIn();
+    const result = await this.economyStore.claimDailyCheckIn();
+    if (!result) {
+      showToast(this.i18n.translate('economy.dailyCheckInError'));
+      return;
+    }
+    if (result.claimed) {
+      this.dailyRewardCoins.set(result.coins_rewarded);
+      this.showDailyRewardModal.set(true);
+    } else {
+      showToast(this.i18n.translate('economy.dailyCheckInAlreadyClaimed'), 'info');
+    }
   }
 
   startTour(): void {
