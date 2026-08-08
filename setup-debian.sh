@@ -59,6 +59,9 @@ if [ ! -d "$FACTORY_STATE/repository/.git" ]; then
 fi
 sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" remote set-url origin "$FACTORY_REPOSITORY_URL"
 sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" config credential.helper '!gh auth git-credential'
+sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" config user.name 'HelloTalk Factory'
+sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" config user.email \
+  'hellotalk-factory@users.noreply.github.com'
 sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" fetch origin main
 sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" switch main
 sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" merge --ff-only origin/main
