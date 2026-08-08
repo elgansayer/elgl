@@ -389,9 +389,19 @@ describe('VocabularyStore', () => {
   });
 
   describe('haptic feedback', () => {
+    let originalNavigator: typeof navigator;
+
+    beforeEach(() => {
+      originalNavigator = globalThis.navigator;
+    });
+
+    afterEach(() => {
+      vi.stubGlobal('navigator', originalNavigator);
+    });
+
     it('should vibrate with success buzz for known words (srs >= 4)', async () => {
       const vibrateSpy = vi.fn();
-      vi.stubGlobal('navigator', { vibrate: vibrateSpy });
+      vi.stubGlobal('navigator', { vibrate: vibrateSpy, onLine: true });
 
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
@@ -406,7 +416,7 @@ describe('VocabularyStore', () => {
 
     it('should vibrate with gentle pulse for learning words (srs 1-3)', async () => {
       const vibrateSpy = vi.fn();
-      vi.stubGlobal('navigator', { vibrate: vibrateSpy });
+      vi.stubGlobal('navigator', { vibrate: vibrateSpy, onLine: true });
 
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
@@ -420,7 +430,7 @@ describe('VocabularyStore', () => {
     });
 
     it('should not throw if navigator.vibrate is undefined', async () => {
-      vi.stubGlobal('navigator', {});
+      vi.stubGlobal('navigator', { onLine: true });
 
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));

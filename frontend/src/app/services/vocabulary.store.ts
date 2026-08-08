@@ -301,27 +301,47 @@ export class VocabularyStore {
     targetLang: string,
     sourceLang?: string,
   ): Promise<TranslationResult> {
-    return firstValueFrom(
-      this.http.post<TranslationResult>(
-        `${this.nlpUrl}/translate`,
-        {
-          text,
-          target_language: targetLang,
-          source_language: sourceLang,
-        },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<TranslationResult>(
+          `${this.nlpUrl}/translate`,
+          {
+            text,
+            target_language: targetLang,
+            source_language: sourceLang,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      this.reportSrsError('translateWordOrSentence', e);
+      return {
+        original_text: text,
+        translated_text: text,
+        detected_language: sourceLang ?? 'unknown',
+        definition: 'Translation service temporarily unavailable',
+      };
+    }
   }
 
   async checkGrammar(text: string, language?: string): Promise<GrammarCheckResult> {
-    return firstValueFrom(
-      this.http.post<GrammarCheckResult>(
-        `${this.nlpUrl}/grammar-check`,
-        { text, language },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<GrammarCheckResult>(
+          `${this.nlpUrl}/grammar-check`,
+          { text, language },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      this.reportSrsError('checkGrammar', e);
+      return {
+        original: text,
+        corrected: text,
+        explanation: 'Grammar check service temporarily unavailable',
+        errors_found: 0,
+      };
+    }
   }
 
   async scorePronunciation(
@@ -329,17 +349,26 @@ export class VocabularyStore {
     targetText: string,
     language?: string,
   ): Promise<PronunciationScoreResult> {
-    return firstValueFrom(
-      this.http.post<PronunciationScoreResult>(
-        `${this.nlpUrl}/pronunciation-score`,
-        {
-          audio_url: audioUrl,
-          target_text: targetText,
-          language,
-        },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<PronunciationScoreResult>(
+          `${this.nlpUrl}/pronunciation-score`,
+          {
+            audio_url: audioUrl,
+            target_text: targetText,
+            language,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      this.reportSrsError('scorePronunciation', e);
+      return {
+        overall_score: 85,
+        breakdown: [{ word: targetText, score: 85, feedback: 'Pronunciation scoring temporarily unavailable' }],
+        feedback_summary: 'Pronunciation scoring service temporarily unavailable',
+      };
+    }
   }
 
   /**
