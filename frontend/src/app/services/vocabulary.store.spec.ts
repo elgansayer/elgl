@@ -632,6 +632,8 @@ describe('VocabularyStore', () => {
     it('should handle updateSrsLevel failure gracefully', async () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
+      // jsdom returns undefined for navigator.onLine, which would trigger offline fallback.
+      vi.stubGlobal('navigator', { onLine: true, vibrate: vi.fn() });
 
       const promise = store.updateSrsLevel('1', 2);
       httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(
@@ -899,6 +901,98 @@ describe('VocabularyStore', () => {
       expect(req.request.body.language).toBeUndefined();
       req.flush({ overall_score: 100, breakdown: [], feedback_summary: '' });
       await promise;
+    });
+  });
+
+  describe('isDegraded signal', () => {
+    it('should initialise isDegraded as false', () => {
+      expect(store.isDegraded()).toBe(false);
+    });
+
+    it('should set isDegraded to true when NLP translate fails', async () => {
+      const promise = store.translateWordOrSentence('hello', 'es');
+      httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush(
+        {},
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+      await promise;
+
+      expect(store.isDegraded()).toBe(true);
+    });
+
+    it('should set isDegraded to true when grammar check fails', async () => {
+      const promise = store.checkGrammar('hola');
+      httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`).flush(
+        {},
+        { status: 500, statusText: 'Error' },
+      );
+      await promise;
+
+      expect(store.isDegraded()).toBe(true);
+    });
+
+    it('should set isDegraded to true when pronunciation scoring fails', async () => {
+      const promise = store.scorePronunciation('url', 'text');
+      httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`).flush(
+        {},
+        { status: 500, statusText: 'Error' },
+      );
+      await promise;
+
+      expect(store.isDegraded()).toBe(true);
+    });
+
+    it('should remain false when NLP calls succeed', async () => {
+      const promise = store.translateWordOrSentence('hello', 'es');
+      httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush({
+        original_text: 'hello',
+        translated_text: 'hola',
+        detected_language: 'en',
+      });
+      await promise;
+
+      expect(store.isDegraded()).toBe(false);
+    });
+  });
+
+  describe('degradedReason signal', () => {
+    it('should initialise degradedReason as empty string', () => {
+      expect(store.degradedReason()).toBe('');
+    });
+  });
+
+  describe('pendingReviewCards signal', () => {
+    it('should initialise as an empty array', () => {
+      expect(store.pendingReviewCards()).toEqual([]);
+    });
+
+    it('should allow setting and reading pendingReviewCards', () => {
+      const cards = [mockFlashcard];
+      store.pendingReviewCards.set(cards);
+      expect(store.pendingReviewCards()).toEqual(cards);
+      expect(store.pendingReviewCards().length).toBe(1);
+    });
+  });
+
+  describe('isOffline computed signal', () => {
+    it('should be false when navigator.onLine is true', () => {
+      vi.stubGlobal('navigator', { onLine: true, vibrate: vi.fn() });
+      expect(store.isOffline()).toBe(false);
+    });
+
+    it('should be true when navigator.onLine is false', () => {
+      vi.stubGlobal('navigator', { onLine: false, vibrate: vi.fn() });
+      expect(store.isOffline()).toBe(true);
+    });
+  });
+
+  describe('syncOfflineReviews', () => {
+    it('should delegate to srsOffline.syncQueuedReviews and return result', async () => {
+      srsOfflineSpy.syncQueuedReviews.mockResolvedValue({ synced: 3, failed: 1 });
+
+      const result = await store.syncOfflineReviews();
+      expect(result).toEqual({ synced: 3, failed: 1 });
+      expect(srsOfflineSpy.syncQueuedReviews).toHaveBeenCalledOnce();
     });
   });
 });
