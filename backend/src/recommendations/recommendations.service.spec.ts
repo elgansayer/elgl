@@ -196,7 +196,7 @@ describe('RecommendationsService', () => {
       usersChain._setResolve([
         {
           id: 'user-a',
-          native_language: 'en',
+          native_languages: ['en'],
           target_languages: ['es'],
         },
       ]);
@@ -207,7 +207,7 @@ describe('RecommendationsService', () => {
           id: 'partner-1',
           display_name: 'Partner 1',
           avatar_url: 'http://img/1.png',
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 30,
@@ -217,7 +217,7 @@ describe('RecommendationsService', () => {
           id: 'partner-2',
           display_name: 'Partner 2',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 3,
@@ -269,7 +269,7 @@ describe('RecommendationsService', () => {
       chain._setResolve([
         {
           id: 'user-a',
-          native_language: 'en',
+          native_languages: ['en'],
           target_languages: null,
         },
       ]);
@@ -327,7 +327,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['es'],
       });
 
@@ -337,7 +337,7 @@ describe('RecommendationsService', () => {
           id: 'partner-1',
           display_name: 'Partner 1',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 30,
@@ -392,7 +392,7 @@ describe('RecommendationsService', () => {
           id: 'candidate-1',
           display_name: 'Candidate 1',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 15,
@@ -419,7 +419,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['es'],
       });
 
@@ -429,7 +429,7 @@ describe('RecommendationsService', () => {
           id: 'lang-partner',
           display_name: 'Lang Partner',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 20,
@@ -456,7 +456,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: null,
       });
 
@@ -467,7 +467,7 @@ describe('RecommendationsService', () => {
           id: 'active-user',
           display_name: 'Active User',
           avatar_url: null,
-          native_language: 'fr',
+          native_languages: ['fr'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 50,
@@ -527,7 +527,7 @@ describe('RecommendationsService', () => {
           id: 'c-low',
           display_name: 'Low',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 100,
@@ -537,7 +537,7 @@ describe('RecommendationsService', () => {
           id: 'c-high-serious',
           display_name: 'HighSerious',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 10,
@@ -547,7 +547,7 @@ describe('RecommendationsService', () => {
           id: 'c-high-not-serious',
           display_name: 'HighNotSerious',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 50,
@@ -574,7 +574,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['ja'],
       });
 
@@ -587,7 +587,7 @@ describe('RecommendationsService', () => {
           id: 'active-user',
           display_name: 'Active User',
           avatar_url: null,
-          native_language: 'fr',
+          native_languages: ['fr'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 40,
@@ -606,14 +606,14 @@ describe('RecommendationsService', () => {
       expect(result[0].id).toBe('active-user');
     });
 
-    it('should skip language exchange when user has no native_language', async () => {
+    it('should skip language exchange when user has no native_languages', async () => {
       const tagsChain = makeQueryChain();
       tagsChain._setResolve([]);
 
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: null,
+        native_languages: null,
         target_languages: ['es', 'fr'],
       });
 
@@ -623,7 +623,7 @@ describe('RecommendationsService', () => {
           id: 'active-p',
           display_name: 'Active P',
           avatar_url: null,
-          native_language: 'de',
+          native_languages: ['de'],
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 12,
@@ -676,7 +676,7 @@ describe('RecommendationsService', () => {
           id: 'c-1',
           display_name: 'C1',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 10,
@@ -702,7 +702,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['es'],
       });
 
@@ -712,7 +712,7 @@ describe('RecommendationsService', () => {
           id: 'lang-p',
           display_name: 'Lang P',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 5,
@@ -738,7 +738,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: null,
+        native_languages: null,
         target_languages: null,
       });
 
@@ -748,7 +748,7 @@ describe('RecommendationsService', () => {
           id: 'active-u',
           display_name: 'Active U',
           avatar_url: null,
-          native_language: 'de',
+          native_languages: ['de'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 40,
@@ -835,7 +835,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['es'],
       });
 
@@ -848,7 +848,7 @@ describe('RecommendationsService', () => {
           id: 'active-u',
           display_name: 'Active U',
           avatar_url: null,
-          native_language: 'de',
+          native_languages: ['de'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 30,
@@ -881,7 +881,7 @@ describe('RecommendationsService', () => {
           id: 'fallback-u',
           display_name: 'Fallback U',
           avatar_url: null,
-          native_language: 'pt',
+          native_languages: ['pt'],
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 8,
@@ -906,7 +906,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['es', 'fr'],
       });
 
@@ -916,7 +916,7 @@ describe('RecommendationsService', () => {
           id: 'full-partner',
           display_name: 'Full Partner',
           avatar_url: 'https://img.example/avatar.png',
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en', 'pt'],
           is_serious_learner: true,
           study_streak_days: 42,
@@ -955,7 +955,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['es'],
       });
 
@@ -965,7 +965,7 @@ describe('RecommendationsService', () => {
           id: 'lang-match',
           display_name: 'Lang Match',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 25,
@@ -997,7 +997,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_language: 'en',
+        native_languages: ['en'],
         target_languages: ['es'],
       });
 
@@ -1007,7 +1007,7 @@ describe('RecommendationsService', () => {
           id: 'lang-partner',
           display_name: 'Lang Partner',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 7,
@@ -1030,10 +1030,10 @@ describe('RecommendationsService', () => {
     it('should handle calculateDailyRecommendations with multiple users and diverse language pairs', async () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
-        { id: 'user-a', native_language: 'en', target_languages: ['es'] },
-        { id: 'user-b', native_language: 'ja', target_languages: ['en', 'ko'] },
-        { id: 'user-c', native_language: 'es', target_languages: ['en'] },
-        { id: 'user-d', native_language: 'en', target_languages: null },
+        { id: 'user-a', native_languages: ['en'], target_languages: ['es'] },
+        { id: 'user-b', native_languages: ['ja'], target_languages: ['en', 'ko'] },
+        { id: 'user-c', native_languages: ['es'], target_languages: ['en'] },
+        { id: 'user-d', native_languages: ['en'], target_languages: null },
       ]);
 
       const matchesForA = makeQueryChain();
@@ -1042,7 +1042,7 @@ describe('RecommendationsService', () => {
           id: 'user-c',
           display_name: 'User C',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 20,
@@ -1059,7 +1059,7 @@ describe('RecommendationsService', () => {
           id: 'user-a',
           display_name: 'User A',
           avatar_url: null,
-          native_language: 'en',
+          native_languages: ['en'],
           target_languages: ['es'],
           is_serious_learner: true,
           study_streak_days: 30,
@@ -1092,7 +1092,7 @@ describe('RecommendationsService', () => {
     it('should handle calculateDailyRecommendations with Redis set failure gracefully', async () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
-        { id: 'user-a', native_language: 'en', target_languages: ['es'] },
+        { id: 'user-a', native_languages: ['en'], target_languages: ['es'] },
       ]);
 
       const matchesChain = makeQueryChain();
@@ -1101,7 +1101,7 @@ describe('RecommendationsService', () => {
           id: 'partner-1',
           display_name: 'Partner 1',
           avatar_url: null,
-          native_language: 'es',
+          native_languages: ['es'],
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 5,
@@ -1132,7 +1132,7 @@ describe('RecommendationsService', () => {
           id: 'best-match',
           display_name: 'Best Match',
           avatar_url: null,
-          native_language: 'fr',
+          native_languages: ['fr'],
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 50,
