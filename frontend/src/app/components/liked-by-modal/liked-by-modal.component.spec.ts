@@ -60,7 +60,8 @@ describe('LikedByModalComponent', () => {
         id: 'user-1',
         display_name: 'Alice',
         native_languages: ['en'],
-        target_languages: ['es', 'fr'], avatar_url: null,
+        target_languages: ['es', 'fr'],
+        avatar_url: null,
       },
       {
         id: 'user-2',
@@ -174,7 +175,8 @@ describe('LikedByModalComponent', () => {
         id: 'user-1',
         display_name: 'Alice',
         native_languages: ['en'],
-        target_languages: ['es'], avatar_url: null,
+        target_languages: ['es'],
+        avatar_url: null,
       },
     ];
     req.flush(mockUsers);
@@ -196,7 +198,8 @@ describe('LikedByModalComponent', () => {
         id: 'user-1',
         display_name: 'Alice',
         native_languages: ['en'],
-        target_languages: ['es'], avatar_url: null,
+        target_languages: ['es'],
+        avatar_url: null,
       },
     ]);
     await fixture.whenStable();

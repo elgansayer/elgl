@@ -94,6 +94,23 @@ export class ChatController {
     return await this.chatService.shareContact(user.id, dto);
   }
 
+  @Get('search')
+  async searchMessages(
+    @CurrentUser() user: User | null,
+    @Query('term') term?: string,
+    @Query('limit') limit?: string,
+    @Query('roomId') roomId?: string,
+  ): Promise<ChatMessage[]> {
+    if (!user) return [];
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    return await this.chatService.searchAllMessages(
+      user.id,
+      term ?? '',
+      limitNum,
+      roomId,
+    );
+  }
+
   @Get('rooms')
   async getRooms(@CurrentUser() user: User | null): Promise<ChatRoomRecord[]> {
     if (!user) return [];
