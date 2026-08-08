@@ -96,6 +96,7 @@ describe('RecommendationsService', () => {
     recordMatchmakingDailyCacheMiss: jest.Mock;
     setMatchmakingTierSuccessRate: jest.Mock;
   };
+  let mockCrashReportService: { reportCrash: jest.Mock };
 
   beforeEach(async () => {
     mockPipeline = {
@@ -120,6 +121,10 @@ describe('RecommendationsService', () => {
       recordMatchmakingRequestDuration: jest.fn(),
       recordMatchmakingDailyCacheMiss: jest.fn(),
       setMatchmakingTierSuccessRate: jest.fn(),
+    };
+
+    mockCrashReportService = {
+      reportCrash: jest.fn().mockResolvedValue({}),
     };
 
     mockLogger = {
@@ -172,9 +177,7 @@ describe('RecommendationsService', () => {
         },
         {
           provide: MatchmakingCrashReportService,
-          useValue: {
-            reportCrash: jest.fn().mockResolvedValue({}),
-          },
+          useValue: mockCrashReportService,
         },
       ],
     }).compile();
@@ -1193,6 +1196,130 @@ describe('RecommendationsService', () => {
       await expect(
         service.purgeRecommendationsCache('user-to-delete'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('tier degradation crash reporting', () => {
+    it('should report crash when interest tier throws in getRecommendationsWithFallback', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve(null, { message: 'Interests DB connection refused' });
+
+      const userChain = makeQueryChain();
+      userChain._setResolve({
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['es'],
+      });
+
+      const matchesChain = makeQueryChain();
+      matchesChain._setResolve([
+        {
+          id: 'lang-partner',
+          display_name: 'Lang Partner',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 20,
+          correction_ratio: 0.88,
+        },
+      ]);
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(matchesChain);
+
+      await service.getRecommendationsWithFallback('user-123');
+
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'getRecommendationsWithFallback:interest',
+          user_id: 'user-123',
+          degraded_tier: 'language_exchange',
+          circuit_breaker_open: false,
+        }),
+      );
+    });
+
+    it('should report crash when all tiers fail in getRecommendationsWithFallback', async () => {
+      const tagsChain = makeQueryChain();
+      tagsChain._setResolve(null, { message: 'Interests DB down' });
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'Users DB down' });
+
+      const activeChain = makeQueryChain();
+      activeChain._setResolve(null, { message: 'Users DB down' });
+
+      mockFrom
+        .mockReturnValueOnce(tagsChain)
+        .mockReturnValueOnce(userChain)
+        .mockReturnValueOnce(activeChain);
+
+      await service.getRecommendationsWithFallback('user-123');
+
+      // Should have reported interest and language_exchange degradations, and active_users
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledTimes(3);
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'getRecommendationsWithFallback:interest',
+          degraded_tier: 'language_exchange',
+        }),
+      );
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'getRecommendationsWithFallback:language_exchange',
+          degraded_tier: 'active_users',
+        }),
+      );
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'getRecommendationsWithFallback:active_users',
+          degraded_tier: 'mock',
+        }),
+      );
+    });
+
+    it('should report crash for daily recommendation calculation failure', async () => {
+      const chain = makeQueryChain();
+      chain._setResolve(null, { message: 'Users table offline' });
+      mockFrom.mockReturnValueOnce(chain);
+
+      await service.calculateDailyRecommendations();
+
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'calculateDailyRecommendations',
+          user_id: 'system',
+          degraded_tier: 'none',
+        }),
+      );
+    });
+
+    it('should report crash when daily Redis fails and live fallback also fails', async () => {
+      mockRedis.get.mockRejectedValue(new Error('Connection refused'));
+
+      const userChain = makeQueryChain();
+      userChain._setResolve(null, { message: 'Users table offline' });
+
+      mockFrom.mockReturnValueOnce(userChain);
+
+      const result = await service.getDailyRecommendations('user-123');
+      expect(result).toEqual([]);
+
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'getDailyRecommendations:redis',
+          degraded_tier: 'language_exchange_live',
+        }),
+      );
+      expect(mockCrashReportService.reportCrash).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: 'getDailyRecommendations:live',
+          degraded_tier: 'empty',
+        }),
+      );
     });
   });
 });

@@ -146,6 +146,12 @@ export class RecommendationsService {
     } catch (error) {
       await flushPipeline();
       this.logger.error('Error calculating daily recommendations', error);
+      void this.reportTierDegradation(
+        'calculateDailyRecommendations',
+        'system',
+        error,
+        'none',
+      );
     }
   }
 
@@ -163,6 +169,12 @@ export class RecommendationsService {
       this.logger.warn(
         `Redis unavailable for daily recommendations (user ${userId}), falling back to live computation`,
       );
+      void this.reportTierDegradation(
+        'getDailyRecommendations:redis',
+        userId,
+        error,
+        'language_exchange_live',
+      );
     }
 
     try {
@@ -173,6 +185,12 @@ export class RecommendationsService {
     } catch (error) {
       this.logger.warn(
         `Live language-exchange fallback failed for user ${userId}`,
+      );
+      void this.reportTierDegradation(
+        'getDailyRecommendations:live',
+        userId,
+        error,
+        'empty',
       );
     }
 
@@ -189,6 +207,12 @@ export class RecommendationsService {
       this.logger.warn(
         `Interest-based recommendations failed for user ${userId}, falling back to language exchange`,
       );
+      void this.reportTierDegradation(
+        'getRecommendations:interest',
+        userId,
+        error,
+        'language_exchange',
+      );
     }
 
     try {
@@ -199,6 +223,12 @@ export class RecommendationsService {
       }
     } catch (error) {
       this.logger.warn(`Language exchange fallback failed for user ${userId}`);
+      void this.reportTierDegradation(
+        'getRecommendations:language_exchange',
+        userId,
+        error,
+        'active_users',
+      );
     }
 
     try {
@@ -210,6 +240,12 @@ export class RecommendationsService {
       this.logger.error(
         `Active users fallback failed for user ${userId}`,
         error,
+      );
+      void this.reportTierDegradation(
+        'getRecommendations:active_users',
+        userId,
+        error,
+        'mock',
       );
     }
 
@@ -232,6 +268,12 @@ export class RecommendationsService {
       this.logger.warn(
         `Tier 1 (interest) unavailable for user ${userId}, degrading`,
       );
+      void this.reportTierDegradation(
+        'getRecommendationsWithFallback:interest',
+        userId,
+        error,
+        'language_exchange',
+      );
     }
 
     try {
@@ -247,6 +289,12 @@ export class RecommendationsService {
       this.logger.warn(
         `Tier 2 (language exchange) unavailable for user ${userId}, degrading`,
       );
+      void this.reportTierDegradation(
+        'getRecommendationsWithFallback:language_exchange',
+        userId,
+        error,
+        'active_users',
+      );
     }
 
     try {
@@ -261,10 +309,43 @@ export class RecommendationsService {
       this.logger.error(
         `Tier 3 (active users) unavailable for user ${userId}, degrading to mock data`,
       );
+      void this.reportTierDegradation(
+        'getRecommendationsWithFallback:active_users',
+        userId,
+        error,
+        'mock',
+      );
     }
 
     const mockResults = this.recommendationsFromMock(userId);
     return mockResults;
+  }
+
+  /** Reports a tier degradation event to the crash reporting service without blocking the response. */
+  private async reportTierDegradation(
+    operation: string,
+    userId: string,
+    error: unknown,
+    degradedTier: string,
+  ): Promise<void> {
+    try {
+      const err = error instanceof Error ? error : new Error(String(error));
+      const circuitOpen = !this.circuitBreakerService.isAvailable('matchmaking');
+
+      await this.crashReportService.reportCrash({
+        operation,
+        user_id: userId,
+        error_type: err.constructor.name,
+        error_message: err.message,
+        stack_trace: err.stack,
+        degraded_tier: degradedTier,
+        circuit_breaker_open: circuitOpen,
+      });
+    } catch {
+      this.logger.warn(
+        `Failed to persist tier degradation report for ${operation}`,
+      );
+    }
   }
 
   private async recommendationsByInterests(

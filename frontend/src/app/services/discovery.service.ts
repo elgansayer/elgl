@@ -160,8 +160,8 @@ export class DiscoveryService {
         const profile = await this.userService.getMyProfile().catch((): UserProfile | null => null);
         if (profile) {
           const scored = this.matchmakingAlgorithm.scoreAndRank(profile, MOCK_PARTNERS);
-          const scoreFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored, filters);
-          const fallbackUsers = scoreFiltered.map((s) => s.partner);
+          const scoreFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored.data, filters);
+          const fallbackUsers = scoreFiltered.data.map((s) => s.partner);
           return this.enrichPartnersFallback(fallbackUsers, filters);
         }
       }
@@ -261,8 +261,8 @@ export class DiscoveryService {
         .catch((): UserProfile | null => null);
       if (profile) {
         const scored = this.matchmakingAlgorithm.scoreAndRank(profile, filtered);
-        const rankFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored, filters);
-        return rankFiltered.map((s) => s.partner);
+        const rankFiltered = this.matchmakingAlgorithm.applyOfflineFilters(scored.data, filters);
+        return rankFiltered.data.map((s) => s.partner);
       }
     }
 
