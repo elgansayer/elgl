@@ -45,6 +45,13 @@ describe('VocabularyStore', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
 
+    // Stub navigator.onLine to true for tests (online mode)
+    vi.stubGlobal('navigator', {
+      ...(globalThis.navigator ?? {}),
+      onLine: true,
+      vibrate: vi.fn(),
+    });
+
     authSpy = {
       getAccessToken: vi.fn().mockReturnValue('mock-token'),
     };
