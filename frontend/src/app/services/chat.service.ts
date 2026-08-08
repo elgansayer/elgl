@@ -81,6 +81,12 @@ export interface ChatMessage {
 
   /** True when the message has been soft‑deleted for all users */
   is_deleted?: boolean;
+
+  /** Whether the message has been edited by the sender */
+  is_edited?: boolean;
+
+  /** Timestamp when the message was last edited */
+  edited_at?: string | null;
 }
 
 export interface FavouriteRecord {
@@ -530,6 +536,23 @@ export class ChatService {
       this.http.patch<ChatMessage>(
         `${this.baseUrl}/messages/${messageId}/fix`,
         { correctedText, explanation },
+        { headers: this.getHeaders() },
+      ),
+    );
+  }
+
+  /**
+   * Edits a sent text message within the allowed time window.
+   * Only the original sender can edit their own text messages.
+   */
+  async editMessage(
+    messageId: string,
+    textContent: string,
+  ): Promise<ChatMessage> {
+    return firstValueFrom(
+      this.http.patch<ChatMessage>(
+        `${this.baseUrl}/messages/${messageId}`,
+        { text_content: textContent },
         { headers: this.getHeaders() },
       ),
     );

@@ -68,6 +68,12 @@ export interface ChatMessage {
 
   /** User IDs for whom this message has been soft-deleted */
   deleted_for_user_ids?: string[] | null;
+
+  /** Whether the message has been edited by the sender */
+  is_edited?: boolean;
+
+  /** Timestamp when the message was last edited */
+  edited_at?: string | null;
 }
 
 export interface DeletedAwareMessage extends ChatMessage {

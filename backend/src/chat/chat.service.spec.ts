@@ -7,6 +7,7 @@ import {
   jest,
 } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
@@ -117,6 +118,12 @@ describe('ChatService', () => {
           useValue: {
             getMessageFilters: jest.fn().mockResolvedValue({}),
             getProfile: jest.fn().mockResolvedValue(null),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue(5),
           },
         },
       ],
@@ -1225,6 +1232,159 @@ describe('ChatService', () => {
       await expect(service.exportChatHistory('user-1', roomId)).rejects.toThrow(
         'Failed to fetch messages: DB failed',
       );
+    });
+  });
+
+  describe('editMessage', () => {
+    const messageId = 'msg-edit-123';
+    const roomId = 'room-edit-1';
+    const senderId = 'sender-edit-1';
+    const otherUserId = 'other-user-edit-1';
+    const dto = { text_content: 'edited text' };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should edit a text message and publish via Centrifugo', async () => {
+      const createdAt = new Date().toISOString();
+
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: {
+              id: messageId,
+              sender_id: senderId,
+              message_type: 'text',
+              room_id: roomId,
+              created_at: createdAt,
+              text_content: 'original text',
+            },
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: senderId }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: {
+              id: messageId,
+              room_id: roomId,
+              sender_id: senderId,
+              message_type: 'text',
+              text_content: 'edited text',
+              is_edited: true,
+              edited_at: new Date().toISOString(),
+              is_read: false,
+              created_at: createdAt,
+            },
+            error: null,
+          }),
+        );
+
+      const result = await service.editMessage(senderId, messageId, dto);
+
+      expect(result.text_content).toBe('edited text');
+      expect(result.is_edited).toBe(true);
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        `chat:${roomId}`,
+        expect.objectContaining({ message: expect.anything() }),
+      );
+    });
+
+    it('should throw NotFoundException when message is not found', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: { message: 'Not found' } }),
+      );
+
+      await expect(
+        service.editMessage(senderId, messageId, dto),
+      ).rejects.toThrow('Message not found');
+    });
+
+    it('should throw ForbiddenException when user is not the sender', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({
+          data: {
+            id: messageId,
+            sender_id: otherUserId,
+            message_type: 'text',
+            room_id: roomId,
+            created_at: new Date().toISOString(),
+          },
+          error: null,
+        }),
+      );
+
+      await expect(
+        service.editMessage(senderId, messageId, dto),
+      ).rejects.toThrow('You can only edit your own messages');
+    });
+
+    it('should throw BadRequestException when message is not text type', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({
+          data: {
+            id: messageId,
+            sender_id: senderId,
+            message_type: 'voice',
+            room_id: roomId,
+            created_at: new Date().toISOString(),
+          },
+          error: null,
+        }),
+      );
+
+      await expect(
+        service.editMessage(senderId, messageId, dto),
+      ).rejects.toThrow('Only text messages can be edited');
+    });
+
+    it('should throw ForbiddenException when edit window has expired', async () => {
+      const oldDate = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // 10 minutes ago
+
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({
+          data: {
+            id: messageId,
+            sender_id: senderId,
+            message_type: 'text',
+            room_id: roomId,
+            created_at: oldDate,
+          },
+          error: null,
+        }),
+      );
+
+      await expect(
+        service.editMessage(senderId, messageId, dto),
+      ).rejects.toThrow('Messages can only be edited within 5 minutes of sending');
+    });
+
+    it('should throw ForbiddenException when user is not a room member', async () => {
+      const createdAt = new Date().toISOString();
+
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: {
+              id: messageId,
+              sender_id: senderId,
+              message_type: 'text',
+              room_id: roomId,
+              created_at: createdAt,
+            },
+            error: null,
+          }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: null }),
+        );
+
+      await expect(
+        service.editMessage(senderId, messageId, dto),
+      ).rejects.toThrow('You are not a member of this room');
     });
   });
 });
