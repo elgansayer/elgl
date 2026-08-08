@@ -25,6 +25,7 @@ import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
+import { ChatSearchComponent } from '../chat-search/chat-search.component';
 import { DraftService } from '../../services/draft.service';
 
 @Component({
@@ -46,6 +47,7 @@ import { DraftService } from '../../services/draft.service';
     ReplyPreviewComponent,
     LinkPreviewCardComponent,
     GroupParticipantDrawerComponent,
+    ChatSearchComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -150,6 +152,7 @@ export class ChatRoomComponent implements OnDestroy {
   roomId = '';
   roomDetails: ChatRoom | null = null;
   searchQuery = '';
+  showSearchPanel = signal(false);
   textInput = '';
 
   // Admin fields
@@ -645,6 +648,13 @@ export class ChatRoomComponent implements OnDestroy {
 
   onSearch(): void {
     void this.loadMessages();
+  }
+
+  onSearchResultSelect(message: ChatMessage): void {
+    this.showSearchPanel.set(false);
+    if (message.room_id === this.roomId) {
+      this.scrollToMessage(message.id);
+    }
   }
 
   async toggleParticipantDrawer(): Promise<void> {

@@ -455,6 +455,26 @@ export class ChatService {
     if (!response.ok) throw new Error('Failed to report message');
   }
 
+  /**
+   * Search messages across all conversations (or within a specific room).
+   * Calls GET /chat/search?term=...&roomId=...&limit=...
+   */
+  async searchMessages(term: string, roomId?: string, limit = 50): Promise<ChatMessage[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
+    let params = new HttpParams().set('term', term.trim()).set('limit', String(limit));
+    if (roomId) {
+      params = params.set('roomId', roomId);
+    }
+    return firstValueFrom(
+      this.http.get<ChatMessage[]>(`${this.baseUrl}/search`, {
+        headers: this.getHeaders(),
+        params,
+      }),
+    );
+  }
+
   async getFavourites(): Promise<FavouriteRecord[]> {
     if (!this.authService.getAccessToken()) {
       return [];
