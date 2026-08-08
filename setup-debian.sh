@@ -25,8 +25,21 @@ esac
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential ca-certificates curl git gh jq logrotate nodejs npm podman \
+  build-essential ca-certificates curl git gh gnupg jq logrotate podman \
   python3 python3-pip python3-venv rsync shellcheck tmux uidmap
+
+install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key |
+  gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main' |
+  tee /etc/apt/sources.list.d/nodesource.list >/dev/null
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+node_major="$(node --version | sed -E 's/^v([0-9]+).*/\1/')"
+if [ "$node_major" -lt 22 ]; then
+  echo "Node.js 22 or newer is required, found $(node --version)" >&2
+  exit 1
+fi
 
 if ! id "$FACTORY_USER" >/dev/null 2>&1; then
   useradd --system --create-home --home-dir "$FACTORY_STATE/home" --shell /usr/sbin/nologin "$FACTORY_USER"
@@ -56,7 +69,7 @@ ln -sfn "$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv"
 
 for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e"; do
   if [ -f "$directory/package-lock.json" ]; then
-    sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts
+    sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
   fi
 done
 sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" podman build \
