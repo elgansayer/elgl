@@ -2163,6 +2163,25 @@ export interface Database {
         };
         Returns: void;
       };
+      search_chat_messages: {
+        Args: {
+          p_room_id: string;
+          p_query: string;
+          p_similarity_threshold: number;
+        };
+        Returns: {
+          id: string;
+          room_id: string;
+          sender_id: string;
+          message_type: string;
+          text_content: string | null;
+          media_url: string | null;
+          correction_payload: Record<string, unknown> | null;
+          is_read: boolean;
+          created_at: string;
+          similarity_score: number;
+        }[];
+      };
     };
     location_shares: {
       Row: LocationShareRow;

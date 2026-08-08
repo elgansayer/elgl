@@ -569,7 +569,69 @@ export class ChatService {
     }
 
     if (search && search.trim().length > 0) {
-      query = query.ilike('text_content', `%${search.trim()}%`);
+      const searchTerm = search.trim();
+      // Use pg_trgm similarity search via RPC for fuzzy-ranked results
+      const { data: searchResults, error: searchError } = await supabase.rpc(
+        'search_chat_messages',
+        {
+          p_room_id: roomId,
+          p_query: searchTerm,
+          p_similarity_threshold: 0.15,
+        },
+      );
+
+      if (!searchError && searchResults && searchResults.length > 0) {
+        const messageIds = searchResults.map(
+          (r: { id: string }) => r.id,
+        );
+
+        const { data: messagesWithSenders, error: fetchError } =
+          await supabase
+            .from('chat_messages')
+            .select(
+              `
+              *,
+              sender:users!chat_messages_sender_id_fkey (
+                id,
+                display_name,
+                avatar_url
+              )
+            `,
+            )
+            .in('id', messageIds)
+            .order('created_at', { ascending: true });
+
+        if (!fetchError && messagesWithSenders) {
+          // Sort by similarity rank from the RPC result
+          const idToRank = new Map(
+            searchResults.map(
+              (r: { id: string; similarity_score: number }, i: number) => [
+                r.id,
+                i,
+              ],
+            ),
+          );
+          messagesWithSenders.sort((a, b) => {
+            const rankA = idToRank.get(a.id) ?? Infinity;
+            const rankB = idToRank.get(b.id) ?? Infinity;
+            return rankA - rankB;
+          });
+
+          const filtered = blockedIds.length > 0
+            ? messagesWithSenders.filter(
+                (msg) => !blockedIds.includes(msg.sender_id),
+              )
+            : messagesWithSenders;
+
+          return this.processMessages(
+            filtered as DeletedAwareMessage[],
+            currentUserId,
+          );
+        }
+      }
+
+      // Fallback to empty if no matching messages found
+      return [];
     }
 
     const response = await query;
@@ -614,7 +676,13 @@ export class ChatService {
       return mockMessages;
     }
     const messages: DeletedAwareMessage[] = response.data;
+    return this.processMessages(messages, currentUserId);
+  }
 
+  private processMessages(
+    messages: DeletedAwareMessage[],
+    currentUserId?: string,
+  ): ChatMessage[] {
     // Exclude media_url for view-once media that has already been viewed
     for (const msg of messages) {
       if (msg.is_view_once && msg.viewed_at) {

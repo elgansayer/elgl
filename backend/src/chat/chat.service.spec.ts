@@ -32,27 +32,35 @@ describe('ChatService', () => {
   let mockQueryBuilder: any;
 
   beforeEach(async () => {
-    mockQueryBuilder = {
-      insert: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      neq: jest.fn().mockReturnThis(),
-      ilike: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      match: jest.fn().mockReturnThis(),
-      patch: jest.fn().mockReturnThis(),
-      upsert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      single: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockReturnThis(),
-      // Make the builder thenable so that `await supabase.from(...)` calls resolve
-      then: jest.fn((resolve) => resolve({ data: [] })),
+    const createMockBuilder = (overrides: Record<string, unknown> = {}) => {
+      const builder: Record<string, jest.Mock> = {
+        insert: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        neq: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
+        in: jest.fn().mockReturnThis(),
+        not: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        match: jest.fn().mockReturnThis(),
+        patch: jest.fn().mockReturnThis(),
+        upsert: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
+        delete: jest.fn().mockReturnThis(),
+        single: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockReturnThis(),
+        then: jest.fn((resolve: (value: unknown) => void) => resolve({ data: [], error: null })),
+        ...overrides,
+      };
+      return builder;
     };
 
+    mockQueryBuilder = createMockBuilder();
+
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      rpc: jest.fn(),
+      from: jest.fn().mockImplementation(() => mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -766,24 +774,58 @@ describe('ChatService', () => {
         ascending: true,
       });
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(100);
-      expect(mockQueryBuilder.ilike).not.toHaveBeenCalled();
+      expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
       expect(result).toEqual(messages);
     });
 
-    it('should apply search filter using ilike when search query is provided and non-empty', async () => {
-      const messages = [{ id: 'msg-2', text_content: 'Hello friend' }];
-      mockQueryBuilder.ilike.mockResolvedValue({
-        data: messages,
+    it('should use pg_trgm similarity search via RPC when search query is provided and non-empty', async () => {
+      const searchResults = [
+        { id: 'msg-2', similarity_score: 0.8 },
+      ];
+      const messages = [
+        {
+          id: 'msg-2',
+          room_id: 'room-1',
+          sender_id: 'user-1',
+          message_type: 'text',
+          text_content: 'Hello friend',
+          is_read: true,
+          created_at: new Date().toISOString(),
+          sender: { id: 'user-1', display_name: 'User1', avatar_url: null },
+        },
+      ];
+
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: searchResults,
         error: null,
       });
 
+      mockQueryBuilder.in.mockReturnThis();
+      mockQueryBuilder.order.mockReturnThis();
+      mockQueryBuilder.then = jest.fn((resolve) => resolve({ data: messages, error: null }));
+
       const result = await service.getMessages('room-1', '  friend  ');
 
-      expect(mockQueryBuilder.ilike).toHaveBeenCalledWith(
-        'text_content',
-        '%friend%',
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_chat_messages',
+        {
+          p_room_id: 'room-1',
+          p_query: 'friend',
+          p_similarity_threshold: 0.15,
+        },
       );
-      expect(result).toEqual(messages);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('msg-2');
+    });
+
+    it('should return empty array when pg_trgm search finds no matching messages', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      const result = await service.getMessages('room-1', 'nonexistent');
+      expect(result).toEqual([]);
     });
 
     it('should return fallback mock messages when query returns error or null data', async () => {

@@ -150,6 +150,8 @@ export class ChatRoomComponent implements OnDestroy {
   roomId = '';
   roomDetails: ChatRoom | null = null;
   searchQuery = '';
+  readonly searchActive = signal<boolean>(false);
+  readonly searchResultCount = signal<number>(-1);
   textInput = '';
 
   // Admin fields
@@ -311,8 +313,11 @@ export class ChatRoomComponent implements OnDestroy {
   async loadMessages(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const data = await this.chatService.getMessages(this.roomId, this.searchQuery);
+      const data = await this.chatService.getMessages(this.roomId, this.searchQuery || undefined);
       this.messages.set(data);
+      if (this.searchActive()) {
+        this.searchResultCount.set(data.length);
+      }
       // Restore reply-to target from the persisted draft once messages are available
       if (this._restoredReplyToId) {
         const target = data.find((m) => m.id === this._restoredReplyToId);
@@ -627,6 +632,18 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   onSearch(): void {
+    if (this.searchQuery.trim().length > 0) {
+      this.searchActive.set(true);
+      void this.loadMessages();
+    } else {
+      this.clearSearch();
+    }
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.searchActive.set(false);
+    this.searchResultCount.set(-1);
     void this.loadMessages();
   }
 
@@ -699,6 +716,18 @@ export class ChatRoomComponent implements OnDestroy {
 
   cancelReply(): void {
     this.replyingTo.set(null);
+  }
+
+  /**
+   * Checks if a message's text content matches the active search query for
+   * client-side highlighting. Used to visually distinguish matching messages.
+   */
+  isSearchMatch(msg: { text_content?: string }): boolean {
+    if (!this.searchActive() || !this.searchQuery.trim()) return false;
+    if (!msg.text_content) return false;
+    return msg.text_content
+      .toLowerCase()
+      .includes(this.searchQuery.trim().toLowerCase());
   }
 
   openDoodlePreview(url: string): void {
