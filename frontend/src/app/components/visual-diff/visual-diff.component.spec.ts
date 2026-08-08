@@ -1,27 +1,46 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { VisualDiffComponent } from './visual-diff.component';
+import { I18nService } from '../../services/i18n.service';
+
+function mockTranslate(key: string): string {
+  return key;
+}
 
 describe('VisualDiffComponent', () => {
   let fixture: ComponentFixture<VisualDiffComponent>;
   let component: VisualDiffComponent;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [VisualDiffComponent],
-    }).compileComponents();
-
+  function setInputs(original: string, corrected: string): void {
     fixture = TestBed.createComponent(VisualDiffComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
-
-  function setInputs(original: string, corrected: string): void {
     fixture.componentRef.setInput('original', original);
     fixture.componentRef.setInput('corrected', corrected);
     fixture.detectChanges();
   }
 
+  function setInputsWithExplanation(original: string, corrected: string, explanation: string): void {
+    fixture = TestBed.createComponent(VisualDiffComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('original', original);
+    fixture.componentRef.setInput('corrected', corrected);
+    fixture.componentRef.setInput('explanation', explanation);
+    fixture.detectChanges();
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [VisualDiffComponent],
+      providers: [
+        {
+          provide: I18nService,
+          useValue: { translate: mockTranslate, locale: () => 'en', direction: () => 'ltr' },
+        },
+      ],
+    }).compileComponents();
+  });
+
   it('should create the component', () => {
+    setInputs('Hello', 'Hello');
     expect(component).toBeTruthy();
   });
 
@@ -77,9 +96,9 @@ describe('VisualDiffComponent', () => {
     }
   });
 
-  it('should handle non-Latin text (Arabic)', () => {
-    const original = 'مرحبا';
-    const corrected = 'مرحبا';
+  it('should handle non-Latin text', () => {
+    const original = 'mrHba';
+    const corrected = 'mrHba';
     setInputs(original, corrected);
 
     const segments = component.segments();
@@ -99,5 +118,21 @@ describe('VisualDiffComponent', () => {
 
     const removedEls = fixture.nativeElement.querySelectorAll('[data-type="removed"]');
     expect(removedEls.length).toBeGreaterThan(0);
+  });
+
+  it('should render the explanation when provided', () => {
+    setInputsWithExplanation('Hello', 'Hello World', 'Added world for context');
+
+    const native = fixture.nativeElement.textContent;
+    expect(native).toContain('Added world for context');
+  });
+
+  it('should not render the explanation when not provided', () => {
+    setInputs('Hello', 'Hello World');
+
+    const card = fixture.nativeElement.querySelector('.bg-amber-500\\/10');
+    expect(card).not.toBeNull();
+    const explanationBlock = fixture.nativeElement.querySelector('.border-t.border-amber-500\\/30');
+    expect(explanationBlock).toBeNull();
   });
 });
