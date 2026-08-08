@@ -40,6 +40,17 @@ export interface AudioRoomRecord {
     display_name?: string;
     avatar_url?: string | null;
   };
+  is_private?: boolean;
+  invited_user_ids?: string[];
+  party_type?: string;
+}
+
+export interface PrivatePartyCreatePayload {
+  title: string;
+  languagePair: string;
+  topicTag: string;
+  isVideoStream: boolean;
+  invitedUserIds: string[];
 }
 
 export interface StageParticipant {
@@ -117,6 +128,8 @@ export class AudioRoomsStore {
   readonly stageInfo = signal<StageInfo | null>(null);
   readonly stageParticipants = signal<StageParticipant[]>([]);
   readonly audienceCount = signal<number>(0);
+  readonly privateRooms = signal<AudioRoomRecord[]>([]);
+  readonly isLoadingPrivate = signal<boolean>(false);
 
   // Split-screen co-host video state
   readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
@@ -255,6 +268,40 @@ export class AudioRoomsStore {
     );
     this.activeRooms.update((list) => [created, ...list]);
     return created;
+  }
+
+  async createPrivateParty(payload: PrivatePartyCreatePayload): Promise<AudioRoomRecord> {
+    const created = await firstValueFrom(
+      this.http.post<AudioRoomRecord>(
+        `${this.baseUrl}/private`,
+        {
+          title: payload.title,
+          target_language: payload.languagePair,
+          language_pair: payload.languagePair,
+          topic_tag: payload.topicTag,
+          is_video_stream: payload.isVideoStream,
+          invited_user_ids: payload.invitedUserIds,
+        },
+        { headers: this.getHeaders() },
+      ),
+    );
+    this.privateRooms.update((list) => [created, ...list]);
+    this.activeRooms.update((list) => [created, ...list]);
+    return created;
+  }
+
+  async loadPrivateRooms(): Promise<void> {
+    this.isLoadingPrivate.set(true);
+    try {
+      const list = await firstValueFrom(
+        this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/private`, { headers: this.getHeaders() }),
+      );
+      this.privateRooms.set(list);
+    } catch (e) {
+      console.error('Failed to load private rooms:', e);
+    } finally {
+      this.isLoadingPrivate.set(false);
+    }
   }
 
   async joinRoom(room: AudioRoomRecord): Promise<void> {
