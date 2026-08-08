@@ -55,6 +55,25 @@
     <span class="shrink-0 text-xs text-red-400">{{ 'audioPlayer.error' | t }}</span>
   }
 
+  <div class="flex items-center gap-1 ms-1 shrink-0" role="radiogroup" [attr.aria-label]="'audioPlayer.speedLabel' | t">
+    @for (speed of playbackSpeeds; track speed) {
+      <button
+        type="button"
+        (click)="setPlaybackRate(speed)"
+        class="rounded-pill px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+        [class.bg-primary]="playbackRate() === speed"
+        [class.text-white]="playbackRate() === speed"
+        [class.bg-surface-100]="playbackRate() !== speed"
+        [class.text-text-secondary]="playbackRate() !== speed"
+        [attr.aria-label]="('audioPlayer.speed' + (speed === 1 ? '1x' : speed === 1.5 ? '15x' : '2x')) | t"
+        role="radio"
+        [attr.aria-checked]="playbackRate() === speed"
+      >
+        {{ speed }}x
+      </button>
+    }
+  </div>
+
   <audio
     #audioEl
     class="hidden"

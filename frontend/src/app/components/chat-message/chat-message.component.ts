@@ -10,11 +10,12 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { AudioPlayerComponent } from '../audio-player/audio-player.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent],
+  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent, AudioPlayerComponent],
   template: `
     @if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
@@ -95,16 +96,13 @@ import { environment } from '../../../environments/environment';
             }
 
             @if (message().message_type === 'voice') {
-              <div class="flex items-center gap-2">
-                <button aria-label="Play voice message" (click)="playVoice()" class="p-2 rounded-full hover:bg-black/10">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
-                    />
-                  </svg>
-                </button>
+              @if (message().media_url) {
+                <app-audio-player
+                  [src]="message().media_url!"
+                ></app-audio-player>
+              } @else {
                 <span class="text-sm">{{ 'chatRoom.voiceMessage' | t }}</span>
-              </div>
+              }
               @if (message().media_url) {
                 <div class="mt-2 text-xs opacity-80 italic border-s-2 border-blue-400 ps-2">
                   @if (voiceTranscribing()) {
@@ -269,13 +267,6 @@ export class ChatMessageComponent {
       return this.message().sender_id === this.currentUserId();
     }
     return this.message().sender_id === this.authService.currentUser()?.id;
-  }
-
-  playVoice(): void {
-    if (this.message().media_url) {
-      const audio = new Audio(this.message().media_url);
-      audio.play().catch(console.error);
-    }
   }
 
   async fetchTranscription(audioUrl: string): Promise<void> {

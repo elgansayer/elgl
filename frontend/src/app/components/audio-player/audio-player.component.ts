@@ -13,6 +13,8 @@ import {
 
 import { TranslatePipe } from '../../services/translate.pipe';
 
+const PLAYBACK_SPEEDS = [1, 1.5, 2] as const;
+
 @Component({
   selector: 'app-audio-player',
   imports: [TranslatePipe],
@@ -26,12 +28,14 @@ export class AudioPlayerComponent {
   readonly durationSec = input<number | undefined>(undefined);
 
   protected readonly barCount = 40;
+  protected readonly playbackSpeeds = PLAYBACK_SPEEDS;
 
   protected readonly audioRef = viewChild<ElementRef<HTMLAudioElement>>('audioEl');
 
   protected readonly isPlaying = signal(false);
   protected readonly currentTime = signal(0);
   protected readonly duration = signal(0);
+  protected readonly playbackRate = signal<number>(1);
   protected readonly peaks = signal<number[]>([]);
   protected readonly isLoadingWaveform = signal(true);
   protected readonly hasError = signal(false);
@@ -63,6 +67,14 @@ export class AudioPlayerComponent {
     });
   }
 
+  protected setPlaybackRate(rate: number): void {
+    this.playbackRate.set(rate);
+    const audio = this.audioRef()?.nativeElement;
+    if (audio) {
+      audio.playbackRate = rate;
+    }
+  }
+
   protected togglePlay(): void {
     const audio = this.audioRef()?.nativeElement;
     if (!audio) return;
@@ -72,6 +84,7 @@ export class AudioPlayerComponent {
       return;
     }
 
+    audio.playbackRate = this.playbackRate();
     const playResult = audio.play();
     if (playResult && typeof playResult.then === 'function') {
       playResult.catch(() => this.hasError.set(true));

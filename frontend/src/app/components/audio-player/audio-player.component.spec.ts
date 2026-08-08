@@ -118,4 +118,33 @@ describe('AudioPlayerComponent', () => {
     expect(getButton().disabled).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('audioPlayer.error');
   });
+
+  it('should default to 1x playback rate', () => {
+    expect(component['playbackRate']()).toBe(1);
+  });
+
+  it('should update playbackRate signal when setPlaybackRate is called', () => {
+    component['setPlaybackRate'](1.5);
+    expect(component['playbackRate']()).toBe(1.5);
+  });
+
+  it('should set audio.playbackRate when rate button is clicked', () => {
+    const speedButtons = fixture.nativeElement.querySelectorAll('[role="radio"]');
+    for (const btn of speedButtons) {
+      const speed = parseFloat(btn.textContent!);
+      btn.click();
+      fixture.detectChanges();
+      expect(component['playbackRate']()).toBe(speed);
+      expect(btn.getAttribute('aria-checked')).toBe('true');
+    }
+  });
+
+  it('should apply playbackRate to audio element when toggling play', () => {
+    component['setPlaybackRate'](2);
+    fixture.detectChanges();
+    getAudioEl().play = vi.fn();
+    getButton().click();
+    fixture.detectChanges();
+    expect(getAudioEl().playbackRate).toBe(2);
+  });
 });
