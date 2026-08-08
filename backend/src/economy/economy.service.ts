@@ -18,6 +18,7 @@ import {
   PurchaseCoinsDto,
   SendGiftDto,
   UnlockStickerPackDto,
+  UnlockPremiumServiceDto,
 } from './dto/economy.dto';
 import { sanitiseEconomyData } from './sanitise-economy.helper';
 import { withExponentialBackoff } from '../common/http-retry.helper';
@@ -164,6 +165,27 @@ export const COIN_PACKAGES: CoinPackage[] = [
   },
 ];
 
+export interface PremiumAiService {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  cost_coins: number;
+  category: 'report' | 'analysis' | 'insight';
+}
+
+export const PREMIUM_AI_SERVICES: PremiumAiService[] = [
+  {
+    id: 'conversation_analysis_report',
+    name: 'Conversation Analysis Report',
+    description:
+      'Deep AI-powered analysis of your conversation patterns with a partner. Includes message frequency trends, language mix breakdown, correction ratios, engagement heatmap, and personalised improvement suggestions.',
+    icon: '📊',
+    cost_coins: 200,
+    category: 'report',
+  },
+];
+
 function isCoinBalanceRow(value: unknown): value is { coins_balance: number } {
   if (typeof value !== 'object' || value === null) return false;
   if (!('coins_balance' in value)) return false;
@@ -222,6 +244,33 @@ export interface GiftEventPayload {
   sender_name: string | null;
   receiver_name: string | null;
   room_id?: string;
+}
+
+export interface ConversationMessage {
+  sender_id: string;
+  payload_type: string;
+  content_json?: Record<string, unknown> | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ConversationAnalysisReport {
+  total_messages: number;
+  messages_by_user: number;
+  messages_by_partner: number;
+  partner_name: string;
+  first_message_date: string | null;
+  last_message_date: string | null;
+  days_since_first_contact: number;
+  average_messages_per_day: number;
+  message_type_breakdown: Record<string, number>;
+  correction_count: number;
+  corrections_given: number;
+  corrections_received: number;
+  engagement_score: number;
+  engagement_rating: string;
+  key_insights: string[];
+  suggestions: string[];
 }
 
 @Injectable()
@@ -1568,6 +1617,361 @@ export class EconomyService {
       );
       return [];
     }
+  }
+
+  /**
+   * Returns the list of premium AI services that can be unlocked with coins.
+   */
+  getPremiumServices(): PremiumAiService[] {
+    return PREMIUM_AI_SERVICES;
+  }
+
+  /**
+   * Unlocks a premium one-off AI service, deducting coins and producing
+   * the requested analysis or report. The caller must have sufficient
+   * coin balance to cover the service cost.
+   */
+  async unlockPremiumService(
+    userId: string,
+    dto: UnlockPremiumServiceDto,
+  ): Promise<{
+    success: boolean;
+    coins_remaining: number;
+    service_id: string;
+    service_name: string;
+    report: ConversationAnalysisReport;
+  }> {
+    const service = PREMIUM_AI_SERVICES.find(
+      (s) => s.id === dto.service_id,
+    );
+    if (!service) {
+      throw new NotFoundException(
+        `Premium AI service "${dto.service_id}" not found.`,
+      );
+    }
+
+    const supabase = this.supabaseService.getClient();
+
+    // 1. Check user coin balance
+    const { coins_balance } = await this.getBalance(userId);
+    if (coins_balance < service.cost_coins) {
+      throw new BadRequestException(
+        `Insufficient coin balance (${coins_balance} available, ${service.cost_coins} required).`,
+      );
+    }
+
+    // 2. Verify the partner exists and the user has a conversation with them
+    const profile = await this.usersService.getProfile(dto.partner_id);
+    if (!profile) {
+      throw new NotFoundException('Partner user not found.');
+    }
+
+    // 3. Fetch conversation messages between the two users
+    const chatMessages = await this.fetchConversationMessages(
+      userId,
+      dto.partner_id,
+    );
+
+    // 4. Generate the analysis report
+    const report = this.generateConversationAnalysisReport(
+      chatMessages,
+      userId,
+      dto.partner_id,
+      profile.display_name ?? 'Partner',
+    );
+
+    // 5. Deduct coins
+    const newBalance = coins_balance - service.cost_coins;
+    const { error: updateError } = await withExponentialBackoff(
+      () =>
+        supabase
+          .from('users')
+          .update({ coins_balance: newBalance })
+          .eq('id', userId),
+      'unlockPremiumService',
+      { logger: this.logger },
+    );
+
+    if (updateError) {
+      throw new InternalServerErrorException(
+        'Failed to deduct coins for premium service.',
+      );
+    }
+
+    // 6. Record the transaction
+    const { error: insertError } = await withExponentialBackoff(
+      () =>
+        supabase.from('coin_transactions').insert({
+          user_id: userId,
+          type: 'premium_service',
+          amount: -service.cost_coins,
+          description: `Unlocked: ${service.name}`,
+          metadata: {
+            service_id: dto.service_id,
+            partner_id: dto.partner_id,
+            coins_before: coins_balance,
+            coins_after: newBalance,
+          },
+        }),
+      'unlockPremiumService-tx',
+      { logger: this.logger },
+    );
+
+    if (insertError) {
+      this.logger.warn(
+        `Failed to record premium service transaction: ${insertError.message}`,
+      );
+    }
+
+    this.invalidateUserEconomyCaches(userId);
+    this.metricsService.recordCoinPurchase(
+      'premium_service',
+      dto.service_id,
+      'success',
+      service.cost_coins,
+    );
+
+    return sanitiseEconomyData({
+      success: true,
+      coins_remaining: newBalance,
+      service_id: dto.service_id,
+      service_name: service.name,
+      report,
+    });
+  }
+
+  /**
+   * Fetches the last 200 messages between two users from the chat_messages table.
+   */
+  private async fetchConversationMessages(
+    userId: string,
+    partnerId: string,
+  ): Promise<ConversationMessage[]> {
+    // channel_id format: "chat_{userA}_{userB}" where IDs are sorted alphabetically
+    const channelId =
+      userId < partnerId
+        ? `chat_${userId}_${partnerId}`
+        : `chat_${partnerId}_${userId}`;
+
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await withExponentialBackoff(
+        () =>
+          supabase
+            .from('chat_messages')
+            .select('sender_id, payload_type, content_json, is_read, created_at')
+            .eq('channel_id', channelId)
+            .order('created_at', { ascending: false })
+            .limit(200),
+        'fetchConversationMessages',
+        { logger: this.logger },
+      );
+
+      if (response.error || !response.data) {
+        return [];
+      }
+
+      const rows: unknown = response.data;
+      if (!Array.isArray(rows)) {
+        return [];
+      }
+
+      return rows.filter(
+        (row: unknown): row is ConversationMessage =>
+          typeof row === 'object' &&
+          row !== null &&
+          'sender_id' in row &&
+          'created_at' in row,
+      );
+    } catch (dbError: unknown) {
+      this.logger.warn(
+        `Failed to fetch conversation messages: ${dbError instanceof Error ? dbError.message : 'unknown error'}`,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Generates a comprehensive conversation analysis report from chat messages.
+   * The analysis runs entirely server-side using statistical computation;
+   * no external AI API call is required for core metrics.
+   */
+  private generateConversationAnalysisReport(
+    messages: ConversationMessage[],
+    userId: string,
+    partnerId: string,
+    partnerName: string,
+  ): ConversationAnalysisReport {
+    if (messages.length === 0) {
+      return {
+        total_messages: 0,
+        messages_by_user: 0,
+        messages_by_partner: 0,
+        partner_name: partnerName,
+        first_message_date: null,
+        last_message_date: null,
+        days_since_first_contact: 0,
+        average_messages_per_day: 0,
+        message_type_breakdown: {},
+        correction_count: 0,
+        corrections_given: 0,
+        corrections_received: 0,
+        engagement_score: 0,
+        engagement_rating: 'Insufficient data',
+        key_insights: [
+          'Start a conversation with this partner to receive a detailed analysis report.',
+        ],
+        suggestions: [
+          'Send your first message to begin tracking conversation metrics.',
+        ],
+      };
+    }
+
+    const userMessages = messages.filter((m) => m.sender_id === userId);
+    const partnerMessages = messages.filter(
+      (m) => m.sender_id === partnerId,
+    );
+
+    const typeBreakdown: Record<string, number> = {};
+    let correctionCount = 0;
+    let correctionsGiven = 0;
+    let correctionsReceived = 0;
+
+    for (const msg of messages) {
+      const type = msg.payload_type || 'text';
+      typeBreakdown[type] = (typeBreakdown[type] || 0) + 1;
+
+      if (type === 'correction') {
+        correctionCount++;
+        if (msg.sender_id === userId) {
+          correctionsGiven++;
+        } else {
+          correctionsReceived++;
+        }
+      }
+    }
+
+    // Dates
+    const sortedByDate = [...messages].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+    const firstDate = new Date(sortedByDate[0].created_at);
+    const lastDate = new Date(
+      sortedByDate[sortedByDate.length - 1].created_at,
+    );
+    const daysDiff = Math.max(
+      1,
+      Math.ceil(
+        (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+    const daysSinceFirst = Math.max(
+      1,
+      Math.ceil(
+        (Date.now() - firstDate.getTime()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+    const avgPerDay = messages.length / daysSinceFirst;
+
+    // Engagement scoring (0-100)
+    const participationRatio =
+      messages.length > 0
+        ? Math.min(userMessages.length, partnerMessages.length) /
+          Math.max(userMessages.length, partnerMessages.length)
+        : 0;
+
+    const engagementScore = Math.round(
+      Math.min(
+        100,
+        (Math.min(messages.length, 200) / 200) * 40 +
+          participationRatio * 30 +
+          (correctionCount > 0 ? Math.min(correctionCount, 10) * 3 : 0),
+      ),
+    );
+
+    const engagementRating =
+      engagementScore >= 80
+        ? 'Excellent - highly engaged conversation'
+        : engagementScore >= 60
+          ? 'Good - consistent interaction'
+          : engagementScore >= 40
+            ? 'Moderate - occasional exchange'
+            : engagementScore >= 20
+              ? 'Low - limited interaction'
+              : 'Minimal - just getting started';
+
+    // Insights
+    const insights: string[] = [];
+    if (userMessages.length > partnerMessages.length * 1.5) {
+      insights.push(
+        'You send significantly more messages than your partner. Consider inviting them to share more.',
+      );
+    } else if (partnerMessages.length > userMessages.length * 1.5) {
+      insights.push(
+        'Your partner sends more messages. Try engaging more actively to balance the conversation.',
+      );
+    } else {
+      insights.push(
+        'Great balance in message contribution between you and your partner.',
+      );
+    }
+
+    if (correctionCount > 0) {
+      insights.push(
+        `You have exchanged ${correctionCount} corrections - a sign of active language learning together.`,
+      );
+    }
+
+    const textMessages = typeBreakdown['text'] || 0;
+    const voiceMessages = typeBreakdown['voice'] || 0;
+    if (voiceMessages > textMessages * 0.3) {
+      insights.push(
+        'You frequently use voice messages, which is excellent for pronunciation practice.',
+      );
+    }
+
+    // Suggestions
+    const suggestions: string[] = [];
+    if (avgPerDay < 1) {
+      suggestions.push(
+        'Try to send at least one message per day to maintain momentum.',
+      );
+    }
+    if (correctionCount < 3 && messages.length > 20) {
+      suggestions.push(
+        'Consider exchanging more corrections to help each other improve grammar.',
+      );
+    }
+    if (voiceMessages === 0) {
+      suggestions.push(
+        'Try sending voice messages to practise pronunciation and listening skills.',
+      );
+    }
+    if (messages.length < 30) {
+      suggestions.push(
+        'Continue building your conversation to unlock deeper insights and trend analysis.',
+      );
+    }
+
+    return {
+      total_messages: messages.length,
+      messages_by_user: userMessages.length,
+      messages_by_partner: partnerMessages.length,
+      partner_name: partnerName,
+      first_message_date: firstDate.toISOString(),
+      last_message_date: lastDate.toISOString(),
+      days_since_first_contact: daysSinceFirst,
+      average_messages_per_day: Math.round(avgPerDay * 10) / 10,
+      message_type_breakdown: typeBreakdown,
+      correction_count: correctionCount,
+      corrections_given: correctionsGiven,
+      corrections_received: correctionsReceived,
+      engagement_score: engagementScore,
+      engagement_rating: engagementRating,
+      key_insights: insights,
+      suggestions,
+    };
   }
 
   /**

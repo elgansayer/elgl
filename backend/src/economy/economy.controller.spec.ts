@@ -53,6 +53,8 @@ describe('EconomyController', () => {
             getStickerPacks: jest.fn(),
             unlockStickerPack: jest.fn(),
             getTransactionHistory: jest.fn(),
+            getPremiumServices: jest.fn(),
+            unlockPremiumService: jest.fn(),
           },
         },
         {
@@ -437,6 +439,81 @@ describe('EconomyController', () => {
       const result = await controller.getHealth();
       expect(result).toEqual(mockSnapshot);
       expect(healthService.getHealthSnapshot).toHaveBeenCalled();
+    });
+  });
+
+  describe('getPremiumServices', () => {
+    it('should return list of premium AI services from service', () => {
+      const mockServices = [
+        {
+          id: 'conversation_analysis_report',
+          name: 'Conversation Analysis Report',
+          description: 'Deep AI-powered analysis',
+          icon: '[Chart]',
+          cost_coins: 200,
+          category: 'report',
+        },
+      ];
+      (economyService.getPremiumServices as jest.Mock).mockReturnValue(
+        mockServices,
+      );
+
+      const result = controller.getPremiumServices();
+      expect(result).toEqual(mockServices);
+      expect(economyService.getPremiumServices).toHaveBeenCalled();
+    });
+  });
+
+  describe('unlockPremiumService', () => {
+    it('should return null when no user is provided', async () => {
+      const result = await controller.unlockPremiumService(null, {
+        service_id: 'conversation_analysis_report',
+        partner_id: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+      });
+      expect(result).toBeNull();
+    });
+
+    it('should call service unlockPremiumService when user is provided', async () => {
+      const mockUser = { id: 'test-user-id' } as User;
+      const mockResult = {
+        success: true,
+        coins_remaining: 300,
+        service_id: 'conversation_analysis_report',
+        service_name: 'Conversation Analysis Report',
+        report: {
+          total_messages: 48,
+          messages_by_user: 28,
+          messages_by_partner: 20,
+          partner_name: 'Partner',
+          first_message_date: '2026-01-01T00:00:00.000Z',
+          last_message_date: '2026-08-01T00:00:00.000Z',
+          days_since_first_contact: 220,
+          average_messages_per_day: 0.2,
+          message_type_breakdown: { text: 40, voice: 8 },
+          correction_count: 5,
+          corrections_given: 3,
+          corrections_received: 2,
+          engagement_score: 72,
+          engagement_rating: 'Good - consistent interaction',
+          key_insights: ['Great balance'],
+          suggestions: ['Try voice messages'],
+        },
+      };
+
+      (economyService.unlockPremiumService as jest.Mock).mockResolvedValue(
+        mockResult,
+      );
+
+      const dto = {
+        service_id: 'conversation_analysis_report',
+        partner_id: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+      };
+      const result = await controller.unlockPremiumService(mockUser, dto);
+      expect(result).toEqual(mockResult);
+      expect(economyService.unlockPremiumService).toHaveBeenCalledWith(
+        'test-user-id',
+        dto,
+      );
     });
   });
 });

@@ -23,6 +23,7 @@ import {
   PurchaseCoinsDto,
   SendGiftDto,
   UnlockStickerPackDto,
+  UnlockPremiumServiceDto,
 } from './dto/economy.dto';
 import { EconomyService } from './economy.service';
 import { CoinEconomyHealthService } from './coin-economy-health.service';
@@ -516,6 +517,93 @@ export class EconomyController {
   ) {
     if (!user) return null;
     return await this.economyService.unlockStickerPack(user.id, dto);
+  }
+
+  /**
+   * Premium AI services catalogue: public, long-lived CDN cache.
+   * Service definitions rarely change so browsers may keep this for 1 hour.
+   */
+  @Get('premium-services')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_LONG))
+  @ApiOperation({
+    summary: 'Get premium AI services catalogue',
+    description:
+      'Returns all available premium one-off AI services that can be unlocked with coins. ' +
+      'Services rarely change, so responses are cached aggressively.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of premium AI services with id, name, description, icon, and coin cost.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', example: 'conversation_analysis_report' },
+          name: { type: 'string', example: 'Conversation Analysis Report' },
+          description: { type: 'string' },
+          icon: { type: 'string', example: '\u{1F4CA}' },
+          cost_coins: { type: 'number', example: 200 },
+          category: { type: 'string', enum: ['report', 'analysis', 'insight'], example: 'report' },
+        },
+      },
+    },
+  })
+  getPremiumServices() {
+    return this.economyService.getPremiumServices();
+  }
+
+  /**
+   * Unlock premium AI service: mutation, never cached.
+   * Deducts coins from the user and generates the requested analysis/report.
+   */
+  @Post('unlock-premium-service')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @EconomyRateLimit({ maxRequests: 5, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Unlock a premium one-off AI service with coins',
+    description:
+      'Deducts the service coin cost from the user balance, generates the requested AI analysis ' +
+      'or report (e.g., Conversation Analysis Report), records the transaction, and returns the result. ' +
+      'The user must have sufficient coins to cover the service cost.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Premium service unlocked and report generated.',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        coins_remaining: { type: 'number', example: 300 },
+        service_id: { type: 'string', example: 'conversation_analysis_report' },
+        service_name: { type: 'string', example: 'Conversation Analysis Report' },
+        report: {
+          type: 'object',
+          properties: {
+            total_messages: { type: 'number', example: 48 },
+            messages_by_user: { type: 'number', example: 28 },
+            messages_by_partner: { type: 'number', example: 20 },
+            partner_name: { type: 'string', example: 'Sofia Garcia' },
+            engagement_score: { type: 'number', example: 72 },
+            engagement_rating: { type: 'string', example: 'Good - consistent interaction' },
+            key_insights: { type: 'array', items: { type: 'string' } },
+            suggestions: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Insufficient balance or invalid service ID.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Service or partner not found.' })
+  async unlockPremiumService(
+    @CurrentUser() user: User | null,
+    @Body() dto: UnlockPremiumServiceDto,
+  ) {
+    if (!user) return null;
+    return await this.economyService.unlockPremiumService(user.id, dto);
   }
 
   /**

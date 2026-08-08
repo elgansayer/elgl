@@ -7,6 +7,25 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class UnlockPremiumServiceDto {
+  @ApiProperty({
+    description: 'ID of the premium AI service to unlock',
+    enum: ['conversation_analysis_report'],
+    example: 'conversation_analysis_report',
+  })
+  @IsString()
+  @IsNotEmpty()
+  service_id!: string;
+
+  @ApiProperty({
+    description: 'UUID of the conversation partner to analyse',
+    format: 'uuid',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+  })
+  @IsUUID()
+  partner_id!: string;
+}
+
 export class PurchaseCoinsDto {
   @ApiProperty({
     description:

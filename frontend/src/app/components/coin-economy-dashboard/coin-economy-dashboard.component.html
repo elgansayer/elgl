@@ -166,6 +166,30 @@
               </a>
             </div>
           </app-card>
+
+          <!-- Premium AI Services -->
+          @if (economyStore.premiumServices().length > 0) {
+            @for (svc of economyStore.premiumServices(); track svc.id) {
+              <app-card variant="elevated" padding="md">
+                <div class="flex flex-col items-center text-center gap-3">
+                  <span class="text-4xl" aria-hidden="true">{{ svc.icon }}</span>
+                  <h3 class="font-bold text-lg">{{ svc.name }}</h3>
+                  <p class="text-sm text-text-secondary">{{ svc.description }}</p>
+                  <span class="text-sm font-semibold text-amber-400">
+                    {{ 'coinEconomy.unlockReportCost' | t: { coins: svc.cost_coins } }}
+                  </span>
+                  <button
+                    type="button"
+                    class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors disabled:opacity-40"
+                    [disabled]="economyStore.unlockReportLoading() || economyStore.coinsBalance() < svc.cost_coins"
+                    (click)="openUnlockDialog(svc)"
+                  >
+                    {{ 'coinEconomy.unlockReport' | t }}
+                  </button>
+                </div>
+              </app-card>
+            }
+          }
         </div>
       }
     </div>

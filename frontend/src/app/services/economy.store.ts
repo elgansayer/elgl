@@ -51,6 +51,34 @@ export interface StickerPack {
   animation_url?: string;
 }
 
+export interface PremiumAiService {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  cost_coins: number;
+  category: 'report' | 'analysis' | 'insight';
+}
+
+export interface ConversationAnalysisReport {
+  total_messages: number;
+  messages_by_user: number;
+  messages_by_partner: number;
+  partner_name: string;
+  first_message_date: string | null;
+  last_message_date: string | null;
+  days_since_first_contact: number;
+  average_messages_per_day: number;
+  message_type_breakdown: Record<string, number>;
+  correction_count: number;
+  corrections_given: number;
+  corrections_received: number;
+  engagement_score: number;
+  engagement_rating: string;
+  key_insights: string[];
+  suggestions: string[];
+}
+
 export interface TransactionRecord {
   id: string;
   type: 'earn' | 'spend' | 'gift_sent' | 'gift_received' | 'purchase' | 'daily_checkin';
@@ -95,6 +123,14 @@ export class EconomyStore {
 
   readonly coinsBalance = signal<number>(50);
   readonly stickerPacks = signal<StickerPack[]>([]);
+
+  /** Premium AI services available for coin unlock */
+  readonly premiumServices = signal<PremiumAiService[]>([]);
+
+  /** Report from an unlocked premium AI service */
+  readonly unlockReport = signal<ConversationAnalysisReport | null>(null);
+  readonly unlockReportLoading = signal(false);
+  readonly unlockReportError = signal<string | null>(null);
   readonly catalog = signal<VirtualGift[]>([]);
   readonly coinPackages = signal<CoinPackage[]>([]);
   readonly developerStats = signal<DeveloperAnalytics | null>(null);
@@ -659,6 +695,69 @@ export class EconomyStore {
   readonly unlockedStickerPacks = computed(() => {
     return this.stickerPacks().filter((pack) => pack.owned);
   });
+
+  async loadPremiumServices(): Promise<void> {
+    if (!this.isOnline()) {
+      return;
+    }
+    try {
+      const res = await firstValueFrom(
+        this.http.get<PremiumAiService[]>(`${this.baseUrl}/premium-services`, {
+          headers: this.getHeaders(),
+        }),
+      );
+      this.premiumServices.set(res);
+    } catch (e) {
+      console.error('Error loading premium AI services:', e);
+    }
+  }
+
+  async unlockPremiumService(serviceId: string, partnerId: string): Promise<boolean> {
+    this.unlockReportLoading.set(true);
+    this.unlockReportError.set(null);
+
+    if (!this.isOnline()) {
+      showToast(this.i18n.translate('economy.offlinePurchaseUnavailable'));
+      this.unlockReportLoading.set(false);
+      return false;
+    }
+
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{
+          success: boolean;
+          coins_remaining: number;
+          service_id: string;
+          service_name: string;
+          report: ConversationAnalysisReport;
+        }>(
+          `${this.baseUrl}/unlock-premium-service`,
+          { service_id: serviceId, partner_id: partnerId },
+          { headers: this.getHeaders() },
+        ),
+      );
+      if (res.success) {
+        this.coinsBalance.set(res.coins_remaining);
+        this.offlineEconomy.cacheBalance(res.coins_remaining);
+        this.unlockReport.set(res.report);
+        showToast(
+          this.i18n.translate('coinEconomy.premiumServiceUnlocked', {
+            name: res.service_name,
+          }),
+        );
+        return true;
+      }
+      this.unlockReportError.set('Failed to unlock service');
+      return false;
+    } catch (e) {
+      console.error('Unlock premium service error:', e);
+      showToast(this.i18n.translate('coinEconomy.premiumServiceInsufficientCoins'));
+      this.unlockReportError.set('Insufficient coins or partner not found');
+      return false;
+    } finally {
+      this.unlockReportLoading.set(false);
+    }
+  }
 
   private mapDiagnosticLog(log: DiagnosticLogApiRecord): DiagnosticLog {
     return {

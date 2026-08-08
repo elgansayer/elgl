@@ -1,7 +1,7 @@
 import { Component, inject, AfterViewInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { EconomyStore, TransactionRecord } from '../../services/economy.store';
+import { EconomyStore, TransactionRecord, PremiumAiService } from '../../services/economy.store';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoinEconomyOnboardingService } from '../../services/coin-economy-onboarding.service';
@@ -10,6 +10,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-coin-economy-dashboard',
@@ -18,6 +19,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     TranslatePipe,
     RouterLink,
     DecimalPipe,
+    FormsModule,
     AppCardComponent,
     AppPillComponent,
     AppButtonPrimaryComponent,
@@ -162,9 +164,127 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
             </a>
           </div>
         </app-card>
+
+        <!-- Premium AI Services -->
+        @if (economyStore.premiumServices().length > 0) {
+          @for (svc of economyStore.premiumServices(); track svc.id) {
+            <app-card variant="elevated" padding="md">
+              <div class="flex flex-col items-center text-center gap-3">
+                <span class="text-4xl" aria-hidden="true">{{ svc.icon }}</span>
+                <h3 class="font-bold text-lg">{{ svc.name }}</h3>
+                <p class="text-sm text-text-secondary">{{ svc.description }}</p>
+                <span class="text-sm font-semibold text-amber-400">
+                  {{ 'coinEconomy.unlockReportCost' | t: { coins: svc.cost_coins } }}
+                </span>
+                <input
+                  type="text"
+                  class="w-full bg-surface-200 text-white rounded-lg px-3 py-2 text-sm placeholder-neutral-400 border border-surface-100 focus:border-primary outline-none"
+                  [placeholder]="'Enter partner ID'"
+                  [ngModel]="partnerIdInput"
+                  (ngModelChange)="partnerIdInput = $event"
+                />
+                <button
+                  type="button"
+                  class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors disabled:opacity-40"
+                  [disabled]="economyStore.unlockReportLoading() || economyStore.coinsBalance() < svc.cost_coins || !partnerIdInput.trim()"
+                  (click)="openUnlockDialog(svc)"
+                >
+                  {{ 'coinEconomy.unlockReport' | t }}
+                </button>
+              </div>
+            </app-card>
+          }
+        }
       </div>
     </div>
   </section>
+
+  <!-- Analysis Report Section -->
+  @if (economyStore.unlockReport(); as report) {
+    <section class="ps-4 pe-4 pb-8 md:ps-8 md:pe-8">
+      <div class="max-w-4xl mx-auto">
+        <app-card variant="elevated" padding="md" >
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl" aria-hidden="true">📊</span>
+              <div>
+                <h2 class="text-xl font-bold">
+                  {{ 'coinEconomy.conversationAnalysisReport.reportTitle' | t: { name: report.partner_name } }}
+                </h2>
+                <p class="text-sm text-text-secondary">{{ 'coinEconomy.conversationAnalysisReport.desc' | t }}</p>
+              </div>
+            </div>
+
+            <!-- Key metrics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div class="bg-surface-200 rounded-xl p-3 text-center">
+                <p class="text-xs text-text-secondary">{{ 'coinEconomy.report.totalMessages' | t }}</p>
+                <p class="text-2xl font-extrabold text-amber-400">{{ report.total_messages }}</p>
+              </div>
+              <div class="bg-surface-200 rounded-xl p-3 text-center">
+                <p class="text-xs text-text-secondary">{{ 'coinEconomy.report.messagesByUser' | t }}</p>
+                <p class="text-2xl font-extrabold text-emerald-400">{{ report.messages_by_user }}</p>
+              </div>
+              <div class="bg-surface-200 rounded-xl p-3 text-center">
+                <p class="text-xs text-text-secondary">{{ 'coinEconomy.report.messagesByPartner' | t }}</p>
+                <p class="text-2xl font-extrabold text-blue-400">{{ report.messages_by_partner }}</p>
+              </div>
+              <div class="bg-surface-200 rounded-xl p-3 text-center">
+                <p class="text-xs text-text-secondary">{{ 'coinEconomy.report.engagementScore' | t }}</p>
+                <p class="text-2xl font-extrabold" [class.text-rose-400]="report.engagement_score < 40" [class.text-amber-400]="report.engagement_score >= 40 && report.engagement_score < 70" [class.text-emerald-400]="report.engagement_score >= 70">{{ report.engagement_score }}%</p>
+              </div>
+            </div>
+
+            <!-- Additional stats -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div class="bg-surface-200 rounded-xl p-3">
+                <p class="text-xs text-text-secondary">{{ 'coinEconomy.report.daysSinceFirst' | t }}</p>
+                <p class="text-lg font-semibold">{{ report.days_since_first_contact }}</p>
+              </div>
+              <div class="bg-surface-200 rounded-xl p-3">
+                <p class="text-xs text-text-secondary">{{ 'coinEconomy.report.avgPerDay' | t }}</p>
+                <p class="text-lg font-semibold">{{ report.average_messages_per_day }}</p>
+              </div>
+              <div class="bg-surface-200 rounded-xl p-3">
+                <p class="text-xs text-text-secondary">{{ 'coinEconomy.report.corrections' | t }}</p>
+                <p class="text-lg font-semibold">{{ report.correction_count }} ({{ report.corrections_given }} / {{ report.corrections_received }})</p>
+              </div>
+            </div>
+
+            <!-- Engagement rating -->
+            <div class="bg-surface-200 rounded-xl p-4">
+              <p class="text-sm font-semibold">{{ 'coinEconomy.report.engagementRating' | t }}</p>
+              <p class="text-lg">{{ report.engagement_rating }}</p>
+            </div>
+
+            <!-- Key Insights -->
+            @if (report.key_insights.length > 0) {
+              <div class="bg-surface-200 rounded-xl p-4">
+                <p class="text-sm font-semibold mb-2">{{ 'coinEconomy.report.keyInsights' | t }}</p>
+                <ul class="list-disc list-inside space-y-1">
+                  @for (insight of report.key_insights; track insight) {
+                    <li class="text-sm text-text-secondary">{{ insight }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            <!-- Suggestions -->
+            @if (report.suggestions.length > 0) {
+              <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
+                <p class="text-sm font-semibold mb-2">{{ 'coinEconomy.report.suggestions' | t }}</p>
+                <ul class="list-disc list-inside space-y-1">
+                  @for (suggestion of report.suggestions; track suggestion) {
+                    <li class="text-sm">{{ suggestion }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        </app-card>
+      </div>
+    </section>
+  }
 
   <!-- Recent Activity -->
   <section class="ps-4 pe-4 pb-12 md:ps-8 md:pe-8">
@@ -221,14 +341,26 @@ export class CoinEconomyDashboardComponent implements AfterViewInit {
   private readonly onboardingService = inject(CoinEconomyOnboardingService);
 
   readonly balance = this.economyStore.coinsBalance;
+  
+  /** Partner ID input for the unlock dialog */
+  partnerIdInput = '';
 
   ngAfterViewInit(): void {
     void this.economyStore.loadInitialData();
+    void this.economyStore.loadPremiumServices();
     this.maybeStartTour();
   }
 
   getTransactionTypeLabel(type: TransactionRecord['type']): string {
     return this.i18n.translate(`coinEconomy.transaction.${type}`);
+  }
+
+  openUnlockDialog(service: PremiumAiService): void {
+    const partnerId = this.partnerIdInput.trim();
+    if (!partnerId) {
+      return;
+    }
+    void this.economyStore.unlockPremiumService(service.id, partnerId);
   }
 
   private maybeStartTour(): void {
