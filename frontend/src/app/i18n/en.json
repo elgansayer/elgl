@@ -99,5 +99,21 @@
     "typing": "Writing...",
     "backToScenarios": "Back to scenarios"
   },
-  "moderation": {}
+  "moderation": {},
+  "groupsDiscoveryTab": {
+    "tabChats": "Chats",
+    "tabGroups": "Groups",
+    "title": "Discover Groups",
+    "subtitle": "Find and join group chats by topic",
+    "loading": "Loading groups...",
+    "loadError": "Failed to load groups",
+    "joinBtn": "Join",
+    "joined": "Joined",
+    "full": "Full",
+    "members": "members",
+    "noGroups": "No groups found matching your filters",
+    "noGroupsHint": "Try adjusting the topic filter or check back later for new groups.",
+    "filterAllTopics": "All Topics",
+    "searchPlaceholder": "Search groups..."
+  }
 }

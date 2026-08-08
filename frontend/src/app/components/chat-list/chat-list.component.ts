@@ -1,8 +1,10 @@
 import { notImplementedToast, showToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, OnInit, computed, inject, signal, resource } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
@@ -10,6 +12,7 @@ import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service'
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { environment } from '../../../environments/environment';
 
 interface ChatRoomPreview {
   id: string;
@@ -25,6 +28,17 @@ interface ChatRoomPreview {
   unreadCount: number;
 }
 
+interface DiscoverableGroup {
+  id: string;
+  name: string;
+  owner_id: string;
+  max_members: number;
+  member_count: number;
+  is_member: boolean;
+  interest_id?: string;
+  created_at: string;
+}
+
 @Component({
   selector: 'app-chat-list',
   imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent],
@@ -35,12 +49,74 @@ export class ChatListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly unreadCounter = inject(UnreadCounterService);
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = environment.apiUrl;
 
   readonly isLoading = signal<boolean>(true);
   readonly labels = signal<string[]>([]);
   readonly selectedLabel = signal<string | null>(null);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
+
+  // ---------- Tab state ----------
+  readonly activeTab = signal<'chats' | 'groups'>('chats');
+
+  // ---------- Groups Discovery state ----------
+  readonly groupsSearch = signal<string>('');
+  readonly joiningId = signal<string | null>(null);
+  readonly groupsError = signal<string>('');
+  readonly selectedGroupTopic = signal<string>('');
+
+  readonly groupsResource = resource({
+    loader: async (): Promise<DiscoverableGroup[]> => {
+      this.groupsError.set('');
+      try {
+        return await firstValueFrom(
+          this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/groups/discoverable`)
+        );
+      } catch {
+        this.groupsError.set(this.i18n.translate('groupsDiscoveryTab.loadError'));
+        return [];
+      }
+    },
+  });
+
+  readonly filteredGroups = computed(() => {
+    const groups = this.groupsResource.value() ?? [];
+    const query = this.groupsSearch().trim().toLowerCase();
+    const topic = this.selectedGroupTopic();
+
+    let result = groups;
+    if (topic) {
+      result = result.filter((g) => g.interest_id === topic);
+    }
+    if (query) {
+      result = result.filter(
+        (g) => g.name.toLowerCase().includes(query)
+      );
+    }
+    return result;
+  });
+
+  readonly groupTopics = computed(() => {
+    const groups = this.groupsResource.value() ?? [];
+    const topicMap = new Map<string, string>();
+    for (const g of groups) {
+      if (g.interest_id) {
+        topicMap.set(g.interest_id, g.interest_id);
+      }
+    }
+    return Array.from(topicMap.keys());
+  });
+
+  readonly groupTopicPills = computed(() => {
+    this.i18n.translations();
+    const pills = [{ id: '', label: this.i18n.translate('groupsDiscoveryTab.filterAllTopics') }];
+    for (const topicId of this.groupTopics()) {
+      pills.push({ id: topicId, label: topicId });
+    }
+    return pills;
+  });
 
   // ---------- Locked chat state ----------
   readonly lockedRoomIds = signal<string[]>([]);
@@ -57,6 +133,33 @@ export class ChatListComponent implements OnInit {
   });
 
   // --------------------------------------------------------------------
+  // Tab management
+  setActiveTab(tab: 'chats' | 'groups'): void {
+    this.activeTab.set(tab);
+    if (tab === 'groups') {
+      this.groupsResource.reload();
+    }
+  }
+
+  handleTopicFilter(topicId: string): void {
+    this.selectedGroupTopic.set(topicId ?? '');
+  }
+
+  async joinGroup(groupId: string): Promise<void> {
+    this.joiningId.set(groupId);
+    try {
+      await firstValueFrom(
+        this.http.post<unknown>(`${this.apiUrl}/groups/${groupId}/join`, {})
+      );
+      this.groupsResource.reload();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : this.i18n.translate('groupsDiscoveryTab.loadError');
+      this.groupsError.set(message);
+    } finally {
+      this.joiningId.set(null);
+    }
+  }
+
   notImplemented(): void {
     notImplementedToast();
   }

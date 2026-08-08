@@ -63,186 +63,323 @@
       </button>
     </div>
 
-    <!-- Search Bar -->
-    <div class="bg-surface-200 rounded-pill px-3 py-1.5 flex items-center gap-2 mb-3">
-      <span class="text-text-muted text-sm">🔍</span>
-      <input
-        [ngModel]="search()"
-        (ngModelChange)="search.set($event)"
-        type="text"
-        [placeholder]="'chatList.searchPlaceholder' | t"
-        class="bg-transparent border-none outline-none text-sm text-text-primary w-full placeholder-text-muted"
-       [attr.aria-label]="'chatList.searchPlaceholder' | t"/>
+    <!-- Tab Bar: Chats | Groups -->
+    <div class="flex bg-surface-300 rounded-pill p-0.5 mb-4">
+      <button
+        (click)="setActiveTab('chats')"
+        class="flex-1 py-2 rounded-pill text-sm font-bold transition-colors"
+        [class.bg-accent-500]="activeTab() === 'chats'"
+        [class.text-white]="activeTab() === 'chats'"
+        [class.text-text-secondary]="activeTab() !== 'chats'"
+        [attr.aria-selected]="activeTab() === 'chats'"
+        role="tab"
+        [attr.aria-label]="'groupsDiscoveryTab.tabChats' | t"
+      >
+        {{ 'groupsDiscoveryTab.tabChats' | t }}
+      </button>
+      <button
+        (click)="setActiveTab('groups')"
+        class="flex-1 py-2 rounded-pill text-sm font-bold transition-colors"
+        [class.bg-accent-500]="activeTab() === 'groups'"
+        [class.text-white]="activeTab() === 'groups'"
+        [class.text-text-secondary]="activeTab() !== 'groups'"
+        [attr.aria-selected]="activeTab() === 'groups'"
+        role="tab"
+        [attr.aria-label]="'groupsDiscoveryTab.tabGroups' | t"
+      >
+        {{ 'groupsDiscoveryTab.tabGroups' | t }}
+      </button>
     </div>
 
-    <!-- Filter Pills -->
-    <div class="flex items-center">
-      <button
-        aria-label="Filter options"
-        (click)="notImplemented()"
-        class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ms-4"
-      >
-        ≡
-      </button>
-      <app-scrollable-pills
-        [pills]="filterPills()"
-        [selected]="selectedFilter()"
-        (select)="onFilterSelect($any($event))"
-        class="flex-1"
-      >
-      </app-scrollable-pills>
-    </div>
+    <!-- Chats tab: Search + Filter Pills (hidden in groups tab) -->
+    @if (activeTab() === 'chats') {
+      <!-- Search Bar -->
+      <div class="bg-surface-200 rounded-pill px-3 py-1.5 flex items-center gap-2 mb-3">
+        <span class="text-text-muted text-sm">🔍</span>
+        <input
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          type="text"
+          [placeholder]="'chatList.searchPlaceholder' | t"
+          class="bg-transparent border-none outline-none text-sm text-text-primary w-full placeholder-text-muted"
+         [attr.aria-label]="'chatList.searchPlaceholder' | t"/>
+      </div>
+
+      <!-- Filter Pills -->
+      <div class="flex items-center">
+        <button
+          aria-label="Filter options"
+          (click)="notImplemented()"
+          class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ms-4"
+        >
+          ≡
+        </button>
+        <app-scrollable-pills
+          [pills]="filterPills()"
+          [selected]="selectedFilter()"
+          (select)="onFilterSelect($any($event))"
+          class="flex-1"
+        >
+        </app-scrollable-pills>
+      </div>
+    }
+
+    <!-- Groups tab: Search + Topic Pills (hidden in chats tab) -->
+    @if (activeTab() === 'groups') {
+      <!-- Groups Search Bar -->
+      <div class="bg-surface-200 rounded-pill px-3 py-1.5 flex items-center gap-2 mb-3">
+        <span class="text-text-muted text-sm">🔍</span>
+        <input
+          [ngModel]="groupsSearch()"
+          (ngModelChange)="groupsSearch.set($event)"
+          type="text"
+          [placeholder]="'groupsDiscoveryTab.searchPlaceholder' | t"
+          class="bg-transparent border-none outline-none text-sm text-text-primary w-full placeholder-text-muted"
+         [attr.aria-label]="'groupsDiscoveryTab.searchPlaceholder' | t"/>
+      </div>
+
+      <!-- Topic Filter Pills -->
+      @if (groupTopicPills().length > 1) {
+        <app-scrollable-pills
+          [pills]="groupTopicPills()"
+          [selected]="selectedGroupTopic()"
+          (select)="handleTopicFilter($any($event))"
+          class="block"
+        >
+        </app-scrollable-pills>
+      }
+    }
   </header>
 
-  <main class="divide-y divide-surface-200">
-    @if (isLoading()) {
-      <app-empty-state
-        [title]="'chatList.loading' | t"
-        [customClass]="'py-16'">
-      </app-empty-state>
-    }
+  <!-- Chats Tab Content -->
+  @if (activeTab() === 'chats') {
+    <main class="divide-y divide-surface-200">
+      @if (isLoading()) {
+        <app-empty-state
+          [title]="'chatList.loading' | t"
+          [customClass]="'py-16'">
+        </app-empty-state>
+      }
 
-    @if (!isLoading() && regularAndPinnedPreviews().length === 0) {
-      <app-empty-state
-        [illustration]="'/assets/illustrations/no-messages.svg'"
-        [title]="'chatList.noMessagesFound' | t"
-        [description]="'chatList.noMessagesHint' | t"
-        [actionLabel]="'chatList.findPartnersBtn' | t"
-        [customClass]="'py-16'">
-        <a [routerLink]="['/discovery']" class="text-primary font-semibold text-xs mt-2 inline-block">
-          {{ 'chatList.browseDiscovery' | t }}
-        </a>
-      </app-empty-state>
-    }
+      @if (!isLoading() && regularAndPinnedPreviews().length === 0) {
+        <app-empty-state
+          [illustration]="'/assets/illustrations/no-messages.svg'"
+          [title]="'chatList.noMessagesFound' | t"
+          [description]="'chatList.noMessagesHint' | t"
+          [actionLabel]="'chatList.findPartnersBtn' | t"
+          [customClass]="'py-16'">
+          <a [routerLink]="['/discovery']" class="text-primary font-semibold text-xs mt-2 inline-block">
+            {{ 'chatList.browseDiscovery' | t }}
+          </a>
+        </app-empty-state>
+      }
 
-    @for (preview of regularAndPinnedPreviews(); track preview.id) {
-      <a
-        [routerLink]="['/chat', preview.id]"
-        class="flex items-center gap-3 p-4 hover:bg-surface-300 transition-colors block"
-      >
-        <div class="relative shrink-0">
-          <div
-            class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-lg"
-          >
-            {{ preview.avatar || preview.title.charAt(0) }}
-          </div>
-          @if (preview.isOnline) {
-            <span
-              class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
-            ></span>
-          }
-        </div>
-
-        <div class="flex-1 min-w-0">
-          <div class="flex justify-between items-baseline mb-0.5">
-            <div class="flex items-center gap-2 truncate">
-              <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
-              <span
-                class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none"
-                >{{ 'discovery.vipBadge' | t }}</span
-              >
+      @for (preview of regularAndPinnedPreviews(); track preview.id) {
+        <a
+          [routerLink]="['/chat', preview.id]"
+          class="flex items-center gap-3 p-4 hover:bg-surface-300 transition-colors block"
+        >
+          <div class="relative shrink-0">
+            <div
+              class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-lg"
+            >
+              {{ preview.avatar || preview.title.charAt(0) }}
             </div>
-            <span class="text-xs text-text-secondary shrink-0 ms-2">
-              @if (preview.lastMessageAt) {
-                {{ preview.lastMessageAt | date: 'shortTime' }}
-              }
-            </span>
-          </div>
-          <div class="flex justify-between items-center gap-2">
-            <p class="text-[13px] text-text-secondary truncate">
-              {{ preview.lastMessageText || ('chatList.tapToChat' | t) }}
-            </p>
-            @if (preview.unreadCount > 0) {
+            @if (preview.isOnline) {
               <span
-                class="bg-gradient-to-br from-primary to-accent-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-purple-500/30"
-              >
-                {{ preview.unreadCount }}
-              </span>
+                class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
+              ></span>
             }
           </div>
-        </div>
 
-        <button
-          type="button"
-          (click)="toggleRoomLock($event, preview.id)"
-          class="shrink-0 text-text-muted hover:text-text-primary p-1"
-          [attr.aria-label]="'chatList.lockChat' | t"
-          [attr.title]="'chatList.lockChat' | t"
-        >
-          <span class="text-sm">🔓</span>
-        </button>
-      </a>
-    }
-
-    <!-- Locked folder section -->
-    @if (lockedRoomIds().length > 0) {
-      <div class="px-4 py-2 border-t border-surface-200">
-        <button (click)="toggleLockedFolder()" class="flex items-center gap-2 text-text-primary" [attr.aria-label]="'chatList.lockedFolder' | t">
-          <span>{{ showLocked() ? '🔓' : '🔒' }}</span>
-          <span>{{ 'chatList.lockedFolder' | t }}</span>
-          <span class="text-xs text-text-secondary">({{ lockedRoomIds().length }})</span>
-        </button>
-      </div>
-      @if (showLocked()) {
-        @for (preview of lockedPreviews(); track preview.id) {
-          <a
-            [routerLink]="['/chat', preview.id]"
-            class="flex items-center gap-3 p-4 hover:bg-surface-300 transition-colors block"
-          >
-            <div class="relative shrink-0">
-              <div
-                class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-lg"
-              >
-                {{ preview.avatar || preview.title.charAt(0) }}
-              </div>
-              @if (preview.isOnline) {
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-baseline mb-0.5">
+              <div class="flex items-center gap-2 truncate">
+                <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
                 <span
-                  class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
-                ></span>
+                  class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none"
+                  >{{ 'discovery.vipBadge' | t }}</span
+                >
+              </div>
+              <span class="text-xs text-text-secondary shrink-0 ms-2">
+                @if (preview.lastMessageAt) {
+                  {{ preview.lastMessageAt | date: 'shortTime' }}
+                }
+              </span>
+            </div>
+            <div class="flex justify-between items-center gap-2">
+              <p class="text-[13px] text-text-secondary truncate">
+                {{ preview.lastMessageText || ('chatList.tapToChat' | t) }}
+              </p>
+              @if (preview.unreadCount > 0) {
+                <span
+                  class="bg-gradient-to-br from-primary to-accent-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-purple-500/30"
+                >
+                  {{ preview.unreadCount }}
+                </span>
               }
             </div>
+          </div>
 
-            <div class="flex-1 min-w-0">
-              <div class="flex justify-between items-baseline mb-0.5">
-                <div class="flex items-center gap-2 truncate">
-                  <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
-                  <span
-                    class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none"
-                    >{{ 'discovery.vipBadge' | t }}</span
-                  >
+          <button
+            type="button"
+            (click)="toggleRoomLock($event, preview.id)"
+            class="shrink-0 text-text-muted hover:text-text-primary p-1"
+            [attr.aria-label]="'chatList.lockChat' | t"
+            [attr.title]="'chatList.lockChat' | t"
+          >
+            <span class="text-sm">🔓</span>
+          </button>
+        </a>
+      }
+
+      <!-- Locked folder section -->
+      @if (lockedRoomIds().length > 0) {
+        <div class="px-4 py-2 border-t border-surface-200">
+          <button (click)="toggleLockedFolder()" class="flex items-center gap-2 text-text-primary" [attr.aria-label]="'chatList.lockedFolder' | t">
+            <span>{{ showLocked() ? '🔓' : '🔒' }}</span>
+            <span>{{ 'chatList.lockedFolder' | t }}</span>
+            <span class="text-xs text-text-secondary">({{ lockedRoomIds().length }})</span>
+          </button>
+        </div>
+        @if (showLocked()) {
+          @for (preview of lockedPreviews(); track preview.id) {
+            <a
+              [routerLink]="['/chat', preview.id]"
+              class="flex items-center gap-3 p-4 hover:bg-surface-300 transition-colors block"
+            >
+              <div class="relative shrink-0">
+                <div
+                  class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white font-bold text-lg"
+                >
+                  {{ preview.avatar || preview.title.charAt(0) }}
                 </div>
-                <span class="text-xs text-text-secondary shrink-0 ms-2">
-                  @if (preview.lastMessageAt) {
-                    {{ preview.lastMessageAt | date: 'shortTime' }}
+                @if (preview.isOnline) {
+                  <span
+                    class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
+                  ></span>
+                }
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-baseline mb-0.5">
+                  <div class="flex items-center gap-2 truncate">
+                    <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
+                    <span
+                      class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none"
+                      >{{ 'discovery.vipBadge' | t }}</span
+                    >
+                  </div>
+                  <span class="text-xs text-text-secondary shrink-0 ms-2">
+                    @if (preview.lastMessageAt) {
+                      {{ preview.lastMessageAt | date: 'shortTime' }}
+                    }
+                  </span>
+                </div>
+                <div class="flex justify-between items-center gap-2">
+                  <p class="text-[13px] text-text-secondary truncate">
+                    {{ preview.lastMessageText || ('chatList.tapToChat' | t) }}
+                  </p>
+                  @if (preview.unreadCount > 0) {
+                    <span
+                  class="bg-gradient-to-br from-primary to-accent-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-purple-500/30"
+                    >
+                      {{ preview.unreadCount }}
+                    </span>
                   }
+                </div>
+              </div>
+
+              <button
+                type="button"
+                (click)="toggleRoomLock($event, preview.id)"
+                class="shrink-0 text-text-muted hover:text-text-primary p-1"
+                [attr.aria-label]="'chatList.unlockChat' | t"
+                [attr.title]="'chatList.unlockChat' | t"
+              >
+                <span class="text-sm">🔒</span>
+              </button>
+            </a>
+          }
+        }
+      }
+    </main>
+  }
+
+  <!-- Groups Tab Content -->
+  @if (activeTab() === 'groups') {
+    <main>
+      @if (groupsResource.isLoading()) {
+        <app-empty-state
+          [title]="'groupsDiscoveryTab.loading' | t"
+          [customClass]="'py-16'">
+        </app-empty-state>
+      }
+
+      @if (groupsError()) {
+        <div
+          class="bg-red-500/10 text-red-400 px-3 py-2 rounded-lg m-4 text-sm"
+          role="alert"
+        >
+          {{ groupsError() }}
+        </div>
+      }
+
+      @if (!groupsResource.isLoading() && filteredGroups().length === 0 && !groupsError()) {
+        <app-empty-state
+          [title]="'groupsDiscoveryTab.noGroups' | t"
+          [description]="'groupsDiscoveryTab.noGroupsHint' | t"
+          [customClass]="'py-16'">
+        </app-empty-state>
+      }
+
+      @if (!groupsResource.isLoading()) {
+        <div class="divide-y divide-surface-200">
+          @for (group of filteredGroups(); track group.id) {
+            <div
+              class="flex items-center gap-3 p-4 hover:bg-surface-300 transition-colors"
+            >
+              <div class="relative shrink-0">
+                <div
+                  class="w-12 h-12 rounded-full bg-gradient-to-br from-accent-500 to-neon-purple flex items-center justify-center text-white font-bold text-lg"
+                >
+                  {{ group.name.charAt(0) }}
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <h3 class="text-[15px] font-bold text-text-primary truncate">{{ group.name }}</h3>
+                <span class="text-xs text-text-secondary">
+                  {{ group.member_count }} / {{ group.max_members }}
+                  {{ 'groupsDiscoveryTab.members' | t }}
                 </span>
               </div>
-              <div class="flex justify-between items-center gap-2">
-                <p class="text-[13px] text-text-secondary truncate">
-                  {{ preview.lastMessageText || ('chatList.tapToChat' | t) }}
-                </p>
-                @if (preview.unreadCount > 0) {
-                  <span
-                class="bg-gradient-to-br from-primary to-accent-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-purple-500/30"
+
+              <div class="shrink-0">
+                @if (!group.is_member && group.member_count < group.max_members) {
+                  <button
+                    (click)="joinGroup(group.id)"
+                    class="bg-accent-500 hover:bg-accent-400 text-white px-4 py-1.5 rounded-full text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    [disabled]="joiningId() === group.id"
                   >
-                    {{ preview.unreadCount }}
+                    {{ joiningId() === group.id ? ('common.loading' | t) : ('groupsDiscoveryTab.joinBtn' | t) }}
+                  </button>
+                } @else if (group.is_member) {
+                  <span
+                    class="inline-flex items-center gap-1 text-accent-400 text-sm font-bold"
+                    [attr.aria-label]="'groupsDiscoveryTab.joined' | t"
+                  >
+                    <span aria-hidden="true">&#x2713;</span>
+                    {{ 'groupsDiscoveryTab.joined' | t }}
                   </span>
+                } @else {
+                  <span class="text-text-muted text-sm">{{ 'groupsDiscoveryTab.full' | t }}</span>
                 }
               </div>
             </div>
-
-            <button
-              type="button"
-              (click)="toggleRoomLock($event, preview.id)"
-              class="shrink-0 text-text-muted hover:text-text-primary p-1"
-              [attr.aria-label]="'chatList.unlockChat' | t"
-              [attr.title]="'chatList.unlockChat' | t"
-            >
-              <span class="text-sm">🔒</span>
-            </button>
-          </a>
-        }
+          }
+        </div>
       }
-    }
-  </main>
+    </main>
+  }
 </div>
