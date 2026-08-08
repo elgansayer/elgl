@@ -37,6 +37,66 @@
   }
 }
 
+
+
+/* Skeleton stagger animation for list items */
+@keyframes skeleton-stagger-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.skeleton-stagger {
+  animation: skeleton-stagger-in 0.4s ease-out both;
+}
+
+/* Skeleton shimmer animation */
+@keyframes skeleton-shimmer {
+  0% { opacity: 0.6; background-position: -200% 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--surface-200, #2a2a2a) 25%, var(--surface-100, #3a3a3a) 50%, var(--surface-200, #2a2a2a) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  will-change: opacity, background-position;
+}
+
+
+/* Empty state fade-in and icon pulse */
+@keyframes empty-state-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.empty-state-fade-in {
+  animation: empty-state-fade-in 0.35s ease-out;
+}
+@keyframes empty-state-icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+.empty-state-icon {
+  animation: empty-state-icon-pulse 3s ease-in-out infinite;
+}
+
+
+/* Content state transition animation */
+@keyframes content-state-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.content-state-enter {
+  animation: content-state-enter 0.25s ease-out;
+}
+/* Partner grid enter animation */
+@keyframes partner-card-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.partner-card-enter {
+  animation: partner-card-enter 0.3s ease-out both;
+}
+
 /* UI Primitives */
 @layer components {
   .app-card {

@@ -23,7 +23,7 @@
     "tunnel": "ngrok http 3000"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1097.0",
+    "@aws-sdk/client-s3": "^3.1103.0",
     "@aws-sdk/s3-request-presigner": "^3.1092.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
@@ -34,7 +34,7 @@
     "@nestjs/schedule": "^6.1.3",
     "@nestjs/swagger": "^11.4.6",
     "@nestjs/throttler": "^6.5.0",
-    "@supabase/supabase-js": "^2.111.0",
+    "@supabase/supabase-js": "^2.112.1",
     "@types/jsdom": "^28.0.3",
     "axios": "^1.19.0",
     "cheerio": "^1.0.0",
@@ -75,7 +75,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
-    "@types/dompurify": "^3.0.5",
+    "@types/dompurify": "^3.2.0",
     "@types/express": "^5.0.0",
     "@types/ioredis": "^4.28.10",
     "@types/jest": "^30.0.0",
@@ -87,7 +87,7 @@
     "@types/speakeasy": "^2.0.10",
     "@types/supertest": "^7.0.0",
     "@types/uuid": "^10.0.0",
-    "eslint": "^9.18.0",
+    "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^17.0.0",
@@ -123,7 +123,9 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^jwks-rsa$": "<rootDir>/../test/mocks/jwks-rsa-mock.js"
+      "^jwks-rsa$": "<rootDir>/../test/mocks/jwks-rsa-mock.js",
+      "^jsdom$": "<rootDir>/../test/mocks/jsdom-mock.js",
+      "^dompurify$": "<rootDir>/../test/mocks/dompurify-mock.js"
     }
   }
 }

@@ -352,6 +352,47 @@ export class NlpService {
     };
   }
 
+  /** Produces a simple phoneme decomposition of an English word. */
+  private static phonemiseWord(word: string): string[] {
+    const phonemeMap: Record<string, string> = {
+      th: 'θ',
+      dh: 'ð',
+      sh: 'ʃ',
+      ch: 'tʃ',
+      zh: 'ʒ',
+      ng: 'ŋ',
+      oo: 'u',
+      ee: 'i',
+      ea: 'iː',
+      ay: 'eɪ',
+      ow: 'aʊ',
+      oi: 'ɔɪ',
+      ph: 'f',
+      wh: 'w',
+      gh: '',
+    };
+    const lower = word.toLowerCase();
+    const result: string[] = [];
+    let i = 0;
+    while (i < lower.length) {
+      let matched = false;
+      for (let len = 2; len >= 1; len--) {
+        const digraph = lower.slice(i, i + len);
+        if (phonemeMap[digraph] !== undefined) {
+          if (phonemeMap[digraph]) result.push(phonemeMap[digraph]);
+          i += len;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        result.push(lower[i]);
+        i++;
+      }
+    }
+    return result;
+  }
+
   async pronunciationScore(
     userId: string,
     isVip: boolean,
@@ -361,11 +402,10 @@ export class NlpService {
 
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
     const region = this.configService.get<string>('AZURE_SPEECH_REGION');
+    const detectedLang = dto.language || 'en-US';
 
     if (azureKey && region) {
       try {
-        // Azure Speech Services Pronunciation Assessment API
-        // We need to download the audio from the URL and send it to Azure
         const audioResponse = await NlpService.fetchWithTimeout(
           dto.audio_url,
           {},
@@ -373,9 +413,8 @@ export class NlpService {
         if (audioResponse.ok) {
           const audioBuffer = await audioResponse.arrayBuffer();
 
-          // Azure Speech Services REST API for pronunciation assessment
           const assessmentRes = await NlpService.fetchWithTimeout(
-            `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed&profanity=raw`,
+            `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${detectedLang}&format=detailed&profanity=raw`,
             {
               method: 'POST',
               headers: {
@@ -389,9 +428,20 @@ export class NlpService {
 
           if (assessmentRes.ok) {
             const assessmentData = (await assessmentRes.json()) as {
+              DisplayText?: string;
               NBest?: Array<{
-                PronunciationAssessment?: { AccuracyScore?: number };
+                PronunciationAssessment?: {
+                  AccuracyScore?: number;
+                  PronScore?: number;
+                };
                 Words?: Array<{
+                  Word?: string;
+                  Phonemes?: Array<{
+                    Phoneme?: string;
+                    AccuracyScore?: number;
+                    Offset?: number;
+                    Duration?: number;
+                  }>;
                   PronunciationAssessment?: {
                     AccuracyScore?: number;
                     ErrorType?: string;
@@ -399,63 +449,105 @@ export class NlpService {
                 }>;
               }>;
             };
+
             const nBest = assessmentData.NBest?.[0];
+            const overallScore = Math.round(
+              nBest?.PronunciationAssessment?.AccuracyScore ??
+                nBest?.PronunciationAssessment?.PronScore ??
+                85,
+            );
 
-            if (nBest) {
-              const overallScore = Math.round(
-                nBest.PronunciationAssessment?.AccuracyScore || 85,
-              );
-              const words = dto.target_text
-                .split(/\s+/)
-                .filter((w) => w.length > 0);
+            const targetWords = dto.target_text
+              .split(/\s+/)
+              .filter((w) => w.length > 0);
+            const azureWords = nBest?.Words ?? [];
 
-              const breakdown: WordBreakdownItem[] = words.map((w, index) => {
-                const wordResult = nBest.Words?.[index];
+            const breakdown: WordBreakdownItem[] = targetWords.map(
+              (w, index) => {
+                const wordResult = azureWords[index];
+                const expectedPhonemes = NlpService.phonemiseWord(w);
+                const azurePhonemes = wordResult?.Phonemes ?? [];
+
+                const phonemes = expectedPhonemes.map((expectedPh, phIdx) => {
+                  const azurePh = azurePhonemes[phIdx];
+                  return {
+                    phoneme: azurePh?.Phoneme ?? expectedPh,
+                    score: Math.round(azurePh?.AccuracyScore ?? 85),
+                    expected_phoneme: expectedPh,
+                    feedback:
+                      azurePh?.AccuracyScore !== undefined
+                        ? azurePh.AccuracyScore >= 85
+                          ? 'Native-like'
+                          : azurePh.AccuracyScore >= 65
+                            ? 'Acceptable'
+                            : 'Needs practice'
+                        : undefined,
+                  };
+                });
+
+                const wordScore = Math.round(
+                  wordResult?.PronunciationAssessment?.AccuracyScore ?? 85,
+                );
                 return {
                   word: w,
-                  score: Math.round(
-                    wordResult?.PronunciationAssessment?.AccuracyScore || 85,
-                  ),
+                  score: wordScore,
                   feedback: wordResult?.PronunciationAssessment?.ErrorType
                     ? `Error: ${wordResult.PronunciationAssessment.ErrorType}`
-                    : 'Good pronunciation',
+                    : wordScore >= 90
+                      ? 'Excellent'
+                      : wordScore >= 70
+                        ? 'Good'
+                        : 'Needs work',
+                  phonemes,
                 };
-              });
+              },
+            );
 
-              const feedbackSummary =
-                overallScore >= 90
-                  ? 'Excellent pronunciation!'
-                  : overallScore >= 70
-                    ? 'Good effort, some areas to improve'
-                    : 'Needs practice, focus on individual sounds';
+            const feedbackSummary =
+              overallScore >= 90
+                ? 'Excellent pronunciation!'
+                : overallScore >= 70
+                  ? 'Good effort, some areas to improve'
+                  : 'Needs practice, focus on individual sounds';
 
-              return {
-                overall_score: overallScore,
-                breakdown,
-                feedback_summary: feedbackSummary,
-              };
-            }
+            return {
+              overall_score: overallScore,
+              breakdown,
+              feedback_summary: feedbackSummary,
+              detected_language: detectedLang,
+              transcription: assessmentData.DisplayText,
+            };
           }
         }
-        // Azure API failed, fall through to fallback
       } catch {
-        // Azure fetch failed (network error, timeout), fall through to fallback
+        // Azure fetch failed, fall through to fallback
       }
     }
 
-    // Graceful degradation: return estimated pronunciation score
+    // Graceful degradation: phonetic analysis with estimated scores
     const words = dto.target_text.split(/\s+/).filter((w) => w.length > 0);
-    const breakdown: WordBreakdownItem[] = words.map((w) => ({
-      word: w,
-      score: 85,
-      feedback: 'Pronunciation assessment service temporarily unavailable',
-    }));
+    const breakdown: WordBreakdownItem[] = words.map((w) => {
+      const phonemes = NlpService.phonemiseWord(w).map((ph) => ({
+        phoneme: ph,
+        score: 85,
+        expected_phoneme: ph,
+        feedback: 'Estimated (service unavailable)',
+      }));
+
+      return {
+        word: w,
+        score: 85,
+        feedback: 'Pronunciation assessment service temporarily unavailable',
+        phonemes,
+      };
+    });
 
     return {
       overall_score: 85,
       breakdown,
       feedback_summary:
         'Pronunciation scoring service is temporarily unavailable. Keep practising!',
+      detected_language: detectedLang,
     };
   }
 

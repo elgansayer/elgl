@@ -10,6 +10,7 @@ import { AudioRoomsModule } from '../audio-rooms/audio-rooms.module';
 import { UsersModule } from '../users/users.module';
 import { SafetyModule } from '../safety/safety.module';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { CorrectorScoreModule } from '../corrector-score/corrector-score.module';
 
 describe('DiscoveryModule', () => {
   it('should be defined', () => {
@@ -24,6 +25,7 @@ describe('DiscoveryModule', () => {
     expect(importsMetadata).toContain(UsersModule);
     expect(importsMetadata).toContain(SafetyModule);
     expect(importsMetadata).toContain(SupabaseModule);
+    expect(importsMetadata).toContain(CorrectorScoreModule);
   });
 
   it('should register DiscoveryController in its controllers metadata', () => {
