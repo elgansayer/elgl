@@ -11,6 +11,7 @@
 
 -- The UPDATE policy uses the same ownership check as the INSERT/DELETE
 -- policies: the authenticated user must own the deck.
+DROP POLICY IF EXISTS deck_flashcards_update_own ON public.deck_flashcards;
 CREATE POLICY deck_flashcards_update_own ON public.deck_flashcards
     FOR UPDATE TO authenticated
     USING (
