@@ -48,13 +48,13 @@ describe('ChatCacheService', () => {
           set(f: () => void) {
             cr['_onsuccess'] = f;
             if (pos < entries.length) {
-              cr.result = {
+              cr['result'] = {
                 value: entries[pos],
                 delete() { s.delete(entries[pos].key); },
                 continue() { pos++; if (cr['_onsuccess']) setTimeout(() => (cr['_onsuccess'] as () => void)(), 0); },
               };
             } else {
-              cr.result = null;
+              cr['result'] = null;
             }
             if (f) f();
           },
@@ -77,7 +77,7 @@ describe('ChatCacheService', () => {
           get() { return tx['_onerror']; },
           set(f: () => void) { tx['_onerror'] = f; },
         });
-        tx.objectStore = () => os(sName);
+        tx['objectStore'] = () => os(sName);
         return tx;
       },
       close: () => {},
