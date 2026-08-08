@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { GroupsDiscoveryComponent } from './groups-discovery.component';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({ name: 't' })

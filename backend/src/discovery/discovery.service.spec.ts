@@ -6,7 +6,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
-import { PinoLogger } from 'nestjs-pino';
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],

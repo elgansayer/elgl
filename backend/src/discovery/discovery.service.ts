@@ -8,7 +8,6 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
-import { withRetry, isRateLimitError } from '../common/retry';
 import {
   DiscoveryDegradationService,
   DegradationMarker,
