@@ -1,0 +1,18 @@
+[Unit]
+Description=HelloTalk factory read-only health check
+
+[Service]
+Type=oneshot
+User=hellotalk-factory
+Group=hellotalk-factory
+WorkingDirectory=/var/lib/hellotalk-factory/repository
+EnvironmentFile=/etc/hellotalk-factory/factory.env
+Environment=HOME=/var/lib/hellotalk-factory/home
+ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory doctor
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory
+

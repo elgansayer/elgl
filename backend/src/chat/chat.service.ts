@@ -676,8 +676,7 @@ export class ChatService {
     roomId?: string,
   ): Promise<ChatMessage[]> {
     const supabase = this.supabaseService.getClient();
-    const blockedIds =
-      await this.safetyService.getBlockedAndBlockerIds(userId);
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
 
     // Get all room IDs the user is a member of
     const { data: memberRooms, error: memberErr } = await supabase

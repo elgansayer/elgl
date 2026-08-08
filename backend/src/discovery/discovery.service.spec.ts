@@ -191,7 +191,11 @@ describe('DiscoveryService', () => {
   describe('calculatePartnerOfWeek', () => {
     const makeCandidates = (
       count: number,
-    ): Array<{ id: string; correction_ratio: number; study_streak_days: number }> =>
+    ): Array<{
+      id: string;
+      correction_ratio: number;
+      study_streak_days: number;
+    }> =>
       Array.from({ length: count }, (_, i) => ({
         id: `u${i + 1}`,
         correction_ratio: 0.6 + (count - i) * 0.005,
@@ -203,7 +207,10 @@ describe('DiscoveryService', () => {
       mockQueryBuilder.gt = jest.fn().mockReturnThis();
       mockQueryBuilder.gte = jest.fn().mockReturnThis();
       mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit.mockResolvedValue({ data: candidates, error: null });
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: candidates,
+        error: null,
+      });
 
       await service.calculatePartnerOfWeek();
 
@@ -251,7 +258,10 @@ describe('DiscoveryService', () => {
       mockQueryBuilder.gt = jest.fn().mockReturnThis();
       mockQueryBuilder.gte = jest.fn().mockReturnThis();
       mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit.mockResolvedValue({ data: candidates, error: null });
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: candidates,
+        error: null,
+      });
 
       await service.calculatePartnerOfWeek();
 
@@ -278,7 +288,10 @@ describe('DiscoveryService', () => {
       mockQueryBuilder.gt = jest.fn().mockReturnThis();
       mockQueryBuilder.gte = jest.fn().mockReturnThis();
       mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit.mockResolvedValue({ data: zeroStreak, error: null });
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: zeroStreak,
+        error: null,
+      });
 
       await service.calculatePartnerOfWeek();
 

@@ -92,10 +92,6 @@ export class OfflineReadingService {
     const db = await this.ensureDB();
     const store = db.transaction(STORE_ARTICLES, 'readwrite').objectStore(STORE_ARTICLES);
 
-    // Keep only the most recent MAX_CACHED_ARTICLES
-    const existing = await this.getAllFromStore(db, STORE_ARTICLES);
-    const existingIds = new Set(existing.map((a: unknown) => (a as CachedArticle).id));
-
     for (const article of articles) {
       const cached: CachedArticle = { ...article, cachedAt: Date.now() };
       await this.putInStore(store, cached as unknown as Record<string, unknown>);

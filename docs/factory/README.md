@@ -1,0 +1,107 @@
+# HelloTalk OpenHands Factory Runbook
+
+## Architecture and threat model
+
+The controller leases work, builds task-specific context, communicates with providers, records metrics and
+brokers GitHub operations. Terminal calls run in rootless Podman without controller credentials. File editor
+calls are constrained to the canonical task worktree. One conversation handles one task.
+
+Issues, pull requests, source comments, logs and documentation are untrusted. They cannot override security
+policy. Agent processes receive no OAuth, API, GitHub or Telegram credentials. Path escapes, direct protected
+branch pushes, hook bypass, administrator merges, staged secrets and conflict markers are rejected.
+
+The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenCode Go `deepseek-v4-flash`, then Gemini
+`gemini-3.6-flash`. SDK fallback covers recognised transient LLM-call errors. The outer health controller
+handles credentials, model compatibility, budgets, malformed responses and open circuits.
+
+The former Aider, DeepSeek, swarm watchdog, guardian, resolver and reviewer automation was removed. Its useful
+planning, repair, review, health and merge responsibilities move into the factory and protected CI.
+
+## Costs
+
+ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenCode Go is
+budgeted at USD 10 monthly. The VPS is approximately USD 5 monthly. Gemini uses the free tier only, with
+billing disabled and variable budget USD 0. The steady operating ceiling is USD 35, not USD 30. Unknown-cost
+subscription calls are counted separately.
+
+Free-tier Gemini content may be used by Google to improve its products. Never send secrets, production data,
+private keys, environment files, OAuth caches or database dumps to an LLM.
+
+## Bootstrap
+
+Keep at least 5 GB free for worktrees, dependency caches and build output. The reserve is configurable with
+`FACTORY_MINIMUM_FREE_DISK_GIB`; the factory pauses before starting new work when the reserve is breached.
+
+```bash
+sudo /home/dev/hellotalk/setup-debian.sh
+sudoedit /etc/hellotalk-factory/factory.env
+sudo chmod 0640 /etc/hellotalk-factory/factory.env
+sudo chown root:hellotalk-factory /etc/hellotalk-factory/factory.env
+```
+
+The idempotent bootstrap supports Debian 13, Ubuntu 24.04 and Ubuntu 26.04. It uses `npm ci`, creates a
+dedicated user, installs rootless Podman and a versioned Python environment, and never overwrites credentials.
+
+## ChatGPT subscription authentication
+
+Complete OAuth before enabling systemd:
+
+```bash
+tmux new -s hellotalk-auth
+sudo -u hellotalk-factory env HOME=/var/lib/hellotalk-factory/home \
+  /opt/hellotalk-factory/venv/bin/hellotalk-factory auth openai
+```
+
+Copy the printed URL, open it locally and complete consent. Detach using `Ctrl-b d` and reattach with
+`tmux attach -t hellotalk-auth`. The cache is `/var/lib/hellotalk-factory/home/.openhands/auth`, owned by
+`hellotalk-factory`, mode `0600`, beneath a mode `0700` directory.
+
+Force renewal with `hellotalk-factory auth openai --force`. If OAuth is revoked, the factory alerts through
+Telegram and runs OpenCode-only for at most 24 hours before pausing. Account-owner action is the sole
+authentication break-glass exception.
+
+## Providers and doctor
+
+Store credentials only in `/etc/hellotalk-factory/factory.env`, never in commands or chat.
+
+```bash
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models opencode-go
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models gemini
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
+```
+
+Discovery must list both configured models. A missing model, invalid credential, paid-tier response or
+unexpected endpoint response blocks activation.
+
+## systemd and operator commands
+
+```bash
+sudo systemd-analyze verify /etc/systemd/system/hellotalk-factory.service
+sudo systemctl enable --now hellotalk-factory.service hellotalk-factory-health.timer
+sudo systemctl status hellotalk-factory.service
+sudo journalctl -u hellotalk-factory.service -f
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
+```
+
+Emergency stop: `sudo systemctl disable --now hellotalk-factory.service hellotalk-factory-health.timer`.
+
+Use a fine-grained GitHub token limited to repository metadata read, Actions read, contents read/write, issues
+read/write and pull requests read/write. The factory uses its cached backlog during GitHub outages and honours
+rate-limit reset times.
+
+## Wiki, upgrades and recovery
+
+Every feature pull request must update application documentation. The deterministic wiki publisher derives
+pages from routes, modules, APIs, migrations, integrations and tests. An issue title is never evidence that a
+feature exists, and generated wiki content never pushes to application `main`.
+
+Build upgrades in `/opt/hellotalk-factory/venv-VERSION`, run tests and doctor, atomically change the `venv`
+symlink, restart and roll back the symlink if health fails.
+
+For a damaged worktree, pause the factory, preserve its branch and logs, remove only the named factory-owned
+worktree with `git worktree remove`, prune worktree metadata and resume. Never reset the human checkout or
+delete an unmerged branch. Full rollback disables the units and restores the prior factory version while
+leaving all task branches and pull requests recoverable.

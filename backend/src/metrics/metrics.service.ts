@@ -1077,10 +1077,7 @@ export class MetricsService {
     );
   }
 
-  setVideoClassroomParticipantMax(
-    roomName: string,
-    count: number,
-  ): void {
+  setVideoClassroomParticipantMax(roomName: string, count: number): void {
     this.videoClassroomsParticipantMax.set({ room_name: roomName }, count);
   }
 

@@ -21,16 +21,18 @@ export class CommentNotificationListener {
     let shouldPush = true;
     let shouldInApp = true;
     try {
-      shouldPush = await this.notificationPreferencesService.shouldSendNotification(
-        recipientId,
-        'moment_comment',
-        'push',
-      );
-      shouldInApp = await this.notificationPreferencesService.shouldSendNotification(
-        recipientId,
-        'moment_comment',
-        'in_app',
-      );
+      shouldPush =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'moment_comment',
+          'push',
+        );
+      shouldInApp =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'moment_comment',
+          'in_app',
+        );
     } catch (err) {
       console.error(
         `Failed to check notification preferences for user ${recipientId}:`,
@@ -43,13 +45,17 @@ export class CommentNotificationListener {
 
     // Create in-app notification
     if (shouldInApp) {
-      await this.notificationsService.createNotification(
-        recipientId,
-        payload.commenterId,
-        type,
-        payload.momentId,
-        message,
-      ).catch((err: unknown) => console.error('Failed to create in-app notification:', err));
+      await this.notificationsService
+        .createNotification(
+          recipientId,
+          payload.commenterId,
+          type,
+          payload.momentId,
+          message,
+        )
+        .catch((err: unknown) =>
+          console.error('Failed to create in-app notification:', err),
+        );
     }
 
     // Send push notification

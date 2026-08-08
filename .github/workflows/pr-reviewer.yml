@@ -12,7 +12,7 @@ jobs:
   review_and_fix:
     # Guard: only skip if the PR reviewer itself pushed the commit (true self-review loop).
     # AI-created PRs (openhands-agent, jules, etc.) MUST be reviewed and merged.
-    # WARNING: Do NOT block all [bot] actors — that prevents all AI PRs from being reviewed!
+    # WARNING: Do NOT block all [bot] actors - that prevents all AI PRs from being reviewed!
     if: github.actor != 'claude-code[bot]'
     runs-on: ubuntu-latest
     permissions:
@@ -63,11 +63,11 @@ jobs:
             echo "PR already merged by Claude."
           else
             echo "merged=false" >> $GITHUB_OUTPUT
-            echo "PR not merged — falling through to Tier 2."
+            echo "PR not merged - falling through to Tier 2."
           fi
 
       # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
+      - name: Tier 2 - OpenHands (DeepSeek V3 - paid heavy fallback)
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
         continue-on-error: true
@@ -93,7 +93,7 @@ jobs:
           cli_args: "--max-iterations 50"
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
-      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
+      - name: Tier 3 - OpenHands (Gemini 3.6 Flash - last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@v1.0.1

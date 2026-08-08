@@ -80,7 +80,13 @@ export class DiscoveryService {
         .order('correction_ratio', { ascending: false })
         .limit(50);
 
-      if (error || !candidates || candidates.length === 0) {
+      const qualifiedCandidates = candidates?.filter(
+        (candidate) =>
+          (candidate.correction_ratio ?? 0) > 0.5 &&
+          (candidate.study_streak_days ?? 0) >= 7,
+      );
+
+      if (error || !qualifiedCandidates || qualifiedCandidates.length === 0) {
         this.logger.warn(
           'No users qualified for Partner of the Week',
           error?.message,
@@ -95,22 +101,23 @@ export class DiscoveryService {
       >();
 
       if (this.correctorScoreService) {
-        const scorePromises = candidates.map(
-          async (c) => {
-            try {
-              const score = await this.correctorScoreService!.getCorrectorScore(
-                c.id,
-              );
-              return { id: c.id, score };
-            } catch {
-              const fallback: { averageScore: number | null; totalRatings: number } = {
-                averageScore: null,
-                totalRatings: 0,
-              };
-              return { id: c.id, score: fallback };
-            }
-          },
-        );
+        const scorePromises = qualifiedCandidates.map(async (c) => {
+          try {
+            const score = await this.correctorScoreService!.getCorrectorScore(
+              c.id,
+            );
+            return { id: c.id, score };
+          } catch {
+            const fallback: {
+              averageScore: number | null;
+              totalRatings: number;
+            } = {
+              averageScore: null,
+              totalRatings: 0,
+            };
+            return { id: c.id, score: fallback };
+          }
+        });
         const scores = await Promise.all(scorePromises);
         for (const { id, score } of scores) {
           scoreMap.set(id, {
@@ -123,7 +130,7 @@ export class DiscoveryService {
       // Step 3: Compute composite ranking score
       // Normalisation helpers
       const maxStreak = Math.max(
-        ...candidates.map((c) => c.study_streak_days ?? 0),
+        ...qualifiedCandidates.map((c) => c.study_streak_days ?? 0),
         1,
       );
       const maxRatings = Math.max(
@@ -147,8 +154,7 @@ export class DiscoveryService {
         // Log-scale the ratings count so it doesn't dominate
         const ratingsCountLog =
           ratings.totalRatings > 0
-            ? Math.log10(ratings.totalRatings + 1) /
-              Math.log10(maxRatings + 1)
+            ? Math.log10(ratings.totalRatings + 1) / Math.log10(maxRatings + 1)
             : 0;
         // Log-scale the streak
         const streakDays = candidate.study_streak_days ?? 0;
@@ -166,7 +172,7 @@ export class DiscoveryService {
       };
 
       // Step 4: Rank and select top 10
-      const ranked = candidates
+      const ranked = qualifiedCandidates
         .map((c) => ({
           id: c.id,
           composite: computeComposite(c),

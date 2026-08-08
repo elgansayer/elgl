@@ -52,11 +52,11 @@ jobs:
             echo "Claude created issues successfully."
           else
             echo "has_issues=false" >> $GITHUB_OUTPUT
-            echo "Claude did not create issues — falling through to Tier 2."
+            echo "Claude did not create issues - falling through to Tier 2."
           fi
 
       # ── TIER 2: DeepSeek V3 Chat (paid fallback) ──────────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek V3 — paid fallback)
+      - name: Tier 2 - OpenHands (DeepSeek V3 - paid fallback)
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.has_issues == 'false'
         continue-on-error: true
@@ -83,7 +83,7 @@ jobs:
           cli_args: "--max-iterations 50"
 
       # ── TIER 3: Gemini 3.6 Flash (last resort) ────────────────────────────
-      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
+      - name: Tier 3 - OpenHands (Gemini 3.6 Flash - last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@v1.0.1

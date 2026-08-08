@@ -62,13 +62,11 @@ describe.skip('LikedByModalComponent', () => {
         avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es', 'fr'],
-        avatar_url: null,
       },
       {
         id: 'user-2',
         avatar_url: 'https://example.com/avatar.jpg',
         display_name: 'Bob',
-        avatar_url: null,
         native_languages: ['fr'],
         target_languages: ['en'],
       },
@@ -179,7 +177,6 @@ describe.skip('LikedByModalComponent', () => {
         avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es'],
-        avatar_url: null,
       },
     ];
     req.flush(mockUsers);
@@ -203,7 +200,6 @@ describe.skip('LikedByModalComponent', () => {
         avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es'],
-        avatar_url: null,
       },
     ]);
     await fixture.whenStable();

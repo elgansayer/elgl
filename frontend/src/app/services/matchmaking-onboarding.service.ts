@@ -84,7 +84,7 @@ export class MatchmakingOnboardingService {
   isCompleted(): boolean {
     try {
       return window.localStorage.getItem(this.storageKey) === 'true';
-    } catch (e) {
+    } catch {
       return false;
     }
   }

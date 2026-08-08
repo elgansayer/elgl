@@ -217,12 +217,14 @@ describe('UsersService', () => {
           }),
         }),
       });
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'users') {
-          return { select: mockSelectFn };
-        }
-        return mockQueryBuilder;
-      });
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'users') {
+            return { select: mockSelectFn };
+          }
+          return mockQueryBuilder;
+        });
 
       await expect(service.updateProfile('user-1', dto, true)).rejects.toThrow(
         new BadRequestException(
@@ -244,17 +246,19 @@ describe('UsersService', () => {
         }),
       });
 
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'users') {
-          return {
-            select: mockSelectFn,
-            update: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null }),
-            }),
-          };
-        }
-        return mockQueryBuilder;
-      });
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'users') {
+            return {
+              select: mockSelectFn,
+              update: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({ error: null }),
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
 
       const result = await service.updateProfile('user-1', dto, true);
       expect(result).toBeDefined();

@@ -58,7 +58,10 @@ export class LivekitService {
     const stunServers =
       this.configService.get<string>('LIVEKIT_RTC_STUN_SERVERS') || '';
     if (stunServers.trim()) {
-      for (const url of stunServers.split(',').map((s) => s.trim()).filter(Boolean)) {
+      for (const url of stunServers
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)) {
         iceServers.push({ urls: url });
       }
     }
@@ -77,7 +80,8 @@ export class LivekitService {
       const turnUsername =
         this.configService.get<string>('LIVEKIT_TURN_USERNAME') || 'guest';
       const turnPassword =
-        this.configService.get<string>('LIVEKIT_TURN_PASSWORD') || 'somepassword';
+        this.configService.get<string>('LIVEKIT_TURN_PASSWORD') ||
+        'somepassword';
 
       // UDP TURN
       iceServers.push({

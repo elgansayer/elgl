@@ -76,7 +76,6 @@ describe('EscrowCacheInterceptor', () => {
       expect(setHeader).toHaveBeenCalledWith(
         'Cache-Tag',
         'escrow-transactions-v1',
-
       );
     });
 

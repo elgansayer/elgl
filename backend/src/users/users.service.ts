@@ -116,7 +116,9 @@ export class UsersService {
     query: string,
     currentUserId: string,
     limit = 10,
-  ): Promise<{ id: string; display_name: string; avatar_url: string | null }[]> {
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('users')
@@ -130,7 +132,11 @@ export class UsersService {
       return [];
     }
 
-    return data as { id: string; display_name: string; avatar_url: string | null }[];
+    return data as {
+      id: string;
+      display_name: string;
+      avatar_url: string | null;
+    }[];
   }
 
   async getUserXp(userId: string): Promise<number> {

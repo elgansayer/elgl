@@ -19,11 +19,12 @@ export class ChatNotificationListener {
 
     let shouldPush = true;
     try {
-      shouldPush = await this.notificationPreferencesService.shouldSendNotification(
-        recipientId,
-        'new_message',
-        'push',
-      );
+      shouldPush =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'new_message',
+          'push',
+        );
     } catch (err) {
       console.error(
         `Failed to check notification preferences for user ${recipientId}:`,
@@ -32,13 +33,17 @@ export class ChatNotificationListener {
     }
 
     // Create in-app notification for chat messages (always, preferences control push only)
-    await this.notificationsService.createNotification(
-      recipientId,
-      payload.senderId,
-      'mention_chat',
-      payload.roomId,
-      payload.preview,
-    ).catch((err: unknown) => console.error('Failed to create in-app chat notification:', err));
+    await this.notificationsService
+      .createNotification(
+        recipientId,
+        payload.senderId,
+        'mention_chat',
+        payload.roomId,
+        payload.preview,
+      )
+      .catch((err: unknown) =>
+        console.error('Failed to create in-app chat notification:', err),
+      );
 
     // Send push notification
     if (shouldPush) {

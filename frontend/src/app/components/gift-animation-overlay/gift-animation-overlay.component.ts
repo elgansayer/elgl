@@ -91,7 +91,7 @@ export class GiftAnimationOverlayComponent {
   constructor() {
     this.destroyRef.onDestroy(() => this.destroyLottie());
 
-    effect((onCleanup) => {
+    effect(() => {
       const anim = this.animationService.currentAnimation();
       if (anim) {
         const container = document.getElementById('lottie-container');

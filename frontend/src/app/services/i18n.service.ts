@@ -210,6 +210,7 @@ export class I18nService {
     'events.calendar.next': 'Next',
     'events.calendar.today': 'Today',
     'events.calendar.noEvents': 'No upcoming events',
+    'events.calendar.selectDate': 'View events for day {{date}}',
     'events.calendar.attending': 'attending',
     'events.calendar.interested': 'interested',
     'events.calendar.viewDetails': 'View Details',

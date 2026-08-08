@@ -155,9 +155,7 @@ describe('VideoCallsDegradationService', () => {
     });
 
     it('should use fallback when operation fails', async () => {
-      const operation = jest
-        .fn()
-        .mockRejectedValue(new Error('LiveKit down'));
+      const operation = jest.fn().mockRejectedValue(new Error('LiveKit down'));
       const fallback = jest.fn().mockResolvedValue('fallback');
       const marker = {
         degraded: false,

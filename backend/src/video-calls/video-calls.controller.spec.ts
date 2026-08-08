@@ -141,7 +141,17 @@ describe('VideoCallsController', () => {
   describe('health', () => {
     it('should return healthy when no breakers are open', async () => {
       const breakerStates = new Map([
-        ['livekit', { isOpen: false, failureCount: 0, totalFailures: 0, totalSuccesses: 10, lastFailure: 0, cooldownUntil: 0 }],
+        [
+          'livekit',
+          {
+            isOpen: false,
+            failureCount: 0,
+            totalFailures: 0,
+            totalSuccesses: 10,
+            lastFailure: 0,
+            cooldownUntil: 0,
+          },
+        ],
       ]);
       mockDegradationService.getAllBreakerStates.mockReturnValue(breakerStates);
       mockDegradationService.getRecentDegradationEvents.mockResolvedValue([]);
@@ -154,7 +164,17 @@ describe('VideoCallsController', () => {
 
     it('should return degraded when a breaker is open', async () => {
       const breakerStates = new Map([
-        ['livekit', { isOpen: true, failureCount: 3, totalFailures: 5, totalSuccesses: 10, lastFailure: Date.now(), cooldownUntil: Date.now() + 30000 }],
+        [
+          'livekit',
+          {
+            isOpen: true,
+            failureCount: 3,
+            totalFailures: 5,
+            totalSuccesses: 10,
+            lastFailure: Date.now(),
+            cooldownUntil: Date.now() + 30000,
+          },
+        ],
       ]);
       mockDegradationService.getAllBreakerStates.mockReturnValue(breakerStates);
 

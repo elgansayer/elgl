@@ -63,7 +63,7 @@ jobs:
           fi
 
           if [ -z "$ISSUE_NUM" ] || [ "$ISSUE_NUM" = "null" ]; then
-            echo "Queue is empty — nothing to dispatch."
+            echo "Queue is empty - nothing to dispatch."
             exit 0
           fi
 

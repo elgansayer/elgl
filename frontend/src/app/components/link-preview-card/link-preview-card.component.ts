@@ -1,6 +1,5 @@
 import { Component, input, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
 @Component({

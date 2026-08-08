@@ -46,8 +46,15 @@ describe('CentrifugoService', () => {
     ];
     // Remove stale keys
     Object.keys(mockRedis).forEach((k) => {
-      if (k !== 'multi' && k !== 'connect' && k !== 'disconnect' &&
-          k !== 'script' && k !== 'evalsha' && k !== 'zadd' && k !== 'expire')
+      if (
+        k !== 'multi' &&
+        k !== 'connect' &&
+        k !== 'disconnect' &&
+        k !== 'script' &&
+        k !== 'evalsha' &&
+        k !== 'zadd' &&
+        k !== 'expire'
+      )
         delete mockRedis[k];
     });
     entries.forEach(([k, v]) => {
@@ -128,11 +135,16 @@ describe('CentrifugoService', () => {
     });
 
     it('should fall back to pipeline when Lua SHA is not loaded', async () => {
-      (service as unknown as { slidingWindowLuaSha: string | null }).slidingWindowLuaSha = null;
+      (
+        service as unknown as { slidingWindowLuaSha: string | null }
+      ).slidingWindowLuaSha = null;
       const mockMulti = {
         zremrangebyscore: jest.fn().mockReturnThis(),
         zcard: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([[null, 1], [null, 2]]),
+        exec: jest.fn().mockResolvedValue([
+          [null, 1],
+          [null, 2],
+        ]),
       };
       mockRedis.multi.mockReturnValue(mockMulti);
       mockRedis.zadd.mockResolvedValue('OK');
@@ -143,11 +155,16 @@ describe('CentrifugoService', () => {
     });
 
     it('should fall back to pipeline and reject when limit exceeded', async () => {
-      (service as unknown as { slidingWindowLuaSha: string | null }).slidingWindowLuaSha = null;
+      (
+        service as unknown as { slidingWindowLuaSha: string | null }
+      ).slidingWindowLuaSha = null;
       const mockMulti = {
         zremrangebyscore: jest.fn().mockReturnThis(),
         zcard: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([[null, 1], [null, 5]]),
+        exec: jest.fn().mockResolvedValue([
+          [null, 1],
+          [null, 5],
+        ]),
       };
       mockRedis.multi.mockReturnValue(mockMulti);
       const result = await service.checkConnectionRateLimit('user-1');
@@ -159,9 +176,14 @@ describe('CentrifugoService', () => {
       mockRedis.evalsha.mockResolvedValue([1, 0]);
       await service.checkConnectionRateLimit('', '192.168.1.1');
       expect(mockRedis.evalsha).toHaveBeenCalledWith(
-        expect.any(String), 1, 'centrifugo:conn_rate:192.168.1.1',
-        expect.any(String), expect.any(String), expect.any(String),
-        expect.any(String), expect.any(String),
+        expect.any(String),
+        1,
+        'centrifugo:conn_rate:192.168.1.1',
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
+        expect.any(String),
       );
     });
 
@@ -189,12 +211,16 @@ describe('CentrifugoService', () => {
                 if (key === 'CENTRIFUGO_API_KEY') return 'test-api-key';
                 if (key === 'CENTRIFUGO_SECRET') return 'test-secret';
                 if (key === 'REDIS_URL') return 'redis://localhost:6379';
-                if (key === 'CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC') return '120';
+                if (key === 'CENTRIFUGO_CONNECTION_RATE_WINDOW_SEC')
+                  return '120';
                 return null;
               }),
             },
           },
-          { provide: `PinoLogger:${CentrifugoService.name}`, useValue: mockLogger },
+          {
+            provide: `PinoLogger:${CentrifugoService.name}`,
+            useValue: mockLogger,
+          },
         ],
       }).compile();
       const srv = mod.get<CentrifugoService>(CentrifugoService);
@@ -243,8 +269,14 @@ describe('CentrifugoService', () => {
       const result = await service.publish('chat:room-1', { text: 'Hello' });
       expect(fetchSpy).toHaveBeenCalledWith('http://localhost:8000/api', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'apikey test-api-key' },
-        body: JSON.stringify({ method: 'publish', params: { channel: 'chat:room-1', data: { text: 'Hello' } } }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'apikey test-api-key',
+        },
+        body: JSON.stringify({
+          method: 'publish',
+          params: { channel: 'chat:room-1', data: { text: 'Hello' } },
+        }),
       });
       expect(result).toBe(true);
     });
@@ -279,7 +311,12 @@ describe('CentrifugoService', () => {
 
     it('should include extraData and translation fields, and call publish', async () => {
       const extraData = { channel_type: 'voice_room' };
-      const result = await service.publishTranslated('chat:room-1', 'Hello there', 'es', extraData);
+      const result = await service.publishTranslated(
+        'chat:room-1',
+        'Hello there',
+        'es',
+        extraData,
+      );
       expect(publishSpy).toHaveBeenCalledWith('chat:room-1', {
         ...extraData,
         text_content: 'Hello there',
@@ -292,7 +329,12 @@ describe('CentrifugoService', () => {
 
     it('should return false when publish returns false', async () => {
       publishSpy.mockResolvedValue(false);
-      const result = await service.publishTranslated('chat:room-1', 'Hello there', 'es', {});
+      const result = await service.publishTranslated(
+        'chat:room-1',
+        'Hello there',
+        'es',
+        {},
+      );
       expect(result).toBe(false);
       expect(publishSpy).toHaveBeenCalledWith('chat:room-1', {
         text_content: 'Hello there',
