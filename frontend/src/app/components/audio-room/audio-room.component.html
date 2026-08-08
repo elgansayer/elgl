@@ -1,6 +1,25 @@
 <div class="mx-auto max-w-5xl space-y-4">
   @if (store.currentRoom(); as room) {
     <section class="app-card app-padded space-y-4">
+      <!-- Degradation notice banner -->
+      @if (store.isOperatingInDegradedMode()) {
+        <div
+          class="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+          role="alert"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-lg">⚠️</span>
+            <div>
+              <p class="font-bold">{{ 'audioRoom.degradedModeBanner' | t }}</p>
+              <ul class="mt-1 list-disc ps-5 text-xs opacity-80">
+                @for (reason of store.degradationSummary(); track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
+            </div>
+          </div>
+        </div>
+      }
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p class="app-muted font-bold uppercase tracking-wide">
