@@ -274,7 +274,7 @@ describe('NlpService', () => {
   });
 
   describe('pronunciationScore', () => {
-    it('should score words, calculate average, and return positive feedback for high scores', async () => {
+    it('should score words with phonetic breakdown and return positive feedback for high scores', async () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
@@ -285,6 +285,7 @@ describe('NlpService', () => {
           json: () =>
             Promise.resolve({
               RecognitionStatus: 'Success',
+              DisplayText: 'Hello world test',
               NBest: [
                 {
                   PronunciationAssessment: {
@@ -293,18 +294,61 @@ describe('NlpService', () => {
                     FluencyScore: 85,
                     CompletenessScore: 90,
                   },
-                  Words: [],
+                  Words: [
+                    {
+                      Word: 'Hello',
+                      Phonemes: [
+                        { Phoneme: 'h', AccuracyScore: 92 },
+                        { Phoneme: 'ɛ', AccuracyScore: 88 },
+                        { Phoneme: 'l', AccuracyScore: 95 },
+                        { Phoneme: 'oʊ', AccuracyScore: 90 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 91 },
+                    },
+                    {
+                      Word: 'world',
+                      Phonemes: [
+                        { Phoneme: 'w', AccuracyScore: 85 },
+                        { Phoneme: 'ɝ', AccuracyScore: 80 },
+                        { Phoneme: 'l', AccuracyScore: 90 },
+                        { Phoneme: 'd', AccuracyScore: 93 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 87 },
+                    },
+                    {
+                      Word: 'test',
+                      Phonemes: [
+                        { Phoneme: 't', AccuracyScore: 96 },
+                        { Phoneme: 'ɛ', AccuracyScore: 88 },
+                        { Phoneme: 's', AccuracyScore: 94 },
+                        { Phoneme: 't', AccuracyScore: 95 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 93 },
+                    },
+                  ],
                 },
               ],
             }),
         });
-      const dto = { target_text: 'Hello world test', audio_url: 'http://test' };
+      const dto = {
+        target_text: 'Hello world test',
+        audio_url: 'http://test',
+        language: 'en-US',
+      };
       const result = await service.pronunciationScore('user-1', true, dto);
 
       expect(result.breakdown).toHaveLength(3);
-      // scores: 85 + 0 = 85, 85 + 1 = 86, 85 + 2 = 87 -> avg 86
       expect(result.overall_score).toBe(95);
       expect(result.feedback_summary).toBe('Excellent pronunciation!');
+      expect(result.detected_language).toBe('en-US');
+      expect(result.transcription).toBe('Hello world test');
+
+      // Verify phonetic breakdown on first word
+      const firstWord = result.breakdown[0];
+      expect(firstWord.phonemes.length).toBeGreaterThan(0);
+      expect(firstWord.phonemes[0]).toHaveProperty('phoneme');
+      expect(firstWord.phonemes[0]).toHaveProperty('score');
+      expect(firstWord.phonemes[0]).toHaveProperty('expected_phoneme');
     });
 
     it('should handle empty target_text gracefully returning 90 default overall score', async () => {
@@ -318,6 +362,7 @@ describe('NlpService', () => {
           json: () =>
             Promise.resolve({
               RecognitionStatus: 'Success',
+              DisplayText: '',
               NBest: [
                 {
                   PronunciationAssessment: {
@@ -337,6 +382,20 @@ describe('NlpService', () => {
       expect(result.overall_score).toBe(95);
       expect(result.breakdown).toEqual([]);
       expect(result.feedback_summary).toContain('Excellent pronunciation!');
+    });
+
+    it('should fallback with phonetic breakdown when Azure is unavailable', async () => {
+      const dto = {
+        target_text: 'Hello world',
+        audio_url: 'http://test',
+      };
+      const result = await service.pronunciationScore('user-1', true, dto);
+
+      expect(result.overall_score).toBe(85);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown[0].phonemes.length).toBeGreaterThan(0);
+      expect(result.breakdown[0].phonemes[0].expected_phoneme).toBeTruthy();
+      expect(result.feedback_summary).toContain('temporarily unavailable');
     });
   });
 
