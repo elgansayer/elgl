@@ -71,8 +71,11 @@ describe('AudioRoomComponent', () => {
   it('should render host name and translated headers', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('Host Name');
-    expect(el.textContent).toContain('Speaker Stage Grid');
-    expect(el.textContent).toContain('Listener Audience Grid');
+    expect(el.textContent).toContain('Stage');
+    expect(el.textContent).toContain('Listeners');
+    expect(el.textContent).toContain('Host');
+    expect(el.textContent).toContain('Speaker Alpha');
+    expect(el.textContent).toContain('Listener Alpha');
   });
 
   it('should show video icon when video stream is enabled', () => {
