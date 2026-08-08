@@ -261,7 +261,7 @@ export class DiagnosticQuizComponent {
     this.isSubmitting.set(true);
     const totalScore = Object.values(this.answers()).reduce((sum, pts) => sum + pts, 0);
     const totalQuestions = this.questions().length;
-    const maxScore = totalQuestions * 3;
+    const maxScore = totalQuestions * 4;
     const percentage = maxScore > 0 ? totalScore / maxScore : 0;
 
     let suggestedLevel = 'A1';

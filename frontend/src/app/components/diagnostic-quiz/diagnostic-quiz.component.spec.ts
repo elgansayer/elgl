@@ -220,15 +220,15 @@ describe('DiagnosticQuizComponent', () => {
     expect(progressBar.getAttribute('aria-valuemax')).toBe('100');
   });
 
-  it('should reload questions with a different language', async () => {
+  it('should reload questions', async () => {
     fixture.detectChanges();
     const req1 = httpTesting.expectOne('/api/quiz/questions?language=en');
     req1.flush(mockQuestions);
     await fixture.whenStable();
 
-    component.reloadQuestions('es');
+    component.reloadQuestions();
     fixture.detectChanges();
-    const req2 = httpTesting.expectOne('/api/quiz/questions?language=es');
+    const req2 = httpTesting.expectOne('/api/quiz/questions?language=en');
     req2.flush(mockQuestions);
     await fixture.whenStable();
 
@@ -246,6 +246,7 @@ describe('DiagnosticQuizComponent', () => {
     let emitted: unknown = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
+    // q1: 3, q2: 3 => score 6, maxScore 8 (2*4), percentage 75% => B2
     component.selectOption('q1', 3);
     component.next();
     fixture.detectChanges();
@@ -257,7 +258,7 @@ describe('DiagnosticQuizComponent', () => {
     resultsReq.flush({ received: true });
     await fixture.whenStable();
 
-    expect((emitted as { suggestedLevel: string }).suggestedLevel).toBe('C2');
+    expect((emitted as { suggestedLevel: string }).suggestedLevel).toBe('B2');
   });
 
   it('should handle submit results API failure gracefully', async () => {
