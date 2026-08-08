@@ -18,6 +18,7 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
 
     assert "--no-editable" in setup
     assert "-- cypress install" in setup
+    assert "merge --ff-only origin/main" in setup
 
 
 def test_competing_legacy_agent_workflows_are_retired() -> None:
@@ -34,6 +35,14 @@ def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
 
     assert "NoNewPrivileges=true" not in unit
     assert "RestrictSUIDSGID=true" not in unit
+
+
+def test_backend_test_heap_fits_the_service_memory_limit() -> None:
+    package = (Path(__file__).parents[2] / "backend" / "package.json").read_text(
+        encoding="utf-8"
+    )
+
+    assert "--max-old-space-size=3072" in package
 
 
 

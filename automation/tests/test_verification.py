@@ -16,13 +16,16 @@ def test_every_change_runs_full_frontend_backend_and_factory_gate(tmp_path: Path
     assert "factory-tests" in names
     assert "frontend-build" in names
     assert "frontend-test" in names
-    assert "frontend-e2e" in names
+    assert "frontend-e2e" not in names
     assert "backend-build" in names
     assert "backend-test" in names
     assert "backend-test:e2e" in names
     factory = next(command for command in commands if command.name == "factory-tests")
     assert factory.arguments[:3] == (sys.executable, "-m", "pytest")
-    frontend_e2e = next(command for command in commands if command.name == "frontend-e2e")
+    frontend_commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
+    frontend_e2e = next(
+        command for command in frontend_commands if command.name == "frontend-e2e"
+    )
     assert frontend_e2e.arguments[:2] == ("bash", "-lc")
     assert "npm start" in frontend_e2e.arguments[2]
 

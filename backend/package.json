@@ -14,7 +14,7 @@
     "start:prod": "node dist/main",
     "lint": "sh -c 'eslint \"{src,apps,libs,test}/**/*.ts\" --fix'",
     "lint:check": "sh -c 'eslint \"{src,apps,libs,test}/**/*.ts\"'",
-    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --config jest.config.js",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules --max-old-space-size=3072\" jest --config jest.config.js",
     "test:watch": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --config jest.config.js --watch",
     "test:cov": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --config jest.config.js --coverage",
     "test:debug": "NODE_OPTIONS=\"--experimental-vm-modules\" node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --config jest.config.js --runInBand",

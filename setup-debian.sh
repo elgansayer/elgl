@@ -59,6 +59,9 @@ if [ ! -d "$FACTORY_STATE/repository/.git" ]; then
 fi
 sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" remote set-url origin "$FACTORY_REPOSITORY_URL"
 sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" config credential.helper '!gh auth git-credential'
+sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" fetch origin main
+sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" switch main
+sudo -u "$FACTORY_USER" git -C "$FACTORY_STATE/repository" merge --ff-only origin/main
 
 python3 -m venv "$FACTORY_ROOT/venv-0.1.0"
 "$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install --upgrade 'pip==25.2'
