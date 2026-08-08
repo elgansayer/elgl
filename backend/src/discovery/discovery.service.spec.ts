@@ -6,8 +6,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
-import { PinoLogger } from 'nestjs-pino';
-
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
@@ -28,6 +26,15 @@ describe('DiscoveryService', () => {
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
   let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
+  let mockDegradationService: {
+    executeWithBreaker: jest.Mock;
+    executeWithCascade: jest.Mock;
+    recordDegradationEvent: jest.Mock;
+    isAvailable: jest.Mock;
+    recordSuccess: jest.Mock;
+    recordFailure: jest.Mock;
+    getAllBreakerStates: jest.Mock;
+  };
 
   function createMockQueryBuilder() {
     const builder: any = {};
@@ -94,28 +101,28 @@ describe('DiscoveryService', () => {
       purgeByCacheTags: jest.fn().mockResolvedValue(true),
     };
 
+    mockDegradationService = {
+      executeWithBreaker: jest
+        .fn()
+        .mockImplementation((_svc: string, op: () => Promise<unknown>) => op()),
+      executeWithCascade: jest
+        .fn()
+        .mockImplementation((_svc: string, primary: () => Promise<unknown>) =>
+          primary(),
+        ),
+      recordDegradationEvent: jest.fn(),
+      isAvailable: jest.fn().mockReturnValue(true),
+      recordSuccess: jest.fn(),
+      recordFailure: jest.fn(),
+      getAllBreakerStates: jest.fn().mockReturnValue(new Map()),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
         {
           provide: DiscoveryDegradationService,
-          useValue: {
-            executeWithBreaker: jest
-              .fn()
-              .mockImplementation((_svc: string, op: () => Promise<unknown>) =>
-                op(),
-              ),
-            executeWithCascade: jest
-              .fn()
-              .mockImplementation(
-                (_svc: string, primary: () => Promise<unknown>) => primary(),
-              ),
-            recordDegradationEvent: jest.fn(),
-            isAvailable: jest.fn().mockReturnValue(true),
-            recordSuccess: jest.fn(),
-            recordFailure: jest.fn(),
-            getAllBreakerStates: jest.fn().mockReturnValue(new Map()),
-          },
+          useValue: mockDegradationService,
         },
         {
           provide: SupabaseService,
@@ -1231,6 +1238,161 @@ describe('DiscoveryService', () => {
 
       const result = await service.searchByCountryCity('user-1', {});
       expect(result).toEqual([]);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // searchPartnersWithDegradation
+  // ---------------------------------------------------------------------------
+  describe('searchPartnersWithDegradation', () => {
+    it('should return results with a non-degraded marker on normal success', async () => {
+      const partners = [{ id: 'p1', display_name: 'User One' }];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartnersWithDegradation(
+        'user-1',
+        null,
+        {},
+      );
+
+      expect(result.data).toEqual(
+        partners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
+      expect(result.marker).toEqual({
+        degraded: false,
+        fallbackSource: 'none',
+      });
+    });
+
+    it('should fall back to mock data when breaker degrades and search returns empty', async () => {
+      mockDegradationService.executeWithBreaker.mockImplementationOnce(
+        (
+          _svc: string,
+          primary: () => Promise<unknown>,
+          fallbackFn: () => Promise<unknown>,
+          marker: any,
+        ) => {
+          // Simulate degraded state: mark the marker and call fallback
+          marker.degraded = true;
+          marker.reason = 'circuit open';
+          return fallbackFn();
+        },
+      );
+
+      // The fallbackFn sets marker.fallbackSource = 'basic_query' and returns []
+      // Since result is empty [], the method should try mock data
+      // Mock searchByCountryCity to verify mockData is used
+      // The mock data path calls getMockDiscoveryData which uses MOCK_USERS
+      const result = await service.searchPartnersWithDegradation(
+        'user-1',
+        null,
+        {},
+      );
+
+      expect(result.marker.degraded).toBe(true);
+      expect(result.marker.fallbackSource).toBe('mock');
+      expect(result.marker.reason).toContain('circuit open');
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(
+        mockDegradationService.recordDegradationEvent,
+      ).toHaveBeenCalledWith(
+        '/discovery/partners',
+        'circuit open',
+        'mock',
+        'user-1',
+      );
+    });
+
+    it('should return fallback results with non-empty data when breaker degrades but primary succeeds', async () => {
+      mockDegradationService.executeWithBreaker.mockImplementationOnce(
+        (
+          _svc: string,
+          primary: () => Promise<unknown>,
+          _fallbackFn: () => Promise<unknown>,
+          marker: any,
+        ) => {
+          marker.degraded = true;
+          marker.reason = 'timeout';
+          return primary();
+        },
+      );
+
+      const partners = [{ id: 'p2', display_name: 'User Two' }];
+      stubLimitResponse(partners);
+
+      const result = await service.searchPartnersWithDegradation(
+        'user-1',
+        null,
+        {},
+      );
+
+      expect(result.marker.degraded).toBe(true);
+      expect(result.marker.fallbackSource).toBe('none');
+      expect(result.data).toEqual(
+        partners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
+      expect(
+        mockDegradationService.recordDegradationEvent,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should catch thrown errors and fall back to mock data', async () => {
+      mockDegradationService.executeWithBreaker.mockRejectedValueOnce(
+        new Error('supabase down'),
+      );
+
+      const result = await service.searchPartnersWithDegradation(
+        'user-1',
+        null,
+        {},
+      );
+
+      expect(result.marker.degraded).toBe(true);
+      expect(result.marker.fallbackSource).toBe('mock');
+      expect(result.marker.reason).toBe('supabase down');
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(
+        mockDegradationService.recordDegradationEvent,
+      ).toHaveBeenCalledWith(
+        '/discovery/partners',
+        'supabase down',
+        'mock',
+        'user-1',
+      );
+    });
+
+    it('should handle non-Error thrown objects in catch block', async () => {
+      mockDegradationService.executeWithBreaker.mockRejectedValueOnce(
+        'string error',
+      );
+
+      const result = await service.searchPartnersWithDegradation(
+        'user-1',
+        null,
+        {},
+      );
+
+      expect(result.marker.degraded).toBe(true);
+      expect(result.marker.fallbackSource).toBe('mock');
+      expect(result.marker.reason).toBe('string error');
+    });
+
+    it('should pass RPC proximity search through degradation layer', async () => {
+      const nearbyPartners = [{ id: 'nearby-1', display_name: 'Nearby' }];
+      stubRpcResponse(nearbyPartners);
+
+      const result = await service.searchPartnersWithDegradation(
+        'user-1',
+        null,
+        { latitude: 51.5074, longitude: -0.1278 },
+      );
+
+      expect(result.marker.degraded).toBe(false);
+      expect(result.marker.fallbackSource).toBe('none');
+      expect(result.data).toEqual(
+        nearbyPartners.map((p) => ({ ...p, is_partner_of_week: false })),
+      );
+      expect(mockSupabaseClient.rpc).toHaveBeenCalled();
     });
   });
 });
