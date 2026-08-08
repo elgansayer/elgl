@@ -1,14 +1,24 @@
-import {Component, inject, OnInit, signal} from '@angular/core';import { CommonModule, DatePipe } from '@angular/common';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
 import { EventsService, Event } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { CreateEventModalComponent } from '../../events/create-event-modal/create-event-modal.component';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-events-feed',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, DatePipe],
+  imports: [CommonModule, TranslatePipe, DatePipe, CreateEventModalComponent],
   template: `
-    <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold">{{ 'events.title' | t }}</h1>
+      <button
+        class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-500"
+        (click)="showCreateModal.set(true)"
+      >
+        {{ 'events.createTitle' | t }}
+      </button>
+    </div>
 
     <!-- Filter bar -->
     <div class="flex gap-2 mb-4 items-center flex-wrap">
@@ -80,6 +90,14 @@ import { firstValueFrom } from 'rxjs';
         </button>
       }
     }
+
+    <!-- Create Event Modal -->
+    @if (showCreateModal()) {
+      <app-create-event-modal
+        (created)="onEventCreated($event)"
+        (dismiss)="showCreateModal.set(false)"
+      ></app-create-event-modal>
+    }
   `,
 })
 export class EventsFeedComponent implements OnInit {
@@ -90,6 +108,7 @@ export class EventsFeedComponent implements OnInit {
   readonly hasMore = signal(true);
   readonly status = signal<'upcoming' | 'past'>('upcoming');
   readonly languagePair = signal<string | undefined>(undefined);
+  readonly showCreateModal = signal(false);
   private page = signal(1);
 
   ngOnInit(): void {
@@ -141,5 +160,10 @@ export class EventsFeedComponent implements OnInit {
     if (this.isLoading() || !this.hasMore()) return;
     this.page.update((p) => p + 1);
     this.loadEvents();
+  }
+
+  onEventCreated(event: Event): void {
+    this.events.update((prev) => [event, ...prev]);
+    this.showCreateModal.set(false);
   }
 }

@@ -4,9 +4,6 @@ import { firstValueFrom } from 'rxjs';
 import { EventsService, Event } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
-/**
- * Values emitted when the user confirms creation (kept for reference).
- */
 export interface AppEventParams {
   title: string;
   date_time: string;
@@ -19,65 +16,66 @@ export interface AppEventParams {
   standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div
-        class="max-w-md w-full rounded-2xl bg-surface-dark p-6 shadow-xl"
-      >
-        <h2 class="mb-4 text-start text-lg font-semibold">
-          {{ 'events.createEvent' | t }}
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" [attr.aria-label]="'events.createTitle' | t">
+      <div class="max-w-md w-full rounded-2xl bg-[#1e1e1e] p-6 shadow-xl border border-gray-700">
+        <h2 class="mb-4 text-start text-lg font-semibold text-white">
+          {{ 'events.createTitle' | t }}
         </h2>
 
         <form [formGroup]="eventForm" (ngSubmit)="onSubmit()">
           <!-- What (Title) -->
-          <div class="mb-3">
-            <label class="mb-1 block text-sm" for="titleInput">
-              {{ 'events.title' | t }}
+          <div class="mb-4">
+            <label class="mb-1 block text-sm text-gray-300" for="titleInput">
+              {{ 'events.titleWhat' | t }}
             </label>
             <input
               id="titleInput"
               formControlName="title"
               type="text"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-gray-600 bg-[#2a2a2a] px-3 py-2 text-sm text-white placeholder-gray-400"
               [placeholder]="'events.titlePlaceholder' | t"
             />
           </div>
 
           <!-- When (Date & Time) -->
-          <div class="mb-3">
-            <label class="mb-1 block text-sm" for="dateTimeInput">
-              {{ 'events.dateTime' | t }}
+          <div class="mb-4">
+            <label class="mb-1 block text-sm text-gray-300" for="dateTimeInput">
+              {{ 'events.dateTimeWhen' | t }}
             </label>
             <input
               id="dateTimeInput"
               formControlName="date_time"
               type="datetime-local"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-gray-600 bg-[#2a2a2a] px-3 py-2 text-sm text-white"
             />
           </div>
 
           <!-- Where (Platform / Location) -->
-          <div class="mb-3">
-            <label class="mb-1 block text-sm" for="locationInput">
-              {{ 'events.where' | t }}
+          <div class="mb-4">
+            <label class="mb-1 block text-sm text-gray-300" for="locationSelect">
+              {{ 'events.locationWhere' | t }}
             </label>
-            <p class="text-xs text-gray-500 ms-1">
+            <p class="text-xs text-gray-500 ms-1 mb-1">
               {{ 'events.whereHint' | t }}
             </p>
-            <input
-              id="locationInput"
+            <select
+              id="locationSelect"
               formControlName="platform_location"
-              type="text"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-              [placeholder]="'events.wherePlaceholder' | t"
-            />
+              class="w-full rounded-lg border border-gray-600 bg-[#2a2a2a] px-3 py-2 text-sm text-white"
+            >
+              <option value="" disabled selected>{{ 'events.locationSelect' | t }}</option>
+              @for (opt of locationOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label | t }}</option>
+              }
+            </select>
           </div>
 
           <!-- Description -->
-          <div class="mb-3">
-            <label class="mb-1 block text-sm" for="descriptionInput">
+          <div class="mb-4">
+            <label class="mb-1 block text-sm text-gray-300" for="descriptionInput">
               {{ 'events.description' | t }}
             </label>
             <textarea
@@ -85,7 +83,7 @@ export interface AppEventParams {
               formControlName="description"
               rows="3"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-gray-600 bg-[#2a2a2a] px-3 py-2 text-sm text-white placeholder-gray-400"
               [placeholder]="'events.descriptionPlaceholder' | t"
             ></textarea>
           </div>
@@ -95,16 +93,16 @@ export interface AppEventParams {
             <button
               type="button"
               (click)="dismiss.emit()"
-              class="rounded-lg bg-gray-700 px-4 py-2 text-sm"
+              class="rounded-lg bg-gray-700 px-4 py-2 text-sm text-white hover:bg-gray-600"
             >
-              {{ 'events.cancel' | t }}
+              {{ 'common.cancel' | t }}
             </button>
             <button
               type="submit"
               [disabled]="eventForm.invalid"
-              class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-500 disabled:opacity-50"
             >
-              {{ 'events.create' | t }}
+              {{ 'common.save' | t }}
             </button>
           </div>
         </form>
@@ -115,6 +113,12 @@ export interface AppEventParams {
 export class CreateEventModalComponent {
   private readonly fb = inject(FormBuilder);
   private readonly eventsService = inject(EventsService);
+
+  readonly locationOptions = [
+    { value: 'audio_room', label: 'events.locationAudio' },
+    { value: 'zoom', label: 'events.locationZoom' },
+    { value: 'in_person', label: 'events.locationInPerson' },
+  ];
 
   readonly eventForm = this.fb.group({
     title: ['', Validators.required],
