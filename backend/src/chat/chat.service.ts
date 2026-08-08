@@ -391,6 +391,7 @@ export class ChatService {
         correction_request_payload: dto.correction_request_payload ?? null,
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media' ? true : false,
+        delivery_status: 'sent',
       })
       .select(
         `
@@ -1025,6 +1026,7 @@ export class ChatService {
           avatar_url: contact.avatar_url,
         },
         is_view_once: false,
+        delivery_status: 'sent',
       } as Record<string, unknown>)
       .select(
         `
@@ -1909,6 +1911,7 @@ export class ChatService {
         correction_request_payload: null,
         status_reply_payload: null,
         is_view_once: false,
+        delivery_status: 'sent',
       })
       .select()
       .single();
@@ -1991,6 +1994,7 @@ export class ChatService {
         correction_request_payload: null,
         status_reply_payload: null,
         is_view_once: false,
+        delivery_status: 'sent',
       })
       .select()
       .single();

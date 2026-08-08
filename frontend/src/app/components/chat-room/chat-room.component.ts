@@ -1,5 +1,14 @@
 import { showToast, showErrorToast } from '../../services/toast.service';
-import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  OnDestroy,
+  input,
+  effect,
+  afterNextRender,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -24,7 +33,10 @@ import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
-import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
+import {
+  GroupParticipantDrawerComponent,
+  GroupParticipant,
+} from '../group-participant-drawer/group-participant-drawer.component';
 import { DraftService } from '../../services/draft.service';
 
 @Component({
@@ -164,13 +176,15 @@ export class ChatRoomComponent implements OnDestroy {
 
   private subscription: { unsubscribe: () => void } | null = null;
 
-  private isChatEventPayload(
-    value: unknown,
-  ): value is { message?: ChatMessage; typing?: boolean } {
+  private isChatEventPayload(value: unknown): value is {
+    message?: ChatMessage;
+    typing?: boolean;
+    status_update?: { message_id: string; delivery_status: string };
+  } {
     return (
       !!value &&
       typeof value === 'object' &&
-      ('message' in value || 'typing' in value)
+      ('message' in value || 'typing' in value || 'status_update' in value)
     );
   }
 
@@ -268,6 +282,10 @@ export class ChatRoomComponent implements OnDestroy {
     if (this.subscription) {
       this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
     }
+    if (this.readObserver) {
+      this.readObserver.disconnect();
+      this.readObserver = null;
+    }
     this.typingService.disconnect();
     this.saveChatDrafts();
   }
@@ -313,6 +331,15 @@ export class ChatRoomComponent implements OnDestroy {
     try {
       const data = await this.chatService.getMessages(this.roomId, this.searchQuery);
       this.messages.set(data);
+      // Auto-mark non-owned messages as delivered when loading history
+      const currentUserId = this.authService.currentUser()?.id;
+      if (currentUserId) {
+        for (const msg of data) {
+          if (msg.sender_id !== currentUserId && !msg.delivery_status) {
+            this.chatService.markMessageStatus(msg.id, 'delivered').catch(() => {});
+          }
+        }
+      }
       // Restore reply-to target from the persisted draft once messages are available
       if (this._restoredReplyToId) {
         const target = data.find((m) => m.id === this._restoredReplyToId);
@@ -337,13 +364,81 @@ export class ChatRoomComponent implements OnDestroy {
       const payload = this.isChatEventPayload(data) ? data : null;
       if (payload?.message) {
         this.messages.update((list) => [...list, payload.message!]);
+        // Auto-mark as delivered for messages received via real-time
+        const msg = payload.message;
+        if (msg && !this.isOwnMessage(msg) && !msg.delivery_status) {
+          this.chatService.markMessageStatus(msg.id, 'delivered').catch(() => {});
+          this.messages.update((list) =>
+            list.map((m) => (m.id === msg.id ? { ...m, delivery_status: 'delivered' } : m)),
+          );
+        }
       } else if (payload?.typing) {
         this.isTyping.set(true);
         setTimeout(() => this.isTyping.set(false), 3000);
+      } else if (payload?.status_update) {
+        // Handle delivery/read status updates from Centrifugo
+        const { message_id, delivery_status } = payload.status_update as {
+          message_id: string;
+          delivery_status: string;
+        };
+        this.messages.update((list) =>
+          list.map((m) =>
+            m.id === message_id
+              ? { ...m, delivery_status: delivery_status as 'sent' | 'delivered' | 'read' }
+              : m,
+          ),
+        );
       }
     });
 
+    // Set up IntersectionObserver to auto-mark messages as read
+    afterNextRender(() => {
+      this.setupReadObserver();
+    });
+
     this.typingService.connect(this.roomId);
+  }
+
+  private readObserver: IntersectionObserver | null = null;
+  private pendingDelivered: Set<string> = new Set();
+
+  private setupReadObserver(): void {
+    this.readObserver = new IntersectionObserver(
+      (entries) => {
+        const currentUserId = this.authService.currentUser()?.id;
+        if (!currentUserId) return;
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const el = entry.target as HTMLElement;
+          const messageId = el.getAttribute('data-message-id');
+          if (!messageId) continue;
+          // Check if this message is from someone else and not yet marked read
+          const msg = this.messages().find((m) => m.id === messageId);
+          if (!msg) continue;
+          if (msg.sender_id === currentUserId) continue;
+          if (msg.delivery_status === 'read') continue;
+          // Mark as delivered first if needed
+          if (!msg.delivery_status || msg.delivery_status === 'sent') {
+            this.chatService.markMessageStatus(messageId, 'delivered').catch(() => {});
+            this.messages.update((list) =>
+              list.map((m) => (m.id === messageId ? { ...m, delivery_status: 'delivered' } : m)),
+            );
+          }
+          // Then mark as read
+          this.chatService.markMessageStatus(messageId, 'read').catch(() => {});
+          this.messages.update((list) =>
+            list.map((m) => (m.id === messageId ? { ...m, delivery_status: 'read' } : m)),
+          );
+          this.readObserver?.unobserve(el);
+        }
+      },
+      { threshold: 0.5 },
+    );
+  }
+
+  /** Observe a message element for read receipt tracking */
+  observeMessageElement(element: HTMLElement): void {
+    this.readObserver?.observe(element);
   }
 
   onWordClicked(event: { token: string; context: string }): void {
