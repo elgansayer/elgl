@@ -382,6 +382,14 @@ export class I18nService {
     'discovery.offlineBanner': 'You are offline',
     'discovery.offlineCachedData': '\u2013 viewing cached data',
     'discovery.offlineRankedData': '\u2013 offline ranked results',
+    // ---- Interests filter ----
+    'discovery.filterInterests': 'Interests',
+    'discovery.interestLabel': 'Filter by interest: ',
+    'discovery.interestAny': 'Any interest',
+    'discovery.interestsHint': 'Find partners with shared hobbies',
+    'discovery.sharedInterests': 'Shared interests: {{interests}}',
+    'common.showMore': 'Show more',
+    'common.showLess': 'Show less',
     // ---- Matchmaking algorithm labels ----
     'matchmaking.reasonLanguageExchange': 'Complementary language exchange',
     'matchmaking.reasonSharedInterests': 'Shared learning interests',

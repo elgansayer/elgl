@@ -86,12 +86,29 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedTargetLanguage = signal<string>('');
   readonly selectedProficiencyLevel = signal<string>('');
   readonly selectedGender = signal<string>('');
+  readonly selectedInterests = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
+
+  /** Common interest tags available for filtering. */
+  readonly commonInterestTags: readonly string[] = [
+    'sports', 'music', 'travel', 'photography', 'gaming',
+    'cooking', 'reading', 'movies', 'fitness', 'art',
+    'technology', 'nature',
+  ];
+
+  /** Whether the interests chips section is expanded. */
+  readonly showAllInterests = signal<boolean>(false);
+
+  /** Visible interest tags: first N unless expanded. */
+  readonly visibleInterestTags = computed(() => {
+    if (this.showAllInterests()) return this.commonInterestTags;
+    return this.commonInterestTags.slice(0, 6);
+  });
 
   /** Debounce timer handle for throttling rapid search calls. */
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -172,6 +189,19 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
+  setInterest(interest: string) {
+    if (this.selectedInterests() === interest) {
+      this.selectedInterests.set('');
+    } else {
+      this.selectedInterests.set(interest);
+    }
+    void this.searchPartners();
+  }
+
+  toggleShowAllInterests() {
+    this.showAllInterests.update((v) => !v);
+  }
+
   async ngOnInit(): Promise<void> {
     try {
       const profile = await this.userService.getMyProfile();
@@ -236,6 +266,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
           this.availableTimeEnd() || undefined,
         sort: this.selectedSort(),
         voice_room_active: this.voiceRoomActive() || undefined,
+        interests: this.selectedInterests() || undefined,
       }, signal);
       // If request was aborted, don't update the UI with stale results
       if (signal.aborted) return;
@@ -413,6 +444,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.availableTimeEnd.set('');
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
+    this.selectedInterests.set('');
+    this.showAllInterests.set(false);
     void this.searchPartners();
   }
 }
