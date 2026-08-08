@@ -19,6 +19,13 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "--no-editable" in setup
 
 
+def test_competing_legacy_agent_workflows_are_retired() -> None:
+    workflows = Path(__file__).parents[2] / ".github" / "workflows"
+
+    for name in ("architect.yml", "auto-dispatcher.yml", "openhands.yml", "pr-reviewer.yml"):
+        assert not (workflows / name).exists()
+
+
 def environment(**overrides: str) -> dict[str, str]:
     values = {
         "OPENCODE_GO_API_KEY": "not-a-real-key",

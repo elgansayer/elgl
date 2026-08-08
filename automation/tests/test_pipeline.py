@@ -17,12 +17,13 @@ class GitHub:
         self.auto_merged: list[int] = []
         self.closed: list[int] = []
         self.reviewed: list[str] = []
+        self.tasks = [Task("42", "Fix build", "Broken build", "github-issue", 0)]
 
     def ensure_factory_labels(self) -> None:
         return None
 
     def collect_open_issues(self, limit: int = 100) -> list[Task]:
-        return [Task("42", "Fix build", "Broken build", "github-issue", 0)]
+        return self.tasks
 
     def add_issue_labels(self, issue: int, labels: tuple[str, ...]) -> None:
         self.labels.append((issue, labels))
@@ -86,6 +87,29 @@ def test_refresh_creates_durable_discovered_job(tmp_path: Path) -> None:
 
     assert jobs["42"].state is JobState.DISCOVERED
     assert restored["42"].task.title == "Fix build"
+
+
+def test_refresh_releases_closed_issue_before_pull_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save({"42": job})
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    removed: list[Path] = []
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path: removed.append(path)
+    )
+    github.tasks = []
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["42"].state is JobState.DONE
+    assert refreshed["42"].last_error == "Issue closed before pull request creation"
+    assert removed == [worktree]
 
 
 def test_complete_pipeline_reaches_done_only_after_merge(
