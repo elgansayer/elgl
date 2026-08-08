@@ -266,8 +266,8 @@ describe('MomentsService', () => {
 
       expect(mockRedisClient.lrange).toHaveBeenCalledWith(
         'timeline_queue:user-1',
-        0,
-        49,
+        -50,
+        -1,
       );
       expect(result).toHaveLength(2);
       expect(result[0].is_liked_by_me).toBe(true);

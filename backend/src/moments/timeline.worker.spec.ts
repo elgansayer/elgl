@@ -19,7 +19,7 @@ describe('TimelineWorker', () => {
     };
 
     mockRedisClient = {
-      lpush: jest.fn().mockResolvedValue(1),
+      rpush: jest.fn().mockResolvedValue(1),
       ltrim: jest.fn().mockResolvedValue('OK'),
     };
 
@@ -72,24 +72,24 @@ describe('TimelineWorker', () => {
       );
 
       // follower-1, follower-2, author-1 -> 3 total pushes
-      expect(mockRedisClient.lpush).toHaveBeenCalledTimes(3);
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockRedisClient.rpush).toHaveBeenCalledTimes(3);
+      expect(mockRedisClient.rpush).toHaveBeenCalledWith(
         'timeline_queue:follower-1',
         'moment-100',
       );
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockRedisClient.rpush).toHaveBeenCalledWith(
         'timeline_queue:follower-2',
         'moment-100',
       );
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockRedisClient.rpush).toHaveBeenCalledWith(
         'timeline_queue:author-1',
         'moment-100',
       );
       expect(mockRedisClient.ltrim).toHaveBeenCalledTimes(3);
       expect(mockRedisClient.ltrim).toHaveBeenCalledWith(
         'timeline_queue:follower-1',
-        0,
-        499,
+        -500,
+        -1,
       );
 
       expect(logSpy).toHaveBeenCalledWith(
@@ -106,7 +106,7 @@ describe('TimelineWorker', () => {
 
       await worker.fanOutMoment('moment-100', 'author-1');
 
-      expect(mockRedisClient.lpush).not.toHaveBeenCalled();
+      expect(mockRedisClient.rpush).not.toHaveBeenCalled();
     });
 
     it('should catch error during execution and log error', async () => {

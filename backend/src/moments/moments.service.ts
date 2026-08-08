@@ -318,7 +318,7 @@ export class MomentsService {
 
     if (filter === 'Following') {
       const queueKey = `timeline_queue:${userId}`;
-      const momentIds = await redis.lrange(queueKey, 0, 49);
+      const momentIds = await redis.lrange(queueKey, -50, -1);
       if (momentIds.length > 0) {
         const { data } = await supabase
           .from('moments')
