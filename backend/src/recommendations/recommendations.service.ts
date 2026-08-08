@@ -148,15 +148,30 @@ export class RecommendationsService {
   }
 
   async getDailyRecommendations(userId: string): Promise<RecommendedUserDto[]> {
+    const startTime = Date.now();
+
     try {
       const redis = this.supabaseService.getRedisClient();
       const cached = await redis.get(`recommendations:daily:${userId}`);
       if (cached) {
         const parsed: unknown = JSON.parse(cached);
         if (Array.isArray(parsed)) {
-          return parsed as RecommendedUserDto[];
+          const results = parsed as RecommendedUserDto[];
+          this.metricsService.recordMatchmakingRecommendationsGenerated(
+            'cached',
+            'getDailyRecommendations',
+            results.length,
+          );
+          this.metricsService.recordMatchmakingRequestDuration(
+            'getDailyRecommendations',
+            'success',
+            (Date.now() - startTime) / 1000,
+          );
+          return results;
         }
       }
+      this.metricsService.recordMatchmakingDailyCacheMiss('empty_cache');
+      this.metricsService.recordMatchmakingEmptyResults('getDailyRecommendations');
     } catch (error) {
       this.logger.warn(
         `Redis unavailable for daily recommendations (user ${userId}), falling back to live computation`,
@@ -166,8 +181,19 @@ export class RecommendationsService {
     try {
       const liveResults = await this.recommendationsByLanguageExchange(userId);
       if (liveResults.length > 0) {
+        this.metricsService.recordMatchmakingRecommendationsGenerated(
+          'language_exchange',
+          'getDailyRecommendations',
+          liveResults.length,
+        );
+        this.metricsService.recordMatchmakingRequestDuration(
+          'getDailyRecommendations',
+          'success',
+          (Date.now() - startTime) / 1000,
+        );
         return liveResults;
       }
+      this.metricsService.recordMatchmakingEmptyResults('getDailyRecommendations');
     } catch (error) {
       this.logger.warn(
         `Live language-exchange fallback failed for user ${userId}`,
@@ -181,6 +207,11 @@ export class RecommendationsService {
     try {
       const interestResults = await this.recommendationsByInterests(userId);
       if (interestResults.length > 0) {
+        this.metricsService.recordMatchmakingRecommendationsGenerated(
+          'interest',
+          'getRecommendations',
+          interestResults.length,
+        );
         return interestResults;
       }
     } catch (error) {
@@ -192,6 +223,11 @@ export class RecommendationsService {
     try {
       const languageMatches = await this.recommendationsByLanguageExchange(userId);
       if (languageMatches.length > 0) {
+        this.metricsService.recordMatchmakingRecommendationsGenerated(
+          'language_exchange',
+          'getRecommendations',
+          languageMatches.length,
+        );
         return languageMatches;
       }
     } catch (error) {
@@ -203,6 +239,11 @@ export class RecommendationsService {
     try {
       const activeUsers = await this.recommendationsByActiveUsers(userId);
       if (activeUsers.length > 0) {
+        this.metricsService.recordMatchmakingRecommendationsGenerated(
+          'active_users',
+          'getRecommendations',
+          activeUsers.length,
+        );
         return activeUsers;
       }
     } catch (error) {
@@ -213,6 +254,11 @@ export class RecommendationsService {
     }
 
     const mockResults = this.recommendationsFromMock(userId);
+    this.metricsService.recordMatchmakingRecommendationsGenerated(
+      'mock',
+      'getRecommendations',
+      mockResults.length,
+    );
     return mockResults;
   }
 

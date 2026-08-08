@@ -1,3 +1,7 @@
+jest.mock('../escrow/sanitise-escrow.helper', () => ({
+  sanitiseEscrowData: (x: unknown) => x,
+}));
+
 import { RecommendationsModule } from './recommendations.module';
 import { RecommendationsController } from './recommendations.controller';
 import { RecommendationsService } from './recommendations.service';

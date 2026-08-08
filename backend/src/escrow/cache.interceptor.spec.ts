@@ -58,7 +58,7 @@ describe('EscrowCacheInterceptor', () => {
       );
       expect(setHeader).toHaveBeenCalledWith(
         'Vary',
-        'Authorization',
+        ESCROW_CACHE_PRIVATE_SHORT['Vary'],
       );
     });
 
@@ -95,7 +95,8 @@ describe('EscrowCacheInterceptor', () => {
       const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT);
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const removeHeader = jest.fn();
+      const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];

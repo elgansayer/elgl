@@ -134,10 +134,11 @@ export class ReadingEngineService {
     if (params.difficulty) query = query.eq('difficulty', params.difficulty);
     if (params.topic) query = query.eq('topic', params.topic);
     const effectiveLimit = params.limit ?? 20;
+    if (params.limit !== undefined) {
+      query = query.limit(params.limit);
+    }
     if (params.offset !== undefined) {
       query = query.range(params.offset, params.offset + effectiveLimit - 1);
-    } else if (params.limit !== undefined) {
-      query = query.limit(params.limit);
     }
 
     const { data, error } = await query;

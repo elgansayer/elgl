@@ -4,6 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
@@ -14,6 +15,7 @@ import {
   DegradationMarker,
 } from './discovery-degradation.service';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
+import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -49,6 +51,7 @@ export class DiscoveryService {
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
     private readonly degradationService: DiscoveryDegradationService,
+    private readonly cloudflareCacheService: CloudflareCacheService,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
@@ -83,6 +86,9 @@ export class DiscoveryService {
         604800,
       );
       this.logger.info(`Partner of the Week set for ${partnerIds.length} users`);
+      await this.cloudflareCacheService.purgeByCacheTags([
+        DISCOVERY_CACHE_TAG_POTW,
+      ]);
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
     }

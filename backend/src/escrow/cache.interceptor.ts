@@ -24,10 +24,9 @@ export const ESCROW_CACHE_PUBLIC_LONG = {
 } as const;
 
 export const ESCROW_CACHE_PRIVATE_SHORT = {
-  'Cache-Control':
-    'private, max-age=60, s-maxage=120, stale-while-revalidate=300, stale-if-error=600',
-  'CDN-Cache-Control': 'private, max-age=120, stale-while-revalidate=300',
-  Vary: 'Authorization, Accept-Encoding',
+  'Cache-Control': 'private, max-age=0, must-revalidate',
+  'CDN-Cache-Control': 'private, no-store',
+  Vary: 'Authorization',
   'Cache-Tag': 'escrow-transactions-v1',
 } as const;
 

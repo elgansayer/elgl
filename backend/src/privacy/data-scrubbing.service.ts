@@ -383,4 +383,16 @@ export class DataScrubbingService {
       );
     }
   }
+
+  scrubEscrowTransactionRecords(records: Array<{
+    payer_id?: string | null;
+    payee_id?: string | null;
+    reason?: string | null;
+    metadata?: Record<string, unknown> | null;
+    last_error?: string | null;
+  }>): void {
+    for (const record of records) {
+      this.scrubEscrowRecord(record);
+    }
+  }
 }

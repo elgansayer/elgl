@@ -80,7 +80,7 @@ export class MatchmakingCrashReportService {
         degraded_tier: data.degraded_tier ?? undefined,
         created_at: data.created_at,
         acknowledged: data.acknowledged ?? false,
-        resolved_at: data.resolved_at ?? null,
+        resolved_at: data.resolved_at,
       };
     } catch (persistError) {
       this.logger.error(

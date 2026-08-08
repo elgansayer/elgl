@@ -1,3 +1,7 @@
+jest.mock('./sanitise-discovery.helper', () => ({
+  sanitiseDiscoveryData: (x: unknown) => x,
+}));
+
 import { DiscoveryModule } from './discovery.module';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
