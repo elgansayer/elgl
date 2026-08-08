@@ -18,6 +18,8 @@ const testDefaults: Record<string, string> = {
   LIVEKIT_TURN_KEY_FILE: '',
   LIVEKIT_TURN_TLS_PORT: '5349',
   LIVEKIT_TURN_UDP_PORT: '3478',
+  LIVEKIT_TURN_USERNAME: 'guest',
+  LIVEKIT_TURN_PASSWORD: 'somepassword',
   LIVEKIT_RTC_STUN_SERVERS:
     'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302',
   CLOUDFLARE_R2_ENDPOINT: 'https://example.r2.cloudflarestorage.com',
@@ -76,6 +78,12 @@ export const validationSchema = Joi.object({
   ),
   LIVEKIT_TURN_UDP_PORT: Joi.string().default(
     testDefaults.LIVEKIT_TURN_UDP_PORT,
+  ),
+  LIVEKIT_TURN_USERNAME: Joi.string().default(
+    testDefaults.LIVEKIT_TURN_USERNAME,
+  ),
+  LIVEKIT_TURN_PASSWORD: Joi.string().default(
+    testDefaults.LIVEKIT_TURN_PASSWORD,
   ),
   LIVEKIT_RTC_STUN_SERVERS: Joi.string().default(
     testDefaults.LIVEKIT_RTC_STUN_SERVERS,

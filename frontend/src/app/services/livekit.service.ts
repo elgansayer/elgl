@@ -11,6 +11,13 @@ import {
   Track,
 } from 'livekit-client';
 
+/** ICE server descriptor returned by the backend token endpoint. */
+export interface IceServer {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -23,21 +30,26 @@ export class LivekitService {
   private _muted = false;
   private _speakerphone = false;
   private e2eeWorker: Worker | null = null;
+  private _iceServers: IceServer[] | null = null;
 
   private createRoom(options: RoomOptions): Room {
     return new Room(options);
   }
 
   /**
-   * Get a LiveKit access token from the backend.
+   * Get a LiveKit access token and ICE server configuration from the backend.
    */
   async getToken(roomName: string, participantIdentity: string): Promise<string> {
     const response = await firstValueFrom(
-      this.http.post<{ token: string }>(`${environment.apiUrl}/livekit/token`, {
-        room_name: roomName,
-        participant_identity: participantIdentity,
-      }),
+      this.http.post<{ token: string; iceServers: IceServer[] }>(
+        `${environment.apiUrl}/livekit/token`,
+        {
+          room_name: roomName,
+          participant_identity: participantIdentity,
+        },
+      ),
     );
+    this._iceServers = response.iceServers ?? [];
     return response.token;
   }
 
@@ -75,14 +87,7 @@ export class LivekitService {
     this.room = room;
     await room.connect(this.getLiveKitUrl(), token, {
       rtcConfig: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          {
-            urls: environment.turnServerUrl,
-            username: environment.turnUsername,
-            credential: environment.turnPassword,
-          },
-        ],
+        iceServers: this._iceServers ?? [],
       },
     });
     return room;
