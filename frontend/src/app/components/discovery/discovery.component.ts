@@ -20,6 +20,7 @@ import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
+import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -34,6 +35,7 @@ import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
+import { DiscoveryMapErrorBoundaryComponent } from './discovery-map-error-boundary.component';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 /** Milliseconds to debounce partner search calls triggered by interaction changes. */
@@ -54,6 +56,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     DistanceSliderComponent,
     AppEmptyStateComponent,
     DiscoverySkeletonCardComponent,
+    DiscoveryMapErrorBoundaryComponent,
     SanitiseHtmlPipe,
   ],
   templateUrl: './discovery.component.html',
@@ -69,6 +72,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
   private readonly discoveryOnboarding = inject(DiscoveryOnboardingService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly matchmakingOnboarding = inject(MatchmakingOnboardingService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
@@ -433,5 +437,20 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
     void this.searchPartners();
+  }
+
+  /** Start the matchmaking algorithm onboarding tour. */
+  startMatchmakingTour(): void {
+    this.matchmakingOnboarding.startTour();
+  }
+
+  /** Whether the matchmaking onboarding tour is currently active. */
+  isMatchmakingTourActive(): boolean {
+    return this.matchmakingOnboarding.isTourInProgress();
+  }
+
+  /** Close the matchmaking onboarding tour and mark it complete. */
+  closeMatchmakingTour(): void {
+    this.matchmakingOnboarding.markComplete();
   }
 }

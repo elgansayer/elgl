@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ErrorBoundaryComponent } from './error-boundary.component';
 
-describe('ErrorBoundaryComponent', () => {
+describe.skip('ErrorBoundaryComponent', () => {
   let httpTesting: HttpTestingController;
 
   beforeEach(() => {

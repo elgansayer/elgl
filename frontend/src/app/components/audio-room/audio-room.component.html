@@ -76,11 +76,23 @@
         </div>
       </div>
 
+      @if (room.host_id) {
+        <app-soundboard
+          [roomId]="room.id"
+          [hostUserId]="room.host_id"
+        ></app-soundboard>
+      }
+
       <div class="flex flex-wrap gap-1.5">
         <span class="app-chip">{{ 'audioRoom.chipListening' | t }}</span>
         <span class="app-chip">{{ 'audioRoom.chipQueue' | t }}</span>
         <span class="app-chip">{{ 'audioRoom.chipSubtitles' | t }}</span>
       </div>
+
+      <app-soundboard
+        [roomId]="room.id"
+        [hostUserId]="room.host_id"
+      ></app-soundboard>
 
       @if (showExclusivePicker() && authService.currentUser()?.is_vip) {
         <div class="flex flex-wrap gap-2 p-2 bg-surface-200 rounded-card">

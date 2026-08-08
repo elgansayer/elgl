@@ -1,9 +1,10 @@
 import { Component, computed, inject, resource, signal, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
-import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { AdminOfflineBannerComponent } from '../../components/admin-offline-banner/admin-offline-banner.component';
+import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 
@@ -61,6 +62,7 @@ export class AdminUsersComponent {
   readonly selectedUserId = signal<string | null>(null);
   readonly showHistory = signal(false);
   readonly isVipUpdating = signal<string | null>(null);
+  readonly vipUpdateError = signal<string>('');
   readonly isBanning = signal<string | null>(null);
   readonly isWarning = signal<string | null>(null);
 
@@ -99,6 +101,7 @@ export class AdminUsersComponent {
       return;
     }
     this.isVipUpdating.set(user.id);
+    this.vipUpdateError.set('');
     try {
       const updated = await this.adminService.setVipStatus(
         user.id,
@@ -113,6 +116,7 @@ export class AdminUsersComponent {
         return { ...prev, users: list };
       });
     } catch (err: unknown) {
+      this.vipUpdateError.set((err as HttpErrorResponse)?.message ?? String(err));
       this.reportCrash(err, 'toggleVip');
     } finally {
       this.isVipUpdating.set(null);

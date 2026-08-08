@@ -52,6 +52,7 @@ describe('EconomyController', () => {
             sendGift: jest.fn(),
             getStickerPacks: jest.fn(),
             unlockStickerPack: jest.fn(),
+            getTransactionHistory: jest.fn(),
           },
         },
         {
@@ -286,6 +287,45 @@ describe('EconomyController', () => {
         dto,
       );
       expect(result).toEqual(response);
+    });
+  });
+
+  describe('getTransactions', () => {
+    it('should return empty transactions array when user is null', async () => {
+      const result = await controller.getTransactions(null);
+      expect(result).toEqual({ transactions: [] });
+    });
+
+    it('should return transactions from service when user is provided', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          user_id: 'user-1',
+          type: 'daily_checkin',
+          amount: 7,
+          description: 'Daily check-in reward',
+          metadata: null,
+          created_at: '2026-08-08T12:00:00.000Z',
+        },
+      ];
+      (economyService.getTransactionHistory as jest.Mock).mockResolvedValue(
+        mockTransactions,
+      );
+
+      const result = await controller.getTransactions({ id: 'user-1' } as any);
+      expect(economyService.getTransactionHistory).toHaveBeenCalledWith(
+        'user-1',
+      );
+      expect(result).toEqual({ transactions: mockTransactions });
+    });
+
+    it('should return empty transactions on service error', async () => {
+      (economyService.getTransactionHistory as jest.Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
+
+      const result = await controller.getTransactions({ id: 'user-1' } as any);
+      expect(result).toEqual({ transactions: [] });
     });
   });
 

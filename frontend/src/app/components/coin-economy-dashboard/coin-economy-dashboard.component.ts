@@ -19,10 +19,10 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     RouterLink,
     DecimalPipe,
     AppCardComponent,
-    AppPillComponent,
-    AppButtonPrimaryComponent,
-    AppSkeletonLoaderComponent,
-    AppEmptyStateComponent,
+    
+    
+    
+    
   ],
   template: `<div class="min-h-screen bg-surface-300 text-text-primary">
   <!-- Header with Coin Balance -->

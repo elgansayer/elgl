@@ -1,9 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { GroupsDiscoveryComponent } from './groups-discovery.component';
-import { Pipe, PipeTransform } from '@angular/core';
+import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { Pipe, PipeTransform, signal } from '@angular/core';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -30,9 +33,21 @@ describe('GroupsDiscoveryComponent', () => {
   ];
 
   beforeEach(async () => {
+    const mockI18n = {
+      currentLang: signal('en-GB'),
+      translations: signal({}),
+      translate: vi.fn().mockReturnValue(''),
+      direction: signal('ltr'),
+    };
+
     await TestBed.configureTestingModule({
       imports: [GroupsDiscoveryComponent, MockTranslatePipe],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: I18nService, useValue: mockI18n },
+      ],
     }).compileComponents();
 
     httpTesting = TestBed.inject(HttpTestingController);
@@ -42,8 +57,12 @@ describe('GroupsDiscoveryComponent', () => {
 
   it('should create and load groups from API', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne((r) => r.url.includes('/groups/discoverable'));
-    req.flush(mockGroups);
+    // interests request
+    const interestsReq = httpTesting.expectOne((r) => r.url.includes('/interests'));
+    interestsReq.flush([]);
+    // groups request
+    const groupsReq = httpTesting.expectOne((r) => r.url.includes('/groups/discoverable'));
+    groupsReq.flush(mockGroups);
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -52,11 +71,15 @@ describe('GroupsDiscoveryComponent', () => {
 
   it('should handle API error gracefully', async () => {
     fixture.detectChanges();
-    const req = httpTesting.expectOne((r) => r.url.includes('/groups/discoverable'));
-    req.error(new ProgressEvent('network error'));
+    // interests request
+    const interestsReq = httpTesting.expectOne((r) => r.url.includes('/interests'));
+    interestsReq.flush([]);
+    // groups request
+    const groupsReq = httpTesting.expectOne((r) => r.url.includes('/groups/discoverable'));
+    groupsReq.error(new ProgressEvent('network error'));
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(component.error()).toBe('Failed to load groups');
+    expect((component as any).error()).toBe('Failed to load groups');
   });
 });

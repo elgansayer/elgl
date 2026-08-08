@@ -252,17 +252,21 @@
 
   <!-- Content States -->
   <main class="p-0">
+    <app-discovery-map-error-boundary
+      [context]="{ component: 'discovery-map', partnerCount: partners().length, filtersApplied: selectedFilter() }"
+      (retry)="retrySearch()"
+    >
     @if (isLoading()) {
-      <section aria-live="polite" aria-busy="true" role="status">
+      <section aria-live="polite" aria-busy="true" role="status" class="content-state-enter">
         <span class="sr-only">{{ 'discovery.loadingPartners' | t }}</span>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200" aria-hidden="true">
           @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-            <app-discovery-skeleton-card />
+            <app-discovery-skeleton-card [index]="i - 1" />
           }
         </div>
       </section>
     } @else if (hasError()) {
-      <section aria-live="assertive">
+      <section aria-live="assertive" class="content-state-enter">
         <app-empty-state
           icon="⚠️"
           [title]="'discovery.searchErrorTitle' | t"
@@ -273,21 +277,8 @@
         >
         </app-empty-state>
       </section>
-    } @else if (searchError(); as errorKey) {
-      <section aria-live="polite" class="flex flex-col items-center justify-center py-16 px-4">
-        <div class="text-5xl mb-4" aria-hidden="true">⚠️</div>
-        <p class="text-text-primary font-bold text-lg mb-2">{{ errorKey | t }}</p>
-        <p class="text-text-secondary text-sm mb-4">{{ 'discovery.searchErrorHint' | t }}</p>
-        <button
-          (click)="retrySearch()"
-          class="px-6 py-2 rounded-full bg-accent-500 text-white font-bold hover:bg-accent-600 transition-colors shadow-md"
-          [attr.aria-label]="'discovery.retrySearch' | t"
-        >
-          {{ 'discovery.retrySearch' | t }}
-        </button>
-      </section>
     } @else if (partners().length === 0) {
-      <section aria-live="polite">
+      <section aria-live="polite" class="content-state-enter">
         <app-empty-state
           illustration="/assets/illustrations/no-users-nearby.svg"
           [title]="'discovery.noResultsTitle' | t"
@@ -441,5 +432,6 @@
         }
       </div>
     }
+    </app-discovery-map-error-boundary>
   </main>
 </div>

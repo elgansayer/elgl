@@ -65,9 +65,7 @@ export class OfflineReadingService {
         resolve();
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-        const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest)) return;
-        const db = target.result;
+        const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(STORE_ARTICLES)) {
           db.createObjectStore(STORE_ARTICLES, { keyPath: 'id' });
         }

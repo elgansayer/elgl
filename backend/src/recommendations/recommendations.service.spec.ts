@@ -12,6 +12,7 @@ jest.mock('../common/retry', () => ({
   withRetry: jest.fn((fn: () => unknown) => fn()),
   isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
 }));
+
 type QueryChainMock = {
   select: jest.Mock;
   eq: jest.Mock;
@@ -1109,6 +1110,7 @@ describe('RecommendationsService', () => {
         },
       ]);
 
+      // Pipeline flush on error should not throw
       mockPipeline.exec.mockRejectedValueOnce(new Error('Redis write failed'));
 
       mockFrom
@@ -1116,6 +1118,7 @@ describe('RecommendationsService', () => {
         .mockReturnValueOnce(matchesChain);
 
       await service.calculateDailyRecommendations();
+      // Should still have called set before flushing
       expect(mockPipeline.set).toHaveBeenCalledTimes(1);
     });
 

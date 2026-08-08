@@ -403,20 +403,18 @@ export class DiscoveryService {
     return filtered;
   }
 
-  async translateBio(bioText: string): Promise<string> {
-    const currentProfile = await this.userService.getMyProfile();
-    const targetLanguage = currentProfile?.native_languages?.[0] ?? 'en';
+  async translateBio(targetUserId: string, targetLanguage: string): Promise<string> {
     try {
       const result = await firstValueFrom(
-        this.http.post<{ translatedText: string }>(
-          `${environment.apiUrl}/nlp/translate`,
-          { text: bioText, sourceLanguage: '', targetLanguage },
-          { headers: this.getHeaders() },
-        ),
+        this.http.post<{ translated_text: string }>(
+          `${environment.apiUrl}/nlp/translate-bio`,
+          { target_user_id: targetUserId, target_language: targetLanguage },
+          { headers: this.getHeaders() }
+        )
       );
-      return result.translatedText;
+      return result.translated_text;
     } catch {
-      return bioText;
+      return '';
     }
   }
 

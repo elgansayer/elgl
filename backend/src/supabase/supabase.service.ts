@@ -81,7 +81,7 @@ export type UsersRow = {
   is_deletion_pending?: boolean | null;
 };
 
-type AudioRoomsRow = {
+export type AudioRoomsRow = {
   id: string;
   room_name: string;
   title: string;
@@ -501,6 +501,16 @@ type GiftTransactionRow = {
   gift_id: string;
   room_id?: string | null;
   coins_spent: number;
+  created_at?: string;
+};
+
+type CoinTransactionRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  amount: number;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
   created_at?: string;
 };
 
@@ -1536,6 +1546,12 @@ export interface Database {
         Row: GiftTransactionRow;
         Insert: Partial<GiftTransactionRow>;
         Update: Partial<GiftTransactionRow>;
+        Relationships: [];
+      };
+      coin_transactions: {
+        Row: CoinTransactionRow;
+        Insert: Partial<CoinTransactionRow>;
+        Update: Partial<CoinTransactionRow>;
         Relationships: [];
       };
       user_sticker_packs: {
