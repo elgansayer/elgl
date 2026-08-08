@@ -1,7 +1,6 @@
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { OfflineReadingService } from './offline-reading.service';
-import { NetworkStatusService } from './network-status.service';
 
 describe.skip('OfflineReadingService', () => {
   let service: OfflineReadingService;
