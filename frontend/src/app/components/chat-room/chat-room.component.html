@@ -172,6 +172,7 @@
             (transliterate)="transliterateMessage(msg)"
             (speak)="speakMessage(msg)"
             (correct)="startCorrection(msg)"
+            (createFlashcard)="onCreateFlashcard($event)"
           >
             <div
               [id]="'msg-' + msg.id"

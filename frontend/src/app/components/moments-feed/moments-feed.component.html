@@ -304,6 +304,12 @@
                   <span>💬</span> <span>{{ 'moments.quoteBtn' | t }}</span>
                 </button>
                 <button
+                  (click)="createFlashcardFromMoment(moment)"
+                  class="flex items-center gap-1 hover:text-emerald-400 font-bold transition-colors"
+                 [attr.aria-label]="'context_menu.createFlashcard' | t">
+                  <span>🃏</span> <span>{{ 'context_menu.createFlashcard' | t }}</span>
+                </button>
+                <button
                   (click)="toggleInlineTranslation(moment)"
                   class="flex items-center gap-1 hover:text-purple-400 transition-colors ms-auto font-bold"
                  [attr.aria-label]="'moments.hideTranslation' | t">

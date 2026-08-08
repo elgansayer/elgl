@@ -10,6 +10,7 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { FlashcardService } from '../../services/flashcard.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -31,6 +32,7 @@ import { environment } from '../../../environments/environment';
         (favourite)="onFavourite($event)"
         (report)="onReport($event)"
         (block)="onBlockToggle($event)"
+        (createFlashcard)="onCreateFlashcard($event)"
       >
         <div
           class="flex"
@@ -219,6 +221,7 @@ export class ChatMessageComponent {
   private safetyService = inject(SafetyService);
   private confirmService = inject(ConfirmService);
   private i18n = inject(I18nService);
+  private flashcardService = inject(FlashcardService);
 
   isBlocked = signal(false);
   simplifiedText = signal<string | null>(null);
@@ -329,6 +332,18 @@ export class ChatMessageComponent {
 
   onFavourite(event: { messageId: string; content: string; messageType: string }): void {
     this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
+  }
+
+  async onCreateFlashcard(event: { messageId: string; content: string }): Promise<void> {
+    try {
+      await this.flashcardService.createFlashcard({
+        word: event.content,
+        sourceLanguage: 'en',
+        contextSentence: event.content,
+      });
+    } catch (err) {
+      console.error('Failed to create flashcard:', err);
+    }
   }
 
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {

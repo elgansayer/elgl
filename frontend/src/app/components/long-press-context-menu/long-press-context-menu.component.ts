@@ -89,6 +89,15 @@ import {Component, input, output, signal} from '@angular/core';import { Translat
             {{ 'context_menu.report' | t }}
           </button>
 
+          @if (messageType() === 'text') {
+            <button
+              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              (click)="doCreateFlashcard()"
+            >
+              {{ 'context_menu.createFlashcard' | t }}
+            </button>
+          }
+
           <button
             class="w-full text-start text-red-400 font-medium py-2 px-3 rounded-lg hover:bg-white/10"
             (click)="doBlockToggle()"
@@ -135,6 +144,7 @@ export class LongPressContextMenuComponent {
   readonly transliterate = output<{ messageId: string; content: string }>();
   readonly speak = output<{ messageId: string; content: string }>();
   readonly correct = output<{ messageId: string; content: string }>();
+  readonly createFlashcard = output<{ messageId: string; content: string }>();
 
   menuVisible = signal(false);
 
@@ -226,6 +236,11 @@ export class LongPressContextMenuComponent {
 
   doCorrect() {
     this.correct.emit({ messageId: this.messageId(), content: this.messageContent() });
+    this.closeMenu();
+  }
+
+  doCreateFlashcard() {
+    this.createFlashcard.emit({ messageId: this.messageId(), content: this.messageContent() });
     this.closeMenu();
   }
 

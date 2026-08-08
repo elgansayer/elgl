@@ -24,6 +24,7 @@ import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.componen
 import { DraftService } from '../../services/draft.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { LightboxComponent } from '../lightbox/lightbox.component';
+import { FlashcardService } from '../../services/flashcard.service';
 
 interface MentionSuggestion {
   id: string;
@@ -67,6 +68,7 @@ export class MomentsFeedComponent {
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly draftService = inject(DraftService);
+  private readonly flashcardService = inject(FlashcardService);
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
@@ -304,6 +306,20 @@ export class MomentsFeedComponent {
     } catch (e) {
       console.error('Failed to save moment text to LingQ deck:', e);
       showToast(this.i18n.translate('moments.saveErrorAlert'));
+    }
+  }
+
+  async createFlashcardFromMoment(moment: MomentRecord): Promise<void> {
+    if (!moment.text_content) return;
+    try {
+      await this.flashcardService.createFlashcard({
+        word: moment.text_content,
+        sourceLanguage: moment.target_language || 'en',
+        contextSentence: moment.text_content,
+      });
+      showToast(this.i18n.translate('context_menu.flashcardCreated') || 'Flashcard created');
+    } catch (err) {
+      console.error('Failed to create flashcard from moment:', err);
     }
   }
 

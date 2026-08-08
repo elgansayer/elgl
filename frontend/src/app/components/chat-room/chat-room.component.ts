@@ -26,6 +26,7 @@ import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
 import { DraftService } from '../../services/draft.service';
+import { FlashcardService } from '../../services/flashcard.service';
 
 @Component({
   selector: 'app-chat-room',
@@ -61,6 +62,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
+  private readonly flashcardService = inject(FlashcardService);
 
   id = input.required<string>();
 
@@ -521,6 +523,20 @@ export class ChatRoomComponent implements OnDestroy {
     this.correctedText = '';
     this.explanationText = '';
     this.showCorrectionForm.set(true);
+  }
+
+  async onCreateFlashcard(event: { messageId: string; content: string }): Promise<void> {
+    try {
+      await this.flashcardService.createFlashcard({
+        word: event.content,
+        sourceLanguage: 'en',
+        contextSentence: event.content,
+      });
+      showToast(this.i18n.translate('context_menu.flashcardCreated') || 'Flashcard created');
+    } catch (err) {
+      console.error('Failed to create flashcard:', err);
+      showToast(this.i18n.translate('context_menu.flashcardError') || 'Failed to create flashcard');
+    }
   }
 
   onBlockToggle(event: { senderId: string; blocked: boolean }): void {
