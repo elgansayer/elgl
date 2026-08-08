@@ -72,15 +72,27 @@ describe('EventsService', () => {
         { id: 'event2', title: 'Event 2' },
       ];
 
+      let fromCallCount = 0;
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            gte: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: jest.fn().mockResolvedValue({ data: mockEvents }),
+        from: jest.fn().mockImplementation((table: string) => {
+          fromCallCount++;
+          if (table === 'events') {
+            return {
+              select: jest.fn().mockReturnValue({
+                gte: jest.fn().mockReturnValue({
+                  order: jest.fn().mockReturnValue({
+                    range: jest.fn().mockResolvedValue({ data: mockEvents }),
+                  }),
+                }),
               }),
+            };
+          }
+          // event_rsvps table
+          return {
+            select: jest.fn().mockReturnValue({
+              in: jest.fn().mockResolvedValue({ data: [], error: null }),
             }),
-          }),
+          };
         }),
       });
 
@@ -93,6 +105,8 @@ describe('EventsService', () => {
           ...ev,
           host_name: null,
           host_avatar_url: null,
+          attendees_count: 0,
+          interested_count: 0,
         })),
       );
       expect(supabaseService.getClient).toHaveBeenCalled();

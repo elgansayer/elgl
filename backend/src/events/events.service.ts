@@ -203,6 +203,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         location: string | null;
         language_pair: string | null;
         max_participants: number | null;
+        proficiency: string | null;
         host_id: string;
       }>({
         title: dto.title,
@@ -212,6 +213,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         location: dto.location ?? null,
         language_pair: dto.language_pair ?? null,
         max_participants: dto.max_participants ?? null,
+        proficiency: dto.proficiency ?? null,
         host_id: userId,
       })
       .select()
@@ -266,11 +268,38 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to list events', error);
       throw error;
     }
-    return ((data ?? []) as EventWithHost[]).map((ev: EventWithHost) => ({
+    const events = ((data ?? []) as EventWithHost[]).map((ev: EventWithHost) => ({
       ...ev,
       host_name: ev.host?.display_name ?? null,
       host_avatar_url: ev.host?.avatar_url ?? null,
     }));
+
+    // Fetch attendee counts for all events in this batch
+    if (events.length > 0) {
+      const eventIds = events.map((e) => e.id);
+      const { data: rsvpCounts, error: rsvpErr } = await supabase
+        .from('event_rsvps')
+        .select('event_id, status')
+        .in('event_id', eventIds);
+
+      if (!rsvpErr && rsvpCounts) {
+        const attendingMap = new Map<string, number>();
+        const interestedMap = new Map<string, number>();
+        for (const r of rsvpCounts) {
+          if (r.status === 'attending') {
+            attendingMap.set(r.event_id, (attendingMap.get(r.event_id) ?? 0) + 1);
+          } else if (r.status === 'interested') {
+            interestedMap.set(r.event_id, (interestedMap.get(r.event_id) ?? 0) + 1);
+          }
+        }
+        for (const ev of events) {
+          (ev as Record<string, unknown>)['attendees_count'] = attendingMap.get(ev.id) ?? 0;
+          (ev as Record<string, unknown>)['interested_count'] = interestedMap.get(ev.id) ?? 0;
+        }
+      }
+    }
+
+    return events;
   }
 
   async getUserEvents(

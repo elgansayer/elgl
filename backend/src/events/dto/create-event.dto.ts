@@ -42,4 +42,9 @@ export class CreateEventDto {
   @Min(1)
   @Max(100)
   max_participants?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['Beginner', 'Intermediate', 'Advanced'])
+  proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
 }

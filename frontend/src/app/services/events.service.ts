@@ -19,11 +19,15 @@ export interface Event {
   host_name?: string;
   host_avatar_url?: string;
   participants_count?: number;
+  attendees_count?: number;
+  interested_count?: number;
+  proficiency?: string;
+  my_rsvp?: 'attending' | 'interested' | null;
 }
 
 export interface EventsQuery {
   language_pair?: string;
-  category?: 'Audio Rooms' | 'Learning Seminars' | 'In-person Meetups' | 'Cultural Exchanges';
+  category?: 'audio_room' | 'learning_seminar' | 'in_person_meetup' | 'cultural_exchange';
   status?: 'upcoming' | 'past';
   from_date?: string;
   to_date?: string;
@@ -49,32 +53,6 @@ export class EventsService {
     return this.http.get<Event[]>(`${environment.apiUrl}/events`, { params });
   }
 
-  createGroupChat(dto: { name: string; description?: string; members: string[] }) {
-    return this.http.post<{ id: string }>(`${environment.apiUrl}/group-chats`, dto);
-  }
-
-  getGroupChat(chatId: string) {
-    return this.http.get<{ id: string; name: string; description?: string; members: string[] }>(
-      `${environment.apiUrl}/group-chats/${chatId}`
-    );
-  }
-
-  updateGroupChat(chatId: string, dto: { name?: string; description?: string; members?: string[] }) {
-    return this.http.patch<void>(`${environment.apiUrl}/group-chats/${chatId}`, dto);
-  }
-
-  deleteGroupChat(chatId: string) {
-    return this.http.delete<void>(`${environment.apiUrl}/group-chats/${chatId}`);
-  }
-
-  addLabelToChat(chatId: string, label: string): Observable<void> {
-    return this.http.post<void>(`${environment.apiUrl}/chats/${chatId}/labels`, { label });
-  }
-
-  removeLabelFromChat(chatId: string, label: string): Observable<void> {
-    return this.http.delete<void>(`${environment.apiUrl}/chats/${chatId}/labels/${label}`);
-  }
-
   getEvent(eventId: string) {
     return this.http.get<Event>(`${environment.apiUrl}/events/${eventId}`);
   }
@@ -87,31 +65,35 @@ export class EventsService {
     location?: string;
     language_pair?: string;
     max_participants?: number;
+    proficiency?: 'Beginner' | 'Intermediate' | 'Advanced';
     mentions?: string[];
   }) {
     return this.http.post<Event>(`${environment.apiUrl}/events`, dto);
   }
 
-  shareContact(
-    targetUserId: string,
-  ): Observable<{ phone_number?: string; email?: string }> {
-    return this.http.post<{ phone_number?: string; email?: string }>(
-      `${environment.apiUrl}/users/me/contact-sharing`,
-      { target_user_id: targetUserId },
-    );
+  rsvpToEvent(eventId: string, status: 'attending' | 'interested') {
+    return this.http.post(`${environment.apiUrl}/events/${eventId}/rsvp`, { status });
   }
 
-  getCategories(): Observable<string[]> {
-    const categories = ['Audio Rooms', 'Learning Seminars', 'In-person Meetups', 'Cultural Exchanges'];
-    return new Observable((observer) => {
-      observer.next(categories);
-      observer.complete();
-    });
+  removeRsvp(eventId: string) {
+    return this.http.delete(`${environment.apiUrl}/events/${eventId}/rsvp`);
+  }
+
+  getUserRsvp(eventId: string) {
+    return this.http.get(`${environment.apiUrl}/events/${eventId}/rsvp`);
   }
 
   getMyEvents(status?: string) {
     const params: Record<string, string> = {};
     if (status) params['status'] = status;
     return this.http.get<Event[]>(`${environment.apiUrl}/events/my`, { params });
+  }
+
+  getCategories(): Observable<string[]> {
+    const categories = ['audio_room', 'learning_seminar', 'in_person_meetup', 'cultural_exchange'];
+    return new Observable((observer) => {
+      observer.next(categories);
+      observer.complete();
+    });
   }
 }
