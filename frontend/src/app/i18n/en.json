@@ -11,6 +11,8 @@
     "loading": "Loading...",
     "back": "Back",
     "save": "Save",
+    "clear": "Clear",
+    "delete": "Delete",
     "error_generic": "Something went wrong. Please try again.",
     "reset": "Reset"
   },
@@ -99,5 +101,20 @@
     "typing": "Writing...",
     "backToScenarios": "Back to scenarios"
   },
-  "moderation": {}
+  "moderation": {},
+  "dataStorage": {
+    "pageTitle": "Data & Storage",
+    "cacheSize": "Cache Size",
+    "calculating": "Calculating...",
+    "clearCache": "Clear Local Cache",
+    "clearCacheDesc": "Remove cached images, audio, and temporary files",
+    "deleteOldMedia": "Delete Old Media",
+    "deleteOldMediaDesc": "Remove media files older than 30 days",
+    "cellularAutoDownload": "Cellular Data Auto-Download",
+    "cellularDesc": "Automatically download media on mobile data",
+    "cacheCleared": "Local cache cleared successfully",
+    "oldMediaDeleted": "Old media deleted successfully",
+    "clearFailed": "Failed to clear cache",
+    "deleteFailed": "Failed to delete old media"
+  }
 }

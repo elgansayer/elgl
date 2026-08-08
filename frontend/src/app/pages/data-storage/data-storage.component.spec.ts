@@ -106,7 +106,7 @@ describe('DataStorageComponent', () => {
   it('should handle clear cache error', async () => {
     (cacheServiceMock.clearCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
     await component.clearCache();
-    expect(component.errorMessage()).toBe('Failed to clear cache');
+    expect(component.errorMessage()).toBe('dataStorage.clearFailed');
     expect(component.isClearingCache()).toBe(false);
   });
 
@@ -120,7 +120,7 @@ describe('DataStorageComponent', () => {
   it('should handle delete old media error', async () => {
     (cacheServiceMock.deleteOldMedia as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
     await component.deleteOldMedia();
-    expect(component.errorMessage()).toBe('Failed to delete old media');
+    expect(component.errorMessage()).toBe('dataStorage.deleteFailed');
     expect(component.isDeletingOldMedia()).toBe(false);
   });
 });

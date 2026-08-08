@@ -10,7 +10,7 @@
   <main class="ps-4 pe-4 pt-4 pb-4 space-y-6 max-w-lg mx-auto">
     @if (errorMessage()) {
       <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-        {{ errorMessage() }}
+        {{ errorMessage() | t }}
       </div>
     }
     @if (successMessage()) {

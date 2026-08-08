@@ -61,7 +61,7 @@ export class DataStorageComponent {
       this.successMessage.set('dataStorage.cacheCleared');
       await this.computeCacheSize();
     } catch {
-      this.errorMessage.set('Failed to clear cache');
+      this.errorMessage.set('dataStorage.clearFailed');
     } finally {
       this.isClearingCache.set(false);
     }
@@ -76,7 +76,7 @@ export class DataStorageComponent {
       this.successMessage.set('dataStorage.oldMediaDeleted');
       await this.computeCacheSize();
     } catch {
-      this.errorMessage.set('Failed to delete old media');
+      this.errorMessage.set('dataStorage.deleteFailed');
     } finally {
       this.isDeletingOldMedia.set(false);
     }
