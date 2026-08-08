@@ -425,7 +425,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     });
   }
 
-
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
   async ngOnInit(): Promise<void> {
     this.connectionState.set('connecting');
