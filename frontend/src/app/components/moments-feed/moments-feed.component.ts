@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, DestroyRef, inject, signal, computed, resource, effect, afterNextRender } from '@angular/core';
+import { Component, DestroyRef, inject, signal, computed, resource, effect, afterNextRender, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -16,6 +16,7 @@ import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.compone
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { CorrectionModalComponent } from '../correction-modal/correction-modal.component';
 import { TextToSpeechComponent } from '../text-to-speech/text-to-speech.component';
+import { GrammarCheckBannerComponent } from '../grammar-check-banner/grammar-check-banner.component';
 import {
   LanguagePickerComponent,
   getLanguageFlag,
@@ -41,6 +42,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     TextToSpeechComponent,
     LikedByModalComponent,
     AppEmptyStateComponent,
+    GrammarCheckBannerComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -55,6 +57,8 @@ export class MomentsFeedComponent {
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly draftService = inject(DraftService);
+
+  readonly grammarBanner = viewChild(GrammarCheckBannerComponent);
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
@@ -213,10 +217,27 @@ export class MomentsFeedComponent {
       );
       return;
     }
+
+    // Trigger grammar check pre-send for text moments
+    const banner = this.grammarBanner();
+    if (banner && !banner.showBanner()) {
+      await banner.check();
+      if (banner.showBanner()) {
+        return; // Banner shown, user must decide
+      }
+    }
+
+    await this.publishMoment();
+  }
+
+  async publishMoment(textOverride?: string): Promise<void> {
+    const textContent = textOverride ?? this.newText().trim();
+    if (!textContent && this.newMediaUrls().length === 0) return;
+
     this.isCreating.set(true);
     try {
       await this.momentsStore.createMoment({
-        text_content: this.newText().trim() || undefined,
+        text_content: textContent || undefined,
         media_urls: this.newMediaUrls(),
         media_type: this.newMediaType(),
         target_language: this.newTargetLanguage(),
@@ -232,6 +253,16 @@ export class MomentsFeedComponent {
     } finally {
       this.isCreating.set(false);
     }
+  }
+
+  onGrammarCorrectionApplied(corrected: string): void {
+    this.newText.set(corrected);
+    this.saveMomentDraft();
+    this.publishMoment(corrected);
+  }
+
+  onGrammarCheckIgnored(original: string): void {
+    this.publishMoment(original);
   }
 
   onWordClicked(event: { token: string; context: string }): void {

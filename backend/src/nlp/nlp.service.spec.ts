@@ -196,7 +196,7 @@ describe('NlpService', () => {
   });
 
   describe('grammarCheck', () => {
-    it('should correct known phrase go to store yesterday', async () => {
+    it('should correct known phrase via Azure back-translation flow', async () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
@@ -206,24 +206,17 @@ describe('NlpService', () => {
           ok: true,
           json: () =>
             Promise.resolve([
-              { displayTarget: 'I went to the store yesterday.' },
-            ]),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve([
-              { translations: [{ text: 'Grammar correction' }] },
+              { translations: [{ text: 'I went to the store yesterday.' }] }
             ]),
         });
-      const dto = { text: 'I go to store yesterday.' };
+      const dto = { text: 'i go to store yesterday' };
       const result = await service.grammarCheck('user-1', true, dto);
 
       expect(result.corrected).toContain('went to the store yesterday');
       expect(result.errors_found).toBe(1);
     });
 
-    it('should report 0 errors for properly terminated sentence', async () => {
+    it('should report 0 errors when Azure returns same text', async () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
@@ -232,13 +225,8 @@ describe('NlpService', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
-            Promise.resolve([{ displayTarget: 'Everything is fine.' }]),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
             Promise.resolve([
-              { translations: [{ text: 'Grammar correction' }] },
+              { translations: [{ text: 'Everything is fine.' }] }
             ]),
         });
       const dto = { text: 'Everything is fine.' };
@@ -248,28 +236,31 @@ describe('NlpService', () => {
       expect(result.errors_found).toBe(0);
     });
 
-    it('should append period and report 1 error if sentence lacks ending punctuation', async () => {
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([{ language: 'en' }]),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([{ displayTarget: 'Needs a period.' }]),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve([
-              { translations: [{ text: 'Grammar correction' }] },
-            ]),
-        });
-      const dto = { text: 'Needs a period' };
+    it('should use local fallback when fetch fails', async () => {
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+      const dto = { text: 'i dont need it', language: 'en' };
       const result = await service.grammarCheck('user-1', true, dto);
 
-      expect(result.corrected).toBe('Needs a period.');
-      expect(result.errors_found).toBe(1);
+      expect(result.corrected).toContain("don't");
+      expect(result.corrected).toMatch(/^I/);
+      expect(result.errors_found).toBeGreaterThan(0);
+    });
+
+    it('should apply local rules: capitalise first letter', async () => {
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('offline'));
+      const dto = { text: 'hello world.', language: 'en' };
+      const result = await service.grammarCheck('user-1', true, dto);
+
+      expect(result.corrected).toBe('Hello world.');
+    });
+
+    it('should fix missing ending punctuation locally', async () => {
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('offline'));
+      const dto = { text: 'Hello world', language: 'en' };
+      const result = await service.grammarCheck('user-1', true, dto);
+
+      expect(result.corrected).toBe('Hello world.');
+      expect(result.errors_found).toBeGreaterThan(0);
     });
   });
 

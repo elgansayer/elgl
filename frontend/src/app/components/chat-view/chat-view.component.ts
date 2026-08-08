@@ -1,4 +1,4 @@
-import { Component, input, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, input, OnInit, inject, signal, computed, viewChild } from '@angular/core';
 
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
 import { ChatService, ChatMessage } from '../../services/chat.service';
@@ -6,10 +6,11 @@ import { AuthService } from '../../services/auth.service';
 import { SafetyService } from '../../services/safety.service';
 import { DraftService } from '../../services/draft.service';
 import { FormsModule } from '@angular/forms';
+import { GrammarCheckBannerComponent } from '../grammar-check-banner/grammar-check-banner.component';
 
 @Component({
   selector: 'app-chat-view',
-  imports: [FormsModule, ChatMessageComponent],
+  imports: [FormsModule, ChatMessageComponent, GrammarCheckBannerComponent],
   template: `
     <div class="flex flex-col h-full">
       <div class="flex-1 overflow-y-auto p-4 space-y-2">
@@ -21,7 +22,12 @@ import { FormsModule } from '@angular/forms';
           ></app-chat-message>
         }
       </div>
-      <div class="border-t p-4">
+      <div class="border-t p-4 space-y-3">
+        <app-grammar-check-banner
+          [text]="newMessageText"
+          (corrected)="onGrammarCorrectionApplied($event)"
+          (ignored)="sendInContext($event)"
+        />
         <input
           type="text"
           [ngModel]="newMessageText"
@@ -50,6 +56,8 @@ export class ChatViewComponent implements OnInit {
   private authService = inject(AuthService);
   private safetyService = inject(SafetyService);
   private draftService = inject(DraftService);
+
+  readonly grammarBanner = viewChild(GrammarCheckBannerComponent);
 
   messages: ChatMessage[] = [];
   newMessageText = '';
@@ -117,11 +125,25 @@ export class ChatViewComponent implements OnInit {
     const text = this.newMessageText?.trim();
     if (!text) return;
 
+    // Trigger grammar check pre-send
+    const banner = this.grammarBanner();
+    if (banner && !banner.showBanner()) {
+      await banner.check();
+      if (banner.showBanner()) {
+        return; // Banner shown, user must decide
+      }
+    }
+
+    await this.sendInContext(text);
+  }
+
+  async sendInContext(text: string): Promise<void> {
+    if (!text.trim()) return;
     try {
       const sent = await this.chatService.sendMessage({
         room_id: this.roomId(),
         message_type: 'text',
-        text_content: text,
+        text_content: text.trim(),
       });
       this.messages.push(sent);
       this.newMessageText = '';
@@ -129,5 +151,11 @@ export class ChatViewComponent implements OnInit {
     } catch (err) {
       console.error('Failed to send message', err);
     }
+  }
+
+  onGrammarCorrectionApplied(corrected: string): void {
+    this.newMessageText = corrected;
+    this.draftService.saveChatDraft(this.roomId(), corrected);
+    this.sendInContext(corrected);
   }
 }

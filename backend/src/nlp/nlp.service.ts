@@ -206,12 +206,14 @@ export class NlpService {
     await this.checkRateLimit(userId, isVip);
     const orig = dto.text.trim();
 
+    const lang = dto.language || this.detectLanguage(orig).language;
     const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
 
     if (azureKey) {
       try {
-        // Use Azure AI Translator's grammar checking via the "breakSentence" and "translate" endpoints
-        // First, detect the language
+        // Use Azure Translator's translate endpoint with grammatical correction
+        // Translating from the detected lang to itself with textType=html
+        // often triggers grammatical normalisation by Azure's neural models
         const detectRes = await NlpService.fetchWithTimeout(
           'https://api.cognitive.microsofttranslator.com/detect?api-version=3.0',
           {
@@ -228,11 +230,12 @@ export class NlpService {
           const detectData = (await detectRes.json()) as unknown as Array<{
             language: string;
           }>;
-          const detectedLang = detectData?.[0]?.language || 'en';
+          const detectedLang = detectData?.[0]?.language || lang;
 
-          // Use Azure's dictionary lookup for grammar correction (works best for common languages)
-          const dictRes = await NlpService.fetchWithTimeout(
-            `https://api.cognitive.microsofttranslator.com/dictionary/lookup?api-version=3.0&from=${detectedLang}&to=en`,
+          // Use Azure's translate endpoint for grammar normalisation
+          // by translating to English and back to the source language
+          const translateRes = await NlpService.fetchWithTimeout(
+            'https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=en',
             {
               method: 'POST',
               headers: {
@@ -243,47 +246,49 @@ export class NlpService {
             },
           );
 
-          if (dictRes.ok) {
-            const dictData = (await dictRes.json()) as unknown as Array<{
-              displayTarget?: string;
+          if (translateRes.ok) {
+            const translateData = (await translateRes.json()) as unknown as Array<{
+              translations: Array<{ text: string }>;
             }>;
-            const correctedText = dictData?.[0]?.displayTarget || orig;
-            const errorsFound = orig === correctedText ? 0 : 1;
+            const englishText = translateData[0]?.translations[0]?.text || orig;
 
-            // Generate explanation using Azure's translation
-            let explanation = '';
-            try {
-              const explainRes = await NlpService.fetchWithTimeout(
-                `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${detectedLang}&to=en&textType=html`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Ocp-Apim-Subscription-Key': azureKey,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify([
-                    {
-                      Text: `Grammar correction: "${orig}" → "${correctedText}"`,
+            // Back-translate to the source language for grammar normalisation
+            let correctedText = orig;
+            if (detectedLang !== 'en') {
+              try {
+                const backRes = await NlpService.fetchWithTimeout(
+                  `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${detectedLang}`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Ocp-Apim-Subscription-Key': azureKey,
+                      'Content-Type': 'application/json',
                     },
-                  ]),
-                },
-              );
-              if (explainRes.ok) {
-                const explainData = (await explainRes.json()) as Array<{
-                  translations: Array<{ text: string }>;
-                }>;
-                explanation =
-                  explainData[0]?.translations[0]?.text ||
-                  'Corrected via Azure AI';
+                    body: JSON.stringify([{ Text: englishText }]),
+                  },
+                );
+                if (backRes.ok) {
+                  const backData = (await backRes.json()) as unknown as Array<{
+                    translations: Array<{ text: string }>;
+                  }>;
+                  correctedText = backData[0]?.translations[0]?.text || orig;
+                }
+              } catch {
+                correctedText = orig;
               }
-            } catch {
-              explanation = 'Corrected via Azure AI';
+            } else {
+              // For English, the translation to English normalises grammar naturally
+              correctedText = englishText;
             }
+
+            const errorsFound = orig === correctedText ? 0 : 1;
 
             return {
               original: orig,
               corrected: correctedText,
-              explanation,
+              explanation: errorsFound > 0
+                ? 'Grammar corrected via Azure AI Translator neural models.'
+                : 'No grammar issues detected.',
               errors_found: errorsFound,
             };
           }
@@ -294,13 +299,98 @@ export class NlpService {
       }
     }
 
-    // Graceful degradation: local NLP.js-based grammar check fallback
+    // Local fallback: basic grammar rule checks
+    const result = NlpService.localGrammarCheck(orig, lang);
+    return result;
+  }
+
+  /**
+   * Local grammar rule checker for offline/fallback mode.
+   * Detects common errors: missing sentence-ending punctuation,
+   * missing capitalisation at sentence start, double spaces,
+   * common subject-verb mismatches, and repeated words.
+   */
+  private static localGrammarCheck(
+    text: string,
+    language: string,
+  ): GrammarCheckResult {
+    const errors: string[] = [];
+    let corrected = text;
+
+    // 1. Check for sentence-ending punctuation for English-like languages
+    if (language === 'en' || language === 'es' || language === 'fr' ||
+        language === 'de' || language === 'it' || language === 'pt') {
+      if (!/[.!?]$/.test(corrected)) {
+        corrected = corrected.replace(/\s*$/, '') + '.';
+        errors.push('Sentence should end with punctuation (full stop, question mark, or exclamation mark).');
+      }
+    }
+
+    // 2. Check capitalisation of first letter
+    if (corrected.length > 0 && /^[a-z]/.test(corrected)) {
+      corrected = corrected.charAt(0).toUpperCase() + corrected.slice(1);
+      errors.push('Sentence should start with a capital letter.');
+    }
+
+    // 3. Detect double spaces
+    if (/\s{2,}/.test(corrected)) {
+      corrected = corrected.replace(/\s{2,}/g, ' ');
+      errors.push('Multiple consecutive spaces should be collapsed to one.');
+    }
+
+    // 4. Detect common English grammar errors
+    if (language === 'en') {
+      // "i" -> "I"
+      if (/\bi\b/.test(corrected)) {
+        corrected = corrected.replace(/\bi\b/g, 'I');
+        errors.push('The pronoun "I" should always be capitalised.');
+      }
+
+      // "dont" -> "don't", "cant" -> "can't", etc.
+      const contractionMap: Record<string, string> = {
+        'dont': "don't", 'cant': "can't", 'wont': "won't",
+        'isnt': "isn't", 'arent': "aren't", 'hasnt': "hasn't",
+        'havent': "haven't", 'shouldnt': "shouldn't", 'wouldnt': "wouldn't",
+        'couldnt': "couldn't", 'doesnt': "doesn't", 'didnt': "didn't",
+        'wasnt': "wasn't", 'werent': "weren't",
+      };
+      for (const [wrong, right] of Object.entries(contractionMap)) {
+        const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+        if (regex.test(corrected)) {
+          corrected = corrected.replace(regex, right);
+          errors.push(`"${wrong}" → "${right}" (missing apostrophe in contraction).`);
+        }
+      }
+
+      // "im" -> "I'm"
+      if (/\bim\b/i.test(corrected)) {
+        corrected = corrected.replace(/\bim\b/gi, "I'm");
+        errors.push('"im" → "I\'m" (missing apostrophe and capitalisation).');
+      }
+    }
+
+    // 5. Detect repeated consecutive duplicate words
+    const dupMatch = corrected.match(/\b(\w+)\s+\1\b/);
+    if (dupMatch) {
+      errors.push(`Duplicate word "${dupMatch[1]}" detected.`);
+    }
+
+    const errorsFound = errors.length;
+
+    if (errorsFound === 0) {
+      return {
+        original: text,
+        corrected: text,
+        explanation: 'No grammar issues detected by local rules.',
+        errors_found: 0,
+      };
+    }
+
     return {
-      original: orig,
-      corrected: orig,
-      explanation:
-        'Grammar checking service is temporarily unavailable. Your text appears correct.',
-      errors_found: 0,
+      original: text,
+      corrected,
+      explanation: errors.join(' '),
+      errors_found: errorsFound,
     };
   }
 

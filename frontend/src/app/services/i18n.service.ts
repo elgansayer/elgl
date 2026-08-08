@@ -870,6 +870,14 @@ export class I18nService {
     'vocabulary.defaultPracticeText': 'Today I practice expressing my thoughts clearly.',
     'vocabulary.grammarErrorAlert': 'Failed to check grammar. Please try again later.',
     'vocabulary.pronunciationErrorAlert': 'Failed to score pronunciation. Please try again later.',
+    // Grammar pre-send banner (Issue #979)
+    'grammar.bannerTitle': '✏️ {{count}} grammar issue(s) found',
+    'grammar.suggestedCorrection': 'Suggested correction',
+    'grammar.applyBtn': 'Apply correction',
+    'grammar.ignoreBtn': 'Ignore & send anyway',
+    'grammar.errorAlert': 'Failed to check grammar. Please try again later.',
+    'grammar.checkingText': 'Checking grammar...',
+    'common.dismiss': 'Dismiss',
     // Audio-sync reader (LingQ immersion audio reader)
     'audioSync.immersionLessonTitle': 'Immersion reading lesson',
     'audioSync.immersionDescription': 'Tap words to look up definitions and build your SRS vocabulary',
