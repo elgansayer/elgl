@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPOSITORY_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FACTORY_REPOSITORY_URL="${FACTORY_REPOSITORY_URL:-https://github.com/elgansayer/hellotalk.git}"
+FACTORY_REPOSITORY_URL="${FACTORY_REPOSITORY_URL:-https://github.com/elgansayer/elgl.git}"
 FACTORY_ROOT=/opt/hellotalk-factory
 FACTORY_STATE=/var/lib/hellotalk-factory
 FACTORY_LOG=/var/log/hellotalk-factory

@@ -40,7 +40,7 @@ class FactoryConfig(BaseModel):
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
     github_token: SecretStr
-    github_repository: str = "elgansayer/hellotalk"
+    github_repository: str = "elgansayer/elgl"
     telegram_bot_token: SecretStr | None = None
     telegram_chat_id: SecretStr | None = None
     podman_path: Path = Path("/usr/bin/podman")
@@ -138,7 +138,7 @@ class FactoryConfig(BaseModel):
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
-                github_repository=env.get("GITHUB_REPOSITORY", "elgansayer/hellotalk"),
+                github_repository=env.get("GITHUB_REPOSITORY", "elgansayer/elgl"),
                 telegram_bot_token=SecretStr(env["TELEGRAM_BOT_TOKEN"])
                 if env.get("TELEGRAM_BOT_TOKEN")
                 else None,
