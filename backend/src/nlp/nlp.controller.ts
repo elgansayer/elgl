@@ -20,6 +20,7 @@ import { GrammarCheckDto } from './dto/grammar-check.dto';
 import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
 import { TranslateUiDto } from './dto/translate-ui.dto';
+import { TransliterateDto } from './dto/transliterate.dto';
 import { ExplainGrammarDto } from './dto/explain-grammar.dto';
 import { SimplifyDto } from './dto/simplify.dto';
 import { TranslateBioDto } from './dto/translate-bio.dto';
@@ -29,6 +30,7 @@ import {
   PronunciationScoreResult,
   TranslationResult,
   TranslateUiResult,
+  TransliterationResult,
 } from './interfaces/nlp-results.interface';
 import { NlpService } from './nlp.service';
 import { NlpRateLimit, NlpRateLimiterGuard } from './nlp-rate-limiter.guard';
@@ -68,6 +70,27 @@ export class NlpController {
     if (!user) return null;
     const profile = await this.usersService.getProfile(user.id);
     return await this.nlpService.translate(
+      user.id,
+      profile?.is_vip ?? false,
+      dto,
+    );
+  }
+
+  /**
+   * Transliteration: script-to-script conversion (e.g. Japanese Kana -> Latin).
+   * Uses Azure AI Transliterate API with graceful degradation.
+   */
+  @Post('transliterate')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @NlpRateLimit({ maxRequests: 20, windowSeconds: 60 })
+  @UseInterceptors(new CacheControlInterceptor(CACHE_PRIVATE_NO_STORE))
+  async transliterate(
+    @CurrentUser() user: User | null,
+    @Body() dto: TransliterateDto,
+  ): Promise<TransliterationResult | null> {
+    if (!user) return null;
+    const profile = await this.usersService.getProfile(user.id);
+    return await this.nlpService.transliterate(
       user.id,
       profile?.is_vip ?? false,
       dto,

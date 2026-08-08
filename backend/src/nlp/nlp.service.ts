@@ -7,11 +7,13 @@ import { PronunciationScoreDto } from './dto/pronunciation-score.dto';
 import { TranslateDto } from './dto/translate.dto';
 import { TranslateUiDto } from './dto/translate-ui.dto';
 import { TranscribeVoiceDto } from './dto/transcribe-voice.dto';
+import { TransliterateDto } from './dto/transliterate.dto';
 import {
   GrammarCheckResult,
   PronunciationScoreResult,
   TranslationResult,
   TranslateUiResult,
+  TransliterationResult,
   TranscribeVoiceResult,
   WordBreakdownItem,
 } from './interfaces/nlp-results.interface';
@@ -109,8 +111,18 @@ export class NlpService {
       dto.source_language || this.detectLanguage(cleanWord).language;
 
     const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
+    const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+    const azureRegion =
+      this.configService.get<string>('AZURE_TRANSLATOR_REGION') || 'global';
 
-    // Try DeepL first, fall back to local NLP.js-based transliteration
+    const targetLang = dto.target_language.toUpperCase();
+    const sourceLang = detected.toUpperCase();
+
+    let translatedText: string | null = null;
+    let transliteration: string | null = null;
+
+    // Provider routing: DeepL for translation, Azure for transliteration
+    // Translation via DeepL (primary translation provider)
     if (deepLKey) {
       try {
         const res = await NlpService.fetchWithTimeout(
@@ -123,78 +135,235 @@ export class NlpService {
             },
             body: JSON.stringify({
               text: [cleanWord],
-              target_lang: dto.target_language.toUpperCase(),
-              source_lang: detected.toUpperCase(),
+              target_lang: targetLang,
+              source_lang: sourceLang,
               tag_handling: 'xml',
             }),
           },
         );
-
         if (res.ok) {
           const jsonResponse = (await res.json()) as unknown as {
             translations: Array<{ text: string }>;
           };
-          if (
-            jsonResponse?.translations &&
-            jsonResponse.translations.length > 0
-          ) {
-            const translatedText = jsonResponse.translations[0].text;
-
-            // Generate transliteration via reverse look-up from DeepL
-            let transliteration = translatedText;
-            try {
-              const translitRes = await NlpService.fetchWithTimeout(
-                'https://api-free.deepl.com/v2/translate',
-                {
-                  method: 'POST',
-                  headers: {
-                    Authorization: `DeepL-Auth-Key ${deepLKey}`,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    text: [translatedText],
-                    target_lang: 'EN',
-                    source_lang: dto.target_language.toUpperCase(),
-                  }),
-                },
-              );
-              if (translitRes.ok) {
-                const translitData = (await translitRes.json()) as {
-                  translations: Array<{ text: string }>;
-                };
-                transliteration = translitData.translations[0].text;
-              }
-            } catch {
-              // Keep the translated text as transliteration fallback
-            }
-
-            return {
-              original_text: cleanWord,
-              translated_text: translatedText,
-              detected_language: detected,
-              transliteration,
-              definition: `Translation of "${cleanWord}" in ${dto.target_language}`,
-              pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
-            };
+          if (jsonResponse?.translations?.length > 0) {
+            translatedText = jsonResponse.translations[0].text;
           }
         }
-        // If DeepL returned non-ok or empty translations, fall through to fallback
       } catch {
-        // DeepL fetch failed (network error, timeout) - fall through to fallback
+        // DeepL fetch failed - fall through to Azure
       }
     }
 
-    // Graceful degradation: local NLP.js-based fallback when DeepL is unavailable
-    const fallbackTranslated = cleanWord;
-    const fallbackPronunciation = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(cleanWord)}&tl=${dto.target_language}`;
+    // Fallback translation via Azure if DeepL unavailable or failed
+    if (!translatedText && azureKey) {
+      try {
+        const azureRes = await NlpService.fetchWithTimeout(
+          `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=${sourceLang}&to=${targetLang}`,
+          {
+            method: 'POST',
+            headers: {
+              'Ocp-Apim-Subscription-Key': azureKey,
+              'Ocp-Apim-Subscription-Region': azureRegion,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify([{ Text: cleanWord }]),
+          },
+        );
+        if (azureRes.ok) {
+          const azureData = (await azureRes.json()) as Array<{
+            translations?: Array<{ text: string }>;
+          }>;
+          if (azureData?.[0]?.translations?.[0]?.text) {
+            translatedText = azureData[0].translations[0].text;
+          }
+        }
+      } catch {
+        // Azure translation also failed
+      }
+    }
+
+    // If no provider returned a translation, use graceful degradation
+    if (!translatedText) {
+      translatedText = cleanWord;
+      transliteration = cleanWord;
+      return {
+        original_text: cleanWord,
+        translated_text: translatedText,
+        detected_language: detected,
+        transliteration,
+        definition: `Word: "${cleanWord}" (translation service temporarily unavailable)`,
+        pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(cleanWord)}&tl=${dto.target_language}`,
+      };
+    }
+
+    // Transliteration via Azure AI Transliterate API (proper script conversion)
+    if (azureKey) {
+      try {
+        const scriptPairs = this.getTransliterationScriptPairs(
+          detected,
+          dto.target_language,
+        );
+        if (scriptPairs.fromScript && scriptPairs.toScript) {
+          const translitRes = await NlpService.fetchWithTimeout(
+            `https://api.cognitive.microsofttranslator.com/transliterate?api-version=3.0&language=${scriptPairs.language}&fromScript=${scriptPairs.fromScript}&toScript=${scriptPairs.toScript}`,
+            {
+              method: 'POST',
+              headers: {
+                'Ocp-Apim-Subscription-Key': azureKey,
+                'Ocp-Apim-Subscription-Region': azureRegion,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify([{ Text: translatedText }]),
+            },
+          );
+          if (translitRes.ok) {
+            const translitData = (await translitRes.json()) as Array<{
+              text: string;
+            }>;
+            if (translitData?.[0]?.text) {
+              transliteration = translitData[0].text;
+            }
+          }
+        }
+      } catch {
+        // Azure transliteration failed - use translated text as fallback
+      }
+    }
+
+    // Fallback: use the translated text itself as transliteration
+    if (!transliteration) {
+      transliteration = translatedText;
+    }
 
     return {
       original_text: cleanWord,
-      translated_text: fallbackTranslated,
+      translated_text: translatedText,
       detected_language: detected,
-      transliteration: cleanWord,
-      definition: `Word: "${cleanWord}" (translation service temporarily unavailable)`,
-      pronunciation_url: fallbackPronunciation,
+      transliteration,
+      definition: `Translation of "${cleanWord}" in ${dto.target_language}`,
+      pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
+    };
+  }
+
+  /**
+   * Map source+target language pair to Azure Transliterate script pair.
+   * Azure requires specific fromScript/toScript values per language.
+   */
+  private getTransliterationScriptPairs(
+    sourceLang: string,
+    targetLang: string,
+  ): { language: string; fromScript: string; toScript: string } | Record<string, never> {
+    // Common script-mismatched language pairs that benefit from transliteration
+    const pairs: Record<string, Record<string, { fromScript: string; toScript: string }>> = {
+      ja: {
+        Latn: { fromScript: 'Jpan', toScript: 'Latn' },
+        en: { fromScript: 'Jpan', toScript: 'Latn' },
+      },
+      zh: {
+        Latn: { fromScript: 'Hans', toScript: 'Latn' },
+        en: { fromScript: 'Hans', toScript: 'Latn' },
+      },
+      ko: {
+        Latn: { fromScript: 'Kore', toScript: 'Latn' },
+        en: { fromScript: 'Kore', toScript: 'Latn' },
+      },
+      ar: {
+        Latn: { fromScript: 'Arab', toScript: 'Latn' },
+        en: { fromScript: 'Arab', toScript: 'Latn' },
+      },
+      hi: {
+        Latn: { fromScript: 'Deva', toScript: 'Latn' },
+        en: { fromScript: 'Deva', toScript: 'Latn' },
+      },
+      ru: {
+        Latn: { fromScript: 'Cyrl', toScript: 'Latn' },
+        en: { fromScript: 'Cyrl', toScript: 'Latn' },
+      },
+      th: {
+        Latn: { fromScript: 'Thai', toScript: 'Latn' },
+        en: { fromScript: 'Thai', toScript: 'Latn' },
+      },
+      el: {
+        Latn: { fromScript: 'Grek', toScript: 'Latn' },
+        en: { fromScript: 'Grek', toScript: 'Latn' },
+      },
+    };
+
+    const targetMap = pairs[sourceLang.toLowerCase()];
+    const scripts = targetMap?.[targetLang.toLowerCase()];
+    if (scripts) {
+      return { language: sourceLang.toLowerCase(), ...scripts };
+    }
+    return {};
+  }
+
+  /**
+   * Dedicated transliteration endpoint using Azure AI Transliterate API.
+   * Converts text between scripts (e.g. Japanese Kana -> Latin, Arabic -> Latin).
+   */
+  async transliterate(
+    userId: string,
+    isVip: boolean,
+    dto: TransliterateDto,
+  ): Promise<TransliterationResult> {
+    await this.checkRateLimit(userId, isVip);
+
+    const cleanText = dto.text.trim();
+    const sourceLang = dto.source_language.toLowerCase();
+    const targetScript = dto.target_script;
+    const fromScript = dto.from_script;
+
+    const azureKey = this.configService.get<string>('AZURE_TRANSLATOR_KEY');
+    const azureRegion =
+      this.configService.get<string>('AZURE_TRANSLATOR_REGION') || 'global';
+
+    if (azureKey) {
+      try {
+        // Determine fromScript if not provided
+        let resolvedFromScript = fromScript;
+        if (!resolvedFromScript) {
+          const scriptPairs = this.getTransliterationScriptPairs(
+            sourceLang,
+            targetScript,
+          );
+          resolvedFromScript = (scriptPairs as { fromScript?: string }).fromScript || sourceLang;
+        }
+
+        const res = await NlpService.fetchWithTimeout(
+          `https://api.cognitive.microsofttranslator.com/transliterate?api-version=3.0&language=${sourceLang}&fromScript=${resolvedFromScript}&toScript=${targetScript}`,
+          {
+            method: 'POST',
+            headers: {
+              'Ocp-Apim-Subscription-Key': azureKey,
+              'Ocp-Apim-Subscription-Region': azureRegion,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify([{ Text: cleanText }]),
+          },
+        );
+
+        if (res.ok) {
+          const data = (await res.json()) as Array<{ text: string }>;
+          if (data?.[0]?.text) {
+            return {
+              original_text: cleanText,
+              transliterated_text: data[0].text,
+              source_language: sourceLang,
+              target_script: targetScript,
+            };
+          }
+        }
+      } catch {
+        // Azure call failed - fall through to fallback
+      }
+    }
+
+    // Graceful degradation: return original text when service unavailable
+    return {
+      original_text: cleanText,
+      transliterated_text: cleanText,
+      source_language: sourceLang,
+      target_script: targetScript,
     };
   }
 
@@ -848,11 +1017,51 @@ export class NlpService {
           : currentPos + origWord.length;
     }
 
+    // Transliteration via Azure AI Transliterate API
+    let transliteration = '';
+    if (azureKey) {
+      try {
+        const scriptPairs = this.getTransliterationScriptPairs(
+          detected,
+          dto.target_language,
+        );
+        if (scriptPairs.fromScript && scriptPairs.toScript) {
+          const azureRegion =
+            this.configService.get<string>('AZURE_TRANSLATOR_REGION') || 'global';
+          const translitRes = await NlpService.fetchWithTimeout(
+            `https://api.cognitive.microsofttranslator.com/transliterate?api-version=3.0&language=${scriptPairs.language}&fromScript=${scriptPairs.fromScript}&toScript=${scriptPairs.toScript}`,
+            {
+              method: 'POST',
+              headers: {
+                'Ocp-Apim-Subscription-Key': azureKey,
+                'Ocp-Apim-Subscription-Region': azureRegion,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify([{ Text: translatedText }]),
+            },
+          );
+          if (translitRes.ok) {
+            const translitData = (await translitRes.json()) as Array<{
+              text: string;
+            }>;
+            if (translitData?.[0]?.text) {
+              transliteration = translitData[0].text;
+            }
+          }
+        }
+      } catch {
+        // Use translated text as fallback
+      }
+    }
+    if (!transliteration) {
+      transliteration = translatedText;
+    }
+
     return {
       original_text: cleanWord,
       translated_text: translatedText,
       detected_language: detected,
-      transliteration: '',
+      transliteration,
       definition: `Translation of "${cleanWord}" in ${dto.target_language}`,
       pronunciation_url: `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(translatedText)}&tl=${dto.target_language}`,
       wordCorrections,

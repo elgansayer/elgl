@@ -132,17 +132,16 @@ describe('NlpService', () => {
   });
 
   describe('translate', () => {
-    it('should use custom dictionary translation when exact match exists (es -> en)', async () => {
+    it('should translate via DeepL and transliterate via Azure when both keys are available', async () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
-            Promise.resolve({ translations: [{ text: 'Hello / Welcome' }] }), // translation
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ translations: [{ text: 'Hello' }] }), // transliteration
+            Promise.resolve({ translations: [{ text: 'Hello / Welcome' }] }), // DeepL translation
         });
+      // No Azure transliteration is attempted for es->en because getTransliterationScriptPairs
+      // returns no match for Spanish (Latin script -> no transliteration needed).
+      // Fallback should use translated text as transliteration.
       mockGuess.mockReturnValue([{ alpha2: 'es', score: 0.9 }]);
 
       const dto = {
@@ -157,41 +156,76 @@ describe('NlpService', () => {
         original_text: 'Hola',
         translated_text: 'Hello / Welcome',
         detected_language: 'es',
-        transliteration: 'Hello',
+        transliteration: 'Hello / Welcome',
         definition: 'Translation of "Hola" in en',
         pronunciation_url: expect.stringContaining('google.com/translate_tts'),
       });
     });
 
-    it('should use simulated format when dictionary match is not found', async () => {
+    it('should fallback to Azure translation when DeepL fails', async () => {
+      (global.fetch as jest.Mock)
+        .mockRejectedValueOnce(new Error('DeepL unavailable')) // DeepL fails
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve([{ translations: [{ text: 'Hello' }] }]), // Azure translation
+        });
+      mockGuess.mockReturnValue([{ alpha2: 'es', score: 0.9 }]);
+
+      const dto = {
+        text: 'Hola',
+        source_language: 'es',
+        target_language: 'en',
+      };
+
+      const result = await service.translate('user-1', false, dto);
+
+      expect(result.translated_text).toBe('Hello');
+      expect(result.detected_language).toBe('es');
+    });
+
+    it('should return graceful degradation when all providers fail', async () => {
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('All providers down'));
+      mockGuess.mockReturnValue([{ alpha2: 'fr', score: 0.99 }]);
+
+      const dto = {
+        text: 'Bonjour',
+        target_language: 'en',
+      };
+
+      const result = await service.translate('user-1', false, dto);
+      expect(result.translated_text).toBe('Bonjour');
+      expect(result.transliteration).toBe('Bonjour');
+      expect(result.definition).toContain('temporarily unavailable');
+    });
+
+    it('should translate ja->en via DeepL with Azure transliteration', async () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
             Promise.resolve({
-              translations: [{ text: 'Translated [ja → en]: Konnichiwa' }],
+              translations: [{ text: 'Hello' }],
             }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-        })
+        }) // DeepL translation
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
-            Promise.resolve({ translations: [{ text: 'Konnichiwa' }] }),
-        });
+            Promise.resolve([{ text: 'Konnichiwa' }]),
+        }); // Azure transliteration
       mockGuess.mockReturnValue([{ alpha2: 'ja', score: 0.99 }]);
 
       const dto = {
-        text: 'Konnichiwa',
+        text: 'こんにちは',
         target_language: 'en',
       };
 
       const result = await service.translate('user-1', true, dto);
 
       expect(result.detected_language).toBe('ja');
-      expect(result.translated_text).toBe('Translated [ja → en]: Konnichiwa');
-      expect(result.definition).toBe('Translation of "Konnichiwa" in en');
+      expect(result.translated_text).toBe('Hello');
+      expect(result.transliteration).toBe('Konnichiwa');
+      expect(result.definition).toBe('Translation of "こんにちは" in en');
     });
   });
 

@@ -32,6 +32,13 @@ export interface TranslateUiResult {
   cached: boolean;
 }
 
+export interface TransliterationResult {
+  original_text: string;
+  transliterated_text: string;
+  source_language: string;
+  target_script: string;
+}
+
 export interface TranscribeVoiceResult {
   original_text: string;
   detected_language: string;
