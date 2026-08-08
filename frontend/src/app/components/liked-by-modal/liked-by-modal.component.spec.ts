@@ -59,6 +59,7 @@ describe('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
+        avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es', 'fr'],
       },
@@ -66,6 +67,7 @@ describe('LikedByModalComponent', () => {
         id: 'user-2',
         avatar_url: 'https://example.com/avatar.jpg',
         display_name: 'Bob',
+        avatar_url: null,
         native_languages: ['fr'],
         target_languages: ['en'],
       },
@@ -173,6 +175,7 @@ describe('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
+        avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es'],
       },
@@ -195,9 +198,10 @@ describe('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
+        avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es'],
-      },
+      } as any,
     ]);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -219,9 +223,10 @@ describe('LikedByModalComponent', () => {
       {
         id: 'user-2',
         display_name: 'Bob',
+        avatar_url: null,
         native_languages: ['fr'],
         target_languages: ['en'],
-      },
+      } as any,
     ]);
     await fixture.whenStable();
     fixture.detectChanges();

@@ -24,7 +24,7 @@ describe('httpRetryInterceptor', () => {
     httpRetryInterceptor(req, mockNext).subscribe({
       next: (res) => {
         if (res instanceof HttpResponse) {
-          receivedBody = res.body ?? undefined;
+          receivedBody = (res.body as string) ?? undefined;
         }
       },
       error: () => done(),
