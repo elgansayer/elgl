@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  AccessToken,
   RoomServiceClient,
+  AccessToken,
   CreateOptions,
 } from 'livekit-server-sdk';
 import { randomUUID as uuidv4 } from 'crypto';
@@ -10,21 +10,23 @@ import {
   VideoCallsDegradationService,
   DegradationMarker,
 } from './video-calls-degradation.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class VideoCallsService {
-  private readonly logger = new Logger(VideoCallsService.name);
   private roomService: RoomServiceClient;
+  private readonly logger = new Logger(VideoCallsService.name);
   private readonly LIVEXIT_SERVICE_NAME = 'livekit';
 
   constructor(
     private configService: ConfigService,
     private degradationService: VideoCallsDegradationService,
+    private readonly metricsService: MetricsService,
   ) {
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
-      this.configService.get<string>('LIVEKIT_API_KEY'),
-      this.configService.get<string>('LIVEKIT_SECRET'),
+      this.configService.get<string>('LIVEKIT_API_KEY') as string,
+      this.configService.get<string>('LIVEKIT_API_SECRET') as string,
     );
   }
 
@@ -47,15 +49,32 @@ export class VideoCallsService {
           emptyTimeout: 30,
           maxParticipants: 2,
         };
-        await this.roomService.createRoom(createOptions);
-        const token = await this.generateToken(userId, roomName, true);
-        this.degradationService.cacheToken(roomName, userId, token);
-        return { token, roomName };
+        try {
+          await this.roomService.createRoom(createOptions);
+        } catch (error) {
+          const errorType = error instanceof Error ? error.constructor.name : 'unknown';
+          this.metricsService.recordVideoClassroomCreationFailed(errorType);
+          throw error;
+        }
+
+        const tokenStart = Date.now();
+        try {
+          const token = await this.generateToken(userId, roomName, true);
+          this.metricsService.recordVideoClassroomTokenGenerationDuration(
+            'create',
+            (Date.now() - tokenStart) / 1000,
+          );
+          this.degradationService.cacheToken(roomName, userId, token);
+          this.metricsService.recordVideoClassroomCreated();
+          return { token, roomName };
+        } catch (error) {
+          const errorType = error instanceof Error ? error.constructor.name : 'unknown';
+          this.metricsService.recordVideoClassroomCreationFailed(errorType);
+          throw error;
+        }
       },
       async () => {
         // Fallback: generate a standalone token without LiveKit room creation
-        // The room creation failed, so we generate a token for a
-        // best-effort peer-to-peer connection
         const token = await this.generateToken(userId, roomName, true);
         return { token, roomName };
       },
@@ -95,9 +114,21 @@ export class VideoCallsService {
     const result = await this.degradationService.executeWithBreaker(
       this.LIVEXIT_SERVICE_NAME,
       async () => {
-        const token = await this.generateToken(userId, roomName, true);
-        this.degradationService.cacheToken(roomName, userId, token);
-        return { token, roomName };
+        const tokenStart = Date.now();
+        try {
+          const token = await this.generateToken(userId, roomName, true);
+          this.metricsService.recordVideoClassroomTokenGenerationDuration(
+            'join',
+            (Date.now() - tokenStart) / 1000,
+          );
+          this.degradationService.cacheToken(roomName, userId, token);
+          this.metricsService.recordVideoClassroomJoined();
+          return { token, roomName };
+        } catch (error) {
+          const errorType = error instanceof Error ? error.constructor.name : 'unknown';
+          this.metricsService.recordVideoClassroomJoinFailed(errorType);
+          throw error;
+        }
       },
       async () => {
         // Fallback: try cached token first, then generate a new one
@@ -136,25 +167,16 @@ export class VideoCallsService {
   private async generateToken(
     userId: string,
     roomName: string,
-    canPublish: boolean,
+    isHost: boolean,
   ): Promise<string> {
     const at = new AccessToken(
       this.configService.get<string>('LIVEKIT_API_KEY'),
-      this.configService.get<string>('LIVEKIT_SECRET'),
+      this.configService.get<string>('LIVEKIT_API_SECRET'),
       {
         identity: userId,
-        ttl: '1h',
       },
     );
-
-    at.addGrant({
-      roomJoin: true,
-      room: roomName,
-      canPublish: canPublish,
-      canSubscribe: true,
-      canPublishData: true,
-    });
-
+    at.addGrant({ roomJoin: true, room: roomName, canPublish: isHost });
     return await at.toJwt();
   }
 }

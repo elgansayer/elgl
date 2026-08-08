@@ -4,9 +4,10 @@ import { VideoCallsService } from './video-calls.service';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { VideoCallsCacheInvalidationService } from './video-calls-cache-invalidation.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, MetricsModule],
   controllers: [VideoCallsController],
   providers: [
     VideoCallsService,
