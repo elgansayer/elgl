@@ -11,7 +11,7 @@ export class CacheService {
     sessionStorage.clear();
 
     // Clear IndexedDB databases used by the application
-    const dbNames = ['hellotalk_cache', 'mediaCache', 'offlineCache'];
+    const dbNames = ['hellotalk_cache', 'hellotalk_chat_cache', 'mediaCache', 'offlineCache'];
     for (const dbName of dbNames) {
       try {
         await indexedDB.deleteDatabase(dbName);

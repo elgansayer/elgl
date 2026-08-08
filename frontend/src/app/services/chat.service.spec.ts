@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
+import { ChatCacheService } from './chat-cache.service';
 import { environment } from '../../environments/environment';
 
 const baseUrl = `${environment.apiUrl}/chat`;
@@ -26,6 +27,10 @@ describe('ChatService', () => {
   let getQueuedMessagesMock: ReturnType<typeof vi.fn>;
   let removeMessageMock: ReturnType<typeof vi.fn>;
   let hapticTapMock: ReturnType<typeof vi.fn>;
+  let chatCacheGetMessagesMock: ReturnType<typeof vi.fn>;
+  let chatCacheCacheMessagesMock: ReturnType<typeof vi.fn>;
+  let chatCacheGetRoomsMock: ReturnType<typeof vi.fn>;
+  let chatCacheCacheRoomsMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     currentUser = signal<{ id: string } | null>(null);
@@ -37,6 +42,10 @@ describe('ChatService', () => {
     getQueuedMessagesMock = vi.fn().mockResolvedValue([]);
     removeMessageMock = vi.fn().mockResolvedValue(undefined);
     hapticTapMock = vi.fn();
+    chatCacheGetMessagesMock = vi.fn().mockResolvedValue(null);
+    chatCacheCacheMessagesMock = vi.fn().mockResolvedValue(undefined);
+    chatCacheGetRoomsMock = vi.fn().mockResolvedValue(null);
+    chatCacheCacheRoomsMock = vi.fn().mockResolvedValue(undefined);
 
     TestBed.configureTestingModule({
       providers: [
@@ -71,6 +80,15 @@ describe('ChatService', () => {
         {
           provide: HapticFeedbackService,
           useValue: { tap: hapticTapMock } as unknown as HapticFeedbackService,
+        },
+        {
+          provide: ChatCacheService,
+          useValue: {
+            getCachedMessages: chatCacheGetMessagesMock,
+            cacheMessages: chatCacheCacheMessagesMock,
+            getCachedRooms: chatCacheGetRoomsMock,
+            cacheRooms: chatCacheCacheRoomsMock,
+          } as unknown as ChatCacheService,
         },
       ],
     });
@@ -257,6 +275,8 @@ describe('ChatService', () => {
       getBlockedAndBlockerIdsMock.mockResolvedValue(['blocked-sender']);
 
       const promise = service.getMessages('room-1');
+      // Allow microtask for cache lookup to resolve before HTTP request is dispatched
+      await Promise.resolve();
 
       const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1`);
       expect(req.request.method).toBe('GET');
@@ -272,23 +292,59 @@ describe('ChatService', () => {
 
     it('should include a trimmed search param when provided', async () => {
       const promise = service.getMessages('room-1', '  hello  ');
+      await Promise.resolve();
 
       const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1` && r.params.get('search') === 'hello');
       req.flush([]);
 
       await expect(promise).resolves.toEqual([]);
     });
+
+    it('should return cached messages and trigger background refresh', async () => {
+      const cachedData = [
+        { id: 'c1', room_id: 'room-1', sender_id: 'user-2', message_type: 'text', is_read: false, created_at: 'now' },
+      ];
+      chatCacheGetMessagesMock.mockResolvedValue(cachedData);
+
+      const promise = service.getMessages('room-1');
+      // Allow microtask for cache lookup to resolve
+      await Promise.resolve();
+
+      // The cached result should be returned immediately (no HTTP request needed for the main call)
+      const messages = await promise;
+      expect(messages).toHaveLength(1);
+      expect(messages[0].id).toBe('c1');
+
+      // Handle the background refresh request that fires asynchronously
+      httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1`);
+    });
   });
 
   describe('rooms', () => {
     it('should fetch chat rooms', async () => {
       const promise = service.getRooms();
+      await Promise.resolve();
 
       const req = httpMock.expectOne(`${baseUrl}/rooms`);
       expect(req.request.method).toBe('GET');
       req.flush([{ id: 'room-1', title: 'Room', subtitle: '', avatar: '', is_online: true, is_pinned: false, created_at: 'now' }]);
 
       await expect(promise).resolves.toHaveLength(1);
+    });
+
+    it('should return cached rooms and trigger background refresh', async () => {
+      const cachedData = [{ id: 'room-1', title: 'Cached Room', subtitle: '', avatar: '', is_online: true, is_pinned: false, created_at: 'now' }];
+      chatCacheGetRoomsMock.mockResolvedValue(cachedData);
+
+      const promise = service.getRooms();
+      await Promise.resolve();
+
+      const rooms = await promise;
+      expect(rooms).toHaveLength(1);
+      expect(rooms[0].title).toBe('Cached Room');
+
+      // Handle the background refresh request
+      httpMock.expectOne(`${baseUrl}/rooms`);
     });
   });
 

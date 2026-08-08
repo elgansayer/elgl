@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
+import { ChatCacheService } from './chat-cache.service';
 import { Router } from '@angular/router';
 
 export interface CorrectionPayload {
@@ -119,6 +120,24 @@ export interface GroupMember {
   };
 }
 
+// Type guards for IndexedDB-deserialised cache entries
+
+function isObject(value: unknown): value is Record<PropertyKey, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isChatMessage(obj: unknown): obj is ChatMessage {
+  if (!isObject(obj)) return false;
+  return 'id' in obj && typeof obj['id'] === 'string'
+    && 'room_id' in obj && typeof obj['room_id'] === 'string';
+}
+
+function isChatRoom(obj: unknown): obj is ChatRoom {
+  if (!isObject(obj)) return false;
+  return 'id' in obj && typeof obj['id'] === 'string'
+    && 'title' in obj && typeof obj['title'] === 'string';
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -174,6 +193,7 @@ export class ChatService {
   private safetyService = inject(SafetyService);
   private offlineQueue = inject(OfflineQueueService);
   private hapticFeedback = inject(HapticFeedbackService);
+  private chatCache = inject(ChatCacheService);
   private router = inject(Router);
   private baseUrl = `${environment.apiUrl}/chat`;
 
@@ -335,8 +355,20 @@ export class ChatService {
       return [];
     }
     let params = new HttpParams();
-    if (search && search.trim().length > 0) {
+    const isSearch = search && search.trim().length > 0;
+    if (isSearch) {
       params = params.set('search', search.trim());
+    }
+
+    // Try cache first for fast first paint (only when not searching)
+    if (!isSearch) {
+      const cached = await this.chatCache.getCachedMessages(roomId);
+      if (cached !== null && cached.length > 0) {
+        // Trigger a background refresh, but return cached immediately
+        this.fetchAndCacheMessages(roomId).catch(() => undefined);
+        // Deserialised IndexedDB JSON is structurally compatible with ChatMessage
+        return cached.filter(isChatMessage);
+      }
     }
 
     const messages = await firstValueFrom(
@@ -351,17 +383,38 @@ export class ChatService {
     if (currentUser?.id) {
       const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
       if (blockedIds.length > 0) {
-        return messages.filter((msg) => !blockedIds.includes(msg.sender_id));
+        const filtered = messages.filter((msg) => !blockedIds.includes(msg.sender_id));
+        if (!isSearch) await this.chatCache.cacheMessages(roomId, filtered);
+        return filtered;
       }
     }
 
+    if (!isSearch) await this.chatCache.cacheMessages(roomId, messages);
     return messages;
+  }
+
+  private async fetchAndCacheMessages(roomId: string): Promise<void> {
+    const messages = await firstValueFrom(
+      this.http.get<ChatMessage[]>(`${this.baseUrl}/messages/${roomId}`, {
+        headers: this.getHeaders(),
+      }),
+    );
+    await this.chatCache.cacheMessages(roomId, messages);
   }
 
   async getRooms(): Promise<ChatRoom[]> {
     if (!this.authService.getAccessToken()) {
       return [];
     }
+
+    // Try cache first for fast first paint
+    const cached = await this.chatCache.getCachedRooms();
+    if (cached !== null && cached.length > 0) {
+      // Trigger background refresh
+      this.fetchAndCacheRooms().catch(() => undefined);
+      return cached.filter(isChatRoom);
+    }
+
     const rooms = await firstValueFrom(
       this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() }),
     );
@@ -375,7 +428,15 @@ export class ChatService {
       }
     }
 
+    await this.chatCache.cacheRooms(rooms);
     return rooms;
+  }
+
+  private async fetchAndCacheRooms(): Promise<void> {
+    const rooms = await firstValueFrom(
+      this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() }),
+    );
+    await this.chatCache.cacheRooms(rooms);
   }
 
   /**
