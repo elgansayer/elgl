@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { DataExportWorker } from './data-export.worker';
@@ -66,6 +67,10 @@ describe('UsersService', () => {
               exported_at: new Date().toISOString(),
             }),
           },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn() },
         },
       ],
     }).compile();

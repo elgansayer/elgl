@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
@@ -30,6 +31,7 @@ export class UsersService {
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     private readonly dataExportWorker: DataExportWorker,
+    private readonly eventEmitter: EventEmitter2,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
@@ -547,6 +549,10 @@ export class UsersService {
       );
     }
     const profile = await this.getProfile(userId);
+
+    // Fire-and-forget: emit profile.updated event for system bubble broadcasting
+    this.eventEmitter.emit('profile.updated', { userId });
+
     return { ...profile, ...updatePayload };
   }
 
