@@ -59,6 +59,7 @@ export default tseslint.config(
       'src/admin/**/*.ts',
       'src/moderation/**/*.ts',
       'src/video-calls/**/*.ts',
+      'src/audio-rooms/**/*.ts',
     ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
@@ -72,6 +73,7 @@ export default tseslint.config(
       'src/monetisation/**/*.e2e-spec.ts',
       'src/admin/**/*.spec.ts',
       'src/moderation/**/*.spec.ts',
+      'src/audio-rooms/**/*.spec.ts',
     ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',

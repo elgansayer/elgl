@@ -62,6 +62,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
               <button
                 (click)="selectCoHost(speakerId)"
                 role="option"
+                [attr.aria-selected]="false"
                 [attr.aria-label]="'videoRoom.speakerOptionAria' | t: { id: speakerId.slice(0, 6) }"
                 [attr.aria-setsize]="eligibleSpeakers().length"
                 class="bg-surface-100 hover:bg-surface-200 text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-white"

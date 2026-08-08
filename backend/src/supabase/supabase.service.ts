@@ -81,7 +81,7 @@ export type UsersRow = {
   is_deletion_pending?: boolean | null;
 };
 
-type AudioRoomsRow = {
+export type AudioRoomsRow = {
   id: string;
   room_name: string;
   title: string;

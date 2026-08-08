@@ -11,7 +11,7 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
-import { firstValueFrom, interval } from 'rxjs';
+import { interval } from 'rxjs';
 import {
   Room,
   RoomEvent,
@@ -487,7 +487,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
           `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`,
         );
       });
-    } catch (error: unknown) {
+} catch {
       this.connectionState.set('error');
     }
   }
