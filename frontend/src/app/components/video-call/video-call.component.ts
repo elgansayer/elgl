@@ -26,16 +26,48 @@ import { LivekitService } from '../../services/livekit.service';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { AppGradientButtonComponent } from '../primitives/gradient-button/gradient-button.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-video-call',
-  imports: [AppButtonSecondaryComponent, AppGradientButtonComponent, LiveChatOverlayComponent, TranslatePipe],
+  imports: [AppButtonSecondaryComponent, AppGradientButtonComponent, LiveChatOverlayComponent, AppSkeletonLoaderComponent, TranslatePipe],
   template: `
     <section class="fixed inset-0 z-50 bg-black flex flex-col" role="dialog" [attr.aria-label]="'video_call.end_call_aria' | t">
       <!-- Remote Video (full screen background) -->
       <div class="flex-1 relative bg-gray-900">
-        @if (mainVideoTrack()) {
+        @if (connectionState() === 'connecting') {
+          <div class="flex items-center justify-center h-full">
+            <div class="text-center text-white/60 space-y-4">
+              <app-skeleton-loader
+                [height]="'80px'"
+                [width]="'80px'"
+                [variant]="'circle'"
+              />
+              <app-skeleton-loader
+                [height]="'16px'"
+                [width]="'200px'"
+                [variant]="'text'"
+              />
+              <p class="text-sm text-slate-400" aria-live="polite">{{ 'video_call.connecting' | t }}</p>
+            </div>
+          </div>
+        } @else if (connectionState() === 'error') {
+          <div class="flex items-center justify-center h-full">
+            <div class="text-center text-white/60 space-y-4 px-6">
+              <span class="text-5xl" aria-hidden="true">&#9888;&#65039;</span>
+              <h3 class="text-lg font-bold text-rose-400">{{ 'videoClassroomErrorBoundary.title' | t }}</h3>
+              <p class="text-sm text-slate-400">{{ 'videoClassroomErrorBoundary.description' | t }}</p>
+              <button
+                type="button"
+                (click)="endCall()"
+                class="rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold px-6 py-2.5 text-sm transition-colors"
+              >
+                {{ 'video_call.end_call_aria' | t }}
+              </button>
+            </div>
+          </div>
+        } @else if (mainVideoTrack()) {
           <video #remoteVideo autoplay playsinline class="w-full h-full object-cover" [attr.aria-label]="'video_call.remote_video_aria' | t"></video>
         } @else {
           <div class="flex items-center justify-center h-full" role="img" [attr.aria-label]="'video_call.remote_avatar_aria' | t: { initials: otherUserInitials() }">
@@ -340,6 +372,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   readonly isInPip = signal(false);
   readonly pipAvailable = computed(() => typeof document !== 'undefined' && document.pictureInPictureEnabled);
   readonly isScreenSharing = signal(false);
+  readonly connectionState = signal<'connecting' | 'connected' | 'error'>('connecting');
   private callStartTime: number = 0;
   private durationSub: { unsubscribe(): void } | null = null;
 
@@ -395,6 +428,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
 
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
   async ngOnInit(): Promise<void> {
+    this.connectionState.set('connecting');
     try {
       const tokenResult = await this.livekitService.getToken(this.roomName(), this.currentUserId());
 
@@ -441,6 +475,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         }
       }
 
+      this.connectionState.set('connected');
+
       // Start call duration timer
       this.callStartTime = Date.now();
       this.durationSub = interval(1000).subscribe(() => {
@@ -452,7 +488,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
         );
       });
     } catch (error: unknown) {
-      this.callEnded.emit();
+      this.connectionState.set('error');
     }
   }
 
