@@ -77,7 +77,7 @@ describe.skip('FavouriteService', () => {
           id: 'fav-1',
           user_id: 'user-1',
           item_type: 'message',
-          item_payload: { text_content: 'hello' } as any,
+          item_payload: { id: 'msg-1', room_id: 'room-1', sender_id: 'user-1', message_type: 'text', text_content: 'hello', created_at: '2025-01-01T00:00:00Z' } as any,
           created_at: '2025-01-01T00:00:00Z',
         },
       ];
