@@ -12,7 +12,17 @@ import * as http from 'http';
 import * as https from 'https';
 import { LinkPreview } from './interfaces/link-preview.interface';
 import Redis from 'ioredis';
-import * as xss from 'xss';
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
+purify.setConfig({
+  ALLOWED_TAGS: [],
+  ALLOWED_ATTR: [],
+  ALLOW_DATA_ATTR: false,
+  ALLOWED_URI_REGEXP: /^(?!(?:javascript|data):)/i,
+});
 
 function isPrivateIp(ip: string): boolean {
   if (ip.startsWith('127.')) return true;
@@ -200,13 +210,11 @@ export class LinkPreviewService {
   }
 
   private sanitizeMetaContent(raw: string): string {
-    const filter = new xss.FilterXSS({
-      whiteList: {}, // Empty whitelist to strip all tags
-      stripIgnoreTagBody: ['script', 'style', 'noscript'],
-      stripIgnoreTag: true,
+    const sanitised = purify.sanitize(raw, {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: [],
     });
-    const sanitizedHtml = filter.process(raw);
-    const $inner = cheerio.load(`<div>${sanitizedHtml}</div>`);
+    const $inner = cheerio.load(`<div>${sanitised}</div>`);
     return $inner('div').text().trim();
   }
 }

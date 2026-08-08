@@ -1,3 +1,19 @@
+// Mock jsdom and dompurify to avoid ESM import failures in Jest (transitively imported through audio-rooms -> chat -> link-preview)
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: {
+      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
+    },
+  })),
+}));
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: jest.fn((d: string) => d.replace(/<[^>]*>/g, '')),
+    setConfig: jest.fn(),
+  })),
+}));
+
 jest.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
 }));
