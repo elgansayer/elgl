@@ -948,21 +948,13 @@ export class AudioRoomsService implements OnModuleInit {
       })
       .eq('id', room.id);
 
-    if (previousCoHostId) {
-      // Awaited so the outgoing co-host's removal is guaranteed to arrive before the
-      // incoming co-host's invite, preventing the invite from being clobbered by a
-      // late-arriving removal for a different user.
-      await this.centrifugoService.publish(`room_${room.id}`, {
-        type: 'co_host_removed',
-        target_user_id: previousCoHostId,
-        room_id: room.id,
-      });
-    }
-
-    // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
+    // Publish a single atomic co_host_changed event to prevent out-of-order delivery
+    // of separate co_host_removed / co_host_invited Centrifugo messages.
+    // The frontend resolves the full transition from a single payload.
     await this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'co_host_invited',
+      type: 'co_host_changed',
       target_user_id: dto.target_user_id,
+      previous_co_host_id: previousCoHostId,
       room_id: room.id,
     });
 
@@ -997,7 +989,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     if (removedUserId) {
       // Notify the removed co-host via Centrifugo to unpublish camera and leave the split-screen layout
-      void this.centrifugoService.publish(`room_${room.id}`, {
+      await this.centrifugoService.publish(`room_${room.id}`, {
         type: 'co_host_removed',
         target_user_id: removedUserId,
         room_id: room.id,

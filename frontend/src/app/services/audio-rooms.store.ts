@@ -183,6 +183,7 @@ export class AudioRoomsStore {
     animation_type?: string;
     tip?: unknown;
     gift_id?: string;
+    previous_co_host_id?: string | null;
   } {
     return typeof data === 'object' && data !== null;
   }
@@ -358,6 +359,44 @@ export class AudioRoomsStore {
             void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
           }
           showToast(this.i18n.translate('audioRoom.speakerDemotedToast'));
+        }
+      } else if (p.type === 'co_host_changed' && p.target_user_id) {
+        // Single atomic event: previous co-host (if any) is removed and new co-host is invited.
+        // Eliminates the race condition where separate co_host_removed / co_host_invited
+        // Centrifugo events could arrive out of order.
+        const currentUserId = this.authService.currentUser()?.id;
+        const previousCoHostId =
+          typeof p.previous_co_host_id === 'string' ? p.previous_co_host_id : null;
+
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          let speakers = r.speakers;
+          if (previousCoHostId) {
+            speakers = speakers.filter((id) => id !== previousCoHostId);
+          }
+          if (!speakers.includes(p.target_user_id!)) {
+            speakers = [...speakers, p.target_user_id!];
+          }
+          const updatedHands = r.raised_hands.filter((id) => id !== p.target_user_id);
+          return {
+            ...r,
+            co_host_id: p.target_user_id,
+            raised_hands: updatedHands,
+            speakers,
+          };
+        });
+
+        // If I was the previous co-host, unpublish camera
+        if (previousCoHostId && previousCoHostId === currentUserId) {
+          this.isSpeaker.set(false);
+          this.unpublishLocalCamera();
+          showToast(this.i18n.translate('audioRoom.coHostRemovedToast'));
+        }
+        // If I am the new co-host, publish camera
+        if (p.target_user_id === currentUserId) {
+          this.isSpeaker.set(true);
+          void this.publishLocalCamera();
+          showToast(this.i18n.translate('audioRoom.coHostPromotedToast'));
         }
       } else if (p.type === 'co_host_invited' && p.target_user_id) {
         this.currentRoom.update((r) => {
