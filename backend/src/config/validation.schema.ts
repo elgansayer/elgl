@@ -106,6 +106,10 @@ export const validationSchema = Joi.object({
   STRIPE_YEARLY_PRICE_ID: Joi.string().default(
     testDefaults.STRIPE_YEARLY_PRICE_ID,
   ),
+  STRIPE_PRO_MONTHLY_PRICE_ID: Joi.string().optional().allow(''),
+  STRIPE_PRO_YEARLY_PRICE_ID: Joi.string().optional().allow(''),
+  STRIPE_DEVELOPER_MONTHLY_PRICE_ID: Joi.string().optional().allow(''),
+  STRIPE_DEVELOPER_YEARLY_PRICE_ID: Joi.string().optional().allow(''),
   FRONTEND_URL: Joi.string().uri().default('http://localhost:4200'),
   APPLE_BUNDLE_ID: Joi.string().default('com.hellotalk.app'),
   APPLE_SHARED_SECRET: Joi.string().default(testDefaults.APPLE_SHARED_SECRET),

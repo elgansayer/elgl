@@ -413,14 +413,19 @@ export class UsersService {
   ): Promise<UserProfile> {
     if (dto.target_languages && dto.target_languages.length > 1 && !isVip) {
       throw new BadRequestException(
-        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages simultaneously.',
+        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages, or Pro (12 UKP / $15 USD per month) for up to 5 languages.',
       );
     }
 
     if (dto.target_languages && dto.target_languages.length > 3) {
-      throw new BadRequestException(
-        'A maximum of 3 target languages can be studied simultaneously.',
-      );
+      const currentProfile = await this.getProfile(userId);
+      const tier = currentProfile?.vip_tier ?? 'free';
+      const maxLanguages = tier === 'pro' || tier === 'developer' ? 5 : 3;
+      if (dto.target_languages.length > maxLanguages) {
+        throw new BadRequestException(
+          `A maximum of ${maxLanguages} target languages can be studied simultaneously on your current tier.`,
+        );
+      }
     }
 
     if (dto.mock_location && !isVip) {
