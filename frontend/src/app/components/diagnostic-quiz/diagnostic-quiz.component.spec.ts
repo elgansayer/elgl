@@ -220,15 +220,20 @@ describe('DiagnosticQuizComponent', () => {
     expect(progressBar.getAttribute('aria-valuemax')).toBe('100');
   });
 
-  it('should reload questions with a different language', async () => {
+  it('should reload questions and reset state', async () => {
     fixture.detectChanges();
     const req1 = httpTesting.expectOne('/api/quiz/questions?language=en');
     req1.flush(mockQuestions);
     await fixture.whenStable();
 
-    component.reloadQuestions('es');
+    component.selectOption('q1', 2);
+    component.next();
     fixture.detectChanges();
-    const req2 = httpTesting.expectOne('/api/quiz/questions?language=es');
+    expect(component.currentIndex()).toBe(1);
+
+    component.reloadQuestions();
+    fixture.detectChanges();
+    const req2 = httpTesting.expectOne('/api/quiz/questions?language=en');
     req2.flush(mockQuestions);
     await fixture.whenStable();
 
