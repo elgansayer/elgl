@@ -89,6 +89,42 @@ export class MediaService implements OnModuleInit {
     return this.generatePresignedUrl(userId, coverDto);
   }
 
+  async generateAvatarPresignedUrl(
+    userId: string,
+    dto: PresignedUrlDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(dto.contentType)) {
+      throw new BadRequestException(
+        'Only JPEG, PNG, and WebP images are allowed',
+      );
+    }
+
+    const avatarDto = { ...dto, folder: 'avatars' };
+    return this.generatePresignedUrl(userId, avatarDto);
+  }
+
+  async generateAudioIntroPresignedUrl(
+    userId: string,
+    dto: PresignedUrlDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    const allowedTypes = [
+      'audio/ogg',
+      'audio/mpeg',
+      'audio/mp4',
+      'audio/webm',
+      'audio/wav',
+    ];
+    if (!allowedTypes.includes(dto.contentType)) {
+      throw new BadRequestException(
+        'Only OGG, MP3, MP4, WebM, and WAV audio files are allowed',
+      );
+    }
+
+    const audioDto = { ...dto, folder: 'audio-intros' };
+    return this.generatePresignedUrl(userId, audioDto);
+  }
+
   async uploadAndCompressVoiceNote(
     userId: string,
     file: Express.Multer.File,
@@ -191,6 +227,96 @@ export class MediaService implements OnModuleInit {
     }
 
     return { coverUrl };
+  }
+
+  async confirmAvatarUpload(
+    userId: string,
+    objectKey: string,
+  ): Promise<{ avatarUrl: string }> {
+    const bucket = this.bucket;
+    const key = objectKey;
+
+    // 1. Retrieve object metadata (ContentType)
+    let contentType: string;
+    try {
+      const headResult = await this.s3Client.send(
+        new HeadObjectCommand({ Bucket: bucket, Key: key }),
+      );
+      contentType = headResult.ContentType || 'image/jpeg';
+    } catch {
+      contentType = 'image/jpeg';
+    }
+
+    // 2. Download original object
+    const getResult = await this.s3Client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    );
+    const stream = getResult.Body as import('stream').Readable;
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const originalBuffer = Buffer.concat(chunks);
+
+    // 3. Compress image
+    const compressedBuffer = await this.imageCompressionService.compress(
+      originalBuffer,
+      contentType,
+    );
+
+    // 4. Overwrite with compressed version
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: compressedBuffer,
+        ContentType: contentType,
+      }),
+    );
+
+    // 5. Update user record
+    const supabase = this.supabaseService.getClient();
+    const avatarUrl = `${this.publicDomain}/${key}`;
+    const { error } = await supabase
+      .from('users')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error('Failed to update avatar photo URL');
+    }
+
+    return { avatarUrl };
+  }
+
+  async confirmAudioIntroUpload(
+    userId: string,
+    objectKey: string,
+  ): Promise<{ audioIntroUrl: string }> {
+    const key = objectKey;
+
+    // Verify the object exists
+    try {
+      await this.s3Client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+    } catch {
+      throw new BadRequestException('Audio intro file not found in storage');
+    }
+
+    // Update user record
+    const supabase = this.supabaseService.getClient();
+    const audioIntroUrl = `${this.publicDomain}/${key}`;
+    const { error } = await supabase
+      .from('users')
+      .update({ audio_intro_url: audioIntroUrl })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error('Failed to update audio intro URL');
+    }
+
+    return { audioIntroUrl };
   }
 
   async processUploadedImage(objectKey: string): Promise<void> {

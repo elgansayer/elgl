@@ -69,6 +69,39 @@ export class MediaController {
     }
     return this.mediaService.uploadAndSetAvatarImage(req.user.id, file);
   }
+
+  @Post('avatar/presigned-url')
+  async getAvatarPresignedUrl(
+    @Req() req: { user: { id: string } },
+    @Body() dto: PresignedUrlDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    return this.mediaService.generateAvatarPresignedUrl(req.user.id, dto);
+  }
+
+  @Post('avatar/confirm')
+  async confirmAvatarUpload(
+    @Req() req: { user: { id: string } },
+    @Body('objectKey') objectKey: string,
+  ): Promise<{ avatarUrl: string }> {
+    return this.mediaService.confirmAvatarUpload(req.user.id, objectKey);
+  }
+
+  @Post('audio-intro/presigned-url')
+  async getAudioIntroPresignedUrl(
+    @Req() req: { user: { id: string } },
+    @Body() dto: PresignedUrlDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    return this.mediaService.generateAudioIntroPresignedUrl(req.user.id, dto);
+  }
+
+  @Post('audio-intro/confirm')
+  async confirmAudioIntroUpload(
+    @Req() req: { user: { id: string } },
+    @Body('objectKey') objectKey: string,
+  ): Promise<{ audioIntroUrl: string }> {
+    return this.mediaService.confirmAudioIntroUpload(req.user.id, objectKey);
+  }
+
   @Post('view-once/mark-viewed')
   async markMediaAsViewed(
     @Req() req: { user: { id: string } },

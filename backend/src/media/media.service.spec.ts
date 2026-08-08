@@ -143,4 +143,93 @@ describe('MediaService', () => {
       expect(result.objectKey).toMatch(/\.bin$/);
     });
   });
+
+  describe('generateAvatarPresignedUrl', () => {
+    it('should generate pre-signed URL for avatar image', async () => {
+      const dto = {
+        filename: 'avatar.png',
+        folder: 'avatars',
+        contentType: 'image/png',
+      };
+
+      const result = await service.generateAvatarPresignedUrl('user-1', dto);
+
+      expect(result.objectKey).toMatch(/^avatars\/user-1\//);
+      expect(result.uploadUrl).toBe('https://upload.r2.mock/url');
+      expect(result.mediaUrl).toMatch(
+        /^https:\/\/media\.hellotalk\.mock\/avatars\/user-1\//,
+      );
+    });
+
+    it('should reject invalid content types', async () => {
+      const dto = {
+        filename: 'file.txt',
+        folder: 'avatars',
+        contentType: 'text/plain',
+      };
+
+      await expect(
+        service.generateAvatarPresignedUrl('user-1', dto),
+      ).rejects.toThrow('Only JPEG, PNG, and WebP images are allowed');
+    });
+  });
+
+  describe('generateAudioIntroPresignedUrl', () => {
+    it('should generate pre-signed URL for audio intro', async () => {
+      const dto = {
+        filename: 'intro.ogg',
+        folder: 'audio-intros',
+        contentType: 'audio/ogg',
+      };
+
+      const result = await service.generateAudioIntroPresignedUrl(
+        'user-1',
+        dto,
+      );
+
+      expect(result.objectKey).toMatch(/^audio-intros\/user-1\//);
+      expect(result.uploadUrl).toBe('https://upload.r2.mock/url');
+      expect(result.mediaUrl).toMatch(
+        /^https:\/\/media\.hellotalk\.mock\/audio-intros\/user-1\//,
+      );
+    });
+
+    it('should reject invalid content types', async () => {
+      const dto = {
+        filename: 'intro.mp3',
+        folder: 'audio-intros',
+        contentType: 'video/mp4',
+      };
+
+      await expect(
+        service.generateAudioIntroPresignedUrl('user-1', dto),
+      ).rejects.toThrow(
+        'Only OGG, MP3, MP4, WebM, and WAV audio files are allowed',
+      );
+    });
+
+    it('should accept all valid audio types', async () => {
+      const validTypes = [
+        'audio/ogg',
+        'audio/mpeg',
+        'audio/mp4',
+        'audio/webm',
+        'audio/wav',
+      ];
+
+      for (const contentType of validTypes) {
+        const dto = {
+          filename: `intro.${contentType.split('/')[1]}`,
+          folder: 'audio-intros',
+          contentType,
+        };
+
+        const result = await service.generateAudioIntroPresignedUrl(
+          'user-1',
+          dto,
+        );
+        expect(result.objectKey).toMatch(/^audio-intros\/user-1\//);
+      }
+    });
+  });
 });
