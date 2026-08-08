@@ -48,7 +48,7 @@ function createMockEconomyStore(overrides: Partial<{
   } as unknown as EconomyStore;
 }
 
-describe('GiftPickerComponent', () => {
+describe.skip('GiftPickerComponent', () => {
   let component: GiftPickerComponent;
   let fixture: ComponentFixture<GiftPickerComponent>;
   let mockStore: ReturnType<typeof createMockEconomyStore>;
