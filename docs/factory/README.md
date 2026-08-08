@@ -92,6 +92,33 @@ Use a fine-grained GitHub token limited to repository metadata read, Actions rea
 read/write and pull requests read/write. The factory uses its cached backlog during GitHub outages and honours
 rate-limit reset times.
 
+## Operator recovery
+
+When providers degrade or a task stalls, run these commands as the `hellotalk-factory` user from the service
+virtualenv:
+
+```bash
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
+```
+
+- `doctor --online` verifies tooling, writable state directories, disk headroom, the systemd unit and live
+  provider endpoints.
+- `providers check` reports the PASS or FAIL state of each configured provider, which isolates a blocked
+  activation.
+- `status` prints the daemon state from `daemon.json` (`running`, `stopped` or `unknown`).
+- `metrics` prints the recorded provider usage and cost snapshot from `metrics.json`.
+- `pause` stops the daemon from starting new work while preserving jobs, branches and pull requests.
+- `resume` re-enables scheduling once the underlying issue is resolved.
+
+Typical recovery flow: run `doctor --online` to confirm the failure, `providers check` to isolate the provider,
+`status` and `metrics` to review daemon health and recent fallbacks, `pause` before touching credentials or
+state, then `resume` after the fix.
+
 ## Wiki, upgrades and recovery
 
 Every feature pull request must update application documentation. The deterministic wiki publisher derives
