@@ -26,6 +26,7 @@ import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
 import { DraftService } from '../../services/draft.service';
+import { ChatSettingsService } from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-chat-room',
@@ -61,6 +62,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
+  private readonly chatSettingsService = inject(ChatSettingsService);
 
   id = input.required<string>();
 
@@ -166,11 +168,15 @@ export class ChatRoomComponent implements OnDestroy {
 
   private isChatEventPayload(
     value: unknown,
-  ): value is { message?: ChatMessage; typing?: boolean } {
+  ): value is {
+    message?: ChatMessage;
+    typing?: boolean;
+    status_update?: { message_id: string; delivery_status: string };
+  } {
     return (
       !!value &&
       typeof value === 'object' &&
-      ('message' in value || 'typing' in value)
+      ('message' in value || 'typing' in value || 'status_update' in value)
     );
   }
 
@@ -191,6 +197,8 @@ export class ChatRoomComponent implements OnDestroy {
     await this.setupRealTime();
     await this.loadParticipants();
     await this.resolvePartnerLanguage();
+    // Mark room messages as read when opening the room
+    this.markRoomAsRead();
   }
 
   /** Requests app unlock (biometric/PIN) before revealing a locked chat's messages. */
@@ -337,18 +345,70 @@ export class ChatRoomComponent implements OnDestroy {
       const payload = this.isChatEventPayload(data) ? data : null;
       if (payload?.message) {
         this.messages.update((list) => [...list, payload.message!]);
+        // Auto-mark incoming message as read and update delivery status
+        if (payload.message && !this.isOwnMessage(payload.message)) {
+          this.markMessageDelivered(payload.message.id);
+        }
       } else if (payload?.typing) {
         this.isTyping.set(true);
         setTimeout(() => this.isTyping.set(false), 3000);
+      } else if (payload?.status_update) {
+        this.messages.update((list) =>
+          list.map((m) =>
+            m.id === payload.status_update!.message_id
+              ? { ...m, delivery_status: payload.status_update!.delivery_status as ChatMessage['delivery_status'] }
+              : m,
+          ),
+        );
       }
     });
 
     this.typingService.connect(this.roomId);
+    // Mark all messages in the room as delivered when opening
+    await this.markRoomMessagesAsDelivered();
   }
 
   onWordClicked(event: { token: string; context: string }): void {
     this.activeWordToken.set(event.token);
     this.activeWordContext.set(event.context);
+  }
+
+  /** Marks a single incoming message as delivered, progressing from sent -> delivered. */
+  async markMessageDelivered(messageId: string): Promise<void> {
+    try {
+      await this.chatService.markMessageStatus(messageId, 'delivered');
+    } catch {
+      // Silently ignore status update failures - the UI is optimistic
+    }
+  }
+
+  /** Marks all non-own messages in this room as delivered via the backend. */
+  private async markRoomMessagesAsDelivered(): Promise<void> {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return;
+    const undelivered = this.messages().filter(
+      (m) => m.sender_id !== currentUserId && (!m.delivery_status || m.delivery_status === 'sent'),
+    );
+    for (const msg of undelivered) {
+      await this.markMessageDelivered(msg.id);
+    }
+  }
+
+  /** Marks this room's messages as read when read receipts are enabled. Called when user focuses the room. */
+  markRoomAsRead(): void {
+    if (!this.chatSettingsService.readReceipts()) return;
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return;
+    this.messages.update((list) =>
+      list.map((m) => {
+        if (m.sender_id !== currentUserId && m.delivery_status !== 'read') {
+          // Optimistically update locally
+          this.chatService.markMessageStatus(m.id, 'read').catch(() => undefined);
+          return { ...m, delivery_status: 'read' as const };
+        }
+        return m;
+      }),
+    );
   }
 
   /** Detects an in-progress "@name" trigger before the cursor and updates mention suggestions. */

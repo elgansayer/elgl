@@ -326,6 +326,23 @@
                   >
                     {{ 'chatRoom.favBtn' | t }}
                   </button>
+                  <!-- Delivery status indicator for own messages -->
+                  @if (isOwnMessage(msg) && msg.delivery_status) {
+                    <span
+                      class="ms-auto text-[10px] leading-none"
+                      [class.text-blue-400]="msg.delivery_status === 'read'"
+                      [class.text-text-muted]="msg.delivery_status !== 'read'"
+                      [attr.aria-label]="'chatRoom.status_' + msg.delivery_status | t"
+                    >
+                      @if (msg.delivery_status === 'read') {
+                        ✓✓
+                      } @else if (msg.delivery_status === 'delivered') {
+                        ✓✓
+                      } @else {
+                        ✓
+                      }
+                    </span>
+                  }
                 </div>
               </div>
             </div>
