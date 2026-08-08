@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
@@ -73,5 +78,53 @@ export class R2Service {
     });
     await this.client.send(command);
     return `${this.publicUrlBase}/${key}`;
+  }
+
+  /**
+   * Delete a single object from the R2 bucket by key.
+   */
+  async deleteObject(key: string): Promise<void> {
+    const command = new DeleteObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+    await this.client.send(command);
+  }
+
+  /**
+   * Delete all objects under a prefix (folder) from the R2 bucket.
+   * Used for GDPR erasure of audio/video room recordings.
+   * Returns the number of objects deleted.
+   */
+  async deleteByPrefix(prefix: string): Promise<number> {
+    let deleted = 0;
+    let continuationToken: string | undefined;
+
+    do {
+      const listCmd = new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      });
+
+      const listResult = await this.client.send(listCmd);
+
+      if (listResult.Contents && listResult.Contents.length > 0) {
+        const keys = listResult.Contents.map(
+          (obj) => obj.Key as string,
+        ).filter(Boolean);
+
+        for (const key of keys) {
+          await this.client.send(
+            new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+          );
+          deleted++;
+        }
+      }
+
+      continuationToken = listResult.NextContinuationToken;
+    } while (continuationToken);
+
+    return deleted;
   }
 }

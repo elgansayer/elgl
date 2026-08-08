@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
+import { R2Service } from '../cloudflare-r2/r2.service';
 
 /**
  * Scheduled data-retention enforcement for GDPR compliance.
@@ -11,7 +12,8 @@ import { SupabaseService } from '../supabase/supabase.service';
  * - Purge reports older than 365 days that are in a terminal state.
  * - Archive deleted user records past their grace period.
  * - Purge call_logs older than 365 days (GDPR Issue #2240).
- * - Scrub ended audio_rooms older than 90 days (GDPR Issue #2240).
+ * - Scrub ended audio_rooms older than 90 days, including R2 recordings
+ *   (GDPR Issue #2240).
  */
 @Injectable()
 export class DataRetentionService {
@@ -20,6 +22,7 @@ export class DataRetentionService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly r2Service: R2Service,
   ) {}
 
   /**
@@ -319,11 +322,11 @@ export class DataRetentionService {
   }
 
   /**
-   * Scrub ended audio_rooms older than 90 days.
+   * Scrub ended audio_rooms older than 90 days, including R2 recordings.
    *
    * Audio rooms that have ended are kept for 90 days to allow moderation
    * review and support investigations. After that, we scrub co_host_id
-   * (which may link to user identity).
+   * (which may link to user identity) and delete their R2 recordings.
    *
    * Runs once per day at 03:45 UTC.
    */
@@ -335,10 +338,10 @@ export class DataRetentionService {
     cutoff.setDate(cutoff.getDate() - 90);
     const supabase = this.supabaseService.getClient();
 
-    // Find ended rooms older than 90 days
+    // Find ended rooms older than 90 days (need room_name for R2 prefix)
     const { data: roomsToScrub, error } = await supabase
       .from('audio_rooms')
-      .select('id')
+      .select('id, room_name')
       .eq('is_active', false)
       .lt('ended_at', cutoff.toISOString())
       .limit(200);
@@ -368,6 +371,23 @@ export class DataRetentionService {
         );
       } else {
         scrubbedCount++;
+      }
+
+      // Delete R2 recordings for this room (GDPR right to erasure)
+      if (room.room_name) {
+        const prefix = `audio-rooms/${room.room_name}/`;
+        try {
+          const deletedCount = await this.r2Service.deleteByPrefix(prefix);
+          if (deletedCount > 0) {
+            this.logger.log(
+              `Deleted ${deletedCount} R2 recordings for room ${room.id}`,
+            );
+          }
+        } catch (r2Err) {
+          this.logger.error(
+            `Failed to delete R2 recordings for room ${room.id}: ${r2Err}`,
+          );
+        }
       }
     }
 

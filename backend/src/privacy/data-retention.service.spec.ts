@@ -1,14 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataRetentionService } from './data-retention.service';
+import { R2Service } from '../cloudflare-r2/r2.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('DataRetentionService', () => {
   let service: DataRetentionService;
   let mockSupabaseClient: Record<string, jest.Mock>;
   let mockQueryBuilder: Record<string, jest.Mock>;
-let mockRedis: { del: jest.Mock };
+  let mockRedis: { del: jest.Mock };
   let mockEventEmitter: { emit: jest.Mock };
+  let mockR2Service: { deleteByPrefix: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -30,6 +32,9 @@ let mockRedis: { del: jest.Mock };
       del: jest.fn().mockResolvedValue(1),
     };
     mockEventEmitter = { emit: jest.fn() };
+    mockR2Service = {
+      deleteByPrefix: jest.fn().mockResolvedValue(0),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -44,6 +49,10 @@ let mockRedis: { del: jest.Mock };
         {
           provide: EventEmitter2,
           useValue: mockEventEmitter,
+        },
+        {
+          provide: R2Service,
+          useValue: mockR2Service,
         },
       ],
     }).compile();
