@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProfileSettingsComponent } from './profile-settings.component';
 import { SettingsService } from '../../../../core/services/settings.service';
+import { UserService } from '../../../../services/user.service';
 import { signal } from '@angular/core';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -23,12 +24,36 @@ describe('ProfileSettingsComponent', () => {
     updateProfileSettings: vi.fn()
   };
 
+  const mockUserService = {
+    getMyProfile: () => Promise.resolve({
+      id: 'user-1',
+      display_name: 'Test User',
+      native_languages: ['English'],
+      target_languages: ['Japanese'],
+      bio_text: 'Test bio',
+      is_vip: false,
+      vip_tier: 'free',
+      coins_balance: 0,
+      study_streak_days: 0,
+      correction_ratio: 0,
+      is_serious_learner: false,
+      privacy_hide_age: false,
+      privacy_hide_location: false,
+      privacy_hide_from_search: false,
+      privacy_hide_gender: false,
+      profile_visibility: 'everyone',
+      created_at: '2024-01-01',
+    }),
+    updateMyProfile: () => Promise.resolve(null),
+  };
+
   beforeEach(async () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ProfileSettingsComponent],
       providers: [
-        { provide: SettingsService, useValue: mockSettingsService }
+        { provide: SettingsService, useValue: mockSettingsService },
+        { provide: UserService, useValue: mockUserService },
       ]
     }).compileComponents();
 

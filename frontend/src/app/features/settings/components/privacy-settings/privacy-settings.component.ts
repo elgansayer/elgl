@@ -1,6 +1,7 @@
 import { Component, inject, signal, effect } from '@angular/core';
 import { TranslatePipe } from '../../../../services/translate.pipe';
 import { SettingsService } from '../../../../core/services/settings.service';
+import { UserService } from '../../../../services/user.service';
 
 type ProfileVis = 'everyone' | 'vips_only' | 'hidden';
 type ImageFilter = 'All' | 'Blurred' | 'None';
@@ -85,6 +86,7 @@ interface VisibilityOption {
 })
 export class PrivacySettingsComponent {
   private settingsService = inject(SettingsService);
+  private userService = inject(UserService);
 
   readonly profileVis = signal<ProfileVis>('everyone');
   readonly allowDm = signal(true);
@@ -109,6 +111,19 @@ export class PrivacySettingsComponent {
     const current = this.settingsService.settings();
     if (!current) {
       this.settingsService.loadSettings('current-user');
+    }
+
+    void this.loadFromApi();
+  }
+
+  private async loadFromApi() {
+    try {
+      const profile = await this.userService.getMyProfile();
+      if (profile?.profile_visibility) {
+        this.profileVis.set(profile.profile_visibility as ProfileVis);
+      }
+    } catch {
+      // Fall back to settings service data
     }
   }
 
@@ -140,6 +155,11 @@ export class PrivacySettingsComponent {
         allowFromServerMembers: this.allowDm(),
         imageFilterLevel: this.imageFilter(),
       },
+    });
+
+    // Sync profile visibility to backend API
+    void this.userService.updatePrivacySettings({
+      incognito_visits: this.profileVis() === 'hidden',
     });
   }
 }
