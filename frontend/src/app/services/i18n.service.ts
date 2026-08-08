@@ -92,12 +92,20 @@ export class I18nService {
 
     // Notification Settings page
     'notification_settings.title': 'Notification Settings',
+    'notification_settings.subtitle': 'Choose which notifications send push alerts and show app badges.',
     'notification_settings.section_title': 'Push Alerts & Badges',
     'notification_settings.section_description':
       'Choose which notifications send push alerts and show app badges.',
+    'notification_settings.toggle_header': 'Push Alerts & Badges',
     'notification_settings.push_alerts': 'Push Alerts',
     'notification_settings.badges': 'Badges',
     'notification_settings.saved_message': 'Preferences saved.',
+    'notification_settings.channel.push': 'Push',
+    'notification_settings.channel.badge': 'Badge',
+    'notification_settings.category.direct_messages': 'Direct Messages',
+    'notification_settings.category.groups': 'Groups',
+    'notification_settings.category.likes': 'Likes',
+    'notification_settings.category.voice_rooms': 'Voicerooms',
     'notification_settings.category.new_message': 'Direct Messages',
     'notification_settings.category.moment_like': 'Likes',
     'notification_settings.category.audio_room_invite': 'Voicerooms',
