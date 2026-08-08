@@ -383,6 +383,10 @@
       </div>
     </section>
 
+    @if (store.archivedRoomId(); as archivedId) {
+      <app-session-summary [roomId]="archivedId" (dismissed)="dismissArchivedSummary()"></app-session-summary>
+    }
+
     <div class="flex flex-wrap gap-1.5">
       <span class="app-chip">{{ 'audioRoom.chipExchange' | t }}</span>
       <span class="app-chip">{{ 'audioRoom.chipStages' | t }}</span>

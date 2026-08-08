@@ -25,6 +25,7 @@ import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
+import { SessionSummaryComponent } from './session-summary.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -43,6 +44,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     LiveChatOverlayComponent,
     TipHostModalComponent,
     VoiceroomNotesComponent,
+    SessionSummaryComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -120,6 +122,10 @@ export class AudioRoomComponent implements OnInit {
   toggleViewMode(): void {
     this.viewMode.update((m) => (m === 'flat' ? 'grouped' : 'flat'));
     this.store.selectedLanguageGroup.set(null);
+  }
+
+  dismissArchivedSummary(): void {
+    this.store.archivedRoomId.set(null);
   }
 
   selectExclusiveEmoji(emojiId: string): void {

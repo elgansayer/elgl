@@ -87,6 +87,13 @@ export interface RoomChatMessage {
   created_at: string;
 }
 
+export interface SessionTranscript {
+  recording_url: string | null;
+  transcript_text: string | null;
+  session_summary: string | null;
+  vocabulary: string[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -107,6 +114,7 @@ export class AudioRoomsStore {
     }>
   >([]);
   readonly currentRoom = signal<AudioRoomRecord | null>(null);
+  readonly archivedRoomId = signal<string | null>(null);
   readonly isSpeaker = signal<boolean>(false);
   readonly isConnectedToLiveKit = signal<boolean>(false);
   readonly isRecording = signal<boolean>(false);
@@ -478,8 +486,12 @@ export class AudioRoomsStore {
           };
         });
       } else if (p.type === 'room_ended') {
-        showToast(this.i18n.translate('audioRoom.roomEndedToast'));
+        const roomId = this.currentRoom()?.id ?? null;
         this.leaveRoom();
+        if (roomId) {
+          this.archivedRoomId.set(roomId);
+        }
+        showToast(this.i18n.translate('audioRoom.roomEndedToast'));
       }
     });
   }
@@ -811,9 +823,31 @@ export class AudioRoomsStore {
           { headers: this.getHeaders() },
         ),
       );
+      const roomId = room.id;
       this.leaveRoom();
+      this.archivedRoomId.set(roomId);
     } catch (e) {
       console.error('Archive room error:', e);
+    }
+  }
+
+  async getTranscript(roomId: string): Promise<SessionTranscript> {
+    try {
+      const result = await firstValueFrom(
+        this.http.get<SessionTranscript>(
+          `${this.baseUrl}/${roomId}/transcript`,
+          { headers: this.getHeaders() },
+        ),
+      );
+      return result;
+    } catch (e) {
+      console.error('Get transcript error:', e);
+      return {
+        recording_url: null,
+        transcript_text: null,
+        session_summary: null,
+        vocabulary: [],
+      };
     }
   }
 
