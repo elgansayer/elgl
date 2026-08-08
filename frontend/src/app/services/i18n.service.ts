@@ -2084,6 +2084,30 @@ export class I18nService {
     'settings.messageFiltersSection': 'Message Filters',
     'settings.messageFiltersDescription':
       'Restrict who can send you an initial message based on their profile. These filters only apply to first-time messages.',
+    'settings.messageFilters.title': 'Message Filters',
+    'settings.messageFilters.description':
+      'Restrict who can send you an initial message based on their profile.',
+    'settings.messageFilters.subtitle':
+      'These filters only apply to first-time messages from new senders.',
+    'settings.messageFilters.ageRange': 'Age Range',
+    'settings.messageFilters.ageMin': 'Min age',
+    'settings.messageFilters.ageMinPlaceholder': 'Min',
+    'settings.messageFilters.ageMax': 'Max age',
+    'settings.messageFilters.ageMaxPlaceholder': 'Max',
+    'settings.messageFilters.nativeLanguage': 'Native Language',
+    'settings.messageFilters.nativeLanguageHint':
+      'Only allow initial messages from speakers of selected native languages.',
+    'settings.messageFilters.gender': 'Gender',
+    'settings.messageFilters.genderHint':
+      'Only allow initial messages from selected genders.',
+    'settings.messageFilters.saved': 'Filter settings saved.',
+    'settings.messageFilters.saveError': 'Failed to save filter settings.',
+    'settings.messageFilters.clear': 'Clear',
+    'settings.messageFilters.to': 'to',
+    'settings.messageFilters.save': 'Save Filters',
+    'settings.messageFilters.clearAll': 'Clear All',
+    'settings.messageFilters.allowedGenders': 'Allowed Genders',
+    'settings.messageFilters.allowedNativeLanguages': 'Allowed Native Languages',
     'settings.age': 'Age',
     'settings.ageMinPlaceholder': 'Min',
     'settings.ageMaxPlaceholder': 'Max',
