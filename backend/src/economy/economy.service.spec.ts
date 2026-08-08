@@ -64,6 +64,7 @@ describe('EconomyService', () => {
       update: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       single: jest.fn(),
       maybeSingle: jest.fn(),
     };
@@ -939,6 +940,67 @@ describe('EconomyService', () => {
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'stk_pack_4' }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getTransactionHistory', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should return empty array when the table does not exist', async () => {
+      mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.order.mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'relation "coin_transactions" does not exist' },
+      });
+
+      const result = await service.getTransactionHistory('user-1');
+      expect(result).toEqual([]);
+    });
+
+    it('should return filtered transaction rows', async () => {
+      const txRows = [
+        {
+          id: 'tx-1',
+          user_id: 'user-1',
+          type: 'daily_checkin',
+          amount: 7,
+          description: 'Daily check-in reward',
+          metadata: null,
+          created_at: '2026-08-08T12:00:00.000Z',
+        },
+      ];
+      mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.order.mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: txRows,
+        error: null,
+      });
+
+      const result = await service.getTransactionHistory('user-1');
+      expect(result).toEqual(txRows);
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('coin_transactions');
+    });
+
+    it('should filter out invalid rows', async () => {
+      const mixedRows = [
+        { id: 'tx-1', user_id: 'user-1', type: 'daily_checkin', amount: 5, created_at: '2026-01-01T00:00:00Z' },
+        { not_valid: true },
+        { id: 'tx-2', type: 'daily_checkin', amount: 5, created_at: '2026-01-01T00:00:00Z' },
+        null,
+      ];
+      mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.order.mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: mixedRows,
+        error: null,
+      });
+
+      const result = await service.getTransactionHistory('user-1');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('tx-1');
     });
   });
 

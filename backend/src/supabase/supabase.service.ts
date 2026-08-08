@@ -504,6 +504,16 @@ type GiftTransactionRow = {
   created_at?: string;
 };
 
+type CoinTransactionRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  amount: number;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string;
+};
+
 type UserStickerPackRow = {
   user_id: string;
   pack_id: string;
@@ -1536,6 +1546,12 @@ export interface Database {
         Row: GiftTransactionRow;
         Insert: Partial<GiftTransactionRow>;
         Update: Partial<GiftTransactionRow>;
+        Relationships: [];
+      };
+      coin_transactions: {
+        Row: CoinTransactionRow;
+        Insert: Partial<CoinTransactionRow>;
+        Update: Partial<CoinTransactionRow>;
         Relationships: [];
       };
       user_sticker_packs: {
