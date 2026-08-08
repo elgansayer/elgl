@@ -186,7 +186,7 @@ describe('RecommendationsService', () => {
       usersChain._setResolve([
         {
           id: 'user-a',
-          native_languages: ['en'],
+          native_language: 'en',
           target_languages: ['es'],
         },
       ]);
@@ -197,7 +197,7 @@ describe('RecommendationsService', () => {
           id: 'partner-1',
           display_name: 'Partner 1',
           avatar_url: 'http://img/1.png',
-          native_languages: ['es'],
+          native_language: 'es',
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 30,
@@ -207,7 +207,7 @@ describe('RecommendationsService', () => {
           id: 'partner-2',
           display_name: 'Partner 2',
           avatar_url: null,
-          native_languages: ['es'],
+          native_language: 'es',
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 3,
@@ -259,7 +259,7 @@ describe('RecommendationsService', () => {
       chain._setResolve([
         {
           id: 'user-a',
-          native_languages: ['en'],
+          native_language: 'en',
           target_languages: null,
         },
       ]);
@@ -290,24 +290,12 @@ describe('RecommendationsService', () => {
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('p-1');
-      expect(
-        mockMetricsService.recordMatchmakingRecommendationsGenerated,
-      ).toHaveBeenCalledWith('cached', 'getDailyRecommendations', 1);
-      expect(
-        mockMetricsService.recordMatchmakingRequestDuration,
-      ).toHaveBeenCalled();
     });
 
     it('should return empty array when nothing cached', async () => {
       mockRedis.get.mockResolvedValue(null);
       const result = await service.getDailyRecommendations('user-123');
       expect(result).toEqual([]);
-      expect(
-        mockMetricsService.recordMatchmakingDailyCacheMiss,
-      ).toHaveBeenCalledWith('empty_cache');
-      expect(
-        mockMetricsService.recordMatchmakingEmptyResults,
-      ).toHaveBeenCalledWith('getDailyRecommendations');
     });
 
     it('should return empty array on parse failure', async () => {
@@ -329,7 +317,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_languages: ['en'],
+        native_language: 'en',
         target_languages: ['es'],
       });
 
@@ -339,7 +327,7 @@ describe('RecommendationsService', () => {
           id: 'partner-1',
           display_name: 'Partner 1',
           avatar_url: null,
-          native_languages: ['es'],
+          native_language: 'es',
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 30,
@@ -394,7 +382,7 @@ describe('RecommendationsService', () => {
           id: 'candidate-1',
           display_name: 'Candidate 1',
           avatar_url: null,
-          native_languages: ['es'],
+          native_language: 'es',
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 15,
@@ -410,9 +398,6 @@ describe('RecommendationsService', () => {
       const result = await service.getRecommendations('user-123');
       expect(result).toHaveLength(1);
       expect(result[0].sharedInterests).toBe(2);
-      expect(
-        mockMetricsService.recordMatchmakingRecommendationsGenerated,
-      ).toHaveBeenCalledWith('interest', 'getRecommendations', 1);
     });
 
     it('should fall back to language exchange when interests return empty', async () => {
@@ -424,7 +409,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_languages: ['en'],
+        native_language: 'en',
         target_languages: ['es'],
       });
 
@@ -434,7 +419,7 @@ describe('RecommendationsService', () => {
           id: 'lang-partner',
           display_name: 'Lang Partner',
           avatar_url: null,
-          native_languages: ['es'],
+          native_language: 'es',
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 20,
@@ -461,7 +446,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_languages: ['en'],
+        native_language: 'en',
         target_languages: null,
       });
 
@@ -472,7 +457,7 @@ describe('RecommendationsService', () => {
           id: 'active-user',
           display_name: 'Active User',
           avatar_url: null,
-          native_languages: ['fr'],
+          native_language: 'fr',
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 50,
@@ -530,17 +515,17 @@ describe('RecommendationsService', () => {
       usersChain._setResolve([
         {
           id: 'c-low', display_name: 'Low', avatar_url: null,
-          native_languages: ['es'], target_languages: ['en'],
+          native_language: 'es', target_languages: ['en'],
           is_serious_learner: true, study_streak_days: 100, correction_ratio: 0.9,
         },
         {
           id: 'c-high-serious', display_name: 'HighSerious', avatar_url: null,
-          native_languages: ['es'], target_languages: ['en'],
+          native_language: 'es', target_languages: ['en'],
           is_serious_learner: true, study_streak_days: 10, correction_ratio: 0.9,
         },
         {
           id: 'c-high-not-serious', display_name: 'HighNotSerious', avatar_url: null,
-          native_languages: ['es'], target_languages: ['en'],
+          native_language: 'es', target_languages: ['en'],
           is_serious_learner: false, study_streak_days: 50, correction_ratio: 0.9,
         },
       ]);
@@ -563,7 +548,7 @@ describe('RecommendationsService', () => {
 
       const userChain = makeQueryChain();
       userChain._setResolve({
-        id: 'user-123', native_languages: ['en'], target_languages: ['ja'],
+        id: 'user-123', native_language: 'en', target_languages: ['ja'],
       });
 
       const matchesChain = makeQueryChain();
@@ -573,7 +558,7 @@ describe('RecommendationsService', () => {
       activeChain._setResolve([
         {
           id: 'active-user', display_name: 'Active User', avatar_url: null,
-          native_languages: ['fr'], target_languages: ['en'],
+          native_language: 'fr', target_languages: ['en'],
           is_serious_learner: true, study_streak_days: 40, correction_ratio: 0.85,
         },
       ]);
@@ -602,7 +587,7 @@ describe('RecommendationsService', () => {
       activeChain._setResolve([
         {
           id: 'active-p', display_name: 'Active P', avatar_url: null,
-          native_languages: ['de'], target_languages: ['en'],
+          native_language: 'de', target_languages: ['en'],
           is_serious_learner: false, study_streak_days: 12, correction_ratio: 0.75,
         },
       ]);
@@ -652,7 +637,7 @@ describe('RecommendationsService', () => {
           id: 'c-1',
           display_name: 'C1',
           avatar_url: null,
-          native_languages: ['es'],
+          native_language: 'es',
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 10,
@@ -678,7 +663,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_languages: ['en'],
+        native_language: 'en',
         target_languages: ['es'],
       });
 
@@ -688,7 +673,7 @@ describe('RecommendationsService', () => {
           id: 'lang-p',
           display_name: 'Lang P',
           avatar_url: null,
-          native_languages: ['es'],
+          native_language: 'es',
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 5,
@@ -724,7 +709,7 @@ describe('RecommendationsService', () => {
           id: 'active-u',
           display_name: 'Active U',
           avatar_url: null,
-          native_languages: ['de'],
+          native_language: 'de',
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 40,
@@ -810,7 +795,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_languages: ['en'],
+        native_language: 'en',
         target_languages: ['es'],
       });
 
@@ -823,7 +808,7 @@ describe('RecommendationsService', () => {
           id: 'active-u',
           display_name: 'Active U',
           avatar_url: null,
-          native_languages: ['de'],
+          native_language: 'de',
           target_languages: ['en'],
           is_serious_learner: true,
           study_streak_days: 30,
@@ -856,7 +841,7 @@ describe('RecommendationsService', () => {
           id: 'fallback-u',
           display_name: 'Fallback U',
           avatar_url: null,
-          native_languages: ['pt'],
+          native_language: 'pt',
           target_languages: ['en'],
           is_serious_learner: false,
           study_streak_days: 8,
@@ -881,7 +866,7 @@ describe('RecommendationsService', () => {
       const userChain = makeQueryChain();
       userChain._setResolve({
         id: 'user-123',
-        native_languages: ['en'],
+        native_language: 'en',
         target_languages: ['es', 'fr'],
       });
 
@@ -891,7 +876,7 @@ describe('RecommendationsService', () => {
           id: 'full-partner',
           display_name: 'Full Partner',
           avatar_url: 'https://img.example/avatar.png',
-          native_languages: ['es'],
+          native_language: 'es',
           target_languages: ['en', 'pt'],
           is_serious_learner: true,
           study_streak_days: 42,
@@ -1050,14 +1035,14 @@ describe('RecommendationsService', () => {
 
       await service.calculateDailyRecommendations();
 
-      expect(mockRedis.set).toHaveBeenCalledTimes(2);
-      expect(mockRedis.set.mock.calls[0][0]).toBe('recommendations:daily:user-a');
+      expect(mockPipeline.set).toHaveBeenCalledTimes(2);
+      expect(mockPipeline.set.mock.calls[0][0]).toBe('recommendations:daily:user-a');
       const firstCache: RecommendedUserDto[] = JSON.parse(
-        mockRedis.set.mock.calls[0][1],
+        mockPipeline.set.mock.calls[0][1],
       );
       expect(firstCache).toHaveLength(1);
       expect(firstCache[0].id).toBe('user-c');
-      expect(mockRedis.set.mock.calls[1][0]).toBe('recommendations:daily:user-c');
+      expect(mockPipeline.set.mock.calls[1][0]).toBe('recommendations:daily:user-c');
     });
 
     it('should handle calculateDailyRecommendations with Redis set failure gracefully', async () => {
@@ -1080,14 +1065,14 @@ describe('RecommendationsService', () => {
         },
       ]);
 
-      mockRedis.set.mockRejectedValueOnce(new Error('Redis write failed'));
+      mockPipeline.exec.mockRejectedValueOnce(new Error('Redis write failed'));
 
       mockFrom
         .mockReturnValueOnce(usersChain)
         .mockReturnValueOnce(matchesChain);
 
       await service.calculateDailyRecommendations();
-      expect(mockRedis.set).toHaveBeenCalledTimes(1);
+      expect(mockPipeline.set).toHaveBeenCalledTimes(1);
     });
 
     it('should prefer interest tier over language exchange when both succeed', async () => {

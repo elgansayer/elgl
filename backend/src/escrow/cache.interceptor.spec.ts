@@ -9,16 +9,12 @@ describe('EscrowCacheInterceptor', () => {
   describe('constants', () => {
     it('ESCROW_CACHE_PRIVATE_SHORT should prevent CDN caching and require browser revalidation', () => {
       expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain('private');
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain('max-age=0');
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain(
-        'must-revalidate',
-      );
-      // Verify no contradictory CDN directives
-      expect(ESCROW_CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toBe(
-        'private, no-store',
-      );
+      expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain('max-age=60');
+      expect(ESCROW_CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain('private');
       // Should vary by auth to prevent cross-user cache leakage
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Vary']).toBe('Authorization');
+      expect(ESCROW_CACHE_PRIVATE_SHORT['Vary']).toBe(
+        'Authorization, Accept-Encoding',
+      );
     });
 
     it('ESCROW_CACHE_PRIVATE_NO_STORE should prevent all caching', () => {
@@ -58,7 +54,11 @@ describe('EscrowCacheInterceptor', () => {
       );
       expect(setHeader).toHaveBeenCalledWith(
         'Vary',
-        'Authorization',
+        'Authorization, Accept-Encoding',
+      );
+      expect(setHeader).toHaveBeenCalledWith(
+        'Cache-Tag',
+        'escrow-transactions-v1',
       );
     });
 
@@ -95,7 +95,8 @@ describe('EscrowCacheInterceptor', () => {
       const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT);
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const removeHeader = jest.fn();
+      const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];

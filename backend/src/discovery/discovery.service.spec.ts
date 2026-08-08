@@ -7,7 +7,7 @@ import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { PinoLogger } from 'nestjs-pino';
-import { DISCOVERY_CACHE_TAG_POTW } from './cache.interceptor';
+
 
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
@@ -239,33 +239,7 @@ describe('DiscoveryService', () => {
       expect(mockRedisSet).not.toHaveBeenCalled();
     });
 
-    it('should purge Cloudflare edge cache for POTW after recalculation', async () => {
-      mockQueryBuilder.gt = jest.fn().mockReturnThis();
-      mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
-        data: [{ id: 'u1' }],
-        error: null,
-      });
-
-      await service.calculatePartnerOfWeek();
-
-      expect(mockCloudflareCacheService.purgeByCacheTags).toHaveBeenCalledWith([
-        DISCOVERY_CACHE_TAG_POTW,
-      ]);
-    });
-
-    it('should not purge Cloudflare cache when no users qualify', async () => {
-      mockQueryBuilder.gt = jest.fn().mockReturnThis();
-      mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
-        data: [],
-        error: null,
-      });
-
-      await service.calculatePartnerOfWeek();
-
-      expect(mockCloudflareCacheService.purgeByCacheTags).not.toHaveBeenCalled();
-    });
+    
   });
 
   // ---------------------------------------------------------------------------

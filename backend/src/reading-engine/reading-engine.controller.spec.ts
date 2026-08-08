@@ -36,8 +36,7 @@ jest.mock('dompurify', () => ({
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReadingEngineController } from './reading-engine.controller';
 import { ReadingEngineService } from './reading-engine.service';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { SupabaseService } from '../supabase/supabase.service';
+import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
 import {
@@ -48,6 +47,7 @@ import {
 
 describe('ReadingEngineController', () => {
   let controller: ReadingEngineController;
+  let readingService: ReadingEngineService;
 
   const mockService = {
     createResource: jest.fn(),
@@ -61,8 +61,18 @@ describe('ReadingEngineController', () => {
     clearUserCaches: jest.fn(),
   };
 
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [ReadingEngineController],
+      providers: [
+        { provide: ReadingEngineService, useValue: mockService },
+      ],
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
     controller = module.get<ReadingEngineController>(ReadingEngineController);
-    readingService = module.get(ReadingEngineService);
+    readingService = module.get<ReadingEngineService>(ReadingEngineService);
   });
 
   it('should be defined', () => {
@@ -97,14 +107,14 @@ describe('ReadingEngineController', () => {
         createdAt: '',
         updatedAt: '',
       };
-      readingService.createResource.mockResolvedValue(mockResource);
+      mockService.createResource.mockResolvedValue(mockResource);
 
       const req = { user: { id: 'user-1' } };
       const result = await controller.createResource(
         dto as never,
         req as never,
       );
-      expect(readingService.createResource).toHaveBeenCalledWith('user-1', dto);
+      expect(mockService.createResource).toHaveBeenCalledWith('user-1', dto);
       expect(result).toBe(mockResource);
     });
 
@@ -125,7 +135,7 @@ describe('ReadingEngineController', () => {
   describe('listResources', () => {
     it('passes query parameters to readingService.listResources', async () => {
       const mockList: ReadingResource[] = [];
-      readingService.listResources.mockResolvedValue(mockList);
+      mockService.listResources.mockResolvedValue(mockList);
 
       const result = await controller.listResources(
         'en',
@@ -136,7 +146,7 @@ describe('ReadingEngineController', () => {
       );
 
       expect(result).toEqual(mockList);
-      expect(readingService.listResources).toHaveBeenCalledWith({
+      expect(mockService.listResources).toHaveBeenCalledWith({
         language: 'en',
         difficulty: 'beginner',
         topic: 'science',
@@ -158,12 +168,12 @@ describe('ReadingEngineController', () => {
         createdAt: '',
         updatedAt: '',
       };
-      readingService.getResource.mockResolvedValue(mockResource);
+      mockService.getResource.mockResolvedValue(mockResource);
 
       const result = await controller.getResource('res-1');
 
       expect(result).toEqual(mockResource);
-      expect(readingService.getResource).toHaveBeenCalledWith('res-1');
+      expect(mockService.getResource).toHaveBeenCalledWith('res-1');
     });
   });
 
@@ -179,12 +189,12 @@ describe('ReadingEngineController', () => {
         createdAt: '',
         updatedAt: '',
       };
-      readingService.updateResource.mockResolvedValue(mockResource);
+      mockService.updateResource.mockResolvedValue(mockResource);
 
       const result = await controller.updateResource('res-1', dto);
 
       expect(result).toEqual(mockResource);
-      expect(readingService.updateResource).toHaveBeenCalledWith('res-1', dto);
+      expect(mockService.updateResource).toHaveBeenCalledWith('res-1', dto);
     });
   });
 
@@ -205,20 +215,21 @@ describe('ReadingEngineController', () => {
         uniqueTokens: 4,
         tokens: [],
       };
-      readingService.tokenise.mockResolvedValue(breakdown);
+      mockService.tokenise.mockResolvedValue(breakdown);
 
-      const result = await controller.tokenise('res-1', 'fr');
+      const req = { user: { id: 'test-user' } };
+      const result = await controller.tokenise('res-1', req as never, 'fr');
 
       expect(result).toEqual(breakdown);
-      expect(readingService.tokenise).toHaveBeenCalledWith(
-        'user',
+      expect(mockService.tokenise).toHaveBeenCalledWith(
+        'test-user',
         'res-1',
         'fr',
       );
     });
 
     it('passes undefined lang when not provided', async () => {
-      readingService.tokenise.mockResolvedValue({
+      mockService.tokenise.mockResolvedValue({
         resourceId: 'res-1',
         language: 'en',
         totalTokens: 0,
@@ -226,10 +237,11 @@ describe('ReadingEngineController', () => {
         tokens: [],
       });
 
-      await controller.tokenise('res-1');
+      const req = { user: { id: 'test-user' } };
+      await controller.tokenise('res-1', req as never);
 
-      expect(readingService.tokenise).toHaveBeenCalledWith(
-        'user',
+      expect(mockService.tokenise).toHaveBeenCalledWith(
+        'test-user',
         'res-1',
         undefined,
       );
@@ -245,12 +257,12 @@ describe('ReadingEngineController', () => {
         totalReadingTimeSeconds: 300,
         fluencyPercentage: 75,
       };
-      mockService.getProgress.mockResolvedValue(expected);
+      mockService.getProgress.mockResolvedValue(progress);
       const result = await controller.getProgress({
         user: { id: 'user-3' },
       } as never);
       expect(mockService.getProgress).toHaveBeenCalledWith('user-3');
-      expect(result).toBe(expected);
+      expect(result).toBe(progress);
     });
   });
 
@@ -268,12 +280,12 @@ describe('ReadingEngineController', () => {
         totalReadingTimeSeconds: 300,
         fluencyPercentage: 50,
       };
-      mockService.recordSession.mockResolvedValue(expected);
+      mockService.recordSession.mockResolvedValue(progress);
       const result = await controller.recordSession(body, {
         user: { id: 'user-4' },
       } as never);
       expect(mockService.recordSession).toHaveBeenCalledWith('user-4', body);
-      expect(result).toBe(expected);
+      expect(result).toBe(progress);
     });
   });
 

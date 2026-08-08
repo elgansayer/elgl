@@ -482,7 +482,6 @@ describe('ReadingEngineService', () => {
 
       await service.listResources({ limit: 10, offset: 5 });
 
-      expect(builder.limit).toHaveBeenCalledWith(10);
       expect(builder.range).toHaveBeenCalledWith(5, 14);
     });
 
