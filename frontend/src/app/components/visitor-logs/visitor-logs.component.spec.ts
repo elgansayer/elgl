@@ -57,6 +57,21 @@ describe('VisitorLogsComponent', () => {
     },
   ];
 
+  const mockVisitorsAllVisible: VisitorLog[] = [
+    {
+      id: 'visit-3',
+      created_at: new Date().toISOString(),
+      is_blurred: false,
+      visitor: {
+        id: 'v-3',
+        display_name: 'Charlie',
+        avatar_url: 'https://example.com/charlie.jpg',
+        native_languages: ['de'],
+        target_languages: ['en'],
+      },
+    },
+  ];
+
   beforeEach(async () => {
     userService = {
       getMyProfile: vi.fn(),
@@ -181,15 +196,50 @@ describe('VisitorLogsComponent', () => {
     expect(cards.length).toBe(2);
   });
 
-  it('should apply blurred class to blurred cards', async () => {
+  it('should apply blurred class to cards when is_vip is false', async () => {
+    // Free-tier user profile - all visitors should be blurred since isFreeTier() is true
     userService.getMyProfile.mockResolvedValue(mockProfile);
     userService.getMyVisitors.mockResolvedValue(mockVisitors);
 
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const blurredCards = fixture.nativeElement.querySelectorAll('.visitor-card--blurred');
-    expect(blurredCards.length).toBe(1);
+    // isFreeTier should be true when is_vip is false
+    expect(component.isFreeTier()).toBe(true);
+
+    // Both visitors should be blurred via shouldBlur()
+    expect(component.shouldBlur(mockVisitors[0])).toBe(true);
+    expect(component.shouldBlur(mockVisitors[1])).toBe(true);
+  });
+
+  it('should not blur all cards when user is VIP', async () => {
+    const vipProfile = { ...mockProfile, is_vip: true };
+    userService.getMyProfile.mockResolvedValue(vipProfile);
+    userService.getMyVisitors.mockResolvedValue(mockVisitors);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.isFreeTier()).toBe(false);
+
+    // Only the one with is_blurred: true should be blurred
+    expect(component.shouldBlur(mockVisitors[0])).toBe(false);
+    expect(component.shouldBlur(mockVisitors[1])).toBe(true);
+  });
+
+  it('should blur all visitors on free tier even when backend sends is_blurred: false', async () => {
+    userService.getMyProfile.mockResolvedValue(mockProfile);
+    userService.getMyVisitors.mockResolvedValue(mockVisitorsAllVisible);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.isFreeTier()).toBe(true);
+
+    // All visitors should be blurred on free tier
+    for (const log of mockVisitorsAllVisible) {
+      expect(component.shouldBlur(log)).toBe(true);
+    }
   });
 
   it('should handle load errors gracefully', async () => {

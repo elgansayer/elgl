@@ -18,6 +18,11 @@ export class VisitorLogsComponent {
   readonly isLoading = signal<boolean>(true);
   readonly hideBlurred = signal<boolean>(false);
 
+  readonly isFreeTier = computed(() => {
+    const p = this.profile();
+    return !p || p.is_vip === false;
+  });
+
   readonly visibleVisitorsCount = computed(
     () => this.visitors().filter((v) => !v.is_blurred).length,
   );
@@ -32,6 +37,10 @@ export class VisitorLogsComponent {
 
   constructor() {
     this.loadData();
+  }
+
+  shouldBlur(log: VisitorLog): boolean {
+    return this.isFreeTier() || log.is_blurred;
   }
 
   private async loadData(): Promise<void> {
