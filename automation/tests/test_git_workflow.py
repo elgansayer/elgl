@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -13,9 +14,9 @@ class Runner:
         self.calls: list[tuple[str, ...]] = []
 
     def __call__(
-        self, arguments: tuple[str, ...], cwd: Path, timeout: int = 300
+        self, arguments: Sequence[str], cwd: Path, timeout: int = 300
     ) -> ProcessResult:
-        self.calls.append(arguments)
+        self.calls.append(tuple(arguments))
         return self.results.pop(0)
 
 
