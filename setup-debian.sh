@@ -72,9 +72,14 @@ for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend
     sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
   fi
 done
+install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT/build-context"
+rsync -a --delete \
+  --exclude=.mypy_cache --exclude=.pytest_cache --exclude=.venv --exclude=__pycache__ \
+  "$REPOSITORY_SOURCE/automation/" "$FACTORY_ROOT/build-context/"
+chown -R "$FACTORY_USER:$FACTORY_USER" "$FACTORY_ROOT/build-context"
 sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" podman build \
   --tag localhost/hellotalk-factory-worker:current \
-  --file "$REPOSITORY_SOURCE/automation/Containerfile" "$REPOSITORY_SOURCE/automation"
+  --file "$FACTORY_ROOT/build-context/Containerfile" "$FACTORY_ROOT/build-context"
 
 if [ ! -f "$FACTORY_CONFIG/factory.env" ]; then
   install -o root -g "$FACTORY_USER" -m 0640 "$REPOSITORY_SOURCE/config/systemd/factory.env.example" "$FACTORY_CONFIG/factory.env"
