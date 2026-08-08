@@ -31,6 +31,7 @@ import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
+import { BlocksModule } from './blocks/blocks.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
@@ -127,6 +128,7 @@ import { CloudflareModule } from './cloudflare/cloudflare.module';
     VideoCallsModule,
     LeaderboardModule,
     StreakModule,
+    BlocksModule,
     NotificationsModule,
     CallsModule,
     QuizModule,
