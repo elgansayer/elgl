@@ -327,7 +327,7 @@ describe('MomentsService', () => {
           if (table === 'moments') {
             return {
               select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
+              in: jest.fn().mockReturnThis(),
               order: jest.fn().mockReturnThis(),
               limit: jest.fn().mockResolvedValue({ data: moments }),
             };
@@ -914,7 +914,7 @@ describe('MomentsService', () => {
           if (table === 'moments') {
             return {
               select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
+              in: jest.fn().mockReturnThis(),
               order: jest.fn().mockReturnThis(),
               limit: jest.fn().mockResolvedValue({ data: moments }),
             };
@@ -950,7 +950,7 @@ describe('MomentsService', () => {
           if (table === 'moments') {
             return {
               select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
+              in: jest.fn().mockReturnThis(),
               order: jest.fn().mockReturnThis(),
               limit: jest.fn().mockResolvedValue({ data: [] }),
             };

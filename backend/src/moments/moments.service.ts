@@ -314,9 +314,12 @@ export class MomentsService {
     const profile = await this.usersService.getProfile(userId);
     const userNativeLang = profile?.native_languages?.[0] ?? null;
 
+    const isClassmates = filter === 'Classmates';
+    const isFollowing = filter === 'Following';
+
     let moments: MomentRecord[] = [];
 
-    if (filter === 'Following') {
+    if (isFollowing) {
       const queueKey = `timeline_queue:${userId}`;
       const momentIds = await redis.lrange(queueKey, 0, 49);
       if (momentIds.length > 0) {
@@ -343,12 +346,18 @@ export class MomentsService {
           .limit(50);
         if (data) moments = data as unknown as MomentRecord[];
       }
-    } else if (filter === 'Classmates') {
-      const lang = targetLang || 'en';
+    } else if (isClassmates) {
+      // Classmates = users learning the same target language(s) as the current user
+      const userTargetLangs = profile?.target_languages ?? [];
+      const langs = targetLang
+        ? [targetLang]
+        : userTargetLangs.length > 0
+          ? userTargetLangs
+          : ['en'];
       const { data } = await supabase
         .from('moments')
         .select('*')
-        .eq('target_language', lang)
+        .in('target_language', langs)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
@@ -389,7 +398,7 @@ export class MomentsService {
 
     // Apply targeted visibility for non-Classmates filters: only show moments
     // whose target_language matches the current user's native language.
-    if (filter !== 'Classmates' && userNativeLang) {
+    if (userNativeLang && !isClassmates) {
       moments = moments.filter(
         (m) =>
           !m.target_language ||
@@ -435,14 +444,21 @@ export class MomentsService {
       }
 
       // Filter the generated mock data same as DB query
-      if (filter === 'Classmates' && targetLang) {
+      if (isClassmates) {
+        const userTargetLangs = profile?.target_languages ?? [];
+        const mockLangs = targetLang
+          ? [targetLang]
+          : userTargetLangs.length > 0
+            ? userTargetLangs
+            : ['en'];
+        const mockLangsLower = mockLangs.map((l) => l.toLowerCase());
         return generated.filter(
-          (m) => m.target_language.toLowerCase() === targetLang.toLowerCase(),
+          (m) => mockLangsLower.includes(m.target_language.toLowerCase()),
         );
       }
       // Targeted visibility for non-Classmates filters: only show moments
       // whose target_language matches the current user's native language.
-      if (filter !== 'Classmates' && userNativeLang) {
+      if (userNativeLang && !isClassmates) {
         generated = generated.filter(
           (m) =>
             !m.target_language ||
