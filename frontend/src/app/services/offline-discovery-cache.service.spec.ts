@@ -8,8 +8,8 @@ import { NetworkStatusService } from './network-status.service';
 function syncReq(result?: unknown) {
   const r: Record<string, unknown> = { result: result ?? null, _onsuccess: null };
   Object.defineProperty(r, 'onsuccess', {
-    get() { return r._onsuccess; },
-    set(f: () => void) { r._onsuccess = f; if (f) f(); },
+    get() { return r['_onsuccess']; },
+    set(f: () => void) { r['_onsuccess'] = f; if (f) f(); },
   });
   return r;
 }
@@ -50,7 +50,7 @@ describe('OfflineDiscoveryCacheService', () => {
     const s = getStore(storeName);
     return {
       put: (v: Record<string, unknown>) => {
-        s.set(String(v.id ?? v['key']), structuredClone(v));
+        s.set(String(v['id'] ?? v['key']), structuredClone(v));
         return syncReq();
       },
       get: (key: string) => syncReq(s.get(key) ?? null),

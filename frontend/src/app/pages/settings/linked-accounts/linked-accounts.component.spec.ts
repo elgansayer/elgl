@@ -29,7 +29,7 @@ describe('LinkedAccountsComponent', () => {
       ],
     }).compileComponents();
 
-    linkedAccountsService = TestBed.inject(LinkedAccountsService) as typeof linkedAccountsService;
+    linkedAccountsService = TestBed.inject(LinkedAccountsService) as unknown as typeof linkedAccountsService;
     fixture = TestBed.createComponent(LinkedAccountsComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();

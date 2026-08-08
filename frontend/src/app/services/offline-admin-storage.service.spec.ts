@@ -11,7 +11,7 @@ function createMockUser(id: string): AdminUserSummary {
   return {
     id,
     display_name: `User ${id}`,
-    avatar_url: null,
+    avatar_url: undefined,
     native_languages: ['en'],
     target_languages: ['es'],
     is_vip: false,
