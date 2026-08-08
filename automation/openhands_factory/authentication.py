@@ -8,6 +8,15 @@ from pathlib import Path
 from openhands_factory.config import FactoryConfig
 
 
+def secure_openai_credentials(home: Path) -> None:
+    credentials_dir = home / ".openhands" / "auth"
+    if not credentials_dir.is_dir():
+        return
+    os.chmod(credentials_dir, 0o700)
+    for credential in credentials_dir.glob("*_oauth.json"):
+        os.chmod(credential, 0o600)
+
+
 def authenticate_openai(config: FactoryConfig, *, force: bool = False) -> None:
     from openhands.sdk import LLM
 
@@ -20,6 +29,4 @@ def authenticate_openai(config: FactoryConfig, *, force: bool = False) -> None:
         force_login=force,
         open_browser=False,
     )
-    auth_path = cache_dir / "auth"
-    if auth_path.exists():
-        os.chmod(auth_path, 0o600)
+    secure_openai_credentials(Path.home())
