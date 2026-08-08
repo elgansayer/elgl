@@ -252,7 +252,12 @@
 
   <!-- Content States -->
   <main class="p-0">
-    @if (isLoading()) {
+    @if (selectedFilter() === 'audio_intros') {
+      <app-audio-intro-feed
+        [users]="audioIntroUsers()"
+        [isLoading]="audioIntrosLoading()"
+      ></app-audio-intro-feed>
+    } @else if (isLoading()) {
       <section aria-live="polite" aria-busy="true" role="status">
         <span class="sr-only">{{ 'discovery.loadingPartners' | t }}</span>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200" aria-hidden="true">

@@ -10,6 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
 import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
+import { MOCK_PARTNERS } from '../../services/mock-data';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -25,6 +26,7 @@ import { DistanceSliderComponent } from '../distance-slider/distance-slider.comp
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AudioIntroFeedComponent } from '../../discovery/audio-intro-feed/audio-intro-feed.component';
 
 /** Milliseconds to debounce partner search calls triggered by interaction changes. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -45,6 +47,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     AppEmptyStateComponent,
     DiscoverySkeletonCardComponent,
     SanitiseHtmlPipe,
+    AudioIntroFeedComponent,
   ],
   templateUrl: './discovery.component.html',
   styleUrls: ['./discovery.component.scss'],
@@ -95,6 +98,11 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
 
+  /** Audio Intros Feed state */
+  readonly audioIntroUsers = signal<UserProfile[]>([]);
+  readonly audioIntrosLoading = signal<boolean>(false);
+  readonly audioIntrosError = signal<string | null>(null);
+
   /** Debounce timer handle for throttling rapid search calls. */
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   /** Abort controller for cancelling in-flight partner search. */
@@ -115,6 +123,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       { id: 'nearby', label: this.i18n.translate('discovery.filterNearMe') },
       { id: 'city', label: this.i18n.translate('discovery.filterCity') },
       { id: 'paid', label: this.i18n.translate('discovery.filterPaidPractice') },
+      { id: 'audio_intros', label: this.i18n.translate('discovery.filterAudioIntros') },
     ];
   });
   readonly selectedFilter = signal<string>('all');
@@ -161,7 +170,11 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     } else {
       this.selectedDistanceKm.set(50);
     }
-    void this.searchPartners();
+    if (id === 'audio_intros') {
+      void this.loadAudioIntros();
+    } else {
+      void this.searchPartners();
+    }
   }
 
   setLanguage(code: string) {
@@ -418,7 +431,33 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
-  /** Start the matchmaking algorithm onboarding tour. */
+  /** Audio Intros Feed: load users with audio introductions */
+  async loadAudioIntros(): Promise<void> {
+    this.audioIntrosLoading.set(true);
+    this.audioIntrosError.set(null);
+    try {
+      const users = await this.discoveryService.getAudioIntros({
+        target_language: this.selectedTargetLanguage() || undefined,
+        country: undefined,
+        city: undefined,
+        proficiency_level: this.selectedProficiencyLevel() || undefined,
+      });
+      const blocked = this.blockedUserIds();
+      const filtered = blocked.length > 0 ? users.filter((u) => !blocked.includes(u.id)) : users;
+      this.audioIntroUsers.set(filtered);
+    } catch (e) {
+      console.warn('Failed to load audio intros', e);
+      this.audioIntrosError.set(this.i18n.translate('discovery.audioIntroFeed.loadError'));
+      // Fall back to mock partners with audio_intro_url
+      const blocked = this.blockedUserIds();
+      const fallback: UserProfile[] = MOCK_PARTNERS.filter((p) => p.audio_intro_url && !blocked.includes(p.id));
+      this.audioIntroUsers.set(fallback);
+    } finally {
+      this.audioIntrosLoading.set(false);
+    }
+  }
+
+/** Start the matchmaking algorithm onboarding tour. */
   startMatchmakingTour(): void {
     this.matchmakingOnboarding.startTour();
   }
