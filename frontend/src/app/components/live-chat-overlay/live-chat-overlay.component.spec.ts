@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LiveChatOverlayComponent } from './live-chat-overlay.component';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { I18nService } from '../../services/i18n.service';
 
 describe('LiveChatOverlayComponent', () => {
@@ -29,7 +29,7 @@ describe('LiveChatOverlayComponent', () => {
     await TestBed.configureTestingModule({
       imports: [LiveChatOverlayComponent],
       providers: [
-        { provide: CentrifugoService, useValue: mockCentrifugo },
+        { provide: CentrifugeService, useValue: mockCentrifugo },
         { provide: I18nService, useValue: mockI18n },
       ],
     }).compileComponents();

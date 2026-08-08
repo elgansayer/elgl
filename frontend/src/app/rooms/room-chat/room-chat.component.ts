@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { CentrifugoService, RoomLiveMessage } from '../../services/centrifugo.service';
+import { CentrifugeService, RoomLiveMessage } from '../../services/centrifuge.service';
 import { DraftService } from '../../services/draft.service';
 
 @Component({
@@ -22,7 +22,7 @@ export class RoomChatComponent {
   readonly messages = signal<RoomLiveMessage[]>([]);
   readonly inputText = signal('');
 
-  private readonly centrifugo = inject(CentrifugoService);
+  private readonly centrifuge = inject(CentrifugeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly draftService = inject(DraftService);
   private readonly messagesContainer = viewChild<HTMLElement>('messagesContainer');
@@ -34,7 +34,7 @@ export class RoomChatComponent {
       if (this.subscribedRoomId && this.subscribedRoomId !== currentRoomId) {
         // Save draft for the previous room before switching
         this.draftService.saveChatDraft(this.subscribedRoomId, this.inputText());
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifuge.unsubscribeLiveRoom(this.subscribedRoomId);
         this.subscribedRoomId = undefined;
       }
 
@@ -47,7 +47,7 @@ export class RoomChatComponent {
         if (draft) {
           this.inputText.set(draft);
         }
-        this.centrifugo.subscribeLiveRoom(currentRoomId, (data) => {
+        this.centrifuge.subscribeLiveRoom(currentRoomId, (data) => {
           this.messages.update((prev) => [...prev, data]);
           this.scrollToBottom();
         });
@@ -57,7 +57,7 @@ export class RoomChatComponent {
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
         this.draftService.saveChatDraft(this.subscribedRoomId, this.inputText());
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifuge.unsubscribeLiveRoom(this.subscribedRoomId);
       }
     });
   }
@@ -65,7 +65,7 @@ export class RoomChatComponent {
   sendMessage(): void {
     const content = this.inputText().trim();
     if (!content) return;
-    this.centrifugo.publish(`room_${this.roomId()}`, {
+    this.centrifuge.publish(`room_${this.roomId()}`, {
       type: 'text',
       content,
     });

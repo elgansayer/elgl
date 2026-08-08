@@ -7,7 +7,7 @@ import { vi } from 'vitest';
 import { ChatPageComponent } from './chat-page.component';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AiConversationService } from './ai-conversation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -30,7 +30,7 @@ describe('ChatPageComponent', () => {
     currentUser: signal({ id: 'test-user' }),
   };
 
-  const centrifugoServiceMock = {
+  const centrifugeServiceMock = {
     subscribe: vi.fn(),
     unsubscribe: vi.fn(),
     publish: vi.fn(),
@@ -71,8 +71,8 @@ describe('ChatPageComponent', () => {
     chatServiceMock.replyToStatusUpdate.mockReset();
     chatServiceMock.markMessageStatus.mockReset();
     chatServiceMock.markMessageStatus.mockResolvedValue(undefined);
-    centrifugoServiceMock.subscribe.mockReset();
-    centrifugoServiceMock.unsubscribe.mockReset();
+    centrifugeServiceMock.subscribe.mockReset();
+    centrifugeServiceMock.unsubscribe.mockReset();
     aiConversationServiceMock.generateReply.mockReset();
 
     await TestBed.configureTestingModule({
@@ -85,7 +85,7 @@ describe('ChatPageComponent', () => {
       providers: [
         { provide: ChatService, useValue: chatServiceMock },
         { provide: AuthService, useValue: authServiceMock },
-        { provide: CentrifugoService, useValue: centrifugoServiceMock },
+        { provide: CentrifugeService, useValue: centrifugeServiceMock },
         { provide: AiConversationService, useValue: aiConversationServiceMock },
         { provide: I18nService, useValue: i18nServiceMock },
       ],

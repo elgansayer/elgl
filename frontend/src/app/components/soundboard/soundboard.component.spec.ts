@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 
 import { SoundboardComponent, SoundItem } from './soundboard.component';
 import { SoundboardService } from '../../services/soundboard.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 import { I18nService } from '../../services/i18n.service';
@@ -32,7 +32,7 @@ describe('SoundboardComponent', () => {
   let currentUser: ReturnType<typeof signal<{ id: string } | null>>;
 
   let soundboardService: SoundboardService;
-  let centrifugoService: CentrifugoService;
+  let centrifugeService: CentrifugeService;
   let authService: AuthService;
   let hapticFeedback: HapticFeedbackService;
   let i18nService: I18nService;
@@ -52,11 +52,11 @@ describe('SoundboardComponent', () => {
       playSound: playSoundMock,
     } as unknown as SoundboardService;
 
-    centrifugoService = {
+    centrifugeService = {
       subscribe: vi.fn((channel: string, cb: (data: unknown) => void) => {
         subscribeCalls.push({ channel, cb });
       }),
-    } as unknown as CentrifugoService;
+    } as unknown as CentrifugeService;
 
     authService = {
       currentUser,
@@ -74,7 +74,7 @@ describe('SoundboardComponent', () => {
       imports: [SoundboardComponent],
       providers: [
         { provide: SoundboardService, useValue: soundboardService },
-        { provide: CentrifugoService, useValue: centrifugoService },
+        { provide: CentrifugeService, useValue: centrifugeService },
         { provide: AuthService, useValue: authService },
         { provide: HapticFeedbackService, useValue: hapticFeedback },
         { provide: I18nService, useValue: i18nService },

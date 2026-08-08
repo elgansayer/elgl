@@ -9,7 +9,7 @@ import {
 import { Subject } from 'rxjs';
 
 import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { SoundboardService } from '../../services/soundboard.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
@@ -53,7 +53,7 @@ export interface SoundItem {
 export class SoundboardComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly soundboardService = inject(SoundboardService);
-  private readonly centrifugoService = inject(CentrifugoService);
+  private readonly centrifugeService = inject(CentrifugeService);
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly hapticFeedback = inject(HapticFeedbackService);
@@ -99,7 +99,7 @@ export class SoundboardComponent {
       if (!room) return;
 
       const channel = `room_${room}`;
-      this.centrifugoService.subscribe(channel, (data: unknown) => {
+      this.centrifugeService.subscribe(channel, (data: unknown) => {
         if (
           data &&
           typeof data === 'object' &&
@@ -120,7 +120,7 @@ export class SoundboardComponent {
       });
 
       // Clean up subscription when roomId changes
-      this.centrifugoService.subscribe(channel, () => {
+      this.centrifugeService.subscribe(channel, () => {
         // noop; subscription is managed by effect lifecycle
       });
     });

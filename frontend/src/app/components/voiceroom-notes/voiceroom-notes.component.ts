@@ -11,7 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 
 interface VoiceRoomNote {
   id: string;
@@ -33,7 +33,7 @@ interface VoiceRoomNote {
 export class VoiceroomNotesComponent {
   private http = inject(HttpClient);
   private i18n = inject(I18nService);
-  private centrifugo = inject(CentrifugoService);
+  private centrifuge = inject(CentrifugeService);
   private destroyRef = inject(DestroyRef);
   private subscribedRoomId?: string;
 
@@ -61,13 +61,13 @@ export class VoiceroomNotesComponent {
     effect(() => {
       const currentRoomId = this.roomId();
       if (this.subscribedRoomId && this.subscribedRoomId !== currentRoomId) {
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifuge.unsubscribeLiveRoom(this.subscribedRoomId);
         this.subscribedRoomId = undefined;
       }
 
       if (currentRoomId) {
         this.subscribedRoomId = currentRoomId;
-        this.centrifugo.subscribeLiveRoom(currentRoomId, (data) => {
+        this.centrifuge.subscribeLiveRoom(currentRoomId, (data) => {
           if (data.type === 'voice_room_note') {
             this.refreshCounter.update((value) => value + 1);
           } else if (data.type === 'voice_room_note_deleted') {
@@ -79,7 +79,7 @@ export class VoiceroomNotesComponent {
 
     this.destroyRef.onDestroy(() => {
       if (this.subscribedRoomId) {
-        this.centrifugo.unsubscribeLiveRoom(this.subscribedRoomId);
+        this.centrifuge.unsubscribeLiveRoom(this.subscribedRoomId);
       }
     });
   }

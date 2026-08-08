@@ -9,7 +9,7 @@ import {
   viewChild,
   OnInit,
 } from '@angular/core';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -88,7 +88,7 @@ interface CentrifugoMessageData {
 export class LiveChatOverlayComponent implements OnInit {
   roomId = input<string>('');
 
-  private centrifugo = inject(CentrifugoService);
+  private centrifuge = inject(CentrifugeService);
   private i18n = inject(I18nService);
   private destroyRef = inject(DestroyRef);
   private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
@@ -104,7 +104,7 @@ export class LiveChatOverlayComponent implements OnInit {
 
     this.channelName = `room_${id}`;
 
-    this.subscription = this.centrifugo.subscribe(this.channelName, (data: unknown) => {
+    this.subscription = this.centrifuge.subscribe(this.channelName, (data: unknown) => {
       const isCentrifugoMessageData = (value: unknown): value is CentrifugoMessageData => {
         if (typeof value !== 'object' || value === null) return false;
         if (!('type' in value) || !('content' in value)) return false;
@@ -131,7 +131,7 @@ export class LiveChatOverlayComponent implements OnInit {
   constructor() {
     this.destroyRef.onDestroy(() => {
       if (this.channelName) {
-        this.centrifugo.unsubscribe(this.channelName);
+        this.centrifuge.unsubscribe(this.channelName);
       }
     });
   }

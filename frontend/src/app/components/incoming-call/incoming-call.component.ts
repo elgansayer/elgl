@@ -4,7 +4,7 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
-import { CentrifugoService } from '../../services/centrifugo.service';
+import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { LivekitService } from '../../services/livekit.service';
@@ -138,7 +138,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
 })
 export class IncomingCallComponent implements OnDestroy {
   readonly i18n = inject(I18nService);
-  private centrifugoService = inject(CentrifugoService);
+  private centrifugeService = inject(CentrifugeService);
   private authService = inject(AuthService);
   private livekitService = inject(LivekitService);
   private userService = inject(UserService);
@@ -165,14 +165,14 @@ export class IncomingCallComponent implements OnDestroy {
 
       // Unsubscribe previous subscription if user changed
       if (this.subscribedChannel) {
-        this.centrifugoService.unsubscribe(this.subscribedChannel);
+        this.centrifugeService.unsubscribe(this.subscribedChannel);
         this.subscribedChannel = null;
       }
 
       this.loadSilenceSetting(_userId);
 
       const channel = `user_${_userId}`;
-      this.centrifugoService.subscribe(channel, (data: unknown) => {
+      this.centrifugeService.subscribe(channel, (data: unknown) => {
         if (isIncomingCallEvent(data) && data.type === 'incoming_call' && data.callInfo) {
           this.handleIncomingCall(data.callInfo);
         }
@@ -181,7 +181,7 @@ export class IncomingCallComponent implements OnDestroy {
 
       onCleanup(() => {
         if (this.subscribedChannel) {
-          this.centrifugoService.unsubscribe(this.subscribedChannel);
+          this.centrifugeService.unsubscribe(this.subscribedChannel);
           this.subscribedChannel = null;
         }
       });
@@ -288,7 +288,7 @@ export class IncomingCallComponent implements OnDestroy {
       );
 
       // Notify caller that call was accepted
-      this.centrifugoService.publish(`user_${info.callerId}`, {
+      this.centrifugeService.publish(`user_${info.callerId}`, {
         type: 'call_accepted',
         data: {
           userId: this.authService.currentUser()?.id,
@@ -315,7 +315,7 @@ export class IncomingCallComponent implements OnDestroy {
     this.hapticFeedback.tap();
 
     // Notify the caller that the call was rejected
-    this.centrifugoService.publish(`user_${info.callerId}`, {
+    this.centrifugeService.publish(`user_${info.callerId}`, {
       type: 'call_rejected',
       data: {
         userId: this.authService.currentUser()?.id,
@@ -330,7 +330,7 @@ export class IncomingCallComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.stopRingtone();
     if (this.subscribedChannel) {
-      this.centrifugoService.unsubscribe(this.subscribedChannel);
+      this.centrifugeService.unsubscribe(this.subscribedChannel);
       this.subscribedChannel = null;
     }
   }

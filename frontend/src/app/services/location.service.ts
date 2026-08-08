@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
-import { CentrifugoService } from './centrifugo.service';
+import { CentrifugeService } from './centrifuge.service';
 
 export interface CurrentLocation {
   latitude: number;
@@ -18,7 +18,7 @@ export interface LiveLocationData {
 @Injectable({ providedIn: 'root' })
 export class LocationService {
   private authService = inject(AuthService);
-  private centrifugoService = inject(CentrifugoService);
+  private centrifugeService = inject(CentrifugeService);
 
   private async authHeaders(): Promise<Record<string, string>> {
     const token = this.authService.getAccessToken();
@@ -112,7 +112,7 @@ export class LocationService {
     userId: string,
     callback: (data: LiveLocationData) => void,
   ): () => void {
-    this.centrifugoService.subscribeLiveLocation(userId, callback);
-    return () => this.centrifugoService.unsubscribeLiveLocation(userId);
+    this.centrifugeService.subscribeLiveLocation(userId, callback);
+    return () => this.centrifugeService.unsubscribeLiveLocation(userId);
   }
 }
