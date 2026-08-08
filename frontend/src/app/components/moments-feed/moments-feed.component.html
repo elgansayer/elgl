@@ -6,7 +6,17 @@
       <h1 class="text-xl font-black text-text-primary tracking-tight">{{ 'moments.title' | t }}</h1>
       <div class="flex items-center gap-3">
         <a routerLink="/notifications" class="text-text-primary text-xl" [attr.aria-label]="'nav.notifications' | t">🔔</a>
-        <button (click)="showComposeForm.set(!showComposeForm())" class="text-text-primary" [attr.aria-label]="'nav.compose' | t">
+        <button (click)="showMuteWordsPanel.set(!showMuteWordsPanel())" class="text-text-primary me-1" [attr.aria-label]="'moments.muteWordsTitle' | t">
+            <!-- Mute filter icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+              <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
+              <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </button>
+          <button (click)="showComposeForm.set(!showComposeForm())" class="text-text-primary" [attr.aria-label]="'nav.compose' | t">
           <!-- Camera / Post Icon -->
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -125,6 +135,45 @@
     </section>
   }
 
+  <!-- Mute Words Panel -->
+  @if (showMuteWordsPanel()) {
+    <section class="p-4 bg-surface-400 border-b border-surface-200">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-bold text-text-primary">{{ 'moments.muteWordsTitle' | t }}</h3>
+        <button (click)="showMuteWordsPanel.set(false)" class="text-text-muted hover:text-text-primary text-sm" [attr.aria-label]="'moments.muteWordsTitle' | t">&#10005;</button>
+      </div>
+      <p class="text-xs text-text-secondary mb-3">{{ 'moments.muteWordsDescription' | t }}</p>
+      <div class="flex gap-2 mb-3">
+        <input
+          type="text"
+          [(ngModel)]="newMuteWord"
+          (keyup.enter)="addMuteWord()"
+          [placeholder]="'moments.muteWordPlaceholder' | t"
+          class="flex-1 bg-surface-300 text-text-primary rounded-full px-4 py-1.5 text-xs border-none focus:ring-1 focus:ring-purple-500 outline-none"
+        />
+        <button
+          (click)="addMuteWord()"
+          [disabled]="!newMuteWord().trim()"
+          class="bg-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-full disabled:opacity-50 transition-opacity"
+        >
+          {{ 'moments.muteWordAddBtn' | t }}
+        </button>
+      </div>
+      @if (safetyService.mutedWords().length > 0) {
+        <div class="flex flex-wrap gap-2">
+          @for (word of safetyService.mutedWords(); track word) {
+            <span class="inline-flex items-center gap-1 bg-surface-300 text-text-primary text-xs px-3 py-1 rounded-full">
+              {{ word }}
+              <button (click)="removeMuteWord(word)" class="text-text-muted hover:text-red-400" [attr.aria-label]="'moments.muteWordRemoveAria' | t">&#10005;</button>
+            </span>
+          }
+        </div>
+      } @else {
+        <p class="text-xs text-text-muted">{{ 'moments.muteWordsEmpty' | t }}</p>
+      }
+    </section>
+  }
+
   @if (showVoiceRecorder()) {
     <div
       class="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm"
@@ -155,8 +204,14 @@
       </app-empty-state>
     }
 
+    @if (hiddenByMuteCount() > 0) {
+      <div class="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-center">
+        <p class="text-xs text-yellow-400 font-bold">{{ 'moments.muteWordsFilteredBanner' | t: { count: hiddenByMuteCount() } }}</p>
+      </div>
+    }
+
     <!-- Moments Feed List -->
-    @for (moment of momentsStore.feed().slice(0, visibleCount()); track moment.id) {
+    @for (moment of filteredFeed().slice(0, visibleCount()); track moment.id) {
       <article
         class="p-4 bg-surface-500 hover:bg-surface-400/50 transition-colors"
         [class.bg-surface-400]="moment.is_pinned"

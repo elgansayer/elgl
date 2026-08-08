@@ -22,6 +22,7 @@ import {
 } from '../primitives/language-picker/language-picker.component';
 import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 import { DraftService } from '../../services/draft.service';
+import { SafetyService } from '../../services/safety.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { LightboxComponent } from '../lightbox/lightbox.component';
 
@@ -67,10 +68,34 @@ export class MomentsFeedComponent {
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly draftService = inject(DraftService);
+  readonly safetyService = inject(SafetyService);
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
   readonly visibleCount = signal(15);
+
+  // Mute words panel
+  readonly showMuteWordsPanel = signal(false);
+  readonly newMuteWord = signal('');
+
+  /** Feed filtered client-side by muted words */
+  readonly filteredFeed = computed(() => {
+    const feed = this.momentsStore.feed();
+    const muted = this.safetyService.mutedWords();
+    if (!muted.length) return feed;
+    return feed.filter((moment) => {
+      const text = moment.text_content;
+      if (!text) return true;
+      const lower = text.toLowerCase();
+      return !muted.some((word) => lower.includes(word));
+    });
+  });
+
+  readonly hiddenByMuteCount = computed(() => {
+    const total = this.filteredFeed().length;
+    const visible = this.filteredFeed().length;
+    return total - visible;
+  });
 
   constructor() {
     afterNextRender(() => {
@@ -549,7 +574,7 @@ export class MomentsFeedComponent {
     const docHeight = document.documentElement.scrollHeight;
     const winHeight = window.innerHeight;
     if (docHeight - scrollTop - winHeight < 200) {
-      const total = this.momentsStore.feed().length;
+      const total = this.filteredFeed().length;
       if (this.visibleCount() < total) {
         this.visibleCount.update(c => c + this.pageSize);
       }
@@ -576,5 +601,18 @@ export class MomentsFeedComponent {
     }
     if (draft.targetLanguage) this.newTargetLanguage.set(draft.targetLanguage);
     if (draft.voiceDurationSec !== undefined) this.newVoiceDurationSec = draft.voiceDurationSec;
+  }
+
+  // Mute word helpers
+
+  addMuteWord(): void {
+    const word = this.newMuteWord().trim();
+    if (!word) return;
+    this.safetyService.addMutedWord(word);
+    this.newMuteWord.set('');
+  }
+
+  removeMuteWord(word: string): void {
+    this.safetyService.removeMutedWord(word);
   }
 }
