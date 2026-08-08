@@ -17,7 +17,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })
