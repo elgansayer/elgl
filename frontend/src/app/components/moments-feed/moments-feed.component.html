@@ -71,7 +71,7 @@
               @if (newMediaType() === 'audio') {
                 <audio [src]="url" controls class="h-8 max-w-[200px] rounded-full"></audio>
               }
-              <button aria-label="Remove media"
+              <button [attr.aria-label]="'moments.removeMediaBtn' | t"
                 (click)="removeMedia(i)"
                 class="absolute -top-2 -end-2 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white"
               >
@@ -94,7 +94,7 @@
 
       <div class="mt-3 ms-13 flex justify-between items-center">
         <div class="flex items-center gap-2">
-          <button aria-label="Record voice"
+          <button [attr.aria-label]="'moments.recordVoiceBtn' | t"
             (click)="showVoiceRecorder.set(true)"
             class="p-2 rounded-full bg-surface-300 text-purple-400 hover:text-purple-300"
           >
@@ -108,7 +108,7 @@
               [(ngModel)]="tempImageUrlInput"
               [placeholder]="'moments.imageUrlPlaceholder' | t"
               class="bg-transparent border-none text-xs w-24 text-text-primary outline-none px-2"
-             [attr.aria-label]="'text input'"/>
+             [attr.aria-label]="'moments.imageUrlInputAriaLabel' | t"/>
             <button (click)="addTempImageUrl()" class="text-[10px] font-bold text-purple-400" [attr.aria-label]="'moments.addImageBtn' | t">
               {{ 'moments.addImageBtn' | t | uppercase }}
             </button>
@@ -414,9 +414,9 @@
                       [attr.aria-controls]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'comment-mention-listbox' : null"
                       [attr.aria-expanded]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0"
                       [attr.aria-activedescendant]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'comment-mention-option-' + moment.id + '-' + (mentionActiveIndexMap()[moment.id] ?? 0) : null"
-                      [attr.aria-label]="'text input'"
+                      [attr.aria-label]="'moments.commentInputAriaLabel' | t"
                     />
-                    <button aria-label="Submit comment"
+                    <button [attr.aria-label]="'moments.submitCommentBtn' | t"
                       (click)="submitComment(moment)"
                       class="bg-purple-600 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"
                     >

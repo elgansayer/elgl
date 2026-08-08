@@ -5,8 +5,55 @@
   color: rgba(255, 255, 255, 0.87);
 }
 
+/* Purple-tinted header gradient matching original HelloTalk Moments design */
+header {
+  background: linear-gradient(180deg, rgba(30, 20, 80, 0.95) 0%, rgba(25, 20, 50, 0.8) 100%) !important;
+  backdrop-filter: blur(12px);
+}
+
 /* Neon accent utility for moments feed */
 .neon-accent {
   color: #c084fc;
   text-shadow: 0 0 8px rgba(192, 132, 252, 0.5);
+}
+
+/* Neon glow pulse for interactive icons */
+@keyframes neon-pulse {
+  0%, 100% {
+    text-shadow: 0 0 4px rgba(192, 132, 252, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 12px rgba(192, 132, 252, 0.6);
+  }
+}
+
+.neon-glow {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+/* Gradient button enhancement */
+.gradient-btn {
+  background: linear-gradient(135deg, #fb923c 0%, #facc15 100%) !important;
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.3);
+  transition: box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.gradient-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(251, 146, 60, 0.5);
+  opacity: 0.95;
+}
+
+/* Card hover transitions */
+.card-hover {
+  transition: background-color 0.2s ease;
+}
+
+.card-hover:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Purple tint badge for target language */
+.lang-badge {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(126, 34, 206, 0.1) 100%);
+  border: 1px solid rgba(147, 51, 234, 0.2);
 }
