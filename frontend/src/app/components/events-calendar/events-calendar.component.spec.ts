@@ -2,11 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EventsCalendarComponent } from './events-calendar.component';
-import { EventsService, type Event } from '../../services/events.service';
+import { EventsService } from '../../services/events.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-import { AppCardComponent } from '../primitives/card/card.component';
 import type { PipeTransform } from '@angular/core';
 import { Pipe } from '@angular/core';
 
@@ -28,25 +26,6 @@ describe('EventsCalendarComponent', () => {
     currentLang: vi.fn().mockReturnValue('en-GB'),
     translate: vi.fn().mockImplementation((key: string) => key),
   };
-
-  const createEvent = (overrides: Partial<Event> = {}): Event => ({
-    id: 'ev-1',
-    title: 'Test Event',
-    description: 'A test event',
-    category: 'Audio Rooms',
-    date_time: '2026-08-15T14:00:00Z',
-    location: 'Audio Room',
-    host_id: 'host-1',
-    host_name: 'Test Host',
-    host_avatar_url: null,
-    language_pair: 'en-es',
-    max_participants: 10,
-    is_cancelled: false,
-    created_at: '2026-08-01T00:00:00Z',
-    updated_at: '2026-08-01T00:00:00Z',
-    participants_count: 5,
-    ...overrides,
-  });
 
   beforeEach(async () => {
     mockEventsService = {
