@@ -99,5 +99,20 @@
     "typing": "Writing...",
     "backToScenarios": "Back to scenarios"
   },
-  "moderation": {}
+  "moderation": {},
+  "events": {
+    "title": "Events",
+    "filter_upcoming": "Upcoming",
+    "filter_past": "Past",
+    "all_languages": "All Languages",
+    "hosted_by": "Hosted by {name}",
+    "load_more": "Load More",
+    "attending_count": "{count} attending",
+    "interested_count": "{count} interested",
+    "rsvp_attending": "Attending",
+    "rsvp_attending_active": "Attending",
+    "rsvp_interested": "Interested",
+    "rsvp_interested_active": "Interested",
+    "rsvp_remove": "Remove"
+  }
 }

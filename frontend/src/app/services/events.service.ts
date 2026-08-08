@@ -19,6 +19,16 @@ export interface Event {
   host_name?: string;
   host_avatar_url?: string;
   participants_count?: number;
+  attendees_count?: number;
+  interested_count?: number;
+}
+
+export interface EventRsvp {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: 'attending' | 'interested';
+  created_at: string;
 }
 
 export interface EventsQuery {
@@ -113,5 +123,17 @@ export class EventsService {
     const params: Record<string, string> = {};
     if (status) params['status'] = status;
     return this.http.get<Event[]>(`${environment.apiUrl}/events/my`, { params });
+  }
+
+  getMyRsvp(eventId: string): Observable<EventRsvp | null> {
+    return this.http.get<EventRsvp | null>(`${environment.apiUrl}/events/${eventId}/rsvp`);
+  }
+
+  rsvp(eventId: string, status: 'attending' | 'interested'): Observable<EventRsvp> {
+    return this.http.post<EventRsvp>(`${environment.apiUrl}/events/${eventId}/rsvp`, { status });
+  }
+
+  removeRsvp(eventId: string): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(`${environment.apiUrl}/events/${eventId}/rsvp`);
   }
 }
