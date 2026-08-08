@@ -4,7 +4,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends bash ca-certificates git jq python3 python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --uid 1000 worker
+RUN usermod --login worker --home /home/worker --move-home node \
+    && groupmod --new-name worker node
 USER worker
 WORKDIR /workspace
 ENV HOME=/home/worker

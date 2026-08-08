@@ -6,6 +6,13 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
 
+def test_worker_image_reuses_the_node_base_image_user() -> None:
+    containerfile = (Path(__file__).parents[1] / "Containerfile").read_text(encoding="utf-8")
+
+    assert "usermod --login worker" in containerfile
+    assert "useradd --create-home --uid 1000 worker" not in containerfile
+
+
 def environment(**overrides: str) -> dict[str, str]:
     values = {
         "OPENCODE_GO_API_KEY": "not-a-real-key",
