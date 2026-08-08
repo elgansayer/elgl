@@ -25,7 +25,7 @@ esac
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential ca-certificates curl git gh gnupg jq logrotate podman \
+  build-essential ca-certificates curl git gh gnupg jq logrotate passt podman \
   python3 python3-pip python3-venv rsync shellcheck tmux uidmap
 
 install -d -m 0755 /etc/apt/keyrings
@@ -78,6 +78,7 @@ rsync -a --delete \
   "$REPOSITORY_SOURCE/automation/" "$FACTORY_ROOT/build-context/"
 chown -R "$FACTORY_USER:$FACTORY_USER" "$FACTORY_ROOT/build-context"
 sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" podman build \
+  --cgroup-manager=cgroupfs \
   --tag localhost/hellotalk-factory-worker:current \
   --file "$FACTORY_ROOT/build-context/Containerfile" "$FACTORY_ROOT/build-context"
 
