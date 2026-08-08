@@ -85,7 +85,7 @@ describe('TokenisedTextComponent', () => {
         }
       }).toThrow('errors.intlSegmenterUnavailable');
     } finally {
-      Intl.Segmenter = originalSegmenter;
+      (Intl as any).Segmenter = originalSegmenter;
     }
   });
 });

@@ -45,7 +45,7 @@ describe('GroupParticipantDrawerComponent', () => {
     fixture.componentRef.setInput('isOpen', overrides?.isOpen ?? true);
     fixture.componentRef.setInput('participants', overrides?.participants ?? mockParticipants);
     closedSpy = vi.fn();
-    component.closed.subscribe(closedSpy);
+    component.closed.subscribe(closedSpy as any);
     fixture.detectChanges();
   }
 
