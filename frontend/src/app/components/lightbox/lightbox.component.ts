@@ -1,4 +1,4 @@
-import { Component, input, output, signal, OnInit } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -102,8 +102,8 @@ import { CommonModule } from '@angular/common';
     </div>
   `,
 })
-export class LightboxComponent implements OnInit {
-  images = input.required<string[]>();
+export class LightboxComponent {
+  images = input<string[]>([]);
   initialIndex = input<number>(0);
   closed = output<void>();
 
@@ -111,10 +111,6 @@ export class LightboxComponent implements OnInit {
 
   private touchStartX = 0;
   private touchEndX = 0;
-
-  ngOnInit() {
-    this.currentIndex.set(this.initialIndex());
-  }
 
   handleKeyDown(event: KeyboardEvent) {
     if (event.key === 'Escape') this.closed.emit();
@@ -156,9 +152,9 @@ export class LightboxComponent implements OnInit {
 
     if (Math.abs(diff) > swipeThreshold) {
       if (diff > 0) {
-        this.next(); // Swiped left
+        this.next();
       } else {
-        this.prev(); // Swiped right
+        this.prev();
       }
     }
   }

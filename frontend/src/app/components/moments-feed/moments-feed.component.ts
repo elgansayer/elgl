@@ -23,6 +23,7 @@ import {
 import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 import { DraftService } from '../../services/draft.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { LightboxComponent } from '../lightbox/lightbox.component';
 
 @Component({
   selector: 'app-moments-feed',
@@ -41,6 +42,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     TextToSpeechComponent,
     LikedByModalComponent,
     AppEmptyStateComponent,
+    LightboxComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -80,6 +82,10 @@ export class MomentsFeedComponent {
   readonly activeCorrectionMomentId = signal<string | null>(null);
   readonly activeCorrectionOriginalText = signal<string>('');
   readonly activeLikedByMomentId = signal<string | null>(null);
+  // Lightbox state (issue #1040)
+  readonly lightboxOpen = signal<boolean>(false);
+  readonly lightboxImages = signal<string[]>([]);
+  readonly lightboxInitialIndex = signal<number>(0);
   // Translation cache and visibility toggle (issue #447)
   readonly translationCache = signal<Record<string, string>>({});
   readonly showTranslationMap = signal<Record<string, boolean>>({});
@@ -432,6 +438,16 @@ export class MomentsFeedComponent {
 
   closeLikedBy(): void {
     this.activeLikedByMomentId.set(null);
+  }
+
+  openLightbox(images: string[], index: number): void {
+    this.lightboxImages.set(images);
+    this.lightboxInitialIndex.set(index);
+    this.lightboxOpen.set(true);
+  }
+
+  closeLightbox(): void {
+    this.lightboxOpen.set(false);
   }
 
   private handleWindowScroll = (): void => {
