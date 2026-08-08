@@ -258,7 +258,7 @@ describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
       for (const component of TRUST_SAFETY_COMPONENTS) {
         const template = templates.get(component.name)!;
         for (const banned of bannedStrings) {
-          expect(template).not.toMatch(new RegExp(banned.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')));
+          expect(template).not.toMatch(new RegExp(banned.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')));
         }
       }
     });

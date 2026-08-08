@@ -59,6 +59,7 @@ describe.skip('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
+        avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es', 'fr'],
         avatar_url: null,
@@ -67,6 +68,7 @@ describe.skip('LikedByModalComponent', () => {
         id: 'user-2',
         avatar_url: 'https://example.com/avatar.jpg',
         display_name: 'Bob',
+        avatar_url: null,
         native_languages: ['fr'],
         target_languages: ['en'],
       },
@@ -174,6 +176,7 @@ describe.skip('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
+        avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es'],
         avatar_url: null,
@@ -197,6 +200,7 @@ describe.skip('LikedByModalComponent', () => {
       {
         id: 'user-1',
         display_name: 'Alice',
+        avatar_url: null,
         native_languages: ['en'],
         target_languages: ['es'],
         avatar_url: null,
@@ -222,9 +226,10 @@ describe.skip('LikedByModalComponent', () => {
       {
         id: 'user-2',
         display_name: 'Bob',
+        avatar_url: null,
         native_languages: ['fr'],
         target_languages: ['en'],
-      },
+      } as any,
     ]);
     await fixture.whenStable();
     fixture.detectChanges();

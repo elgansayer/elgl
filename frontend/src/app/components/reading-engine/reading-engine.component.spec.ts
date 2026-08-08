@@ -36,7 +36,6 @@ describe.skip('ReadingEngineComponent', () => {
     const mockVocabStore: Partial<VocabularyStore> = {
       allFlashcards: signal<Flashcard[]>([]),
       flashcardMap: signal(new Map()),
-      
       getWordStatus: () => ({
         level: 0,
         colorClass: 'bg-blue-500/20 text-blue-900',
