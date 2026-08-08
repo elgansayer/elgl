@@ -38,7 +38,12 @@ describe('RecommendedUserResponseDto', () => {
   });
 
   it('should accept all four matchTier values', () => {
-    const tiers = ['interest', 'language_exchange', 'active_users', 'mock'] as const;
+    const tiers = [
+      'interest',
+      'language_exchange',
+      'active_users',
+      'mock',
+    ] as const;
     for (const tier of tiers) {
       const dto = new RecommendedUserResponseDto();
       dto.id = 'a';

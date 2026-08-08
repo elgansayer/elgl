@@ -7,10 +7,7 @@ import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.
 @Module({
   imports: [SharedLoggerModule],
   controllers: [RecommendationsController],
-  providers: [
-    RecommendationsService,
-    RecommendationsRateLimiterGuard,
-  ],
+  providers: [RecommendationsService, RecommendationsRateLimiterGuard],
   exports: [RecommendationsService],
 })
 export class RecommendationsModule {}

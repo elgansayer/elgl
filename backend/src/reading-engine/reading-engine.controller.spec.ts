@@ -64,9 +64,7 @@ describe('ReadingEngineController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ReadingEngineController],
-      providers: [
-        { provide: ReadingEngineService, useValue: mockService },
-      ],
+      providers: [{ provide: ReadingEngineService, useValue: mockService }],
     })
       .overrideGuard(SupabaseAuthGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
@@ -110,10 +108,7 @@ describe('ReadingEngineController', () => {
       mockService.createResource.mockResolvedValue(mockResource);
 
       const req = { user: { id: 'user-1' } };
-      const result = await controller.createResource(
-        dto as never,
-        req as never,
-      );
+      const result = await controller.createResource(dto, req as never);
       expect(mockService.createResource).toHaveBeenCalledWith('user-1', dto);
       expect(result).toBe(mockResource);
     });

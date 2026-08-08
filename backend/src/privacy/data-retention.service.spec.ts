@@ -7,7 +7,7 @@ describe('DataRetentionService', () => {
   let service: DataRetentionService;
   let mockSupabaseClient: Record<string, jest.Mock>;
   let mockQueryBuilder: Record<string, jest.Mock>;
-let mockRedis: { del: jest.Mock };
+  let mockRedis: { del: jest.Mock };
   let mockEventEmitter: { emit: jest.Mock };
 
   beforeEach(async () => {

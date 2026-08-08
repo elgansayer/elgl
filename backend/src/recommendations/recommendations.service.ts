@@ -87,7 +87,9 @@ export class RecommendationsService {
         throw new Error(`Failed to fetch users: ${error?.message}`);
       }
 
-      this.logger.info(`Computing recommendations for ${users.length} users...`);
+      this.logger.info(
+        `Computing recommendations for ${users.length} users...`,
+      );
 
       for (const user of users) {
         const targetLanguages = user.target_languages as string[] | null;
@@ -190,14 +192,13 @@ export class RecommendationsService {
     }
 
     try {
-      const languageMatches = await this.recommendationsByLanguageExchange(userId);
+      const languageMatches =
+        await this.recommendationsByLanguageExchange(userId);
       if (languageMatches.length > 0) {
         return languageMatches;
       }
     } catch (error) {
-      this.logger.warn(
-        `Language exchange fallback failed for user ${userId}`,
-      );
+      this.logger.warn(`Language exchange fallback failed for user ${userId}`);
     }
 
     try {
@@ -216,7 +217,9 @@ export class RecommendationsService {
     return mockResults;
   }
 
-  async getRecommendationsWithFallback(userId: string): Promise<RecommendedUserDto[]> {
+  async getRecommendationsWithFallback(
+    userId: string,
+  ): Promise<RecommendedUserDto[]> {
     try {
       const interestResults = await this.recommendationsByInterests(userId);
       if (interestResults.length > 0) {
@@ -232,7 +235,8 @@ export class RecommendationsService {
     }
 
     try {
-      const languageResults = await this.recommendationsByLanguageExchange(userId);
+      const languageResults =
+        await this.recommendationsByLanguageExchange(userId);
       if (languageResults.length > 0) {
         return languageResults.map((r) => ({
           ...r,
@@ -268,9 +272,8 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: ownTags, error: tagsError } = await withRetry(
-      () =>
-        supabase.from('user_interests').select('tag').eq('user_id', userId),
+    const { data: ownTags, error: tagsError } = await withRetry(() =>
+      supabase.from('user_interests').select('tag').eq('user_id', userId),
     );
 
     if (tagsError) {
@@ -290,13 +293,12 @@ export class RecommendationsService {
       return [];
     }
 
-    const { data: shared, error: sharedError } = await withRetry(
-      () =>
-        supabase
-          .from('user_interests')
-          .select('user_id, tag')
-          .in('tag', tags)
-          .neq('user_id', userId),
+    const { data: shared, error: sharedError } = await withRetry(() =>
+      supabase
+        .from('user_interests')
+        .select('user_id, tag')
+        .in('tag', tags)
+        .neq('user_id', userId),
     );
 
     if (sharedError) {
@@ -362,13 +364,12 @@ export class RecommendationsService {
   ): Promise<RecommendedUserDto[]> {
     const supabase = this.supabaseService.getClient();
 
-    const { data: user, error: userError } = await withRetry(
-      () =>
-        supabase
-          .from('users')
-          .select('native_language, target_languages')
-          .eq('id', userId)
-          .maybeSingle(),
+    const { data: user, error: userError } = await withRetry(() =>
+      supabase
+        .from('users')
+        .select('native_language, target_languages')
+        .eq('id', userId)
+        .maybeSingle(),
     );
 
     if (userError || !user) {

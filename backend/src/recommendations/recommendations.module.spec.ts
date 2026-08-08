@@ -9,21 +9,26 @@ describe('RecommendationsModule', () => {
 
   it('should register RecommendationsController in its controllers metadata', () => {
     const controllersMetadata =
-      (Reflect.getMetadata('controllers', RecommendationsModule) as unknown[]) ?? [];
+      (Reflect.getMetadata(
+        'controllers',
+        RecommendationsModule,
+      ) as unknown[]) ?? [];
 
     expect(controllersMetadata).toContain(RecommendationsController);
   });
 
   it('should register RecommendationsService in its providers metadata', () => {
     const providersMetadata =
-      (Reflect.getMetadata('providers', RecommendationsModule) as unknown[]) ?? [];
+      (Reflect.getMetadata('providers', RecommendationsModule) as unknown[]) ??
+      [];
 
     expect(providersMetadata).toContain(RecommendationsService);
   });
 
   it('should export RecommendationsService', () => {
     const exportsMetadata =
-      (Reflect.getMetadata('exports', RecommendationsModule) as unknown[]) ?? [];
+      (Reflect.getMetadata('exports', RecommendationsModule) as unknown[]) ??
+      [];
 
     expect(exportsMetadata).toContain(RecommendationsService);
   });

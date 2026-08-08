@@ -1628,7 +1628,13 @@ export interface Database {
           payer_id: string;
           payee_id: string;
           amount_coins: number;
-          status: 'held' | 'released' | 'refunded' | 'disputed' | 'cancelled' | 'pending';
+          status:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
           description: string | null;
           reference_id: string | null;
           created_at: string;
@@ -1641,7 +1647,13 @@ export interface Database {
           payer_id: string;
           payee_id: string;
           amount_coins: number;
-          status?: 'held' | 'released' | 'refunded' | 'disputed' | 'cancelled' | 'pending';
+          status?:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
           description?: string | null;
           reference_id?: string | null;
           created_at?: string;
@@ -1654,7 +1666,13 @@ export interface Database {
           payer_id?: string;
           payee_id?: string;
           amount_coins?: number;
-          status?: 'held' | 'released' | 'refunded' | 'disputed' | 'cancelled' | 'pending';
+          status?:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
           description?: string | null;
           reference_id?: string | null;
           created_at?: string;
@@ -2180,7 +2198,9 @@ export class SupabaseService implements OnModuleDestroy {
       lazyConnect: true,
     });
     this.redisClient.on('error', (err) => {
-      this.logger.error(`Redis connection error in SupabaseService: ${err.message}`);
+      this.logger.error(
+        `Redis connection error in SupabaseService: ${err.message}`,
+      );
     });
   }
 

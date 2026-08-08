@@ -85,8 +85,7 @@ export class LanguagePairQueryDto {
   has_audio_intro?: boolean;
 
   @ApiPropertyOptional({
-    description:
-      'Filter by country (case-insensitive ILIKE match).',
+    description: 'Filter by country (case-insensitive ILIKE match).',
     example: 'Japan',
   })
   @IsOptional()
@@ -94,8 +93,7 @@ export class LanguagePairQueryDto {
   country?: string;
 
   @ApiPropertyOptional({
-    description:
-      'Filter by city (case-insensitive ILIKE match).',
+    description: 'Filter by city (case-insensitive ILIKE match).',
     example: 'Tokyo',
   })
   @IsOptional()
@@ -112,8 +110,7 @@ export class LanguagePairQueryDto {
   learning_goals?: string;
 
   @ApiPropertyOptional({
-    description:
-      'Mode for learning_goals filtering. Reserved for future use.',
+    description: 'Mode for learning_goals filtering. Reserved for future use.',
     example: 'any',
   })
   @IsOptional()

@@ -23,8 +23,9 @@ interface AuthenticatedRequest extends Request {
   user: { id: string; [key: string]: unknown };
 }
 
-export const RecommendationsRateLimit = (options: RecommendationsRateLimitOptions) =>
-  SetMetadata(RECOMMENDATIONS_RATE_LIMIT_KEY, options);
+export const RecommendationsRateLimit = (
+  options: RecommendationsRateLimitOptions,
+) => SetMetadata(RECOMMENDATIONS_RATE_LIMIT_KEY, options);
 
 /**
  * Guard that enforces per-user Redis-based sliding window rate limits on
@@ -103,7 +104,8 @@ export class RecommendationsRateLimiterGuard implements CanActivate {
         throw new HttpException(
           {
             statusCode: HttpStatus.TOO_MANY_REQUESTS,
-            message: 'Too many matchmaking requests. Please wait before trying again.',
+            message:
+              'Too many matchmaking requests. Please wait before trying again.',
             retryAfter,
           },
           HttpStatus.TOO_MANY_REQUESTS,
@@ -148,7 +150,7 @@ export class RecommendationsRateLimiterGuard implements CanActivate {
         .eq('id', userId)
         .single();
 
-      const isVip = (!error && data) ? Boolean(data.is_vip) : false;
+      const isVip = !error && data ? Boolean(data.is_vip) : false;
 
       try {
         await redis.set(

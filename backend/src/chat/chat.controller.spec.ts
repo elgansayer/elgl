@@ -120,9 +120,9 @@ describe('ChatController', () => {
       );
 
       const result = await controller.getConnectionToken(mockUser());
-      expect(
-        centrifugoService.checkConnectionRateLimit,
-      ).toHaveBeenCalledWith('user-1');
+      expect(centrifugoService.checkConnectionRateLimit).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );
@@ -134,9 +134,9 @@ describe('ChatController', () => {
         centrifugoService.checkConnectionRateLimit as jest.Mock
       ).mockResolvedValue(false);
 
-      await expect(
-        controller.getConnectionToken(mockUser()),
-      ).rejects.toThrow('Too many WebSocket connection attempts');
+      await expect(controller.getConnectionToken(mockUser())).rejects.toThrow(
+        'Too many WebSocket connection attempts',
+      );
     });
   });
 

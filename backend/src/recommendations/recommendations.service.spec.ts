@@ -73,10 +73,20 @@ const makeQueryChain = (): QueryChainMock => {
 
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
-  let mockRedis: { get: jest.Mock; set: jest.Mock; del: jest.Mock; pipeline: jest.Mock };
+  let mockRedis: {
+    get: jest.Mock;
+    set: jest.Mock;
+    del: jest.Mock;
+    pipeline: jest.Mock;
+  };
   let mockPipeline: { set: jest.Mock; exec: jest.Mock };
   let mockFrom: jest.Mock;
-  let mockLogger: { info: jest.Mock; warn: jest.Mock; error: jest.Mock; debug: jest.Mock };
+  let mockLogger: {
+    info: jest.Mock;
+    warn: jest.Mock;
+    error: jest.Mock;
+    debug: jest.Mock;
+  };
   let mockMetricsService: {
     recordMatchmakingRecommendationsGenerated: jest.Mock;
     recordMatchmakingRecommendationsPerRequest: jest.Mock;
@@ -514,19 +524,34 @@ describe('RecommendationsService', () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
         {
-          id: 'c-low', display_name: 'Low', avatar_url: null,
-          native_language: 'es', target_languages: ['en'],
-          is_serious_learner: true, study_streak_days: 100, correction_ratio: 0.9,
+          id: 'c-low',
+          display_name: 'Low',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 100,
+          correction_ratio: 0.9,
         },
         {
-          id: 'c-high-serious', display_name: 'HighSerious', avatar_url: null,
-          native_language: 'es', target_languages: ['en'],
-          is_serious_learner: true, study_streak_days: 10, correction_ratio: 0.9,
+          id: 'c-high-serious',
+          display_name: 'HighSerious',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 10,
+          correction_ratio: 0.9,
         },
         {
-          id: 'c-high-not-serious', display_name: 'HighNotSerious', avatar_url: null,
-          native_language: 'es', target_languages: ['en'],
-          is_serious_learner: false, study_streak_days: 50, correction_ratio: 0.9,
+          id: 'c-high-not-serious',
+          display_name: 'HighNotSerious',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: false,
+          study_streak_days: 50,
+          correction_ratio: 0.9,
         },
       ]);
 
@@ -548,7 +573,9 @@ describe('RecommendationsService', () => {
 
       const userChain = makeQueryChain();
       userChain._setResolve({
-        id: 'user-123', native_language: 'en', target_languages: ['ja'],
+        id: 'user-123',
+        native_language: 'en',
+        target_languages: ['ja'],
       });
 
       const matchesChain = makeQueryChain();
@@ -557,9 +584,14 @@ describe('RecommendationsService', () => {
       const activeChain = makeQueryChain();
       activeChain._setResolve([
         {
-          id: 'active-user', display_name: 'Active User', avatar_url: null,
-          native_language: 'fr', target_languages: ['en'],
-          is_serious_learner: true, study_streak_days: 40, correction_ratio: 0.85,
+          id: 'active-user',
+          display_name: 'Active User',
+          avatar_url: null,
+          native_language: 'fr',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 40,
+          correction_ratio: 0.85,
         },
       ]);
 
@@ -580,15 +612,22 @@ describe('RecommendationsService', () => {
 
       const userChain = makeQueryChain();
       userChain._setResolve({
-        id: 'user-123', native_language: null, target_languages: ['es', 'fr'],
+        id: 'user-123',
+        native_language: null,
+        target_languages: ['es', 'fr'],
       });
 
       const activeChain = makeQueryChain();
       activeChain._setResolve([
         {
-          id: 'active-p', display_name: 'Active P', avatar_url: null,
-          native_language: 'de', target_languages: ['en'],
-          is_serious_learner: false, study_streak_days: 12, correction_ratio: 0.75,
+          id: 'active-p',
+          display_name: 'Active P',
+          avatar_url: null,
+          native_language: 'de',
+          target_languages: ['en'],
+          is_serious_learner: false,
+          study_streak_days: 12,
+          correction_ratio: 0.75,
         },
       ]);
 
@@ -784,7 +823,8 @@ describe('RecommendationsService', () => {
         .mockReturnValueOnce(userChain)
         .mockReturnValueOnce(activeChain);
 
-      const result = await service.getRecommendationsWithFallback('unknown-user');
+      const result =
+        await service.getRecommendationsWithFallback('unknown-user');
       expect(result.length).toBeLessThanOrEqual(20);
     });
 
@@ -1036,13 +1076,17 @@ describe('RecommendationsService', () => {
       await service.calculateDailyRecommendations();
 
       expect(mockPipeline.set).toHaveBeenCalledTimes(2);
-      expect(mockPipeline.set.mock.calls[0][0]).toBe('recommendations:daily:user-a');
+      expect(mockPipeline.set.mock.calls[0][0]).toBe(
+        'recommendations:daily:user-a',
+      );
       const firstCache: RecommendedUserDto[] = JSON.parse(
         mockPipeline.set.mock.calls[0][1],
       );
       expect(firstCache).toHaveLength(1);
       expect(firstCache[0].id).toBe('user-c');
-      expect(mockPipeline.set.mock.calls[1][0]).toBe('recommendations:daily:user-c');
+      expect(mockPipeline.set.mock.calls[1][0]).toBe(
+        'recommendations:daily:user-c',
+      );
     });
 
     it('should handle calculateDailyRecommendations with Redis set failure gracefully', async () => {
@@ -1122,9 +1166,13 @@ describe('RecommendationsService', () => {
         .mockReturnValueOnce(userChain)
         .mockReturnValueOnce(activeChain);
 
-      const result = await service.getRecommendationsWithFallback('some-completely-random-id');
+      const result = await service.getRecommendationsWithFallback(
+        'some-completely-random-id',
+      );
       expect(result.length).toBeLessThanOrEqual(20);
-      expect(result.every((r) => r.id !== 'some-completely-random-id')).toBe(true);
+      expect(result.every((r) => r.id !== 'some-completely-random-id')).toBe(
+        true,
+      );
       expect(result.every((r) => r.matchTier === 'mock')).toBe(true);
     });
   });

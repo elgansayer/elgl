@@ -140,7 +140,9 @@ describe('EconomyController', () => {
     });
 
     it('should degrade gracefully to default 50 coins when service throws', async () => {
-      (economyService.getBalance as jest.Mock).mockRejectedValue(new Error('DB down'));
+      (economyService.getBalance as jest.Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
 
       const result = await controller.getBalance({ id: 'user-1' } as any);
       expect(result).toEqual({ coins_balance: 50 });
@@ -168,10 +170,18 @@ describe('EconomyController', () => {
     });
 
     it('should degrade gracefully when service throws', async () => {
-      (economyService.claimDailyCheckIn as jest.Mock).mockRejectedValue(new Error('DB down'));
+      (economyService.claimDailyCheckIn as jest.Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
 
-      const result = await controller.claimDailyCheckIn({ id: 'user-1' } as any);
-      expect(result).toEqual({ claimed: false, coins_rewarded: 0, new_balance: 50 });
+      const result = await controller.claimDailyCheckIn({
+        id: 'user-1',
+      } as any);
+      expect(result).toEqual({
+        claimed: false,
+        coins_rewarded: 0,
+        new_balance: 50,
+      });
     });
   });
 
@@ -310,10 +320,7 @@ describe('EconomyController', () => {
 
     it('should apply Throttle decorator to purchaseCoins', () => {
       expect(
-        Reflect.getMetadata(
-          THROTTLER_LIMIT + 'default',
-          proto.purchaseCoins,
-        ),
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.purchaseCoins),
       ).toBe(5);
     });
 
@@ -354,18 +361,38 @@ describe('EconomyController', () => {
         overall: 'healthy' as const,
         timestamp: '2026-08-07T12:00:00.000Z',
         dependencies: {
-          redis: { status: 'healthy' as const, latencyMs: 1, lastChecked: '2026-08-07T12:00:00.000Z' },
-          supabase: { status: 'healthy' as const, latencyMs: 2, lastChecked: '2026-08-07T12:00:00.000Z' },
-          stripe: { status: 'healthy' as const, latencyMs: 50, lastChecked: '2026-08-07T12:00:00.000Z' },
-          centrifugo: { status: 'healthy' as const, latencyMs: 3, lastChecked: '2026-08-07T12:00:00.000Z' },
+          redis: {
+            status: 'healthy' as const,
+            latencyMs: 1,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          supabase: {
+            status: 'healthy' as const,
+            latencyMs: 2,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          stripe: {
+            status: 'healthy' as const,
+            latencyMs: 50,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          centrifugo: {
+            status: 'healthy' as const,
+            latencyMs: 3,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
         },
         circuitBreakers: {},
         degradedFeatures: [] as string[],
         uptimeSeconds: 3600,
       };
 
-      const healthService = (controller as unknown as { healthService: CoinEconomyHealthService }).healthService;
-      (healthService.getHealthSnapshot as jest.Mock).mockResolvedValue(mockSnapshot);
+      const healthService = (
+        controller as unknown as { healthService: CoinEconomyHealthService }
+      ).healthService;
+      (healthService.getHealthSnapshot as jest.Mock).mockResolvedValue(
+        mockSnapshot,
+      );
 
       const result = await controller.getHealth();
       expect(result).toEqual(mockSnapshot);

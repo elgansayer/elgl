@@ -180,14 +180,8 @@ export class DataRetentionService {
     await supabase.from('notifications').delete().eq('recipient_id', userId);
 
     // LingQ Reading Engine: reading progress and authored resources
-    await supabase
-      .from('reading_progress')
-      .delete()
-      .eq('user_id', userId);
-    await supabase
-      .from('reading_resources')
-      .delete()
-      .eq('created_by', userId);
+    await supabase.from('reading_progress').delete().eq('user_id', userId);
+    await supabase.from('reading_resources').delete().eq('created_by', userId);
 
     // Invalidate reading-engine Redis caches for this user
     try {

@@ -12,7 +12,12 @@ describe('ModerationService', () => {
   let mockLogger: any;
 
   beforeEach(async () => {
-    mockLogger = { warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn() };
+    mockLogger = {
+      warn: jest.fn(),
+      error: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+    };
 
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),

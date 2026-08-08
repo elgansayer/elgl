@@ -156,9 +156,9 @@ describe('VideoCallsService', () => {
     it('should propagate errors from token generation', async () => {
       mockToJwt.mockRejectedValueOnce(new Error('JWT signing failed'));
 
-      await expect(
-        service.joinRoom('user-999', 'some-room'),
-      ).rejects.toThrow('JWT signing failed');
+      await expect(service.joinRoom('user-999', 'some-room')).rejects.toThrow(
+        'JWT signing failed',
+      );
     });
   });
 });

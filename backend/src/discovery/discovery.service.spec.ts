@@ -8,7 +8,6 @@ import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { PinoLogger } from 'nestjs-pino';
 
-
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
@@ -238,8 +237,6 @@ describe('DiscoveryService', () => {
 
       expect(mockRedisSet).not.toHaveBeenCalled();
     });
-
-    
   });
 
   // ---------------------------------------------------------------------------
@@ -673,11 +670,11 @@ describe('DiscoveryService', () => {
         { id: 'p2', gender: 'male' },
       ]);
 
-      await service.searchPartners(
-        'user-1',
-        { is_vip: true } as any,
-        { latitude: 1, longitude: 2, gender: 'female' },
-      );
+      await service.searchPartners('user-1', { is_vip: true } as any, {
+        latitude: 1,
+        longitude: 2,
+        gender: 'female',
+      });
 
       expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
         'search_nearby_users',

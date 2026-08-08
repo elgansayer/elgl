@@ -12,7 +12,11 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 @Module({
   imports: [AudioRoomsModule, UsersModule, SafetyModule, SupabaseModule],
   controllers: [DiscoveryController],
-  providers: [DiscoveryService, DiscoveryRateLimiterGuard, DiscoveryDegradationService],
+  providers: [
+    DiscoveryService,
+    DiscoveryRateLimiterGuard,
+    DiscoveryDegradationService,
+  ],
   exports: [DiscoveryService, DiscoveryDegradationService],
 })
 export class DiscoveryModule {}

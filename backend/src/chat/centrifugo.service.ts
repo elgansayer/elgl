@@ -83,7 +83,11 @@ export class CentrifugoService implements OnModuleInit {
         return false;
       }
 
-      await this.redis.zadd(key, now.toString(), `${now}:${Math.random().toString(36).slice(2)}`);
+      await this.redis.zadd(
+        key,
+        now.toString(),
+        `${now}:${Math.random().toString(36).slice(2)}`,
+      );
       await this.redis.expire(key, this.clientConnectionRateWindowSec);
       return true;
     } catch {
