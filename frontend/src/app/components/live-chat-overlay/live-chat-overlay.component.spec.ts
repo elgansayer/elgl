@@ -37,7 +37,7 @@ describe('LiveChatOverlayComponent', () => {
     // Angular 22 JIT test environment cannot resolve input() signals via setInput.
     // We must pass { detectChanges: false } as any and accept the NG0303 console warning
     // as benign (matching the video-call component spec pattern).
-    fixture = TestBed.createComponent(LiveChatOverlayComponent, { detectChanges: false } as any);
+    fixture = TestBed.createComponent(LiveChatOverlayComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('roomId', roomId);
     fixture.detectChanges();

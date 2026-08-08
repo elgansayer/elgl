@@ -59,8 +59,8 @@ export class CrashReportService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest)) return;
-        const db = target.result;
+        if (!(target && (target as any).result)) return;
+        const db = (target as any).result;
         if (!db.objectStoreNames.contains(CRASH_STORE_NAME)) {
           const store = db.createObjectStore(CRASH_STORE_NAME, { keyPath: 'id' });
           store.createIndex('storedAt', 'storedAt', { unique: false });

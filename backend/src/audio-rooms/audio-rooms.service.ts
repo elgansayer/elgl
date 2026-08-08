@@ -20,6 +20,14 @@ import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
+import {
+  CACHE_TAG_AUDIO_ROOMS,
+  CACHE_TAG_AUDIO_ROOM_STAGE,
+  CACHE_TAG_AUDIO_ROOM_POLLS,
+  CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+  CACHE_TAG_AUDIO_ROOM_NOTES,
+} from '../common/cache.interceptor';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -121,6 +129,7 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly nlpService: NlpService,
     private readonly r2Service: R2Service,
     private readonly chatLlmService: ChatLlmService,
+    private readonly cloudflareCache: CloudflareCacheService,
   ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
@@ -203,6 +212,7 @@ export class AudioRoomsService implements OnModuleInit {
       recording_url: r2RecordingUrl,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -357,6 +367,7 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const profile = await this.usersService.getProfile(hostId);
+    this.invalidateAudioRoomCache();
     return {
       ...row,
       host: {
@@ -444,6 +455,7 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const profile = await this.usersService.getProfile(hostId);
+    this.invalidateAudioRoomCache();
     return {
       ...row,
       host: {
@@ -490,6 +502,7 @@ export class AudioRoomsService implements OnModuleInit {
       this.logger.warn('Failed to set private fields', error);
     }
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -554,6 +567,10 @@ export class AudioRoomsService implements OnModuleInit {
         .eq('id', room.id);
     }
 
+    this.invalidateAudioRoomCache([
+      CACHE_TAG_AUDIO_ROOMS,
+      CACHE_TAG_AUDIO_ROOM_STAGE,
+    ]);
     return {
       token: jwtToken,
       room_id: room.id,
@@ -715,6 +732,7 @@ export class AudioRoomsService implements OnModuleInit {
       speaker_order: speakerOrder,
       room_id: roomId,
     });
+    this.invalidateAudioRoomCache();
     return this.getRoom(roomId);
   }
 
@@ -736,6 +754,7 @@ export class AudioRoomsService implements OnModuleInit {
       type: 'stage_cleared',
       room_id: roomId,
     });
+    this.invalidateAudioRoomCache();
     return this.getRoom(roomId);
   }
 
@@ -750,6 +769,7 @@ export class AudioRoomsService implements OnModuleInit {
     const room = response.data as AudioRoomRow;
 
     if (room.raised_hands.includes(userId) || room.speakers.includes(userId)) {
+      this.invalidateAudioRoomCache();
       return this.getRoom(dto.room_id);
     }
 
@@ -766,6 +786,7 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -807,6 +828,7 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -834,6 +856,7 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -874,6 +897,7 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -924,24 +948,17 @@ export class AudioRoomsService implements OnModuleInit {
       })
       .eq('id', room.id);
 
-    if (previousCoHostId) {
-      // Awaited so the outgoing co-host's removal is guaranteed to arrive before the
-      // incoming co-host's invite, preventing the invite from being clobbered by a
-      // late-arriving removal for a different user.
-      await this.centrifugoService.publish(`room_${room.id}`, {
-        type: 'co_host_removed',
-        target_user_id: previousCoHostId,
-        room_id: room.id,
-      });
-    }
-
-    // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
+    // Publish a single atomic co_host_changed event to prevent out-of-order delivery
+    // of separate co_host_removed / co_host_invited Centrifugo messages.
+    // The frontend resolves the full transition from a single payload.
     await this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'co_host_invited',
+      type: 'co_host_changed',
       target_user_id: dto.target_user_id,
+      previous_co_host_id: previousCoHostId,
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -972,13 +989,14 @@ export class AudioRoomsService implements OnModuleInit {
 
     if (removedUserId) {
       // Notify the removed co-host via Centrifugo to unpublish camera and leave the split-screen layout
-      void this.centrifugoService.publish(`room_${room.id}`, {
+      await this.centrifugoService.publish(`room_${room.id}`, {
         type: 'co_host_removed',
         target_user_id: removedUserId,
         room_id: room.id,
       });
     }
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -1016,6 +1034,7 @@ export class AudioRoomsService implements OnModuleInit {
       caption,
     });
 
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_TRANSCRIPT]);
     return caption;
   }
 
@@ -1122,6 +1141,7 @@ export class AudioRoomsService implements OnModuleInit {
       recording_url: recordingUrl,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -1275,6 +1295,7 @@ export class AudioRoomsService implements OnModuleInit {
       question: dto.question,
       options: dto.options,
     });
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_POLLS]);
     return { poll_id: data.id };
   }
 
@@ -1307,6 +1328,8 @@ export class AudioRoomsService implements OnModuleInit {
       poll_id: dto.pollId,
       option_index: dto.optionIndex,
     });
+
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_POLLS]);
   }
 
   async getPollResults(
@@ -1387,6 +1410,7 @@ export class AudioRoomsService implements OnModuleInit {
       note: noteRow,
     });
 
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_NOTES]);
     return noteRow;
   }
 
@@ -1433,6 +1457,8 @@ export class AudioRoomsService implements OnModuleInit {
       note_id: noteId,
       room_id: room.id,
     });
+
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_NOTES]);
   }
 
   /**
@@ -1506,6 +1532,7 @@ export class AudioRoomsService implements OnModuleInit {
       timestamp: new Date().toISOString(),
     };
     await this.centrifugoService.publish(`room_${room.id}`, reactionPayload);
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_STAGE]);
     return { emojiId: dto.emojiId, animationUrl: emoji.animationUrl };
   }
 
@@ -1737,6 +1764,7 @@ export class AudioRoomsService implements OnModuleInit {
       },
     });
 
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_STAGE]);
     return {
       tip_id: tipRow.id,
       amount_coins: amount,
@@ -1802,5 +1830,31 @@ ${transcriptText.substring(0, 4000)}`;
 
     // Fallback to NLP heuristic
     return this.nlpService.generateSessionSummary(transcriptText);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cloudflare edge cache invalidation helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Fire-and-forget invalidation of Cloudflare edge caches for audio room data.
+   *
+   * Called after every mutation that changes room state (create, archive, stage
+   * changes, polls, notes, transcript generation, etc.).  The invalidation is
+   * best-effort -- Cloudflare edge TTLs are short enough that the stale window
+   * is bounded even if the purge API call fails.
+   *
+   * @param tags -- specific Cache-Tag values to purge (e.g. ['audio-rooms', 'audio-rooms:stage'])
+   */
+  private invalidateAudioRoomCache(
+    tags: string[] = [
+      CACHE_TAG_AUDIO_ROOMS,
+      CACHE_TAG_AUDIO_ROOM_STAGE,
+      CACHE_TAG_AUDIO_ROOM_POLLS,
+      CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+      CACHE_TAG_AUDIO_ROOM_NOTES,
+    ],
+  ): void {
+    void this.cloudflareCache.purgeByCacheTags(tags);
   }
 }

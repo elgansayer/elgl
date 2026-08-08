@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
@@ -8,12 +8,12 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
-import { withRetry, isRateLimitError } from '../common/retry';
 import {
   DiscoveryDegradationService,
   DegradationMarker,
 } from './discovery-degradation.service';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
+import { CorrectorScoreService } from '../corrector-score/corrector-score.service';
 
 type DiscoveryUser = UserProfile & {
   distance?: number;
@@ -49,9 +49,21 @@ export class DiscoveryService {
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
     private readonly degradationService: DiscoveryDegradationService,
+    @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
+  // Multi-signal ranking algorithm:
+  //   1. Fetch a candidate pool: users with correction_ratio > 0.5, and at least
+  //      7-day study streak, ordered by descending correction_ratio (top 50).
+  //   2. For each candidate, fetch their corrector rating score via CorrectorScoreService.
+  //   3. Compute a weighted composite score:
+  //        - Correction ratio .................. 30 %
+  //        - Corrector rating average (normalised 1-5 -> 0-1) ... 35 %
+  //        - Total corrector ratings count (log-scaled) .......... 15 %
+  //        - Study streak days (log-scaled) ...................... 20 %
+  //   4. Rank by composite score descending, select top 10.
+  //   5. Store the list as JSON in Redis with a 7-day TTL.
   @Cron('0 0 * * 0')
   async calculatePartnerOfWeek(): Promise<void> {
     this.logger.info('Starting Partner of the Week calculation...');
@@ -59,15 +71,16 @@ export class DiscoveryService {
     const redis = this.supabaseService.getRedisClient();
 
     try {
-      const { data: topUsers, error } = await supabase
+      // Step 1: Fetch candidate pool – users with good correction ratios and solid streaks
+      const { data: candidates, error } = await supabase
         .from('users')
-        .select('id')
+        .select('id, correction_ratio, study_streak_days')
         .gt('correction_ratio', 0.5)
+        .gte('study_streak_days', 7)
         .order('correction_ratio', { ascending: false })
-        .order('study_streak_days', { ascending: false })
-        .limit(10);
+        .limit(50);
 
-      if (error || !topUsers || topUsers.length === 0) {
+      if (error || !candidates || candidates.length === 0) {
         this.logger.warn(
           'No users qualified for Partner of the Week',
           error?.message,
@@ -75,7 +88,95 @@ export class DiscoveryService {
         return;
       }
 
-      const partnerIds = topUsers.map((u) => u.id);
+      // Step 2: Fetch corrector scores for all candidates in parallel
+      const scoreMap = new Map<
+        string,
+        { averageScore: number; totalRatings: number }
+      >();
+
+      if (this.correctorScoreService) {
+        const scorePromises = candidates.map(
+          async (c) => {
+            try {
+              const score = await this.correctorScoreService!.getCorrectorScore(
+                c.id,
+              );
+              return { id: c.id, score };
+            } catch {
+              const fallback: { averageScore: number | null; totalRatings: number } = {
+                averageScore: null,
+                totalRatings: 0,
+              };
+              return { id: c.id, score: fallback };
+            }
+          },
+        );
+        const scores = await Promise.all(scorePromises);
+        for (const { id, score } of scores) {
+          scoreMap.set(id, {
+            averageScore: score.averageScore ?? 0,
+            totalRatings: score.totalRatings,
+          });
+        }
+      }
+
+      // Step 3: Compute composite ranking score
+      // Normalisation helpers
+      const maxStreak = Math.max(
+        ...candidates.map((c) => c.study_streak_days ?? 0),
+        1,
+      );
+      const maxRatings = Math.max(
+        ...[...scoreMap.values()].map((v) => v.totalRatings),
+        1,
+      );
+
+      const computeComposite = (candidate: {
+        id: string;
+        correction_ratio: number | null;
+        study_streak_days: number | null;
+      }): number => {
+        const ratings = scoreMap.get(candidate.id) ?? {
+          averageScore: 0,
+          totalRatings: 0,
+        };
+
+        const correctionRatio = candidate.correction_ratio ?? 0;
+        // Normalise average rating to 0-1 (1-5 scale)
+        const avgRatingNorm = (ratings.averageScore - 1) / 4;
+        // Log-scale the ratings count so it doesn't dominate
+        const ratingsCountLog =
+          ratings.totalRatings > 0
+            ? Math.log10(ratings.totalRatings + 1) /
+              Math.log10(maxRatings + 1)
+            : 0;
+        // Log-scale the streak
+        const streakDays = candidate.study_streak_days ?? 0;
+        const streakLog =
+          streakDays > 0
+            ? Math.log10(streakDays + 1) / Math.log10(maxStreak + 1)
+            : 0;
+
+        return (
+          correctionRatio * 0.3 +
+          avgRatingNorm * 0.35 +
+          ratingsCountLog * 0.15 +
+          streakLog * 0.2
+        );
+      };
+
+      // Step 4: Rank and select top 10
+      const ranked = candidates
+        .map((c) => ({
+          id: c.id,
+          composite: computeComposite(c),
+        }))
+        .sort((a, b) => b.composite - a.composite);
+
+      const top10 = ranked.slice(0, 10);
+      const partnerIds = top10.map((r) => r.id);
+
+      // Step 5: Store in Redis
       await redis.set(
         'partner_of_week_ids',
         JSON.stringify(partnerIds),
@@ -83,7 +184,7 @@ export class DiscoveryService {
         604800,
       );
       this.logger.info(
-        `Partner of the Week set for ${partnerIds.length} users`,
+        `Partner of the Week set for ${partnerIds.length} users (composite scores: ${top10.map((r) => r.id.slice(0, 8) + ':' + r.composite.toFixed(3)).join(', ')})`,
       );
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);

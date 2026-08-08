@@ -5,7 +5,7 @@ import { HtmlSanitisationService } from '../../services/html-sanitisation.servic
 
 @Component({
   selector: 'app-link-preview-card',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule],
   template: `
     <a
       [href]="sanitisedUrl()"

@@ -451,4 +451,88 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
     });
   });
+
+  describe('Video Classrooms metrics', () => {
+    it('should record video classroom created', () => {
+      expect(() => service.recordVideoClassroomCreated()).not.toThrow();
+    });
+
+    it('should record video classroom creation failed', () => {
+      expect(() =>
+        service.recordVideoClassroomCreationFailed('Error'),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom creation failed with default', () => {
+      expect(() => service.recordVideoClassroomCreationFailed()).not.toThrow();
+    });
+
+    it('should record video classroom joined', () => {
+      expect(() => service.recordVideoClassroomJoined()).not.toThrow();
+    });
+
+    it('should record video classroom join failed', () => {
+      expect(() =>
+        service.recordVideoClassroomJoinFailed('Error'),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom join failed with default', () => {
+      expect(() => service.recordVideoClassroomJoinFailed()).not.toThrow();
+    });
+
+    it('should set video classrooms active rooms', () => {
+      expect(() => service.setVideoClassroomsActiveRooms(5)).not.toThrow();
+    });
+
+    it('should record video classroom token generation duration', () => {
+      expect(() =>
+        service.recordVideoClassroomTokenGenerationDuration('create', 0.15),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom token generation duration for join', () => {
+      expect(() =>
+        service.recordVideoClassroomTokenGenerationDuration('join', 0.25),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom room duration', () => {
+      expect(() =>
+        service.recordVideoClassroomRoomDuration(600, 2),
+      ).not.toThrow();
+    });
+
+    it('should set video classroom participant max', () => {
+      expect(() =>
+        service.setVideoClassroomParticipantMax('video_abc', 2),
+      ).not.toThrow();
+    });
+
+    it('should include video classroom metrics in getMetrics output', async () => {
+      service.recordVideoClassroomCreated();
+      service.recordVideoClassroomJoined();
+      service.setVideoClassroomsActiveRooms(3);
+      service.recordVideoClassroomCreationFailed('Error');
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_video_classrooms_created_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_joined_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_active_rooms');
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_failed_creations_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_failed_joins_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_room_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_token_generation_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_participant_max',
+      );
+    });
+  });
 });

@@ -665,6 +665,81 @@ export class ChatService {
     }
   }
 
+  /**
+   * Search messages across ALL rooms the user is a member of.
+   * Uses pg_trgm for fuzzy text search on text_content.
+   */
+  async searchAllMessages(
+    userId: string,
+    term: string,
+    limit = 50,
+    roomId?: string,
+  ): Promise<ChatMessage[]> {
+    const supabase = this.supabaseService.getClient();
+    const blockedIds =
+      await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    // Get all room IDs the user is a member of
+    const { data: memberRooms, error: memberErr } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .eq('user_id', userId);
+
+    if (memberErr || !memberRooms || memberRooms.length === 0) {
+      return [];
+    }
+
+    let roomIds = memberRooms.map((r: { room_id: string }) => r.room_id);
+
+    // If a specific roomId is provided, limit to that room only
+    if (roomId) {
+      if (!roomIds.includes(roomId)) return [];
+      roomIds = [roomId];
+    }
+
+    const trimmedTerm = term.trim();
+    if (trimmedTerm.length < 2) return [];
+
+    let query = supabase
+      .from('chat_messages')
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .in('room_id', roomIds)
+      .ilike('text_content', `%${trimmedTerm}%`)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (blockedIds.length > 0) {
+      query = query.not('sender_id', 'in', blockedIds);
+    }
+
+    const response = await query;
+    if (response.error || !response.data) {
+      return [];
+    }
+
+    const messages: DeletedAwareMessage[] = response.data;
+
+    // Filter out deleted messages
+    return messages.filter((msg) => {
+      if (msg.is_deleted) return false;
+      if (
+        Array.isArray(msg.deleted_for_user_ids) &&
+        msg.deleted_for_user_ids.includes(userId)
+      )
+        return false;
+      return true;
+    });
+  }
+
   async getFavourites(userId: string): Promise<FavouriteRecord[]> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase

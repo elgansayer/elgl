@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
+import { ChatCacheService } from './chat-cache.service';
 import { Router } from '@angular/router';
 
 export interface CorrectionPayload {
@@ -174,6 +175,7 @@ export class ChatService {
   private safetyService = inject(SafetyService);
   private offlineQueue = inject(OfflineQueueService);
   private hapticFeedback = inject(HapticFeedbackService);
+  private chatCache = inject(ChatCacheService);
   private router = inject(Router);
   private baseUrl = `${environment.apiUrl}/chat`;
 
@@ -288,6 +290,8 @@ export class ChatService {
       }),
     );
     this.hapticFeedback.tap();
+    // Append the new message to the room's cached messages so the cache stays warm
+    void this.chatCache.appendCachedMessage(payload.room_id, message);
     return message;
   }
 
@@ -334,9 +338,28 @@ export class ChatService {
     if (!this.authService.getAccessToken()) {
       return [];
     }
+
+    const hasSearch = search && search.trim().length > 0;
+
+    // Try cache first for normal (non-search) loads
+    if (!hasSearch) {
+      const cached = await this.chatCache.getCachedMessages(roomId);
+      if (cached) {
+        // Still filter blocked users from cached results
+        const currentUser = this.authService.currentUser();
+        if (currentUser?.id) {
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+          if (blockedIds.length > 0) {
+            return cached.filter((msg) => !blockedIds.includes(msg.sender_id));
+          }
+        }
+        return cached;
+      }
+    }
+
     let params = new HttpParams();
-    if (search && search.trim().length > 0) {
-      params = params.set('search', search.trim());
+    if (hasSearch) {
+      params = params.set('search', search!.trim());
     }
 
     const messages = await firstValueFrom(
@@ -345,6 +368,11 @@ export class ChatService {
         params,
       }),
     );
+
+    // Cache the result for non-search loads
+    if (!hasSearch) {
+      void this.chatCache.cacheMessages(roomId, messages);
+    }
 
     // Filter out messages from blocked users
     const currentUser = this.authService.currentUser();
@@ -362,9 +390,19 @@ export class ChatService {
     if (!this.authService.getAccessToken()) {
       return [];
     }
+
+    // Try cache first
+    const cached = await this.chatCache.getCachedRooms();
+    if (cached) {
+      return cached;
+    }
+
     const rooms = await firstValueFrom(
       this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() }),
     );
+
+    // Cache the result
+    void this.chatCache.cacheRooms(rooms);
 
     // Filter out rooms where the other participant is blocked
     const currentUser = this.authService.currentUser();
@@ -437,6 +475,7 @@ export class ChatService {
       body: JSON.stringify({ message_id: messageId, note_text: noteText }),
     });
     if (!response.ok) throw new Error('Failed to add favourite');
+    void this.chatCache.invalidateFavourites();
   }
 
   async reportMessage(messageId: string, reason: string): Promise<void> {
@@ -455,15 +494,46 @@ export class ChatService {
     if (!response.ok) throw new Error('Failed to report message');
   }
 
+  /**
+   * Search messages across all conversations (or within a specific room).
+   * Calls GET /chat/search?term=...&roomId=...&limit=...
+   */
+  async searchMessages(term: string, roomId?: string, limit = 50): Promise<ChatMessage[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
+    let params = new HttpParams().set('term', term.trim()).set('limit', String(limit));
+    if (roomId) {
+      params = params.set('roomId', roomId);
+    }
+    return firstValueFrom(
+      this.http.get<ChatMessage[]>(`${this.baseUrl}/search`, {
+        headers: this.getHeaders(),
+        params,
+      }),
+    );
+  }
+
   async getFavourites(): Promise<FavouriteRecord[]> {
     if (!this.authService.getAccessToken()) {
       return [];
     }
-    return firstValueFrom(
+
+    // Try cache first
+    const cached = await this.chatCache.getCachedFavourites();
+    if (cached) {
+      return cached;
+    }
+
+    const favourites = await firstValueFrom(
       this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, {
         headers: this.getHeaders(),
       }),
     );
+
+    // Cache the result
+    void this.chatCache.cacheFavourites(favourites);
+    return favourites;
   }
 
   async removeFavourite(favouriteId: string): Promise<void> {
@@ -472,6 +542,7 @@ export class ChatService {
         headers: this.getHeaders(),
       }),
     );
+    void this.chatCache.invalidateFavourites();
   }
 
   async loadBlockedUsers(): Promise<void> {
@@ -536,13 +607,15 @@ export class ChatService {
   }
 
   async createGroup(name: string, memberIds: string[]): Promise<ChatRoom> {
-    return firstValueFrom(
+    const room = await firstValueFrom(
       this.http.post<ChatRoom>(
         `${this.baseUrl}/groups`,
         { name, memberIds },
         { headers: this.getHeaders() },
       ),
     );
+    void this.chatCache.invalidateRooms();
+    return room;
   }
 
   async renameGroup(roomId: string, name: string): Promise<void> {
@@ -553,6 +626,7 @@ export class ChatService {
         { headers: this.getHeaders() },
       ),
     );
+    void this.chatCache.invalidateRooms();
   }
 
   async addGroupMembers(roomId: string, memberIds: string[]): Promise<void> {

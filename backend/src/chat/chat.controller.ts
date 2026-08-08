@@ -9,8 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -57,22 +60,41 @@ export class ChatController {
   @Post('token')
   async getConnectionToken(
     @CurrentUser() user: User | null,
-  ): Promise<{ token: string } | null> {
-    if (!user) return null;
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (!user) {
+      res.status(HttpStatus.UNAUTHORIZED).json(null);
+      return;
+    }
 
-    const allowed = await this.centrifugoService.checkConnectionRateLimit(
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+      ?? req.ip
+      ?? undefined;
+
+    const result = await this.centrifugoService.checkConnectionRateLimit(
       user.id,
+      clientIp,
     );
-    if (!allowed) {
-      throw new HttpException(
-        'Too many WebSocket connection attempts. Please wait before reconnecting.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+
+    if (!result.allowed) {
+      const retryAfterSec = Math.ceil(result.retryAfterMs / 1000);
+      res
+        .status(HttpStatus.TOO_MANY_REQUESTS)
+        .header('Retry-After', String(retryAfterSec))
+        .json({
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message:
+            'Too many WebSocket connection attempts. Please wait before reconnecting.',
+          error: 'Too Many Requests',
+          retryAfterSec,
+        });
+      return;
     }
 
     const token =
       (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
-    return { token };
+    res.json({ token });
   }
 
   @Post('messages')
@@ -92,6 +114,23 @@ export class ChatController {
   ): Promise<ChatMessage | null> {
     if (!user) return null;
     return await this.chatService.shareContact(user.id, dto);
+  }
+
+  @Get('search')
+  async searchMessages(
+    @CurrentUser() user: User | null,
+    @Query('term') term?: string,
+    @Query('limit') limit?: string,
+    @Query('roomId') roomId?: string,
+  ): Promise<ChatMessage[]> {
+    if (!user) return [];
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    return await this.chatService.searchAllMessages(
+      user.id,
+      term ?? '',
+      limitNum,
+      roomId,
+    );
   }
 
   @Get('rooms')

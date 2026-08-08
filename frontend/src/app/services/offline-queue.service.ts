@@ -30,10 +30,10 @@ export class OfflineQueueService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest)) {
+        if (!(target && (target as any).result)) {
           return;
         }
-        const db = target.result;
+        const db = (target as any).result;
         if (!db.objectStoreNames.contains(this.storeName)) {
           db.createObjectStore(this.storeName, { keyPath: 'id' });
         }
