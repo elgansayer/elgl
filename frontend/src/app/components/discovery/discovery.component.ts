@@ -1,6 +1,17 @@
-import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  OnInit,
+  OnDestroy,
+  DestroyRef,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
+import { Subject, debounceTime } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
@@ -61,13 +72,16 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
   private readonly discoveryOnboarding = inject(DiscoveryOnboardingService);
   private readonly matchmakingOnboarding = inject(MatchmakingOnboardingService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
 
   /** Whether currently offline and serving cached data */
   readonly isOffline = computed(() => !this.offlineCache.isOnline());
-  readonly isUsingCachedData = computed(() => this.isOffline() && this.offlineCache.cachedDataAvailable());
+  readonly isUsingCachedData = computed(
+    () => this.isOffline() && this.offlineCache.cachedDataAvailable(),
+  );
 
   readonly partners = signal<
     (UserProfile & {
@@ -97,14 +111,18 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
 
-  /** Debounce timer handle for throttling rapid search calls. */
-  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** RxJS Subject for debounced search triggering, auto-cleans up via takeUntilDestroyed. */
+  private readonly searchTrigger$ = new Subject<void>();
   /** Abort controller for cancelling in-flight partner search. */
   private searchAbortController: AbortController | null = null;
 
   private readonly discoveryTourEffect = effect(() => {
     // Start the onboarding tour once partners have loaded and tour not yet completed
-    if (!this.isLoading() && this.partners().length > 0 && !this.discoveryOnboarding.hasCompletedTour()) {
+    if (
+      !this.isLoading() &&
+      this.partners().length > 0 &&
+      !this.discoveryOnboarding.hasCompletedTour()
+    ) {
       queueMicrotask(() => this.discoveryOnboarding.startTour());
     }
   });
@@ -177,6 +195,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit(): Promise<void> {
+    // Wire up RxJS-based debounced search auto-unsubscribed via takeUntilDestroyed
+    this.searchTrigger$
+      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        void this.searchPartners();
+      });
+
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
@@ -224,23 +249,24 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
-      const results = await this.discoveryService.findPartners({
-        radius_metres: this.selectedDistanceKm() * 1000,
-        native_languages: this.selectedNativeLanguage() || undefined,
-        target_language: this.selectedTargetLanguage() || undefined,
-        serious_learner_only: this.seriousLearnerOnly(),
-        gender: isVip ? genderVal : undefined,
-        age_min: this.ageRangeMin(),
-        age_max: this.ageRangeMax(),
-        serious_learner_mode: this.seriousLearnerMode(),
-        proficiency_level: this.selectedProficiencyLevel() || undefined,
-        available_time_start:
-          this.availableTimeStart() || undefined,
-        available_time_end:
-          this.availableTimeEnd() || undefined,
-        sort: this.selectedSort(),
-        voice_room_active: this.voiceRoomActive() || undefined,
-      }, signal);
+      const results = await this.discoveryService.findPartners(
+        {
+          radius_metres: this.selectedDistanceKm() * 1000,
+          native_languages: this.selectedNativeLanguage() || undefined,
+          target_language: this.selectedTargetLanguage() || undefined,
+          serious_learner_only: this.seriousLearnerOnly(),
+          gender: isVip ? genderVal : undefined,
+          age_min: this.ageRangeMin(),
+          age_max: this.ageRangeMax(),
+          serious_learner_mode: this.seriousLearnerMode(),
+          proficiency_level: this.selectedProficiencyLevel() || undefined,
+          available_time_start: this.availableTimeStart() || undefined,
+          available_time_end: this.availableTimeEnd() || undefined,
+          sort: this.selectedSort(),
+          voice_room_active: this.voiceRoomActive() || undefined,
+        },
+        signal,
+      );
       // If request was aborted, don't update the UI with stale results
       if (signal.aborted) return;
 
@@ -252,10 +278,12 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       const mapped = filtered.map((partner) => ({
         ...partner,
         nativeLangs: (partner.native_languages || ['EN']).map((code) => ({ code, level: 5 })),
-        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map((code) => ({
-          code,
-          level: 1,
-        })),
+        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map(
+          (code) => ({
+            code,
+            level: 1,
+          }),
+        ),
         formattedDistance: this.formatDistanceHelper(partner.distance_metres),
       }));
 
@@ -271,15 +299,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     }
   }
 
-/** Schedules a debounced search; cancels any prior pending timer. */
+  /** Debounced search via RxJS Subject — no manual timer, auto-cleans up. */
   private scheduleSearch(): void {
-    if (this.searchDebounceTimer !== null) {
-      clearTimeout(this.searchDebounceTimer);
-    }
-    this.searchDebounceTimer = setTimeout(() => {
-      this.searchDebounceTimer = null;
-      void this.searchPartners();
-    }, SEARCH_DEBOUNCE_MS);
+    this.searchTrigger$.next();
   }
 
   retrySearch(): void {
@@ -378,11 +400,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       this.searchAbortController.abort();
       this.searchAbortController = null;
     }
-    // Clear debounce timer
-    if (this.searchDebounceTimer !== null) {
-      clearTimeout(this.searchDebounceTimer);
-      this.searchDebounceTimer = null;
-    }
+    // Debounce subscription auto-unsubscribed via takeUntilDestroyed
+    this.searchTrigger$.complete();
     this.stopAudioIntro();
   }
 
