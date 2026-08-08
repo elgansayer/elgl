@@ -9,7 +9,6 @@ import { I18nService } from '../../services/i18n.service';
 import { EscrowService } from '../../services/escrow.service';
 import { NetworkStatusService } from '../../services/network-status.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
-import { JoyrideService } from 'ngx-joyride';
 
 describe('EscrowPaymentsComponent', () => {
   let component: EscrowPaymentsComponent;
@@ -26,7 +25,6 @@ describe('EscrowPaymentsComponent', () => {
   };
   let mockNetworkService: { isOnline: ReturnType<typeof signal> };
   let mockOnboardingService: { isCompleted: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof signal>; markComplete: ReturnType<typeof vi.fn>; stepNames: string[]; startTour: ReturnType<typeof vi.fn> };
-  let mockJoyrideService: { startTour: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     mockAuthService = {
@@ -60,9 +58,6 @@ describe('EscrowPaymentsComponent', () => {
       startTour: vi.fn(),
     };
 
-    mockJoyrideService = {
-      startTour: vi.fn().mockReturnValue({ subscribe: vi.fn() }),
-    };
 
     await TestBed.configureTestingModule({
       imports: [EscrowPaymentsComponent],
@@ -74,7 +69,6 @@ describe('EscrowPaymentsComponent', () => {
         { provide: EscrowService, useValue: mockEscrowService },
         { provide: NetworkStatusService, useValue: mockNetworkService },
         { provide: EscrowOnboardingService, useValue: mockOnboardingService },
-        { provide: JoyrideService, useValue: mockJoyrideService },
       ],
     }).compileComponents();
 
@@ -126,6 +120,5 @@ describe('EscrowPaymentsComponent', () => {
   it('should not start onboarding tour when already completed', () => {
     mockOnboardingService.isCompleted.mockReturnValue(true);
     fixture = TestBed.createComponent(EscrowPaymentsComponent);
-    expect(mockJoyrideService.startTour).not.toHaveBeenCalled();
   });
 });

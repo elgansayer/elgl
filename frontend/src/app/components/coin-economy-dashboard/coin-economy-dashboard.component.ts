@@ -1,7 +1,6 @@
 import { Component, inject, AfterViewInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
-import { JoyrideModule, JoyrideService } from 'ngx-joyride';
 import { EconomyStore, TransactionRecord } from '../../services/economy.store';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -46,7 +45,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
       <!-- Coin Balance Card -->
       <div
-        joyrideStep="coinEconomyStepBalance"
+        
         class="rounded-3xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 p-6 max-w-md"
       >
         <div class="flex items-center gap-4">
@@ -76,7 +75,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <!-- Buy Coins -->
         <app-card variant="elevated" padding="md">
-          <div joyrideStep="coinEconomyStepBuyCoins" class="flex flex-col items-center text-center gap-3">
+          <div  class="flex flex-col items-center text-center gap-3">
             <span class="text-4xl" aria-hidden="true">💳</span>
             <h3 class="font-bold text-lg">{{ 'coinEconomy.buyCoins' | t }}</h3>
             <p class="text-sm text-text-secondary">{{ 'coinEconomy.buyCoinsDesc' | t }}</p>
@@ -91,7 +90,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
         <!-- Send Gift -->
         <app-card variant="elevated" padding="md">
-          <div joyrideStep="coinEconomyStepSendGift" class="flex flex-col items-center text-center gap-3">
+          <div  class="flex flex-col items-center text-center gap-3">
             <span class="text-4xl" aria-hidden="true">🎁</span>
             <h3 class="font-bold text-lg">{{ 'coinEconomy.sendGift' | t }}</h3>
             <p class="text-sm text-text-secondary">{{ 'coinEconomy.sendGiftDesc' | t }}</p>
@@ -106,7 +105,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
         <!-- Sticker Store -->
         <app-card variant="elevated" padding="md">
-          <div joyrideStep="coinEconomyStepStickerStore" class="flex flex-col items-center text-center gap-3">
+          <div  class="flex flex-col items-center text-center gap-3">
             <span class="text-4xl" aria-hidden="true">🏷️</span>
             <h3 class="font-bold text-lg">{{ 'coinEconomy.stickerStore' | t }}</h3>
             <p class="text-sm text-text-secondary">{{ 'coinEconomy.stickerStoreDesc' | t }}</p>
@@ -121,7 +120,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
         <!-- Shop -->
         <app-card variant="elevated" padding="md">
-          <div joyrideStep="coinEconomyStepShop" class="flex flex-col items-center text-center gap-3">
+          <div  class="flex flex-col items-center text-center gap-3">
             <span class="text-4xl" aria-hidden="true">🛍️</span>
             <h3 class="font-bold text-lg">{{ 'coinEconomy.shop' | t }}</h3>
             <p class="text-sm text-text-secondary">{{ 'coinEconomy.shopDesc' | t }}</p>
@@ -136,7 +135,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
         <!-- VIP Subscription -->
         <app-card variant="elevated" padding="md">
-          <div joyrideStep="coinEconomyStepVIP" class="flex flex-col items-center text-center gap-3">
+          <div  class="flex flex-col items-center text-center gap-3">
             <span class="text-4xl" aria-hidden="true">👑</span>
             <h3 class="font-bold text-lg">{{ 'coinEconomy.vip' | t }}</h3>
             <p class="text-sm text-text-secondary">{{ 'coinEconomy.vipDesc' | t }}</p>

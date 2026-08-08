@@ -50,7 +50,7 @@ describe('OfflineDiscoveryCacheService', () => {
     const s = getStore(storeName);
     return {
       put: (v: Record<string, unknown>) => {
-        s.set(String(v.id ?? v.key), structuredClone(v));
+        s.set(String(v.id ?? v['key']), structuredClone(v));
         return syncReq();
       },
       get: (key: string) => syncReq(s.get(key) ?? null),

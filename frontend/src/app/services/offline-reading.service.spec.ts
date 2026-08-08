@@ -59,11 +59,11 @@ describe('OfflineReadingService', () => {
             return {
               put: (value: unknown) => {
                 const record = value as Record<string, unknown>;
-                let key = record.id;
+                let key = record['id'];
                 if (!key) {
                   autoIncrementCounter++;
                   key = autoIncrementCounter;
-                  record.id = key;
+                  record['id'] = key;
                 }
                 if (key) storeData.set(String(key), value);
                 const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
@@ -84,7 +84,7 @@ describe('OfflineReadingService', () => {
               },
               clear: () => {
                 storeData.clear();
-                if (oncompleteFn) setTimeout(() => oncompleteFn(), 0);
+                if (oncompleteFn) setTimeout(() => oncompleteFn!(), 0);
                 const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
                 setTimeout(() => {
                   if (req.onsuccess) req.onsuccess();
