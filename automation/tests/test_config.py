@@ -37,6 +37,14 @@ def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
     assert "RestrictSUIDSGID=true" not in unit
 
 
+def test_backend_test_heap_fits_the_service_memory_limit() -> None:
+    package = (Path(__file__).parents[2] / "backend" / "package.json").read_text(
+        encoding="utf-8"
+    )
+
+    assert "--max-old-space-size=3072" in package
+
+
 
 
 def environment(**overrides: str) -> dict[str, str]:
