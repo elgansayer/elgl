@@ -166,11 +166,11 @@ export class ChatRoomComponent implements OnDestroy {
 
   private isChatEventPayload(
     value: unknown,
-  ): value is { message?: ChatMessage; typing?: boolean } {
+  ): value is { message?: ChatMessage; typing?: boolean; reaction?: { messageId: string; reactions: Record<string, string[]> } } {
     return (
       !!value &&
       typeof value === 'object' &&
-      ('message' in value || 'typing' in value)
+      ('message' in value || 'typing' in value || 'reaction' in value)
     );
   }
 
@@ -337,6 +337,11 @@ export class ChatRoomComponent implements OnDestroy {
       const payload = this.isChatEventPayload(data) ? data : null;
       if (payload?.message) {
         this.messages.update((list) => [...list, payload.message!]);
+      } else if (payload?.reaction) {
+        const { messageId, reactions } = payload.reaction!;
+        this.messages.update((list) =>
+          list.map((m) => (m.id === messageId ? { ...m, reactions } : m)),
+        );
       } else if (payload?.typing) {
         this.isTyping.set(true);
         setTimeout(() => this.isTyping.set(false), 3000);

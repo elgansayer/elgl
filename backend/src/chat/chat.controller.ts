@@ -418,4 +418,35 @@ export class ChatController {
     const wallpaperUrl = await this.chatService.getWallpaper(roomId);
     return { wallpaperUrl };
   }
+
+  @Post('messages/:messageId/reactions')
+  async addReaction(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: { emoji: string },
+  ): Promise<Record<string, string[]>> {
+    if (!user) return {};
+    return this.chatService.addReaction(user.id, messageId, dto.emoji);
+  }
+
+  @Delete('messages/:messageId/reactions/:emoji')
+  async removeReaction(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Param('emoji') emoji: string,
+  ): Promise<Record<string, string[]>> {
+    if (!user) return {};
+    return this.chatService.removeReaction(user.id, messageId, emoji);
+  }
+
+  @Get('messages/:messageId/reactions')
+  async getReactions(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+  ): Promise<Record<string, string[]>> {
+    if (!user) return {};
+    return this.chatService.getReactionsForMessages([messageId]).then(
+      (result) => result[messageId] || {},
+    );
+  }
 }

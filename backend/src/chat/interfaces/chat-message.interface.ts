@@ -68,6 +68,9 @@ export interface ChatMessage {
 
   /** User IDs for whom this message has been soft-deleted */
   deleted_for_user_ids?: string[] | null;
+
+  /** Emoji reactions: emoji -> array of user IDs */
+  reactions?: Record<string, string[]> | null;
 }
 
 export interface DeletedAwareMessage extends ChatMessage {

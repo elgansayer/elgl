@@ -630,6 +630,14 @@ export class ChatService {
         }
         return true;
       });
+
+      // Fetch reactions for all visible messages
+      const messageIds = visibleMessages.map((m) => m.id);
+      const reactionsMap = await this.getReactionsForMessages(messageIds);
+      for (const msg of visibleMessages) {
+        msg.reactions = reactionsMap[msg.id] || null;
+      }
+
       return visibleMessages;
     }
 
@@ -2005,5 +2013,146 @@ export class ChatService {
     await this.centrifugoService.publish(`chat:${roomId}`, {
       message: awayMessageChat,
     });
+  }
+
+  async addReaction(
+    userId: string,
+    messageId: string,
+    emoji: string,
+  ): Promise<Record<string, string[]>> {
+    const supabase = this.supabaseService.getClient();
+
+    // Verify the message exists and get its room_id
+    const { data: message, error: msgError } = await supabase
+      .from('chat_messages')
+      .select('id, room_id')
+      .eq('id', messageId)
+      .single();
+
+    if (msgError || !message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Upsert the reaction (unique on message_id, user_id, emoji)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = supabase as any;
+    const { error: upsertError } = await client
+      .from('message_reactions')
+      .upsert(
+        { message_id: messageId, user_id: userId, emoji },
+        { onConflict: 'message_id, user_id, emoji' },
+      );
+
+    if (upsertError) {
+      throw new Error(`Failed to add reaction: ${upsertError.message}`);
+    }
+
+    const reactions = await this.getMessageReactions(messageId);
+
+    // Publish reaction update via Centrifugo
+    await this.centrifugoService.publish(`chat:${message.room_id}`, {
+      reaction: { messageId, reactions },
+    });
+
+    return reactions;
+  }
+
+  async removeReaction(
+    userId: string,
+    messageId: string,
+    emoji: string,
+  ): Promise<Record<string, string[]>> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: message, error: msgError } = await supabase
+      .from('chat_messages')
+      .select('id, room_id')
+      .eq('id', messageId)
+      .single();
+
+    if (msgError || !message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = supabase as any;
+    const { error: deleteError } = await client
+      .from('message_reactions')
+      .delete()
+      .eq('message_id', messageId)
+      .eq('user_id', userId)
+      .eq('emoji', emoji);
+
+    if (deleteError) {
+      throw new Error(`Failed to remove reaction: ${deleteError.message}`);
+    }
+
+    const reactions = await this.getMessageReactions(messageId);
+
+    // Publish reaction update via Centrifugo
+    await this.centrifugoService.publish(`chat:${message.room_id}`, {
+      reaction: { messageId, reactions },
+    });
+
+    return reactions;
+  }
+
+  private async getMessageReactions(
+    messageId: string,
+  ): Promise<Record<string, string[]>> {
+    const supabase = this.supabaseService.getClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = supabase as any;
+    const { data, error } = await client
+      .from('message_reactions')
+      .select('emoji, user_id')
+      .eq('message_id', messageId);
+
+    if (error || !data) {
+      return {};
+    }
+
+    const reactionsMap: Record<string, string[]> = {};
+    for (const row of data as { emoji: string; user_id: string }[]) {
+      if (!reactionsMap[row.emoji]) {
+        reactionsMap[row.emoji] = [];
+      }
+      reactionsMap[row.emoji].push(row.user_id);
+    }
+    return reactionsMap;
+  }
+
+  async getReactionsForMessages(
+    messageIds: string[],
+  ): Promise<Record<string, Record<string, string[]>>> {
+    if (messageIds.length === 0) return {};
+
+    const supabase = this.supabaseService.getClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = supabase as any;
+    const { data, error } = await client
+      .from('message_reactions')
+      .select('message_id, emoji, user_id')
+      .in('message_id', messageIds);
+
+    if (error || !data) {
+      return {};
+    }
+
+    const result: Record<string, Record<string, string[]>> = {};
+    for (const row of data as {
+      message_id: string;
+      emoji: string;
+      user_id: string;
+    }[]) {
+      if (!result[row.message_id]) {
+        result[row.message_id] = {};
+      }
+      if (!result[row.message_id][row.emoji]) {
+        result[row.message_id][row.emoji] = [];
+      }
+      result[row.message_id][row.emoji].push(row.user_id);
+    }
+    return result;
   }
 }

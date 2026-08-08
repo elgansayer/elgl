@@ -1,6 +1,6 @@
 import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ChatMessage } from '../../services/chat.service';
+import { ChatMessage, ChatService } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { FavouriteService } from '../../services/favourite.service';
@@ -10,11 +10,12 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { MessageReactionBarComponent } from '../message-reaction-bar/message-reaction-bar.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent],
+  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent, MessageReactionBarComponent],
   template: `
     @if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
@@ -170,6 +171,12 @@ import { environment } from '../../../environments/environment';
                 </span>
               }
             </p>
+            <app-message-reaction-bar
+              [reactions]="message().reactions || {}"
+              [currentUserId]="currentUserId() || ''"
+              [messageId]="message().id"
+              (reacted)="onReaction($event)"
+            ></app-message-reaction-bar>
           </div>
         </div>
       </app-long-press-context-menu>
@@ -219,6 +226,7 @@ export class ChatMessageComponent {
   private safetyService = inject(SafetyService);
   private confirmService = inject(ConfirmService);
   private i18n = inject(I18nService);
+  private chatService = inject(ChatService);
 
   isBlocked = signal(false);
   simplifiedText = signal<string | null>(null);
@@ -358,5 +366,29 @@ export class ChatMessageComponent {
       .catch((err: unknown) => {
         console.error('Report failed', err);
       });
+  }
+
+  async onReaction(event: { messageId: string; emoji: string; added: boolean }): Promise<void> {
+    try {
+      if (event.added) {
+        const reactions = await this.chatService.addReaction(event.messageId, event.emoji);
+        this.updateMessageReactions(reactions);
+      } else {
+        const reactions = await this.chatService.removeReaction(event.messageId, event.emoji);
+        this.updateMessageReactions(reactions);
+      }
+    } catch (err: unknown) {
+      console.error('Reaction failed', err);
+    }
+  }
+
+  private updateMessageReactions(reactions: Record<string, string[]>): void {
+    // Update the local signal/message data - the parent chat-room component
+    // will also receive real-time updates via Centrifugo.
+    // We store reactions directly on the message object reference.
+    const msg = this.message();
+    if (msg) {
+      msg.reactions = reactions;
+    }
   }
 }

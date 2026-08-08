@@ -81,6 +81,9 @@ export interface ChatMessage {
 
   /** True when the message has been soft‑deleted for all users */
   is_deleted?: boolean;
+
+  /** Emoji reactions: emoji -> array of user IDs */
+  reactions?: Record<string, string[]> | null;
 }
 
 export interface FavouriteRecord {
@@ -760,5 +763,44 @@ export class ChatService {
         { headers: this.getHeaders() },
       ),
     );
+  }
+
+  async addReaction(
+    messageId: string,
+    emoji: string,
+  ): Promise<Record<string, string[]>> {
+    const res = await firstValueFrom(
+      this.http.post<Record<string, string[]>>(
+        `${this.baseUrl}/messages/${messageId}/reactions`,
+        { emoji },
+        { headers: this.getHeaders() },
+      ),
+    );
+    return res;
+  }
+
+  async removeReaction(
+    messageId: string,
+    emoji: string,
+  ): Promise<Record<string, string[]>> {
+    const res = await firstValueFrom(
+      this.http.delete<Record<string, string[]>>(
+        `${this.baseUrl}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+        { headers: this.getHeaders() },
+      ),
+    );
+    return res;
+  }
+
+  async getReactions(
+    messageId: string,
+  ): Promise<Record<string, string[]>> {
+    const res = await firstValueFrom(
+      this.http.get<Record<string, string[]>>(
+        `${this.baseUrl}/messages/${messageId}/reactions`,
+        { headers: this.getHeaders() },
+      ),
+    );
+    return res;
   }
 }
