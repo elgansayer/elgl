@@ -23,13 +23,17 @@ export interface AudioRoomRecord {
   id: string;
   room_name: string;
   title: string;
+  party_type?: string;
   target_language: string;
   language_pair?: string;
   topic_tag?: string;
+  level?: string;
   host_id: string;
   co_host_id?: string | null;
   is_video_stream?: boolean;
   is_active: boolean;
+  is_private?: boolean;
+  invited_user_ids?: string[];
   speakers: string[];
   raised_hands: string[];
   listeners_count: number;
@@ -117,6 +121,8 @@ export class AudioRoomsStore {
   readonly stageInfo = signal<StageInfo | null>(null);
   readonly stageParticipants = signal<StageParticipant[]>([]);
   readonly audienceCount = signal<number>(0);
+  readonly privateRooms = signal<AudioRoomRecord[]>([]);
+  readonly isLoadingPrivate = signal<boolean>(false);
 
   // Split-screen co-host video state
   readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
@@ -231,6 +237,47 @@ export class AudioRoomsStore {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async loadPrivateRooms(): Promise<void> {
+    this.isLoadingPrivate.set(true);
+    try {
+      const list = await firstValueFrom(
+        this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/private`, {
+          headers: this.getHeaders(),
+        }),
+      );
+      this.privateRooms.set(list);
+    } catch (e) {
+      console.error('Failed to load private rooms:', e);
+    } finally {
+      this.isLoadingPrivate.set(false);
+    }
+  }
+
+  async createPrivateParty(
+    title: string,
+    languagePair: string,
+    topicTag: string,
+    invitedUserIds: string[],
+    isVideoStream = false,
+  ): Promise<AudioRoomRecord> {
+    const created = await firstValueFrom(
+      this.http.post<AudioRoomRecord>(
+        `${this.baseUrl}/private`,
+        {
+          title,
+          target_language: languagePair,
+          language_pair: languagePair,
+          topic_tag: topicTag,
+          invited_user_ids: invitedUserIds,
+          is_video_stream: isVideoStream,
+        },
+        { headers: this.getHeaders() },
+      ),
+    );
+    this.privateRooms.update((list) => [created, ...list]);
+    return created;
   }
 
   async createRoom(

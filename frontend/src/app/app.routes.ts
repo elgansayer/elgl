@@ -73,6 +73,14 @@ export const routes: Routes = [
     title: 'Video Classrooms - HelloTalk',
   },
   {
+    path: 'classrooms/create-private',
+    loadComponent: () =>
+      import('./components/create-private-party/create-private-party.component').then(
+        (m) => m.CreatePrivatePartyComponent,
+      ),
+    title: 'Create Private Party - HelloTalk',
+  },
+  {
     path: 'chat',
     loadComponent: () =>
       import('./components/chat-list/chat-list.component').then((m) => m.ChatListComponent),

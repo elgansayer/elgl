@@ -12,11 +12,12 @@ import { withRetry } from '../../services/http-retry';
 import { firstValueFrom, interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [SanitiseHtmlPipe, TranslatePipe, RouterLink, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })
@@ -61,9 +62,12 @@ export class ClassroomsMarketplace implements OnInit {
     return this.rooms().some((r) => r.host_id === userId);
   });
 
+  readonly hasPrivateRooms = computed(() => this.store.privateRooms().length > 0);
+
   // LiveKit integration requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit(): void {
     this.loadRooms();
+    this.loadPrivateRooms();
     this.subscribeToUpdates();
   }
 
@@ -89,6 +93,10 @@ export class ClassroomsMarketplace implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async loadPrivateRooms(): Promise<void> {
+    await this.store.loadPrivateRooms();
   }
 
   private subscribeToUpdates(): void {

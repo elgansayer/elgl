@@ -1,0 +1,162 @@
+<div class="create-private-party-container p-4 space-y-6">
+  <header class="space-y-1">
+    <h2 class="text-xl font-bold text-white">{{ 'privateParty.createTitle' | t }}</h2>
+    <p class="text-sm text-slate-400">{{ 'privateParty.createSubtitle' | t }}</p>
+  </header>
+
+  <section class="space-y-4">
+    <!-- Title -->
+    <div class="form-group">
+      <label for="partyTitleInput" class="block text-sm font-semibold text-slate-300 mb-1">
+        {{ 'privateParty.titleLabel' | t }}
+      </label>
+      <input
+        id="partyTitleInput"
+        type="text"
+        [(ngModel)]="title"
+        class="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
+        [placeholder]="'privateParty.titlePlaceholder' | t"
+        maxlength="100"
+      />
+    </div>
+
+    <!-- Language Pair -->
+    <div class="form-group">
+      <label for="languagePairSelect" class="block text-sm font-semibold text-slate-300 mb-1">
+        {{ 'privateParty.languagePairLabel' | t }}
+      </label>
+      <select
+        id="languagePairSelect"
+        [(ngModel)]="languagePair"
+        class="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white text-sm focus:outline-none focus:border-purple-500 transition-colors"
+      >
+        @for (lp of languagePairOptions; track lp) {
+          <option [value]="lp">{{ lp }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Topic Tag -->
+    <div class="form-group">
+      <label for="topicTagSelect" class="block text-sm font-semibold text-slate-300 mb-1">
+        {{ 'privateParty.topicLabel' | t }}
+      </label>
+      <select
+        id="topicTagSelect"
+        [(ngModel)]="topicTag"
+        class="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white text-sm focus:outline-none focus:border-purple-500 transition-colors"
+      >
+        @for (topic of topicOptions; track topic) {
+          <option [value]="topic">{{ topic }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Invitees Search -->
+    <div class="form-group">
+      <label class="block text-sm font-semibold text-slate-300 mb-1">
+        {{ 'privateParty.inviteFriendsLabel' | t }} ({{ inviteeCount() }}/{{ MAX_INVITEES }})
+      </label>
+
+      @if (!canAddMore()) {
+        <p class="text-xs text-amber-400 mb-2">{{ 'privateParty.maxInviteesReached' | t: { max: MAX_INVITEES } }}</p>
+      }
+
+      <div class="relative">
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="searchUsers()"
+          class="w-full rounded-xl bg-slate-800 border border-slate-700 px-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-purple-500 transition-colors"
+          [placeholder]="'privateParty.searchPlaceholder' | t"
+          [disabled]="!canAddMore()"
+        />
+        @if (isSearching()) {
+          <span class="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-purple-400 border-t-transparent animate-spin"></span>
+        }
+      </div>
+
+      <!-- Search Results -->
+      @if (searchResults().length > 0) {
+        <div class="mt-2 rounded-xl bg-slate-800/50 border border-slate-700 divide-y divide-slate-700/50 max-h-48 overflow-y-auto">
+          @for (user of searchResults(); track user.id) {
+            <button
+              type="button"
+              (click)="addInvitee(user)"
+              class="w-full flex items-center gap-3 px-4 py-3 text-start hover:bg-purple-500/10 transition-colors"
+              [disabled]="selectedInviteeIds().includes(user.id)"
+            >
+              <div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                @if (user.avatar_url) {
+                  <img [src]="user.avatar_url" alt="" class="h-full w-full object-cover" />
+                } @else {
+                  {{ (user.display_name || user.id).charAt(0).toUpperCase() }}
+                }
+              </div>
+              <div class="flex-1 min-w-0">
+                <span class="text-sm text-white truncate block">{{ user.display_name || user.id }}</span>
+                @if (user.native_languages?.length) {
+                  <span class="text-xs text-slate-400">{{ user.native_languages[0] }}</span>
+                }
+              </div>
+              <span class="flex-shrink-0 text-lg text-purple-400 font-bold">+</span>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Selected Invitees -->
+      <div class="mt-4">
+        <h3 class="text-sm font-semibold text-slate-400 mb-2">
+          {{ 'privateParty.invitedLabel' | t }} ({{ inviteeCount() }})
+        </h3>
+        @if (selectedInvitees().length === 0) {
+          <p class="text-xs text-slate-500 italic">{{ 'privateParty.noInviteesHint' | t }}</p>
+        } @else {
+          <div class="flex flex-wrap gap-2">
+            @for (invitee of selectedInvitees(); track invitee.id) {
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-500/20 border border-purple-500/30 px-3 py-1.5 text-sm text-purple-200">
+                <span class="h-5 w-5 rounded-full bg-purple-600 flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
+                  @if (invitee.avatar_url) {
+                    <img [src]="invitee.avatar_url" alt="" class="h-full w-full object-cover" />
+                  } @else {
+                    {{ (invitee.display_name || invitee.id).charAt(0).toUpperCase() }}
+                  }
+                </span>
+                <span class="text-xs">{{ invitee.display_name || invitee.id }}</span>
+                <button
+                  type="button"
+                  (click)="removeInvitee(invitee)"
+                  class="ms-1 text-purple-400 hover:text-red-400 transition-colors text-xs font-bold"
+                  [attr.aria-label]="'privateParty.removeInviteeAria' | t: { name: invitee.display_name || invitee.id }"
+                >
+                  &#x2715;
+                </button>
+              </span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <footer class="space-y-3">
+    @if (error()) {
+      <p class="text-sm text-red-400 bg-red-500/10 rounded-xl px-4 py-3">{{ error() }}</p>
+    }
+
+    <button
+      type="button"
+      (click)="createParty()"
+      class="w-full rounded-full bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 text-sm transition-colors"
+      [disabled]="isCreating() || !title.trim() || selectedInvitees().length === 0 || !languagePair || !topicTag"
+    >
+      @if (isCreating()) {
+        <span class="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin me-2 align-middle"></span>
+        {{ 'privateParty.creatingBtn' | t }}
+      } @else {
+        {{ 'privateParty.createBtn' | t }}
+      }
+    </button>
+  </footer>
+</div>
