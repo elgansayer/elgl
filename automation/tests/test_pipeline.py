@@ -163,3 +163,26 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     assert github.auto_merged == [99]
     assert github.closed == [42]
     assert github.reviewed == ["head"]
+
+
+def test_successful_transition_resets_previous_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    job.attempts = 2
+    job.last_error = "temporary failure"
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_worktree",
+        lambda workflow, worktree, task_id, title: "factory/42-fix-build",
+    )
+
+    advanced = pipeline.run_once()
+
+    assert advanced is not None
+    assert advanced.state is JobState.IMPLEMENTING
+    assert advanced.attempts == 0
+    assert advanced.last_error is None

@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,8 @@ def test_every_change_runs_full_frontend_backend_and_factory_gate(tmp_path: Path
     assert "backend-build" in names
     assert "backend-test" in names
     assert "backend-test:e2e" in names
+    factory = next(command for command in commands if command.name == "factory-tests")
+    assert factory.arguments[:3] == (sys.executable, "-m", "pytest")
 
 
 def test_empty_diff_cannot_claim_verification(tmp_path: Path) -> None:

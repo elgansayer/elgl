@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,7 +26,9 @@ def commands_for(repository: Path, changed_paths: set[Path]) -> list[Verificatio
         VerificationCommand(
             "conflict-markers", ("node", "scripts/check-conflict-markers.mjs"), repository
         ),
-        VerificationCommand("factory-tests", ("python", "-m", "pytest"), repository / "automation"),
+        VerificationCommand(
+            "factory-tests", (sys.executable, "-m", "pytest"), repository / "automation"
+        ),
     ]
     for script in (
         "check:control-flow",

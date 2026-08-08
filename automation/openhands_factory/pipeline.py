@@ -76,6 +76,7 @@ class FactoryPipeline:
         job = min(candidates, key=lambda item: (item.task.priority, int(item.task.identifier)))
         try:
             self._advance(job)
+            job.attempts = 0
             job.last_error = None
         except Exception as error:
             job.attempts += 1
