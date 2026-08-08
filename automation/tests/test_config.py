@@ -84,6 +84,12 @@ def test_default_repository_is_production_clone() -> None:
     config = FactoryConfig.from_environment(environment())
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
+    assert config.max_parallel_jobs == 3
+
+
+def test_parallel_job_limit_must_be_positive() -> None:
+    with pytest.raises(ConfigurationError, match="factory limits must be positive"):
+        FactoryConfig.from_environment(environment(FACTORY_MAX_PARALLEL_JOBS="0"))
 
 
 def test_disk_reserve_cannot_be_disabled() -> None:

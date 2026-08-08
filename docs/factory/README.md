@@ -64,6 +64,10 @@ authentication break-glass exception.
 
 Store credentials only in `/etc/hellotalk-factory/factory.env`, never in commands or chat.
 
+`FACTORY_MAX_PARALLEL_JOBS` defaults to three. Issue agents plan, implement and review in
+parallel, while the memory-heavy local verification suite is serialised for safe operation on
+the 4 GB VPS. Increase this only after increasing the systemd memory limit and available RAM.
+
 ```bash
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models opencode-go
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models gemini

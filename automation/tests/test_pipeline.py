@@ -186,3 +186,24 @@ def test_successful_transition_resets_previous_failures(
     assert advanced.state is JobState.IMPLEMENTING
     assert advanced.attempts == 0
     assert advanced.last_error is None
+
+
+def test_run_job_advances_only_the_selected_durable_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    github.tasks.append(Task("43", "Fix lint", "Broken lint", "github-issue", 0))
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    pipeline.refresh()
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_worktree",
+        lambda workflow, worktree, task_id, title: f"factory/{task_id}",
+    )
+
+    advanced = pipeline.run_job("43")
+    restored = pipeline.jobs.load()
+
+    assert advanced is not None
+    assert restored["43"].state is JobState.IMPLEMENTING
+    assert restored["42"].state is JobState.DISCOVERED

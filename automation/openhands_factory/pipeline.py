@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Semaphore
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
@@ -33,6 +34,7 @@ class FactoryPipeline:
         config: FactoryConfig,
         github: GitHubClient | None = None,
         conversations: ConversationRunner | None = None,
+        verification_slots: Semaphore | None = None,
     ) -> None:
         self.config = config
         self.github = github or GitHubClient(
@@ -46,6 +48,7 @@ class FactoryPipeline:
             config, sdk_conversation_factory(config)
         )
         self.labels_ready = False
+        self.verification_slots = verification_slots
 
     def refresh(self) -> dict[str, Job]:
         if not self.labels_ready:
@@ -91,6 +94,29 @@ class FactoryPipeline:
         job.updated_at = datetime.now(UTC)
         jobs[job.task.identifier] = job
         self.jobs.save(jobs)
+        return job
+
+    def run_job(self, task_id: str) -> Job | None:
+        """Advance one scheduler-selected job and merge only its durable state."""
+        job = self.jobs.load().get(task_id)
+        if job is None or job.state in TERMINAL_STATES:
+            return None
+        try:
+            self._advance(job)
+            job.attempts = 0
+            job.last_error = None
+        except Exception as error:
+            job.attempts += 1
+            job.last_error = str(error)[-2000:]
+            LOGGER.exception("Factory job %s failed", job.task.identifier)
+            if job.attempts >= self.config.max_consecutive_failures:
+                job.state = JobState.QUARANTINED
+                self.tasks.release(job.task.identifier)
+                self.github.add_issue_labels(
+                    int(job.task.identifier), ("factory-quarantined", "needs-human")
+                )
+        job.updated_at = datetime.now(UTC)
+        self.jobs.save_job(job)
         return job
 
     def _advance(self, job: Job) -> None:
@@ -227,7 +253,12 @@ class FactoryPipeline:
         changed = workflow.changed_paths()
         if not changed:
             raise FactoryError("No changed paths were found")
-        run_verification(commands_for(workflow.repository, changed))
+        commands = commands_for(workflow.repository, changed)
+        if self.verification_slots is None:
+            run_verification(commands)
+            return
+        with self.verification_slots:
+            run_verification(commands)
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
         context: list[tuple[Path, str]] = []

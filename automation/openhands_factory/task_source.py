@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from threading import Lock
 
 from openhands_factory.models import Lease, Task
 from openhands_factory.state import atomic_write_json, read_json
 
 
 class TaskStore:
+    _lease_lock = Lock()
+
     def __init__(self, state_dir: Path, lease_minutes: int = 180) -> None:
         self.backlog_path = state_dir / "backlog.json"
         self.lease_path = state_dir / "leases.json"
@@ -45,35 +48,27 @@ class TaskStore:
 
     def acquire(self, task: Task, owner: str, now: datetime | None = None) -> Lease:
         current = now or datetime.now(UTC)
-        leases = self.leases(current)
-        if task.identifier in leases:
-            raise ValueError(f"Task {task.identifier} already has an active lease")
-        lease = Lease(
-            task_id=task.identifier,
-            owner=owner,
-            acquired_at=current,
-            expires_at=current + timedelta(minutes=self.lease_minutes),
-        )
-        leases[task.identifier] = lease
-        atomic_write_json(
-            self.lease_path,
-            {
-                "leases": [
-                    {
-                        "task_id": item.task_id,
-                        "owner": item.owner,
-                        "acquired_at": item.acquired_at.isoformat(),
-                        "expires_at": item.expires_at.isoformat() if item.expires_at else None,
-                    }
-                    for item in leases.values()
-                ]
-            },
-        )
-        return lease
+        with self._lease_lock:
+            leases = self.leases(current)
+            if task.identifier in leases:
+                raise ValueError(f"Task {task.identifier} already has an active lease")
+            lease = Lease(
+                task_id=task.identifier,
+                owner=owner,
+                acquired_at=current,
+                expires_at=current + timedelta(minutes=self.lease_minutes),
+            )
+            leases[task.identifier] = lease
+            self._write_leases(leases)
+            return lease
 
     def release(self, task_id: str) -> None:
-        leases = self.leases()
-        leases.pop(task_id, None)
+        with self._lease_lock:
+            leases = self.leases()
+            leases.pop(task_id, None)
+            self._write_leases(leases)
+
+    def _write_leases(self, leases: dict[str, Lease]) -> None:
         atomic_write_json(
             self.lease_path,
             {

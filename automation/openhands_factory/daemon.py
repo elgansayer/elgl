@@ -5,17 +5,28 @@ from __future__ import annotations
 import logging
 import signal
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
+from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
 from openhands_factory.alerts import AlertService
 from openhands_factory.config import FactoryConfig
+from openhands_factory.models import Job
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 
 LOGGER = logging.getLogger(__name__)
+
+
+def select_batch(jobs: dict[str, Job], limit: int) -> list[Job]:
+    candidates = [
+        job for job in jobs.values() if job.state.value not in {"done", "quarantined"}
+    ]
+    candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
+    return candidates[:limit]
 
 
 class FactoryDaemon:
@@ -25,6 +36,7 @@ class FactoryDaemon:
         self.tasks = TaskStore(config.state_dir)
         self.alerts = AlertService(config)
         self.pipeline = FactoryPipeline(config)
+        self.verification_slots = Semaphore(1)
 
     @property
     def control_path(self) -> Path:
@@ -49,14 +61,30 @@ class FactoryDaemon:
 
     def _loop(self) -> int:
         atomic_write_json(self.config.state_dir / "daemon.json", {"status": "running"})
-        while not self.stopping:
-            if self.paused():
-                time.sleep(min(self.config.cooldown_seconds, 30))
-                continue
-            job = self.pipeline.run_once()
-            if job is not None:
-                LOGGER.info("Advanced task %s to %s", job.task.identifier, job.state.value)
-            time.sleep(self.config.cooldown_seconds)
+        active: dict[Future[Job | None], str] = {}
+        with ThreadPoolExecutor(
+            max_workers=self.config.max_parallel_jobs,
+            thread_name_prefix="factory-worker",
+        ) as workers:
+            while not self.stopping:
+                for future, task_id in list(active.items()):
+                    if not future.done():
+                        continue
+                    del active[future]
+                    job = future.result()
+                    if job is not None:
+                        LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
+                if not self.paused() and not active:
+                    jobs = self.pipeline.refresh()
+                    for job in select_batch(jobs, self.config.max_parallel_jobs):
+                        worker = FactoryPipeline(
+                            self.config,
+                            verification_slots=self.verification_slots,
+                        )
+                        future = workers.submit(worker.run_job, job.task.identifier)
+                        active[future] = job.task.identifier
+                        LOGGER.info("Scheduled task %s", job.task.identifier)
+                time.sleep(min(self.config.cooldown_seconds, 10))
         atomic_write_json(self.config.state_dir / "daemon.json", {"status": "stopped"})
         return 0
 
