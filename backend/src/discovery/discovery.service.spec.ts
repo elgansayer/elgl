@@ -5,7 +5,6 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
-import { CloudflareCacheService } from '../cloudflare/cache.service';
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
@@ -25,7 +24,6 @@ describe('DiscoveryService', () => {
   let mockPipelineExec: jest.Mock;
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
-  let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
   let mockDegradationService: {
     executeWithBreaker: jest.Mock;
     executeWithCascade: jest.Mock;
@@ -97,10 +95,6 @@ describe('DiscoveryService', () => {
       getActiveHostIds: jest.fn().mockResolvedValue([]),
     };
 
-    mockCloudflareCacheService = {
-      purgeByCacheTags: jest.fn().mockResolvedValue(true),
-    };
-
     mockDegradationService = {
       executeWithBreaker: jest
         .fn()
@@ -138,10 +132,6 @@ describe('DiscoveryService', () => {
         {
           provide: AudioRoomsService,
           useValue: mockAudioRoomsService,
-        },
-        {
-          provide: CloudflareCacheService,
-          useValue: mockCloudflareCacheService,
         },
         {
           provide: `PinoLogger:${DiscoveryService.name}`,
