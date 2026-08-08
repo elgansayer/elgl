@@ -21,7 +21,7 @@ export class AppSkeletonLoaderComponent {
   readonly customClass = input<string>('');
 
   readonly hostClasses = computed(() => {
-    const base = 'block animate-pulse bg-surface-100';
+    const base = 'block skeleton-shimmer bg-surface-100';
     const variant = this.variant();
     const shape = variant === 'circle' ? 'rounded-full' : variant === 'text' ? 'rounded' : '';
     const extra = this.customClass();

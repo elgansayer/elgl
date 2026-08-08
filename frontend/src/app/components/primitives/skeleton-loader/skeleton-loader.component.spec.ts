@@ -53,8 +53,8 @@ describe('AppSkeletonLoaderComponent', () => {
     expect(skeletonEl.getAttribute('role')).toBe('presentation');
   });
 
-  it('should apply pulse animation class', () => {
-    expect(skeletonEl.classList.contains('animate-pulse')).toBe(true);
+  it('should apply shimmer animation class', () => {
+    expect(skeletonEl.classList.contains('skeleton-shimmer')).toBe(true);
     expect(skeletonEl.classList.contains('bg-surface-100')).toBe(true);
   });
 
