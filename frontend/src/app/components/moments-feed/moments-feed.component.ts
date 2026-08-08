@@ -23,6 +23,7 @@ import {
 import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 import { DraftService } from '../../services/draft.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { LightboxComponent } from '../lightbox/lightbox.component';
 
 interface MentionSuggestion {
   id: string;
@@ -47,6 +48,7 @@ interface MentionSuggestion {
     TextToSpeechComponent,
     LikedByModalComponent,
     AppEmptyStateComponent,
+    LightboxComponent,
   ],
   templateUrl: './moments-feed.component.html',
   styleUrls: ['./moments-feed.component.scss'],
@@ -54,6 +56,10 @@ interface MentionSuggestion {
 export class MomentsFeedComponent {
   private readonly MAX_IMAGES = 9;
   private readonly MAX_VOICE_SECONDS = 60;
+
+  // Lightbox state
+  readonly lightboxImages = signal<string[]>([]);
+  readonly lightboxInitialIndex = signal<number>(0);
 
   readonly momentsStore = inject(MomentsStore);
   readonly vocabStore = inject(VocabularyStore);
@@ -527,6 +533,15 @@ export class MomentsFeedComponent {
 
   closeLikedBy(): void {
     this.activeLikedByMomentId.set(null);
+  }
+
+  openLightbox(images: string[], index: number): void {
+    this.lightboxImages.set(images);
+    this.lightboxInitialIndex.set(index);
+  }
+
+  closeLightbox(): void {
+    this.lightboxImages.set([]);
   }
 
   private handleWindowScroll = (): void => {
