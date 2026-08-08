@@ -777,8 +777,9 @@ describe('AudioRoomsService', () => {
         raised_hands: [],
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_invited',
+        type: 'co_host_changed',
         target_user_id: 'user-2',
+        previous_co_host_id: null,
         room_id: 'room-1',
       });
       expect(result.id).toBe('room-1');
@@ -808,13 +809,9 @@ describe('AudioRoomsService', () => {
         raised_hands: [],
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_removed',
-        target_user_id: 'user-2',
-        room_id: 'room-1',
-      });
-      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_invited',
+        type: 'co_host_changed',
         target_user_id: 'user-3',
+        previous_co_host_id: 'user-2',
         room_id: 'room-1',
       });
       expect(result.id).toBe('room-1');
