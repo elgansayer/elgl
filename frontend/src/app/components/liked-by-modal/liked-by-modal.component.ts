@@ -1,16 +1,7 @@
 import { Component, input, output, inject, resource } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { UpperCasePipe } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
-
-interface LikedUser {
-  id: string;
-  avatar_url: string | null;
-  display_name: string;
-  native_languages?: string[];
-  target_languages: string[];
-}
+import { MomentsStore, type LikedUser } from '../../services/moments.store';
 
 @Component({
   selector: 'app-liked-by-modal',
@@ -88,14 +79,13 @@ interface LikedUser {
   `,
 })
 export class LikedByModalComponent {
-  momentId = input.required<string>();
-  closeModal = output<void>();
+  readonly momentId = input<string>('');
+  readonly closeModal = output<void>();
 
-  private http = inject(HttpClient);
+  private readonly momentsStore = inject(MomentsStore);
 
   readonly likedUsers = resource({
-    params: () => this.momentId(),
-    loader: ({ params: momentId }) =>
-      firstValueFrom(this.http.get<LikedUser[]>(`/api/moments/${momentId}/likes`)),
+    request: () => this.momentId() || undefined,
+    loader: ({ request }) => this.momentsStore.getMomentLikes(request),
   });
 }

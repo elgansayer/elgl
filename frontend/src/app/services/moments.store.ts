@@ -6,6 +6,14 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
 
+export interface LikedUser {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  native_languages?: string[];
+  target_languages: string[];
+}
+
 export interface MomentComment {
   id: string;
   moment_id: string;
@@ -184,6 +192,19 @@ export class MomentsStore {
       }),
     );
     return created;
+  }
+
+  async getMomentLikes(momentId: string): Promise<LikedUser[]> {
+    try {
+      return await firstValueFrom(
+        this.http.get<LikedUser[]>(`${this.baseUrl}/${momentId}/likes`, {
+          headers: this.getHeaders(),
+        }),
+      );
+    } catch (e) {
+      console.error('Failed to load moment likes:', e);
+      throw e;
+    }
   }
 
   async togglePin(momentId: string): Promise<void> {
