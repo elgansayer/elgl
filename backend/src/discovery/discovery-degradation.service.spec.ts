@@ -2,6 +2,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
+
+const mockMetricsService = {
+  setDiscoveryCircuitBreakerOpen: jest.fn(),
+  setDiscoveryDegradationActive: jest.fn(),
+};
 
 describe('DiscoveryDegradationService', () => {
   let service: DiscoveryDegradationService;
@@ -22,6 +28,10 @@ describe('DiscoveryDegradationService', () => {
           useValue: {
             getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();

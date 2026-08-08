@@ -6,6 +6,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
+import { MetricsService } from '../metrics/metrics.service';
 jest.mock('../mock-data', () => ({
   MOCK_USERS: [],
 }));
@@ -14,6 +15,17 @@ jest.mock('../mock-data', () => ({
 jest.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: <T>(value: T): T => value,
 }));
+
+const mockMetricsService = {
+  recordDiscoveryPartnerSearch: jest.fn(),
+  recordDiscoveryCacheHit: jest.fn(),
+  recordDiscoveryCacheMiss: jest.fn(),
+  setDiscoveryDegradationActive: jest.fn(),
+  setDiscoveryCircuitBreakerOpen: jest.fn(),
+  recordDiscoveryRateLimited: jest.fn(),
+  recordDiscoveryGeographySearch: jest.fn(),
+  recordDiscoveryLanguagePairSearch: jest.fn(),
+};
 
 describe('DiscoveryService', () => {
   let service: DiscoveryService;
@@ -152,6 +164,10 @@ describe('DiscoveryService', () => {
             debug: jest.fn(),
             trace: jest.fn(),
           },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();

@@ -68,6 +68,18 @@ prometheus_scrape:
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter
       - hellotalk_active_connections: gauge
+      # Discovery Map metrics (Datadog custom metrics, #2255)
+      - hellotalk_discovery_partner_searches_total: counter
+      - hellotalk_discovery_empty_results_total: counter
+      - hellotalk_discovery_request_duration_seconds: histogram
+      - hellotalk_discovery_cache_hits_total: counter
+      - hellotalk_discovery_cache_misses_total: counter
+      - hellotalk_discovery_degradation_active: gauge
+      - hellotalk_discovery_circuit_breaker_open: gauge
+      - hellotalk_discovery_rate_limited_total: counter
+      - hellotalk_discovery_geography_searches_total: counter
+      - hellotalk_discovery_language_pair_searches_total: counter
+      - hellotalk_discovery_partners_per_request: histogram
       # Matchmaking / Recommendations metrics (Datadog custom metrics, #2280)
       - hellotalk_matchmaking_recommendations_generated_total: counter
       - hellotalk_matchmaking_recommendations_per_request: histogram

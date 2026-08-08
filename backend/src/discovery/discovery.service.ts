@@ -9,6 +9,7 @@ import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
 import { MOCK_USERS } from '../mock-data';
 import { withRetry, isRateLimitError } from '../common/retry';
+import { MetricsService } from '../metrics/metrics.service';
 import {
   DiscoveryDegradationService,
   DegradationMarker,
@@ -49,6 +50,7 @@ export class DiscoveryService {
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
     private readonly degradationService: DiscoveryDegradationService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
@@ -522,6 +524,7 @@ export class DiscoveryService {
     currentUserProfile: UserProfile | null,
     query: SearchQueryDto,
   ): Promise<DiscoveryResult> {
+    const startTime = Date.now();
     const marker: DegradationMarker = {
       degraded: false,
       fallbackSource: 'none',
@@ -546,6 +549,13 @@ export class DiscoveryService {
           'mock',
           currentUserId,
         );
+        this.metricsService.recordDiscoveryPartnerSearch(
+          'partners',
+          'empty',
+          mockData.length,
+          'mock',
+          (Date.now() - startTime) / 1000,
+        );
         return {
           data: mockData,
           marker: {
@@ -555,6 +565,18 @@ export class DiscoveryService {
           },
         };
       }
+
+      const outcome = result.length > 0 ? 'success' : 'empty';
+      const tier = marker.degraded
+        ? (marker.fallbackSource ?? 'degraded')
+        : 'live';
+      this.metricsService.recordDiscoveryPartnerSearch(
+        'partners',
+        outcome,
+        result.length,
+        tier,
+        (Date.now() - startTime) / 1000,
+      );
 
       return { data: result, marker };
     } catch (error: unknown) {
@@ -566,6 +588,13 @@ export class DiscoveryService {
         currentUserId,
       );
       const mockData = this.getMockDiscoveryData(query, []);
+      this.metricsService.recordDiscoveryPartnerSearch(
+        'partners',
+        'error',
+        mockData.length,
+        'mock',
+        (Date.now() - startTime) / 1000,
+      );
       return {
         data: mockData,
         marker: {

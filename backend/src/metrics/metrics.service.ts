@@ -84,6 +84,19 @@ export class MetricsService {
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
 
+  // Discovery Map metrics
+  readonly discoveryPartnerSearches: Counter<string>;
+  readonly discoveryEmptyResults: Counter<string>;
+  readonly discoveryRequestDuration: Histogram<string>;
+  readonly discoveryCacheHits: Counter<string>;
+  readonly discoveryCacheMisses: Counter<string>;
+  readonly discoveryDegradationActive: Gauge<string>;
+  readonly discoveryCircuitBreakerOpen: Gauge<string>;
+  readonly discoveryRateLimited: Counter<string>;
+  readonly discoveryGeographySearches: Counter<string>;
+  readonly discoveryLanguagePairSearches: Counter<string>;
+  readonly discoveryPartnersPerRequest: Histogram<string>;
+
   // Admin Moderation Dashboard metrics
   readonly adminBanActions: Counter<string>;
   readonly adminWarnActions: Counter<string>;
@@ -530,6 +543,87 @@ export class MetricsService {
       registers: [this.register],
     });
 
+    // --- Discovery Map Metrics ---
+
+    this.discoveryPartnerSearches = new Counter({
+      name: 'hellotalk_discovery_partner_searches_total',
+      help: 'Total number of discovery partner search requests',
+      labelNames: ['endpoint', 'outcome'],
+      registers: [this.register],
+    });
+
+    this.discoveryEmptyResults = new Counter({
+      name: 'hellotalk_discovery_empty_results_total',
+      help: 'Total number of discovery requests returning zero results',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+    });
+
+    this.discoveryRequestDuration = new Histogram({
+      name: 'hellotalk_discovery_request_duration_seconds',
+      help: 'End-to-end duration of discovery API requests',
+      labelNames: ['endpoint', 'outcome'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    });
+
+    this.discoveryCacheHits = new Counter({
+      name: 'hellotalk_discovery_cache_hits_total',
+      help: 'Total number of Redis cache hits for discovery endpoints',
+      labelNames: ['endpoint'],
+      registers: [this.register],
+    });
+
+    this.discoveryCacheMisses = new Counter({
+      name: 'hellotalk_discovery_cache_misses_total',
+      help: 'Total number of Redis cache misses for discovery endpoints',
+      labelNames: ['endpoint', 'reason'],
+      registers: [this.register],
+    });
+
+    this.discoveryDegradationActive = new Gauge({
+      name: 'hellotalk_discovery_degradation_active',
+      help: 'Whether the discovery degradation (circuit breaker) path is active',
+      labelNames: ['service'],
+      registers: [this.register],
+    });
+
+    this.discoveryCircuitBreakerOpen = new Gauge({
+      name: 'hellotalk_discovery_circuit_breaker_open',
+      help: 'Whether a discovery circuit breaker is open (1) or closed (0)',
+      labelNames: ['breaker'],
+      registers: [this.register],
+    });
+
+    this.discoveryRateLimited = new Counter({
+      name: 'hellotalk_discovery_rate_limited_total',
+      help: 'Total number of discovery requests rejected by rate limiter',
+      labelNames: ['endpoint', 'tier'],
+      registers: [this.register],
+    });
+
+    this.discoveryGeographySearches = new Counter({
+      name: 'hellotalk_discovery_geography_searches_total',
+      help: 'Total number of location-based discovery searches',
+      labelNames: ['search_type', 'result'],
+      registers: [this.register],
+    });
+
+    this.discoveryLanguagePairSearches = new Counter({
+      name: 'hellotalk_discovery_language_pair_searches_total',
+      help: 'Total number of language pair discovery searches',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.discoveryPartnersPerRequest = new Histogram({
+      name: 'hellotalk_discovery_partners_per_request',
+      help: 'Number of partner results returned per discovery request',
+      labelNames: ['endpoint', 'tier'],
+      registers: [this.register],
+      buckets: [0, 1, 5, 10, 15, 20, 50],
+    });
+
     // --- Admin Moderation Dashboard Metrics ---
 
     this.adminBanActions = new Counter({
@@ -878,6 +972,54 @@ export class MetricsService {
 
   setMatchmakingTierSuccessRate(rate: number): void {
     this.matchmakingTierSuccessRate.set(rate);
+  }
+
+  // --- Discovery Map metric helpers ---
+
+  recordDiscoveryPartnerSearch(
+    endpoint: string,
+    outcome: 'success' | 'empty' | 'error',
+    resultCount: number = 0,
+    tier: string = 'live',
+    durationSeconds: number = 0,
+  ): void {
+    this.discoveryPartnerSearches.inc({ endpoint, outcome });
+    this.discoveryPartnersPerRequest.observe({ endpoint, tier }, resultCount);
+    this.discoveryRequestDuration.observe({ endpoint, outcome }, durationSeconds);
+    if (outcome === 'empty' || resultCount === 0) {
+      this.discoveryEmptyResults.inc({ endpoint });
+    }
+  }
+
+  recordDiscoveryCacheHit(endpoint: string): void {
+    this.discoveryCacheHits.inc({ endpoint });
+  }
+
+  recordDiscoveryCacheMiss(endpoint: string, reason: string): void {
+    this.discoveryCacheMisses.inc({ endpoint, reason });
+  }
+
+  setDiscoveryDegradationActive(service: string, active: boolean): void {
+    this.discoveryDegradationActive.set({ service }, active ? 1 : 0);
+  }
+
+  setDiscoveryCircuitBreakerOpen(breaker: string, isOpen: boolean): void {
+    this.discoveryCircuitBreakerOpen.set({ breaker }, isOpen ? 1 : 0);
+  }
+
+  recordDiscoveryRateLimited(endpoint: string, tier: string): void {
+    this.discoveryRateLimited.inc({ endpoint, tier });
+  }
+
+  recordDiscoveryGeographySearch(
+    searchType: string,
+    result: 'found' | 'empty' | 'error',
+  ): void {
+    this.discoveryGeographySearches.inc({ search_type: searchType, result });
+  }
+
+  recordDiscoveryLanguagePairSearch(result: 'found' | 'empty' | 'error'): void {
+    this.discoveryLanguagePairSearches.inc({ result });
   }
 
   // --- Escrow Payment metric helpers ---

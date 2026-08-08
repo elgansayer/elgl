@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for the Discovery Map architecture. All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Discovery] High empty results rate",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_discovery_empty_results_total{*}.as_rate() > 5",
+      "message": "{{#is_alert}}\nThe Discovery Map is returning zero results at a rate of more than 5 empty responses per second over the last 10 minutes. Users are seeing empty states on the discovery page.\n\n**Current value:** {{value}} req/s\n**Threshold:** 5 req/s\n\n**Actions:**\n1. Check if the user table has sufficient active users.\n2. Verify privacy_hide_from_search flag is not incorrectly set on all users.\n3. Check if discovery filters are too restrictive.\n4. Inspect the discovery service health endpoint.\n5. Verify that mock data fallback is functioning for degraded states.\n{{/is_alert}}\n\n{{#is_warning}}\nEmpty discovery result rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:critical"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 5,
+          "warning": 2
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Discovery] High request latency",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_discovery_request_duration_seconds{outcome:success} > 5",
+      "message": "{{#is_alert}}\nThe average discovery API request duration has exceeded 5 seconds over the last 10 minutes. This is likely caused by slow Supabase/PostgreSQL queries (PostGIS, pg_trgm), missing indexes, or connection pool exhaustion.\n\n**Current value:** {{value}}s\n**Threshold:** 5s\n\n**Actions:**\n1. Check Supabase / PostgreSQL query performance (EXPLAIN ANALYZE on discovery queries).\n2. Verify PostGIS spatial indexes exist on users(location).\n3. Verify pg_trgm indexes exist on users(display_name), users(country), users(city).\n4. Check for connection pool saturation or rate limiting.\n5. Check Redis cache hit rate for discovery endpoints.\n{{/is_alert}}\n\n{{#is_warning}}\nDiscovery request latency elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 5,
+          "warning": 2
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Discovery] Cache miss rate high",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_discovery_cache_misses_total{*}.as_rate() > 20",
+      "message": "{{#is_alert}}\nThe discovery cache miss rate has exceeded 20 per second over the last hour. This indicates Redis is either unavailable, evicting keys prematurely, or the discovery cache invalidation service is not populating the cache.\n\n**Current value:** {{value}} req/s\n**Threshold:** 20 req/s\n\n**Actions:**\n1. Check Redis memory usage and eviction policy.\n2. Verify the DiscoveryCacheInvalidationService cron jobs are running successfully.\n3. Check if the Redis connection pool is exhausted.\n4. Inspect discovery cache TTL configurations.\n5. Verify that discovery cache interceptors are correctly applied to all endpoints.\n{{/is_alert}}\n\n{{#is_warning}}\nDiscovery cache miss rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Discovery] Circuit breaker open",
+      "type": "query alert",
+      "query": "avg(last_5m):avg:hellotalk_discovery_circuit_breaker_open{*} by {breaker} > 0",
+      "message": "{{#is_alert}}\nA discovery circuit breaker is currently open for {{breaker.name}}. The circuit breaker trips after 5 consecutive failures in 30 seconds and remains open for 30 seconds before attempting half-open recovery.\n\n**Affected breaker:** {{breaker.name}}\n**Current value:** {{value}}\n\n**Actions:**\n1. Check the discovery degradation status endpoint (GET /discovery/degradation-status).\n2. Investigate the underlying service that caused the circuit to open (Supabase, Redis, or external API).\n3. Check backend logs for circuit breaker trip events.\n4. Verify that the degraded fallback (mock data) is serving correctly.\n5. Once resolved, the circuit will auto-recover after cooldown.\n{{/is_alert}}\n\n{{#is_warning}}\nCircuit breaker at risk.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:critical"],
+      "options": {
+        "evaluation_delay": 60,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0.5,
+          "warning": 0.1
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Discovery] No discovery activity for 30 minutes",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_discovery_partner_searches_total{*}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo discovery partner search requests have been recorded in the last 30 minutes. This indicates either a complete outage of the discovery pipeline or zero user activity on the discovery page.\n\n**Actions:**\n1. Check the discovery API health endpoint.\n2. Verify the NestJS backend is running and Supabase connection is healthy.\n3. Check if discovery page is rendering correctly in the frontend.\n4. Check for deployment or infrastructure incidents.\n5. Verify that the Auth0/Supabase JWT authentication flow is not broken.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 30,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Discovery] High rate limiting rejection rate",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_discovery_rate_limited_total{*}.as_rate() > 3",
+      "message": "{{#is_alert}}\nThe discovery rate limiter is rejecting more than 3 requests per second over the last 10 minutes. This may indicate abuse, a scraping attempt, or misconfigured rate limits.\n\n**Current value:** {{value}} req/s\n**Threshold:** 3 req/s\n**Endpoint:** {{endpoint.name}}\n**Tier:** {{tier.name}}\n\n**Actions:**\n1. Check if a specific user or IP is hitting the rate limit excessively.\n2. Review the rate limit configuration in discovery-rate-limiter.guard.ts.\n3. Verify that VIP users are not being incorrectly rate-limited.\n4. Consider adjusting limits if legitimate usage is being throttled.\n{{/is_alert}}\n\n{{#is_warning}}\nRate limiting threshold approaching.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 3,
+          "warning": 1
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Discovery] Geography search empty rate high",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_discovery_geography_searches_total{result:empty}.as_rate() / avg:hellotalk_discovery_geography_searches_total{*}.as_rate() > 0.8",
+      "message": "{{#is_alert}}\nMore than 80% of location-based discovery searches are returning empty results. This may indicate a PostGIS index issue, stale location data, or that users are searching for sparsely populated regions.\n\n**Current value:** {{value}}\n**Threshold:** 0.8 (80%)\n\n**Actions:**\n1. Verify PostGIS spatial indexes on users(location) are valid.\n2. Check if user location data is being updated (last_location_update_at).\n3. Verify the ST_DWithin radius calculations are correct.\n4. Check if privacy settings are hiding too many users from search.\n5. Verify that mock_location and mock_country/mock_city spoofing is not interfering with genuine searches.\n{{/is_alert}}\n\n{{#is_warning}}\nGeography search empty rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:discovery", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.8,
+          "warning": 0.5
+        },
+        "timeout_h": 0
+      }
+    }
+  ]
+}

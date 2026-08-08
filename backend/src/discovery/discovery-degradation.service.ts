@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 
 export interface DegradationMarker {
   degraded: boolean;
@@ -38,7 +39,10 @@ export class DiscoveryDegradationService {
   private readonly DEGRADATION_REDIS_KEY = 'discovery:degradation_events';
   private readonly MAX_DEGRADATION_LOG_SIZE = 500;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+  ) {
     this.config = { ...DEFAULT_BREAKER_CONFIG };
   }
 
@@ -98,6 +102,8 @@ export class DiscoveryDegradationService {
       breaker.isOpen = false;
       breaker.failureCount = 0;
       this.halfOpenAttempts.delete(service);
+      this.metricsService.setDiscoveryCircuitBreakerOpen(service, false);
+      this.metricsService.setDiscoveryDegradationActive(service, false);
       return;
     }
 
@@ -122,6 +128,8 @@ export class DiscoveryDegradationService {
       this.logger.error(
         `Circuit ${service}: OPEN after ${breaker.failureCount} failures, cooldown until ${new Date(breaker.cooldownUntil).toISOString()}`,
       );
+      this.metricsService.setDiscoveryCircuitBreakerOpen(service, true);
+      this.metricsService.setDiscoveryDegradationActive(service, true);
     }
   }
 
