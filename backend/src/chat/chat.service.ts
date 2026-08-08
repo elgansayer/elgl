@@ -353,17 +353,9 @@ export class ChatService {
       if (senderBlockedIds.includes(receiverId)) {
         throw new Error('You cannot send messages to this user.');
       }
-
-      // Enforce receiver's message filters for initial messages only
-      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
-    // Check message filters for initial (first) message in a room
-    if (receiverId) {
-      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
-    }
-
-    // Spam detection for text messages
+    // Spam detection for text messages (fail-fast before DB writes)
     if (dto.message_type === 'text' && dto.text_content) {
       const isSpam = this.spamDetectionService.isSpam(dto.text_content);
       if (isSpam) {
@@ -373,7 +365,7 @@ export class ChatService {
       }
     }
 
-    // Enforce receiver's message filters for initial messages
+    // Enforce receiver's message filters for initial messages only
     if (receiverId) {
       await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
