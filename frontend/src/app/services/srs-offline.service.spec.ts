@@ -137,7 +137,7 @@ describe.skip('SrsOfflineService', () => {
               const storeData = mockStores.get(name) || new Map<string, unknown>();
               return {
                 put: (value: unknown) => {
-                  const record = value as unknown as Record<string, unknown>;
+                  const record = value as Record<string, unknown>;
                   const key = record['id'];
                   if (key) storeData.set(String(key), value);
                   const req = makeRequest(value);
