@@ -4,7 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService, UserProfile } from '../../services/user.service';
-import { getLanguageFlag, ALL_LANGUAGE_CODES } from '../../components/primitives/language-picker/language-picker.component';
+import {
+  getLanguageFlag,
+  ALL_LANGUAGE_CODES,
+} from '../../components/primitives/language-picker/language-picker.component';
 import { showToast } from '../../services/toast.service';
 
 interface LangItem {
@@ -45,7 +48,9 @@ interface LangItem {
         }
 
         @if (successMessage()) {
-          <div class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
+          <div
+            class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400"
+          >
             {{ successMessage() }}
           </div>
         }
@@ -118,7 +123,9 @@ interface LangItem {
                       type="button"
                       (click)="removeTargetLanguage(code)"
                       class="ms-1 rounded-full hover:bg-red-500/20 text-text-secondary hover:text-red-400 w-5 h-5 inline-flex items-center justify-center text-xs"
-                      [attr.aria-label]="'languageSettings.removeLanguage' | t: { lang: getLanguageName(code) }"
+                      [attr.aria-label]="
+                        'languageSettings.removeLanguage' | t: { lang: getLanguageName(code) }
+                      "
                     >
                       ✕
                     </button>
@@ -126,7 +133,9 @@ interface LangItem {
                 }
               </div>
             } @else {
-              <div class="rounded-2xl bg-surface-100 border border-surface-200 p-4 text-center text-sm text-text-secondary">
+              <div
+                class="rounded-2xl bg-surface-100 border border-surface-200 p-4 text-center text-sm text-text-secondary"
+              >
                 {{ 'languageSettings.noStudyLanguages' | t }}
               </div>
             }
@@ -134,7 +143,9 @@ interface LangItem {
             @if (showTargetPicker()) {
               <div class="rounded-2xl bg-surface-100 border border-surface-200 p-4 space-y-3">
                 <div class="flex items-center justify-between">
-                  <span class="text-sm font-medium text-text-primary">{{ 'languageSettings.addStudyLanguage' | t }}</span>
+                  <span class="text-sm font-medium text-text-primary">{{
+                    'languageSettings.addStudyLanguage' | t
+                  }}</span>
                   <button
                     type="button"
                     (click)="toggleTargetPicker()"
@@ -206,7 +217,9 @@ interface LangItem {
                       type="button"
                       (click)="removeNativeLanguage(code)"
                       class="ms-1 rounded-full hover:bg-red-500/20 text-text-secondary hover:text-red-400 w-5 h-5 inline-flex items-center justify-center text-xs"
-                      [attr.aria-label]="'languageSettings.removeLanguage' | t: { lang: getLanguageName(code) }"
+                      [attr.aria-label]="
+                        'languageSettings.removeLanguage' | t: { lang: getLanguageName(code) }
+                      "
                     >
                       ✕
                     </button>
@@ -214,7 +227,9 @@ interface LangItem {
                 }
               </div>
             } @else {
-              <div class="rounded-2xl bg-surface-100 border border-surface-200 p-4 text-center text-sm text-text-secondary">
+              <div
+                class="rounded-2xl bg-surface-100 border border-surface-200 p-4 text-center text-sm text-text-secondary"
+              >
                 {{ 'languageSettings.noNativeLanguages' | t }}
               </div>
             }
@@ -222,7 +237,9 @@ interface LangItem {
             @if (showNativePicker()) {
               <div class="rounded-2xl bg-surface-100 border border-surface-200 p-4 space-y-3">
                 <div class="flex items-center justify-between">
-                  <span class="text-sm font-medium text-text-primary">{{ 'languageSettings.addNativeLanguage' | t }}</span>
+                  <span class="text-sm font-medium text-text-primary">{{
+                    'languageSettings.addNativeLanguage' | t
+                  }}</span>
                   <button
                     type="button"
                     (click)="toggleNativePicker()"
@@ -335,12 +352,17 @@ export class LanguageSettingsComponent {
           name = enNames.of(code) || code;
           const nativeDisplay = new Intl.DisplayNames([code], { type: 'language' });
           nativeName = nativeDisplay.of(code) || name;
-        } catch { /* fallback */ }
+        } catch {
+          /* fallback */
+        }
         return { code, name, nativeName, flag: getLanguageFlag(code) };
       }).sort((a, b) => a.name.localeCompare(b.name));
     } catch {
       return ALL_LANGUAGE_CODES.map((code) => ({
-        code, name: code, nativeName: code, flag: getLanguageFlag(code),
+        code,
+        name: code,
+        nativeName: code,
+        flag: getLanguageFlag(code),
       }));
     }
   });
@@ -349,8 +371,11 @@ export class LanguageSettingsComponent {
     const query = this.targetSearchQuery().toLowerCase().trim();
     const langs = this.allLanguages();
     if (!query) return langs;
-    return langs.filter((l) =>
-      l.name.toLowerCase().includes(query) || l.nativeName.toLowerCase().includes(query) || l.code.toLowerCase().includes(query),
+    return langs.filter(
+      (l) =>
+        l.name.toLowerCase().includes(query) ||
+        l.nativeName.toLowerCase().includes(query) ||
+        l.code.toLowerCase().includes(query),
     );
   });
 
@@ -358,8 +383,11 @@ export class LanguageSettingsComponent {
     const query = this.nativeSearchQuery().toLowerCase().trim();
     const langs = this.allLanguages();
     if (!query) return langs;
-    return langs.filter((l) =>
-      l.name.toLowerCase().includes(query) || l.nativeName.toLowerCase().includes(query) || l.code.toLowerCase().includes(query),
+    return langs.filter(
+      (l) =>
+        l.name.toLowerCase().includes(query) ||
+        l.nativeName.toLowerCase().includes(query) ||
+        l.code.toLowerCase().includes(query),
     );
   });
 
@@ -382,6 +410,10 @@ export class LanguageSettingsComponent {
           this.originalTargetLanguages.set([...tl]);
           this.nativeLanguages.set([...nl]);
           this.originalNativeLanguages.set([...nl]);
+          // Sync UI language from backend to keep devices in sync
+          if (profile.interface_language && profile.interface_language !== this.currentLang()) {
+            await this.i18n.setLanguage(profile.interface_language);
+          }
         }
         return profile;
       } catch {
@@ -403,6 +435,11 @@ export class LanguageSettingsComponent {
   async selectUiLang(code: string): Promise<void> {
     await this.i18n.setLanguage(code);
     this.successMessage.set(this.i18n.translate('languageSettings.uiLangChanged', { name: code }));
+    try {
+      await this.userService.updateMyProfile({ interface_language: code });
+    } catch {
+      // UI language change is already applied locally; backend sync is non-critical
+    }
   }
 
   getFlagForCode(code: string): string {
@@ -431,7 +468,11 @@ export class LanguageSettingsComponent {
   addTargetLanguage(code: string): void {
     if (this.targetLanguages().includes(code)) return;
     if (this.targetLanguages().length >= this.maxTargetLanguages) {
-      this.errorMessage.set(this.i18n.translate('languageSettings.maxLanguagesError', { count: this.maxTargetLanguages }));
+      this.errorMessage.set(
+        this.i18n.translate('languageSettings.maxLanguagesError', {
+          count: this.maxTargetLanguages,
+        }),
+      );
       return;
     }
     this.targetLanguages.update((arr) => [...arr, code]);
@@ -447,7 +488,11 @@ export class LanguageSettingsComponent {
   addNativeLanguage(code: string): void {
     if (this.nativeLanguages().includes(code)) return;
     if (this.nativeLanguages().length >= this.maxNativeLanguages) {
-      this.errorMessage.set(this.i18n.translate('languageSettings.maxLanguagesError', { count: this.maxNativeLanguages }));
+      this.errorMessage.set(
+        this.i18n.translate('languageSettings.maxLanguagesError', {
+          count: this.maxNativeLanguages,
+        }),
+      );
       return;
     }
     this.nativeLanguages.update((arr) => [...arr, code]);

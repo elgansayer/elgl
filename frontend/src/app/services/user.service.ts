@@ -62,6 +62,7 @@ export interface UserProfile {
   availability_afternoon?: boolean;
   availability_evening?: boolean;
   default_translation_language?: string;
+  interface_language?: string;
   created_at: string;
   last_active_at?: string;
   is_followed_by_me?: boolean;

@@ -291,4 +291,9 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   serious_learner_mode?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  interface_language?: string;
 }

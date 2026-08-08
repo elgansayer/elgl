@@ -537,6 +537,9 @@ export class UsersService {
     if (dto.serious_learner_mode !== undefined)
       updatePayload.serious_learner_mode = dto.serious_learner_mode;
 
+    if (dto.interface_language !== undefined)
+      updatePayload.interface_language = dto.interface_language;
+
     if (dto.business_name !== undefined)
       updatePayload.business_name = dto.business_name;
     if (dto.business_hours !== undefined)

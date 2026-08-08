@@ -11,6 +11,10 @@ export interface UserProfile {
    * Default language code for automatic translation (ISO 639-1).
    */
   default_translation_language?: string;
+  /**
+   * Preferred interface language code (ISO 639-1 or locale string). Independent of study targets.
+   */
+  interface_language?: string;
   bio_text?: string;
   avatar_url?: string;
   audio_intro_url?: string;

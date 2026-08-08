@@ -17,7 +17,13 @@ describe('LanguageSettingsComponent', () => {
     i18nMock = {
       currentLang: signal('en-GB'),
       availableLanguages: [
-        { code: 'en-GB', name: 'British English', nativeName: 'English (UK)', flag: '🇬🇧', isRtl: false },
+        {
+          code: 'en-GB',
+          name: 'British English',
+          nativeName: 'English (UK)',
+          flag: '🇬🇧',
+          isRtl: false,
+        },
         { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isRtl: false },
         { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', isRtl: true },
       ],
@@ -97,6 +103,17 @@ describe('LanguageSettingsComponent', () => {
   it('should call setLanguage when selecting a UI language', async () => {
     await component.selectUiLang('es');
     expect(i18nMock.setLanguage).toHaveBeenCalledWith('es');
+  });
+
+  it('should persist UI language preference to backend', async () => {
+    await component.selectUiLang('ar');
+    expect(userServiceMock.updateMyProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ interface_language: 'ar' }),
+    );
+  });
+
+  it('should sync UI language from backend profile on load', () => {
+    expect(i18nMock.setLanguage).not.toHaveBeenCalledWith('en'); // default is en-GB, no sync needed
   });
 
   it('should have a back button', () => {
