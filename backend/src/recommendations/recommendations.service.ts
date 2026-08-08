@@ -165,7 +165,7 @@ export class RecommendationsService {
           return parsed as RecommendedUserDto[];
         }
       }
-    } catch (error) {
+    } catch {
       this.logger.warn(
         `Redis unavailable for daily recommendations (user ${userId}), falling back to live computation`,
       );
@@ -182,7 +182,7 @@ export class RecommendationsService {
       if (liveResults.length > 0) {
         return liveResults;
       }
-    } catch (error) {
+    } catch {
       this.logger.warn(
         `Live language-exchange fallback failed for user ${userId}`,
       );
@@ -203,7 +203,7 @@ export class RecommendationsService {
       if (interestResults.length > 0) {
         return interestResults;
       }
-    } catch (error) {
+    } catch {
       this.logger.warn(
         `Interest-based recommendations failed for user ${userId}, falling back to language exchange`,
       );
@@ -221,7 +221,7 @@ export class RecommendationsService {
       if (languageMatches.length > 0) {
         return languageMatches;
       }
-    } catch (error) {
+    } catch {
       this.logger.warn(`Language exchange fallback failed for user ${userId}`);
       void this.reportTierDegradation(
         'getRecommendations:language_exchange',
@@ -264,7 +264,7 @@ export class RecommendationsService {
           matchTier: 'interest' as const,
         }));
       }
-    } catch (error) {
+    } catch {
       this.logger.warn(
         `Tier 1 (interest) unavailable for user ${userId}, degrading`,
       );
@@ -285,7 +285,7 @@ export class RecommendationsService {
           matchTier: 'language_exchange' as const,
         }));
       }
-    } catch (error) {
+    } catch {
       this.logger.warn(
         `Tier 2 (language exchange) unavailable for user ${userId}, degrading`,
       );

@@ -40,6 +40,17 @@ export interface AudioRoomRecord {
     display_name?: string;
     avatar_url?: string | null;
   };
+  is_private?: boolean;
+  invited_user_ids?: string[];
+  party_type?: string;
+}
+
+export interface PrivatePartyCreatePayload {
+  title: string;
+  languagePair: string;
+  topicTag: string;
+  isVideoStream: boolean;
+  invitedUserIds: string[];
 }
 
 export interface StageParticipant {
@@ -117,6 +128,8 @@ export class AudioRoomsStore {
   readonly stageInfo = signal<StageInfo | null>(null);
   readonly stageParticipants = signal<StageParticipant[]>([]);
   readonly audienceCount = signal<number>(0);
+  readonly privateRooms = signal<AudioRoomRecord[]>([]);
+  readonly isLoadingPrivate = signal<boolean>(false);
 
   // Split-screen co-host video state
   readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
@@ -255,6 +268,40 @@ export class AudioRoomsStore {
     );
     this.activeRooms.update((list) => [created, ...list]);
     return created;
+  }
+
+  async createPrivateParty(payload: PrivatePartyCreatePayload): Promise<AudioRoomRecord> {
+    const created = await firstValueFrom(
+      this.http.post<AudioRoomRecord>(
+        `${this.baseUrl}/private`,
+        {
+          title: payload.title,
+          target_language: payload.languagePair,
+          language_pair: payload.languagePair,
+          topic_tag: payload.topicTag,
+          is_video_stream: payload.isVideoStream,
+          invited_user_ids: payload.invitedUserIds,
+        },
+        { headers: this.getHeaders() },
+      ),
+    );
+    this.privateRooms.update((list) => [created, ...list]);
+    this.activeRooms.update((list) => [created, ...list]);
+    return created;
+  }
+
+  async loadPrivateRooms(): Promise<void> {
+    this.isLoadingPrivate.set(true);
+    try {
+      const list = await firstValueFrom(
+        this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/private`, { headers: this.getHeaders() }),
+      );
+      this.privateRooms.set(list);
+    } catch (e) {
+      console.error('Failed to load private rooms:', e);
+    } finally {
+      this.isLoadingPrivate.set(false);
+    }
   }
 
   async joinRoom(room: AudioRoomRecord): Promise<void> {
@@ -485,15 +532,20 @@ export class AudioRoomsStore {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
       } else if (p.type === 'host_tip' && p.tip && this.isHostTipPayload(p.tip)) {
         const tip = p.tip;
+        // Don't replay animation for the sender -- it already fired locally in tipHost()
+        if (tip.sender_user_id === this.authService.currentUser()?.id) {
+          return;
+        }
+        const amount = tip.amount_coins ?? 0;
         this.economyStore.triggerPublicGiftAnimation({
           giftId: `tip_${tip.tip_id ?? 'unknown'}`,
-          giftName: `${tip.amount_coins} Coins`,
-          giftIcon: '🪙',
-          animationType: 'sparkle',
+          giftName: `${amount} Coins`,
+          giftIcon: this.tipIconForAmount(amount),
+          animationType: this.tipAnimationForAmount(amount),
           animationUrl: undefined,
           senderName: tip.sender_name ?? 'Someone',
           receiverName: 'Host',
-          coinValue: tip.amount_coins ?? 0,
+          coinValue: amount,
         });
       } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
         this.economyStore.triggerPublicGiftAnimation({
@@ -791,7 +843,7 @@ export class AudioRoomsStore {
 
   async tipHost(roomId: string, amountCoins: number): Promise<boolean> {
     try {
-      await firstValueFrom(
+      const res = await firstValueFrom(
         this.http.post<{
           tip_id: string;
           amount_coins: number;
@@ -804,6 +856,23 @@ export class AudioRoomsStore {
         ),
       );
       this.economyStore.coinsBalance.update((bal) => bal - amountCoins);
+
+      const user = this.authService.currentUser();
+      const senderName = user?.display_name ?? 'Someone';
+      const animationType = this.tipAnimationForAmount(amountCoins);
+
+      // Fire full-screen SVG animation immediately for the sender
+      this.economyStore.triggerPublicGiftAnimation({
+        giftId: `tip_${res.tip_id}`,
+        giftName: `${amountCoins} Coins`,
+        giftIcon: this.tipIconForAmount(amountCoins),
+        animationType,
+        animationUrl: undefined,
+        senderName,
+        receiverName: 'Host',
+        coinValue: amountCoins,
+      });
+
       showToast(
         this.i18n.translate('audioRoom.tipSentToast', {
           amount: amountCoins,
@@ -816,6 +885,20 @@ export class AudioRoomsStore {
       showToast(message || this.i18n.translate('audioRoom.tipError'));
       return false;
     }
+  }
+
+  private tipAnimationForAmount(amount: number): string {
+    if (amount >= 500) return 'premium';
+    if (amount >= 100) return 'confetti';
+    if (amount >= 50) return 'hearts';
+    return 'sparkle';
+  }
+
+  private tipIconForAmount(amount: number): string {
+    if (amount >= 500) return '💎';
+    if (amount >= 100) return '🎁';
+    if (amount >= 50) return '💝';
+    return '🪙';
   }
 
   async sendRoomChatMessage(text: string): Promise<void> {

@@ -70,7 +70,7 @@ describe('GiftAnimationOverlayComponent', () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
 
-    const iconEl = fixture.nativeElement.querySelector('.drop-shadow-lg');
+    const iconEl = fixture.nativeElement.querySelector(".drop-shadow-lg");
     expect(iconEl).not.toBeNull();
     expect(iconEl.textContent.trim()).toBe('🌹');
 

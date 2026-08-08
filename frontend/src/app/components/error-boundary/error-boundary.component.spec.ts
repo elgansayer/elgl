@@ -1,10 +1,8 @@
-import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ErrorBoundaryComponent } from './error-boundary.component';
-import { EconomyErrorHandlerService } from '../../services/economy-error-handler.service';
 
 describe.skip('ErrorBoundaryComponent', () => {
   let httpTesting: HttpTestingController;

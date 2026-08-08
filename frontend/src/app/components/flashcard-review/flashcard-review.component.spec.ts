@@ -11,12 +11,15 @@ const MOCK_CARD = {
   translation: '丰富的',
   definition: 'existing in large quantities',
   srs_level: 1,
+  easiness_factor: 2.5,
+  repetitions: 0,
+  interval_days: 0,
   next_review_at: new Date().toISOString(),
   created_at: new Date().toISOString(),
   easiness_factor: 2.5,
   repetitions: 0,
   interval_days: 0,
-};
+} as Flashcard;
 
 const MOCK_CARDS: any[] = [MOCK_CARD, { ...MOCK_CARD, id: '2', word_token: 'benevolent' }];
 
