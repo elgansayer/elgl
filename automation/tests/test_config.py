@@ -26,6 +26,15 @@ def test_competing_legacy_agent_workflows_are_retired() -> None:
         assert not (workflows / name).exists()
 
 
+def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
+    unit = (
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service"
+    ).read_text(encoding="utf-8")
+
+    assert "NoNewPrivileges=true" not in unit
+    assert "RestrictSUIDSGID=true" not in unit
+
+
 def environment(**overrides: str) -> dict[str, str]:
     values = {
         "OPENCODE_GO_API_KEY": "not-a-real-key",

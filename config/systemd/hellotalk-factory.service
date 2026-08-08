@@ -18,7 +18,6 @@ RestartSec=30
 TimeoutStopSec=120
 KillSignal=SIGTERM
 UMask=0077
-NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true
 ProtectSystem=strict
@@ -28,7 +27,6 @@ ProtectKernelModules=true
 ProtectKernelLogs=true
 ProtectControlGroups=true
 ProtectClock=true
-RestrictSUIDSGID=true
 LockPersonality=true
 RestrictRealtime=true
 SystemCallArchitectures=native
@@ -40,4 +38,3 @@ MemoryMax=3500M
 
 [Install]
 WantedBy=multi-user.target
-
