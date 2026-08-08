@@ -16,6 +16,7 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
     DiscoveryService,
     DiscoveryRateLimiterGuard,
     DiscoveryDegradationService,
+    DiscoveryCacheInvalidationService,
   ],
   exports: [DiscoveryService, DiscoveryDegradationService],
 })

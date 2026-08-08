@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
@@ -49,6 +50,7 @@ export class DiscoveryService {
     private readonly supabaseService: SupabaseService,
     private readonly safetyService: SafetyService,
     private readonly degradationService: DiscoveryDegradationService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // Weekly computation of Partner of the Week (every Sunday at midnight)
@@ -85,6 +87,9 @@ export class DiscoveryService {
       this.logger.info(
         `Partner of the Week set for ${partnerIds.length} users`,
       );
+
+      // Emit event to trigger cache invalidation
+      this.eventEmitter.emit('discovery.partner_of_week_updated');
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
     }
@@ -225,6 +230,9 @@ export class DiscoveryService {
       this.logger.info(
         `Finished daily partner recommendations calculation. Cached ${totalCached} sets.`,
       );
+
+      // Emit event to trigger cache invalidation
+      this.eventEmitter.emit('discovery.daily_recommendations_updated');
     } catch (err) {
       await flushPipeline();
       this.logger.error('Error calculating daily recommendations', err);

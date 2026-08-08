@@ -6,6 +6,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PinoLogger } from 'nestjs-pino';
 
 jest.mock('../mock-data', () => ({
@@ -28,6 +29,7 @@ describe('DiscoveryService', () => {
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
   let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
+  let mockEventEmitter: { emit: jest.Mock };
 
   function createMockQueryBuilder() {
     const builder: any = {};
@@ -94,6 +96,10 @@ describe('DiscoveryService', () => {
       purgeByCacheTags: jest.fn().mockResolvedValue(true),
     };
 
+    mockEventEmitter = {
+      emit: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
@@ -135,6 +141,10 @@ describe('DiscoveryService', () => {
         {
           provide: CloudflareCacheService,
           useValue: mockCloudflareCacheService,
+        },
+        {
+          provide: EventEmitter2,
+          useValue: mockEventEmitter,
         },
         {
           provide: `PinoLogger:${DiscoveryService.name}`,
@@ -210,6 +220,9 @@ describe('DiscoveryService', () => {
         'EX',
         604800,
       );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'discovery.partner_of_week_updated',
+      );
     });
 
     it('should not set redis key when no users qualify', async () => {
@@ -223,6 +236,7 @@ describe('DiscoveryService', () => {
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should not set redis key when query returns error', async () => {
@@ -236,6 +250,7 @@ describe('DiscoveryService', () => {
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 
@@ -260,6 +275,9 @@ describe('DiscoveryService', () => {
         86400,
       );
       expect(mockPipelineExec).toHaveBeenCalled();
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'discovery.daily_recommendations_updated',
+      );
     });
 
     it('should skip users with empty native_languages', async () => {
@@ -308,6 +326,7 @@ describe('DiscoveryService', () => {
       await service.calculateDailyRecommendations();
 
       expect(mockPipelineSet).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 
