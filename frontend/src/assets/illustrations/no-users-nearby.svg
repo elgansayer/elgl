@@ -1,22 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" fill="none">
-  <!-- Globe/planet -->
-  <circle cx="100" cy="72" r="42" fill="#1A1A2A" stroke="#2A2A3E" stroke-width="1.8"/>
+  <defs>
+    <linearGradient id="usrBg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00B4D8" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#00E5A0" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="usrAccent1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00B4D8"/>
+      <stop offset="100%" stop-color="#00E5A0"/>
+    </linearGradient>
+    <filter id="usrGlow1">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Ambient circle -->
+  <circle cx="100" cy="68" r="58" fill="url(#usrBg1)"/>
+  <!-- Globe -->
+  <circle cx="100" cy="70" r="40" fill="#161628" stroke="#2A2A40" stroke-width="1.5"/>
   <!-- Latitude lines -->
-  <ellipse cx="100" cy="72" rx="42" ry="42" fill="none" stroke="#222235" stroke-width="1"/>
-  <ellipse cx="100" cy="72" rx="42" ry="18" fill="none" stroke="#222235" stroke-width="1"/>
-  <line x1="58" y1="72" x2="142" y2="72" stroke="#222235" stroke-width="0.8"/>
+  <ellipse cx="100" cy="70" rx="40" ry="40" fill="none" stroke="#202038" stroke-width="0.8"/>
+  <ellipse cx="100" cy="70" rx="40" ry="18" fill="none" stroke="#202038" stroke-width="0.8"/>
+  <line x1="60" y1="70" x2="140" y2="70" stroke="#202038" stroke-width="0.8"/>
   <!-- Longitude lines -->
-  <ellipse cx="100" cy="72" rx="14" ry="42" fill="none" stroke="#222235" stroke-width="1"/>
-  <!-- Continent blobs -->
-  <path d="M75 48C82 44 95 46 100 52C105 46 115 44 120 48" stroke="#2D2D44" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-  <path d="M68 88C75 82 90 85 95 78C100 85 115 82 125 88" stroke="#2D2D44" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-  <!-- No markers/pins -->
-  <!-- Neon ring glow -->
-  <circle cx="100" cy="72" r="42" fill="none" stroke="#00B4D8" stroke-width="1.5" opacity="0.3"/>
-  <!-- Location marker with cross -->
-  <path d="M100 34C95 34 92 38 92 43C92 48.5 100 54 100 54C100 54 108 48.5 108 43C108 38 105 34 100 34Z" fill="none" stroke="#505068" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="100" y1="46" x2="100" y2="50" stroke="#505068" stroke-width="1.2"/>
-  <!-- Double sparkle -->
-  <path d="M150 28L150.5 30L152 30.5L150.5 31L150 33L149.5 31L148 30.5L149.5 30Z" fill="#00B4D8" opacity="0.4"/>
-  <path d="M155 40L155.3 41.5L157 41.8L155.3 42L155 43.5L154.7 42L153 41.8L154.7 41.5Z" fill="#00B4D8" opacity="0.2"/>
+  <ellipse cx="100" cy="70" rx="14" ry="40" fill="none" stroke="#202038" stroke-width="0.8"/>
+  <ellipse cx="100" cy="70" rx="28" ry="40" fill="none" stroke="#202038" stroke-width="0.5"/>
+  <!-- Continents -->
+  <path d="M72 44C80 40 94 42 100 48C106 42 118 40 124 44" stroke="#2A2A48" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+  <path d="M66 86C74 80 90 83 94 76C100 83 116 80 126 86" stroke="#2A2A48" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+  <path d="M78 54C82 50 90 52 92 56" stroke="#2A2A48" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+  <!-- Location pin with no indicator -->
+  <path d="M100 28C94 28 90 33 90 39C90 46 100 52 100 52C100 52 110 46 110 39C110 33 106 28 100 28Z" fill="none" stroke="#3D3D5E" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Cross through pin (x mark) -->
+  <line x1="95" y1="36" x2="105" y2="44" stroke="#3D3D5E" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="105" y1="36" x2="95" y2="44" stroke="#3D3D5E" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Globe neon ring -->
+  <circle cx="100" cy="70" r="40" fill="none" stroke="url(#usrAccent1)" stroke-width="1.8" opacity="0.25" filter="url(#usrGlow1)"/>
+  <!-- Neon accent bar -->
+  <path d="M60 118L140 118" stroke="url(#usrAccent1)" stroke-width="2" stroke-linecap="round" opacity="0.45" filter="url(#usrGlow1)"/>
+  <circle cx="100" cy="118" r="3.5" fill="#00B4D8" opacity="0.55" filter="url(#usrGlow1)"/>
+  <!-- Sparkles -->
+  <path d="M148 24L148.6 26.5L151 27L148.6 27.5L148 30L147.4 27.5L145 27L147.4 26.5Z" fill="#00B4D8" opacity="0.4"/>
+  <path d="M154 36L154.3 37.5L156 37.8L154.3 38.1L154 39.5L153.7 38.1L152 37.8L153.7 37.5Z" fill="#00E5A0" opacity="0.2"/>
+  <path d="M48 24L48.4 26L50 26.3L48.4 26.6L48 28.5L47.6 26.6L46 26.3L47.6 26Z" fill="#00B4D8" opacity="0.2"/>
 </svg>

@@ -1,14 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" fill="none">
-  <!-- Photo frame -->
-  <rect x="42" y="25" width="116" height="90" rx="10" fill="#1A1A2A" stroke="#2A2A3E" stroke-width="1.8"/>
-  <!-- Inner photo area -->
-  <rect x="52" y="35" width="96" height="68" rx="5" fill="#12121F" stroke="#353550" stroke-width="1.2" stroke-dasharray="4 3"/>
-  <!-- Mountain/landscape silhouette (empty gallery) -->
-  <path d="M52 95L72 75L88 82L108 62L130 78L148 68V103H52V95Z" fill="#1A1A2A" stroke="#2A2A3E" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Sun/moon circle -->
-  <circle cx="85" cy="55" r="10" fill="none" stroke="#2D2D44" stroke-width="1.2"/>
-  <!-- Neon accent on frame -->
-  <rect x="42" y="25" width="116" height="90" rx="10" fill="none" stroke="#7C3AED" stroke-width="1.8" opacity="0.35"/>
-  <!-- Sparkle -->
-  <path d="M160 18L160.6 20.5L163 21L160.6 21.5L160 24L159.4 21.5L157 21L159.4 20.5Z" fill="#A78BFA" opacity="0.4"/>
+  <defs>
+    <linearGradient id="momBg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#A78BFA" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="momAccent1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <filter id="momGlow1">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Ambient circle -->
+  <circle cx="100" cy="68" r="58" fill="url(#momBg1)"/>
+  <!-- Photo frame outer -->
+  <rect x="40" y="22" width="120" height="98" rx="10" fill="#181828" stroke="#2A2A3E" stroke-width="1.5"/>
+  <!-- Photo inner area -->
+  <rect x="50" y="32" width="100" height="76" rx="5" fill="#0F0F1A" stroke="#252538" stroke-width="1.2" stroke-dasharray="5 3"/>
+  <!-- Landscape (mountains/sunset silhouette for empty gallery) -->
+  <path d="M50 98L68 78L84 84L104 64L128 80L150 70V108H50V98Z" fill="#15152A" stroke="#252540" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Sun -->
+  <circle cx="82" cy="52" r="10" fill="none" stroke="#2A2A48" stroke-width="1.2"/>
+  <circle cx="82" cy="52" r="4" fill="#2A2A48" opacity="0.5"/>
+  <!-- Small cloud -->
+  <path d="M114 48C116 46 120 46 122 48C124 47 126 49 124 51H114C112 49 112 48 114 48Z" fill="#1A1A30" stroke="none"/>
+  <!-- Photo frame inner glow border -->
+  <rect x="40" y="22" width="120" height="98" rx="10" fill="none" stroke="url(#momAccent1)" stroke-width="1.5" opacity="0.3" filter="url(#momGlow1)"/>
+  <!-- Neon accent bar -->
+  <path d="M60 118L140 118" stroke="url(#momAccent1)" stroke-width="2" stroke-linecap="round" opacity="0.45" filter="url(#momGlow1)"/>
+  <circle cx="100" cy="118" r="3.5" fill="#A78BFA" opacity="0.55" filter="url(#momGlow1)"/>
+  <!-- Sparkles -->
+  <path d="M158 18L158.6 20.5L161 21L158.6 21.5L158 24L157.4 21.5L155 21L157.4 20.5Z" fill="#A78BFA" opacity="0.4"/>
+  <path d="M42 16L42.4 18L44 18.3L42.4 18.6L42 20.5L41.6 18.6L40 18.3L41.6 18Z" fill="#C4B5FD" opacity="0.2"/>
 </svg>
