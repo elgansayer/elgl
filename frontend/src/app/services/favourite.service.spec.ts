@@ -77,7 +77,7 @@ describe('FavouriteService', () => {
           id: 'fav-1',
           user_id: 'user-1',
           item_type: 'message',
-          item_payload: { text_content: 'hello' },
+          item_payload: { text_content: 'hello' } as any,
           created_at: '2025-01-01T00:00:00Z',
         },
       ];

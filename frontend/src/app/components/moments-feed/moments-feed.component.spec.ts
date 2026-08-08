@@ -64,7 +64,8 @@ describe('MomentsFeedComponent', () => {
               comments: [
                 {
                   id: 'c1',
-                  user_id: 'u2',
+        moment_id: 'm1',
+        user_id: 'u2',
                   text_content: 'Nice post',
                   created_at: new Date().toISOString(),
                 } as MomentComment,
@@ -311,8 +312,8 @@ describe('MomentsFeedComponent', () => {
     it('inserts mention text and clears query on selectMention', () => {
       const momentId = 'm1';
       component.commentInputMap[momentId] = 'Hello @Ali';
-      component.mentionRangeStartMap[momentId] = 6;
-      component.mentionRangeEndMap[momentId] = 10;
+      (component as any).mentionRangeStartMap[momentId] = 6;
+      (component as any).mentionRangeEndMap[momentId] = 10;
       component.mentionQueryMap.update((m) => ({ ...m, [momentId]: 'Ali' }));
 
       component.selectMention(momentId, {
@@ -335,6 +336,7 @@ describe('MomentsFeedComponent', () => {
     it('starts a reply with correct context', () => {
       const comment: MomentComment = {
         id: 'c1',
+        moment_id: 'm1',
         user_id: 'u2',
         text_content: 'Nice!',
         created_at: new Date().toISOString(),
@@ -353,6 +355,7 @@ describe('MomentsFeedComponent', () => {
     it('cancels a reply', () => {
       component.startReply('m1', {
         id: 'c1',
+        moment_id: 'm1',
         user_id: 'u2',
         text_content: 'Nice!',
         created_at: new Date().toISOString(),

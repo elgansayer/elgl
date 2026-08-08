@@ -1294,6 +1294,8 @@ export class I18nService {
     'profile.noCatalogItems': 'No items yet',
     'profile.translateBio': 'Translate Bio',
     'profile.translateBioError': 'Could not translate bio right now.',
+    'profile.translatingBio': 'Translating...',
+    'profile.showOriginal': 'Show Original',
     'hobby.add': '+ Add Hobby',
     'hobby.title': 'Hobbies & Interests',
     'hobby.searchPlaceholder': 'Search hobbies...',

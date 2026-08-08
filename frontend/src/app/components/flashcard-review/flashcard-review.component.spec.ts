@@ -4,7 +4,7 @@ import { FlashcardReviewComponent } from './flashcard-review.component';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 
-const MOCK_CARD: Flashcard = {
+const MOCK_CARD = { easiness_factor: 2.5, repetitions: 0, interval_days: 0,
   id: '1',
   user_id: 'u1',
   word_token: 'abundant',
@@ -15,7 +15,7 @@ const MOCK_CARD: Flashcard = {
   created_at: new Date().toISOString(),
 };
 
-const MOCK_CARDS: Flashcard[] = [MOCK_CARD, { ...MOCK_CARD, id: '2', word_token: 'benevolent' }];
+const MOCK_CARDS: any[] = [MOCK_CARD, { ...MOCK_CARD, id: '2', word_token: 'benevolent' }];
 
 describe('FlashcardReviewComponent', () => {
   beforeEach(() => {
