@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { provideRouter } from '@angular/router';
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SafetyService } from '../../services/safety.service';
 import { I18nService } from '../../services/i18n.service';
 import { MomentsStore } from '../../services/moments.store';
 import { VocabularyStore } from '../../services/vocabulary.store';
@@ -22,6 +23,7 @@ describe('MomentsFeedComponent', () => {
   let mockAuthService: AuthService;
   let mockUserService: UserService;
   let mockI18nService: I18nService;
+  let mockSafetyService: SafetyService;
 
   const testMoments: MomentRecord[] = [
     {
@@ -92,6 +94,20 @@ describe('MomentsFeedComponent', () => {
     });
   }
 
+  class MockSafetyService {
+    private _mutedWords = signal<string[]>([]);
+    readonly mutedWords = this._mutedWords.asReadonly();
+
+    addMutedWord = vi.fn().mockImplementation((word: string) => {
+      const trimmed = word.trim().toLowerCase();
+      this._mutedWords.update((prev) => prev.includes(trimmed) ? prev : [...prev, trimmed]);
+    });
+    removeMutedWord = vi.fn().mockImplementation((word: string) => {
+      const trimmed = word.trim().toLowerCase();
+      this._mutedWords.update((prev) => prev.filter((w) => w !== trimmed));
+    });
+  }
+
   beforeEach(async () => {
     const store = new MockMomentsStore();
     store.feed.set(testMoments);
@@ -112,6 +128,8 @@ describe('MomentsFeedComponent', () => {
       translate: (key: string, _params?: Record<string, unknown>) => key,
     } as unknown as I18nService;
 
+    mockSafetyService = new MockSafetyService() as unknown as SafetyService;
+
     await TestBed.configureTestingModule({
       imports: [
         MomentsFeedComponent,
@@ -126,6 +144,7 @@ describe('MomentsFeedComponent', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: I18nService, useValue: mockI18nService },
         provideRouter([]),
+        { provide: SafetyService, useValue: mockSafetyService },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
@@ -281,4 +300,55 @@ describe('MomentsFeedComponent', () => {
     expect(component.showTranslationMap()['m1']).toBe(true);
     expect(component.translationCache()['m1']).toBe('Hola');
   });
+
+  it('filters moments client-side by muted words', () => {
+    // feed currently has testMoments with text_content "Hello world"
+    expect(component.filteredFeed().length).toBe(1);
+
+    // Add a mute word that matches
+    component.safetyService.addMutedWord('hello');
+    fixture.detectChanges();
+
+    // Should now be filtered out
+    expect(component.filteredFeed().length).toBe(0);
+    expect(component.hiddenByMuteCount()).toBe(1);
+  });
+
+  it('shows moments that do not match muted words', () => {
+    component.safetyService.addMutedWord('xyzzy');
+    fixture.detectChanges();
+
+    // "Hello world" does not contain "xyzzy"
+    expect(component.filteredFeed().length).toBe(1);
+    expect(component.hiddenByMuteCount()).toBe(0);
+  });
+
+  it('shows moments with no text_content regardless of mute words', () => {
+    // Add a moment with no text_content
+    const noText = { ...testMoments[0], id: 'm2', text_content: undefined };
+    mockMomentsStore.feed.set([...testMoments, noText as unknown as MomentRecord]);
+
+    component.safetyService.addMutedWord('anything');
+    fixture.detectChanges();
+
+    // The no-text moment should still be visible
+    expect(component.filteredFeed().length).toBe(1); // only the no-text one
+  });
+
+  it('adds a mute word via the component helper', () => {
+    component.newMuteWord.set('  SPAM  ');
+    component.addMuteWord();
+    expect(component.safetyService.mutedWords()).toContain('spam');
+    expect(component.newMuteWord()).toBe('');
+    expect(mockSafetyService.addMutedWord).toHaveBeenCalledWith('SPAM');
+  });
+
+  it('removes a mute word via the component helper', () => {
+    component.safetyService.addMutedWord('spam');
+    component.safetyService.addMutedWord('test');
+    component.removeMuteWord('spam');
+    expect(component.safetyService.mutedWords()).toEqual(['test']);
+    expect(mockSafetyService.removeMutedWord).toHaveBeenCalledWith('spam');
+  });
+
 });

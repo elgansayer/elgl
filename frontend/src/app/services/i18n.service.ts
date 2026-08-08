@@ -508,6 +508,13 @@ export class I18nService {
     'moments.transError': 'Could not fetch translation right now.',
     'moments.likedBy': 'Liked by',
     'moments.noLikesYet': 'No likes yet',
+    'moments.muteWordsTitle': 'Mute Words',
+    'moments.muteWordsDescription': 'Hide Moments containing these keywords',
+    'moments.muteWordPlaceholder': 'Add a keyword...',
+    'moments.muteWordAddBtn': 'Add',
+    'moments.muteWordRemoveAria': 'Remove muted word',
+    'moments.muteWordsEmpty': 'No muted words yet',
+    'moments.muteWordsFilteredBanner': '{{count}} Moment(s) hidden by mute filter',
 
     // Audio Room Component
     'audioRoom.liveSfuBadge': '🔴 Live SFU room',
