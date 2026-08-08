@@ -73,10 +73,7 @@ export class LinkPreviewService {
   private readonly httpService: HttpService;
   private readonly redis: Redis;
 
-  constructor(
-    httpService: HttpService,
-    @Inject('REDIS_CLIENT') redis: Redis,
-  ) {
+  constructor(httpService: HttpService, @Inject('REDIS_CLIENT') redis: Redis) {
     this.httpService = httpService;
     this.redis = redis;
     const window = new JSDOM('').window;

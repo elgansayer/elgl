@@ -20,7 +20,11 @@ export class VersionController {
       properties: {
         current: { type: 'string', example: '2.0.0' },
         latest: { type: 'string', example: '2.1.0' },
-        updateUrl: { type: 'string', example: 'https://github.com/elgansayer/elgl/releases/tag/v2.1.0', nullable: true },
+        updateUrl: {
+          type: 'string',
+          example: 'https://github.com/elgansayer/elgl/releases/tag/v2.1.0',
+          nullable: true,
+        },
         minimumSupported: { type: 'string', example: '1.0.0' },
       },
     },

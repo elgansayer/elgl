@@ -20,16 +20,18 @@ export class ProfileViewNotificationListener {
     let shouldPush = true;
     let shouldInApp = true;
     try {
-      shouldPush = await this.notificationPreferencesService.shouldSendNotification(
-        recipientId,
-        'profile_view',
-        'push',
-      );
-      shouldInApp = await this.notificationPreferencesService.shouldSendNotification(
-        recipientId,
-        'profile_view',
-        'in_app',
-      );
+      shouldPush =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'profile_view',
+          'push',
+        );
+      shouldInApp =
+        await this.notificationPreferencesService.shouldSendNotification(
+          recipientId,
+          'profile_view',
+          'in_app',
+        );
     } catch (err) {
       console.error(
         `Failed to check notification preferences for user ${recipientId}:`,
@@ -39,11 +41,14 @@ export class ProfileViewNotificationListener {
 
     // Create in-app notification
     if (shouldInApp) {
-      await this.notificationsService.createNotification(
-        recipientId,
-        payload.viewerId,
-        'profile_visit',
-      ).catch((err: unknown) => console.error('Failed to create in-app profile view notification:', err));
+      await this.notificationsService
+        .createNotification(recipientId, payload.viewerId, 'profile_visit')
+        .catch((err: unknown) =>
+          console.error(
+            'Failed to create in-app profile view notification:',
+            err,
+          ),
+        );
     }
 
     // Send push notification

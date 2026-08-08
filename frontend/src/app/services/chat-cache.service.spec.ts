@@ -43,20 +43,26 @@ describe('ChatCacheService', () => {
         const entries = [...s.values()];
         let pos = 0;
         const cr: Record<string, unknown> = { result: null, _onsuccess: null };
+        const advance = () => {
+          cr['result'] = pos < entries.length
+            ? {
+                value: entries[pos],
+                delete() { s.delete(entries[pos].key); },
+                continue() {
+                  pos++;
+                  advance();
+                },
+              }
+            : null;
+          if (cr['_onsuccess']) {
+            setTimeout(() => (cr['_onsuccess'] as () => void)(), 0);
+          }
+        };
         Object.defineProperty(cr, 'onsuccess', {
           get() { return cr['_onsuccess']; },
           set(f: () => void) {
             cr['_onsuccess'] = f;
-            if (pos < entries.length) {
-              cr['result'] = {
-                value: entries[pos],
-                delete() { s.delete(entries[pos].key); },
-                continue() { pos++; if (cr['_onsuccess']) setTimeout(() => (cr['_onsuccess'] as () => void)(), 0); },
-              };
-            } else {
-              cr['result'] = null;
-            }
-            if (f) f();
+            advance();
           },
         });
         return cr;

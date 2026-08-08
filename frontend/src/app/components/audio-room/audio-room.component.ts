@@ -30,7 +30,6 @@ import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.componen
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { SoundboardComponent } from '../soundboard/soundboard.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
-import { SoundboardComponent } from '../soundboard/soundboard.component';
 
 @Component({
   selector: 'app-audio-room',

@@ -986,9 +986,20 @@ describe('EconomyService', () => {
 
     it('should filter out invalid rows', async () => {
       const mixedRows = [
-        { id: 'tx-1', user_id: 'user-1', type: 'daily_checkin', amount: 5, created_at: '2026-01-01T00:00:00Z' },
+        {
+          id: 'tx-1',
+          user_id: 'user-1',
+          type: 'daily_checkin',
+          amount: 5,
+          created_at: '2026-01-01T00:00:00Z',
+        },
         { not_valid: true },
-        { id: 'tx-2', type: 'daily_checkin', amount: 5, created_at: '2026-01-01T00:00:00Z' },
+        {
+          id: 'tx-2',
+          type: 'daily_checkin',
+          amount: 5,
+          created_at: '2026-01-01T00:00:00Z',
+        },
         null,
       ];
       mockQueryBuilder.eq.mockReturnThis();

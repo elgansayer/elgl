@@ -19,7 +19,7 @@ const mockGetTrackPublication = vi.fn();
 /**
  * Creates a mock LiveKit Room object
  */
-function mockRoom(overrides: Partial<livekitClient.Room> = {}): livekitClient.Room {
+function mockRoom(overrides: Record<string, unknown> = {}): livekitClient.Room {
   return {
     connect: vi.fn(),
     disconnect: vi.fn(),
@@ -35,7 +35,7 @@ function mockRoom(overrides: Partial<livekitClient.Room> = {}): livekitClient.Ro
 /**
  * Creates a mock LiveKit LocalTrack object
  */
-function mockLocalTrack(overrides: Partial<livekitClient.LocalTrack> = {}): livekitClient.LocalTrack {
+function mockLocalTrack(overrides: Record<string, unknown> = {}): livekitClient.LocalTrack {
   return {
     kind: 'audio',
     isMuted: false,

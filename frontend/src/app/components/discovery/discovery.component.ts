@@ -299,7 +299,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Debounced search via RxJS Subject — no manual timer, auto-cleans up. */
+  /** Debounced search via RxJS Subject - no manual timer, auto-cleans up. */
   private scheduleSearch(): void {
     this.searchTrigger$.next();
   }

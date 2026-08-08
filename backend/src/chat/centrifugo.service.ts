@@ -146,10 +146,8 @@ export class CentrifugoService implements OnModuleInit {
         );
 
         const result = Array.isArray(raw) ? raw : [];
-        const allowed =
-          result.length >= 1 ? Number(result[0]) === 1 : true;
-        const retryAfterMs =
-          result.length >= 2 ? Number(result[1]) || 0 : 0;
+        const allowed = result.length >= 1 ? Number(result[0]) === 1 : true;
+        const retryAfterMs = result.length >= 2 ? Number(result[1]) || 0 : 0;
         return { allowed, retryAfterMs };
       }
 

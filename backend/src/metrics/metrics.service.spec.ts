@@ -530,9 +530,7 @@ describe('MetricsService', () => {
       expect(metrics).toContain(
         'hellotalk_video_classrooms_token_generation_duration_seconds',
       );
-      expect(metrics).toContain(
-        'hellotalk_video_classrooms_participant_max',
-      );
+      expect(metrics).toContain('hellotalk_video_classrooms_participant_max');
     });
   });
 });

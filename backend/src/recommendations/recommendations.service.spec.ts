@@ -1202,7 +1202,9 @@ describe('RecommendationsService', () => {
   describe('tier degradation crash reporting', () => {
     it('should report crash when interest tier throws in getRecommendationsWithFallback', async () => {
       const tagsChain = makeQueryChain();
-      tagsChain._setResolve(null, { message: 'Interests DB connection refused' });
+      tagsChain._setResolve(null, {
+        message: 'Interests DB connection refused',
+      });
 
       const userChain = makeQueryChain();
       userChain._setResolve({

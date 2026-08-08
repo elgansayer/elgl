@@ -32,9 +32,7 @@ export class VideoCallsService {
     );
   }
 
-  async createRoom(
-    userId: string,
-  ): Promise<{
+  async createRoom(userId: string): Promise<{
     token: string;
     roomName: string;
     iceServers: IceServer[];
@@ -42,7 +40,10 @@ export class VideoCallsService {
     degradationReason?: string;
   }> {
     const roomName = `video_${uuidv4()}`;
-    const marker: DegradationMarker = { degraded: false, fallbackSource: 'none' };
+    const marker: DegradationMarker = {
+      degraded: false,
+      fallbackSource: 'none',
+    };
 
     const result = await this.degradationService.executeWithBreaker(
       this.LIVEXIT_SERVICE_NAME,
@@ -116,7 +117,10 @@ export class VideoCallsService {
     degraded?: boolean;
     degradationReason?: string;
   }> {
-    const marker: DegradationMarker = { degraded: false, fallbackSource: 'none' };
+    const marker: DegradationMarker = {
+      degraded: false,
+      fallbackSource: 'none',
+    };
 
     const result = await this.degradationService.executeWithBreaker(
       this.LIVEXIT_SERVICE_NAME,

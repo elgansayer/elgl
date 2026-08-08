@@ -4,7 +4,6 @@ import { AuthService } from '../../services/auth.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
 import { VideoClassroomOnboardingService } from '../../services/video-classroom-onboarding.service';
 import { OfflineVideoClassroomService } from '../../services/offline-video-classroom.service';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';

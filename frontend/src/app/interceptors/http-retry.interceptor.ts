@@ -1,5 +1,4 @@
 import {
-  HttpErrorResponse,
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,

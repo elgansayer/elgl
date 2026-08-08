@@ -6,10 +6,6 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoinEconomyOnboardingService } from '../../services/coin-economy-onboarding.service';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { AppPillComponent } from '../primitives/pill/pill.component';
-import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
-import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
-import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-coin-economy-dashboard',

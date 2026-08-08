@@ -70,8 +70,12 @@ describe('validationSchema', () => {
     expect(value.STRIPE_YEARLY_PRICE_ID).toBe('price_yearly_test');
     expect(value.STRIPE_PRO_MONTHLY_PRICE_ID).toBe('price_pro_monthly_test');
     expect(value.STRIPE_PRO_YEARLY_PRICE_ID).toBe('price_pro_yearly_test');
-    expect(value.STRIPE_DEVELOPER_MONTHLY_PRICE_ID).toBe('price_dev_monthly_test');
-    expect(value.STRIPE_DEVELOPER_YEARLY_PRICE_ID).toBe('price_dev_yearly_test');
+    expect(value.STRIPE_DEVELOPER_MONTHLY_PRICE_ID).toBe(
+      'price_dev_monthly_test',
+    );
+    expect(value.STRIPE_DEVELOPER_YEARLY_PRICE_ID).toBe(
+      'price_dev_yearly_test',
+    );
 
     // Apple
     expect(value.APPLE_BUNDLE_ID).toBe('com.hellotalk.app');
@@ -191,7 +195,9 @@ describe('validationSchema', () => {
     expect(value.AZURE_TRANSLATOR_REGION).toBe('westeurope');
     expect(value.AZURE_SPEECH_KEY).toBe('speech-key');
     expect(value.STRIPE_PRO_MONTHLY_PRICE_ID).toBe('price_pro_monthly_custom');
-    expect(value.STRIPE_DEVELOPER_YEARLY_PRICE_ID).toBe('price_dev_yearly_custom');
+    expect(value.STRIPE_DEVELOPER_YEARLY_PRICE_ID).toBe(
+      'price_dev_yearly_custom',
+    );
     expect(value.APPLE_BUNDLE_ID).toBe('com.example.app');
     expect(value.FIREBASE_SERVICE_ACCOUNT).toBe('{"type":"service_account"}');
     expect(value.MAIL_HOST).toBe('smtp.example.com');

@@ -65,9 +65,7 @@ export const validationSchema = Joi.object({
     .default('development'),
   FRONTEND_URL: Joi.string().uri().default(testDefaults.FRONTEND_URL),
   APP_URL: Joi.string().uri().optional(),
-  INTERNAL_API_SECRET: Joi.string().default(
-    testDefaults.INTERNAL_API_SECRET,
-  ),
+  INTERNAL_API_SECRET: Joi.string().default(testDefaults.INTERNAL_API_SECRET),
   LOG_LEVEL: Joi.string()
     .valid('trace', 'debug', 'info', 'warn', 'error', 'fatal')
     .default('info'),
@@ -94,9 +92,7 @@ export const validationSchema = Joi.object({
     .default(60),
 
   // -- LiveKit (WebRTC Audio/Video) --
-  LIVEKIT_URL: Joi.string()
-    .uri(uriOpt)
-    .default(testDefaults.LIVEKIT_URL),
+  LIVEKIT_URL: Joi.string().uri(uriOpt).default(testDefaults.LIVEKIT_URL),
   LIVEKIT_API_KEY: Joi.string().default(testDefaults.LIVEKIT_API_KEY),
   LIVEKIT_SECRET: Joi.string().default(testDefaults.LIVEKIT_SECRET),
   LIVEKIT_TURN_ENABLED: Joi.string()
@@ -189,9 +185,7 @@ export const validationSchema = Joi.object({
   // -- Apple App Store (IAP + Server Notifications) --
   APPLE_BUNDLE_ID: Joi.string().default(testDefaults.APPLE_BUNDLE_ID),
   APPLE_SHARED_SECRET: Joi.string().default(testDefaults.APPLE_SHARED_SECRET),
-  APPLE_ROOT_CA_CERT_1: Joi.string().default(
-    testDefaults.APPLE_ROOT_CA_CERT_1,
-  ),
+  APPLE_ROOT_CA_CERT_1: Joi.string().default(testDefaults.APPLE_ROOT_CA_CERT_1),
   APPLE_ROOT_CA_CERT_2: Joi.string()
     .optional()
     .allow('')
@@ -235,8 +229,7 @@ export const validationSchema = Joi.object({
   SPAM_SIMILARITY_THRESHOLD: Joi.number().default(0.75),
 
   // -- Transfer --
-  TRANSFER_SECRET: Joi.string()
-    .default('device-transfer-secret-dev-only'),
+  TRANSFER_SECRET: Joi.string().default('device-transfer-secret-dev-only'),
 
   // -- Privacy & Legal --
   PRIVACY_EFFECTIVE_DATE: Joi.string().optional().allow(''),

@@ -107,8 +107,7 @@ describe('ChatController', () => {
   });
 
   describe('getConnectionToken', () => {
-    const mockReq = () =>
-      ({ headers: {}, ip: '127.0.0.1' }) as unknown as any;
+    const mockReq = () => ({ headers: {}, ip: '127.0.0.1' }) as unknown as any;
 
     const mockRes = () => {
       const res: Record<string, any> = {};
@@ -126,23 +125,32 @@ describe('ChatController', () => {
     });
 
     it('should return connection token when user is provided and rate limit allows', async () => {
-      (centrifugoService.checkConnectionRateLimit as jest.Mock).mockResolvedValue({
+      (
+        centrifugoService.checkConnectionRateLimit as jest.Mock
+      ).mockResolvedValue({
         allowed: true,
         retryAfterMs: 0,
       });
-      (chatService.generateConnectionToken as jest.Mock).mockResolvedValue('ws-token');
+      (chatService.generateConnectionToken as jest.Mock).mockResolvedValue(
+        'ws-token',
+      );
 
       const res = mockRes();
       await controller.getConnectionToken(mockUser(), mockReq(), res);
       expect(centrifugoService.checkConnectionRateLimit).toHaveBeenCalledWith(
-        'user-1', expect.any(String),
+        'user-1',
+        expect.any(String),
       );
-      expect(chatService.generateConnectionToken).toHaveBeenCalledWith(mockUser().id);
+      expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
+        mockUser().id,
+      );
       expect(res.json).toHaveBeenCalledWith({ token: 'ws-token' });
     });
 
     it('should respond with 429 when rate limit is exceeded', async () => {
-      (centrifugoService.checkConnectionRateLimit as jest.Mock).mockResolvedValue({
+      (
+        centrifugoService.checkConnectionRateLimit as jest.Mock
+      ).mockResolvedValue({
         allowed: false,
         retryAfterMs: 30000,
       });
@@ -154,7 +162,9 @@ describe('ChatController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           statusCode: 429,
-          message: expect.stringContaining('Too many WebSocket connection attempts'),
+          message: expect.stringContaining(
+            'Too many WebSocket connection attempts',
+          ),
         }),
       );
     });

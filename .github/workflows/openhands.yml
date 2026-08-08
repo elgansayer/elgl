@@ -68,14 +68,14 @@ jobs:
           echo "pr_count=$COUNT"
           if [ "$COUNT" -gt 0 ]; then
             echo "pr_exists=true" >> $GITHUB_OUTPUT
-            echo "Claude created a PR — skipping lower tiers."
+            echo "Claude created a PR - skipping lower tiers."
           else
             echo "pr_exists=false" >> $GITHUB_OUTPUT
-            echo "Claude did NOT create a PR (token exhausted or error) — falling through to Tier 2."
+            echo "Claude did NOT create a PR (token exhausted or error) - falling through to Tier 2."
           fi
 
       # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
-      - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
+      - name: Tier 2 - OpenHands (DeepSeek V3 - paid heavy fallback)
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.pr_exists == 'false'
         continue-on-error: true
@@ -97,7 +97,7 @@ jobs:
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
-      - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
+      - name: Tier 3 - OpenHands (Gemini 3.6 Flash - last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
         uses: xinbenlv/openhands-action@v1.0.1

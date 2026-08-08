@@ -10,10 +10,6 @@ import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
 interface UserInfo { id: string }
 
-function createAuthService(userSignal: () => UserInfo | null): AuthService {
-  return { currentUser: userSignal } as unknown as AuthService;
-}
-
 describe('SoundboardComponent', () => {
   let component: SoundboardComponent;
   let fixture: ComponentFixture<SoundboardComponent>;

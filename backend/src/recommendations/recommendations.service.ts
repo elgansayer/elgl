@@ -330,7 +330,8 @@ export class RecommendationsService {
   ): Promise<void> {
     try {
       const err = error instanceof Error ? error : new Error(String(error));
-      const circuitOpen = !this.circuitBreakerService.isAvailable('matchmaking');
+      const circuitOpen =
+        !this.circuitBreakerService.isAvailable('matchmaking');
 
       await this.crashReportService.reportCrash({
         operation,

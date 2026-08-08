@@ -101,7 +101,11 @@ describe('EventsService', () => {
 
   describe('createRsvp', () => {
     it('should create an RSVP successfully', async () => {
-      const mockRsvp = { event_id: 'event1', user_id: 'user123', status: 'attending' };
+      const mockRsvp = {
+        event_id: 'event1',
+        user_id: 'user123',
+        status: 'attending',
+      };
 
       supabaseService.getClient.mockReturnValue({
         from: jest.fn().mockReturnValue({
@@ -142,7 +146,11 @@ describe('EventsService', () => {
 
   describe('getUserRsvp', () => {
     it('should return RSVP if found', async () => {
-      const mockRsvp = { event_id: 'event1', user_id: 'user123', status: 'attending' };
+      const mockRsvp = {
+        event_id: 'event1',
+        user_id: 'user123',
+        status: 'attending',
+      };
 
       supabaseService.getClient.mockReturnValue({
         from: jest.fn().mockReturnValue({
@@ -201,7 +209,9 @@ describe('EventsService', () => {
             return {
               select: jest.fn().mockReturnValue({
                 eq: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({ data: mockEvent, error: null }),
+                  single: jest
+                    .fn()
+                    .mockResolvedValue({ data: mockEvent, error: null }),
                 }),
               }),
             };

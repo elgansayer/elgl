@@ -1,4 +1,10 @@
-import { Controller, Post, Body, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { LivekitService } from './livekit.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { Request } from 'express';

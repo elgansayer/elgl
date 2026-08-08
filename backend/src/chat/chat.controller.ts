@@ -68,9 +68,10 @@ export class ChatController {
       return;
     }
 
-    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
-      ?? req.ip
-      ?? undefined;
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+      req.ip ??
+      undefined;
 
     const result = await this.centrifugoService.checkConnectionRateLimit(
       user.id,

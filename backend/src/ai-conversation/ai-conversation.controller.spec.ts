@@ -45,14 +45,18 @@ describe('AiConversationController', () => {
     });
 
     it('should return a hint when message is empty', async () => {
-      const result = await controller.handleMessage(mockUser(), { message: '' });
+      const result = await controller.handleMessage(mockUser(), {
+        message: '',
+      });
 
       expect(result).toEqual({ reply: 'Please say something first!' });
       expect(service.generateReply).not.toHaveBeenCalled();
     });
 
     it('should return a hint when message is only whitespace', async () => {
-      const result = await controller.handleMessage(mockUser(), { message: '   ' });
+      const result = await controller.handleMessage(mockUser(), {
+        message: '   ',
+      });
 
       expect(result).toEqual({ reply: 'Please say something first!' });
       expect(service.generateReply).not.toHaveBeenCalled();

@@ -66,7 +66,7 @@ export class LivekitService {
    */
   async getToken(
     roomName: string,
-    participantIdentity: string,
+    _participantIdentity: string,
   ): Promise<TokenFetchResult> {
     const response = await firstValueFrom(
       this.http.post<VideoClassroomTokenResponse>(
@@ -88,7 +88,7 @@ export class LivekitService {
    * Start a new video call room. Returns token and whether degraded.
    */
   async startRoom(
-    userId: string,
+    _userId: string,
   ): Promise<{ token: string; roomName: string; iceServers?: IceServer[]; degraded: boolean; degradationReason?: string }> {
     const response = await firstValueFrom(
       this.http.post<VideoClassroomTokenResponse>(
