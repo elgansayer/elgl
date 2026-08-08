@@ -89,6 +89,27 @@ export class MediaService implements OnModuleInit {
     return this.generatePresignedUrl(userId, coverDto);
   }
 
+  async generateVoiceNotePresignedUrl(
+    userId: string,
+    dto: PresignedUrlDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    const allowedTypes = [
+      'audio/webm',
+      'audio/ogg',
+      'audio/mpeg',
+      'audio/mp4',
+      'audio/wav',
+    ];
+    if (!allowedTypes.includes(dto.contentType)) {
+      throw new BadRequestException(
+        'Only WebM, OGG, MP3, MP4, and WAV audio are allowed',
+      );
+    }
+
+    const voiceNoteDto = { ...dto, folder: 'voice-notes' };
+    return this.generatePresignedUrl(userId, voiceNoteDto);
+  }
+
   async uploadAndCompressVoiceNote(
     userId: string,
     file: Express.Multer.File,

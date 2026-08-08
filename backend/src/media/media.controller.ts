@@ -26,6 +26,14 @@ export class MediaController {
     return this.mediaService.generateCoverPresignedUrl(req.user.id, dto);
   }
 
+  @Post('voice-note/presigned-url')
+  async getVoiceNotePresignedUrl(
+    @Req() req: { user: { id: string } },
+    @Body() dto: PresignedUrlDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    return this.mediaService.generateVoiceNotePresignedUrl(req.user.id, dto);
+  }
+
   @Post('voice-note')
   @UseInterceptors(FileInterceptor('file'))
   async uploadVoiceNote(

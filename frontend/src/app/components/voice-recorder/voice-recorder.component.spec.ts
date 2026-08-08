@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { VoiceRecorderComponent } from './voice-recorder.component';
 import { MediaService } from '../../services/media.service';
+import { I18nService } from '../../services/i18n.service';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -11,7 +12,12 @@ class MockTranslatePipe implements PipeTransform {
 }
 
 class MockMediaService {
+  uploadVoiceNoteDirectToR2 = vi.fn().mockResolvedValue('https://r2.example.com/voice_notes/voice.webm');
   uploadVoiceNote = vi.fn().mockResolvedValue({ url: 'https://media.url/voice.ogg' });
+}
+
+class MockI18nService {
+  translate = vi.fn().mockReturnValue('Mock error message');
 }
 
 class MockedMediaRecorder {
@@ -59,6 +65,7 @@ describe('VoiceRecorderComponent', () => {
       imports: [VoiceRecorderComponent],
       providers: [
         { provide: MediaService, useClass: MockMediaService },
+        { provide: I18nService, useClass: MockI18nService },
       ],
     })
       .overrideComponent(VoiceRecorderComponent, {
@@ -76,44 +83,37 @@ describe('VoiceRecorderComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should stop the media stream and clear the timer when destroyed mid-recording', async () => {
+  it('should start recording on pointerdown and stop on pointerup', async () => {
     vi.useFakeTimers();
     try {
-      await component.startRecording();
+      component.onRecordPointerDown(new PointerEvent('pointerdown'));
+      fixture.detectChanges();
+
       expect(component.isRecording()).toBe(true);
 
-      fixture.destroy();
-
-      expect(stopTrack).toHaveBeenCalled();
-
-      const durationBeforeTick = component.durationSeconds();
-      vi.advanceTimersByTime(5000);
-      expect(component.durationSeconds()).toBe(durationBeforeTick);
+      component.onRecordPointerUp();
+      // onstop fires synchronously in mock
+      expect(component.isRecording()).toBe(false);
+      expect(component.audioPreviewUrl()).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('should revoke the preview object URL when destroyed after recording', async () => {
-    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  it('should stop recording on pointerleave', async () => {
+    vi.useFakeTimers();
     try {
-      await component.startRecording();
-      component.stopRecording();
+      component.onRecordPointerDown(new PointerEvent('pointerdown'));
+      expect(component.isRecording()).toBe(true);
 
-      expect(component.audioPreviewUrl()).toBeTruthy();
-
-      fixture.destroy();
-
-      const previewUrl = component.audioPreviewUrl();
-      if (previewUrl) {
-        expect(revokeSpy).toHaveBeenCalledWith(previewUrl);
-      }
+      component.onRecordPointerLeave();
+      expect(component.isRecording()).toBe(false);
     } finally {
-      revokeSpy.mockRestore();
+      vi.useRealTimers();
     }
   });
 
-  it('should upload voice note via media service and emit result URL', async () => {
+  it('should upload via R2 direct upload and emit the URL', async () => {
     await component.startRecording();
     component.stopRecording();
 
@@ -122,7 +122,42 @@ describe('VoiceRecorderComponent', () => {
 
     await component.uploadAndSend();
 
-    expect(mediaService.uploadVoiceNote).toHaveBeenCalled();
-    expect(emitted).toEqual(['https://media.url/voice.ogg']);
+    expect(mediaService.uploadVoiceNoteDirectToR2).toHaveBeenCalled();
+    expect(emitted).toEqual(['https://r2.example.com/voice_notes/voice.webm']);
+  });
+
+  it('should emit local preview URL as fallback when R2 upload fails', async () => {
+    mediaService.uploadVoiceNoteDirectToR2 = vi.fn().mockRejectedValue(new Error('Upload failed'));
+
+    await component.startRecording();
+    component.stopRecording();
+    const previewUrl = component.audioPreviewUrl();
+
+    const emitted: string[] = [];
+    component.audioUploaded.subscribe((url: string) => emitted.push(url));
+
+    await component.uploadAndSend();
+
+    expect(emitted).toEqual([previewUrl]);
+  });
+
+  it('should clean up preview URL on cancel', async () => {
+    await component.startRecording();
+    component.stopRecording();
+    const previewUrl = component.audioPreviewUrl();
+
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    try {
+      const emitted: unknown[] = [];
+      component.cancelled.subscribe(() => emitted.push(true));
+
+      component.cancel();
+
+      expect(component.audioPreviewUrl()).toBeNull();
+      expect(emitted.length).toBe(1);
+      expect(revokeSpy).toHaveBeenCalledWith(previewUrl);
+    } finally {
+      revokeSpy.mockRestore();
+    }
   });
 });

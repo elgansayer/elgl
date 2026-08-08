@@ -1327,6 +1327,12 @@ export class I18nService {
     'voiceRecorder.stopBtn': '⏹️ Stop recording',
     'voiceRecorder.sendBtn': '📤 Send voice note',
     'voiceRecorder.uploadingBtn': '⏳ Uploading to Cloudflare R2...',
+    'voiceRecorder.holdBtn': '🎙️ Hold to record',
+    'voiceRecorder.holdBtnAria': 'Hold to record voice note',
+    'voiceRecorder.holdHint': 'Release to stop recording',
+    'voiceRecorder.cancelAria': 'Cancel recording',
+    'voiceRecorder.microphoneError': 'Microphone permission required to record voice notes.',
+    'voiceRecorder.uploadError': 'Failed to upload voice note. Please try again.',
 
     // Audio Player
     'audioPlayer.groupLabel': 'Audio player',

@@ -3,7 +3,12 @@
     <h3 class="app-section-title flex items-center gap-2">
       <span>{{ 'voiceRecorder.title' | t }}</span>
     </h3>
-    <button aria-label="Cancel recording" (click)="cancel()" class="text-text-muted hover:text-text-secondary font-bold">
+    <button
+      type="button"
+      (click)="cancel()"
+      class="text-text-muted hover:text-text-secondary font-bold"
+      [attr.aria-label]="'voiceRecorder.cancelAria' | t"
+    >
       ✕
     </button>
   </div>
@@ -39,41 +44,60 @@
     <div class="mt-4 text-2xl font-mono font-bold text-text-primary">
       {{ formatDuration(durationSeconds()) }}
     </div>
+
+    @if (isRecording()) {
+      <p class="mt-2 text-sm text-text-muted">{{ 'voiceRecorder.holdHint' | t }}</p>
+    }
   </div>
 
+  @if (errorMessage(); as msg) {
+    <p class="text-sm text-red-400 mb-2">{{ msg }}</p>
+  }
+
   <div class="flex justify-center gap-3 pt-2">
+    <!-- Hold-to-record button: visible when not recording and no preview yet -->
     @if (!isRecording() && !audioPreviewUrl()) {
       <button
-        (click)="startRecording()"
-        class="px-6 py-3 rounded-app bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
-       [attr.aria-label]="'voiceRecorder.startBtn' | t">
-        <span>{{ 'voiceRecorder.startBtn' | t }}</span>
+        type="button"
+        (pointerdown)="onRecordPointerDown($event)"
+        (pointerup)="onRecordPointerUp()"
+        (pointerleave)="onRecordPointerLeave()"
+        class="px-6 py-3 rounded-app bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 select-none touch-none"
+        [attr.aria-label]="'voiceRecorder.holdBtnAria' | t"
+      >
+        <span>{{ 'voiceRecorder.holdBtn' | t }}</span>
       </button>
     }
 
     @if (isRecording()) {
       <button
+        type="button"
         (click)="stopRecording()"
         class="px-6 py-3 rounded-app bg-surface-800 hover:bg-surface-800 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
-       [attr.aria-label]="'voiceRecorder.stopBtn' | t">
+        [attr.aria-label]="'voiceRecorder.stopBtn' | t"
+      >
         <span>{{ 'voiceRecorder.stopBtn' | t }}</span>
       </button>
     }
 
     @if (audioPreviewUrl() && !isUploading()) {
       <button
+        type="button"
         (click)="uploadAndSend()"
         class="app-button-primary px-6 py-3 text-sm flex items-center gap-2"
-       [attr.aria-label]="'voiceRecorder.sendBtn' | t">
+        [attr.aria-label]="'voiceRecorder.sendBtn' | t"
+      >
         <span>{{ 'voiceRecorder.sendBtn' | t }}</span>
       </button>
     }
 
     @if (isUploading()) {
       <button
+        type="button"
         disabled
         class="px-6 py-3 bg-surface-100 text-white rounded-app font-bold text-sm flex items-center gap-2 cursor-not-allowed"
-       [attr.aria-label]="'voiceRecorder.uploadingBtn' | t">
+        [attr.aria-label]="'voiceRecorder.uploadingBtn' | t"
+      >
         <span>{{ 'voiceRecorder.uploadingBtn' | t }}</span>
       </button>
     }

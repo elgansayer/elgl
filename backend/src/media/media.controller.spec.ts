@@ -15,6 +15,7 @@ describe('MediaController', () => {
           provide: MediaService,
           useValue: {
             generateCoverPresignedUrl: jest.fn(),
+            generateVoiceNotePresignedUrl: jest.fn(),
             confirmCoverUpload: jest.fn(),
           },
         },
@@ -83,6 +84,36 @@ describe('MediaController', () => {
       expect(mediaService.confirmCoverUpload).toHaveBeenCalledWith(
         'user-1',
         'covers/user-1/test.jpg',
+      );
+      expect(result).toEqual(expectedResponse);
+    });
+  });
+
+  describe('getVoiceNotePresignedUrl', () => {
+    it('should call service generateVoiceNotePresignedUrl', async () => {
+      const dto = {
+        filename: 'voice.webm',
+        contentType: 'audio/webm',
+        folder: 'voice-notes',
+      };
+      const expectedResponse = {
+        uploadUrl: 'https://upload.r2.example.com',
+        mediaUrl: 'https://r2.example.com/voice-notes/user-1/voice.webm',
+        objectKey: 'voice-notes/user-1/voice.webm',
+      };
+
+      (
+        mediaService.generateVoiceNotePresignedUrl as jest.Mock
+      ).mockResolvedValue(expectedResponse);
+
+      const result = await controller.getVoiceNotePresignedUrl(
+        { user: { id: 'user-1' } },
+        dto,
+      );
+
+      expect(mediaService.generateVoiceNotePresignedUrl).toHaveBeenCalledWith(
+        'user-1',
+        dto,
       );
       expect(result).toEqual(expectedResponse);
     });
