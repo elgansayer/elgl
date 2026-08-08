@@ -77,6 +77,7 @@ import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
+import { LivekitModule } from './livekit/livekit.module';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { CloudflareModule } from './cloudflare/cloudflare.module';
     }),
     SharedLoggerModule,
     RetryModule,
+    LivekitModule,
     SupabaseModule,
     LocationModule,
     AuthModule,

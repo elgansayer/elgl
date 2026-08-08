@@ -25,6 +25,8 @@ describe('validationSchema', () => {
     expect(value.LIVEKIT_TURN_KEY_FILE).toBe('');
     expect(value.LIVEKIT_TURN_TLS_PORT).toBe('5349');
     expect(value.LIVEKIT_TURN_UDP_PORT).toBe('3478');
+    expect(value.LIVEKIT_TURN_USERNAME).toBe('guest');
+    expect(value.LIVEKIT_TURN_PASSWORD).toBe('somepassword');
     expect(value.LIVEKIT_RTC_STUN_SERVERS).toBe(
       'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302',
     );

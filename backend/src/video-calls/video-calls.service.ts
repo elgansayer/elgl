@@ -10,6 +10,7 @@ import {
   VideoCallsDegradationService,
   DegradationMarker,
 } from './video-calls-degradation.service';
+import { LivekitService, IceServer } from '../livekit/livekit.service';
 
 @Injectable()
 export class VideoCallsService {
@@ -20,6 +21,7 @@ export class VideoCallsService {
   constructor(
     private configService: ConfigService,
     private degradationService: VideoCallsDegradationService,
+    private livekitService: LivekitService,
   ) {
     this.roomService = new RoomServiceClient(
       this.configService.get<string>('LIVEKIT_URL') as string,
@@ -33,6 +35,7 @@ export class VideoCallsService {
   ): Promise<{
     token: string;
     roomName: string;
+    iceServers: IceServer[];
     degraded?: boolean;
     degradationReason?: string;
   }> {
@@ -53,9 +56,6 @@ export class VideoCallsService {
         return { token, roomName };
       },
       async () => {
-        // Fallback: generate a standalone token without LiveKit room creation
-        // The room creation failed, so we generate a token for a
-        // best-effort peer-to-peer connection
         const token = await this.generateToken(userId, roomName, true);
         return { token, roomName };
       },
@@ -76,6 +76,7 @@ export class VideoCallsService {
 
     return {
       ...result,
+      iceServers: this.livekitService.buildIceServers(),
       degraded: marker.degraded,
       degradationReason: marker.reason,
     };
@@ -87,6 +88,7 @@ export class VideoCallsService {
   ): Promise<{
     token: string;
     roomName: string;
+    iceServers: IceServer[];
     degraded?: boolean;
     degradationReason?: string;
   }> {
@@ -100,7 +102,6 @@ export class VideoCallsService {
         return { token, roomName };
       },
       async () => {
-        // Fallback: try cached token first, then generate a new one
         const cachedToken = this.degradationService.getCachedToken(
           roomName,
           userId,
@@ -128,6 +129,7 @@ export class VideoCallsService {
 
     return {
       ...result,
+      iceServers: this.livekitService.buildIceServers(),
       degraded: marker.degraded,
       degradationReason: marker.reason,
     };

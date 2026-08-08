@@ -1,3 +1,4 @@
+import { LivekitService } from "../livekit/livekit.service";
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { VideoCallsService } from './video-calls.service';
@@ -77,6 +78,7 @@ describe('VideoCallsService', () => {
         },
         {
           provide: VideoCallsDegradationService,
+        { provide: LivekitService, useValue: { buildIceServers: jest.fn().mockReturnValue([]) } },
           useValue: mockDegradationService,
         },
       ],
@@ -85,6 +87,7 @@ describe('VideoCallsService', () => {
     service = module.get<VideoCallsService>(VideoCallsService);
     degradationService = module.get<VideoCallsDegradationService>(
       VideoCallsDegradationService,
+        { provide: LivekitService, useValue: { buildIceServers: jest.fn().mockReturnValue([]) } },
     );
   });
 
