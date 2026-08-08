@@ -67,7 +67,8 @@ export class EconomyController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Array of virtual gifts with id, name, icon (emoji), coin cost, and animation metadata.',
+    description:
+      'Array of virtual gifts with id, name, icon (emoji), coin cost, and animation metadata.',
     schema: {
       type: 'array',
       items: {
@@ -78,7 +79,11 @@ export class EconomyController {
           icon: { type: 'string', example: '\u{1F339}' },
           cost_coins: { type: 'number', example: 10 },
           animation_type: { type: 'string', example: 'float' },
-          animation_url: { type: 'string', nullable: true, example: 'https://r2.example.com/rose.json' },
+          animation_url: {
+            type: 'string',
+            nullable: true,
+            example: 'https://r2.example.com/rose.json',
+          },
         },
       },
     },
@@ -103,7 +108,8 @@ export class EconomyController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Array of coin packages with id, name, coin amount, and platform-specific pricing (price_ukp, price_usd) and product IDs.',
+    description:
+      'Array of coin packages with id, name, coin amount, and platform-specific pricing (price_ukp, price_usd) and product IDs.',
     schema: {
       type: 'array',
       items: {
@@ -118,9 +124,21 @@ export class EconomyController {
           platform_product_id: {
             type: 'object',
             properties: {
-              ios: { type: 'string', nullable: true, example: 'com.linguaexchange.coins.small' },
-              android: { type: 'string', nullable: true, example: 'com.linguaexchange.coins.small' },
-              web: { type: 'string', nullable: true, example: 'price_small_coins' },
+              ios: {
+                type: 'string',
+                nullable: true,
+                example: 'com.linguaexchange.coins.small',
+              },
+              android: {
+                type: 'string',
+                nullable: true,
+                example: 'com.linguaexchange.coins.small',
+              },
+              web: {
+                type: 'string',
+                nullable: true,
+                example: 'price_small_coins',
+              },
             },
           },
         },
@@ -231,12 +249,18 @@ export class EconomyController {
     schema: {
       type: 'object',
       properties: {
-        sessionUrl: { type: 'string', example: 'https://checkout.stripe.com/pay/cs_test_abc123' },
+        sessionUrl: {
+          type: 'string',
+          example: 'https://checkout.stripe.com/pay/cs_test_abc123',
+        },
         sessionId: { type: 'string', example: 'cs_test_abc123' },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Package not available for web purchase.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Package not available for web purchase.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Coin package not found.' })
   async createCheckoutSession(
@@ -277,7 +301,10 @@ export class EconomyController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid receipt or receipt verification failed.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid receipt or receipt verification failed.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 409, description: 'Duplicate transaction.' })
   async purchaseCoins(
@@ -324,9 +351,15 @@ export class EconomyController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Insufficient balance or cannot send to self.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Insufficient balance or cannot send to self.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'Gift not found in catalog or receiver not found.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Gift not found in catalog or receiver not found.',
+  })
   async sendGift(@CurrentUser() user: User | null, @Body() dto: SendGiftDto) {
     if (!user) return null;
     return await this.economyService.sendGift(user.id, dto);
@@ -362,11 +395,19 @@ export class EconomyController {
               name: { type: 'string', example: 'Happy Corgi Pack' },
               cost_coins: { type: 'number', example: 50 },
               is_animated: { type: 'boolean', example: false },
-              sticker_urls: { type: 'array', items: { type: 'string' }, example: ['assets/stickers/happy.png'] },
+              sticker_urls: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['assets/stickers/happy.png'],
+              },
             },
           },
         },
-        owned_pack_ids: { type: 'array', items: { type: 'string' }, example: ['stk_pack_1'] },
+        owned_pack_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['stk_pack_1'],
+        },
         user_coins: { type: 'number', example: 250 },
       },
     },
@@ -406,7 +447,11 @@ export class EconomyController {
             name: { type: 'string', example: 'Happy Corgi Pack' },
             cost_coins: { type: 'number', example: 50 },
             is_animated: { type: 'boolean', example: false },
-            sticker_urls: { type: 'array', items: { type: 'string' }, example: ['assets/stickers/happy.png'] },
+            sticker_urls: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['assets/stickers/happy.png'],
+            },
           },
         },
       },

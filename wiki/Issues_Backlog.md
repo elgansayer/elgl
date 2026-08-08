@@ -2,26 +2,212 @@
 
 Total open issues: 1000
 
-- **#3073**: Guardian: frontend build + test failure on main [ai-agent-task, priority:high]
-- **#3023**: Guardian: backend build + test failure on main [ai-agent-task, priority:high]
-- **#2953**: Guardian: backend build failure on main [ai-agent-task, priority:high]
+- **#2641**: Guardian: frontend build + test failure on main [swarm-active, ai-agent-task, priority:high]
+- **#2568**: Guardian: backend build + test failure on main [swarm-active, ai-agent-task, priority:high]
+- **#2560**: Guardian: backend test failure on main [swarm-active, ai-agent-task, priority:high]
+- **#2436**: Task: Verify RTL logical CSS properties (ps-, pe-) for Trust & Safety [swarm-active]
+- **#2433**: Task: Audit accessibility (ARIA) and screen reader support for Trust & Safety [swarm-active]
+- **#2431**: Task: Set up Datadog monitoring alerts for Trust & Safety [swarm-active]
+- **#2430**: Task: Implement Redis cache invalidation rules for Trust & Safety [swarm-active]
+- **#2426**: Task: Implement graceful degradation fallbacks for Virtual Coin Economy [swarm-active]
+- **#2425**: Task: Review Supabase Row Level Security (RLS) policies for Virtual Coin Economy [swarm-active]
+- **#2424**: Task: Enforce strict TypeScript typings (no-any) on Virtual Coin Economy [swarm-active]
+- **#2423**: Task: Standardise logging levels (Winston/Pino) for Virtual Coin Economy
+- **#2422**: Task: Implement exponential backoff retry logic (HTTP 429) for Virtual Coin Economy
+- **#2421**: Task: Audit memory leaks and payload sizes for Virtual Coin Economy
+- **#2420**: Task: Implement user onboarding tooltips (ngx-joyride) for Virtual Coin Economy
+- **#2419**: Task: Add strict DOMPurify HTML sanitisation to Virtual Coin Economy
+- **#2418**: Task: Optimise database indices (PostgreSQL) and query performance for Virtual Coin Economy
+- **#2417**: Task: Implement robust error boundary handling and crash reporting for Virtual Coin Economy
+- **#2416**: Task: Audit GDPR compliance and data scrubbing for Virtual Coin Economy
+- **#2415**: Task: Implement offline PWA fallback logic for Virtual Coin Economy
+- **#2414**: Task: Audit mobile responsive layouts (Tailwind) for Virtual Coin Economy
+- **#2413**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Virtual Coin Economy
+- **#2412**: Task: Implement automated rate limiting & API throttling for Virtual Coin Economy
+- **#2411**: Task: Verify RTL logical CSS properties (ps-, pe-) for Virtual Coin Economy
+- **#2410**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Virtual Coin Economy
+- **#2409**: Task: Conduct load testing (Artillery) for Virtual Coin Economy
+- **#2408**: Task: Audit accessibility (ARIA) and screen reader support for Virtual Coin Economy
+- **#2407**: Task: Design empty states and skeleton loaders for Virtual Coin Economy
+- **#2406**: Task: Set up Datadog monitoring alerts for Virtual Coin Economy
+- **#2405**: Task: Implement Redis cache invalidation rules for Virtual Coin Economy
+- **#2404**: Task: Write Jest unit tests (NestJS) for Virtual Coin Economy
+- **#2403**: Task: Write Cypress E2E test flows for Virtual Coin Economy
+- **#2402**: Task: Review and optimise Cloudflare edge caching for Escrow Payments
+- **#2401**: Task: Implement graceful degradation fallbacks for Escrow Payments
+- **#2400**: Task: Review Supabase Row Level Security (RLS) policies for Escrow Payments
+- **#2399**: Task: Enforce strict TypeScript typings (no-any) on Escrow Payments
+- **#2398**: Task: Standardise logging levels (Winston/Pino) for Escrow Payments
+- **#2397**: Task: Implement exponential backoff retry logic (HTTP 429) for Escrow Payments
+- **#2396**: Task: Audit memory leaks and payload sizes for Escrow Payments
+- **#2395**: Task: Implement user onboarding tooltips (ngx-joyride) for Escrow Payments
+- **#2394**: Task: Add strict DOMPurify HTML sanitisation to Escrow Payments
+- **#2393**: Task: Optimise database indices (PostgreSQL) and query performance for Escrow Payments
+- **#2392**: Task: Implement robust error boundary handling and crash reporting for Escrow Payments
+- **#2391**: Task: Audit GDPR compliance and data scrubbing for Escrow Payments
+- **#2390**: Task: Implement offline PWA fallback logic for Escrow Payments
+- **#2389**: Task: Audit mobile responsive layouts (Tailwind) for Escrow Payments
+- **#2388**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Escrow Payments
+- **#2387**: Task: Implement automated rate limiting & API throttling for Escrow Payments
+- **#2386**: Task: Verify RTL logical CSS properties (ps-, pe-) for Escrow Payments
+- **#2385**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Escrow Payments
+- **#2384**: Task: Conduct load testing (Artillery) for Escrow Payments
+- **#2383**: Task: Audit accessibility (ARIA) and screen reader support for Escrow Payments
+- **#2382**: Task: Design empty states and skeleton loaders for Escrow Payments
+- **#2381**: Task: Set up Datadog monitoring alerts for Escrow Payments
+- **#2380**: Task: Implement Redis cache invalidation rules for Escrow Payments
+- **#2379**: Task: Write Jest unit tests (NestJS) for Escrow Payments
+- **#2378**: Task: Write Cypress E2E test flows for Escrow Payments
+- **#2377**: Task: Review and optimise Cloudflare edge caching for Admin Moderation Dashboard
+- **#2376**: Task: Implement graceful degradation fallbacks for Admin Moderation Dashboard
+- **#2375**: Task: Review Supabase Row Level Security (RLS) policies for Admin Moderation Dashboard
+- **#2374**: Task: Enforce strict TypeScript typings (no-any) on Admin Moderation Dashboard
+- **#2373**: Task: Standardise logging levels (Winston/Pino) for Admin Moderation Dashboard
+- **#2372**: Task: Implement exponential backoff retry logic (HTTP 429) for Admin Moderation Dashboard
+- **#2371**: Task: Audit memory leaks and payload sizes for Admin Moderation Dashboard
+- **#2370**: Task: Implement user onboarding tooltips (ngx-joyride) for Admin Moderation Dashboard
+- **#2369**: Task: Add strict DOMPurify HTML sanitisation to Admin Moderation Dashboard
+- **#2368**: Task: Optimise database indices (PostgreSQL) and query performance for Admin Moderation Dashboard
+- **#2367**: Task: Implement robust error boundary handling and crash reporting for Admin Moderation Dashboard
+- **#2366**: Task: Audit GDPR compliance and data scrubbing for Admin Moderation Dashboard
+- **#2365**: Task: Implement offline PWA fallback logic for Admin Moderation Dashboard
+- **#2364**: Task: Audit mobile responsive layouts (Tailwind) for Admin Moderation Dashboard
+- **#2363**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Admin Moderation Dashboard
+- **#2362**: Task: Implement automated rate limiting & API throttling for Admin Moderation Dashboard
+- **#2361**: Task: Verify RTL logical CSS properties (ps-, pe-) for Admin Moderation Dashboard
+- **#2360**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Admin Moderation Dashboard
+- **#2359**: Task: Conduct load testing (Artillery) for Admin Moderation Dashboard
+- **#2358**: Task: Audit accessibility (ARIA) and screen reader support for Admin Moderation Dashboard
+- **#2357**: Task: Design empty states and skeleton loaders for Admin Moderation Dashboard
+- **#2356**: Task: Set up Datadog monitoring alerts for Admin Moderation Dashboard
+- **#2355**: Task: Implement Redis cache invalidation rules for Admin Moderation Dashboard
+- **#2354**: Task: Write Jest unit tests (NestJS) for Admin Moderation Dashboard
+- **#2353**: Task: Write Cypress E2E test flows for Admin Moderation Dashboard
+- **#2352**: Task: Review and optimise Cloudflare edge caching for Spaced Repetition (SRS)
+- **#2351**: Task: Implement graceful degradation fallbacks for Spaced Repetition (SRS)
 - **#2350**: Task: Review Supabase Row Level Security (RLS) policies for Spaced Repetition (SRS)
+- **#2349**: Task: Enforce strict TypeScript typings (no-any) on Spaced Repetition (SRS)
+- **#2348**: Task: Standardise logging levels (Winston/Pino) for Spaced Repetition (SRS)
+- **#2347**: Task: Implement exponential backoff retry logic (HTTP 429) for Spaced Repetition (SRS)
 - **#2346**: Task: Audit memory leaks and payload sizes for Spaced Repetition (SRS)
+- **#2345**: Task: Implement user onboarding tooltips (ngx-joyride) for Spaced Repetition (SRS)
+- **#2344**: Task: Add strict DOMPurify HTML sanitisation to Spaced Repetition (SRS)
+- **#2343**: Task: Optimise database indices (PostgreSQL) and query performance for Spaced Repetition (SRS)
+- **#2342**: Task: Implement robust error boundary handling and crash reporting for Spaced Repetition (SRS)
+- **#2341**: Task: Audit GDPR compliance and data scrubbing for Spaced Repetition (SRS)
+- **#2340**: Task: Implement offline PWA fallback logic for Spaced Repetition (SRS)
+- **#2338**: Task: Audit mobile responsive layouts (Tailwind) for Spaced Repetition (SRS)
+- **#2337**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Spaced Repetition (SRS)
+- **#2336**: Task: Implement automated rate limiting & API throttling for Spaced Repetition (SRS)
+- **#2335**: Task: Verify RTL logical CSS properties (ps-, pe-) for Spaced Repetition (SRS)
+- **#2334**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Spaced Repetition (SRS)
+- **#2333**: Task: Conduct load testing (Artillery) for Spaced Repetition (SRS)
+- **#2332**: Task: Audit accessibility (ARIA) and screen reader support for Spaced Repetition (SRS)
+- **#2331**: Task: Design empty states and skeleton loaders for Spaced Repetition (SRS)
+- **#2330**: Task: Set up Datadog monitoring alerts for Spaced Repetition (SRS)
+- **#2329**: Task: Implement Redis cache invalidation rules for Spaced Repetition (SRS)
+- **#2328**: Task: Write Jest unit tests (NestJS) for Spaced Repetition (SRS)
+- **#2327**: Task: Write Cypress E2E test flows for Spaced Repetition (SRS)
+- **#2326**: Task: Review and optimise Cloudflare edge caching for LingQ Reading Engine
+- **#2325**: Task: Implement graceful degradation fallbacks for LingQ Reading Engine
+- **#2324**: Task: Review Supabase Row Level Security (RLS) policies for LingQ Reading Engine
+- **#2323**: Task: Enforce strict TypeScript typings (no-any) on LingQ Reading Engine
+- **#2322**: Task: Standardise logging levels (Winston/Pino) for LingQ Reading Engine
+- **#2321**: Task: Implement exponential backoff retry logic (HTTP 429) for LingQ Reading Engine
+- **#2320**: Task: Audit memory leaks and payload sizes for LingQ Reading Engine
+- **#2319**: Task: Implement user onboarding tooltips (ngx-joyride) for LingQ Reading Engine
+- **#2318**: Task: Add strict DOMPurify HTML sanitisation to LingQ Reading Engine
+- **#2317**: Task: Optimise database indices (PostgreSQL) and query performance for LingQ Reading Engine
+- **#2316**: Task: Implement robust error boundary handling and crash reporting for LingQ Reading Engine
 - **#2315**: Task: Audit GDPR compliance and data scrubbing for LingQ Reading Engine
+- **#2314**: Task: Implement offline PWA fallback logic for LingQ Reading Engine
+- **#2313**: Task: Audit mobile responsive layouts (Tailwind) for LingQ Reading Engine
+- **#2312**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for LingQ Reading Engine
+- **#2311**: Task: Implement automated rate limiting & API throttling for LingQ Reading Engine
+- **#2310**: Task: Verify RTL logical CSS properties (ps-, pe-) for LingQ Reading Engine
+- **#2309**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for LingQ Reading Engine
+- **#2308**: Task: Conduct load testing (Artillery) for LingQ Reading Engine
 - **#2307**: Task: Audit accessibility (ARIA) and screen reader support for LingQ Reading Engine
+- **#2306**: Task: Design empty states and skeleton loaders for LingQ Reading Engine
+- **#2305**: Task: Set up Datadog monitoring alerts for LingQ Reading Engine
+- **#2304**: Task: Implement Redis cache invalidation rules for LingQ Reading Engine
+- **#2303**: Task: Write Jest unit tests (NestJS) for LingQ Reading Engine
+- **#2302**: Task: Write Cypress E2E test flows for LingQ Reading Engine
+- **#2301**: Task: Review and optimise Cloudflare edge caching for Matchmaking Algorithm
+- **#2300**: Task: Implement graceful degradation fallbacks for Matchmaking Algorithm
+- **#2299**: Task: Review Supabase Row Level Security (RLS) policies for Matchmaking Algorithm
+- **#2298**: Task: Enforce strict TypeScript typings (no-any) on Matchmaking Algorithm
+- **#2297**: Task: Standardise logging levels (Winston/Pino) for Matchmaking Algorithm
+- **#2296**: Task: Implement exponential backoff retry logic (HTTP 429) for Matchmaking Algorithm
+- **#2295**: Task: Audit memory leaks and payload sizes for Matchmaking Algorithm
 - **#2294**: Task: Implement user onboarding tooltips (ngx-joyride) for Matchmaking Algorithm
+- **#2293**: Task: Add strict DOMPurify HTML sanitisation to Matchmaking Algorithm
+- **#2292**: Task: Optimise database indices (PostgreSQL) and query performance for Matchmaking Algorithm
 - **#2291**: Task: Implement robust error boundary handling and crash reporting for Matchmaking Algorithm
+- **#2290**: Task: Audit GDPR compliance and data scrubbing for Matchmaking Algorithm
+- **#2289**: Task: Implement offline PWA fallback logic for Matchmaking Algorithm
+- **#2288**: Task: Audit mobile responsive layouts (Tailwind) for Matchmaking Algorithm
+- **#2287**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Matchmaking Algorithm
+- **#2286**: Task: Implement automated rate limiting & API throttling for Matchmaking Algorithm
+- **#2285**: Task: Verify RTL logical CSS properties (ps-, pe-) for Matchmaking Algorithm
 - **#2284**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Matchmaking Algorithm
+- **#2283**: Task: Conduct load testing (Artillery) for Matchmaking Algorithm
+- **#2282**: Task: Audit accessibility (ARIA) and screen reader support for Matchmaking Algorithm
+- **#2281**: Task: Design empty states and skeleton loaders for Matchmaking Algorithm
+- **#2280**: Task: Set up Datadog monitoring alerts for Matchmaking Algorithm
+- **#2279**: Task: Implement Redis cache invalidation rules for Matchmaking Algorithm
+- **#2278**: Task: Write Jest unit tests (NestJS) for Matchmaking Algorithm
+- **#2277**: Task: Write Cypress E2E test flows for Matchmaking Algorithm
+- **#2276**: Task: Review and optimise Cloudflare edge caching for Discovery Map
+- **#2275**: Task: Implement graceful degradation fallbacks for Discovery Map
 - **#2274**: Task: Review Supabase Row Level Security (RLS) policies for Discovery Map
+- **#2273**: Task: Enforce strict TypeScript typings (no-any) on Discovery Map
+- **#2272**: Task: Standardise logging levels (Winston/Pino) for Discovery Map
+- **#2271**: Task: Implement exponential backoff retry logic (HTTP 429) for Discovery Map
+- **#2270**: Task: Audit memory leaks and payload sizes for Discovery Map
+- **#2269**: Task: Implement user onboarding tooltips (ngx-joyride) for Discovery Map
+- **#2268**: Task: Add strict DOMPurify HTML sanitisation to Discovery Map
+- **#2267**: Task: Optimise database indices (PostgreSQL) and query performance for Discovery Map
 - **#2266**: Task: Implement robust error boundary handling and crash reporting for Discovery Map
+- **#2265**: Task: Audit GDPR compliance and data scrubbing for Discovery Map
+- **#2264**: Task: Implement offline PWA fallback logic for Discovery Map
+- **#2263**: Task: Audit mobile responsive layouts (Tailwind) for Discovery Map
+- **#2262**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Discovery Map
+- **#2261**: Task: Implement automated rate limiting & API throttling for Discovery Map
+- **#2260**: Task: Verify RTL logical CSS properties (ps-, pe-) for Discovery Map
+- **#2259**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Discovery Map
+- **#2258**: Task: Conduct load testing (Artillery) for Discovery Map
+- **#2257**: Task: Audit accessibility (ARIA) and screen reader support for Discovery Map
 - **#2256**: Task: Design empty states and skeleton loaders for Discovery Map
 - **#2255**: Task: Set up Datadog monitoring alerts for Discovery Map
+- **#2254**: Task: Implement Redis cache invalidation rules for Discovery Map
+- **#2253**: Task: Write Jest unit tests (NestJS) for Discovery Map
+- **#2252**: Task: Write Cypress E2E test flows for Discovery Map
+- **#2251**: Task: Review and optimise Cloudflare edge caching for Video Classrooms
 - **#2250**: Task: Implement graceful degradation fallbacks for Video Classrooms
+- **#2249**: Task: Review Supabase Row Level Security (RLS) policies for Video Classrooms
+- **#2248**: Task: Enforce strict TypeScript typings (no-any) on Video Classrooms
+- **#2247**: Task: Standardise logging levels (Winston/Pino) for Video Classrooms
+- **#2246**: Task: Implement exponential backoff retry logic (HTTP 429) for Video Classrooms
+- **#2245**: Task: Audit memory leaks and payload sizes for Video Classrooms
+- **#2244**: Task: Implement user onboarding tooltips (ngx-joyride) for Video Classrooms
+- **#2243**: Task: Add strict DOMPurify HTML sanitisation to Video Classrooms
 - **#2242**: Task: Optimise database indices (PostgreSQL) and query performance for Video Classrooms
+- **#2241**: Task: Implement robust error boundary handling and crash reporting for Video Classrooms
 - **#2240**: Task: Audit GDPR compliance and data scrubbing for Video Classrooms
 - **#2239**: Task: Implement offline PWA fallback logic for Video Classrooms
+- **#2238**: Task: Audit mobile responsive layouts (Tailwind) for Video Classrooms
+- **#2237**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Video Classrooms
+- **#2236**: Task: Implement automated rate limiting & API throttling for Video Classrooms
+- **#2235**: Task: Verify RTL logical CSS properties (ps-, pe-) for Video Classrooms
+- **#2234**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Video Classrooms
+- **#2233**: Task: Conduct load testing (Artillery) for Video Classrooms
+- **#2232**: Task: Audit accessibility (ARIA) and screen reader support for Video Classrooms
 - **#2231**: Task: Design empty states and skeleton loaders for Video Classrooms
 - **#2230**: Task: Set up Datadog monitoring alerts for Video Classrooms
+- **#2229**: Task: Implement Redis cache invalidation rules for Video Classrooms
+- **#2228**: Task: Write Jest unit tests (NestJS) for Video Classrooms
+- **#2227**: Task: Write Cypress E2E test flows for Video Classrooms
 - **#2226**: Task: Review and optimise Cloudflare edge caching for Live Audio Rooms
 - **#2225**: Task: Implement graceful degradation fallbacks for Live Audio Rooms
 - **#2224**: Task: Review Supabase Row Level Security (RLS) policies for Live Audio Rooms
@@ -816,189 +1002,3 @@ Total open issues: 1000
 - **#967**: Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations.
 - **#966**: Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text).
 - **#965**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts.
-- **#964**: Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`).
-- **#963**: Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables.
-- **#962**: Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.
-- **#961**: Build NestJS endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.
-- **#960**: Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.
-- **#959**: Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and Serious Learner toggle.
-- **#958**: Build Angular Who Viewed Me component (`VisitorLogsComponent`): blur visitor avatars and names if user is on the free tier (`is_vip === false`), showing upgrade prompt for 8 UKP / $10 USD.
-- **#957**: Build Angular Profile UI (`ProfileComponent`) with native/target language badges, audio intro player, and study streak display.
-- **#956**: Build NestJS `ProfileVisitsService` to record profile views and query visitor logs (`GET /users/:id/visitors`).
-- **#955**: Build algorithmic Serious Learner filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`).
-- **#954**: Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`).
-- **#953**: Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`).
-- **#952**: Configure Cloudflare R2 SDK (`@aws-sdk/client-s3`) in NestJS `MediaModule`. Create pre-signed URL upload endpoints for avatars and audio intros.
-- **#951**: Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
-- **#950**: Verify clean linting across both projects (`npm run lint`).
-- **#949**: Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints.
-- **#948**: Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`).
-- **#947**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
-- **#946**: Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`.
-- **#945**: Create comprehensive `.env.example` and setup NestJS `@nestjs/config` environment schema validation (`Joi`/`Zod`) to fail-fast on missing keys or malformed URLs.
-- **#944**: Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2).
-- **#943**: Install and configure Tailwind CSS in the Angular project (`tailwind.config.js` & `styles.scss`) using strictly logical properties (`ps-`, `pe-`, `ms-`, `me-`).
-- **#942**: Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`).
-- **#941**: Initialise NestJS backend (`nest new backend --package-manager npm`).
-- **#938**: Fix QA test failure: `Error: Process from config.webServer was not able to start. Exit code: 143`. Root cause: `e2e/playwright.config.ts` `webServer` runs `cd ../frontend && npm run start` (Angular dev server), which never reaches a successful compile because the frontend currently has real TypeScript build errors, so `ng serve` keeps failing/restarting until
-- **#937**: Fix QA test failure: `ReferenceError: describe is not defined`.
-- **#934**: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (from `e2e/playwright.config.ts`, whose `webServer.command` runs `cd ../frontend && npm run start`). Root cause per `qa_errors.log`: the Angular dev server never reaches a successful compile because of a real TypeScript build error, `TS4111: Property status comes from an index signature, so it must be accessed with [status]` at `frontend/src/app/services/moderation.service.ts:41` (`params.status = status;`, where `params` is typed `Record<string, string>`). Because `ng serve` keeps failing/restarting,
-- **#918**: Admin portal: `AdminService.setVipStatus`/`listUsers`/`getLoginHistory` (frontend/src/app/services/admin.service.ts) silently `catchError` into mock data on any HTTP failure, including a real 403 from the backend `AdminGuard`. Because the `/admin` route has no client-side guard, a non-admin who browses to it sees a fully populated fake user list, and clicking Grant/Revoke VIP appears to succeed even though no backend mutation happened. Surface real errors for admin actions instead of faking success (the mock fallback is fine for read-only browsing/demo mode, but not for a PATCH that changes VIP status).
-- **#896**: Fix QA test failure: `TS2307: Cannot find module ../../../environments/environment or its corresponding type declarations.` in `frontend/src/app/services/faq.service.ts:4` and `frontend/src/app/services/moderation.service.ts:5` (per `qa_errors.log`). Both files sit at `frontend/src/app/services/` but use a 3-level-up relative import (`../../../environments/environment`), whereas every sibling service in that same directory (e.g. `notification.service.ts`, `user.service.ts`, `chat.service.ts`) correctly uses 2 levels up (`../../environments/environment`) to reach `frontend/src/environments/environment.ts`. Fix: correct both imports to `../../environments/environment`.
-- **#895**: build a new agent workflow to check for security issues and vulnerability  [enhancement]
-- **#878**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules. (Added `FontScaleService` (`frontend/src/app/services/font-scale.service.ts`), which persists a 80-150% scale to `localStorage` and sets `document.documentElement.style.fontSize` so every Tailwind `rem` utility across the app scales together. Wired a slider into `SettingsComponent` under a new Accessibility section, and injected the service in `AppComponent` so the persisted scale applies on boot. Verified: `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json` are clean, and `ng test --no-watch` passes 115/119 (28/28 spec files, 4 pre-existing skips) including the new `font-scale.service.spec.ts`. Follow-up review found `font-scale.service.ts` and `font-scale.service.spec.ts` were left untracked by git (`??`), so they were invisible to `git diff HEAD` and would have been silently dropped from the next commit even though `SettingsComponent`/`AppComponent` already depend on them; `git add`ed both to fix.)
-- **#875**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the *recurrence* was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in
-- **#872**: Identify and fix the specific test file causing ReferenceError: describe is not defined (need the failing test file path added to the chat).
-- **#871**: Fix QA test failure: `ReferenceError: describe is not defined` in test suites.
-- **#868**: Implement a calendar view for users to track all their upcoming
-- **#860**: Fix QA test failure: `ReferenceError: describe is not defined`. (Root cause was not a Jest/Jasmine config or test globals issue: `qa-loop.sh` was running `npx playwright test` from `frontend/`, which has no `playwright.config.ts`, so Playwright fell back to its default glob and picked up the Angular Vitest unit `*.spec.ts` files under `frontend/src`. Those files use bare `describe`/`it` (Vitest globals) or `import { vi } from vitest`, neither of which exist under the Playwright test runner, hence the `ReferenceError` and the Vitest cannot be imported... using require() errors. Fixed by pointing `qa-loop.sh` at the real Playwright suite in `e2e/` (its own `playwright.config.ts` + `tests/`); `ux-loop.sh` already targeted `e2e/` correctly. Verified no other script/CI invocation runs Playwright against `frontend/`.)
-- **#857**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time.
-- **#856**: Build automated push notification reminders (e.g., Your Spanish Learning Event starts in 15 minutes).
-- **#855**: Implement RSVP functionality allowing users to mark Attending or Interested.
-- **#853**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description.
-- **#852**: Build a centralized Events discovery feed for users to find upcoming scheduled activities.
-- **#850**: Build Private Parties feature (VIP/Pro tier) allowing invite-only audio rooms for specific friends or study partners.
-- **#848**: Build Language Parties live audio rooms dedicated to spoken practice in a group setting.
-- **#846**: Build a Groups Discovery tab within the chat interface for users to browse and join active group chats by topic.
-- **#845**: Implement real-time text correction tools specifically designed to work within Group Chats (allowing members to correct each [swarm-active]
-- **#844**: Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar). [swarm-active]
-- **#842**: Design and implement a Pro subscription tier mimicking Tandem Pro (unlimited translations, advanced visitor logs, nearby members visibility, ad-free).
-- **#841**: Implement in-app translations and language corrections with an interface mirroring [swarm-active]
-- **#838**: Build a Serious Learner mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals. [swarm-active]
-- **#836**: Build Recommended for You carousel based on mutual interests and activity levels. [swarm-active]
-- **#835**: Build Recommended for You carousel based on mutual interests and activity levels. [swarm-active]
-- **#832**: Add quick-action Send Message and Follow buttons on list items. [swarm-active]
-- **#831**: Add quick-action Send Message and Follow buttons on list items. [swarm-active]
-- **#822**: Build GPS-based Nearby search rendering distance in miles or kilometres. [swarm-active]
-- **#821**: Build GPS-based Nearby search rendering distance in miles or kilometres. [swarm-active]
-- **#820**: Implement Has Audio Intro required filter. [swarm-active]
-- **#819**: Implement Has Audio Intro required filter. [swarm-active]
-- **#813**: Add Serious Learner toggle to filter for active study streaks. [swarm-active]
-- **#812**: Add Serious Learner toggle to filter for active study streaks. [swarm-active]
-- **#807**: Build Terms of Service and Privacy Policy document viewers. [swarm-active]
-- **#801**: Add Restore Purchases workflow. [swarm-active]
-- **#800**: Add Restore Purchases workflow. [swarm-active]
-- **#785**: Add Do Not Disturb scheduling. [swarm-active]
-- **#784**: Add Do Not Disturb scheduling. [swarm-active]
-- **#777**: Add Hide Online Status and Hide VIP Status toggles. [swarm-active]
-- **#776**: Add Hide Online Status and Hide VIP Status toggles. [swarm-active]
-- **#773**: Implement Who can message me filters (Age, Gender, Native Language). [swarm-active]
-- **#772**: Implement Who can message me filters (Age, Gender, Native Language). [swarm-active]
-- **#759**: Implement Who Viewed Me visitor logs. [swarm-active]
-- **#758**: Implement Who Viewed Me visitor logs. [swarm-active]
-- **#757**: Build direct Send Message and Follow action buttons on external profiles. [swarm-active]
-- **#756**: Build direct Send Message and Follow action buttons on external profiles. [swarm-active]
-- **#742**: Build Profile Cover Photo upload and positioning. [swarm-active]
-- **#741**: Build Profile Cover Photo upload and positioning. [swarm-active]
-- **#714**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge). [swarm-active]
-- **#713**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge). [swarm-active]
-- **#712**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
-- **#711**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
-- **#710**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
-- **#709**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
-- **#708**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
-- **#707**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
-- **#703**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords. [swarm-active]
-- **#702**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords.
-- **#701**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords.
-- **#700**: Implement Request Correction from Group feature/message type for group chats. [swarm-active]
-- **#699**: Implement Request Correction from Group feature/message type for group chats. [swarm-active]
-- **#698**: Implement Request Correction from Group feature/message type for group chats. [swarm-active]
-- **#694**: Implement Translate Bio button on user profile cards and pages. [swarm-active]
-- **#693**: Implement Translate Bio button on user profile cards and pages. [swarm-active]
-- **#692**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
-- **#691**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
-- **#690**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
-- **#689**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
-- **#688**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles). [swarm-active]
-- **#687**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles). [swarm-active]
-- **#686**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience. [swarm-active]
-- **#685**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience. [swarm-active]
-- **#684**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience. [swarm-active]
-- **#680**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed. [swarm-active]
-- **#679**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed. [swarm-active]
-- **#672**: Build shared Voiceroom Notes panel where hosts/speakers can post key vocabulary or discussion topics. [swarm-active]
-- **#671**: Add haptic feedback for grading flashcards (e.g., success buzz for Known, gentle pulse for Learning). [swarm-active]
-- **#670**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed. [swarm-active]
-- **#669**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed. [swarm-active]
-- **#668**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed. [swarm-active]
-- **#664**: Implement AI-powered Conversation Starter suggestions in new chat windows based on [swarm-active]
-- **#663**: Implement AI-powered Conversation Starter suggestions in new chat windows based on [swarm-active]
-- **#662**: Implement AI-powered Conversation Starter suggestions in new chat windows based on [swarm-active]
-- **#661**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
-- **#660**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
-- **#659**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
-- **#655**: Implement a user-level Corrector Score based on ratings to display on profiles. [swarm-active]
-- **#654**: Implement a user-level Corrector Score based on ratings to display on profiles. [swarm-active]
-- **#653**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
-- **#652**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
-- **#651**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
-- **#650**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts. [swarm-active]
-- **#649**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts. [swarm-active]
-- **#648**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts. [swarm-active]
-- **#628**: Implement Word of the Day feature on the [swarm-active]
-- **#626**: Implement Word of the Day feature on the [swarm-active]
-- **#619**: Build Lessons module in Angular. [swarm-active]
-- **#618**: Build Lessons module in Angular. [swarm-active]
-- **#617**: Build Lessons module in Angular. [swarm-active]
-- **#616**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
-- **#615**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
-- **#614**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
-- **#607**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak). [swarm-active]
-- **#605**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak). [swarm-active]
-- **#601**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview). [swarm-active]
-- **#599**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview). [swarm-active]
-- **#596**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown. [swarm-active]
-- **#595**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown. [swarm-active]
-- **#594**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown. [swarm-active]
-- **#587**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
-- **#586**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
-- **#585**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
-- **#584**: Add Interests filter to Discovery search to match users with shared hobbies. [swarm-active]
-- **#583**: Add Interests filter to Discovery search to match users with shared hobbies. [swarm-active]
-- **#582**: Add Interests filter to Discovery search to match users with shared hobbies. [swarm-active]
-- **#571**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow. [swarm-active]
-- **#570**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow. [swarm-active]
-- **#569**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy. [swarm-active]
-- **#568**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy. [swarm-active]
-- **#565**: Build Help & About page displaying App Version, build number, and open-source licences. [swarm-active]
-- **#564**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads). [swarm-active]
-- **#562**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads). [swarm-active]
-- **#561**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send). [swarm-active]
-- **#553**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers. [swarm-active]
-- **#551**: Build Block Management page to manage and unblock users. [swarm-active]
-- **#545**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden). [swarm-active]
-- **#543**: Build Privacy Settings hub. [swarm-active]
-- **#541**: Build Privacy Settings hub. [swarm-active]
-- **#538**: Build Language Settings menu to switch UI language independently of study target. [swarm-active]
-- **#533**: Build Appearance Settings menu. [swarm-active]
-- **#520**: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously. [swarm-active]
-- **#519**: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously. [swarm-active]
-- **#517**: Build Forgot Password UI and NestJS email dispatch service. [swarm-active]
-- **#508**: Persist unsent chat messages and Moment drafts to `localStorage`. [swarm-active]
-- **#506**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text. [swarm-active]
-- **#504**: Design custom vector illustrations for No Messages, No Moments Found, and No Users Nearby. [swarm-active]
-- **#497**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics. [swarm-active]
-- **#481**: Implement 1-click ban and warning buttons. [swarm-active]
-- **#480**: Implement 1-click ban and warning buttons. [swarm-active]
-- **#461**: Setup Cypress inside `frontend/`. [swarm-active]
-- **#456**: Build NestJS background job calculating top 10 recommended language partners daily. [swarm-active]
-- **#453**: Build swipeable full-screen lightbox for Moments with multiple images. [swarm-active]
-- **#452**: Build swipeable full-screen lightbox for Moments with multiple images. [swarm-active]
-- **#449**: Add settings toggle to auto-play sequential voice notes in chat. [swarm-active]
-- **#443**: Build daily login modal granting 5 to 10 free virtual coins upon first daily login. [swarm-active]
-- **#440**: Fetch multiple-choice assessment questions from backend database. [swarm-active]
-- **#431**: Build Liked By modal listing all users who liked a Moment. [swarm-active]
-- **#429**: Implement Invite Co-Host split-screen video layout. [swarm-active]
-- **#418**: Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks. [swarm-active]
-- **#406**: Allow VIP users to select custom primary accent colours. [swarm-active]
-- **#402**: Allow VIP users to select custom primary accent colours. [swarm-active]
-- **#395**: Build My Stats dashboard tracking study hours, messages sent, and corrections made. [swarm-active]
-- **#389**: Allow spending virtual coins to unlock animated sticker packs. [swarm-active]
-- **#385**: Build Sticker Store UI. [swarm-active]
-- **#380**: Implement Download My Data button triggering a NestJS JSON export worker. [swarm-active]
-- **#379**: Implement Download My Data button triggering a NestJS JSON export worker. [swarm-active]
-- **#377**: Build dynamic Terms of Service and Privacy Policy document viewer. [swarm-active]
-- **#376**: Build dynamic Terms of Service and Privacy Policy document viewer. [swarm-active]
-- **#371**: Configure Angular Universal (SSR) for public Voiceroom preview pages. [swarm-active]
-- **#368**: Configure Angular Universal (SSR) for public Voiceroom preview pages. [swarm-active]

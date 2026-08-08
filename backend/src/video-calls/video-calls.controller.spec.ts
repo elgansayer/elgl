@@ -68,9 +68,7 @@ describe('VideoCallsController', () => {
   describe('acceptCall', () => {
     it('should join a room and return the sanitised response', async () => {
       const mockResponse = { token: 'livekit-join-token', roomName: 'room-1' };
-      (videoCallsService.joinRoom as jest.Mock).mockResolvedValue(
-        mockResponse,
-      );
+      (videoCallsService.joinRoom as jest.Mock).mockResolvedValue(mockResponse);
 
       const req = { user: mockUser } as any;
       const result = await controller.acceptCall(req, 'room-1');

@@ -71,9 +71,20 @@ export class RecommendationsController {
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string', example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789' },
-          displayName: { type: 'string', nullable: true, example: 'Taro Yamada' },
-          avatarUrl: { type: 'string', nullable: true, example: 'https://r2.example.com/avatars/taro.jpg' },
+          id: {
+            type: 'string',
+            example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+          },
+          displayName: {
+            type: 'string',
+            nullable: true,
+            example: 'Taro Yamada',
+          },
+          avatarUrl: {
+            type: 'string',
+            nullable: true,
+            example: 'https://r2.example.com/avatars/taro.jpg',
+          },
           nativeLanguage: { type: 'string', nullable: true, example: 'ja-JP' },
           targetLanguages: {
             type: 'array',
@@ -95,7 +106,10 @@ export class RecommendationsController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async getForYou(
     @Req() req: AuthenticatedRequest,
   ): Promise<RecommendedUserDto[]> {
@@ -129,9 +143,20 @@ export class RecommendationsController {
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string', example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789' },
-          displayName: { type: 'string', nullable: true, example: 'Maria Garcia' },
-          avatarUrl: { type: 'string', nullable: true, example: 'https://r2.example.com/avatars/maria.jpg' },
+          id: {
+            type: 'string',
+            example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+          },
+          displayName: {
+            type: 'string',
+            nullable: true,
+            example: 'Maria Garcia',
+          },
+          avatarUrl: {
+            type: 'string',
+            nullable: true,
+            example: 'https://r2.example.com/avatars/maria.jpg',
+          },
           nativeLanguage: { type: 'string', nullable: true, example: 'es' },
           targetLanguages: {
             type: 'array',
@@ -147,7 +172,10 @@ export class RecommendationsController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async getDaily(
     @Req() req: AuthenticatedRequest,
   ): Promise<RecommendedUserDto[]> {

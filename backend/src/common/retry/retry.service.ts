@@ -40,7 +40,8 @@ export class RetryService {
     options: RetryOptions = {},
   ): Promise<RetryResult<T>> {
     const maxRetries = options.maxRetries ?? RetryService.DEFAULT_MAX_RETRIES;
-    const baseDelayMs = options.baseDelayMs ?? RetryService.DEFAULT_BASE_DELAY_MS;
+    const baseDelayMs =
+      options.baseDelayMs ?? RetryService.DEFAULT_BASE_DELAY_MS;
     const maxDelayMs = options.maxDelayMs ?? RetryService.DEFAULT_MAX_DELAY_MS;
     const useJitter = options.jitter ?? true;
 
@@ -80,7 +81,7 @@ export class RetryService {
 
         this.logger.warn(
           `Operation failed with 429 (attempt ${attempt + 1}/${maxRetries + 1}), ` +
-          `retrying in ${delayMs}ms`,
+            `retrying in ${delayMs}ms`,
         );
 
         await this.sleep(delayMs);

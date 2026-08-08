@@ -237,8 +237,8 @@ describe('DataScrubbingService', () => {
     });
   });
 
-  describe('scrubEscrowTransactionRecords', () => {
-    it('scrubs each record in the array in-place', () => {
+  describe('scrubEscrowRecord (multiple)', () => {
+    it('scrubs each record in the array in-place via scrubEscrowRecord', () => {
       const records = [
         {
           payer_id: 'payer-1',
@@ -254,7 +254,9 @@ describe('DataScrubbingService', () => {
         },
       ];
 
-      service.scrubEscrowTransactionRecords(records);
+      for (const record of records) {
+        service.scrubEscrowRecord(record);
+      }
 
       expect(records[0].payer_id).toBe('payer-1');
       expect(records[0].reason).toBe('Lesson payment');

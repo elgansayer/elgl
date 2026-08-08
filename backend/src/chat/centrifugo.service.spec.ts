@@ -25,7 +25,12 @@ describe('CentrifugoService', () => {
   let service: CentrifugoService;
   let configService: ConfigService;
   let redisInstance: jest.Mocked<Redis>;
-  let mockLogger: { error: jest.Mock; warn: jest.Mock; info: jest.Mock; debug: jest.Mock };
+  let mockLogger: {
+    error: jest.Mock;
+    warn: jest.Mock;
+    info: jest.Mock;
+    debug: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockLogger = {
@@ -60,7 +65,7 @@ describe('CentrifugoService', () => {
     service = module.get<CentrifugoService>(CentrifugoService);
     configService = module.get<ConfigService>(ConfigService);
     service.onModuleInit();
-    redisInstance = (service as unknown as { redis: jest.Mocked<Redis> }).redis as jest.Mocked<Redis>;
+    redisInstance = (service as unknown as { redis: jest.Mocked<Redis> }).redis;
   });
 
   afterEach(() => {
@@ -108,7 +113,7 @@ describe('CentrifugoService', () => {
         multi: jest.fn(() => mockMulti),
         zadd: mockZadd,
         expire: mockExpire,
-      } as unknown as jest.Mocked<Redis>;
+      };
 
       const result = await service.checkConnectionRateLimit('user-1');
       expect(result).toBe(true);
@@ -132,7 +137,7 @@ describe('CentrifugoService', () => {
       };
       svc.redis = {
         multi: jest.fn(() => mockMulti),
-      } as unknown as jest.Mocked<Redis>;
+      };
 
       const result = await service.checkConnectionRateLimit('user-1');
       expect(result).toBe(false);

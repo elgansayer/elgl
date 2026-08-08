@@ -138,7 +138,8 @@ export const DISCOVERY_CACHE_PRIVATE_SHORT = DISCOVERY_CACHE_EDGE_MEDIUM;
 export const CACHE_TAG_DISCOVERY_PARTNERS = 'discovery:partners';
 export const CACHE_TAG_DISCOVERY_POTW = 'discovery:potw';
 export const CACHE_TAG_DISCOVERY_AUDIO_INTROS = 'discovery:audio-intros';
-export const CACHE_TAG_DISCOVERY_RECENT_NATIVE = 'discovery:recent-native-speakers';
+export const CACHE_TAG_DISCOVERY_RECENT_NATIVE =
+  'discovery:recent-native-speakers';
 export const CACHE_TAG_DISCOVERY_SPOTLIGHT = 'discovery:spotlight';
 export const CACHE_TAG_DISCOVERY_LANGUAGE_PAIR = 'discovery:language-pair';
 export const CACHE_TAG_DISCOVERY_LOCATION = 'discovery:location';

@@ -270,7 +270,7 @@ export class ModerationService {
         return { success: false, error: 'Failed to approve item' };
       }
 
-this.metricsService.recordTsModerationAction(
+      this.metricsService.recordTsModerationAction(
         'approve',
         dto.type,
         (Date.now() - startTime) / 1000,
@@ -279,11 +279,7 @@ this.metricsService.recordTsModerationAction(
       return { success: true };
     } catch (err) {
       this.metricsService.recordAdminReportResolution('approve', 'failure');
-      this.metricsService.recordTsModerationAction(
-        'approve',
-        dto.type,
-        0,
-      );
+      this.metricsService.recordTsModerationAction('approve', dto.type, 0);
       this.logger.warn(err, 'Failed to approve item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }
@@ -308,7 +304,7 @@ this.metricsService.recordTsModerationAction(
         return { success: false, error: 'Failed to reject item' };
       }
 
-this.metricsService.recordTsModerationAction(
+      this.metricsService.recordTsModerationAction(
         'reject',
         dto.type,
         (Date.now() - startTime) / 1000,
@@ -317,11 +313,7 @@ this.metricsService.recordTsModerationAction(
       return { success: true };
     } catch (err) {
       this.metricsService.recordAdminReportResolution('reject', 'failure');
-      this.metricsService.recordTsModerationAction(
-        'reject',
-        dto.type,
-        0,
-      );
+      this.metricsService.recordTsModerationAction('reject', dto.type, 0);
       this.logger.warn(err, 'Failed to reject item, degraded');
       return { success: false, error: 'Service temporarily unavailable' };
     }

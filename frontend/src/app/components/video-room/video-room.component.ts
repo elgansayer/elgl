@@ -1,6 +1,5 @@
 import { Component, inject, signal, computed, effect, viewChild, ElementRef } from '@angular/core';
 import { VideoTrack } from 'livekit-client';
-import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
@@ -10,7 +9,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
 
 @Component({
   selector: 'app-video-room',
-  imports: [TranslatePipe, LiveChatOverlayComponent, AppSkeletonLoaderComponent, JoyrideModule],
+  imports: [TranslatePipe, LiveChatOverlayComponent, AppSkeletonLoaderComponent],
   template: `
     @if (store.currentRoom(); as room) {
       <section
@@ -26,10 +25,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
             @if (isHost() && !hasCoHost()) {
               @if (eligibleSpeakers().length > 0) {
                 <span
-                  joyrideStep="videoClassroomStepInviteCoHost"
-                  [title]="'videoClassroomTour.stepInviteCoHostTitle' | t"
-                  [text]="'videoClassroomTour.stepInviteCoHostText' | t"
-                  stepPosition="bottom"
+                  
                 >
                   <button
                     (click)="showInvitePicker.set(!showInvitePicker())"
@@ -50,7 +46,6 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
               (click)="startOnboardingTour()"
               class="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm font-bold"
               [attr.aria-label]="'videoClassroomTour.helpBtn' | t"
-              [title]="'videoClassroomTour.helpBtn' | t"
             >
               ?
             </button>
@@ -89,10 +84,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
             class="relative bg-black rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center shadow-lg min-h-0"
             role="region"
             [attr.aria-label]="'videoRoom.hostBadge' | t"
-            joyrideStep="videoClassroomStepHostVideo"
-            [title]="'videoClassroomTour.stepHostVideoTitle' | t"
-            [text]="'videoClassroomTour.stepHostVideoText' | t"
-            stepPosition="top"
+            
           >
             @if (!hasHostVideo()) {
 <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 sm:gap-3 p-4 sm:p-6">
@@ -136,10 +128,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
               class="relative bg-black rounded-xl overflow-hidden border-2 border-blue-500 flex items-center justify-center shadow-lg animate-fade-in min-h-0"
               role="region"
               [attr.aria-label]="'videoRoom.coHostBadge' | t"
-              joyrideStep="videoClassroomStepCoHost"
-              [title]="'videoClassroomTour.stepCoHostTitle' | t"
-              [text]="'videoClassroomTour.stepCoHostText' | t"
-              stepPosition="top"
+              
             >
               @if (!hasCoHostVideo()) {
 <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 sm:gap-2 p-3 sm:p-4">

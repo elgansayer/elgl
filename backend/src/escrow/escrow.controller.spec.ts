@@ -168,7 +168,12 @@ describe('EscrowController', () => {
 
   describe('listTransactions', () => {
     it('should call service.listTransactions with defaults', async () => {
-      await controller.listTransactions(mockRequest, undefined, undefined, undefined);
+      await controller.listTransactions(
+        mockRequest,
+        undefined,
+        undefined,
+        undefined,
+      );
       expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
         mockUserId,
         undefined,
@@ -178,7 +183,7 @@ describe('EscrowController', () => {
     });
 
     it('should parse limit and offset query params', async () => {
-      await controller.listTransactions(mockRequest, 'held' as any, '10', '5');
+      await controller.listTransactions(mockRequest, 'held', '10', '5');
       expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
         mockUserId,
         'held',
@@ -262,9 +267,9 @@ describe('EscrowController', () => {
     it('should propagate list errors from service', async () => {
       const error = new Error('List error');
       mockEscrowService.listTransactions.mockRejectedValue(error);
-      await expect(
-        controller.listTransactions(mockRequest),
-      ).rejects.toThrow('List error');
+      await expect(controller.listTransactions(mockRequest)).rejects.toThrow(
+        'List error',
+      );
     });
   });
 });

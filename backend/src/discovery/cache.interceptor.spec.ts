@@ -19,15 +19,21 @@ describe('DiscoveryCacheInterceptor', () => {
   describe('cache directive constants', () => {
     it('DISCOVERY_CACHE_PUBLIC_LONG should have public CDN cache (no hardcoded tag)', () => {
       expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain('public');
-      expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain('max-age=3600');
-      expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain('s-maxage=86400');
+      expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain(
+        'max-age=3600',
+      );
+      expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain(
+        's-maxage=86400',
+      );
       expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain(
         'stale-while-revalidate=604800',
       );
       expect(DISCOVERY_CACHE_PUBLIC_LONG['Cache-Control']).toContain(
         'stale-if-error=86400',
       );
-      expect(DISCOVERY_CACHE_PUBLIC_LONG['CDN-Cache-Control']).toContain('public');
+      expect(DISCOVERY_CACHE_PUBLIC_LONG['CDN-Cache-Control']).toContain(
+        'public',
+      );
       expect(DISCOVERY_CACHE_PUBLIC_LONG['CDN-Cache-Control']).toContain(
         'max-age=86400',
       );
@@ -37,9 +43,15 @@ describe('DiscoveryCacheInterceptor', () => {
 
     it('DISCOVERY_CACHE_PUBLIC_SHORT should have public CDN cache (no hardcoded tag)', () => {
       expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Control']).toContain('public');
-      expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Control']).toContain('max-age=60');
-      expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Control']).toContain('s-maxage=600');
-      expect(DISCOVERY_CACHE_PUBLIC_SHORT['CDN-Cache-Control']).toContain('public');
+      expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Control']).toContain(
+        'max-age=60',
+      );
+      expect(DISCOVERY_CACHE_PUBLIC_SHORT['Cache-Control']).toContain(
+        's-maxage=600',
+      );
+      expect(DISCOVERY_CACHE_PUBLIC_SHORT['CDN-Cache-Control']).toContain(
+        'public',
+      );
       expect(DISCOVERY_CACHE_PUBLIC_SHORT['CDN-Cache-Control']).toContain(
         'max-age=600',
       );
@@ -48,22 +60,42 @@ describe('DiscoveryCacheInterceptor', () => {
 
     it('DISCOVERY_CACHE_EDGE_MEDIUM should have browser-private/CDN-public with Vary', () => {
       expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control']).toContain('private');
-      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control']).toContain('max-age=0');
-      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control']).toContain('must-revalidate');
-      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain('public');
-      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain('max-age=120');
-      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain('stale-while-revalidate=300');
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control']).toContain(
+        'max-age=0',
+      );
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Control']).toContain(
+        'must-revalidate',
+      );
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain(
+        'public',
+      );
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain(
+        'max-age=120',
+      );
+      expect(DISCOVERY_CACHE_EDGE_MEDIUM['CDN-Cache-Control']).toContain(
+        'stale-while-revalidate=300',
+      );
       expect(DISCOVERY_CACHE_EDGE_MEDIUM['Vary']).toBe('Authorization');
       expect(DISCOVERY_CACHE_EDGE_MEDIUM['Cache-Tag']).toBeUndefined();
     });
 
     it('DISCOVERY_CACHE_EDGE_SHORT should have browser-private/CDN-short with Vary', () => {
       expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain('private');
-      expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain('max-age=0');
-      expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain('must-revalidate');
-      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain('public');
-      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain('max-age=30');
-      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain('stale-while-revalidate=30');
+      expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain(
+        'max-age=0',
+      );
+      expect(DISCOVERY_CACHE_EDGE_SHORT['Cache-Control']).toContain(
+        'must-revalidate',
+      );
+      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain(
+        'public',
+      );
+      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain(
+        'max-age=30',
+      );
+      expect(DISCOVERY_CACHE_EDGE_SHORT['CDN-Cache-Control']).toContain(
+        'stale-while-revalidate=30',
+      );
       expect(DISCOVERY_CACHE_EDGE_SHORT['Vary']).toBe('Authorization');
     });
 
@@ -72,7 +104,9 @@ describe('DiscoveryCacheInterceptor', () => {
     });
 
     it('DISCOVERY_CACHE_NO_STORE should never cache', () => {
-      expect(DISCOVERY_CACHE_NO_STORE['Cache-Control']).toBe('private, no-store');
+      expect(DISCOVERY_CACHE_NO_STORE['Cache-Control']).toBe(
+        'private, no-store',
+      );
       expect(DISCOVERY_CACHE_NO_STORE['CDN-Cache-Control']).toBe(
         'private, no-store',
       );
@@ -107,7 +141,9 @@ describe('DiscoveryCacheInterceptor', () => {
     it('should set all directive headers on success', async () => {
       const setHeader = jest.fn();
       const context = createCallContext(setHeader);
-      const interceptor = new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG);
+      const interceptor = new DiscoveryCacheInterceptor(
+        DISCOVERY_CACHE_PUBLIC_LONG,
+      );
       const next = {
         handle: () => of('potw-data'),
       } as Parameters<typeof interceptor.intercept>[1];
@@ -127,7 +163,9 @@ describe('DiscoveryCacheInterceptor', () => {
     it('should set EDGE_MEDIUM headers with Vary for user-specific routes', async () => {
       const setHeader = jest.fn();
       const context = createCallContext(setHeader);
-      const interceptor = new DiscoveryCacheInterceptor(DISCOVERY_CACHE_EDGE_MEDIUM);
+      const interceptor = new DiscoveryCacheInterceptor(
+        DISCOVERY_CACHE_EDGE_MEDIUM,
+      );
       const next = {
         handle: () => of('partner-search-results'),
       } as Parameters<typeof interceptor.intercept>[1];
@@ -158,10 +196,7 @@ describe('DiscoveryCacheInterceptor', () => {
 
       await lastValueFrom(interceptor.intercept(context, next));
 
-      expect(setHeader).toHaveBeenCalledWith(
-        'Cache-Tag',
-        'discovery:partners',
-      );
+      expect(setHeader).toHaveBeenCalledWith('Cache-Tag', 'discovery:partners');
     });
 
     it('should set multiple Cache-Tag headers comma-separated', async () => {
@@ -195,7 +230,7 @@ describe('DiscoveryCacheInterceptor', () => {
 
       await lastValueFrom(interceptor.intercept(context, next));
 
-      const cacheTagCalls = (setHeader as jest.Mock).mock.calls.filter(
+      const cacheTagCalls = setHeader.mock.calls.filter(
         (call: [string, string]) => call[0] === 'Cache-Tag',
       );
       expect(cacheTagCalls).toHaveLength(0);

@@ -82,7 +82,9 @@ export class DiscoveryService {
         'EX',
         604800,
       );
-      this.logger.info(`Partner of the Week set for ${partnerIds.length} users`);
+      this.logger.info(
+        `Partner of the Week set for ${partnerIds.length} users`,
+      );
     } catch (err) {
       this.logger.error('Error calculating Partner of the Week', err);
     }
@@ -143,7 +145,11 @@ export class DiscoveryService {
         const key = `${target}:${native}`; // matches speak user's target natively AND are learning user's native
         pairSet.add(key);
         const bucket = pairIndex.get(key) ?? [];
-        bucket.push({ userId: user.id, nativeLang: native, targetLang: target });
+        bucket.push({
+          userId: user.id,
+          nativeLang: native,
+          targetLang: target,
+        });
         pairIndex.set(key, bucket);
       }
 
@@ -190,8 +196,9 @@ export class DiscoveryService {
           // Cache the same match list for every user in this pair bucket
           for (const entry of userEntries) {
             let filtered = matchIds.filter((id) => id !== entry.userId);
-            const blockedIds =
-              await this.safetyService.getBlockedAndBlockerIds(entry.userId);
+            const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
+              entry.userId,
+            );
             if (blockedIds.length > 0) {
               filtered = filtered.filter((id) => !blockedIds.includes(id));
             }
@@ -356,7 +363,10 @@ export class DiscoveryService {
         try {
           filtered = this.applyAdvancedFilters(filtered, query);
         } catch (err) {
-          this.logger.error('Advanced filters failed, returning unfiltered results', err);
+          this.logger.error(
+            'Advanced filters failed, returning unfiltered results',
+            err,
+          );
         }
       }
       let partnerSet = new Set<string>();
@@ -367,7 +377,10 @@ export class DiscoveryService {
         const partnerIds = this.parseStringArray(raw);
         partnerSet = new Set(partnerIds);
       } catch (err) {
-        this.logger.error('Failed to load partner-of-week IDs, continuing without PoW badges', err);
+        this.logger.error(
+          'Failed to load partner-of-week IDs, continuing without PoW badges',
+          err,
+        );
       }
       const enriched = filtered.map((u) => ({
         ...u,
@@ -891,7 +904,10 @@ export class DiscoveryService {
       const activeHostIds = await this.audioRoomsService.getActiveHostIds();
       return users.filter((u) => activeHostIds.includes(u.id));
     } catch (err) {
-      this.logger.error('Voice room active filter failed, returning unfiltered results', err);
+      this.logger.error(
+        'Voice room active filter failed, returning unfiltered results',
+        err,
+      );
       return users;
     }
   }

@@ -1,10 +1,10 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { SupabaseService, ReadingResourceRow, ReadingProgressRow } from '../supabase/supabase.service';
+import {
+  SupabaseService,
+  ReadingResourceRow,
+  ReadingProgressRow,
+} from '../supabase/supabase.service';
 import { ReadingEngineCacheService } from './reading-engine-cache.service';
 import { ReadingEngineCacheNamespace } from './interfaces/cache-rules.interface';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
@@ -145,7 +145,11 @@ export class ReadingEngineService {
     const rows = (data ?? []) as Array<Record<string, unknown>>;
     if (rows.length > ReadingEngineService.MAX_LIST_LIMIT) {
       this.logger.warn(
-        { requestedLimit: params.limit, enforcedLimit: sanitisedLimit, actualRows: rows.length },
+        {
+          requestedLimit: params.limit,
+          enforcedLimit: sanitisedLimit,
+          actualRows: rows.length,
+        },
         'Supabase returned more rows than the enforced limit; possible RLS bypass',
       );
     }
@@ -268,7 +272,9 @@ export class ReadingEngineService {
     return this.computeAndCacheProgress(userId);
   }
 
-  private async computeAndCacheProgress(userId: string): Promise<ReadingProgress> {
+  private async computeAndCacheProgress(
+    userId: string,
+  ): Promise<ReadingProgress> {
     const { data } = await this.db
       .from('reading_progress')
       .select()

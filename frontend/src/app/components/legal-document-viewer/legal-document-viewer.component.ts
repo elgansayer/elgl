@@ -9,6 +9,7 @@ export interface LegalSection {
 
 @Component({
   selector: 'app-legal-document-viewer',
+  imports: [DatePipe],
   host: {
     class: 'block min-h-screen bg-[#121212] text-slate-200',
   },

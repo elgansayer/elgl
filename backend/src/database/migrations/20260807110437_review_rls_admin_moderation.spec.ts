@@ -31,7 +31,9 @@ describe('RLS migration: Admin Moderation Dashboard (#2375)', () => {
     });
 
     it('starts with a migration header comment', () => {
-      expect(sql).toMatch(/Migration: Review RLS policies for Admin Moderation Dashboard/);
+      expect(sql).toMatch(
+        /Migration: Review RLS policies for Admin Moderation Dashboard/,
+      );
     });
 
     it('mentions the issue number', () => {
@@ -68,7 +70,9 @@ describe('RLS migration: Admin Moderation Dashboard (#2375)', () => {
     });
 
     it('covers login_history table with admin-gated SELECT', () => {
-      expect(sql).toMatch(/login_history_select_own_or_admin\b[\s\S]*?is_admin = true/);
+      expect(sql).toMatch(
+        /login_history_select_own_or_admin\b[\s\S]*?is_admin = true/,
+      );
     });
   });
 
@@ -103,7 +107,8 @@ describe('RLS migration: Admin Moderation Dashboard (#2375)', () => {
       expect(adminCheckCount).toBeGreaterThanOrEqual(13);
 
       // Verify the canonical pattern is used consistently
-      const canonicalPattern = /EXISTS\s*\(\s*SELECT 1 FROM public\.users u WHERE u\.id = auth\.uid\(\) AND u\.is_admin = true\s*\)/g;
+      const canonicalPattern =
+        /EXISTS\s*\(\s*SELECT 1 FROM public\.users u WHERE u\.id = auth\.uid\(\) AND u\.is_admin = true\s*\)/g;
       const canonicalCount = (sql.match(canonicalPattern) ?? []).length;
       expect(canonicalCount).toBe(adminCheckCount);
     });
@@ -115,8 +120,7 @@ describe('RLS migration: Admin Moderation Dashboard (#2375)', () => {
       const policyLines = sql
         .split('\n')
         .filter(
-          (line) =>
-            line.includes('CREATE POLICY') || line.includes('TO '),
+          (line) => line.includes('CREATE POLICY') || line.includes('TO '),
         );
       for (const line of policyLines) {
         if (line.includes('TO ')) {
@@ -146,7 +150,10 @@ describe('RLS migration: Admin Moderation Dashboard (#2375)', () => {
       // No policy should have USING (true) or WITH CHECK (true) for authenticated
       const usingClauses = sql.match(/USING\s*\([\s\S]*?\)/g) ?? [];
       for (const clause of usingClauses) {
-        const inner = clause.replace(/USING\s*\(\s*/, '').replace(/\s*\)$/, '').trim();
+        const inner = clause
+          .replace(/USING\s*\(\s*/, '')
+          .replace(/\s*\)$/, '')
+          .trim();
         // Only 'true' is the blanket bypass; admin-gated clauses contain
         // auth.uid() or is_admin checks
         if (inner === 'true') {

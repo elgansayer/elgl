@@ -89,10 +89,13 @@ describe('EconomyRateLimiterGuard', () => {
 
   describe('when no rate limit metadata is defined', () => {
     it('should allow the request through', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const handler = () => {};
       class TestController {}
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -105,7 +108,6 @@ describe('EconomyRateLimiterGuard', () => {
       windowSeconds: 60,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const handler = async () => {};
 
     class TestController {}
@@ -120,7 +122,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should allow request when count is within limit', async () => {
       redisMock.incr.mockResolvedValue(3);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
     });
@@ -128,7 +134,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should allow request and set expire on first request', async () => {
       redisMock.incr.mockResolvedValue(1);
 
-      const context = createMockExecutionContext('user-2', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-2',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).toHaveBeenCalledWith(
@@ -140,7 +150,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should not set expire on subsequent requests', async () => {
       redisMock.incr.mockResolvedValue(4);
 
-      const context = createMockExecutionContext('user-3', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-3',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).not.toHaveBeenCalled();
@@ -149,7 +163,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should block request when limit exceeded', async () => {
       redisMock.incr.mockResolvedValue(6);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
       await expect(guard.canActivate(context)).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
@@ -160,7 +178,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should log warning when rate limit is exceeded', async () => {
       redisMock.incr.mockResolvedValue(10);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       try {
         await guard.canActivate(context);
       } catch {
@@ -179,7 +201,11 @@ describe('EconomyRateLimiterGuard', () => {
     });
 
     it('should allow request if user is not authenticated', async () => {
-      const context = createMockExecutionContext(undefined, handler, TestController);
+      const context = createMockExecutionContext(
+        undefined,
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -188,7 +214,11 @@ describe('EconomyRateLimiterGuard', () => {
     it('should allow request and log error if Redis is unavailable', async () => {
       redisMock.incr.mockRejectedValue(new Error('Redis connection error'));
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(logger.error).toHaveBeenCalledWith(
@@ -209,18 +239,13 @@ describe('EconomyRateLimiterGuard', () => {
       };
 
       class DecoratorTest {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         testMethod() {}
       }
       const desc = Object.getOwnPropertyDescriptor(
         DecoratorTest.prototype,
         'testMethod',
       );
-      EconomyRateLimit(opts)(
-        DecoratorTest.prototype,
-        'testMethod',
-        desc!,
-      );
+      EconomyRateLimit(opts)(DecoratorTest.prototype, 'testMethod', desc!);
 
       const metadata = Reflect.getMetadata(
         ECONOMY_RATE_LIMIT_KEY,
@@ -237,18 +262,13 @@ describe('EconomyRateLimiterGuard', () => {
 
       // Setting metadata should overwrite any previous value
       class DecoratorTest2 {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         testMethod() {}
       }
       const desc2 = Object.getOwnPropertyDescriptor(
         DecoratorTest2.prototype,
         'testMethod',
       );
-      EconomyRateLimit(opts)(
-        DecoratorTest2.prototype,
-        'testMethod',
-        desc2!,
-      );
+      EconomyRateLimit(opts)(DecoratorTest2.prototype, 'testMethod', desc2!);
 
       const metadata = Reflect.getMetadata(
         ECONOMY_RATE_LIMIT_KEY,

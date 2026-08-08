@@ -11,7 +11,7 @@ describe('EscrowMetricsAggregator', () => {
   let mockRedisClient: Record<string, jest.Mock>;
 
   function createSelectChain() {
-    let eqResult: unknown = null;
+    const eqResult: unknown = null;
     const chain: Record<string, jest.Mock> = {
       select: jest.fn(),
       eq: jest.fn(),
@@ -99,7 +99,9 @@ describe('EscrowMetricsAggregator', () => {
     mockRedisClient.llen.mockResolvedValue(42);
     await aggregator.collectEscrowStats();
     expect(mockRedisClient.llen).toHaveBeenCalledWith('escrow_degraded_queue');
-    expect(mockMetricsService.setEscrowDegradedQueueSize).toHaveBeenCalledWith(42);
+    expect(mockMetricsService.setEscrowDegradedQueueSize).toHaveBeenCalledWith(
+      42,
+    );
   });
 
   it('should handle Redis errors gracefully', async () => {

@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { validationSchema } from './config/validation.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { SharedLoggerModule } from './common/logger/logger.module';
 import { RetryModule } from './common/retry/retry.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -76,7 +77,6 @@ import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 import { CloudflareModule } from './cloudflare/cloudflare.module';
-import { SharedLoggerModule } from './common/logger/logger.module';
 
 @Module({
   imports: [
@@ -102,6 +102,7 @@ import { SharedLoggerModule } from './common/logger/logger.module';
       verboseMemoryLeak: false,
       ignoreErrors: false,
     }),
+    SharedLoggerModule,
     RetryModule,
     SupabaseModule,
     LocationModule,
@@ -169,7 +170,6 @@ import { SharedLoggerModule } from './common/logger/logger.module';
     MetricsModule,
     ReadingEngineModule,
     CloudflareModule,
-    SharedLoggerModule,
   ],
   controllers: [AppController],
   providers: [

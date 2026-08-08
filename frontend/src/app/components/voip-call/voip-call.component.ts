@@ -36,13 +36,13 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               {{ displayName()[0]?.toUpperCase() || '?' }}
             </div>
             <h2 class="text-xl font-semibold text-white">{{ displayName() }}</h2>
-            <p class="text-text-muted text-sm mt-1">{{ callStatusText() }}</p>
+            <p class="text-text-muted text-sm mt-1">{{ callStatusText }}</p>
           </div>
 
           <!-- Call Timer (when connected) -->
           @if (callState() === 'connected') {
             <div class="text-3xl font-mono text-white mb-6">
-              {{ formattedDuration() }}
+              {{ formattedDuration }}
             </div>
           }
 
@@ -268,7 +268,7 @@ export class VoipCallComponent implements OnDestroy {
         message_type: 'text',
         text_content: 'Call accepted',
       });
-    } catch {
+    } catch (_error: unknown) {
       this.callState.set('ended');
     }
   }

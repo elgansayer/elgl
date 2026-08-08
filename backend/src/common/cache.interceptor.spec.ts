@@ -90,7 +90,9 @@ describe('CacheControlInterceptor', () => {
       expect(CACHE_PUBLIC_VERY_SHORT['Cache-Control']).toContain('max-age=30');
       expect(CACHE_PUBLIC_VERY_SHORT['Cache-Control']).toContain('s-maxage=60');
       expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain('public');
-      expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain('max-age=60');
+      expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain(
+        'max-age=60',
+      );
       expect(CACHE_PUBLIC_VERY_SHORT['CDN-Cache-Control']).toContain(
         'stale-while-revalidate=60',
       );
@@ -99,9 +101,13 @@ describe('CacheControlInterceptor', () => {
     it('CACHE_EDGE_VERY_SHORT should have edge-only very short cache with browser revalidation', () => {
       expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('private');
       expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('max-age=0');
-      expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain('must-revalidate');
+      expect(CACHE_EDGE_VERY_SHORT['Cache-Control']).toContain(
+        'must-revalidate',
+      );
       expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain('public');
-      expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain('max-age=30');
+      expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain(
+        'max-age=30',
+      );
       expect(CACHE_EDGE_VERY_SHORT['CDN-Cache-Control']).toContain(
         'stale-while-revalidate=15',
       );
@@ -222,10 +228,10 @@ describe('CacheControlInterceptor', () => {
     it('should set Cache-Tag header when cacheTags are provided', async () => {
       const setHeader = jest.fn();
       const context = createCallContext(setHeader);
-      const interceptor = new CacheControlInterceptor(
-        CACHE_EDGE_MEDIUM,
-        ['flashcards', 'flashcards:due'],
-      );
+      const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [
+        'flashcards',
+        'flashcards:due',
+      ]);
       const next = { handle: () => of([]) } as Parameters<
         typeof interceptor.intercept
       >[1];
@@ -246,17 +252,19 @@ describe('CacheControlInterceptor', () => {
       >[1];
 
       await lastValueFrom(interceptor.intercept(context, next));
-      expect(setHeader).not.toHaveBeenCalledWith('Cache-Tag', expect.anything());
+      expect(setHeader).not.toHaveBeenCalledWith(
+        'Cache-Tag',
+        expect.anything(),
+      );
     });
 
     it('should remove Cache-Tag header on error', async () => {
       const setHeader = jest.fn();
       const removeHeader = jest.fn();
       const context = createCallContext(setHeader, removeHeader);
-      const interceptor = new CacheControlInterceptor(
-        CACHE_EDGE_MEDIUM,
-        ['flashcards'],
-      );
+      const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [
+        'flashcards',
+      ]);
       const next = {
         handle: () => throwError(() => new Error('db error')),
       } as Parameters<typeof interceptor.intercept>[1];

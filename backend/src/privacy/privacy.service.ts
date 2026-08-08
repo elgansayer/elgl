@@ -259,7 +259,6 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
 
-
     return {
       export_generated_at: new Date().toISOString(),
       user_profile: userProfile ?? null,

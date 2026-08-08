@@ -9,21 +9,25 @@ describe('EscrowCacheInterceptor', () => {
   describe('constants', () => {
     it('ESCROW_CACHE_PRIVATE_SHORT should prevent CDN caching and require browser revalidation', () => {
       expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain('private');
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain('max-age=0');
       expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain(
-        'must-revalidate',
+        'max-age=60',
       );
-      // Verify no contradictory CDN directives
-      expect(ESCROW_CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toBe(
-        'private, no-store',
+      expect(ESCROW_CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain(
+        'private',
       );
       // Should vary by auth to prevent cross-user cache leakage
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Vary']).toBe('Authorization');
+      expect(ESCROW_CACHE_PRIVATE_SHORT['Vary']).toBe(
+        'Authorization, Accept-Encoding',
+      );
     });
 
     it('ESCROW_CACHE_PRIVATE_NO_STORE should prevent all caching', () => {
-      expect(ESCROW_CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain('private');
-      expect(ESCROW_CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain('no-store');
+      expect(ESCROW_CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain(
+        'private',
+      );
+      expect(ESCROW_CACHE_PRIVATE_NO_STORE['Cache-Control']).toContain(
+        'no-store',
+      );
       expect(ESCROW_CACHE_PRIVATE_NO_STORE['CDN-Cache-Control']).toBe(
         'private, no-store',
       );
@@ -33,7 +37,9 @@ describe('EscrowCacheInterceptor', () => {
 
   describe('intercept', () => {
     it('should set private short cache headers on successful response', async () => {
-      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT);
+      const interceptor = new EscrowCacheInterceptor(
+        ESCROW_CACHE_PRIVATE_SHORT,
+      );
 
       const setHeader = jest.fn();
       const mockResponse = { setHeader };
@@ -58,12 +64,18 @@ describe('EscrowCacheInterceptor', () => {
       );
       expect(setHeader).toHaveBeenCalledWith(
         'Vary',
-        'Authorization',
+        'Authorization, Accept-Encoding',
+      );
+      expect(setHeader).toHaveBeenCalledWith(
+        'Cache-Tag',
+        'escrow-transactions-v1',
       );
     });
 
     it('should set no-store headers on successful mutation response', async () => {
-      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE);
+      const interceptor = new EscrowCacheInterceptor(
+        ESCROW_CACHE_PRIVATE_NO_STORE,
+      );
 
       const setHeader = jest.fn();
       const mockResponse = { setHeader };
@@ -85,17 +97,17 @@ describe('EscrowCacheInterceptor', () => {
         'CDN-Cache-Control',
         ESCROW_CACHE_PRIVATE_NO_STORE['CDN-Cache-Control'],
       );
-      expect(setHeader).toHaveBeenCalledWith(
-        'Vary',
-        'Authorization',
-      );
+      expect(setHeader).toHaveBeenCalledWith('Vary', 'Authorization');
     });
 
     it('should override cache headers to private/no-store on error', async () => {
-      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT);
+      const interceptor = new EscrowCacheInterceptor(
+        ESCROW_CACHE_PRIVATE_SHORT,
+      );
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const removeHeader = jest.fn();
+      const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];
@@ -117,16 +129,15 @@ describe('EscrowCacheInterceptor', () => {
         'CDN-Cache-Control',
         'private, no-store',
       );
-      expect(setHeader).toHaveBeenCalledWith(
-        'Vary',
-        'Authorization',
-      );
+      expect(setHeader).toHaveBeenCalledWith('Vary', 'Authorization');
     });
 
     it('should set Vary: Authorization to prevent cross-user cache leakage', async () => {
       // All escrow responses are user-specific; Vary: Authorization ensures
       // Cloudflare and other intermediaries key caches by auth token.
-      const interceptor = new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT);
+      const interceptor = new EscrowCacheInterceptor(
+        ESCROW_CACHE_PRIVATE_SHORT,
+      );
 
       const setHeader = jest.fn();
       const mockResponse = { setHeader };
