@@ -24,6 +24,7 @@ import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component'
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
+import { SoundboardComponent } from '../soundboard/soundboard.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 import { SoundboardComponent } from '../soundboard/soundboard.component';
 

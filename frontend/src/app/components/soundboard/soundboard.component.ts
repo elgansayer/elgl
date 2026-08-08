@@ -5,6 +5,8 @@ import {
     signal,
     effect,
     computed,
+    untracked,
+    DestroyRef,
 } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -58,17 +60,14 @@ export interface SoundItem {
   ],
 })
 export class SoundboardComponent {
-  readonly soundboardService = inject(SoundboardService);
-  readonly centrifugoService = inject(CentrifugoService);
-  readonly authService = inject(AuthService);
-  readonly hapticFeedback = inject(HapticFeedbackService);
-
-  // --- Inputs ---
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly soundboardService = inject(SoundboardService);
+  private readonly centrifugoService = inject(CentrifugoService);
+  private readonly authService = inject(AuthService);
+  private readonly hapticFeedback = inject(HapticFeedbackService);
 
   readonly roomId = input<string>('');
   readonly hostUserId = input<string>('');
-
-  // --- State ---
 
   readonly canPlay = computed(() => {
     const currentUser = this.authService.currentUser();
@@ -82,15 +81,16 @@ export class SoundboardComponent {
 
   constructor() {
     effect(() => {
-      const roomId = this.roomId();
-      const hostUserId = this.hostUserId();
-      if (!roomId || !hostUserId) return;
+      const room = this.roomId();
+      if (!room) return;
+      untracked(() => void this.loadSounds());
+    });
 
-      // Load sounds
-      void this.loadSounds();
-
-      // Subscribe to Centrifugo events for soundboard playback
-      this.centrifugoService.subscribe(`room_${roomId}`, (data: unknown) => {
+    effect(() => {
+      const room = this.roomId();
+      if (!room) return;
+      const channel = `room_${room}`;
+      this.centrifugoService.subscribe(channel, (data: unknown) => {
         if (
           data &&
           typeof data === 'object' &&
@@ -114,14 +114,11 @@ export class SoundboardComponent {
 
   async playSound(sound: SoundItem): Promise<void> {
     if (!this.canPlay()) return;
-
     this.hapticFeedback.tap();
-
-    const roomId = this.roomId();
-    if (!roomId) return;
-
+    const roomIdValue = this.roomId();
+    if (!roomIdValue) return;
     try {
-      await this.soundboardService.playSound(roomId, sound.id);
+      await this.soundboardService.playSound(roomIdValue, sound.id);
     } catch {
       // Silently fail
     }
@@ -132,14 +129,10 @@ export class SoundboardComponent {
       this.playbackAudio.pause();
       this.playbackAudio = null;
     }
-
     const audio = new Audio(url);
     audio.volume = 0.6;
-    audio.play().catch(() => {
-      // Ignore autoplay restrictions
-    });
+    audio.play().catch(() => { /* ignore autoplay restrictions */ });
     this.playbackAudio = audio;
-
     audio.addEventListener('ended', () => {
       if (this.playbackAudio === audio) {
         this.playbackAudio = null;

@@ -89,6 +89,11 @@
         <span class="app-chip">{{ 'audioRoom.chipSubtitles' | t }}</span>
       </div>
 
+      <app-soundboard
+        [roomId]="room.id"
+        [hostUserId]="room.host_id"
+      ></app-soundboard>
+
       @if (showExclusivePicker() && authService.currentUser()?.is_vip) {
         <div class="flex flex-wrap gap-2 p-2 bg-surface-200 rounded-card">
           @for (emoji of exclusiveEmojis(); track emoji.emojiId) {

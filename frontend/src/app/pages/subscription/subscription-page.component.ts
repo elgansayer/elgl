@@ -21,7 +21,7 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
-    AppButtonSecondaryComponent,
+    
     AppPillComponent,
     AppGradientButtonComponent,
     RestorePurchasesButtonComponent,
