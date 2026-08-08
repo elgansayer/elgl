@@ -389,6 +389,33 @@ export class I18nService {
     'matchmaking.reasonActiveLearner': 'Active study streak',
     'matchmaking.reasonGeneral': 'General match',
 
+    // ---- Matchmaking Onboarding Tour ----
+    'matchmaking.onboarding.helpBtn': 'Show matchmaking tour',
+    'matchmaking.onboarding.overviewTitle': 'How Matchmaking Works',
+    'matchmaking.onboarding.overviewText':
+      'Our algorithm scores language partners based on complementary languages, shared interests, study streaks, and serious-learner status. Higher-scoring partners appear first.',
+    'matchmaking.onboarding.filterPillsTitle': 'Quick Filters',
+    'matchmaking.onboarding.filterPillsText':
+      'Switch between All Users, Serious Learners, Nearby partners, and Paid Practice with a single tap on these filter pills.',
+    'matchmaking.onboarding.languagePillsTitle': 'Language Selection',
+    'matchmaking.onboarding.languagePillsText':
+      'Tap a language chip to filter partners by the language they teach. Use the search icon to find additional languages.',
+    'matchmaking.onboarding.sortGenderTitle': 'Sort & Gender',
+    'matchmaking.onboarding.sortGenderText':
+      'Sort by best match, online now, nearest, or newest. VIP members can also filter partners by gender.',
+    'matchmaking.onboarding.ageDistanceTitle': 'Age & Distance',
+    'matchmaking.onboarding.ageDistanceText':
+      'Drag the age-range slider to set minimum and maximum age. VIP members can adjust the distance radius slider.',
+    'matchmaking.onboarding.globalSearchTitle': 'Global Search',
+    'matchmaking.onboarding.globalSearchText':
+      'Search partners globally by name, native language, target language, or proficiency level using the search bar.',
+    'matchmaking.onboarding.partnerCardsTitle': 'Partner Cards',
+    'matchmaking.onboarding.partnerCardsText':
+      'Each card shows a partner\'s display name, VIP badge, personality type, fluency indicators, shared interests, and match reason. Tap a card to start chatting.',
+    'matchmaking.onboarding.seriousModeTitle': 'Serious Learner Mode',
+    'matchmaking.onboarding.seriousModeText':
+      'Enable Serious Learner Mode to prioritise dedicated partners and boost your own visibility to other serious learners.',
+
     // Moments Feed Component
     'moments.title': 'Moments',
     'moments.subtitle': 'Share, correct, and learn in public.',
