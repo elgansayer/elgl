@@ -268,7 +268,7 @@ export class VoipCallComponent implements OnDestroy {
         message_type: 'text',
         text_content: 'Call accepted',
       });
-    } catch (_error: unknown) {
+    } catch {
       this.callState.set('ended');
     }
   }
