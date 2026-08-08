@@ -1,7 +1,10 @@
 /// <reference types="jest" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryService } from './discovery.service';
-import { DiscoveryDegradationService } from './discovery-degradation.service';
+import {
+  DiscoveryDegradationService,
+  DegradationMarker,
+} from './discovery-degradation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SafetyService } from '../safety/safety.service';
 import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
@@ -28,6 +31,15 @@ describe('DiscoveryService', () => {
   let mockSafetyService: any;
   let mockAudioRoomsService: any;
   let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
+  let mockDegradationService: {
+    executeWithBreaker: jest.Mock;
+    executeWithCascade: jest.Mock;
+    recordDegradationEvent: jest.Mock;
+    isAvailable: jest.Mock;
+    recordSuccess: jest.Mock;
+    recordFailure: jest.Mock;
+    getAllBreakerStates: jest.Mock;
+  };
 
   function createMockQueryBuilder() {
     const builder: any = {};
@@ -94,28 +106,35 @@ describe('DiscoveryService', () => {
       purgeByCacheTags: jest.fn().mockResolvedValue(true),
     };
 
+    mockDegradationService = {
+      executeWithBreaker: jest
+        .fn()
+        .mockImplementation(
+          (
+            _svc: string,
+            op: () => Promise<unknown>,
+            _fallback?: () => Promise<unknown>,
+            _marker?: DegradationMarker,
+          ) => op(),
+        ),
+      executeWithCascade: jest
+        .fn()
+        .mockImplementation(
+          (_svc: string, primary: () => Promise<unknown>) => primary(),
+        ),
+      recordDegradationEvent: jest.fn(),
+      isAvailable: jest.fn().mockReturnValue(true),
+      recordSuccess: jest.fn(),
+      recordFailure: jest.fn(),
+      getAllBreakerStates: jest.fn().mockReturnValue(new Map()),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DiscoveryService,
         {
           provide: DiscoveryDegradationService,
-          useValue: {
-            executeWithBreaker: jest
-              .fn()
-              .mockImplementation((_svc: string, op: () => Promise<unknown>) =>
-                op(),
-              ),
-            executeWithCascade: jest
-              .fn()
-              .mockImplementation(
-                (_svc: string, primary: () => Promise<unknown>) => primary(),
-              ),
-            recordDegradationEvent: jest.fn(),
-            isAvailable: jest.fn().mockReturnValue(true),
-            recordSuccess: jest.fn(),
-            recordFailure: jest.fn(),
-            getAllBreakerStates: jest.fn().mockReturnValue(new Map()),
-          },
+          useValue: mockDegradationService,
         },
         {
           provide: SupabaseService,
@@ -884,6 +903,51 @@ describe('DiscoveryService', () => {
 
       expect(result.map((u) => u.id).sort()).toEqual(['p1', 'p2']);
     });
+
+    // -- PostGIS RPC interests post-processing ---------------------------------
+    it('should filter RPC results by interests in post-processing when both lat/lon and interests are provided', async () => {
+      stubRpcResponse([
+        { id: 'p1', interests: ['music', 'travel'] },
+        { id: 'p2', interests: ['sports'] },
+        { id: 'p3', interests: ['music', 'cooking'] },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        interests: 'music',
+      });
+
+      expect(result.map((u) => u.id).sort()).toEqual(['p1', 'p3']);
+    });
+
+    // -- PostGIS RPC fallback to mock data -------------------------------------
+    it('should fall back to mock data when RPC returns empty and fallback query returns empty (double fallback)', async () => {
+      mockSupabaseClient.rpc.mockResolvedValue({ data: [], error: null });
+      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 35.6895,
+        longitude: 139.6917,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('should pass VIP gender filter as null to RPC when user is not VIP', async () => {
+      stubRpcResponse([{ id: 'p1' }]);
+
+      await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        gender: 'female',
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_gender: null }),
+      );
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -970,6 +1034,68 @@ describe('DiscoveryService', () => {
       });
 
       expect(result.map((u) => u.id)).toEqual(['close', 'mid', 'no-dist']);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // searchPartnersWithDelegation (degradation-aware PostGIS search)
+  // ---------------------------------------------------------------------------
+  describe('searchPartnersWithDegradation', () => {
+    it('should delegate to searchPartners and return non-degraded marker on success', async () => {
+      stubRpcResponse([{ id: 'p1', display_name: 'Nearby' }]);
+
+      const result = await service.searchPartnersWithDegradation('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.marker.degraded).toBe(false);
+      expect(result.marker.fallbackSource).toBe('none');
+    });
+
+    it('should return degraded marker with mock data when executeWithBreaker throws', async () => {
+      mockDegradationService.executeWithBreaker.mockRejectedValueOnce(
+        new Error('Circuit open'),
+      );
+
+      const result = await service.searchPartnersWithDegradation('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
+
+      expect(result.marker.degraded).toBe(true);
+      expect(result.marker.fallbackSource).toBe('mock');
+      expect(result.data).toEqual([]);
+    });
+
+    it('should return mock data when circuit breaker degrades and search returns empty', async () => {
+      const markerStub: DegradationMarker = {
+        degraded: true,
+        reason: 'PostGIS RPC timeout',
+        fallbackSource: 'basic_query',
+      };
+      mockDegradationService.executeWithBreaker.mockImplementationOnce(
+        (
+          _svc: string,
+          _primary: () => Promise<unknown>,
+          fallback: () => Promise<unknown>,
+          outMarker: DegradationMarker,
+        ) => {
+          Object.assign(outMarker, markerStub);
+          return fallback();
+        },
+      );
+
+      const result = await service.searchPartnersWithDegradation('user-1', null, {
+        latitude: 51.5074,
+        longitude: -0.1278,
+      });
+
+      expect(result.marker.degraded).toBe(true);
+      expect(result.marker.fallbackSource).toBe('mock');
+      expect(result.marker.reason).toContain('PostGIS RPC timeout');
+      expect(result.data).toEqual([]);
     });
   });
 
