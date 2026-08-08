@@ -417,10 +417,8 @@ export class ChatRoomComponent implements OnDestroy {
     if (!this.textInput.trim()) return;
     const text = this.textInput.trim();
     const replyToId = this.replyingTo()?.id;
-    this.textInput = '';
     this.mentionQuery.set(null);
     this.typingService.sendTyping(false);
-    this.clearChatDrafts();
 
     try {
       const sent = await this.chatService.sendMessage({
@@ -432,8 +430,12 @@ export class ChatRoomComponent implements OnDestroy {
       // Add locally if not duplicate
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
       this.replyingTo.set(null);
+      this.textInput = '';
+      this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send text message:', e);
+      // Restore draft so the unsent text is recoverable
+      this.draftService.saveChatDraft(this.roomId, text);
     }
   }
 
