@@ -629,7 +629,9 @@ describe('VocabularyStore', () => {
       expect(store.flashcardMap().size).toBe(0);
     });
 
-    it('should handle updateSrsLevel failure gracefully', async () => {
+    it('should reject and preserve original SRS level on server error when online', async () => {
+      vi.stubGlobal('navigator', { onLine: true });
+
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
 
@@ -644,43 +646,34 @@ describe('VocabularyStore', () => {
       expect(store.flashcardMap().get('hello')?.srs_level).toBe(1);
     });
 
-    it('should gracefully degrade translateWordOrSentence on failure', async () => {
+    it('should propagate HTTP errors from translateWordOrSentence', async () => {
       const promise = store.translateWordOrSentence('hello', 'es');
       httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush(
         { message: 'Service unavailable' },
         { status: 503, statusText: 'Service Unavailable' },
       );
 
-      const result = await promise;
-      expect(result.original_text).toBe('hello');
-      expect(result.translated_text).toBe('hello');
-      expect(result.definition).toContain('unavailable');
+      await expect(promise).rejects.toThrow();
     });
 
-    it('should gracefully degrade checkGrammar on failure', async () => {
+    it('should propagate HTTP errors from checkGrammar', async () => {
       const promise = store.checkGrammar('hola', 'es');
       httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`).flush(
         { message: 'Bad request' },
         { status: 400, statusText: 'Bad Request' },
       );
 
-      const result = await promise;
-      expect(result.original).toBe('hola');
-      expect(result.corrected).toBe('hola');
-      expect(result.errors_found).toBe(0);
+      await expect(promise).rejects.toThrow();
     });
 
-    it('should gracefully degrade scorePronunciation on failure', async () => {
+    it('should propagate HTTP errors from scorePronunciation', async () => {
       const promise = store.scorePronunciation('http://audio.url', 'hello', 'en');
       httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`).flush(
         { message: 'Internal error' },
         { status: 500, statusText: 'Internal Server Error' },
       );
 
-      const result = await promise;
-      expect(result.overall_score).toBe(85);
-      expect(result.breakdown.length).toBeGreaterThan(0);
-      expect(result.feedback_summary).toContain('unavailable');
+      await expect(promise).rejects.toThrow();
     });
   });
 
@@ -899,6 +892,170 @@ describe('VocabularyStore', () => {
       expect(req.request.body.language).toBeUndefined();
       req.flush({ overall_score: 100, breakdown: [], feedback_summary: '' });
       await promise;
+    });
+  });
+
+  describe('isDegraded and degradedReason signals', () => {
+    it('should initialise isDegraded as false', () => {
+      expect(store.isDegraded()).toBe(false);
+    });
+
+    it('should initialise degradedReason as empty string', () => {
+      expect(store.degradedReason()).toBe('');
+    });
+
+    it('should allow isDegraded to be set and read reactively', () => {
+      store.isDegraded.set(true);
+      expect(store.isDegraded()).toBe(true);
+    });
+
+    it('should allow degradedReason to be set and read reactively', () => {
+      store.degradedReason.set('Circuit breaker open');
+      expect(store.degradedReason()).toBe('Circuit breaker open');
+    });
+  });
+
+  describe('pendingReviewCards signal', () => {
+    it('should initialise pendingReviewCards as an empty array', () => {
+      expect(store.pendingReviewCards()).toEqual([]);
+    });
+
+    it('should allow setting and reading pending review cards', () => {
+      const cards = [mockFlashcard];
+      store.pendingReviewCards.set(cards);
+      expect(store.pendingReviewCards()).toEqual(cards);
+    });
+  });
+
+  describe('isOffline computed signal', () => {
+    it('should initialise isOffline as the inverse of navigator.onLine', () => {
+      // JSDOM defaults navigator.onLine to true, so !true === false
+      expect(store.isOffline()).toBe(false);
+    });
+
+    it('should reflect navigator.onLine when true at creation', () => {
+      // Recreate store after stubbing navigator
+      TestBed.resetTestingModule();
+      vi.stubGlobal('navigator', { onLine: true });
+
+      authSpy = { getAccessToken: vi.fn().mockReturnValue('mock-token') };
+      TestBed.configureTestingModule({
+        providers: [
+          VocabularyStore,
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: AuthService, useValue: authSpy },
+          { provide: SrsOfflineService, useValue: srsOfflineSpy },
+          { provide: SrsCircuitBreakerService, useValue: circuitBreakerSpy },
+        ],
+      });
+      const offlineStore = TestBed.inject(VocabularyStore);
+      httpMock = TestBed.inject(HttpTestingController);
+
+      expect(offlineStore.isOffline()).toBe(false);
+    });
+  });
+
+  describe('syncOfflineReviews', () => {
+    it('should delegate to SrsOfflineService.syncQueuedReviews', async () => {
+      srsOfflineSpy.syncQueuedReviews.mockResolvedValue({ synced: 3, failed: 0 });
+      const result = await store.syncOfflineReviews();
+      expect(result).toEqual({ synced: 3, failed: 0 });
+      expect(srsOfflineSpy.syncQueuedReviews).toHaveBeenCalled();
+    });
+
+    it('should report failed syncs correctly', async () => {
+      srsOfflineSpy.syncQueuedReviews.mockResolvedValue({ synced: 1, failed: 2 });
+      const result = await store.syncOfflineReviews();
+      expect(result.synced).toBe(1);
+      expect(result.failed).toBe(2);
+    });
+  });
+
+  describe('offline fallback in loadAllFlashcards', () => {
+    it('should fall back to cached flashcards when offline on error', async () => {
+      vi.stubGlobal('navigator', { onLine: false });
+      const cachedCards = [{ ...mockFlashcard, id: 'cached1', word_token: 'bonjour' }];
+      srsOfflineSpy.getCachedFlashcards.mockResolvedValue(cachedCards);
+
+      const promise = store.loadAllFlashcards();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
+        { message: 'Offline' },
+        { status: 0, statusText: 'Unknown Error' },
+      );
+      await promise;
+
+      expect(store.allFlashcards().length).toBe(1);
+      expect(store.allFlashcards()[0].word_token).toBe('bonjour');
+      expect(store.flashcardMap().get('bonjour')).toEqual(cachedCards[0]);
+    });
+
+    it('should not use cached fallback when online', async () => {
+      vi.stubGlobal('navigator', { onLine: true });
+      srsOfflineSpy.getCachedFlashcards.mockResolvedValue([{ ...mockFlashcard, id: 'cached2' }]);
+
+      const promise = store.loadAllFlashcards();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards`).flush(
+        { message: 'Error' },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
+      await promise;
+
+      expect(store.allFlashcards()).toEqual([]);
+    });
+  });
+
+  describe('offline fallback in loadDueReviews', () => {
+    it('should fall back to cached due reviews when offline on error', async () => {
+      vi.stubGlobal('navigator', { onLine: false });
+      const cachedDue = [{ ...mockFlashcard, id: 'due1', word_token: 'salut' }];
+      srsOfflineSpy.getCachedDueReviews.mockResolvedValue(cachedDue);
+
+      const promise = store.loadDueReviews();
+      httpMock.expectOne(`${environment.apiUrl}/flashcards/due`).flush(
+        { message: 'Offline' },
+        { status: 0, statusText: 'Unknown Error' },
+      );
+      await promise;
+
+      expect(store.dueReviews().length).toBe(1);
+      expect(store.dueReviews()[0].word_token).toBe('salut');
+    });
+  });
+
+  describe('offline optimistic SRS update', () => {
+    it('should optimistically update srs_level when offline', async () => {
+      vi.stubGlobal('navigator', { onLine: false, vibrate: undefined });
+
+      const cardAtLevel3 = { ...mockFlashcard, srs_level: 3 };
+      store.allFlashcards.set([cardAtLevel3]);
+      store.flashcardMap.set(new Map([['hello', cardAtLevel3]]));
+
+      const promise = store.updateSrsLevel('1', 4);
+      // The request is still made and fails; catch block handles offline
+      httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(
+        { message: 'Offline' },
+        { status: 0, statusText: 'Unknown Error' },
+      );
+      const result = await promise;
+
+      // estimateNewLevel(3, 4) => quality >= 4 && currentLevel >= 3 => 4
+      expect(result.srs_level).toBe(4);
+      expect(store.allFlashcards()[0].srs_level).toBe(4);
+      expect(store.flashcardMap().get('hello')?.srs_level).toBe(4);
+      expect(srsOfflineSpy.queueSrsReview).toHaveBeenCalledWith('1', 4, 4);
+    });
+
+    it('should throw when updateSrsLevel fails and offline queue is empty (no current card)', async () => {
+      vi.stubGlobal('navigator', { onLine: false, vibrate: undefined });
+
+      const promise = store.updateSrsLevel('nonexistent', 3);
+      httpMock.expectOne(`${environment.apiUrl}/flashcards/nonexistent/srs`).flush(
+        { message: 'Not found' },
+        { status: 404, statusText: 'Not Found' },
+      );
+
+      await expect(promise).rejects.toThrow('Failed to update SRS level');
     });
   });
 });
