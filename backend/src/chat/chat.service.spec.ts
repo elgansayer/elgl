@@ -136,17 +136,6 @@ describe('ChatService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('generateCentrifugoToken', () => {
-    it('should generate token via CentrifugoService', async () => {
-      const result = await service.generateConnectionToken('user-1');
-      expect(centrifugoService.signJwt).toHaveBeenCalledWith({
-        sub: 'user-1',
-        exp: expect.any(Number),
-      });
-      expect(result).toBe('mock-token');
-    });
-  });
-
   describe('sendMessage', () => {
     it('should save message and publish to Centrifugo channel', async () => {
       const dto: any = {

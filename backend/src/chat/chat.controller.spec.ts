@@ -29,7 +29,6 @@ describe('ChatController', () => {
         {
           provide: ChatService,
           useValue: {
-            generateConnectionToken: jest.fn(),
             sendMessage: jest.fn(),
             getRooms: jest.fn(),
             getMessages: jest.fn(),
@@ -110,20 +109,19 @@ describe('ChatController', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.getConnectionToken(null);
       expect(result).toBeNull();
-      expect(chatService.generateConnectionToken).not.toHaveBeenCalled();
+      expect(centrifugoService.generateConnectionToken).not.toHaveBeenCalled();
     });
 
     it('should return connection token when user is provided and rate limit allows', async () => {
-      const _mockToken = 'ws-token';
-      (chatService.generateConnectionToken as jest.Mock).mockResolvedValue(
-        _mockToken,
-      );
+      (centrifugoService.generateConnectionToken as jest.Mock).mockReturnValue({
+        token: 'ws-token',
+      });
 
       const result = await controller.getConnectionToken(mockUser());
       expect(centrifugoService.checkConnectionRateLimit).toHaveBeenCalledWith(
         'user-1',
       );
-      expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
+      expect(centrifugoService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );
       expect(result).toEqual({ token: 'ws-token' });

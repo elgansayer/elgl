@@ -70,8 +70,7 @@ export class ChatController {
       );
     }
 
-    const token =
-      (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
+    const { token } = this.centrifugoService.generateConnectionToken(user.id);
     return { token };
   }
 
