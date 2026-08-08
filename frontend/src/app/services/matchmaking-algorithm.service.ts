@@ -59,7 +59,7 @@ export class MatchmakingAlgorithmService {
     filters: SearchFilterParams,
   ): PartnerScore[] {
     return scored.filter(({ partner }) => {
-      if (filters.serious_learner_only && !partner.is_serious_learner) return false;
+      if (filters.serious_learner_only && !((partner.study_streak_days ?? 0) > 7 && (partner.correction_ratio ?? 0) >= 0.8)) return false;
       if (filters.gender && filters.gender !== partner.gender) return false;
       if (filters.availability_morning && !partner.availability_morning) return false;
       if (filters.availability_afternoon && !partner.availability_afternoon) return false;
@@ -169,11 +169,13 @@ export class MatchmakingAlgorithmService {
     return Math.round(WEIGHTS.activityStreak * ratio * 10) / 10;
   }
 
-  /** Bonus for serious learners, slightly boosted if current user is also one. */
+  /** Bonus for serious learners (study_streak_days > 7 AND correction_ratio >= 0.8), slightly boosted if current user is also one. */
   private scoreSeriousLearner(partner: UserProfile, currentUser: UserProfile): number {
-    if (!partner.is_serious_learner) return 0;
+    const isPartnerSerious = (partner.study_streak_days ?? 0) > 7 && (partner.correction_ratio ?? 0) >= 0.8;
+    if (!isPartnerSerious) return 0;
+    const isCurrentSerious = (currentUser.study_streak_days ?? 0) > 7 && (currentUser.correction_ratio ?? 0) >= 0.8;
     let bonus = WEIGHTS.seriousLearnerBonus;
-    if (currentUser.is_serious_learner) {
+    if (isCurrentSerious) {
       bonus = WEIGHTS.seriousLearnerBonus * 1.25;
     }
     return Math.round(bonus * 10) / 10;

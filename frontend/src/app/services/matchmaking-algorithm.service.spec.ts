@@ -64,7 +64,7 @@ describe('MatchmakingAlgorithmService', () => {
         native_languages: ['ja'],
         target_languages: ['en'],
         study_streak_days: 100,
-        is_serious_learner: true,
+        correction_ratio: 0.9,
         learning_goals: 'conversation,vocabulary',
       });
 
@@ -99,14 +99,14 @@ describe('MatchmakingAlgorithmService', () => {
       const current = makeUser({
         native_languages: ['en'],
         target_languages: ['ja'],
-        is_serious_learner: true,
+        correction_ratio: 0.9,
         learning_goals: 'conversation,vocabulary',
       });
       const perfect = makeUser({
         native_languages: ['ja'],
         target_languages: ['en'],
         study_streak_days: 400,
-        is_serious_learner: true,
+        correction_ratio: 0.9,
         learning_goals: 'conversation,vocabulary',
       });
 
@@ -195,15 +195,15 @@ describe('MatchmakingAlgorithmService', () => {
   describe('serious learner bonus', () => {
     it('should give bonus for serious learners', () => {
       const current = makeUser({ is_serious_learner: false });
-      const partner = makeUser({ is_serious_learner: true });
+      const partner = makeUser({ correction_ratio: 0.9 });
 
       const results = service.scoreAndRank(current, [partner]);
       expect(results[0].breakdown.seriousLearnerBonus).toBe(10);
     });
 
     it('should give extra bonus when both are serious learners', () => {
-      const current = makeUser({ is_serious_learner: true });
-      const partner = makeUser({ is_serious_learner: true });
+      const current = makeUser({ correction_ratio: 0.9 });
+      const partner = makeUser({ correction_ratio: 0.9 });
 
       const results = service.scoreAndRank(current, [partner]);
       expect(results[0].breakdown.seriousLearnerBonus).toBe(12.5);
@@ -222,7 +222,7 @@ describe('MatchmakingAlgorithmService', () => {
     it('should filter by seriousness', () => {
       const current = makeUser();
       const scored = service.scoreAndRank(current, [
-        makeUser({ id: 'serious', is_serious_learner: true }),
+        makeUser({ id: 'serious', correction_ratio: 0.9 }),
         makeUser({ id: 'not-serious', is_serious_learner: false }),
       ]);
 

@@ -222,11 +222,11 @@ export class DiscoveryService {
     }));
 
     // Apply serious_learner_only filter if requested
+    // Uses algorithmic criteria: study_streak_days > 7 AND correction_ratio >= 0.8
     if (filters.serious_learner_only) {
-      function hasSeriousLearner(user: UserProfile): user is UserProfile & { is_serious_learner: boolean } {
-        return 'is_serious_learner' in user;
-      }
-      enriched = enriched.filter((user) => hasSeriousLearner(user) && user.is_serious_learner);
+      enriched = enriched.filter(
+        (user) => (user.study_streak_days ?? 0) > 7 && (user.correction_ratio ?? 0) >= 0.8,
+      );
     }
 
     return enriched;

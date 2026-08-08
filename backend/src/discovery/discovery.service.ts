@@ -313,6 +313,11 @@ export class DiscoveryService {
       ]);
     }
 
+    // When the user has serious_learner_mode enabled, force serious learner filter
+    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
+      query.serious_learner_only = true;
+    }
+
     if (query.serious_learner_only) {
       queryBuilder = queryBuilder
         .gt('study_streak_days', 7)
@@ -321,11 +326,6 @@ export class DiscoveryService {
 
     if (query.level) {
       queryBuilder = queryBuilder.eq('proficiency_level', query.level);
-    }
-
-    // When the user has serious_learner_mode enabled, force serious learner filter
-    if (_currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
-      query.serious_learner_only = true;
     }
 
     if (_currentUserProfile?.is_vip && query.gender) {
@@ -622,6 +622,11 @@ export class DiscoveryService {
       queryBuilder = queryBuilder.contains('target_languages', [
         query.target_language,
       ]);
+    }
+
+    // When the user has serious_learner_mode enabled, force serious learner filter
+    if (currentUserProfile?.is_serious_learner || query.serious_learner_mode) {
+      query.serious_learner_only = true;
     }
 
     if (query.serious_learner_only) {

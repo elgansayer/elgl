@@ -194,6 +194,9 @@ export class DiscoveryController {
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
+    if (profile?.is_serious_learner === true) {
+      query.serious_learner_mode = true;
+    }
     const result = await this.discoveryService.getAudioIntros(
       user.id,
       profile,
