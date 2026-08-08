@@ -409,6 +409,8 @@
   "chatRoom.liveStatus": "Live Status",
   "chatRoom.loading": "Loading messages...",
   "chatRoom.loadingMessages": "Loading Messages",
+  "chatRoom.loadingStarters": "Generating conversation starters...",
+  "chatRoom.conversationStartersTitle": "Start the conversation",
   "chatRoom.lockedMessage": "Locked Message",
   "chatRoom.lockedTitle": "Locked Title",
   "chatRoom.mentionListLabel": "Mention List Label",

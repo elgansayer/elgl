@@ -102,6 +102,8 @@ export class ChatRoomComponent implements OnDestroy {
   );
   readonly blockedUserIds = signal<string[]>([]);
   readonly partnerLanguage = signal<string | null>(null);
+  readonly conversationStarters = signal<string[]>([]);
+  readonly conversationStartersLoading = signal<boolean>(false);
   readonly filteredMessages = computed(() => {
     const blocked = this.blockedUserIds();
     return this.messages().filter((m) => !blocked.includes(m.sender_id));
@@ -191,6 +193,9 @@ export class ChatRoomComponent implements OnDestroy {
     await this.setupRealTime();
     await this.loadParticipants();
     await this.resolvePartnerLanguage();
+    if (this.messages().length === 0) {
+      void this.loadConversationStarters();
+    }
   }
 
   /** Requests app unlock (biometric/PIN) before revealing a locked chat's messages. */
@@ -234,6 +239,30 @@ export class ChatRoomComponent implements OnDestroy {
     } catch (e) {
       console.error('Failed to resolve partner language:', e);
     }
+  }
+
+  /** Loads AI-generated conversation starters based on the chat partner's profile. */
+  async loadConversationStarters(): Promise<void> {
+    const currentUserId = this.authService.currentUser()?.id;
+    if (!currentUserId) return;
+    const partner = this.participants().find((m) => m.user_id !== currentUserId);
+    if (!partner) return;
+    this.conversationStartersLoading.set(true);
+    try {
+      const suggestions = await this.chatService.getConversationStarters(partner.user_id);
+      this.conversationStarters.set(suggestions);
+    } catch (e) {
+      console.error('Failed to load conversation starters:', e);
+    } finally {
+      this.conversationStartersLoading.set(false);
+    }
+  }
+
+  /** Sends one of the conversation starter suggestions as a chat message. */
+  sendStarter(text: string): void {
+    this.textInput = text;
+    void this.sendTextMessage();
+    this.conversationStarters.set([]);
   }
 
   async loadRoomDetails(): Promise<void> {

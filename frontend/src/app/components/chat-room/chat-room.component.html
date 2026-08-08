@@ -146,9 +146,29 @@
         </div>
       }
       @if (!isLoading() && messages().length === 0) {
-        <div class="pt-10 text-center text-sm text-text-secondary">
-          {{ 'chatRoom.noMessages' | t }}
-        </div>
+        @if (conversationStartersLoading()) {
+          <div class="pt-10 text-center text-sm text-text-secondary">
+            {{ 'chatRoom.loadingStarters' | t }}
+          </div>
+        } @else if (conversationStarters().length > 0) {
+          <div class="pt-6 space-y-3">
+            <p class="text-sm text-text-secondary text-center">{{ 'chatRoom.conversationStartersTitle' | t }}</p>
+            <div class="space-y-2">
+              @for (starter of conversationStarters(); track starter; let idx = $index) {
+                <button
+                  (click)="sendStarter(starter)"
+                  class="w-full text-start ps-3 pe-3 pt-2.5 pb-2.5 rounded-card border border-surface-100 bg-surface-100/50 hover:bg-primary/10 hover:border-primary/40 transition-colors text-sm text-text-primary leading-relaxed"
+                >
+                  <span class="text-primary me-2 text-xs align-middle">{{ idx + 1 }}</span>{{ starter }}
+                </button>
+              }
+            </div>
+          </div>
+        } @else {
+          <div class="pt-10 text-center text-sm text-text-secondary">
+            {{ 'chatRoom.noMessages' | t }}
+          </div>
+        }
       }
 
       @for (msg of filteredMessages(); track msg.id) {
