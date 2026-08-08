@@ -8,9 +8,16 @@ import { DiscoveryCacheInvalidationService } from './discovery-cache-invalidatio
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
+import { CorrectorScoreModule } from '../corrector-score/corrector-score.module';
 
 @Module({
-  imports: [AudioRoomsModule, UsersModule, SafetyModule, SupabaseModule],
+  imports: [
+    AudioRoomsModule,
+    UsersModule,
+    SafetyModule,
+    SupabaseModule,
+    CorrectorScoreModule,
+  ],
   controllers: [DiscoveryController],
   providers: [
     DiscoveryService,
