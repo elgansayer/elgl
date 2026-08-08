@@ -1,10 +1,25 @@
 import { Component, inject, computed } from '@angular/core';
+import { LottieComponent, AnimationOptions } from 'ngx-lottie';
 import { GiftAnimationService } from '../../services/gift-animation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
+/** Built-in Lottie animation assets bundled with the app. */
+const BUILTIN_ANIMATION_URLS: Record<string, string> = {
+  gift_rose: 'assets/animations/gift-rose.json',
+  gift_heart: 'assets/animations/gift-heart.json',
+};
+
+function resolveAnimationPath(
+  animationUrl: string | undefined,
+  giftId: string,
+): string | null {
+  if (animationUrl) return animationUrl;
+  return BUILTIN_ANIMATION_URLS[giftId] ?? null;
+}
+
 @Component({
   selector: 'app-gift-animation-overlay',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, LottieComponent],
   template: `
     @if (animationService.currentAnimation(); as anim) {
       <div
@@ -14,7 +29,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         aria-live="polite"
         [attr.aria-label]="'gift.broadcastDesc' | t: { sender: anim.senderName, receiver: anim.receiverName, giftName: anim.giftName, cost: anim.coinValue }"
       >
-        <!-- Full-screen SVG animation layer -->
+        <!-- Full-screen SVG particle layer (keeps existing particle effects) -->
         <div class="absolute inset-0 z-0" aria-hidden="true">
           @switch (anim.animationType) {
             @case ('confetti') {
@@ -169,18 +184,30 @@ import { TranslatePipe } from '../../services/translate.pipe';
           [class.animate-zoom-in]="animationService.isVisible()"
         >
           <div class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-4 sm:px-8 py-4 sm:py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 max-w-[90vw]">
-            <span class="text-5xl sm:text-7xl filter drop-shadow-lg">{{ anim.giftIcon }}</span>
+            <!-- Lottie animation or fallback emoji for the gift -->
+            @if (lottieOptions(); as opts) {
+              <ng-lottie
+                [options]="opts"
+                width="120"
+                height="120"
+                containerClass="drop-shadow-lg"
+              />
+            } @else {
+              <span class="text-5xl sm:text-7xl filter drop-shadow-lg">{{ anim.giftIcon }}</span>
+            }
             <h3 class="text-lg sm:text-2xl font-black tracking-wide text-center">
               {{ 'gift.broadcastTitle' | t: { giftName: anim.giftName } }}
             </h3>
-            <p class="text-xs sm:text-sm font-extrabold text-amber-100 text-center">              {{
+            <p class="text-xs sm:text-sm font-extrabold text-amber-100 text-center">
+              {{
                 'gift.broadcastDesc'
                   | t
                     : {
                         sender: anim.senderName,
                         receiver: anim.receiverName,
                         giftName: anim.giftName,
-                        cost: anim.coinValue,                      }
+                        cost: anim.coinValue,
+                      }
               }}
             </p>
           </div>
@@ -221,12 +248,22 @@ import { TranslatePipe } from '../../services/translate.pipe';
       .sparkle-particle,
       .float-particle,
       .premium-ring {
-        will-change: transform, opacity;      }
+        will-change: transform, opacity;
+      }
     `,
   ],
 })
 export class GiftAnimationOverlayComponent {
   readonly animationService = inject(GiftAnimationService);
+
+  /** Lottie options derived from the current animation's URL, or null to fall back to emoji. */
+  readonly lottieOptions = computed<AnimationOptions | null>(() => {
+    const anim = this.animationService.currentAnimation();
+    if (!anim) return null;
+    const path = resolveAnimationPath(anim.animationUrl, anim.id);
+    if (!path) return null;
+    return { path, loop: true, autoplay: true };
+  });
 
   readonly heartPath =
     'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
@@ -237,7 +274,6 @@ export class GiftAnimationOverlayComponent {
     '#00CED1', '#FF8C00', '#98D8C8', '#F7DC6F',
   ];
 
-  // Particles are derived from the animation signal so they regenerate on each new gift
   readonly confettiPieces = computed(() => {
     const anim = this.animationService.currentAnimation();
     const animId = anim?.id ?? 'default';
@@ -334,4 +370,3 @@ export class GiftAnimationOverlayComponent {
     return coords.join(' ');
   }
 }
-// SVG gift animation implementation for issue #423

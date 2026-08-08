@@ -7,6 +7,8 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { provideLottieOptions } from 'ngx-lottie';
+import lottie from 'lottie-web';
 import { routes } from './app.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
@@ -57,6 +59,7 @@ export const appConfig: ApplicationConfig = {
       },
       defaultLanguage: 'en-GB',
     }).providers ?? []),
+    provideLottieOptions({ player: () => lottie }),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     {
       provide: APP_INITIALIZER,

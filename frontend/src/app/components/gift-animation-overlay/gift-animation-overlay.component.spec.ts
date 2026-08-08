@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideLottieOptions } from 'ngx-lottie';
 
 import { GiftAnimationOverlayComponent } from './gift-animation-overlay.component';
 import { GiftAnimationService, GiftAnimationOverlay } from '../../services/gift-animation.service';
@@ -27,6 +28,7 @@ describe('GiftAnimationOverlayComponent', () => {
     TestBed.configureTestingModule({
       imports: [GiftAnimationOverlayComponent],
       providers: [
+        provideLottieOptions({ player: () => ({ loadAnimation: () => ({}) }) as unknown as typeof import('lottie-web').default }),
         {
           provide: TranslatePipe,
           useValue: mockTranslatePipe,
@@ -59,15 +61,24 @@ describe('GiftAnimationOverlayComponent', () => {
     expect(svg).not.toBeNull();
   });
 
-  it('should display gift icon and banners', () => {
+  it('should display gift icon fallback when no Lottie URL is available', () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
 
     const iconEl = fixture.nativeElement.querySelector('.text-7xl');
+    expect(iconEl).toBeTruthy();
     expect(iconEl.textContent.trim()).toBe('🌹');
 
     const buttons = fixture.nativeElement.querySelectorAll('button');
     expect(buttons.length).toBeGreaterThan(0);
+  });
+
+  it('should render ng-lottie when animationUrl is present', () => {
+    animationService.playAnimation({ ...mockOverlay, animationUrl: 'assets/test.json' });
+    fixture.detectChanges();
+
+    const lottieEl = fixture.nativeElement.querySelector('ng-lottie');
+    expect(lottieEl).not.toBeNull();
   });
 
   it('should have correct accessibility attributes', () => {
@@ -149,8 +160,15 @@ describe('GiftAnimationOverlayComponent', () => {
     animationService.playAnimation({ ...mockOverlay, giftName: 'Heart' });
     fixture.detectChanges();
 
-    // Particles should still exist
     const secondFloat = fixture.nativeElement.querySelector('.float-particle');
     expect(secondFloat).not.toBeNull();
+  });
+
+  it('should use built-in gift_heart animation URL', () => {
+    animationService.playAnimation({ ...mockOverlay, id: 'gift_heart', animationUrl: undefined });
+    fixture.detectChanges();
+
+    const lottieEl = fixture.nativeElement.querySelector('ng-lottie');
+    expect(lottieEl).not.toBeNull();
   });
 });
