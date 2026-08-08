@@ -13,6 +13,12 @@ def test_worker_image_reuses_the_node_base_image_user() -> None:
     assert "useradd --create-home --uid 1000 worker" not in containerfile
 
 
+def test_bootstrap_installs_a_self_contained_factory_package() -> None:
+    setup = (Path(__file__).parents[2] / "setup-debian.sh").read_text(encoding="utf-8")
+
+    assert "--no-editable" in setup
+
+
 def environment(**overrides: str) -> dict[str, str]:
     values = {
         "OPENCODE_GO_API_KEY": "not-a-real-key",
