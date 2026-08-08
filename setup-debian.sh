@@ -25,7 +25,7 @@ esac
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential ca-certificates curl git gh gnupg jq logrotate passt podman \
+  build-essential ca-certificates curl git gh gnupg jq libgtk-3-0t64 logrotate passt podman \
   python-is-python3 python3 python3-pip python3-venv rsync shellcheck tmux uidmap
 
 install -d -m 0755 /etc/apt/keyrings
@@ -72,6 +72,8 @@ for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend
     sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
   fi
 done
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" bash -c \
+  'cd "$1" && npm exec -- cypress install' _ "$FACTORY_STATE/repository/frontend"
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT/build-context"
 rsync -a --delete \
   --exclude=.mypy_cache --exclude=.pytest_cache --exclude=.venv --exclude=__pycache__ \

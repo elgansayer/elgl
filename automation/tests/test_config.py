@@ -17,6 +17,7 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     setup = (Path(__file__).parents[2] / "setup-debian.sh").read_text(encoding="utf-8")
 
     assert "--no-editable" in setup
+    assert "-- cypress install" in setup
 
 
 def test_competing_legacy_agent_workflows_are_retired() -> None:
@@ -33,6 +34,8 @@ def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
 
     assert "NoNewPrivileges=true" not in unit
     assert "RestrictSUIDSGID=true" not in unit
+
+
 
 
 def environment(**overrides: str) -> dict[str, str]:
