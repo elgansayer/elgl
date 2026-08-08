@@ -11,6 +11,7 @@ import { UserService } from '../../services/user.service';
 import { TypingService } from '../../services/typing.service';
 import { TypingIndicatorComponent } from '../primitives/typing-indicator/typing-indicator.component';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
@@ -61,6 +62,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
+  private readonly translationCache = inject(TranslationCacheService);
 
   id = input.required<string>();
 
@@ -584,9 +586,19 @@ export class ChatRoomComponent implements OnDestroy {
       return;
     }
 
+    const targetLang = this.i18n.currentLang().split('-')[0] || 'en';
+
+    // Check persistent translation cache first (issue #1037)
+    const cached = this.translationCache.get(msg.text_content, targetLang);
+    if (cached) {
+      this.translations.update((prev) => ({ ...prev, [msg.id]: cached }));
+      this.showTranslation.update((prev) => ({ ...prev, [msg.id]: true }));
+      return;
+    }
+
     try {
-      const targetLang = this.i18n.currentLang().split('-')[0] || 'en';
       const res = await this.chatService.translateText(msg.text_content, targetLang);
+      this.translationCache.set(msg.text_content, targetLang, res.translated_text);
       this.translations.update((prev) => ({
         ...prev,
         [msg.id]: res.translated_text,
