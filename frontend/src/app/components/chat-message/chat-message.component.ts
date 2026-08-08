@@ -10,11 +10,12 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
+import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent],
+  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent, GiftAnimationComponent],
   template: `
     @if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
@@ -128,6 +129,10 @@ import { environment } from '../../../environments/environment';
                   </p>
                 }
               </div>
+            }
+
+            @if (message().message_type === 'gift' && message().gift_payload) {
+              <app-gift-animation [giftPayload]="message().gift_payload!" />
             }
 
             @if (message().message_type === 'doodle' && message().media_url) {
