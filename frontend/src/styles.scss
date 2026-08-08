@@ -44,7 +44,7 @@
   }
 
   .app-screen {
-    @apply mx-auto max-w-2xl space-y-4;
+    @apply ms-auto me-auto max-w-2xl space-y-4;
   }
 
   .app-padded {
@@ -106,14 +106,14 @@
   }
 
   .word-token-new {
-    @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded px-0.5 transition-colors cursor-pointer;
+    @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
   }
 
   .word-token-learning {
-    @apply bg-vip/20 text-vip-light hover:bg-vip/40 border-b border-vip rounded px-0.5 transition-colors cursor-pointer;
+    @apply bg-vip/20 text-vip-light hover:bg-vip/40 border-b border-vip rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
   }
 
   .word-token-known {
-    @apply text-text-primary hover:bg-surface-100 rounded px-0.5 transition-colors cursor-pointer;
+    @apply text-text-primary hover:bg-surface-100 rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
   }
 }
