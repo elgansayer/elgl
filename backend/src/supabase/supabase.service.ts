@@ -86,6 +86,7 @@ type AudioRoomsRow = {
   room_name: string;
   title: string;
   party_type?: string | null;
+  event_id?: string | null;
   target_language: string;
   language_pair: string;
   topic_tag: string;
@@ -704,6 +705,7 @@ export interface Database {
           language_pair: string | null;
           max_participants: number | null;
           host_id: string;
+          is_cancelled?: boolean;
           proficiency?: string | null;
         };
         Insert: Partial<{
@@ -716,6 +718,7 @@ export interface Database {
           language_pair?: string | null;
           max_participants?: number | null;
           host_id: string;
+          is_cancelled?: boolean;
           proficiency?: string | null;
         }>;
         Update: Partial<{
@@ -728,6 +731,7 @@ export interface Database {
           language_pair?: string | null;
           max_participants?: number | null;
           host_id?: string;
+          is_cancelled?: boolean;
           proficiency?: string | null;
         }>;
         Relationships: [];
