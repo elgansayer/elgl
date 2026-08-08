@@ -142,48 +142,78 @@
         </div>
       }
 
-      <div
-        class="mt-4 grid grid-cols-2 gap-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 text-center sm:grid-cols-5"
-      >
-        <div>
+      <!-- Stats Grid -->
+      <div class="mt-4 grid grid-cols-2 gap-3 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-3 pb-3 sm:grid-cols-5">
+        <!-- Native Languages -->
+        <div class="flex flex-col items-center gap-1">
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.statNative' | t }}
           </p>
-          <p class="text-sm font-bold uppercase text-text-primary">
-            {{ profile()?.native_languages?.join(', ') }}
-          </p>
+          <div class="flex flex-wrap justify-center gap-1">
+            @if (profile()?.native_languages?.length) {
+              @for (code of profile()?.native_languages; track code) {
+                <span class="inline-flex items-center gap-1 rounded-full bg-surface-200 px-2 py-0.5 text-[11px] font-medium text-text-primary">
+                  <span>{{ getLanguageFlagIcon(code) }}</span>
+                  <span>{{ getLanguageName(code) }}</span>
+                </span>
+              }
+            } @else {
+              <span class="text-xs text-text-secondary">---</span>
+            }
+          </div>
         </div>
-        <div>
+        <!-- Target Languages -->
+        <div class="flex flex-col items-center gap-1">
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.statTarget' | t }}
           </p>
-          <p class="text-sm font-bold uppercase text-primary">
-            {{ profile()?.target_languages?.join(', ') }}
-          </p>
+          <div class="flex flex-wrap justify-center gap-1">
+            @if (profile()?.target_languages?.length) {
+              @for (code of profile()?.target_languages; track code) {
+                <span class="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
+                  <span>{{ getLanguageFlagIcon(code) }}</span>
+                  <span>{{ getLanguageName(code) }}</span>
+                </span>
+              }
+            } @else {
+              <span class="text-xs text-text-secondary">---</span>
+            }
+          </div>
         </div>
-        <div>
+        <!-- Study Streak -->
+        <div class="flex flex-col items-center gap-1">
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.statStreak' | t }}
           </p>
-          <p class="text-sm font-bold text-amber-600">🔥 {{ profile()?.study_streak_days }}d</p>
+          <div class="flex flex-col items-center">
+            <span class="text-sm font-bold text-amber-500">🔥 {{ profile()?.study_streak_days ?? 0 }}</span>
+            <span class="text-[10px] text-text-secondary">{{ 'profile.streakLabel' | t }}</span>
+          </div>
         </div>
-        <div>
+        <!-- Corrections -->
+        <div class="flex flex-col items-center gap-1">
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.statCorrections' | t }}
           </p>
-          <p class="text-sm font-bold text-emerald-600">{{ profile()?.correction_ratio }}x</p>
+          <div class="flex flex-col items-center">
+            <span class="text-sm font-bold text-emerald-500">{{ profile()?.correction_ratio ?? 0 }}x</span>
+            <span class="text-[10px] text-text-secondary">{{ 'profile.correctionsLabel' | t }}</span>
+          </div>
         </div>
-        <div>
+        <!-- Corrector Score -->
+        <div class="flex flex-col items-center gap-1">
           <p class="text-[10px] font-semibold uppercase text-text-secondary">
             {{ 'profile.correctorScore' | t }}
           </p>
-          <p class="text-sm font-bold text-primary">
+          <div class="flex flex-col items-center">
             @if (profile()?.corrector_score != null) {
-              {{ profile()?.corrector_score }} / 5
+              <span class="text-sm font-bold text-primary">
+                {{ profile()?.corrector_score }} / 5
+              </span>
             } @else {
-              {{ 'profile.noRatings' | t }}
+              <span class="text-xs text-text-secondary">{{ 'profile.noRatings' | t }}</span>
             }
-          </p>
+          </div>
         </div>
       </div>
 
