@@ -157,8 +157,8 @@ class SecureFileEditorTool(FileEditorTool):
         cls, conv_state: ConversationState
     ) -> Sequence[FileEditorTool]:
         tools = list(FileEditorTool.create(conv_state))
-        tools[0].executor = ContainedFileEditorExecutor(Path(conv_state.workspace.working_dir))
-        return tools
+        executor = ContainedFileEditorExecutor(Path(conv_state.workspace.working_dir))
+        return [tools[0].model_copy(update={"executor": executor})]
 
 
 register_tool(SecureTerminalTool.name, SecureTerminalTool)

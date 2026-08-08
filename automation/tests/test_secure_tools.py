@@ -39,3 +39,12 @@ def test_file_editor_accepts_relative_path_inside_worktree(tmp_path: Path) -> No
 
     assert not result.is_error
     assert "safe" in result.text
+
+
+def test_secure_tool_replaces_the_frozen_executor_by_copying() -> None:
+    source = (Path(__file__).parents[1] / "openhands_factory" / "secure_tools.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'model_copy(update={"executor": executor})' in source
+    assert "tools[0].executor =" not in source
