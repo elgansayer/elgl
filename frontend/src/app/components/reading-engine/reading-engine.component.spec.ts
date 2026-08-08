@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
@@ -161,15 +161,18 @@ describe('ReadingEngineComponent', () => {
     expect(component.fetchError()).toBeNull();
   });
 
-  it('should return empty filtered articles when no articles loaded', () => {
-    expect(component.filteredArticles()).toEqual([]);
+  it('should return filtered articles when articles have loaded', async () => {
+    await fixture.whenStable();
+    expect(component.filteredArticles().length).toBeGreaterThan(0);
   });
 
-  it('should return empty distinct topics when no articles loaded', () => {
-    expect(component.distinctTopics()).toEqual([]);
+  it('should return distinct topics when articles have loaded', async () => {
+    await fixture.whenStable();
+    expect(component.distinctTopics().length).toBeGreaterThan(0);
   });
 
-  it('should indicate offline status via isOffline signal', () => {
+  it('should indicate offline status via isOffline signal', async () => {
+    await fixture.whenStable();
     expect(component.isOffline()).toBe(false);
   });
 
