@@ -32,8 +32,8 @@ describe('AppearanceSettingsComponent', () => {
       translate: vi.fn((key: string) => key),
       setLanguage: vi.fn(),
       availableLanguages: [
-        { code: 'en-GB', flag: '🇬🇧', nativeName: 'English', name: 'English' },
-        { code: 'es', flag: '🇪🇸', nativeName: 'Español', name: 'Spanish' },
+        { isRtl: false, code: 'en-GB', flag: '🇬🇧', nativeName: 'English', name: 'English' },
+        { isRtl: false, code: 'es', flag: '🇪🇸', nativeName: 'Español', name: 'Spanish' },
       ],
     };
 

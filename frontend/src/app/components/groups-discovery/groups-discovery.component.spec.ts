@@ -58,6 +58,6 @@ describe('GroupsDiscoveryComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(component.error()).toBe('Failed to load groups');
+    expect(component['error']()).toBe('Failed to load groups');
   });
 });

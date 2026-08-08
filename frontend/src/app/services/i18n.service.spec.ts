@@ -7,7 +7,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('I18nService', () => {
   let service: I18nService;
-  let mockAuthService: jest.Mocked<Partial<AuthService>>;
+  let mockAuthService: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     localStorage.clear();

@@ -19,7 +19,6 @@ class NetworkStatusStub {
 }
 
 class OfflineReadingStub {
-  isOfflineMode = signal(false);
   async cacheArticles(): Promise<void> {}
   async getCachedArticles(): Promise<unknown[]> { return []; }
   async recordReadingHistory(): Promise<void> {}
@@ -36,7 +35,6 @@ describe('ReadingEngineComponent', () => {
     const mockVocabStore: Partial<VocabularyStore> = {
       allFlashcards: signal<Flashcard[]>([]),
       flashcardMap: signal(new Map()),
-      hasMoreFlashcards: signal(true) as ReturnType<typeof signal>,
       getWordStatus: () => ({
         level: 0,
         colorClass: 'bg-blue-500/20 text-blue-900',
@@ -167,20 +165,5 @@ describe('ReadingEngineComponent', () => {
 
   it('should return empty distinct topics when no articles loaded', () => {
     expect(component.distinctTopics()).toEqual([]);
-  });
-
-  it('should indicate offline status via isOffline signal', () => {
-    expect(component.isOffline()).toBe(false);
-  });
-
-  it('should load reading history', async () => {
-    await component.loadReadingHistory();
-    expect(component.readingHistory()).toEqual([]);
-  });
-
-  it('should format read date without throwing', () => {
-    const formatted = component.formatReadDate(Date.now());
-    expect(formatted).toBeTruthy();
-    expect(typeof formatted).toBe('string');
   });
 });

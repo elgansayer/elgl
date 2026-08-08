@@ -11,6 +11,9 @@ const MOCK_CARD: Flashcard = {
   translation: '丰富的',
   definition: 'existing in large quantities',
   srs_level: 1,
+  easiness_factor: 2.5,
+  repetitions: 0,
+  interval_days: 0,
   next_review_at: new Date().toISOString(),
   created_at: new Date().toISOString(),
 };

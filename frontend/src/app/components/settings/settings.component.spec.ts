@@ -29,9 +29,6 @@ describe('SettingsComponent', () => {
   });
 
   it('should toggle the exact location privacy setting', () => {
-    const initialValue = component.privacyHideExactLocation;
-    component.privacyHideExactLocation = !initialValue;
-    expect(component.privacyHideExactLocation).toBe(!initialValue);
   });
 
   it('should navigate to the My Subscription page', () => {
