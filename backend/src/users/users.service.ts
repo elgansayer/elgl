@@ -112,6 +112,27 @@ export class UsersService {
     return profile;
   }
 
+  async searchUsers(
+    query: string,
+    currentUserId: string,
+    limit = 10,
+  ): Promise<{ id: string; display_name: string; avatar_url: string | null }[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .ilike('display_name', `${query}%`)
+      .neq('id', currentUserId)
+      .order('display_name', { ascending: true })
+      .limit(limit);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data as { id: string; display_name: string; avatar_url: string | null }[];
+  }
+
   async getUserXp(userId: string): Promise<number> {
     return this.xpService.getTotalXp(userId);
   }

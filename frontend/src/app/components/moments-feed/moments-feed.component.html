@@ -376,20 +376,51 @@
                 }
 
                 <!-- Write Comment -->
-                <div class="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    [(ngModel)]="commentInputMap[moment.id]"
-                    (keyup.enter)="submitComment(moment)"
-                    [placeholder]="replyingToMap[moment.id] ? ('moments.commentReplyPlaceholder' | t) : ('moments.commentPlaceholder' | t)"
-                    class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none"
-                   [attr.aria-label]="'text input'"/>
-                  <button aria-label="Submit comment"
-                    (click)="submitComment(moment)"
-                    class="bg-purple-600 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"
-                  >
-                    ➤
-                  </button>
+                <div class="relative">
+                  @if ((mentionSuggestionsMap()[moment.id] ?? []).length > 0) {
+                    <ul
+                      id="comment-mention-listbox"
+                      role="listbox"
+                      [attr.aria-label]="'chatRoom.mentionListLabel' | t"
+                      class="absolute bottom-full start-0 mb-1 bg-surface-300 border border-surface-400 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto min-w-[180px]"
+                    >
+                      @for (member of mentionSuggestionsMap()[moment.id]; track member.id; let i = $index) {
+                        <li
+                          role="option"
+                          [id]="'comment-mention-option-' + moment.id + '-' + i"
+                          [attr.aria-selected]="i === (mentionActiveIndexMap()[moment.id] ?? 0)"
+                          [class.bg-surface-400]="i === (mentionActiveIndexMap()[moment.id] ?? 0)"
+                          class="px-3 py-2 text-xs text-text-primary cursor-pointer hover:bg-surface-400 flex items-center gap-2"
+                        >
+                          @if (member.avatar_url) {
+                            <img [src]="member.avatar_url" alt="" class="w-5 h-5 rounded-full object-cover" loading="eager" />
+                          }
+                          <span class="font-medium">&#64;{{ member.display_name }}</span>
+                        </li>
+                      }
+                    </ul>
+                  }
+                  <div class="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      [(ngModel)]="commentInputMap[moment.id]"
+                      (input)="onCommentInput($event, moment.id)"
+                      (keydown)="onCommentKeydown($event, moment)"
+                      [placeholder]="replyingToMap[moment.id] ? ('moments.commentReplyPlaceholder' | t) : ('moments.commentPlaceholder' | t)"
+                      class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none"
+                      [attr.aria-autocomplete]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'list' : null"
+                      [attr.aria-controls]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'comment-mention-listbox' : null"
+                      [attr.aria-expanded]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0"
+                      [attr.aria-activedescendant]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'comment-mention-option-' + moment.id + '-' + (mentionActiveIndexMap()[moment.id] ?? 0) : null"
+                      [attr.aria-label]="'text input'"
+                    />
+                    <button aria-label="Submit comment"
+                      (click)="submitComment(moment)"
+                      class="bg-purple-600 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"
+                    >
+                      ➤
+                    </button>
+                  </div>
                 </div>
               </div>
             }
