@@ -162,6 +162,8 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Send push notification using the existing NotificationsService
+    // Event reminders bypass category-specific toggle checks because the user
+    // has explicitly RSVP'd to the event and expects to be reminded.
     const title = `Event Reminder: ${eventTitle}`;
     const body = `Your event "${eventTitle}" starts in 15 minutes.`;
 
@@ -171,7 +173,6 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
           type: 'event_reminder',
           title,
           body,
-          category: 'groups',
         }),
       ),
     );
