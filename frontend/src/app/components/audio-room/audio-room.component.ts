@@ -25,6 +25,7 @@ import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
+import { SoundboardComponent } from '../soundboard/soundboard.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -43,6 +44,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     LiveChatOverlayComponent,
     TipHostModalComponent,
     VoiceroomNotesComponent,
+    SoundboardComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],

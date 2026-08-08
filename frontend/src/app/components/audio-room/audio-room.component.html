@@ -76,6 +76,13 @@
         </div>
       </div>
 
+      @if (room.host_id) {
+        <app-soundboard
+          [roomId]="room.id"
+          [hostUserId]="room.host_id"
+        ></app-soundboard>
+      }
+
       <div class="flex flex-wrap gap-1.5">
         <span class="app-chip">{{ 'audioRoom.chipListening' | t }}</span>
         <span class="app-chip">{{ 'audioRoom.chipQueue' | t }}</span>
