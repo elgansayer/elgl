@@ -5,8 +5,8 @@ import {
   Put,
   Body,
   Param,
-  Request,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { CallsService } from './calls.service';
 import { CreateGroupCallDto } from './dto/create-group-call.dto';
@@ -26,16 +26,14 @@ import {
   CACHE_NO_STORE,
   CACHE_TAG_CALLS,
 } from '../common/cache.interceptor';
-
-interface RequestWithUser {
-  user?: {
-    id?: string;
-  };
-}
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { User } from '@supabase/supabase-js';
 
 @ApiTags('Video Classrooms')
 @Controller('calls')
 @ApiBearerAuth()
+@UseGuards(SupabaseAuthGuard)
 export class CallsController {
   constructor(private readonly callsService: CallsService) {}
 
@@ -102,12 +100,11 @@ export class CallsController {
   @ApiResponse({ status: 400, description: 'Bad request - invalid callee ID.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async initiateCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User,
     @Body() dto: InitiateCallDto,
   ) {
-    const callerId = req.user?.id || 'dummy_caller_id';
     return this.callsService.initiateCall(
-      callerId,
+      user.id,
       dto.callee_id,
       dto.is_video,
     );
@@ -173,10 +170,10 @@ export class CallsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async createGroupCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User,
     @Body() dto: CreateGroupCallDto,
   ) {
-    const callerId = req.user?.id || 'dummy_caller_id';
+    const callerId = user.id;
     const participantIds = dto.participant_ids;
     const limit = dto.participant_limit;
     return this.callsService.createGroupCall(callerId, participantIds, limit);
@@ -212,8 +209,8 @@ export class CallsController {
       },
     },
   })
-  getActiveCalls(@Request() req: RequestWithUser) {
-    const userId = req.user?.id || 'dummy_caller_id';
+  getActiveCalls(@CurrentUser() user: User) {
+    const userId = user.id;
     return this.callsService.getActiveCalls(userId);
   }
 
@@ -250,10 +247,10 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   getActiveCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = user.id;
     return this.callsService.getActiveCall(userId, roomName);
   }
 
@@ -283,8 +280,8 @@ export class CallsController {
       },
     },
   })
-  getWaitingCalls(@Request() req: RequestWithUser) {
-    const userId = req.user?.id || 'dummy_caller_id';
+  getWaitingCalls(@CurrentUser() user: User) {
+    const userId = user.id;
     return this.callsService.getWaitingCalls(userId);
   }
 
@@ -337,8 +334,8 @@ export class CallsController {
     description:
       'Bad request - call not found, same call, or no waiting calls.',
   })
-  switchCall(@Request() req: RequestWithUser, @Body() dto: SwitchCallDto) {
-    const userId = req.user?.id || 'dummy_caller_id';
+  switchCall(@CurrentUser() user: User, @Body() dto: SwitchCallDto) {
+    const userId = user.id;
     return this.callsService.switchCall(
       userId,
       dto.current_room_name,
@@ -374,10 +371,10 @@ export class CallsController {
     description: 'Waiting call not found or no waiting calls.',
   })
   acceptWaitingCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = user.id;
     this.callsService.acceptWaitingCall(userId, roomName);
     return { success: true };
   }
@@ -407,10 +404,10 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   holdCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = user.id;
     this.callsService.holdCall(userId, roomName);
     return { success: true };
   }
@@ -440,10 +437,10 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   resumeCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = user.id;
     this.callsService.resumeCall(userId, roomName);
     return { success: true };
   }
@@ -473,10 +470,10 @@ export class CallsController {
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
   leaveCall(
-    @Request() req: RequestWithUser,
+    @CurrentUser() user: User,
     @Param('room_name') roomName: string,
   ) {
-    const userId = req.user?.id || 'dummy_caller_id';
+    const userId = user.id;
     this.callsService.leaveCall(userId, roomName);
     return { success: true };
   }

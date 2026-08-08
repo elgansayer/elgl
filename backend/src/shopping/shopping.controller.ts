@@ -1,3 +1,4 @@
+import { UseGuards } from '@nestjs/common';
 import {
   Controller,
   Get,
@@ -8,16 +9,19 @@ import {
   Req,
   HttpCode,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { ShoppingService } from './shopping.service';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { User } from '@supabase/supabase-js';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string };
 }
 
 @Controller('shopping')
+@UseGuards(SupabaseAuthGuard)
 export class ShoppingController {
   constructor(
     private readonly shoppingService: ShoppingService,
@@ -35,25 +39,25 @@ export class ShoppingController {
   }
 
   @Get('cart')
-  getCart(@Req() req: AuthenticatedRequest) {
-    return this.cartService.getCart(req.user.id);
+  getCart(@CurrentUser() user: User) {
+    return this.cartService.getCart(user.id);
   }
 
   @Post('cart')
   @HttpCode(200)
-  addToCart(@Req() req: AuthenticatedRequest, @Body() dto: AddToCartDto) {
-    return this.cartService.addItem(req.user.id, dto.itemId, dto.quantity);
+  addToCart(@CurrentUser() user: User, @Body() dto: AddToCartDto) {
+    return this.cartService.addItem(user.id, dto.itemId, dto.quantity);
   }
 
   @Delete('cart')
   @HttpCode(200)
-  removeFromCart(@Req() req: AuthenticatedRequest, @Body() dto: AddToCartDto) {
-    return this.cartService.removeItem(req.user.id, dto.itemId, dto.quantity);
+  removeFromCart(@CurrentUser() user: User, @Body() dto: AddToCartDto) {
+    return this.cartService.removeItem(user.id, dto.itemId, dto.quantity);
   }
 
   @Post('cart/checkout')
   @HttpCode(200)
-  async checkout(@Req() req: AuthenticatedRequest) {
-    return this.cartService.checkout(req.user.id);
+  async checkout(@CurrentUser() user: User) {
+    return this.cartService.checkout(user.id);
   }
 }

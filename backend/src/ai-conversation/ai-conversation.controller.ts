@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AiConversationService } from './ai-conversation.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 @Controller('ai-conversation')
+@UseGuards(SupabaseAuthGuard)
 export class AiConversationController {
   constructor(private readonly aiConversationService: AiConversationService) {}
 

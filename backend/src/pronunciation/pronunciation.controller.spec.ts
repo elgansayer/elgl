@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { PronunciationController } from './pronunciation.controller';
 import { PronunciationService } from './pronunciation.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 type AnalyseResult = Awaited<ReturnType<PronunciationService['analyse']>>;
 
@@ -27,7 +28,10 @@ describe('PronunciationController', () => {
           },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
 
     controller = moduleRef.get<PronunciationController>(
       PronunciationController,
