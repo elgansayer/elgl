@@ -442,6 +442,7 @@
   "chatRoom.voiceBtn": "Voice",
   "chatRoom.voiceMessage": "Voice message",
   "chatRoom.voiceNoteCaption": "Voice Note Caption",
+  "chatRoom.forwarded": "Forwarded",
   "chatSearch.noResults": "No results",
   "chatSearch.placeholder": "Placeholder",
   "chatSearch.searching": "Searching",

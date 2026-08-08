@@ -24,6 +24,7 @@ import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto'
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
+import { ForwardMessageDto } from './dto/forward-message.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
 import { UpdateMessageStatusDto } from './dto/update-message-status.dto';
@@ -282,6 +283,20 @@ export class ChatController {
     if (!user) return null;
     await this.chatService.viewMessageMedia(user.id, messageId);
     return { success: true };
+  }
+
+  @Post('messages/:messageId/forward')
+  async forwardMessage(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: ForwardMessageDto,
+  ): Promise<ChatMessage[]> {
+    if (!user) return [];
+    return await this.chatService.forwardMessage(
+      user.id,
+      messageId,
+      dto.room_ids,
+    );
   }
 
   @Delete('messages/:messageId')

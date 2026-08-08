@@ -303,16 +303,20 @@ export class I18nService {
     'discovery.startChat': 'Start chat',
     'discovery.noBio': 'No profile bio yet.',
     'discovery.noUsersNearby': 'No Users Nearby',
-    'discovery.noUsersHint': 'We couldn\'t find any language partners near your current filters. Try expanding your search or check back soon.',
+    'discovery.noUsersHint':
+      "We couldn't find any language partners near your current filters. Try expanding your search or check back soon.",
     'discovery.loadingPartners': 'Searching for language partners...',
     'discovery.noResultsTitle': 'No partners match your search',
-    'discovery.noResultsDescription': 'Try adjusting your filters or widening your search area to discover more language partners.',
+    'discovery.noResultsDescription':
+      'Try adjusting your filters or widening your search area to discover more language partners.',
     'discovery.noResultsAction': 'Reset Filters',
     'discovery.searchErrorTitle': 'Something went wrong',
-    'discovery.searchErrorDescription': 'We couldn\'t load partner results. Please check your connection and try again.',
+    'discovery.searchErrorDescription':
+      "We couldn't load partner results. Please check your connection and try again.",
     'discovery.searchErrorAction': 'Try Again',
     'discovery.searchError': 'Failed to load partners',
-    'discovery.searchErrorHint': 'There was a problem connecting to the server. Check your connection and try again.',
+    'discovery.searchErrorHint':
+      'There was a problem connecting to the server. Check your connection and try again.',
     'discovery.retrySearch': 'Retry',
     'discovery.streakBadge': '🔥 {{days}}d streak',
     'discovery.correctionBadge': '✅ {{ratio}}x corrections',
@@ -369,12 +373,18 @@ export class I18nService {
     'discovery.genderFemale': 'Female',
     'discovery.genderVipRequired': 'VIP required to filter by gender',
     'discovery.startTour': 'Tour',
-    'discovery.tour.filterPillsText': 'Use these filter pills to quickly switch between All Users, Serious Learners, Nearby partners, and Paid Practice.',
-    'discovery.tour.languagePillsText': 'Tap a language chip to filter partners by target language, or use the language picker to search for more languages.',
-    'discovery.tour.sortGenderText': 'Sort results by best match, online status, or distance. VIP users can also filter by gender.',
-    'discovery.tour.ageDistanceText': 'Adjust the age range and distance radius to narrow down your partner search. VIP users can fine-tune distance control.',
-    'discovery.tour.globalSearchText': 'Use the global search bar to search partners by name, native language, target language, or proficiency level.',
-    'discovery.tour.partnerCardsText': 'Browse partner cards showing display names, VIP badges, personality types, fluency indicators, and shared interests. Tap a card to start a chat.',
+    'discovery.tour.filterPillsText':
+      'Use these filter pills to quickly switch between All Users, Serious Learners, Nearby partners, and Paid Practice.',
+    'discovery.tour.languagePillsText':
+      'Tap a language chip to filter partners by target language, or use the language picker to search for more languages.',
+    'discovery.tour.sortGenderText':
+      'Sort results by best match, online status, or distance. VIP users can also filter by gender.',
+    'discovery.tour.ageDistanceText':
+      'Adjust the age range and distance radius to narrow down your partner search. VIP users can fine-tune distance control.',
+    'discovery.tour.globalSearchText':
+      'Use the global search bar to search partners by name, native language, target language, or proficiency level.',
+    'discovery.tour.partnerCardsText':
+      'Browse partner cards showing display names, VIP badges, personality types, fluency indicators, and shared interests. Tap a card to start a chat.',
     'tour.prev': 'Previous',
     'tour.next': 'Next',
     'tour.done': 'Done',
@@ -411,7 +421,7 @@ export class I18nService {
       'Search partners globally by name, native language, target language, or proficiency level using the search bar.',
     'matchmaking.onboarding.partnerCardsTitle': 'Partner Cards',
     'matchmaking.onboarding.partnerCardsText':
-      'Each card shows a partner\'s display name, VIP badge, personality type, fluency indicators, shared interests, and match reason. Tap a card to start chatting.',
+      "Each card shows a partner's display name, VIP badge, personality type, fluency indicators, shared interests, and match reason. Tap a card to start chatting.",
     'matchmaking.onboarding.seriousModeTitle': 'Serious Learner Mode',
     'matchmaking.onboarding.seriousModeText':
       'Enable Serious Learner Mode to prioritise dedicated partners and boost your own visibility to other serious learners.',
@@ -438,7 +448,8 @@ export class I18nService {
     'moments.loading': 'Loading moments...',
     'moments.empty': 'No moments yet in this feed.',
     'moments.noMomentsFound': 'No Moments Found',
-    'moments.noMomentsHint': 'Nothing to see here yet. Share a photo, voice note, or text update with the community!',
+    'moments.noMomentsHint':
+      'Nothing to see here yet. Share a photo, voice note, or text update with the community!',
     'moments.createFirstBtn': 'Create First Moment',
     'moments.pinnedBanner': 'Pinned moment (VIP 8 UKP / $10 USD)',
     'moments.memberFallback': 'Member',
@@ -461,7 +472,8 @@ export class I18nService {
     'common.optional': 'optional',
     'common.confirm': 'Confirm',
     'correction.explainPlaceholder': 'Explain grammar rule, nuance, or native alternative...',
-    'correction.editPlaceholder': 'Edit sentence to correct grammar, spelling, or natural phrasing...',
+    'correction.editPlaceholder':
+      'Edit sentence to correct grammar, spelling, or natural phrasing...',
     'common.toggleEnterToSend': 'Toggle enter to send',
     'common.toggleReadReceipts': 'Toggle read receipts',
     'common.toggleAutoTranslate': 'Toggle auto translate',
@@ -549,7 +561,8 @@ export class I18nService {
     'audioRoom.demoteBtn': 'Demote',
     'audioRoom.raisedHandsTitle': '✋ Raised hands',
     'audioRoom.approveSpeakerModalTitle': '✋ Speaker requests',
-    'audioRoom.approveSpeakerModalDesc': '{{count}} learner(s) are requesting to speak on stage. Approve them to grant microphone access.',
+    'audioRoom.approveSpeakerModalDesc':
+      '{{count}} learner(s) are requesting to speak on stage. Approve them to grant microphone access.',
     'audioRoom.approveSpeakerBtn': 'Approve',
     'audioRoom.wantsStageAccess': 'Wants to speak on stage',
     'audioRoom.noRaisedHands': 'No pending speaker requests.',
@@ -652,7 +665,8 @@ export class I18nService {
 
     // Video Classrooms Marketplace
     'classroomsMarketplace.title': '&#127979;&#65039; Video Classrooms',
-    'classroomsMarketplace.subtitle': 'Join live video language-learning sessions hosted by the community',
+    'classroomsMarketplace.subtitle':
+      'Join live video language-learning sessions hosted by the community',
     'classroomsMarketplace.hostingBadge': 'You are hosting',
     'classroomsMarketplace.filterAll': 'All Languages',
     'classroomsMarketplace.liveBadge': 'LIVE',
@@ -661,32 +675,42 @@ export class I18nService {
     'classroomsMarketplace.createdAt': 'Started {{date}}',
     'classroomsMarketplace.joinBtn': 'Join Classroom',
     'classroomsMarketplace.loadErrorTitle': 'Failed to load classrooms',
-    'classroomsMarketplace.loadErrorDescription': 'We could not load the classroom list. Please check your connection and try again.',
+    'classroomsMarketplace.loadErrorDescription':
+      'We could not load the classroom list. Please check your connection and try again.',
     'classroomsMarketplace.retryLoadBtn': 'Try Again',
     'classroomsMarketplace.emptyTitle': 'No Video Classrooms Available',
-    'classroomsMarketplace.emptyDescription': 'No live video classrooms match your filters. Start one or check back later!',
+    'classroomsMarketplace.emptyDescription':
+      'No live video classrooms match your filters. Start one or check back later!',
 
     // Video Classroom Onboarding Tour (ngx-joyride)
     'videoClassroomTour.helpBtn': 'Show guided tour',
     'videoClassroomTour.stepMarketplaceTitle': 'Video Classrooms',
-    'videoClassroomTour.stepMarketplaceText': 'Browse live video language-learning sessions hosted by community members. Join a room to practise speaking with native speakers.',
+    'videoClassroomTour.stepMarketplaceText':
+      'Browse live video language-learning sessions hosted by community members. Join a room to practise speaking with native speakers.',
     'videoClassroomTour.stepFiltersTitle': 'Filter by Language',
-    'videoClassroomTour.stepFiltersText': 'Use these language filters to find classrooms focused on the language pair you want to practise.',
+    'videoClassroomTour.stepFiltersText':
+      'Use these language filters to find classrooms focused on the language pair you want to practise.',
     'videoClassroomTour.stepRoomCardTitle': 'Join a Classroom',
-    'videoClassroomTour.stepRoomCardText': 'Each card shows a live classroom. Tap "Join Classroom" to enter and start participating in the video session.',
+    'videoClassroomTour.stepRoomCardText':
+      'Each card shows a live classroom. Tap "Join Classroom" to enter and start participating in the video session.',
     'videoClassroomTour.stepHostVideoTitle': 'Host Video',
-    'videoClassroomTour.stepHostVideoText': 'The host video stream is displayed here. You can watch the host and interact via the live chat overlay.',
+    'videoClassroomTour.stepHostVideoText':
+      'The host video stream is displayed here. You can watch the host and interact via the live chat overlay.',
     'videoClassroomTour.stepCoHostTitle': 'Split Screen',
-    'videoClassroomTour.stepCoHostText': 'When a co-host is invited, they appear in a split-screen view alongside the host for collaborative teaching.',
+    'videoClassroomTour.stepCoHostText':
+      'When a co-host is invited, they appear in a split-screen view alongside the host for collaborative teaching.',
     'videoClassroomTour.stepInviteCoHostTitle': 'Invite Co-Host',
-    'videoClassroomTour.stepInviteCoHostText': 'As the host, you can invite an approved speaker to become your co-host and share the screen.',
+    'videoClassroomTour.stepInviteCoHostText':
+      'As the host, you can invite an approved speaker to become your co-host and share the screen.',
 
     // Video Classroom Error Boundary
     'videoClassroomErrorBoundary.title': 'Video Classroom Error',
-    'videoClassroomErrorBoundary.description': 'An unexpected error occurred while loading this video classroom. Your connection has been preserved.',
+    'videoClassroomErrorBoundary.description':
+      'An unexpected error occurred while loading this video classroom. Your connection has been preserved.',
     'videoClassroomErrorBoundary.retryBtn': 'Try Again',
     'videoClassroomErrorBoundary.reportBtn': 'Report Crash',
-    'videoClassroomErrorBoundary.reportedMessage': 'Crash reported. Thank you for helping us improve!',
+    'videoClassroomErrorBoundary.reportedMessage':
+      'Crash reported. Thank you for helping us improve!',
 
     // 1:1 Video Call Component
     'video_call.waiting_for': 'Waiting for {{name}}...',
@@ -838,7 +862,8 @@ export class I18nService {
     'chat.incomingCallTitle': 'Incoming Call',
     'chatList.noMessages': 'No messages yet. Start a chat.',
     'chatList.noMessagesFound': 'No Messages',
-    'chatList.noMessagesHint': 'Your inbox is empty! Find language partners and start exchanging messages.',
+    'chatList.noMessagesHint':
+      'Your inbox is empty! Find language partners and start exchanging messages.',
     'chatList.findPartnersBtn': 'Find Partners',
     'chatList.browseDiscovery': 'Browse Discovery',
     'chatList.textMessage': 'Text message',
@@ -872,16 +897,16 @@ export class I18nService {
     'chatList.labelAssignFailed': 'Failed to assign label',
     'chatList.labelRemovedFromRoom': 'Label removed from chat',
     'chatList.labelRemoveFromRoomFailed': 'Failed to remove label from chat',
-    'groups_discovery_title': 'Discover Groups',
-    'groups_discovery_filter_topics': 'Filter groups by topic',
-    'groups_discovery_all_topics': 'All Topics',
-    'groups_discovery_members': 'members',
-    'groups_discovery_join': 'Join',
-    'groups_discovery_joined': 'Joined',
-    'groups_discovery_full': 'Full',
-    'groups_discovery_empty': 'No groups found. Create one or check back later!',
-    'groups_discovery_clear_filter': 'Show all topics',
-    'groups_discovery_create': 'Create Group',
+    groups_discovery_title: 'Discover Groups',
+    groups_discovery_filter_topics: 'Filter groups by topic',
+    groups_discovery_all_topics: 'All Topics',
+    groups_discovery_members: 'members',
+    groups_discovery_join: 'Join',
+    groups_discovery_joined: 'Joined',
+    groups_discovery_full: 'Full',
+    groups_discovery_empty: 'No groups found. Create one or check back later!',
+    groups_discovery_clear_filter: 'Show all topics',
+    groups_discovery_create: 'Create Group',
 
     // LingQ & Vocabulary Studio
     'vocabulary.title': '📚 Vocabulary studio',
@@ -919,7 +944,8 @@ export class I18nService {
     'vocabulary.pronunciationErrorAlert': 'Failed to score pronunciation. Please try again later.',
     // Audio-sync reader (LingQ immersion audio reader)
     'audioSync.immersionLessonTitle': 'Immersion reading lesson',
-    'audioSync.immersionDescription': 'Tap words to look up definitions and build your SRS vocabulary',
+    'audioSync.immersionDescription':
+      'Tap words to look up definitions and build your SRS vocabulary',
     'audioSync.speechSynthesisUnavailable': 'Speech synthesis is not available in your browser.',
     'audioSync.pauseImmersionAudio': '⏸️ Pause reading',
     'audioSync.playAudioLesson': '▶️ Play audio lesson',
@@ -933,16 +959,21 @@ export class I18nService {
     'readingEngine.tab.vocabulary': 'My Vocabulary',
     'readingEngine.tab.history': 'History',
     'readingEngine.loadingArticles': 'Loading reading articles',
-    'readingEngine.fetchError': 'Failed to load reading articles. Please check your connection and try again.',
+    'readingEngine.fetchError':
+      'Failed to load reading articles. Please check your connection and try again.',
     'readingEngine.errorTitle': 'Unable to load articles',
-    'readingEngine.errorDescription': 'Something went wrong while fetching reading content. Check your connection and try again.',
+    'readingEngine.errorDescription':
+      'Something went wrong while fetching reading content. Check your connection and try again.',
     'readingEngine.retryAction': 'Retry',
     'readingEngine.noArticlesTitle': 'No articles found',
-    'readingEngine.noArticlesDescription': 'No articles match your current filters. Try adjusting or clearing them.',
+    'readingEngine.noArticlesDescription':
+      'No articles match your current filters. Try adjusting or clearing them.',
     'readingEngine.noVocabularyTitle': 'No vocabulary saved yet',
-    'readingEngine.noVocabularyDescription': 'Start reading articles and tap on words to save them to your SRS flashcard deck.',
+    'readingEngine.noVocabularyDescription':
+      'Start reading articles and tap on words to save them to your SRS flashcard deck.',
     'readingEngine.noHistoryTitle': 'No reading history yet',
-    'readingEngine.noHistoryDescription': 'Your recently read articles will appear here. Start reading to build your history.',
+    'readingEngine.noHistoryDescription':
+      'Your recently read articles will appear here. Start reading to build your history.',
     'readingEngine.browseArticlesAction': 'Browse articles',
     'readingEngine.backToList': 'Back to articles',
     'readingEngine.saveArticle': 'Save for later',
@@ -958,10 +989,13 @@ export class I18nService {
     'readingEngine.wordCount': '{{count}} words',
     'readingEngine.wordCountShort': '{{count}} words',
     'readingEngine.vocabularyTabTitle': 'My saved vocabulary',
-    'readingEngine.vocabularyTabDescription': 'Words and phrases you have saved from reading articles for spaced repetition study.',
-    'readingEngine.vocabularyPlaceholder': 'Vocabulary entries will be displayed here from the backend. Start reading articles and tap words to build your list.',
+    'readingEngine.vocabularyTabDescription':
+      'Words and phrases you have saved from reading articles for spaced repetition study.',
+    'readingEngine.vocabularyPlaceholder':
+      'Vocabulary entries will be displayed here from the backend. Start reading articles and tap words to build your list.',
     'readingEngine.historyTabTitle': 'Reading history',
-    'readingEngine.historyTabDescription': 'Track your reading progress and revisit previously read articles.',
+    'readingEngine.historyTabDescription':
+      'Track your reading progress and revisit previously read articles.',
     'readingEngine.difficulty.beginner': 'Beginner',
     'readingEngine.difficulty.intermediate': 'Intermediate',
     'readingEngine.difficulty.advanced': 'Advanced',
@@ -972,7 +1006,8 @@ export class I18nService {
     'readingEngine.topic.technology': 'Technology',
     'readingEngine.offlineBanner': 'You are offline. Showing cached content.',
     'readingEngine.offlineCachedInfo': '{{count}} articles available offline',
-    'readingEngine.vocabularyOfflineNote': 'Vocabulary shown from local cache while offline. Some features may be limited.',
+    'readingEngine.vocabularyOfflineNote':
+      'Vocabulary shown from local cache while offline. Some features may be limited.',
     'readingEngine.historyOfflineNote': 'History shown from locally stored reading activity.',
     'readingEngine.historyListAriaLabel': 'Reading history list',
 
@@ -984,14 +1019,16 @@ export class I18nService {
     'vocabDisplay.addToSrs': '+ SRS',
     'vocabDisplay.addToSrsAriaLabel': 'Add {{word}} to spaced repetition flashcards',
     'vocabDisplay.emptyTitle': 'No vocabulary found',
-    'vocabDisplay.emptyDesc': 'Save some words from your conversations to build your vocabulary list.',
+    'vocabDisplay.emptyDesc':
+      'Save some words from your conversations to build your vocabulary list.',
     'vocabDisplay.contextSentence': 'Found in {{tag}} conversation',
     'vocabDisplay.addSuccess': 'Word added to SRS flashcards',
     'vocabDisplay.addError': 'Failed to add word to flashcards',
 
     // Deck management
     'suggest_flashcards.title': 'Word Suggestions',
-    'suggest_flashcards.placeholder': 'Enter a sentence or topic to get word suggestions for your flashcards...',
+    'suggest_flashcards.placeholder':
+      'Enter a sentence or topic to get word suggestions for your flashcards...',
     'suggest_flashcards.suggest_button': 'Suggest Words',
     'suggest_flashcards.loading': 'Analysing text for useful vocabulary...',
     'suggest_flashcards.error': 'Could not generate suggestions. Please try again.',
@@ -1023,7 +1060,8 @@ export class I18nService {
     'deck.addCardsTitle': 'Add cards to this deck',
     'deck.addBtn': '+ Add',
     'deck.cardsInDeck': 'Cards in deck ({{count}})',
-    'deck.noCardsAvailable': 'All flashcards are already in this deck. Save more words to add them!',
+    'deck.noCardsAvailable':
+      'All flashcards are already in this deck. Save more words to add them!',
     'deck.noCardsInDeck': 'No cards in this deck yet. Add cards from the list above.',
     'deck.removeAriaLabel': 'Remove {{word}} from deck',
     'deck.startReview': '▶ Start Review',
@@ -1052,7 +1090,8 @@ export class I18nService {
     'review.gradingGroupLabel': 'Rate your recall',
     'review.knownCount': '✓ {{count}} known',
     'review.emptyTitle': 'No reviews due',
-    'review.emptyDesc': 'Come back later when your flashcards are due for review, or start a new review session from a deck.',
+    'review.emptyDesc':
+      'Come back later when your flashcards are due for review, or start a new review session from a deck.',
     'review.loading': 'Loading review cards...',
     'review.goodCount': '• {{count}} good',
     'review.againCount': '↻ {{count}} again',
@@ -1198,7 +1237,8 @@ export class I18nService {
     'profile.visitorsBtn': 'Visitors',
     'profile.audioIntroBtn': 'Audio intro',
     'profile.audioIntroCardTitle': 'Audio Introduction',
-    'profile.audioIntroHint': 'Record a 30-second audio introduction to let others hear your voice.',
+    'profile.audioIntroHint':
+      'Record a 30-second audio introduction to let others hear your voice.',
     'profile.audioIntroRecord': 'Record Intro',
     'profile.audioIntroRerecord': 'Re-record',
     'profile.audioIntroStop': 'Stop Recording',
@@ -1345,7 +1385,7 @@ export class I18nService {
     'doodle.clearBtn': '🗑️ Clear canvas',
     'doodle.cancelBtn': 'Cancel',
     'doodle.sendBtn': '📤 Send doodle',
-'doodle.brushSizeAria': 'Brush size {{size}}px',
+    'doodle.brushSizeAria': 'Brush size {{size}}px',
 
     // Visual Diff
     'visualDiff.title': '✏️ Language Correction Diff',
@@ -1410,7 +1450,8 @@ export class I18nService {
     'safety.blockManagement.unblock': 'Unblock',
     'safety.blockManagement.unblockAria': 'Unblock {{name}}',
     'safety.blockManagement.emptyTitle': 'No blocked users',
-    'safety.blockManagement.emptyDesc': 'When you block someone, they will appear here. Blocked users cannot message you or see your activity.',
+    'safety.blockManagement.emptyDesc':
+      'When you block someone, they will appear here. Blocked users cannot message you or see your activity.',
     'safety.blockManagement.loadError': 'Failed to load blocked users',
     'safety.blockManagement.loadErrorDesc': 'Please check your connection and try again.',
     'safety.moderation.loadingTitle': 'Loading moderation queue...',
@@ -1473,7 +1514,8 @@ export class I18nService {
     'coinEconomy.dailyCheckIn': 'Daily Check-in',
     'coinEconomy.quickActions': 'Quick Actions',
     'coinEconomy.buyCoins': 'Buy Coins',
-    'coinEconomy.buyCoinsDesc': 'Purchase coin packages to unlock gifts, stickers, and premium features.',
+    'coinEconomy.buyCoinsDesc':
+      'Purchase coin packages to unlock gifts, stickers, and premium features.',
     'coinEconomy.buyCoinsBtn': 'Buy Coins',
     'coinEconomy.sendGift': 'Send Virtual Gifts',
     'coinEconomy.sendGiftDesc': 'Browse and send animated virtual gifts to your language partners.',
@@ -1488,7 +1530,8 @@ export class I18nService {
     'coinEconomy.vipDesc': 'Upgrade to VIP for premium features and exclusive content.',
     'coinEconomy.vipBtn': 'View Plans',
     'coinEconomy.escrowPayments': 'Escrow Payments',
-    'coinEconomy.escrowPaymentsDesc': 'Securely hold coins until both parties confirm the transaction.',
+    'coinEconomy.escrowPaymentsDesc':
+      'Securely hold coins until both parties confirm the transaction.',
     'coinEconomy.escrowPaymentsBtn': 'Manage Escrow',
     'coinEconomy.recentActivity': 'Recent Activity',
     'coinEconomy.popularGifts': 'Popular Gifts',
@@ -1499,9 +1542,11 @@ export class I18nService {
     'coinEconomy.emptyStickersTitle': 'No Sticker Packs',
     'coinEconomy.emptyStickersDesc': 'Browse the sticker store to unlock packs with your coins.',
     'coinEconomy.emptyTransactionsTitle': 'No Transactions Yet',
-    'coinEconomy.emptyTransactionsDesc': 'Your recent coin activity will appear here. Start by claiming your daily reward!',
+    'coinEconomy.emptyTransactionsDesc':
+      'Your recent coin activity will appear here. Start by claiming your daily reward!',
     'coinEconomy.emptyActivityTitle': 'No Recent Activity',
-    'coinEconomy.emptyActivityDesc': 'Your coin economy activity will appear here. Start by exploring gifts and sticker packs.',
+    'coinEconomy.emptyActivityDesc':
+      'Your coin economy activity will appear here. Start by exploring gifts and sticker packs.',
     'coinEconomy.transactionHistory': 'Transaction History',
     'coinEconomy.viewAllTransactions': 'View All',
     'coinEconomy.transaction.earn': 'Earned',
@@ -1515,7 +1560,8 @@ export class I18nService {
     'rooms.roomChat.title': '💬 Synchronised room chat and subtitles',
     'rooms.roomChat.showChatBtn': '💬 Show chat',
     'rooms.roomChat.showSubtitlesBtn': '🎙️ Show AI subtitles ({{count}})',
-    'rooms.roomChat.emptyChat': 'No messages in this live room yet. Say hello to the stage speakers!',
+    'rooms.roomChat.emptyChat':
+      'No messages in this live room yet. Say hello to the stage speakers!',
     'rooms.roomChat.emptySubtitles':
       'No live subtitles yet. When speakers talk on stage or use speech-to-text, closed captions broadcast here!',
     'rooms.roomChat.speakerCaptionPrefix': '🎙️ {{name}} (Live AI caption):',
@@ -1652,7 +1698,8 @@ export class I18nService {
     'admin.blocks.emptyTitle': 'No Blocked Users',
     'admin.blocks.emptyDesc': 'There are no blocked users in the system.',
     'admin.blocks.loadError': 'Failed to Load Blocked Users',
-    'admin.blocks.loadErrorDesc': 'An error occurred while loading blocked users. Please try again.',
+    'admin.blocks.loadErrorDesc':
+      'An error occurred while loading blocked users. Please try again.',
     'admin.blocks.unblock': 'Unblock',
 
     // Sticker Store
@@ -1676,6 +1723,7 @@ export class I18nService {
     'chatRoom.stickersDrawerTitle': 'Stickers',
     'chatRoom.stickerBtn': 'Sticker',
     'chatRoom.stickerCaption': 'Sticker',
+    'chatRoom.forwarded': 'Forwarded',
     'stickerStore.unlocking': 'Unlocking...',
     // Theme Selection
     'theme.light': 'Light',
@@ -1763,14 +1811,17 @@ export class I18nService {
     'escrow.detailSubtitle': 'View and manage your escrow transaction',
     'escrow.detailLoadError': 'We could not load the escrow details. Please try again.',
     'escrow.notFoundTitle': 'Escrow not found',
-    'escrow.notFoundDescription': 'This escrow transaction does not exist or you do not have permission to view it.',
+    'escrow.notFoundDescription':
+      'This escrow transaction does not exist or you do not have permission to view it.',
     'escrow.backToList': 'Back to escrow payments',
     'escrow.filterLabel': 'Filter escrows by status',
     'escrow.showAll': 'Show all escrows',
     'escrow.emptyTitle': 'No escrow payments yet',
-    'escrow.emptyDescription': 'Create an escrow to securely pay partners for language exchange lessons, translations, and more.',
+    'escrow.emptyDescription':
+      'Create an escrow to securely pay partners for language exchange lessons, translations, and more.',
     'escrow.emptyFilteredTitle': 'No {{ status }} escrows found',
-    'escrow.emptyFilteredDescription': 'You do not have any escrows with this status. Try viewing all escrows instead.',
+    'escrow.emptyFilteredDescription':
+      'You do not have any escrows with this status. Try viewing all escrows instead.',
     'escrow.coins': 'coins',
     'escrow.detailId': 'Transaction ID',
     'escrow.detailServiceType': 'Service Type',
@@ -1820,7 +1871,8 @@ export class I18nService {
     'escrow.amount': 'Amount (coins)',
     'escrow.amountHint': 'Enter the number of coins to hold in escrow',
     'escrow.description': 'Description',
-    'escrow.descriptionHint': 'Describe what this escrow payment is for (lesson, translation, etc.)',
+    'escrow.descriptionHint':
+      'Describe what this escrow payment is for (lesson, translation, etc.)',
     'escrow.serviceTypeLabel': 'Service type',
     'escrow.submitPayment': 'Submit Escrow Payment',
     'escrow.filterByStatus': 'Filter transactions by status',
@@ -1841,7 +1893,8 @@ export class I18nService {
     'escrow.emptyStateHint': 'Create a new escrow payment to get started',
     'escrow.pendingBanner': 'You have {{count}} pending escrow transaction(s)',
     'escrow.createSuccess': 'Escrow payment created successfully.',
-    'escrow.createError': 'Failed to create escrow payment. Please check the details and try again.',
+    'escrow.createError':
+      'Failed to create escrow payment. Please check the details and try again.',
     'escrow.releaseError': 'Failed to release escrow payment.',
     'escrow.refundError': 'Failed to refund escrow payment.',
     'escrow.disputeError': 'Failed to dispute escrow payment.',
@@ -1999,18 +2052,23 @@ export class I18nService {
     'languageSettings.title': 'Language Settings',
     'languageSettings.description': 'Choose the UI language independently of your study target.',
     'languageSettings.interfaceLanguage': 'Interface Language',
-    'languageSettings.interfaceLanguageDescription': 'This changes the language used for buttons, menus, and labels throughout the app. It does not affect your study languages.',
+    'languageSettings.interfaceLanguageDescription':
+      'This changes the language used for buttons, menus, and labels throughout the app. It does not affect your study languages.',
     'languageSettings.selectLabel': 'Select interface language',
     'languageSettings.applyBtn': 'Apply',
     'languageSettings.currentLang': 'Current: {{name}}',
     'languageSettings.studyLanguages': 'Study Languages',
-    'languageSettings.studyLanguagesDescription': 'Languages you want to learn. These are used for discovery matching and content recommendations.',
+    'languageSettings.studyLanguagesDescription':
+      'Languages you want to learn. These are used for discovery matching and content recommendations.',
     'languageSettings.nativeLanguages': 'Native Languages',
-    'languageSettings.nativeLanguagesDescription': 'Languages you speak natively. Partners who are learning these languages can find you.',
+    'languageSettings.nativeLanguagesDescription':
+      'Languages you speak natively. Partners who are learning these languages can find you.',
     'languageSettings.addStudyLanguage': 'Add study language',
     'languageSettings.addNativeLanguage': 'Add native language',
-    'languageSettings.noStudyLanguages': 'No study languages set. Add one to find learning partners.',
-    'languageSettings.noNativeLanguages': 'No native languages set. Add one so partners can find you.',
+    'languageSettings.noStudyLanguages':
+      'No study languages set. Add one to find learning partners.',
+    'languageSettings.noNativeLanguages':
+      'No native languages set. Add one so partners can find you.',
     'languageSettings.removeLanguage': 'Remove {{lang}}',
     'languageSettings.saveChanges': 'Save Changes',
     'languageSettings.discard': 'Discard',
@@ -2056,7 +2114,8 @@ export class I18nService {
     'gdpr.deleteAccountBtn': 'Delete My Account',
     'gdpr.deleteSuccess': 'Account deletion initiated. Check your email for confirmation.',
     'gdpr.cancelDeletionSection': 'Cancel Account Deletion',
-    'gdpr.cancelDeletionInfo': 'Your account is currently scheduled for deletion. You can cancel this request during the 30-day grace period.',
+    'gdpr.cancelDeletionInfo':
+      'Your account is currently scheduled for deletion. You can cancel this request during the 30-day grace period.',
     'gdpr.cancelDeletionBtn': 'Cancel Account Deletion',
     'gdpr.cancelDeletionSuccess': 'Account deletion has been cancelled successfully.',
 
@@ -2065,7 +2124,8 @@ export class I18nService {
     'settings.gdprHubDesc': 'Request your data archive or manage account deletion.',
     'settings.linkedAccountsSection': 'Linked Accounts',
     'settings.linkedAccounts.title': 'Linked Accounts',
-    'settings.linkedAccounts.subtitle': 'Connect your social accounts to sign in with multiple providers and keep your account secure.',
+    'settings.linkedAccounts.subtitle':
+      'Connect your social accounts to sign in with multiple providers and keep your account secure.',
     'settings.linkedAccounts.active': 'Connected',
     'settings.linkedAccounts.inactive': 'Not connected',
     'settings.linkedAccounts.unlink': 'Unlink',
@@ -2180,10 +2240,10 @@ export class I18nService {
     'home.dailyTip.loading': 'Fetching your tip...',
     'home.dailyTip.fallback': 'Keep practising every day!',
 
-// Link Preview
+    // Link Preview
     'linkPreview.openLink': 'Open link: {title}',
 
-// Diagnostic Quiz
+    // Diagnostic Quiz
     'diagnosticQuiz.title': 'Language Level Diagnostic',
     'diagnosticQuiz.loading': 'Loading your diagnostic quiz...',
     'diagnosticQuiz.errorTitle': 'Unable to load quiz',
