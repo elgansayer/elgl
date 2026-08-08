@@ -123,7 +123,9 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^jwks-rsa$": "<rootDir>/../test/mocks/jwks-rsa-mock.js"
+      "^jwks-rsa$": "<rootDir>/../test/mocks/jwks-rsa-mock.js",
+      "^jsdom$": "<rootDir>/../test/mocks/jsdom-mock.js",
+      "^dompurify$": "<rootDir>/../test/mocks/dompurify-mock.js"
     }
   }
 }
