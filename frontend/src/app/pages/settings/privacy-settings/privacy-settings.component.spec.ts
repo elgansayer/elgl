@@ -22,33 +22,35 @@ describe('PrivacySettingsComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render the title', () => {
+  it('should render the hub title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent?.trim()).toBe('privacy.title');
+    const heading = compiled.querySelector('h1');
+    expect(heading?.textContent?.trim()).toBe('privacy.hub.title');
   });
 
-  it('should have default profile visibility as everyone', () => {
-    expect(component.profileVisibility()).toBe('everyone');
+  it('should have navigation items', () => {
+    expect(component.hubNavItems.length).toBeGreaterThan(0);
+    expect(component.hubNavItems[0].route).toBeTruthy();
   });
 
-  it('should have all privacy toggles initially false', () => {
-    expect(component.privacyHideAge()).toBe(false);
-    expect(component.privacyHideLocation()).toBe(false);
-    expect(component.privacyHideSearch()).toBe(false);
-    expect(component.privacyHideGender()).toBe(false);
-    expect(component.privacyHideExactLocation()).toBe(false);
-    expect(component.privacyHideOnlineStatus()).toBe(false);
-    expect(component.privacyHideVipStatus()).toBe(false);
+  it('should have muted word input initially empty', () => {
+    expect(component.mutedWordInput()).toBe('');
   });
 
-  it('should set privacy toggle values via signal set', () => {
-    component.privacyHideAge.set(true);
-    expect(component.privacyHideAge()).toBe(true);
+  it('should provide muted words from safety service', () => {
+    expect(component.mutedWords).toBeDefined();
+    expect(Array.isArray(component.mutedWords())).toBe(true);
   });
 
-  it('should have save button enabled initially', () => {
+  it('should render hub navigation links', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const saveBtn = compiled.querySelector('button') as HTMLButtonElement;
-    expect(saveBtn).toBeTruthy();
+    const links = compiled.querySelectorAll('a[href]');
+    expect(links.length).toBeGreaterThan(0);
+  });
+
+  it('should render muted words input', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector('input[type="text"]') as HTMLInputElement;
+    expect(input).toBeTruthy();
   });
 });
