@@ -609,5 +609,9 @@
   "safety.submitReportAria": "{{name}}を通報する",
   "safety.confirmBlockAria": "{{name}}をブロックする",
   "safety.categoriesLoading": "通報カテゴリを読み込み中",
-  "safety.blockManagement.unblockAria": "{{name}}のブロックを解除"
+  "safety.blockManagement.unblockAria": "{{name}}のブロックを解除",
+  "helpAbout.title": "ヘルプ＆アバウト",
+  "helpAbout.appVersion": "アプリバージョン",
+  "helpAbout.buildNumber": "ビルド番号",
+  "helpAbout.openSourceLicences": "オープンソースライセンス"
 }
