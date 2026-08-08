@@ -1936,5 +1936,19 @@
   "admin.crashHistory.synced": "Synced",
   "common.yes": "Yes",
   "common.no": "No",
-  "common.retry": "Retry"
+  "common.retry": "Retry",
+  "privateParty.modalTitle": "Create a Private Party",
+  "privateParty.modalSubtitle": "Start an invite-only audio room for your friends or study partners.",
+  "privateParty.launchBtn": "&#128274; Private Party",
+  "privateParty.createBtn": "Launch Private Party",
+  "privateParty.createError": "Failed to create private party. Make sure you have a VIP subscription.",
+  "privateParty.inviteFriendsLabel": "Invite Friends",
+  "privateParty.inviteFriendsHint": "Select friends to invite. Only invited users can join this room.",
+  "privateParty.searchFriendsPlaceholder": "Search friends...",
+  "privateParty.loadingFriends": "Loading friends...",
+  "privateParty.noFriendsFound": "No friends found. Follow some language partners first!",
+  "privateParty.removeFriendAria": "Remove friend",
+  "privateParty.privateTag": "Private",
+  "privateParty.yourPrivateRoomsHeading": "Your Private Parties",
+  "privateParty.emptyPrivateRooms": "No private parties yet. Create one to invite your friends!"
 }
