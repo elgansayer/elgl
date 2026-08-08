@@ -19,6 +19,12 @@ from openhands_factory.verification import commands_for, run_verification
 
 LOGGER = logging.getLogger(__name__)
 TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
+PRE_PULL_REQUEST_STATES = {
+    JobState.DISCOVERED,
+    JobState.IMPLEMENTING,
+    JobState.VERIFYING,
+    JobState.PR_DRAFT,
+}
 
 
 class FactoryPipeline:
@@ -47,16 +53,30 @@ class FactoryPipeline:
             self.labels_ready = True
         tasks = self.github.collect_open_issues()
         self.tasks.cache(tasks)
-        return self.jobs.reconcile(tasks)
+        jobs = self.jobs.reconcile(tasks)
+        active_task_ids = {task.identifier for task in tasks}
+        for task_id, job in jobs.items():
+            if task_id in active_task_ids or job.state not in PRE_PULL_REQUEST_STATES:
+                continue
+            worktree = self.config.worktree_dir / f"issue-{task_id}"
+            if worktree.exists():
+                workflow = GitWorkflow(self.config.repository, self.config.base_branch)
+                workflow.remove_worktree(worktree)
+            self.tasks.release(task_id)
+            job.state = JobState.DONE
+            job.last_error = "Issue closed before pull request creation"
+        self.jobs.save(jobs)
+        return jobs
 
     def run_once(self) -> Job | None:
         jobs = self.refresh()
         candidates = [job for job in jobs.values() if job.state not in TERMINAL_STATES]
         if not candidates:
             return None
-        job = min(candidates, key=lambda item: (item.task.priority, item.task.identifier))
+        job = min(candidates, key=lambda item: (item.task.priority, int(item.task.identifier)))
         try:
             self._advance(job)
+            job.attempts = 0
             job.last_error = None
         except Exception as error:
             job.attempts += 1

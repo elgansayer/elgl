@@ -28,5 +28,6 @@ def authenticate_openai(config: FactoryConfig, *, force: bool = False) -> None:
         model=config.openai_model,
         force_login=force,
         open_browser=False,
+        auth_method="device_code",
     )
     secure_openai_credentials(Path.home())

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 import httpx
@@ -35,6 +36,11 @@ class ProviderProfile:
     model: str
     base_url: str | None
     api_key: SecretStr | None
+
+
+def openai_credentials_available(home: Path | None = None) -> bool:
+    credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
+    return credentials.is_file() and credentials.stat().st_size > 0
 
 
 def _model_identifiers(payload: object) -> set[str]:
@@ -168,13 +174,27 @@ def build_llm(config: FactoryConfig) -> LLM:
         fallback_names.append(config.gemini_profile_name)
     for profile_path in config.profile_store.glob("*.json"):
         profile_path.chmod(0o600)
-    strategy = FallbackStrategy(
+    subscription_strategy = FallbackStrategy(
         fallback_llms=fallback_names,
         profile_store_dir=config.profile_store,
     )
+    if not openai_credentials_available():
+        opencode_fallbacks = fallback_names[1:]
+        if not opencode_fallbacks:
+            return opencode
+        return LLM(
+            model=f"openai/{config.opencode_model}",
+            api_key=config.opencode_api_key,
+            base_url=config.opencode_base_url,
+            usage_id=config.opencode_profile_name,
+            fallback_strategy=FallbackStrategy(
+                fallback_llms=opencode_fallbacks,
+                profile_store_dir=config.profile_store,
+            ),
+        )
     return LLM.subscription_login(
         vendor="openai",
         model=config.openai_model,
         open_browser=False,
-        fallback_strategy=strategy,
+        fallback_strategy=subscription_strategy,
     )

@@ -1,7 +1,13 @@
+from pathlib import Path
+
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 from openhands_factory.models import ProviderName
-from openhands_factory.provider_profiles import ordered_profiles, validate_opencode
+from openhands_factory.provider_profiles import (
+    openai_credentials_available,
+    ordered_profiles,
+    validate_opencode,
+)
 
 
 class Response:
@@ -43,6 +49,15 @@ def test_provider_priority_order() -> None:
         ProviderName.OPENAI_SUBSCRIPTION,
         ProviderName.OPENCODE_GO,
     ]
+
+
+def test_openai_credentials_must_exist_and_be_non_empty(tmp_path: Path) -> None:
+    credentials = tmp_path / ".openhands" / "auth" / "openai_oauth.json"
+    credentials.parent.mkdir(parents=True)
+
+    assert not openai_credentials_available(tmp_path)
+    credentials.write_text("{}", encoding="utf-8")
+    assert openai_credentials_available(tmp_path)
 
 
 def test_opencode_catalogue_accepts_exact_model() -> None:

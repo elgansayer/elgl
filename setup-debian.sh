@@ -25,8 +25,8 @@ esac
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential ca-certificates curl git gh gnupg jq logrotate passt podman \
-  python3 python3-pip python3-venv rsync shellcheck tmux uidmap
+  build-essential ca-certificates curl git gh gnupg jq libgtk-3-0t64 logrotate passt podman \
+  python-is-python3 python3 python3-pip python3-venv rsync shellcheck tmux uidmap
 
 install -d -m 0755 /etc/apt/keyrings
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key |
@@ -64,7 +64,7 @@ python3 -m venv "$FACTORY_ROOT/venv-0.1.0"
 "$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install --upgrade 'pip==25.2'
 "$FACTORY_ROOT/venv-0.1.0/bin/python" -m pip install 'uv==0.8.12'
 VIRTUAL_ENV="$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv-0.1.0/bin/uv" sync \
-  --active --frozen --extra development --project "$REPOSITORY_SOURCE/automation"
+  --active --frozen --no-editable --extra development --project "$REPOSITORY_SOURCE/automation"
 ln -sfn "$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv"
 
 for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e"; do
@@ -72,6 +72,8 @@ for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend
     sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
   fi
 done
+sudo -u "$FACTORY_USER" env HOME="$FACTORY_STATE/home" bash -c \
+  'cd "$1" && npm exec -- cypress install' _ "$FACTORY_STATE/repository/frontend"
 install -d -o "$FACTORY_USER" -g "$FACTORY_USER" -m 0750 "$FACTORY_ROOT/build-context"
 rsync -a --delete \
   --exclude=.mypy_cache --exclude=.pytest_cache --exclude=.venv --exclude=__pycache__ \

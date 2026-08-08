@@ -13,6 +13,31 @@ def test_worker_image_reuses_the_node_base_image_user() -> None:
     assert "useradd --create-home --uid 1000 worker" not in containerfile
 
 
+def test_bootstrap_installs_a_self_contained_factory_package() -> None:
+    setup = (Path(__file__).parents[2] / "setup-debian.sh").read_text(encoding="utf-8")
+
+    assert "--no-editable" in setup
+    assert "-- cypress install" in setup
+
+
+def test_competing_legacy_agent_workflows_are_retired() -> None:
+    workflows = Path(__file__).parents[2] / ".github" / "workflows"
+
+    for name in ("architect.yml", "auto-dispatcher.yml", "openhands.yml", "pr-reviewer.yml"):
+        assert not (workflows / name).exists()
+
+
+def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
+    unit = (
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service"
+    ).read_text(encoding="utf-8")
+
+    assert "NoNewPrivileges=true" not in unit
+    assert "RestrictSUIDSGID=true" not in unit
+
+
+
+
 def environment(**overrides: str) -> dict[str, str]:
     values = {
         "OPENCODE_GO_API_KEY": "not-a-real-key",
