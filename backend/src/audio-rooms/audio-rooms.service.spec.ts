@@ -12,6 +12,7 @@ import { CentrifugoService } from '../chat/centrifugo.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
@@ -128,6 +129,12 @@ describe('AudioRoomsService', () => {
                 vocabulary: ['greetings', 'holiday', 'culture'],
               }),
             ),
+          },
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: {
+            purgeByCacheTags: jest.fn().mockResolvedValue(true),
           },
         },
       ],
