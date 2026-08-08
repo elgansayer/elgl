@@ -65,12 +65,7 @@ describe('LegalService', () => {
     const req = httpMock.expectOne(`${baseUrl}/terms`);
     req.error(new ProgressEvent('Network error'));
 
-    try {
-      await resultPromise;
-      expect.unreachable('Expected fetchTermsOfService to throw');
-    } catch (error) {
-      expect(error).toBeTruthy();
-    }
+    await expect(resultPromise).rejects.toThrow();
   });
 
   it('should handle HTTP errors for Privacy Policy', async () => {
@@ -79,11 +74,6 @@ describe('LegalService', () => {
     const req = httpMock.expectOne(`${baseUrl}/privacy`);
     req.error(new ProgressEvent('Network error'));
 
-    try {
-      await resultPromise;
-      expect.unreachable('Expected fetchPrivacyPolicy to throw');
-    } catch (error) {
-      expect(error).toBeTruthy();
-    }
+    await expect(resultPromise).rejects.toThrow();
   });
 });
