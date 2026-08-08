@@ -548,5 +548,9 @@
   "safety.submitReportAria": "تقديم بلاغ ضد {{name}}",
   "safety.confirmBlockAria": "تأكيد حظر {{name}}",
   "safety.categoriesLoading": "جارٍ تحميل فئات البلاغات",
-  "safety.blockManagement.unblockAria": "إلغاء حظر {{name}}"
+  "safety.blockManagement.unblockAria": "إلغاء حظر {{name}}",
+  "helpAbout.title": "المساعدة وحول",
+  "helpAbout.appVersion": "إصدار التطبيق",
+  "helpAbout.buildNumber": "رقم البناء",
+  "helpAbout.openSourceLicences": "تراخيص مفتوحة المصدر"
 }

@@ -190,42 +190,54 @@ describe('DiscoveryService', () => {
   // calculatePartnerOfWeek
   // ---------------------------------------------------------------------------
   describe('calculatePartnerOfWeek', () => {
+    const makeCandidates = (
+      count: number,
+    ): Array<{ id: string; correction_ratio: number; study_streak_days: number }> =>
+      Array.from({ length: count }, (_, i) => ({
+        id: `u${i + 1}`,
+        correction_ratio: 0.6 + (count - i) * 0.005,
+        study_streak_days: 10 + (count - i),
+      }));
+
     it('should store partner IDs in redis when users qualify', async () => {
+      const candidates = makeCandidates(20);
       mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.gte = jest.fn().mockReturnThis();
       mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
-        data: [{ id: 'u1' }, { id: 'u2' }],
-        error: null,
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: candidates, error: null });
 
       await service.calculatePartnerOfWeek();
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockRedisSet).toHaveBeenCalledWith(
-        'partner_of_week_ids',
-        '["u1","u2"]',
-        'EX',
-        604800,
-      );
+      expect(mockRedisSet).toHaveBeenCalled();
+      const setCall = mockRedisSet.mock.calls[0];
+      expect(setCall[0]).toBe('partner_of_week_ids');
+      expect(setCall[2]).toBe('EX');
+      expect(setCall[3]).toBe(604800);
+      const ids: string[] = JSON.parse(setCall[1]);
+      expect(ids.length).toBe(10);
+      // Top 10 candidates should be selected
+      for (let i = 0; i < 10; i++) {
+        expect(ids[i]).toBe(candidates[i].id);
+      }
     });
 
-    it('should not set redis key when no users qualify', async () => {
+    it('should not set redis key when no users qualify (empty candidates)', async () => {
       mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.gte = jest.fn().mockReturnThis();
       mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
-        data: [],
-        error: null,
-      });
+      mockQueryBuilder.limit.mockResolvedValue({ data: [], error: null });
 
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
     });
 
-    it('should not set redis key when query returns error', async () => {
+    it('should not set redis key when candidates are null (error)', async () => {
       mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.gte = jest.fn().mockReturnThis();
       mockQueryBuilder.order = jest.fn().mockReturnThis();
-      mockQueryBuilder.limit = jest.fn().mockResolvedValue({
+      mockQueryBuilder.limit.mockResolvedValue({
         data: null,
         error: { message: 'DB down' },
       });
@@ -233,6 +245,47 @@ describe('DiscoveryService', () => {
       await service.calculatePartnerOfWeek();
 
       expect(mockRedisSet).not.toHaveBeenCalled();
+    });
+
+    it('should handle fewer than 10 candidates', async () => {
+      const candidates = makeCandidates(5);
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.gte = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValue({ data: candidates, error: null });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockRedisSet).toHaveBeenCalled();
+      const ids: string[] = JSON.parse(mockRedisSet.mock.calls[0][1]);
+      expect(ids.length).toBe(5);
+      expect(ids).toEqual(candidates.map((c) => c.id));
+    });
+
+    it('should catch and log errors without crashing', async () => {
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.gte = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockRejectedValue(new Error('network error'));
+
+      await expect(service.calculatePartnerOfWeek()).resolves.toBeUndefined();
+      expect(mockRedisSet).not.toHaveBeenCalled();
+    });
+
+    it('should handle zero study_streak_days gracefully', async () => {
+      const zeroStreak = [
+        { id: 'low', correction_ratio: 0.8, study_streak_days: 0 },
+      ];
+      mockQueryBuilder.gt = jest.fn().mockReturnThis();
+      mockQueryBuilder.gte = jest.fn().mockReturnThis();
+      mockQueryBuilder.order = jest.fn().mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValue({ data: zeroStreak, error: null });
+
+      await service.calculatePartnerOfWeek();
+
+      expect(mockRedisSet).toHaveBeenCalled();
+      const ids: string[] = JSON.parse(mockRedisSet.mock.calls[0][1]);
+      expect(ids).toEqual(['low']);
     });
   });
 

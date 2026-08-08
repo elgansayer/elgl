@@ -125,7 +125,7 @@ describe.skip('SrsOfflineService', () => {
           }
           return { createIndex: () => undefined };
         },
-        transaction: (storeNames: string | string[]) => {
+        transaction: (_storeNames: string | string[]) => {
           let oncompleteFn: (() => void) | null = null;
 
           const tx = {

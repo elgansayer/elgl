@@ -486,6 +486,16 @@ export class FlashcardReviewComponent {
     audio.play().catch(() => {
       // Audio playback failed silently
     });
+    // Release the Audio object after playback ends to avoid memory leaks
+    // during rapid review sessions where many cards are reviewed in sequence.
+    audio.addEventListener(
+      'ended',
+      () => {
+        audio.src = '';
+        audio.load();
+      },
+      { once: true },
+    );
   }
 
   private computeNewLevel(currentLevel: number, grade: ReviewGrade): number {
