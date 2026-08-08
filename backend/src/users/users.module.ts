@@ -12,6 +12,7 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { XpModule } from '../xp/xp.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
+import { ProfileVisitsModule } from '../profile-visits/profile-visits.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { TwoFactorModule } from '../two-factor/two-factor.module';
     MediaModule,
     XpModule,
     TwoFactorModule,
+    ProfileVisitsModule,
   ],
   controllers: [UsersController, DeviceLinkController],
   providers: [

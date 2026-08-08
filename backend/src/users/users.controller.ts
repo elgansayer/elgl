@@ -31,6 +31,10 @@ import {
 } from './interfaces/user-profile.interface';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
+import {
+  ProfileVisitRecord,
+  ProfileVisitsService,
+} from '../profile-visits/profile-visits.service';
 
 @Controller('users')
 @UseGuards(SupabaseAuthGuard)
@@ -38,6 +42,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly mediaService: MediaService,
+    private readonly profileVisitsService: ProfileVisitsService,
   ) {}
 
   @UseGuards(TwoFactorGuard)
@@ -211,6 +216,40 @@ export class UsersController {
       throw new UnauthorizedException();
     }
     return this.usersService.getVisitors(user.id);
+  }
+
+  @Get(':id/visitors')
+  async getVisitors(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: User | null,
+  ): Promise<ProfileVisitRecord[]> {
+    if (!currentUser) {
+      throw new UnauthorizedException();
+    }
+
+    // If the requesting user is viewing their own visitor list, use the full VIP-aware endpoint
+    if (currentUser.id === id) {
+      const profile = await this.usersService.getProfile(id);
+      return this.profileVisitsService.getVisitors(
+        id,
+        profile?.is_vip ?? false,
+      );
+    }
+
+    // For viewing another user's visitors, enforce profile visibility
+    const profile = await this.usersService.getProfile(id);
+    const profileRecord = profile as unknown as Record<string, unknown>;
+    const visibility =
+      (profileRecord.profile_visibility as string) ?? 'everyone';
+    if (visibility === 'hidden') {
+      throw new UnauthorizedException('This profile is not visible');
+    }
+
+    // Only VIP users can see visitors of non-public profiles
+    const requestingProfile = await this.usersService.getProfile(currentUser.id);
+    const isRequesterVip = requestingProfile?.is_vip ?? false;
+
+    return this.profileVisitsService.getVisitors(id, isRequesterVip);
   }
 
   @Get('status/:statusId/viewers')

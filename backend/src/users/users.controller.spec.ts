@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { MediaService } from '../media/media.service';
+import { ProfileVisitsService } from '../profile-visits/profile-visits.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 
@@ -9,6 +10,7 @@ describe('UsersController', () => {
   let controller: UsersController;
   let usersService: UsersService;
   let mediaService: MediaService;
+  let profileVisitsService: ProfileVisitsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -61,6 +63,15 @@ describe('UsersController', () => {
             confirmCoverUpload: jest.fn(),
           },
         },
+        {
+          provide: ProfileVisitsService,
+          useValue: {
+            recordVisit: jest.fn(),
+            getVisitors: jest.fn(),
+            getVisitCount: jest.fn(),
+            deleteVisit: jest.fn(),
+          },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
@@ -72,6 +83,7 @@ describe('UsersController', () => {
     controller = module.get<UsersController>(UsersController);
     usersService = module.get<UsersService>(UsersService);
     mediaService = module.get<MediaService>(MediaService);
+    profileVisitsService = module.get<ProfileVisitsService>(ProfileVisitsService);
   });
 
   afterEach(() => {
@@ -793,6 +805,69 @@ describe('UsersController', () => {
       (usersService.getVisitors as jest.Mock).mockResolvedValue(visitors);
       const result = await controller.getMyVisitors({ id: 'user-1' } as any);
       expect(usersService.getVisitors).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(visitors);
+    });
+  });
+
+  describe('getVisitors (by :id)', () => {
+    it('should throw UnauthorizedException when no current user', async () => {
+      await expect(
+        controller.getVisitors('target-id', null),
+      ).rejects.toThrow('Unauthorized');
+      expect(profileVisitsService.getVisitors).not.toHaveBeenCalled();
+    });
+
+    it('should return visitors using ProfileVisitsService when user requests their own visitors', async () => {
+      const ownProfile: any = { id: 'user-1', is_vip: true };
+      const visitors: any[] = [{ id: 'v1', is_blurred: false, created_at: '2026-01-01', visitor: {} }];
+      (usersService.getProfile as jest.Mock).mockResolvedValue(ownProfile);
+      (profileVisitsService.getVisitors as jest.Mock).mockResolvedValue(visitors);
+
+      const result = await controller.getVisitors('user-1', { id: 'user-1' } as any);
+
+      expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
+      expect(profileVisitsService.getVisitors).toHaveBeenCalledWith('user-1', true);
+      expect(result).toEqual(visitors);
+    });
+
+    it('should deny access when fetching visitors of a hidden profile', async () => {
+      const hiddenProfile: any = { id: 'target-id', profile_visibility: 'hidden' };
+      (usersService.getProfile as jest.Mock).mockResolvedValue(hiddenProfile);
+
+      await expect(
+        controller.getVisitors('target-id', { id: 'user-1' } as any),
+      ).rejects.toThrow('This profile is not visible');
+    });
+
+    it('should return visitors for another user when requester is VIP', async () => {
+      const targetProfile: any = { id: 'target-id', profile_visibility: 'everyone' };
+      const requesterProfile: any = { id: 'user-1', is_vip: true };
+      const visitors: any[] = [{ id: 'v1', is_blurred: false, created_at: '2026-01-01', visitor: {} }];
+
+      (usersService.getProfile as jest.Mock)
+        .mockResolvedValueOnce(targetProfile)
+        .mockResolvedValueOnce(requesterProfile);
+      (profileVisitsService.getVisitors as jest.Mock).mockResolvedValue(visitors);
+
+      const result = await controller.getVisitors('target-id', { id: 'user-1' } as any);
+
+      expect(profileVisitsService.getVisitors).toHaveBeenCalledWith('target-id', true);
+      expect(result).toEqual(visitors);
+    });
+
+    it('should return blurred visitors for another user when requester is not VIP', async () => {
+      const targetProfile: any = { id: 'target-id', profile_visibility: 'everyone' };
+      const requesterProfile: any = { id: 'user-1', is_vip: false };
+      const visitors: any[] = [{ id: 'v1', is_blurred: true, created_at: '2026-01-01', visitor: { id: 'hidden-vip-only', display_name: 'Someone near you' } }];
+
+      (usersService.getProfile as jest.Mock)
+        .mockResolvedValueOnce(targetProfile)
+        .mockResolvedValueOnce(requesterProfile);
+      (profileVisitsService.getVisitors as jest.Mock).mockResolvedValue(visitors);
+
+      const result = await controller.getVisitors('target-id', { id: 'user-1' } as any);
+
+      expect(profileVisitsService.getVisitors).toHaveBeenCalledWith('target-id', false);
       expect(result).toEqual(visitors);
     });
   });
