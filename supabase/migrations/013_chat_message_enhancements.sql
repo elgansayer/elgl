@@ -8,5 +8,5 @@ ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS is_starred BOOLEAN NOT
 ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS is_forwarded BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(20) NOT NULL DEFAULT 'sent' CHECK (delivery_status IN ('sent', 'delivered', 'read'));
 ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
-ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS view_once BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS is_view_once BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS viewed_at TIMESTAMPTZ;
