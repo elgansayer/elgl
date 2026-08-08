@@ -13,7 +13,7 @@
       class="absolute bottom-2 sm:bottom-4 start-2 sm:start-4 bg-black/60 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-md"
       role="status"
     >
-      {{ hostName() }} (Host)
+      {{ hostName() }} {{ 'splitScreen.hostLabel' | t }}
     </div>
   </div>
 
@@ -31,7 +31,7 @@
         class="absolute bottom-2 sm:bottom-4 start-2 sm:start-4 bg-black/60 text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium backdrop-blur-md"
         role="status"
       >
-        {{ coHostName() }} (Co-Host)
+        {{ coHostName() }} {{ 'splitScreen.coHostLabel' | t }}
       </div>
     </div>
   } @else {
@@ -54,7 +54,7 @@
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
         </svg>
-        <span class="text-sm sm:text-lg font-semibold">Invite Co-Host</span>
+        <span class="text-sm sm:text-lg font-semibold">{{ 'splitScreen.inviteCoHostBtn' | t }}</span>
       </button>
     </div>
   }
