@@ -1210,7 +1210,7 @@ describe('DiscoveryService', () => {
   // searchByCountryCity
   // ---------------------------------------------------------------------------
   describe('searchByCountryCity', () => {
-    it('should search users by country and city', async () => {
+    it('should search users by country and city via ILIKE', async () => {
       stubLimitResponse([{ id: 'p1', country: 'JP', city: 'Tokyo' }]);
 
       const result = await service.searchByCountryCity('user-1', {
@@ -1221,6 +1221,82 @@ describe('DiscoveryService', () => {
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('country', '%Japan%');
       expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('city', '%Tokyo%');
       expect(result).toHaveLength(1);
+    });
+
+    it('should use PostGIS search_nearby_users RPC when latitude and longitude are provided', async () => {
+      const stubPartner = {
+        id: 'nearby-1',
+        display_name: 'Nearby User',
+        distance_metres: 1200,
+      };
+      stubRpcResponse([stubPartner]);
+
+      const result = await service.searchByCountryCity('user-1', {
+        latitude: 35.6762,
+        longitude: 139.6503,
+        radius_metres: 10000,
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({
+          search_lat: 35.6762,
+          search_lon: 139.6503,
+          radius_m: 10000,
+          exclude_user_id: 'user-1',
+        }),
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('nearby-1');
+      expect(result[0].distance_metres).toBe(1200);
+    });
+
+    it('should use default radius 50000 when radius_metres not specified for spatial search', async () => {
+      stubRpcResponse([{ id: 'p1' }]);
+
+      await service.searchByCountryCity('user-1', {
+        latitude: 35.6,
+        longitude: 139.6,
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ radius_m: 50000 }),
+      );
+    });
+
+    it('should filter spatial results by country/city text', async () => {
+      stubRpcResponse([
+        { id: 'p1', country: 'Japan', city: 'Tokyo' },
+        { id: 'p2', country: 'Korea', city: 'Seoul' },
+      ]);
+
+      const result = await service.searchByCountryCity('user-1', {
+        latitude: 35.6,
+        longitude: 139.6,
+        country: 'Japan',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('p1');
+    });
+
+    it('should fall back to ILIKE when spatial RPC returns empty', async () => {
+      stubRpcResponse([]);
+      stubLimitResponse([
+        { id: 'p-fallback', country: 'Japan', city: 'Tokyo' },
+      ]);
+
+      const result = await service.searchByCountryCity('user-1', {
+        latitude: 35.6,
+        longitude: 139.6,
+        country: 'Japan',
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalled();
+      expect(mockQueryBuilder.ilike).toHaveBeenCalledWith('country', '%Japan%');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('p-fallback');
     });
 
     it('should return empty on DB error', async () => {

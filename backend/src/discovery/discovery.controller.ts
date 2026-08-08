@@ -306,7 +306,10 @@ export class DiscoveryController {
   }
 
   /**
-   * Location-based search: user-specific, private short cache.
+   * Location-based search: PostGIS ST_DWithin proximity + ILIKE text fallback.
+   * When latitude/longitude are provided, uses geospatial matching via the
+   * search_nearby_users RPC with a customisable radius. Otherwise falls back
+   * to case-insensitive ILIKE matching on country and city fields.
    */
   @Get('search-by-location')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
@@ -316,21 +319,45 @@ export class DiscoveryController {
     windowSeconds: 60,
   })
   @ApiOperation({
-    summary: 'Search partners by country and/or city',
+    summary: 'Search partners by location (PostGIS proximity or text match)',
     description:
-      'Simple location-based search by country and/or city using case-insensitive ILIKE matching. ' +
-      'Returns up to 50 matching user profiles.',
+      'Location-based search with PostGIS ST_DWithin geospatial matching. ' +
+      'When latitude and longitude are provided, queries the search_nearby_users ' +
+      'RPC with a customisable radius (default 50000m). Falls back to case-insensitive ' +
+      'ILIKE matching on country and city fields when coordinates are absent. ' +
+      'Returns up to 50 matching user profiles sorted by distance when using spatial search.',
+  })
+  @ApiQuery({
+    name: 'latitude',
+    required: false,
+    description: 'Latitude for geospatial proximity search (-90 to 90).',
+    example: 51.5074,
+  })
+  @ApiQuery({
+    name: 'longitude',
+    required: false,
+    description: 'Longitude for geospatial proximity search (-180 to 180).',
+    example: -0.1278,
+  })
+  @ApiQuery({
+    name: 'radius_metres',
+    required: false,
+    description:
+      'Search radius in metres (1000 - 20000000). Defaults to 50000 (50 km). Only used when latitude/longitude are provided.',
+    example: 10000,
   })
   @ApiQuery({
     name: 'country',
     required: false,
-    description: 'Country name (case-insensitive partial match).',
+    description:
+      'Country name (case-insensitive partial match). Used in fallback mode and additionally filters spatial results.',
     example: 'Japan',
   })
   @ApiQuery({
     name: 'city',
     required: false,
-    description: 'City name (case-insensitive partial match).',
+    description:
+      'City name (case-insensitive partial match). Used in fallback mode and additionally filters spatial results.',
     example: 'Tokyo',
   })
   @ApiResponse({
@@ -344,13 +371,22 @@ export class DiscoveryController {
   })
   async searchByLocation(
     @CurrentUser() user: User | null,
+    @Query('latitude') latitude?: string,
+    @Query('longitude') longitude?: string,
+    @Query('radius_metres') radius_metres?: string,
     @Query('country') country?: string,
     @Query('city') city?: string,
   ): Promise<UserProfile[]> {
     if (!user) return [];
+    const lat = latitude ? parseFloat(latitude) : undefined;
+    const lon = longitude ? parseFloat(longitude) : undefined;
+    const radius = radius_metres ? parseInt(radius_metres, 10) : undefined;
     const result = await this.discoveryService.searchByCountryCity(user.id, {
       country,
       city,
+      latitude: lat,
+      longitude: lon,
+      radius_metres: radius,
     });
     return sanitiseDiscoveryData(result);
   }

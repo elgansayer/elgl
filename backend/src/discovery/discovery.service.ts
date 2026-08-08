@@ -1083,11 +1083,73 @@ export class DiscoveryService {
 
   async searchByCountryCity(
     currentUserId: string,
-    query: { country?: string; city?: string },
+    query: {
+      country?: string;
+      city?: string;
+      latitude?: number;
+      longitude?: number;
+      radius_metres?: number;
+    },
   ): Promise<UserProfile[]> {
     const supabase = this.supabaseService.getClient();
     const blockedIds =
       await this.safetyService.getBlockedAndBlockerIds(currentUserId);
+
+    // Geospatial path: use PostGIS ST_DWithin via search_nearby_users RPC
+    if (query.latitude !== undefined && query.longitude !== undefined) {
+      const radius = query.radius_metres || 50000;
+      const response = (await supabase.rpc('search_nearby_users', {
+        search_lat: query.latitude,
+        search_lon: query.longitude,
+        radius_m: radius,
+        exclude_user_id: currentUserId,
+        filter_native_arr: null,
+        filter_target: null,
+        serious_only: false,
+        filter_level: null,
+        filter_gender: null,
+        filter_age_min: null,
+        filter_age_max: null,
+        filter_audio_intro: false,
+      })) as unknown as {
+        data: unknown[] | null;
+        error: { message?: string } | null;
+      };
+
+      if (response.error || !response.data || response.data.length === 0) {
+        // Fall through to ILIKE text matching
+      } else {
+        let results: DiscoveryUser[] = (
+          response.data as unknown as DiscoveryUser[]
+        ).map((item) => ({
+          ...item,
+          distance_metres: item.distance_metres ?? item.distance ?? undefined,
+        }));
+
+        // Post-filter by blocked users
+        if (blockedIds.length > 0) {
+          results = results.filter((u) => !blockedIds.includes(u.id));
+        }
+
+        // Post-filter by country/city text when combined with spatial search
+        if (query.country) {
+          results = results.filter((u) =>
+            (u.country ?? '')
+              .toLowerCase()
+              .includes(query.country!.toLowerCase()),
+          );
+        }
+        if (query.city) {
+          results = results.filter((u) =>
+            (u.city ?? '').toLowerCase().includes(query.city!.toLowerCase()),
+          );
+        }
+
+        return sanitiseDiscoveryData(results);
+      }
+    }
+
+    // Fallback: ILIKE text matching on country and city
     let qb = supabase
       .from('users')
       .select(
