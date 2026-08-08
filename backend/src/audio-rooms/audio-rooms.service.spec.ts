@@ -16,17 +16,23 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
 const mockCreateRoom = jest.fn().mockResolvedValue({});
+const mockUpdateParticipant = jest.fn().mockResolvedValue({});
 const mockAddGrant = jest.fn();
 const mockToJwt = jest.fn().mockResolvedValue('mock-livekit-jwt');
 
 jest.mock('livekit-server-sdk', () => ({
   RoomServiceClient: jest.fn().mockImplementation(() => ({
     createRoom: mockCreateRoom,
+    updateParticipant: mockUpdateParticipant,
   })),
   AccessToken: jest.fn().mockImplementation(() => ({
     addGrant: mockAddGrant,
     toJwt: mockToJwt,
   })),
+}));
+
+jest.mock('@livekit/protocol', () => ({
+  ParticipantPermission: class {},
 }));
 
 describe('AudioRoomsService', () => {
@@ -39,6 +45,7 @@ describe('AudioRoomsService', () => {
 
   beforeEach(async () => {
     mockCreateRoom.mockClear().mockResolvedValue({});
+    mockUpdateParticipant.mockClear().mockResolvedValue({});
     mockAddGrant.mockClear();
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
     mockGenerateTranscriptFromAudioUrl = jest.fn();
@@ -750,6 +757,7 @@ describe('AudioRoomsService', () => {
     it('should set co_host_id, add to speakers, clear raised hand, and publish event', async () => {
       const roomRow: any = {
         id: 'room-1',
+        room_name: 'room-1-name',
         host_id: 'host-1',
         speakers: ['host-1'],
         raised_hands: ['user-2'],
@@ -774,12 +782,14 @@ describe('AudioRoomsService', () => {
         target_user_id: 'user-2',
         room_id: 'room-1',
       });
+      expect(mockUpdateParticipant).not.toHaveBeenCalled();
       expect(result.id).toBe('room-1');
     });
 
     it('should demote and notify the existing co-host before assigning a new one', async () => {
       const roomRow: any = {
         id: 'room-1',
+        room_name: 'room-1-name',
         host_id: 'host-1',
         co_host_id: 'user-2',
         speakers: ['host-1', 'user-2'],
@@ -794,6 +804,19 @@ describe('AudioRoomsService', () => {
         room_id: 'room-1',
         target_user_id: 'user-3',
       });
+
+      // Should revoke LiveKit publish for previous co-host
+      expect(mockUpdateParticipant).toHaveBeenCalledWith(
+        'room-1-name',
+        'user-2',
+        {
+          permission: {
+            canPublish: false,
+            canSubscribe: true,
+            canPublishData: true,
+          },
+        },
+      );
 
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         co_host_id: 'user-3',
@@ -816,6 +839,7 @@ describe('AudioRoomsService', () => {
     it('should not publish a demotion event when re-inviting the same co-host', async () => {
       const roomRow: any = {
         id: 'room-1',
+        room_name: 'room-1-name',
         host_id: 'host-1',
         co_host_id: 'user-2',
         speakers: ['host-1', 'user-2'],
@@ -831,6 +855,7 @@ describe('AudioRoomsService', () => {
         target_user_id: 'user-2',
       });
 
+      expect(mockUpdateParticipant).not.toHaveBeenCalled();
       expect(centrifugoService.publish).not.toHaveBeenCalledWith(
         'room_room-1',
         expect.objectContaining({ type: 'co_host_removed' }),
@@ -856,6 +881,7 @@ describe('AudioRoomsService', () => {
     it('should clear co_host_id, remove from speakers, and publish event', async () => {
       const roomRow: any = {
         id: 'room-1',
+        room_name: 'room-1-name',
         host_id: 'host-1',
         co_host_id: 'user-2',
         speakers: ['host-1', 'user-2'],
@@ -868,6 +894,19 @@ describe('AudioRoomsService', () => {
       const result = await service.removeCoHost('host-1', {
         room_id: 'room-1',
       });
+
+      // Should revoke LiveKit publish for removed co-host
+      expect(mockUpdateParticipant).toHaveBeenCalledWith(
+        'room-1-name',
+        'user-2',
+        {
+          permission: {
+            canPublish: false,
+            canSubscribe: true,
+            canPublishData: true,
+          },
+        },
+      );
 
       expect(mockQueryBuilder.update).toHaveBeenCalledWith({
         co_host_id: null,

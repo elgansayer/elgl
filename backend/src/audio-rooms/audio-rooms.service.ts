@@ -9,6 +9,7 @@ import {
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
+import type { ParticipantPermission } from '@livekit/protocol';
 import { CentrifugoService } from '../chat/centrifugo.service';
 import { CreateVoiceRoomNoteDto } from './dto/voice-room-note.dto';
 import { VoiceRoomNote } from './interfaces/voice-room-note.interface';
@@ -915,6 +916,28 @@ export class AudioRoomsService implements OnModuleInit {
       (id) => id !== dto.target_user_id,
     );
 
+    // Revoke the previous co-host's publish permissions via LiveKit server API.
+    // This prevents a malicious client from ignoring the Centrifugo notification
+    // and continuing to publish audio/video after being demoted.
+    if (previousCoHostId && this.roomServiceClient) {
+      try {
+        const permission: Partial<ParticipantPermission> = {
+          canPublish: false,
+          canSubscribe: true,
+          canPublishData: true,
+        };
+        await this.roomServiceClient.updateParticipant(
+          room.room_name,
+          previousCoHostId,
+          { permission },
+        );
+      } catch (e: unknown) {
+        this.logger.warn(
+          `Failed to revoke LiveKit publish for demoted co-host ${previousCoHostId}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+
     await supabase
       .from('audio_rooms')
       .update({
@@ -964,6 +987,26 @@ export class AudioRoomsService implements OnModuleInit {
 
     const removedUserId = room.co_host_id;
     const updatedSpeakers = room.speakers.filter((id) => id !== removedUserId);
+
+    // Revoke the removed co-host's publish permissions via LiveKit server API.
+    if (removedUserId && this.roomServiceClient) {
+      try {
+        const permission: Partial<ParticipantPermission> = {
+          canPublish: false,
+          canSubscribe: true,
+          canPublishData: true,
+        };
+        await this.roomServiceClient.updateParticipant(
+          room.room_name,
+          removedUserId,
+          { permission },
+        );
+      } catch (e: unknown) {
+        this.logger.warn(
+          `Failed to revoke LiveKit publish for removed co-host ${removedUserId}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
 
     await supabase
       .from('audio_rooms')
