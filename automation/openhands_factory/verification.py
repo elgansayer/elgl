@@ -43,21 +43,22 @@ def commands_for(repository: Path, changed_paths: set[Path]) -> list[Verificatio
                 f"frontend-{script}", ("npm", "run", script), repository / "frontend"
             )
         )
-    commands.append(
-        VerificationCommand(
-            "frontend-e2e",
-            (
-                "bash",
-                "-lc",
-                "npm start -- --host 127.0.0.1 >/tmp/factory-angular-e2e.log 2>&1 & "
-                "server_pid=$!; trap 'kill \"$server_pid\" 2>/dev/null || true' EXIT; "
-                "for attempt in $(seq 1 60); do "
-                "curl -fsS http://127.0.0.1:4200 >/dev/null && break; sleep 1; done; "
-                "curl -fsS http://127.0.0.1:4200 >/dev/null; npm run e2e",
-            ),
-            repository / "frontend",
+    if any(path.parts and path.parts[0] in {"frontend", "e2e"} for path in changed_paths):
+        commands.append(
+            VerificationCommand(
+                "frontend-e2e",
+                (
+                    "bash",
+                    "-lc",
+                    "npm start -- --host 127.0.0.1 >/tmp/factory-angular-e2e.log 2>&1 & "
+                    "server_pid=$!; trap 'kill \"$server_pid\" 2>/dev/null || true' EXIT; "
+                    "for attempt in $(seq 1 60); do "
+                    "curl -fsS http://127.0.0.1:4200 >/dev/null && break; sleep 1; done; "
+                    "curl -fsS http://127.0.0.1:4200 >/dev/null; npm run e2e",
+                ),
+                repository / "frontend",
+            )
         )
-    )
     for script in ("lint:check", "build", "test", "test:e2e"):
         commands.append(
             VerificationCommand(
