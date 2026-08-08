@@ -252,6 +252,10 @@
 
   <!-- Content States -->
   <main class="p-0">
+    <app-discovery-map-error-boundary
+      [context]="{ component: 'discovery-map', partnerCount: partners().length, filtersApplied: selectedFilter() }"
+      (retry)="retrySearch()"
+    >
     @if (isLoading()) {
       <section aria-live="polite" aria-busy="true" role="status">
         <span class="sr-only">{{ 'discovery.loadingPartners' | t }}</span>
@@ -441,5 +445,6 @@
         }
       </div>
     }
+    </app-discovery-map-error-boundary>
   </main>
 </div>
