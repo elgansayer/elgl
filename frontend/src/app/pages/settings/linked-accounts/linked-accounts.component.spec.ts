@@ -1,35 +1,41 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { vi } from 'vitest';
 import { LinkedAccountsComponent } from './linked-accounts.component';
-import { LinkedAccountsService } from '../../../services/linked-accounts.service';
 import { TranslatePipe } from '../../../services/translate.pipe';
 
 describe('LinkedAccountsComponent', () => {
   let component: LinkedAccountsComponent;
   let fixture: ComponentFixture<LinkedAccountsComponent>;
-  let linkedAccountsService: { getLinkedAccounts: ReturnType<typeof vi.fn>; linkAccount: ReturnType<typeof vi.fn>; unlinkAccount: ReturnType<typeof vi.fn> };
+  let getLinkedAccountsSpy: ReturnType<typeof vi.fn>;
+  let linkAccountSpy: ReturnType<typeof vi.fn>;
+  let unlinkAccountSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    const spy = {
-      getLinkedAccounts: vi.fn().mockResolvedValue([
-        { provider: 'google', active: true, created_at: '2024-01-01' },
-        { provider: 'email', active: false, created_at: '2024-01-02' },
-      ]),
-      linkAccount: vi.fn().mockResolvedValue(undefined),
-      unlinkAccount: vi.fn().mockResolvedValue(undefined),
-    };
+    getLinkedAccountsSpy = vi.fn().mockResolvedValue([
+      { provider: 'google', active: true, created_at: '2024-01-01' },
+      { provider: 'email', active: false, created_at: '2024-01-02' },
+    ]);
+    linkAccountSpy = vi.fn().mockResolvedValue(undefined);
+    unlinkAccountSpy = vi.fn().mockResolvedValue(undefined);
 
     await TestBed.configureTestingModule({
       imports: [LinkedAccountsComponent, TranslatePipe],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: LinkedAccountsService, useValue: spy },
+        {
+          provide: LinkedAccountsService,
+          useValue: {
+            getLinkedAccounts: getLinkedAccountsSpy,
+            linkAccount: linkAccountSpy,
+            unlinkAccount: unlinkAccountSpy,
+          },
+        },
       ],
     }).compileComponents();
 
-    linkedAccountsService = TestBed.inject(LinkedAccountsService) as typeof linkedAccountsService;
     fixture = TestBed.createComponent(LinkedAccountsComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -60,7 +66,7 @@ describe('LinkedAccountsComponent', () => {
   });
 
   it('should allow unlinking when multiple providers are linked', async () => {
-    linkedAccountsService.getLinkedAccounts.mockResolvedValue([
+    getLinkedAccountsSpy.mockResolvedValue([
       { provider: 'google', active: true, created_at: '2024-01-01' },
       { provider: 'email', active: true, created_at: '2024-01-02' },
     ]);
@@ -73,13 +79,12 @@ describe('LinkedAccountsComponent', () => {
   });
 
   it('should call linkAccount on link', async () => {
-    linkedAccountsService.linkAccount.mockResolvedValue(undefined);
     await component.link('facebook');
-    expect(linkedAccountsService.linkAccount).toHaveBeenCalledWith('facebook');
+    expect(linkAccountSpy).toHaveBeenCalledWith('facebook');
   });
 
   it('should call unlinkAccount on unlink when allowed', async () => {
-    linkedAccountsService.getLinkedAccounts.mockResolvedValue([
+    getLinkedAccountsSpy.mockResolvedValue([
       { provider: 'google', active: true, created_at: '2024-01-01' },
       { provider: 'email', active: true, created_at: '2024-01-02' },
     ]);
@@ -87,26 +92,24 @@ describe('LinkedAccountsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    linkedAccountsService.unlinkAccount.mockResolvedValue(undefined);
     await component.unlink('email');
-    expect(linkedAccountsService.unlinkAccount).toHaveBeenCalledWith('email');
+    expect(unlinkAccountSpy).toHaveBeenCalledWith('email');
   });
 
   it('should not call unlinkAccount when cannot unlink', async () => {
-    linkedAccountsService.unlinkAccount.mockResolvedValue(undefined);
     await component.unlink('google');
-    expect(linkedAccountsService.unlinkAccount).not.toHaveBeenCalled();
+    expect(unlinkAccountSpy).not.toHaveBeenCalled();
   });
 
   it('should handle link error gracefully', async () => {
-    linkedAccountsService.linkAccount.mockRejectedValue(new Error('Network error'));
+    linkAccountSpy.mockRejectedValue(new Error('Network error'));
     await component.link('google');
     expect(component.errorMessage()).toBeTruthy();
     expect(component.loading()).toBeFalsy();
   });
 
   it('should handle unlink error gracefully', async () => {
-    linkedAccountsService.getLinkedAccounts.mockResolvedValue([
+    getLinkedAccountsSpy.mockResolvedValue([
       { provider: 'google', active: true, created_at: '2024-01-01' },
       { provider: 'email', active: true, created_at: '2024-01-02' },
     ]);
@@ -114,7 +117,7 @@ describe('LinkedAccountsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    linkedAccountsService.unlinkAccount.mockRejectedValue(new Error('Network error'));
+    unlinkAccountSpy.mockRejectedValue(new Error('Network error'));
     await component.unlink('google');
     expect(component.errorMessage()).toBeTruthy();
     expect(component.loading()).toBeFalsy();

@@ -79,13 +79,13 @@ describe('AdminBlocksComponent', () => {
     translate: (key: string) => key,
   };
 
-  const createUser = (overrides: Partial<AdminBlockedUser> = {}): AdminBlockedUser => ({
-    id: 'user-1',
-    display_name: 'John Doe',
-    native_language: 'English',
-    target_languages: ['French', 'Spanish'],
-    ...overrides,
-  });
+  const createUser = (overrides: Record<string, unknown> = {}): AdminBlockedUser => ({
+    id: 'user-1' as string,
+    blocked_id: 'b-1' as string,
+    blocker_id: 'a-1' as string,
+    created_at: new Date().toISOString(),
+    ...(overrides as Record<string, unknown>),
+  }) as unknown as AdminBlockedUser;
 
   beforeEach(async () => {
     listBlockedUsersSpy = vi.fn().mockResolvedValue([]);

@@ -82,13 +82,14 @@ describe('EscrowOfflineService', () => {
               },
               objectStore: (name: string) => ({
                 put: (item: EscrowRow | EscrowOperation) => {
-                  if (name === 'escrows') escrowStore.set(item.id, item as EscrowRow);
+                  if (name === 'escrows') escrowStore.set((item as EscrowRow).id, item as EscrowRow);
                   if (name === 'operations') operationStore.set((item as EscrowOperation).key, item as EscrowOperation);
                   return createSyncRequest();
                 },
                 get: (key: string) => {
                   const r = createSyncRequest();
-                  r.result = name === 'escrows' ? escrowStore.get(key) : operationStore.get(key);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (r as any).result = name === 'escrows' ? escrowStore.get(key) : operationStore.get(key);
                   return r;
                 },
                 getAll: () => {

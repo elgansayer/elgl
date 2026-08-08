@@ -65,7 +65,8 @@ describe('ImageCompressionService', () => {
     const origGetContext = HTMLCanvasElement.prototype.getContext;
     const origToBlob = HTMLCanvasElement.prototype.toBlob;
 
-    HTMLCanvasElement.prototype.getContext = function () {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (HTMLCanvasElement.prototype as any).getContext = function () {
       return mockCtx;
     };
     HTMLCanvasElement.prototype.toBlob = function (callback: (blob: Blob | null) => void) {
