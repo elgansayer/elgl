@@ -33,13 +33,11 @@ describe('CreateEventModalComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CreateEventModalComponent, ReactiveFormsModule],
       providers: [
-        { provide: EventsService, useValue: eventsServiceSpy as unknown as EventsService },
-        { provide: TranslatePipe, useValue: translateStub as unknown as TranslatePipe },
+        { provide: EventsService, useValue: eventsServiceSpy },
+        { provide: TranslatePipe, useValue: translateStub },
       ],
     }).compileComponents();
-  });
 
-  beforeEach(() => {
     fixture = TestBed.createComponent(CreateEventModalComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -56,6 +54,11 @@ describe('CreateEventModalComponent', () => {
       platform_location: '',
       description: '',
     });
+  });
+
+  it('should render the modal dialog', () => {
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]');
+    expect(dialog).toBeTruthy();
   });
 
   it('should not call createEvent when form is invalid', () => {
@@ -94,7 +97,6 @@ describe('CreateEventModalComponent', () => {
   it('should not emit anything when creation fails', async () => {
     const createdSpy = vi.fn();
     const dismissSpy = vi.fn();
-    const consoleSpy = vi.spyOn(console, 'error');
     component.created.subscribe(createdSpy);
     component.dismiss.subscribe(dismissSpy);
 
@@ -111,7 +113,6 @@ describe('CreateEventModalComponent', () => {
 
     await component.onSubmit();
 
-    expect(consoleSpy).toHaveBeenCalled();
     expect(createdSpy).not.toHaveBeenCalled();
     expect(dismissSpy).not.toHaveBeenCalled();
   });

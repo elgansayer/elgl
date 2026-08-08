@@ -4,9 +4,6 @@ import { firstValueFrom } from 'rxjs';
 import { EventsService, Event } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
-/**
- * Values emitted when the user confirms creation (kept for reference).
- */
 export interface AppEventParams {
   title: string;
   date_time: string;
@@ -16,53 +13,47 @@ export interface AppEventParams {
 
 @Component({
   selector: 'app-create-event-modal',
-  standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div
-        class="max-w-md w-full rounded-2xl bg-surface-dark p-6 shadow-xl"
-      >
-        <h2 class="mb-4 text-start text-lg font-semibold">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" [attr.aria-label]="'events.createEvent' | t">
+      <div class="max-w-md w-full rounded-2xl bg-surface-500 p-6 shadow-lift">
+        <h2 class="mb-4 text-start text-lg font-semibold text-white">
           {{ 'events.createEvent' | t }}
         </h2>
 
         <form [formGroup]="eventForm" (ngSubmit)="onSubmit()">
-          <!-- What (Title) -->
           <div class="mb-3">
-            <label class="mb-1 block text-sm" for="titleInput">
-              {{ 'events.title' | t }}
+            <label class="mb-1 block text-sm text-text-secondary" for="titleInput">
+              {{ 'events.titleWhat' | t }}
             </label>
             <input
               id="titleInput"
               formControlName="title"
               type="text"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm text-white placeholder:text-text-muted"
               [placeholder]="'events.titlePlaceholder' | t"
             />
           </div>
 
-          <!-- When (Date & Time) -->
           <div class="mb-3">
-            <label class="mb-1 block text-sm" for="dateTimeInput">
-              {{ 'events.dateTime' | t }}
+            <label class="mb-1 block text-sm text-text-secondary" for="dateTimeInput">
+              {{ 'events.dateTimeWhen' | t }}
             </label>
             <input
               id="dateTimeInput"
               formControlName="date_time"
               type="datetime-local"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm text-white"
             />
           </div>
 
-          <!-- Where (Platform / Location) -->
           <div class="mb-3">
-            <label class="mb-1 block text-sm" for="locationInput">
-              {{ 'events.where' | t }}
+            <label class="mb-1 block text-sm text-text-secondary" for="locationInput">
+              {{ 'events.whereLabel' | t }}
             </label>
-            <p class="text-xs text-gray-500 ms-1">
+            <p class="mb-1 text-xs text-text-muted ms-1">
               {{ 'events.whereHint' | t }}
             </p>
             <input
@@ -70,39 +61,37 @@ export interface AppEventParams {
               formControlName="platform_location"
               type="text"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm text-white placeholder:text-text-muted"
               [placeholder]="'events.wherePlaceholder' | t"
             />
           </div>
 
-          <!-- Description -->
           <div class="mb-3">
-            <label class="mb-1 block text-sm" for="descriptionInput">
-              {{ 'events.description' | t }}
+            <label class="mb-1 block text-sm text-text-secondary" for="descriptionInput">
+              {{ 'events.descriptionLabel' | t }}
             </label>
             <textarea
               id="descriptionInput"
               formControlName="description"
               rows="3"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm text-white placeholder:text-text-muted"
               [placeholder]="'events.descriptionPlaceholder' | t"
             ></textarea>
           </div>
 
-          <!-- Action buttons -->
           <div class="flex justify-end gap-3">
             <button
               type="button"
               (click)="dismiss.emit()"
-              class="rounded-lg bg-gray-700 px-4 py-2 text-sm"
+              class="rounded-lg bg-surface-200 px-4 py-2 text-sm text-text-secondary hover:text-white transition-colors"
             >
               {{ 'events.cancel' | t }}
             </button>
             <button
               type="submit"
               [disabled]="eventForm.invalid"
-              class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              class="rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-accent-600 transition-colors"
             >
               {{ 'events.create' | t }}
             </button>
@@ -111,6 +100,11 @@ export interface AppEventParams {
       </div>
     </div>
   `,
+  styles: [`
+    :host {
+      display: block;
+    }
+  `],
 })
 export class CreateEventModalComponent {
   private readonly fb = inject(FormBuilder);
@@ -145,8 +139,8 @@ export class CreateEventModalComponent {
       );
       this.created.emit(createdEvent);
       this.dismiss.emit();
-    } catch (err) {
-      console.error('Failed to create event', err);
+    } catch (_err) {
+      // Error is swallowed - the parent should show a toast/notification
     }
   }
 }

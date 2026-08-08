@@ -1,14 +1,23 @@
-import {Component, inject, OnInit, signal} from '@angular/core';import { CommonModule, DatePipe } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
 import { EventsService, Event } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { CreateEventModalComponent } from '../../events/create-event-modal/create-event-modal.component';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-events-feed',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe, DatePipe],
+  imports: [CommonModule, TranslatePipe, DatePipe, CreateEventModalComponent],
   template: `
-    <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold text-white">{{ 'events.title' | t }}</h1>
+      <button
+        class="rounded-full bg-accent-500 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-600 transition-colors"
+        (click)="showCreateModal.set(true)"
+      >
+        {{ 'events.createEvent' | t }}
+      </button>
+    </div>
 
     <!-- Filter bar -->
     <div class="flex gap-2 mb-4 items-center flex-wrap">
@@ -27,8 +36,8 @@ import { firstValueFrom } from 'rxjs';
 
       <select
         [value]="languagePair() ?? ''"
-        (change)="onLanguageChange($any($event.target).value)"
-        class="bg-surface border border-border rounded px-2 py-1 text-sm"
+        (change)="onLanguageSelectChange($event)"
+        class="bg-surface-200 border border-surface-100 rounded px-2 py-1 text-sm text-white"
       >
         <option value="">{{ 'events.all_languages' | t }}</option>
         <option value="en-es">English ↔ Spanish</option>
@@ -46,20 +55,20 @@ import { firstValueFrom } from 'rxjs';
 
     <!-- Event list -->
     @if (isLoading() && events().length === 0) {
-      <p>{{ 'loading' | t }}</p>
+      <p class="text-text-secondary">{{ 'loading' | t }}</p>
     } @else {
       <div class="space-y-3">
         @for (event of events(); track event.id) {
-          <div class="p-4 bg-surface rounded-lg shadow">
-            <h2 class="font-semibold text-lg">{{ event.title }}</h2>
+          <div class="p-4 bg-surface-400 rounded-lg shadow">
+            <h2 class="font-semibold text-lg text-white">{{ event.title }}</h2>
             <p class="text-sm text-text-secondary">
               {{ event.date_time | date:'medium' }}
             </p>
             @if (event.location) {
-              <p class="text-xs">{{ event.location }}</p>
+              <p class="text-xs text-text-muted">{{ event.location }}</p>
             }
             @if (event.host_name) {
-              <p class="text-xs">
+              <p class="text-xs text-text-secondary">
                 {{ 'events.hosted_by' | t : { name: event.host_name } }}
               </p>
             }
@@ -68,7 +77,7 @@ import { firstValueFrom } from 'rxjs';
       </div>
       @if (hasMore()) {
         <button
-          class="mt-4 w-full py-2 bg-surface border border-border rounded text-sm font-medium disabled:opacity-50"
+          class="mt-4 w-full py-2 bg-surface-200 border border-surface-100 rounded text-sm font-medium text-white disabled:opacity-50"
           [disabled]="isLoading()"
           (click)="loadMore()"
         >
@@ -80,9 +89,17 @@ import { firstValueFrom } from 'rxjs';
         </button>
       }
     }
+
+    <!-- Create Event Modal -->
+    @if (showCreateModal()) {
+      <app-create-event-modal
+        (dismiss)="showCreateModal.set(false)"
+        (created)="onEventCreated($event)"
+      />
+    }
   `,
 })
-export class EventsFeedComponent implements OnInit {
+export class EventsFeedComponent {
   private eventsService = inject(EventsService);
 
   readonly events = signal<Event[]>([]);
@@ -90,9 +107,10 @@ export class EventsFeedComponent implements OnInit {
   readonly hasMore = signal(true);
   readonly status = signal<'upcoming' | 'past'>('upcoming');
   readonly languagePair = signal<string | undefined>(undefined);
+  readonly showCreateModal = signal(false);
   private page = signal(1);
 
-  ngOnInit(): void {
+  constructor() {
     this.loadEvents(true);
   }
 
@@ -127,14 +145,23 @@ export class EventsFeedComponent implements OnInit {
     }
   }
 
+  onEventCreated(event: Event): void {
+    this.showCreateModal.set(false);
+    this.events.update((prev) => [event, ...prev]);
+  }
+
   onStatusChange(value: 'upcoming' | 'past'): void {
     this.status.set(value);
     this.loadEvents(true);
   }
 
-  onLanguageChange(value: string): void {
-    this.languagePair.set(value ? value : undefined);
-    this.loadEvents(true);
+  onLanguageSelectChange(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLSelectElement) {
+      const value = target.value;
+      this.languagePair.set(value ? value : undefined);
+      this.loadEvents(true);
+    }
   }
 
   loadMore(): void {
