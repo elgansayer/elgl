@@ -108,14 +108,18 @@ export class SafetyService {
     }
   }
 
-  /** Apply mute‑word filter to an array of moments. */
-  filterMomentsByMutedWords(moments: MomentFeedItem[] | null | undefined): MomentFeedItem[] {
+  /** Apply mute‑word filter to an array of moments. Accepts both MomentFeedItem (content_text) and MomentRecord (text_content). */
+  filterMomentsByMutedWords<
+    T extends { content_text?: string | null; text_content?: string | null },
+  >(moments: T[] | null | undefined): T[] {
     if (!moments || moments.length === 0) return [];
     const muted = this._mutedWords();
     if (muted.length === 0) return moments;
     return moments.filter((moment) => {
-      if (!moment.content_text) return true;
-      const text: string = moment.content_text.toLowerCase();
+      const m = moment as Record<string, unknown>;
+      const rawText = m['content_text'] ?? m['text_content'];
+      if (!rawText || typeof rawText !== 'string') return true;
+      const text: string = rawText.toLowerCase();
       return !muted.some((word) => text.includes(word));
     });
   }
