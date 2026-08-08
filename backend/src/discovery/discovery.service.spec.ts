@@ -743,6 +743,114 @@ describe('DiscoveryService', () => {
       expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
     });
 
+    it('should pass target_language as filter_target to RPC call', async () => {
+      stubRpcResponse([{ id: 'p1' }]);
+
+      await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        target_language: 'JA',
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_target: 'JA' }),
+      );
+    });
+
+    it('should pass filter_target null when target_language is not provided', async () => {
+      stubRpcResponse([{ id: 'p1' }]);
+
+      await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+      });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ filter_target: null }),
+      );
+    });
+
+    it('should post-filter RPC results by interests when RPC succeeds', async () => {
+      stubRpcResponse([
+        { id: 'p1', interests: ['music', 'sports'] },
+        { id: 'p2', interests: ['reading'] },
+        { id: 'p3', interests: ['music'] },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        interests: 'music',
+      });
+
+      expect(result.map((u) => u.id)).toEqual(['p1', 'p3']);
+    });
+
+    it('should filter out all users when no RPC results match interests', async () => {
+      stubRpcResponse([
+        { id: 'p1', interests: ['reading'] },
+        { id: 'p2', interests: ['sports'] },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        interests: 'music',
+      });
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle RPC results without interests field gracefully', async () => {
+      stubRpcResponse([{ id: 'p1' }, { id: 'p2' }]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        interests: 'music',
+      });
+
+      // No interests field, no match, empty result
+      expect(result).toHaveLength(0);
+    });
+
+    it('should force serious_only true in RPC when profile has serious_learner_mode', async () => {
+      stubRpcResponse([{ id: 'p1' }]);
+
+      await service.searchPartners(
+        'user-1',
+        { is_serious_learner: true } as any,
+        { latitude: 1, longitude: 2, serious_learner_mode: true },
+      );
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+        'search_nearby_users',
+        expect.objectContaining({ serious_only: true }),
+      );
+    });
+
+    it('should not apply country/city ilike on RPC results when RPC succeeds', async () => {
+      // When RPC succeeds, queryBuilder ilike filters are NOT applied.
+      // RPC results may include users from any country/city.
+      stubRpcResponse([
+        { id: 'p1', country: 'US', city: 'NYC' },
+        { id: 'p2', country: 'JP', city: 'Tokyo' },
+      ]);
+
+      const result = await service.searchPartners('user-1', null, {
+        latitude: 1,
+        longitude: 2,
+        country: 'Canada',
+        city: 'Toronto',
+      });
+
+      // RPC succeeds, ilike filters on queryBuilder not consulted
+      // Both users returned (country/city filtering is post-DB via enrich only)
+      expect(result.map((u) => u.id)).toEqual(['p1', 'p2']);
+    });
+
     // -- RPC fallback chain --------------------------------------------------
     it('should fall back to standard query when RPC returns error', async () => {
       mockSupabaseClient.rpc.mockResolvedValue({
