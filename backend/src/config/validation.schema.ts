@@ -80,6 +80,11 @@ export const validationSchema = Joi.object({
   LIVEKIT_RTC_STUN_SERVERS: Joi.string().default(
     testDefaults.LIVEKIT_RTC_STUN_SERVERS,
   ),
+  LIVEKIT_TURN_USERNAME: Joi.string().optional().allow(''),
+  LIVEKIT_TURN_PASSWORD: Joi.string().optional().allow(''),
+  TURN_SERVER_URL: Joi.string().optional().allow(''),
+  TURN_USERNAME: Joi.string().optional().allow(''),
+  TURN_PASSWORD: Joi.string().optional().allow(''),
   CLOUDFLARE_R2_ENDPOINT: Joi.string()
     .uri()
     .default(testDefaults.CLOUDFLARE_R2_ENDPOINT),

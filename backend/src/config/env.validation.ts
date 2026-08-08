@@ -70,6 +70,26 @@ export class EnvironmentVariables {
   LIVEKIT_RTC_STUN_SERVERS?: string;
 
   @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_USERNAME?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
+  TURN_SERVER_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  TURN_USERNAME?: string;
+
+  @IsString()
+  @IsOptional()
+  TURN_PASSWORD?: string;
+
+  @IsString()
   CLOUDFLARE_R2_ENDPOINT!: string;
 
   @IsString()

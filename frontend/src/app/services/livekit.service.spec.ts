@@ -120,7 +120,7 @@ describe('LivekitService', () => {
   });
 
   describe('getToken', () => {
-    it('should POST to the livekit token endpoint', async () => {
+    it('should POST to the livekit token endpoint and return TokenResponse', async () => {
       const tokenPromise = service.getToken('my-room', 'user-123');
       const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
       expect(req.request.method).toBe('POST');
@@ -128,9 +128,15 @@ describe('LivekitService', () => {
         room_name: 'my-room',
         participant_identity: 'user-123',
       });
-      req.flush({ token: 'test-token' });
-      const token = await tokenPromise;
-      expect(token).toBe('test-token');
+      req.flush({
+        token: 'test-token',
+        ice_servers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        livekit_url: 'ws://localhost:7880',
+      });
+      const tokenResponse = await tokenPromise;
+      expect(tokenResponse.token).toBe('test-token');
+      expect(tokenResponse.ice_servers).toEqual([{ urls: 'stun:stun.l.google.com:19302' }]);
+      expect(tokenResponse.livekit_url).toBe('ws://localhost:7880');
     });
   });
 
@@ -141,7 +147,7 @@ describe('LivekitService', () => {
   });
 
   describe('joinRoom', () => {
-    it('should connect to a room with the token from the backend', async () => {
+    it('should connect to a room with the token and ICE config from the backend', async () => {
       const fakeRoom = mockRoom({
         connect: mockRoomConnect,
         disconnect: mockRoomDisconnect,
@@ -154,9 +160,21 @@ describe('LivekitService', () => {
       const roomPromise = service.joinRoom('my-room', 'user-123', false);
       const req = httpMock.expectOne(`${environment.apiUrl}/livekit/token`);
       expect(req.request.method).toBe('POST');
-      req.flush({ token: 'test-token' });
+      req.flush({
+        token: 'test-token',
+        ice_servers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        livekit_url: 'ws://localhost:7880',
+      });
       const room = await roomPromise;
-      expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token');
+      expect(mockRoomConnect).toHaveBeenCalledWith(
+        'ws://localhost:7880',
+        'test-token',
+        {
+          rtcConfig: {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+          },
+        },
+      );
       expect(room).toBe(fakeRoom);
       expect(internals(service).room).toEqual(fakeRoom);
     });

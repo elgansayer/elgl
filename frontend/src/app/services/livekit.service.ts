@@ -11,6 +11,16 @@ import {
   Track,
 } from 'livekit-client';
 
+interface TokenResponse {
+  token: string;
+  ice_servers: Array<{
+    urls: string | string[];
+    username?: string;
+    credential?: string;
+  }>;
+  livekit_url: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -29,23 +39,26 @@ export class LivekitService {
   }
 
   /**
-   * Get a LiveKit access token from the backend.
+   * Get a LiveKit access token and ICE server configuration from the backend.
    */
-  async getToken(roomName: string, participantIdentity: string): Promise<string> {
+  async getToken(roomName: string, participantIdentity: string): Promise<TokenResponse> {
     const response = await firstValueFrom(
-      this.http.post<{ token: string }>(`${environment.apiUrl}/livekit/token`, {
+      this.http.post<TokenResponse>(`${environment.apiUrl}/livekit/token`, {
         room_name: roomName,
         participant_identity: participantIdentity,
       }),
     );
-    return response.token;
+    return response;
   }
 
   /**
-   * Get the LiveKit WebSocket URL.
+   * Get the LiveKit WebSocket URL. Uses the last known URL from the token
+   * response when available, otherwise falls back to the environment default.
    */
+  private _liveKitUrl = '';
+
   getLiveKitUrl(): string {
-    return environment.liveKitUrl;
+    return this._liveKitUrl || environment.liveKitUrl;
   }
 
   async joinRoom(
@@ -54,8 +67,11 @@ export class LivekitService {
     _isVideoCall: boolean,
     e2eeKey?: string,
   ): Promise<Room> {
-    const token = await this.getToken(roomName, userId);
+    const tokenResponse = await this.getToken(roomName, userId);
     let roomOptions: RoomOptions = {};
+
+    // Store the LiveKit URL from the backend response
+    this._liveKitUrl = tokenResponse.livekit_url;
 
     if (e2eeKey) {
       const keyProvider = new ExternalE2EEKeyProvider();
@@ -73,16 +89,13 @@ export class LivekitService {
 
     const room = this.createRoom(roomOptions);
     this.room = room;
-    await room.connect(this.getLiveKitUrl(), token, {
+    await room.connect(this.getLiveKitUrl(), tokenResponse.token, {
       rtcConfig: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          {
-            urls: environment.turnServerUrl,
-            username: environment.turnUsername,
-            credential: environment.turnPassword,
-          },
-        ],
+        iceServers: tokenResponse.ice_servers.map((server) => ({
+          urls: server.urls,
+          ...(server.username ? { username: server.username } : {}),
+          ...(server.credential ? { credential: server.credential } : {}),
+        })),
       },
     });
     return room;
