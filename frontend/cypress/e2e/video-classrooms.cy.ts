@@ -159,22 +159,9 @@ function makeCallLog(overrides: Partial<CallLogRecord> = {}): CallLogRecord {
   };
 }
 
-function setupCommonMocks(): void {
-  cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-  cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-  cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-  cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-  cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-  cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-  cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-    'getBlockedAndBlockerIds',
-  );
-  cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-  cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 100 } }).as('getBalance');
-}
 
 function setupAudioRoomsMocks(rooms: AudioRoomRecord[] = createMockRooms()): void {
-  setupCommonMocks();
+  cy.setupCommonMocks();
 
   // Active rooms list
   cy.intercept('GET', `${AUDIO_ROOMS_BASE}/list*`, {
@@ -649,7 +636,7 @@ describe('Video Classrooms - Stage Management', () => {
 
 describe('Video Classrooms - 1-on-1 Video Call Flow', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
 
     // Mock start call
     cy.intercept('POST', `${VIDEO_CALLS_BASE}/start`, {
@@ -788,7 +775,7 @@ describe('Video Classrooms - Call Logs', () => {
 
 describe('Video Classrooms - Classrooms Marketplace', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should render the classrooms marketplace component', () => {
@@ -810,7 +797,7 @@ describe('Video Classrooms - Classrooms Marketplace', () => {
 
 describe('Video Classrooms - VoIP Call Flow', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
 
     // Mock LiveKit token for VoIP
     cy.intercept('POST', '**/api/livekit/token', {
@@ -965,7 +952,7 @@ describe('Video Classrooms - Full User Journey', () => {
 
 describe('Video Classrooms - Error Handling & Edge Cases', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should handle LiveKit token fetch failure gracefully', () => {

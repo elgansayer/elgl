@@ -54,27 +54,13 @@ function mockEscrow(overrides: Partial<EscrowTransaction> = {}): EscrowTransacti
   };
 }
 
-function setupCommonMocks(): void {
-  cy.intercept('GET', '**/api/chat/rooms', { body: [] }).as('getRooms');
-  cy.intercept('GET', '**/api/chat/locked-rooms', { body: [] }).as('getLockedRooms');
-  cy.intercept('GET', '**/api/chat/labels', { body: [] }).as('getLabels');
-  cy.intercept('GET', '**/api/safety/blocked-ids', { body: [] }).as('getBlockedIds');
-  cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: [] }).as('getUserBlockedIds');
-  cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
-  cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: [] }).as(
-    'getBlockedAndBlockerIds',
-  );
-  cy.intercept('GET', '**/api/economy/catalog', { body: [] }).as('getCatalog');
-  cy.intercept('GET', '**/api/economy/balance', { body: { coins_balance: 500 } }).as('getBalance');
-}
 
-// -----------------------------------------------------------------
 // 1. Create Escrow (API Contract)
 // -----------------------------------------------------------------
 
 describe('Escrow Payments - Create Escrow', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should create a new escrow transaction with valid payload', () => {
@@ -252,7 +238,7 @@ describe('Escrow Payments - Create Escrow', () => {
 
 describe('Escrow Payments - View Escrow', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should retrieve a single escrow by ID', () => {
@@ -363,7 +349,7 @@ describe('Escrow Payments - View Escrow', () => {
 
 describe('Escrow Payments - Release Funds', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should release escrow funds to the recipient', () => {
@@ -459,7 +445,7 @@ describe('Escrow Payments - Release Funds', () => {
 
 describe('Escrow Payments - Cancel & Refund', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should allow the payer to cancel a pending escrow', () => {
@@ -562,7 +548,7 @@ describe('Escrow Payments - Cancel & Refund', () => {
 
 describe('Escrow Payments - Dispute Flow', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should allow the payer to open a dispute', () => {
@@ -672,7 +658,7 @@ describe('Escrow Payments - Dispute Flow', () => {
 
 describe('Escrow Payments - History & Filtering', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   const historyEscrows: EscrowTransaction[] = [
@@ -777,7 +763,7 @@ describe('Escrow Payments - History & Filtering', () => {
 
 describe('Escrow Payments - Error States & Edge Cases', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should handle server errors gracefully (500)', () => {
@@ -887,7 +873,7 @@ describe('Escrow Payments - Error States & Edge Cases', () => {
 
 describe('Escrow Payments - UI Flow', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
 
     cy.intercept('GET', `${API_BASE}/history`, {
       statusCode: 200,
@@ -946,7 +932,7 @@ describe('Escrow Payments - UI Flow', () => {
 
 describe('Escrow Payments - Summary & Stats', () => {
   beforeEach(() => {
-    setupCommonMocks();
+    cy.setupCommonMocks();
   });
 
   it('should return escrow summary for the authenticated user', () => {
