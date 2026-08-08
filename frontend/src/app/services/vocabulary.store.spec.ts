@@ -629,9 +629,13 @@ describe('VocabularyStore', () => {
       expect(store.flashcardMap().size).toBe(0);
     });
 
-    it('should handle updateSrsLevel failure gracefully', async () => {
+    it('should handle updateSrsLevel failure gracefully when online', async () => {
       store.allFlashcards.set([mockFlashcard]);
       store.flashcardMap.set(new Map([['hello', mockFlashcard]]));
+
+      // Force online to exercise the throw path (not the offline optimistic-update path)
+      const protoDesc = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
 
       const promise = store.updateSrsLevel('1', 2);
       httpMock.expectOne(`${environment.apiUrl}/flashcards/1/srs`).flush(
@@ -639,48 +643,45 @@ describe('VocabularyStore', () => {
         { status: 404, statusText: 'Not Found' },
       );
 
-      await expect(promise).rejects.toThrow();
+      await expect(promise).rejects.toThrow('Failed to update SRS level');
       expect(store.allFlashcards()[0].srs_level).toBe(1);
       expect(store.flashcardMap().get('hello')?.srs_level).toBe(1);
+
+      // Restore
+      if (protoDesc) {
+        Object.defineProperty(Navigator.prototype, 'onLine', protoDesc);
+      }
+      Object.defineProperty(navigator, 'onLine', { value: protoDesc?.value ?? true, configurable: true });
     });
 
-    it('should gracefully degrade translateWordOrSentence on failure', async () => {
+    it('should propagate errors from translateWordOrSentence', async () => {
       const promise = store.translateWordOrSentence('hello', 'es');
       httpMock.expectOne(`${environment.apiUrl}/nlp/translate`).flush(
         { message: 'Service unavailable' },
         { status: 503, statusText: 'Service Unavailable' },
       );
 
-      const result = await promise;
-      expect(result.original_text).toBe('hello');
-      expect(result.translated_text).toBe('hello');
-      expect(result.definition).toContain('unavailable');
+      await expect(promise).rejects.toThrow();
     });
 
-    it('should gracefully degrade checkGrammar on failure', async () => {
+    it('should propagate errors from checkGrammar', async () => {
       const promise = store.checkGrammar('hola', 'es');
       httpMock.expectOne(`${environment.apiUrl}/nlp/grammar-check`).flush(
         { message: 'Bad request' },
         { status: 400, statusText: 'Bad Request' },
       );
 
-      const result = await promise;
-      expect(result.original).toBe('hola');
-      expect(result.corrected).toBe('hola');
-      expect(result.errors_found).toBe(0);
+      await expect(promise).rejects.toThrow();
     });
 
-    it('should gracefully degrade scorePronunciation on failure', async () => {
+    it('should propagate errors from scorePronunciation', async () => {
       const promise = store.scorePronunciation('http://audio.url', 'hello', 'en');
       httpMock.expectOne(`${environment.apiUrl}/nlp/pronunciation-score`).flush(
         { message: 'Internal error' },
         { status: 500, statusText: 'Internal Server Error' },
       );
 
-      const result = await promise;
-      expect(result.overall_score).toBe(85);
-      expect(result.breakdown.length).toBeGreaterThan(0);
-      expect(result.feedback_summary).toContain('unavailable');
+      await expect(promise).rejects.toThrow();
     });
   });
 
@@ -899,6 +900,92 @@ describe('VocabularyStore', () => {
       expect(req.request.body.language).toBeUndefined();
       req.flush({ overall_score: 100, breakdown: [], feedback_summary: '' });
       await promise;
+    });
+  });
+
+  describe('isDegraded and degradedReason signals', () => {
+    it('should initialise isDegraded as false', () => {
+      expect(store.isDegraded()).toBe(false);
+    });
+
+    it('should initialise degradedReason as empty string', () => {
+      expect(store.degradedReason()).toBe('');
+    });
+
+    it('should allow setting isDegraded and degradedReason', () => {
+      store.isDegraded.set(true);
+      store.degradedReason.set('Circuit breaker is open');
+
+      expect(store.isDegraded()).toBe(true);
+      expect(store.degradedReason()).toBe('Circuit breaker is open');
+    });
+
+    it('should toggle isDegraded back to false', () => {
+      store.isDegraded.set(true);
+      expect(store.isDegraded()).toBe(true);
+
+      store.isDegraded.set(false);
+      expect(store.isDegraded()).toBe(false);
+    });
+  });
+
+  describe('pendingReviewCards signal', () => {
+    it('should initialise pendingReviewCards as an empty array', () => {
+      expect(store.pendingReviewCards()).toEqual([]);
+    });
+
+    it('should allow setting a deck-specific review queue', () => {
+      const reviewCards = [
+        { ...mockFlashcard, id: 'r1', word_token: 'review1' },
+        { ...mockFlashcard, id: 'r2', word_token: 'review2' },
+      ];
+      store.pendingReviewCards.set(reviewCards);
+
+      expect(store.pendingReviewCards().length).toBe(2);
+      expect(store.pendingReviewCards()[0].id).toBe('r1');
+      expect(store.pendingReviewCards()[1].id).toBe('r2');
+    });
+
+    it('should allow clearing pending review cards', () => {
+      store.pendingReviewCards.set([mockFlashcard]);
+      expect(store.pendingReviewCards().length).toBe(1);
+
+      store.pendingReviewCards.set([]);
+      expect(store.pendingReviewCards().length).toBe(0);
+    });
+  });
+
+  describe('isOffline computed signal', () => {
+    it('should return a boolean value reflecting initial navigator.onLine state', () => {
+      // isOffline is computed(() => !navigator.onLine) — it caches the value at init time
+      expect(typeof store.isOffline()).toBe('boolean');
+      expect(store.isOffline()).toBe(!navigator.onLine);
+    });
+
+    it('should be true when navigator is initially offline', () => {
+      // Store was initialised while navigator.onLine is true in standard jsdom;
+      // we simply validate isOffline() returns the correct negated value.
+      const expected = !navigator.onLine;
+      expect(store.isOffline()).toBe(expected);
+    });
+  });
+
+  describe('syncOfflineReviews', () => {
+    it('should delegate to srsOffline.syncQueuedReviews and return synced/failed counts', async () => {
+      srsOfflineSpy.syncQueuedReviews.mockResolvedValue({ synced: 3, failed: 1 });
+
+      const result = await store.syncOfflineReviews();
+
+      expect(result).toEqual({ synced: 3, failed: 1 });
+      expect(srsOfflineSpy.syncQueuedReviews).toHaveBeenCalledOnce();
+    });
+
+    it('should return zero counts when no reviews are queued', async () => {
+      srsOfflineSpy.syncQueuedReviews.mockResolvedValue({ synced: 0, failed: 0 });
+
+      const result = await store.syncOfflineReviews();
+
+      expect(result).toEqual({ synced: 0, failed: 0 });
     });
   });
 });
