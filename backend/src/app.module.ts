@@ -71,7 +71,6 @@ import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
@@ -179,7 +178,6 @@ import { CloudflareModule } from './cloudflare/cloudflare.module';
 
       useClass: ThrottlerGuard,
     },
-    PronunciationScoringService,
     AnkiiIntegrationService,
   ],
 })
