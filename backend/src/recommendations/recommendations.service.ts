@@ -59,13 +59,14 @@ export class RecommendationsService {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async calculateDailyRecommendations(): Promise<void> {
-    this.logger.info('Starting daily recommendation calculations...');
+    this.logger.info('Starting daily partner recommendation calculations...');
     const supabase = this.supabaseService.getClient();
     const redis = this.supabaseService.getRedisClient();
 
-    let pipeline = redis.pipeline();
+    const startTime = Date.now();
     let pipelineOps = 0;
     let totalCached = 0;
+    let pipeline = redis.pipeline();
 
     const flushPipeline = async (): Promise<void> => {
       if (pipelineOps > 0) {
@@ -76,57 +77,165 @@ export class RecommendationsService {
     };
 
     try {
-      const { data: users, error } = await supabase
+      // Phase 1: Fetch all eligible users with full profiles in a single bulk query.
+      const { data: allUsers, error: usersError } = await supabase
         .from('users')
-        .select('id, native_language, target_languages')
+        .select(
+          'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        )
         .match(GDPR_MATCHMAKING_FILTERS)
         .not('target_languages', 'is', null)
         .limit(CRON_USERS_LIMIT);
 
-      if (error || !users) {
-        throw new Error(`Failed to fetch users: ${error?.message}`);
+      if (usersError || !allUsers) {
+        throw new Error(`Failed to fetch users: ${usersError?.message}`);
       }
 
+      const eligibleUsers = allUsers as UserRow[];
       this.logger.info(
-        `Computing recommendations for ${users.length} users...`,
+        `Fetched ${eligibleUsers.length} eligible users for batch recommendation computation`,
       );
 
-      for (const user of users) {
+      // Phase 2: Fetch all user_interests in bulk for interest-based matching.
+      const userIds = eligibleUsers.map((u) => u.id);
+      let interestsByUser = new Map<string, string[]>();
+
+      if (userIds.length > 0) {
+        // Query in chunks to avoid query size limits on large user bases.
+        const INTEREST_CHUNK_SIZE = 1000;
+        for (let offset = 0; offset < userIds.length; offset += INTEREST_CHUNK_SIZE) {
+          const chunk = userIds.slice(offset, offset + INTEREST_CHUNK_SIZE);
+          const { data: interestRows, error: interestError } = await supabase
+            .from('user_interests')
+            .select('user_id, tag')
+            .in('user_id', chunk);
+
+          if (!interestError && Array.isArray(interestRows)) {
+            for (const row of interestRows) {
+              if (isRecord(row)) {
+                const uid = row['user_id'];
+                const tag = row['tag'];
+                if (typeof uid === 'string' && typeof tag === 'string') {
+                  const tags = interestsByUser.get(uid) ?? [];
+                  tags.push(tag);
+                  interestsByUser.set(uid, tags);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Phase 3: Build index by native_language for efficient lookups.
+      const usersByNativeLang = new Map<string, UserRow[]>();
+      for (const user of eligibleUsers) {
+        if (!user.native_language) continue;
+        const key = user.native_language.toLowerCase();
+        const bucket = usersByNativeLang.get(key) ?? [];
+        bucket.push(user);
+        usersByNativeLang.set(key, bucket);
+      }
+
+      // Phase 4: For each user, compute multi-tier recommendations in-memory.
+      let processedCount = 0;
+
+      for (const user of eligibleUsers) {
+        processedCount++;
         const targetLanguages = user.target_languages as string[] | null;
         if (!targetLanguages || targetLanguages.length === 0) continue;
 
-        const nativeLang = user.native_language as string | null;
+        const userTags = interestsByUser.get(user.id) ?? [];
+        const nativeLang = (user.native_language as string | null)?.toLowerCase();
 
-        const { data: matches } = await supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .neq('id', user.id)
-          .match(GDPR_MATCHMAKING_FILTERS)
-          .in('native_language', targetLanguages)
-          .contains('target_languages', nativeLang ? [nativeLang] : [])
-          .order('is_serious_learner', { ascending: false })
-          .limit(DAILY_LIMIT);
+        const candidates: RecommendedUserDto[] = [];
+        const seen = new Set<string>();
 
-        if (matches && matches.length > 0) {
-          const dtos: RecommendedUserDto[] = (matches as UserRow[]).map(
-            (m) => ({
-              id: m.id,
-              displayName: m.display_name ?? null,
-              avatarUrl: m.avatar_url ?? null,
-              nativeLanguage: m.native_language ?? null,
-              targetLanguages: m.target_languages ?? null,
-              sharedInterests: 0,
-              isSeriousLearner: m.is_serious_learner ?? null,
-              studyStreakDays: m.study_streak_days ?? null,
-              correctionRatio: m.correction_ratio ?? null,
-            }),
-          );
+        // Tier 1: Interest-based matching (in-memory).
+        if (userTags.length > 0) {
+          for (const [otherUserId, otherTags] of interestsByUser) {
+            if (otherUserId === user.id) continue;
+            if (seen.has(otherUserId)) continue;
+
+            const sharedCount = userTags.filter((t) =>
+              otherTags.includes(t),
+            ).length;
+            if (sharedCount > 0) {
+              const otherUser = eligibleUsers.find((u) => u.id === otherUserId);
+              if (otherUser) {
+                seen.add(otherUserId);
+                candidates.push({
+                  id: otherUser.id,
+                  displayName: otherUser.display_name ?? null,
+                  avatarUrl: otherUser.avatar_url ?? null,
+                  nativeLanguage: otherUser.native_language ?? null,
+                  targetLanguages: otherUser.target_languages ?? null,
+                  sharedInterests: sharedCount,
+                  isSeriousLearner: otherUser.is_serious_learner ?? null,
+                  studyStreakDays: otherUser.study_streak_days ?? null,
+                  correctionRatio: otherUser.correction_ratio ?? null,
+                  matchTier: 'interest',
+                });
+              }
+            }
+          }
+        }
+
+        // Tier 2: Language exchange matching (in-memory, complementary languages).
+        if (nativeLang && targetLanguages.length > 0) {
+          for (const targetLang of targetLanguages) {
+            const targetLangKey = targetLang.toLowerCase();
+            const speakers = usersByNativeLang.get(targetLangKey) ?? [];
+            for (const speaker of speakers) {
+              if (speaker.id === user.id) continue;
+              if (seen.has(speaker.id)) continue;
+
+              const speakerTargets = (speaker.target_languages as string[] | null) ?? [];
+              const speakerTargetsLower = speakerTargets.map((t) =>
+                t.toLowerCase(),
+              );
+              // The partner's target languages must include the user's native language.
+              if (!speakerTargetsLower.includes(nativeLang)) continue;
+
+              seen.add(speaker.id);
+              candidates.push({
+                id: speaker.id,
+                displayName: speaker.display_name ?? null,
+                avatarUrl: speaker.avatar_url ?? null,
+                nativeLanguage: speaker.native_language ?? null,
+                targetLanguages: speaker.target_languages ?? null,
+                sharedInterests: 0,
+                isSeriousLearner: speaker.is_serious_learner ?? null,
+                studyStreakDays: speaker.study_streak_days ?? null,
+                correctionRatio: speaker.correction_ratio ?? null,
+                matchTier: 'language_exchange',
+              });
+            }
+          }
+        }
+
+        // Phase 5: Sort and limit results, then cache.
+        if (candidates.length > 0) {
+          candidates.sort((a, b) => {
+            // Interest tier first.
+            const tierA = a.matchTier === 'interest' ? 0 : 1;
+            const tierB = b.matchTier === 'interest' ? 0 : 1;
+            if (tierA !== tierB) return tierA - tierB;
+
+            // Within same tier: shared interests (desc), serious learner, streak.
+            if (b.sharedInterests !== a.sharedInterests) {
+              return b.sharedInterests - a.sharedInterests;
+            }
+            if (a.isSeriousLearner !== b.isSeriousLearner) {
+              return b.isSeriousLearner ? -1 : 1;
+            }
+            return (b.studyStreakDays ?? 0) - (a.studyStreakDays ?? 0);
+          });
+
+          const topK = candidates.slice(0, DAILY_LIMIT);
 
           pipeline.set(
             `recommendations:daily:${user.id}`,
-            JSON.stringify(dtos),
+            JSON.stringify(topK),
             'EX',
             DAILY_REDIS_TTL,
           );
@@ -140,12 +249,14 @@ export class RecommendationsService {
       }
 
       await flushPipeline();
+
+      const elapsed = Date.now() - startTime;
       this.logger.info(
-        `Successfully calculated and cached ${totalCached} daily recommendation sets.`,
+        `Daily partner recommendations computed: cached ${totalCached} sets for ${processedCount} users in ${elapsed}ms`,
       );
     } catch (error) {
       await flushPipeline();
-      this.logger.error('Error calculating daily recommendations', error);
+      this.logger.error('Error calculating daily partner recommendations', error);
       void this.reportTierDegradation(
         'calculateDailyRecommendations',
         'system',

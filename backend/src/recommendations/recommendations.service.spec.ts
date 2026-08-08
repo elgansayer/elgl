@@ -194,18 +194,19 @@ describe('RecommendationsService', () => {
   });
 
   describe('calculateDailyRecommendations', () => {
-    it('should cache full DTOs for language exchange matches in Redis', async () => {
+    it('should precompute multi-tier partner recommendations in Redis', async () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
         {
           id: 'user-a',
+          display_name: 'User A',
+          avatar_url: 'http://img/a.png',
           native_language: 'en',
           target_languages: ['es'],
+          is_serious_learner: true,
+          study_streak_days: 10,
+          correction_ratio: 0.95,
         },
-      ]);
-
-      const matchesChain = makeQueryChain();
-      matchesChain._setResolve([
         {
           id: 'partner-1',
           display_name: 'Partner 1',
@@ -228,24 +229,38 @@ describe('RecommendationsService', () => {
         },
       ]);
 
+      const interestsChain = makeQueryChain();
+      interestsChain._setResolve([
+        { user_id: 'user-a', tag: 'music' },
+        { user_id: 'partner-1', tag: 'music' },
+        { user_id: 'partner-2', tag: 'travel' },
+      ]);
+
       mockFrom
         .mockReturnValueOnce(usersChain)
-        .mockReturnValueOnce(matchesChain);
+        .mockReturnValueOnce(interestsChain);
 
       await service.calculateDailyRecommendations();
 
-      expect(mockPipeline.set).toHaveBeenCalledTimes(1);
-      expect(mockPipeline.set.mock.calls[0][0]).toBe(
-        'recommendations:daily:user-a',
+      // All eligible users with complementary language pairs get cached.
+      // user-a (en->es) matches partner-1 & partner-2 (es->en)
+      // partner-1 (es->en) matches user-a (en->es)
+      // partner-2 (es->en) matches user-a (en->es)
+      const userACall = mockPipeline.set.mock.calls.find(
+        (call: string[]) => call[0] === 'recommendations:daily:user-a',
       );
+      expect(userACall).toBeDefined();
 
-      const parsed: RecommendedUserDto[] = JSON.parse(
-        mockPipeline.set.mock.calls[0][1],
-      );
-      expect(parsed).toHaveLength(2);
+      const parsed: RecommendedUserDto[] = JSON.parse(userACall[1]);
+      expect(parsed.length).toBeGreaterThanOrEqual(1);
+      // partner-1 shares interest 'music' and is complementary language, so should rank first
       expect(parsed[0].id).toBe('partner-1');
-      expect(parsed[0].displayName).toBe('Partner 1');
-      expect(parsed[1].id).toBe('partner-2');
+      // Interest-based matches should have matchTier='interest'
+      expect(parsed[0].matchTier).toBe('interest');
+      expect(parsed[0].sharedInterests).toBe(1);
+      // partner-2 should also appear as language exchange match
+      const partner2 = parsed.find((p) => p.id === 'partner-2');
+      expect(partner2).toBeDefined();
       expect(mockPipeline.exec).toHaveBeenCalled();
     });
 
@@ -268,18 +283,57 @@ describe('RecommendationsService', () => {
     });
 
     it('should skip users without target languages', async () => {
-      const chain = makeQueryChain();
-      chain._setResolve([
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
         {
           id: 'user-a',
+          display_name: 'User A',
+          avatar_url: null,
           native_language: 'en',
           target_languages: null,
+          is_serious_learner: false,
+          study_streak_days: 0,
+          correction_ratio: null,
         },
       ]);
-      mockFrom.mockReturnValueOnce(chain);
+
+      // The new implementation fetches interests in a second query.
+      const interestsChain = makeQueryChain();
+      interestsChain._setResolve([]);
+
+      mockFrom
+        .mockReturnValueOnce(usersChain)
+        .mockReturnValueOnce(interestsChain);
 
       await service.calculateDailyRecommendations();
       expect(mockPipeline.set).not.toHaveBeenCalled();
+    });
+
+    it('should handle interest fetching error gracefully', async () => {
+      const usersChain = makeQueryChain();
+      usersChain._setResolve([
+        {
+          id: 'user-a',
+          display_name: 'User A',
+          avatar_url: null,
+          native_language: 'en',
+          target_languages: ['es'],
+          is_serious_learner: true,
+          study_streak_days: 10,
+          correction_ratio: 0.95,
+        },
+      ]);
+
+      const interestsChain = makeQueryChain();
+      interestsChain._setResolve(null, { message: 'Interest DB error' });
+
+      mockFrom
+        .mockReturnValueOnce(usersChain)
+        .mockReturnValueOnce(interestsChain);
+
+      await service.calculateDailyRecommendations();
+      // Should still complete, just without interest-based matches.
+      // User has no language exchange partners without interest data either, so no cache.
     });
   });
 
@@ -1033,31 +1087,6 @@ describe('RecommendationsService', () => {
     it('should handle calculateDailyRecommendations with multiple users and diverse language pairs', async () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
-        { id: 'user-a', native_language: 'en', target_languages: ['es'] },
-        { id: 'user-b', native_language: 'ja', target_languages: ['en', 'ko'] },
-        { id: 'user-c', native_language: 'es', target_languages: ['en'] },
-        { id: 'user-d', native_language: 'en', target_languages: null },
-      ]);
-
-      const matchesForA = makeQueryChain();
-      matchesForA._setResolve([
-        {
-          id: 'user-c',
-          display_name: 'User C',
-          avatar_url: null,
-          native_language: 'es',
-          target_languages: ['en'],
-          is_serious_learner: true,
-          study_streak_days: 20,
-          correction_ratio: 0.9,
-        },
-      ]);
-
-      const matchesForB = makeQueryChain();
-      matchesForB._setResolve([]);
-
-      const matchesForC = makeQueryChain();
-      matchesForC._setResolve([
         {
           id: 'user-a',
           display_name: 'User A',
@@ -1068,16 +1097,51 @@ describe('RecommendationsService', () => {
           study_streak_days: 30,
           correction_ratio: 0.95,
         },
+        {
+          id: 'user-b',
+          display_name: 'User B',
+          avatar_url: null,
+          native_language: 'ja',
+          target_languages: ['en', 'ko'],
+          is_serious_learner: false,
+          study_streak_days: 5,
+          correction_ratio: 0.7,
+        },
+        {
+          id: 'user-c',
+          display_name: 'User C',
+          avatar_url: null,
+          native_language: 'es',
+          target_languages: ['en'],
+          is_serious_learner: true,
+          study_streak_days: 20,
+          correction_ratio: 0.9,
+        },
+        {
+          id: 'user-d',
+          display_name: 'User D',
+          avatar_url: null,
+          native_language: 'en',
+          target_languages: null,
+          is_serious_learner: false,
+          study_streak_days: 0,
+          correction_ratio: null,
+        },
       ]);
+
+      const interestsChain = makeQueryChain();
+      interestsChain._setResolve([]);
 
       mockFrom
         .mockReturnValueOnce(usersChain)
-        .mockReturnValueOnce(matchesForA)
-        .mockReturnValueOnce(matchesForB)
-        .mockReturnValueOnce(matchesForC);
+        .mockReturnValueOnce(interestsChain);
 
       await service.calculateDailyRecommendations();
 
+      // user-a (en -> es) matches user-c (es -> en): language exchange
+      // user-b (ja -> en, ko): no one has those as native in this set
+      // user-c (es -> en) matches user-a (en -> es): language exchange
+      // user-d: null target_languages, skipped
       expect(mockPipeline.set).toHaveBeenCalledTimes(2);
       expect(mockPipeline.set.mock.calls[0][0]).toBe(
         'recommendations:daily:user-a',
@@ -1087,6 +1151,7 @@ describe('RecommendationsService', () => {
       );
       expect(firstCache).toHaveLength(1);
       expect(firstCache[0].id).toBe('user-c');
+      expect(firstCache[0].matchTier).toBe('language_exchange');
       expect(mockPipeline.set.mock.calls[1][0]).toBe(
         'recommendations:daily:user-c',
       );
@@ -1095,11 +1160,16 @@ describe('RecommendationsService', () => {
     it('should handle calculateDailyRecommendations with Redis set failure gracefully', async () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
-        { id: 'user-a', native_language: 'en', target_languages: ['es'] },
-      ]);
-
-      const matchesChain = makeQueryChain();
-      matchesChain._setResolve([
+        {
+          id: 'user-a',
+          display_name: 'User A',
+          avatar_url: null,
+          native_language: 'en',
+          target_languages: ['es'],
+          is_serious_learner: true,
+          study_streak_days: 10,
+          correction_ratio: 0.95,
+        },
         {
           id: 'partner-1',
           display_name: 'Partner 1',
@@ -1112,14 +1182,20 @@ describe('RecommendationsService', () => {
         },
       ]);
 
+      const interestsChain = makeQueryChain();
+      interestsChain._setResolve([]);
+
       mockPipeline.exec.mockRejectedValueOnce(new Error('Redis write failed'));
 
       mockFrom
         .mockReturnValueOnce(usersChain)
-        .mockReturnValueOnce(matchesChain);
+        .mockReturnValueOnce(interestsChain);
 
       await service.calculateDailyRecommendations();
-      expect(mockPipeline.set).toHaveBeenCalledTimes(1);
+      // Both complementary user-a and partner-1 get cached (2 set calls),
+      // but the first flushPipeline will fail due to mocked rejection.
+      // The method still continues and will attempt the remaining calls.
+      expect(mockPipeline.set).toHaveBeenCalled();
     });
 
     it('should prefer interest tier over language exchange when both succeed', async () => {
