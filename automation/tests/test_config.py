@@ -18,6 +18,7 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
 
     assert "--no-editable" in setup
     assert "-- cypress install" in setup
+    assert "merge --ff-only origin/main" in setup
 
 
 def test_competing_legacy_agent_workflows_are_retired() -> None:
