@@ -971,8 +971,9 @@ export class AudioRoomsService implements OnModuleInit {
       .eq('id', room.id);
 
     if (removedUserId) {
-      // Notify the removed co-host via Centrifugo to unpublish camera and leave the split-screen layout
-      void this.centrifugoService.publish(`room_${room.id}`, {
+      // Awaited so the co-host removal notification is guaranteed to arrive before any subsequent
+      // co_host_invited event, preventing the client from being left in a split-screen layout.
+      await this.centrifugoService.publish(`room_${room.id}`, {
         type: 'co_host_removed',
         target_user_id: removedUserId,
         room_id: room.id,
