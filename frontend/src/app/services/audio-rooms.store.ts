@@ -17,6 +17,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
+import { EconomyStore } from './economy.store';
 
 export interface AudioRoomRecord {
   id: string;
@@ -39,6 +40,17 @@ export interface AudioRoomRecord {
     display_name?: string;
     avatar_url?: string | null;
   };
+  is_private?: boolean;
+  invited_user_ids?: string[];
+  party_type?: string;
+}
+
+export interface PrivatePartyCreatePayload {
+  title: string;
+  languagePair: string;
+  topicTag: string;
+  isVideoStream: boolean;
+  invitedUserIds: string[];
 }
 
 export interface StageParticipant {
@@ -94,6 +106,7 @@ export class AudioRoomsStore {
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private economyStore = inject(EconomyStore);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly activeRooms = signal<AudioRoomRecord[]>([]);
@@ -115,9 +128,11 @@ export class AudioRoomsStore {
   readonly stageInfo = signal<StageInfo | null>(null);
   readonly stageParticipants = signal<StageParticipant[]>([]);
   readonly audienceCount = signal<number>(0);
+  readonly privateRooms = signal<AudioRoomRecord[]>([]);
+  readonly isLoadingPrivate = signal<boolean>(false);
 
   // Split-screen co-host video state
-  private readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
+  readonly localVideoTrack = signal<LocalVideoTrack | null>(null);
   private readonly remoteVideoTracksByIdentity = signal<Map<string, RemoteVideoTrack>>(new Map());
 
   readonly hostVideoTrack = computed<RemoteVideoTrack | null>(() => {
@@ -141,17 +156,47 @@ export class AudioRoomsStore {
 
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
+  private onTrackSubscribedBound: ((
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant,
+  ) => void) | null = null;
+  private onTrackUnsubscribedBound: ((
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant,
+  ) => void) | null = null;
 
   /**
    * Type guard that narrows the raw Centrifugo payload into the expected shape.
    * This avoids production `as` type assertions.
    */
+  private isHostTipPayload(data: unknown): data is {
+    tip_id?: string;
+    amount_coins?: number;
+    sender_user_id?: string;
+    sender_name?: string;
+    receiver_user_id?: string;
+  } {
+    return typeof data === 'object' && data !== null && !Array.isArray(data);
+  }
+
   private isRoomEvent(data: unknown): data is {
     type?: string;
     user_id?: string;
     target_user_id?: string;
     caption?: CaptionRecord;
     message?: RoomChatMessage;
+    animation_url?: string;
+    sender_name?: string;
+    receiver_name?: string;
+    coin_value?: number;
+    icon?: string;
+    gift_name?: string;
+    animation_type?: string;
+    tip?: unknown;
+    gift_id?: string;
+    previous_co_host_id?: string | null;
   } {
     return typeof data === 'object' && data !== null;
   }
@@ -225,6 +270,40 @@ export class AudioRoomsStore {
     return created;
   }
 
+  async createPrivateParty(payload: PrivatePartyCreatePayload): Promise<AudioRoomRecord> {
+    const created = await firstValueFrom(
+      this.http.post<AudioRoomRecord>(
+        `${this.baseUrl}/private`,
+        {
+          title: payload.title,
+          target_language: payload.languagePair,
+          language_pair: payload.languagePair,
+          topic_tag: payload.topicTag,
+          is_video_stream: payload.isVideoStream,
+          invited_user_ids: payload.invitedUserIds,
+        },
+        { headers: this.getHeaders() },
+      ),
+    );
+    this.privateRooms.update((list) => [created, ...list]);
+    this.activeRooms.update((list) => [created, ...list]);
+    return created;
+  }
+
+  async loadPrivateRooms(): Promise<void> {
+    this.isLoadingPrivate.set(true);
+    try {
+      const list = await firstValueFrom(
+        this.http.get<AudioRoomRecord[]>(`${this.baseUrl}/private`, { headers: this.getHeaders() }),
+      );
+      this.privateRooms.set(list);
+    } catch (e) {
+      console.error('Failed to load private rooms:', e);
+    } finally {
+      this.isLoadingPrivate.set(false);
+    }
+  }
+
   async joinRoom(room: AudioRoomRecord): Promise<void> {
     this.currentRoom.set(room);
     this.captions.set([]);
@@ -251,9 +330,11 @@ export class AudioRoomsStore {
       if (typeof window !== 'undefined' && !tokenRes.livekit_url.includes('mock')) {
         try {
           this.livekitRoom = new Room();
+          this.onTrackSubscribedBound = this.onTrackSubscribed.bind(this);
+          this.onTrackUnsubscribedBound = this.onTrackUnsubscribed.bind(this);
           this.livekitRoom
-            .on(RoomEvent.TrackSubscribed, this.onTrackSubscribed.bind(this))
-            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed.bind(this));
+            .on(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound)
+            .on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
           await this.livekitRoom.connect(tokenRes.livekit_url, tokenRes.token);
           this.isConnectedToLiveKit.set(true);
 
@@ -326,6 +407,44 @@ export class AudioRoomsStore {
           }
           showToast(this.i18n.translate('audioRoom.speakerDemotedToast'));
         }
+      } else if (p.type === 'co_host_changed' && p.target_user_id) {
+        // Single atomic event: previous co-host (if any) is removed and new co-host is invited.
+        // Eliminates the race condition where separate co_host_removed / co_host_invited
+        // Centrifugo events could arrive out of order.
+        const currentUserId = this.authService.currentUser()?.id;
+        const previousCoHostId =
+          typeof p.previous_co_host_id === 'string' ? p.previous_co_host_id : null;
+
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          let speakers = r.speakers;
+          if (previousCoHostId) {
+            speakers = speakers.filter((id) => id !== previousCoHostId);
+          }
+          if (!speakers.includes(p.target_user_id!)) {
+            speakers = [...speakers, p.target_user_id!];
+          }
+          const updatedHands = r.raised_hands.filter((id) => id !== p.target_user_id);
+          return {
+            ...r,
+            co_host_id: p.target_user_id,
+            raised_hands: updatedHands,
+            speakers,
+          };
+        });
+
+        // If I was the previous co-host, unpublish camera
+        if (previousCoHostId && previousCoHostId === currentUserId) {
+          this.isSpeaker.set(false);
+          this.unpublishLocalCamera();
+          showToast(this.i18n.translate('audioRoom.coHostRemovedToast'));
+        }
+        // If I am the new co-host, publish camera
+        if (p.target_user_id === currentUserId) {
+          this.isSpeaker.set(true);
+          void this.publishLocalCamera();
+          showToast(this.i18n.translate('audioRoom.coHostPromotedToast'));
+        }
       } else if (p.type === 'co_host_invited' && p.target_user_id) {
         this.currentRoom.update((r) => {
           if (!r) return r;
@@ -367,10 +486,88 @@ export class AudioRoomsStore {
           this.unpublishLocalCamera();
           showToast(this.i18n.translate('audioRoom.coHostRemovedToast'));
         }
+      } else if (p.type === 'force_mute' && p.target_user_id) {
+        this.stageParticipants.update((list) =>
+          list.map((sp) => (sp.user_id === p.target_user_id ? { ...sp, isMuted: true } : sp)),
+        );
+
+        // If target user is me, mute my local microphone
+        if (p.target_user_id === this.authService.currentUser()?.id) {
+          if (this.livekitRoom) {
+            void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          }
+          showToast(this.i18n.translate('audioRoom.micForceMutedToast'));
+        }
+      } else if (p.type === 'force_unmute' && p.target_user_id) {
+        this.stageParticipants.update((list) =>
+          list.map((sp) => (sp.user_id === p.target_user_id ? { ...sp, isMuted: false } : sp)),
+        );
+
+        // If target user is me, unmute my local microphone
+        if (p.target_user_id === this.authService.currentUser()?.id) {
+          if (this.livekitRoom) {
+            void this.livekitRoom.localParticipant.setMicrophoneEnabled(true);
+          }
+          showToast(this.i18n.translate('audioRoom.micForceUnmutedToast'));
+        }
+      } else if (p.type === 'speaker_kicked' && p.target_user_id) {
+        // Remove kicked user from both currentRoom speakers and stageParticipants
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          return { ...r, speakers: r.speakers.filter((id) => id !== p.target_user_id) };
+        });
+        this.stageParticipants.update((list) =>
+          list.filter((sp) => sp.user_id !== p.target_user_id),
+        );
+
+        // If target user is me, drop publish permission, mute, and notify
+        if (p.target_user_id === this.authService.currentUser()?.id) {
+          this.isSpeaker.set(false);
+          if (this.livekitRoom) {
+            void this.livekitRoom.localParticipant.setMicrophoneEnabled(false);
+          }
+          showToast(this.i18n.translate('audioRoom.speakerKickedToast'));
+        }
       } else if (p.type === 'subtitle' && p.caption) {
         this.captions.update((list) => [...list.slice(-49), p.caption!]);
+      } else if (p.type === 'host_tip' && p.tip && this.isHostTipPayload(p.tip)) {
+        const tip = p.tip;
+        // Don't replay animation for the sender -- it already fired locally in tipHost()
+        if (tip.sender_user_id === this.authService.currentUser()?.id) {
+          return;
+        }
+        const amount = tip.amount_coins ?? 0;
+        this.economyStore.triggerPublicGiftAnimation({
+          giftId: `tip_${tip.tip_id ?? 'unknown'}`,
+          giftName: `${amount} Coins`,
+          giftIcon: this.tipIconForAmount(amount),
+          animationType: this.tipAnimationForAmount(amount),
+          animationUrl: undefined,
+          senderName: tip.sender_name ?? 'Someone',
+          receiverName: 'Host',
+          coinValue: amount,
+        });
+      } else if (p.type === 'virtual_gift' && p.icon && p.gift_name) {
+        this.economyStore.triggerPublicGiftAnimation({
+          giftId: typeof p.gift_id === 'string' ? p.gift_id : 'unknown',
+          giftName: typeof p.gift_name === 'string' ? p.gift_name : 'Gift',
+          giftIcon: typeof p.icon === 'string' ? p.icon : '🎁',
+          animationType: typeof p.animation_type === 'string' ? p.animation_type : 'float',
+          animationUrl: typeof p.animation_url === 'string' ? p.animation_url : undefined,
+          senderName: typeof p.sender_name === 'string' ? p.sender_name : 'Someone',
+          receiverName: typeof p.receiver_name === 'string' ? p.receiver_name : 'Host',
+          coinValue: typeof p.coin_value === 'number' ? p.coin_value : 0,
+        });
       } else if (p.type === 'chat_message' && p.message) {
         this.roomMessages.update((list) => [...list.slice(-99), p.message!]);
+      } else if (p.type === 'hand_dismissed' && p.target_user_id) {
+        this.currentRoom.update((r) => {
+          if (!r) return r;
+          return {
+            ...r,
+            raised_hands: r.raised_hands.filter((id: string) => id !== p.target_user_id),
+          };
+        });
       } else if (p.type === 'room_ended') {
         showToast(this.i18n.translate('audioRoom.roomEndedToast'));
         this.leaveRoom();
@@ -485,11 +682,34 @@ export class AudioRoomsStore {
     }
   }
 
+  async dismissRaisedHand(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    this.currentRoom.update((r) => {
+      if (!r) return r;
+      return { ...r, raised_hands: r.raised_hands.filter((id: string) => id !== targetUserId) };
+    });
+    try {
+      await firstValueFrom(
+        this.http.post<void>(
+          `${this.baseUrl}/dismiss-raised-hand`,
+          { room_id: room.id, target_user_id: targetUserId },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      this.currentRoom.update((r) => {
+        if (!r) return r;
+        return { ...r, raised_hands: [...r.raised_hands, targetUserId] };
+      });
+    }
+  }
+
   async muteSpeaker(targetUserId: string): Promise<void> {
     const room = this.currentRoom();
     if (!room) return;
     try {
-      const updated = await firstValueFrom(
+      await firstValueFrom(
         this.http.post<AudioRoomRecord>(
           `${this.baseUrl}/mute-speaker`,
           {
@@ -499,9 +719,46 @@ export class AudioRoomsStore {
           { headers: this.getHeaders() },
         ),
       );
-      this.currentRoom.set(updated);
     } catch (e) {
       console.error('Mute speaker error:', e);
+    }
+  }
+
+  async unmuteSpeaker(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    try {
+      await firstValueFrom(
+        this.http.post<AudioRoomRecord>(
+          `${this.baseUrl}/unmute-speaker`,
+          {
+            room_id: room.id,
+            target_user_id: targetUserId,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      console.error('Unmute speaker error:', e);
+    }
+  }
+
+  async kickSpeaker(targetUserId: string): Promise<void> {
+    const room = this.currentRoom();
+    if (!room) return;
+    try {
+      await firstValueFrom(
+        this.http.post<AudioRoomRecord>(
+          `${this.baseUrl}/kick-speaker`,
+          {
+            room_id: room.id,
+            target_user_id: targetUserId,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch (e) {
+      console.error('Kick speaker error:', e);
     }
   }
 
@@ -584,6 +841,66 @@ export class AudioRoomsStore {
     }
   }
 
+  async tipHost(roomId: string, amountCoins: number): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(
+        this.http.post<{
+          tip_id: string;
+          amount_coins: number;
+          receiver_id: string;
+          receiver_new_balance: number;
+        }>(
+          `${this.baseUrl}/${roomId}/tip`,
+          { room_id: roomId, amount_coins: amountCoins },
+          { headers: this.getHeaders() },
+        ),
+      );
+      this.economyStore.coinsBalance.update((bal) => bal - amountCoins);
+
+      const user = this.authService.currentUser();
+      const senderName = user?.display_name ?? 'Someone';
+      const animationType = this.tipAnimationForAmount(amountCoins);
+
+      // Fire full-screen SVG animation immediately for the sender
+      this.economyStore.triggerPublicGiftAnimation({
+        giftId: `tip_${res.tip_id}`,
+        giftName: `${amountCoins} Coins`,
+        giftIcon: this.tipIconForAmount(amountCoins),
+        animationType,
+        animationUrl: undefined,
+        senderName,
+        receiverName: 'Host',
+        coinValue: amountCoins,
+      });
+
+      showToast(
+        this.i18n.translate('audioRoom.tipSentToast', {
+          amount: amountCoins,
+        }),
+      );
+      return true;
+    } catch (e: unknown) {
+      console.error('Tip host error:', e);
+      const message = e instanceof Error ? e.message : String(e);
+      showToast(message || this.i18n.translate('audioRoom.tipError'));
+      return false;
+    }
+  }
+
+  private tipAnimationForAmount(amount: number): string {
+    if (amount >= 500) return 'premium';
+    if (amount >= 100) return 'confetti';
+    if (amount >= 50) return 'hearts';
+    return 'sparkle';
+  }
+
+  private tipIconForAmount(amount: number): string {
+    if (amount >= 500) return '💎';
+    if (amount >= 100) return '🎁';
+    if (amount >= 50) return '💝';
+    return '🪙';
+  }
+
   async sendRoomChatMessage(text: string): Promise<void> {
     const room = this.currentRoom();
     if (!room || !text.trim()) return;
@@ -647,6 +964,14 @@ export class AudioRoomsStore {
 
   leaveRoom(): void {
     if (this.livekitRoom) {
+      if (this.onTrackSubscribedBound) {
+        this.livekitRoom.off(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound);
+        this.onTrackSubscribedBound = null;
+      }
+      if (this.onTrackUnsubscribedBound) {
+        this.livekitRoom.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+        this.onTrackUnsubscribedBound = null;
+      }
       this.livekitRoom.disconnect();
       this.livekitRoom = null;
     }
@@ -660,7 +985,7 @@ export class AudioRoomsStore {
     this.stageInfo.set(null);
     this.stageParticipants.set([]);
     this.audienceCount.set(0);
-    this.localVideoTrack.set(null);
+    this.unpublishLocalCamera();
     this.remoteVideoTracksByIdentity.set(new Map());
   }
 }

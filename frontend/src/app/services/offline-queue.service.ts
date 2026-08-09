@@ -1,118 +1,123 @@
-import { Injectable } from '@angular/core';
-import { openDB, IDBPDatabase } from 'idb';
+import { Injectable, signal } from '@angular/core';
 import { ChatMessage } from './chat.service';
-
-export interface QueuedMessage {
-  id: string;
-  room_id: string;
-  sender_id: string;
-  message_type: ChatMessage['message_type'];
-  text_content?: string;
-  media_url?: string;
-  correction_payload?: ChatMessage['correction_payload'];
-  correction_request_payload?: ChatMessage['correction_request_payload'];
-  reply_to_id?: string;
-  status_reply_payload?: ChatMessage['status_reply_payload'];
-  /** Timestamp when the message was queued locally */
-  queued_at: string;
-  /** Number of delivery attempts made so far */
-  retry_count: number;
-}
-
-const DB_NAME = 'chat_offline_db';
-const STORE_NAME = 'messages';
-const DB_VERSION = 2;
 
 @Injectable({
   providedIn: 'root',
 })
 export class OfflineQueueService {
-  private dbPromise: Promise<IDBPDatabase> | null = null;
-  private readonly browserSupported: boolean;
+  private readonly dbName = 'chat_offline_db';
+  private readonly storeName = 'messages';
+  private db: IDBDatabase | null = null;
+  private initPromise: Promise<void> | null = null;
+
+  /** Reactive count of queued messages for UI indicators */
+  readonly queuedCount = signal(0);
 
   constructor() {
-    this.browserSupported =
-      typeof window !== 'undefined' && typeof window.indexedDB !== 'undefined';
-    if (this.browserSupported) {
-      this.dbPromise = this.initDB();
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      this.initPromise = this.initDB();
+      this.initPromise.then(() => this.refreshCount()).catch(() => undefined);
     }
   }
 
-  private initDB(): Promise<IDBPDatabase> {
-    return openDB(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
-        if (oldVersion < 1) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+  private initDB(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
+      request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+        const target = event.target;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) {
+          return;
         }
-        if (oldVersion < 2) {
-          // Migrate existing records to add queued_at and retry_count defaults
-          // The idb library handles store existence; we just ensure the store exists
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-          }
+        const db = target.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: 'id' });
         }
-      },
+      };
     });
   }
 
-  private async ensureDB(): Promise<IDBPDatabase> {
-    if (!this.dbPromise) {
-      throw new Error('IndexedDB not available in this environment');
+  private async ensureDB(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise;
     }
-    return this.dbPromise;
+    if (!this.db) {
+      throw new Error('IndexedDB not initialised');
+    }
   }
 
-  private toQueuedMessage(msg: ChatMessage): QueuedMessage {
-    return {
-      id: msg.id,
-      room_id: msg.room_id,
-      sender_id: msg.sender_id,
-      message_type: msg.message_type,
-      text_content: msg.text_content,
-      media_url: msg.media_url,
-      correction_payload: msg.correction_payload,
-      correction_request_payload: msg.correction_request_payload,
-      reply_to_id: msg.reply_to_id,
-      status_reply_payload: msg.status_reply_payload,
-      queued_at: new Date().toISOString(),
-      retry_count: 0,
-    };
+  private async refreshCount(): Promise<void> {
+    try {
+      const messages = await this.getQueuedMessages();
+      this.queuedCount.set(messages.length);
+    } catch {
+      // Silently handle count refresh failures
+    }
+  }
+
+  private isIndexedDBAvailable(): boolean {
+    return typeof window !== 'undefined' && !!window.indexedDB;
   }
 
   async enqueueMessage(message: ChatMessage): Promise<void> {
-    if (!this.browserSupported) return;
-    const db = await this.ensureDB();
-    await db.put(STORE_NAME, this.toQueuedMessage(message));
+    if (!this.isIndexedDBAvailable()) return;
+    await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(this.storeName, 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.put(message);
+      request.onsuccess = () => {
+        this.queuedCount.update((c) => c + 1);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
   }
 
-  async getQueuedMessages(): Promise<QueuedMessage[]> {
-    if (!this.browserSupported) return [];
-    const db = await this.ensureDB();
-    return db.getAll(STORE_NAME);
+  async getQueuedMessages(): Promise<ChatMessage[]> {
+    if (!this.isIndexedDBAvailable()) return [];
+    await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(this.storeName, 'readonly');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
   }
 
   async removeMessage(id: string): Promise<void> {
-    if (!this.browserSupported) return;
-    const db = await this.ensureDB();
-    await db.delete(STORE_NAME, id);
+    if (!this.isIndexedDBAvailable()) return;
+    await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(this.storeName, 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.delete(id);
+      request.onsuccess = () => {
+        this.queuedCount.update((c) => Math.max(0, c - 1));
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
   }
 
-  async incrementRetryCount(id: string): Promise<void> {
-    if (!this.browserSupported) return;
-    const db = await this.ensureDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    const existing = await store.get(id);
-    if (existing) {
-      existing.retry_count = (existing.retry_count || 0) + 1;
-      await store.put(existing);
-    }
-    await tx.done;
-  }
-
-  async clearAll(): Promise<void> {
-    if (!this.browserSupported) return;
-    const db = await this.ensureDB();
-    await db.clear(STORE_NAME);
+  /** Remove all queued messages and reset the counter. */
+  async clearQueue(): Promise<void> {
+    if (!this.isIndexedDBAvailable()) return;
+    await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(this.storeName, 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.clear();
+      request.onsuccess = () => {
+        this.queuedCount.set(0);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
   }
 }

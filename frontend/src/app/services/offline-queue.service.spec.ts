@@ -1,15 +1,16 @@
-import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import { OfflineQueueService } from './offline-queue.service';
 import { ChatMessage } from './chat.service';
 
-function makeChatMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
+function createMockMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
     id: 'msg-1',
     room_id: 'room-1',
     sender_id: 'user-1',
     message_type: 'text',
-    text_content: 'hello',
+    text_content: 'Hello',
     is_read: false,
     created_at: new Date().toISOString(),
     ...overrides,
@@ -18,147 +19,132 @@ function makeChatMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
 
 describe('OfflineQueueService', () => {
   let service: OfflineQueueService;
+  let mockStore: Map<string, ChatMessage>;
+
+  function createSyncRequest(result?: unknown) {
+    // Fire onsuccess synchronously once it's set (using a MutationObserver-like pattern with defineProperty)
+    const req = {
+      result: result ?? null,
+      error: null as DOMException | null,
+      _onsuccess: null as (() => void) | null,
+    };
+    Object.defineProperty(req, 'onsuccess', {
+      get() { return this._onsuccess; },
+      set(fn: () => void) {
+        this._onsuccess = fn;
+        // Fire synchronously so the IDB promise resolves immediately
+        fn();
+      },
+    });
+    return req;
+  }
 
   beforeEach(() => {
-    service = new OfflineQueueService();
+    mockStore = new Map<string, ChatMessage>();
+
+    vi.stubGlobal('indexedDB', {
+      open: () => {
+        const req = createSyncRequest();
+        // The mock DB object
+        req.result = {
+          objectStoreNames: { contains: () => true },
+          transaction: () => ({
+            objectStore: () => ({
+              put: (msg: ChatMessage) => {
+                mockStore.set(msg.id, msg);
+                return createSyncRequest();
+              },
+              getAll: () => {
+                const r = createSyncRequest();
+                r.result = Array.from(mockStore.values());
+                return r;
+              },
+              delete: (id: string) => {
+                mockStore.delete(id);
+                return createSyncRequest();
+              },
+              clear: () => {
+                mockStore.clear();
+                return createSyncRequest();
+              },
+            }),
+          }),
+        };
+        return req;
+      },
+    });
+
+    TestBed.configureTestingModule({});
+    service = TestBed.inject(OfflineQueueService);
   });
 
-  afterEach(async () => {
-    await service.clearAll();
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  describe('lifecycle', () => {
-    it('should be created', () => {
-      expect(service).toBeTruthy();
-    });
+  it('should be created', () => {
+    expect(service).toBeTruthy();
   });
 
-  describe('enqueueMessage', () => {
-    it('stores a message and persists queued_at / retry_count metadata', async () => {
-      const msg = makeChatMessage({ id: 'q-1', text_content: 'queued message' });
-      await service.enqueueMessage(msg);
-
-      const all = await service.getQueuedMessages();
-      expect(all).toHaveLength(1);
-      expect(all[0].id).toBe('q-1');
-      expect(all[0].text_content).toBe('queued message');
-      expect(all[0].queued_at).toBeTruthy();
-      expect(all[0].retry_count).toBe(0);
-    });
-
-    it('updates an existing message when re-enqueued with the same id', async () => {
-      const msg = makeChatMessage({ id: 'dup-1', text_content: 'first' });
-      await service.enqueueMessage(msg);
-
-      const updated = makeChatMessage({ id: 'dup-1', text_content: 'second' });
-      await service.enqueueMessage(updated);
-
-      const all = await service.getQueuedMessages();
-      expect(all).toHaveLength(1);
-      expect(all[0].text_content).toBe('second');
-    });
-
-    it('handles voice messages with media_url', async () => {
-      const msg = makeChatMessage({
-        id: 'voice-1',
-        message_type: 'voice',
-        media_url: 'https://example.com/audio.webm',
-        text_content: undefined,
-      });
-      await service.enqueueMessage(msg);
-
-      const all = await service.getQueuedMessages();
-      expect(all).toHaveLength(1);
-      expect(all[0].message_type).toBe('voice');
-      expect(all[0].media_url).toBe('https://example.com/audio.webm');
-    });
-
-    it('stores correction_payload when present', async () => {
-      const msg = makeChatMessage({
-        id: 'corr-1',
-        message_type: 'correction',
-        text_content: 'fixed text',
-        correction_payload: {
-          original: 'broken text',
-          corrected: 'fixed text',
-          explanation: 'grammar',
-        },
-      });
-      await service.enqueueMessage(msg);
-
-      const all = await service.getQueuedMessages();
-      expect(all).toHaveLength(1);
-      expect(all[0].correction_payload?.original).toBe('broken text');
-      expect(all[0].correction_payload?.corrected).toBe('fixed text');
-    });
+  it('should have zero queued count after initialisation', () => {
+    expect(service.queuedCount()).toBe(0);
   });
 
-  describe('getQueuedMessages', () => {
-    it('returns an empty array when no messages are queued', async () => {
-      const all = await service.getQueuedMessages();
-      expect(all).toEqual([]);
-    });
-
-    it('returns multiple messages', async () => {
-      await service.enqueueMessage(makeChatMessage({ id: 'a', text_content: 'first' }));
-      await service.enqueueMessage(makeChatMessage({ id: 'b', text_content: 'second' }));
-      await service.enqueueMessage(makeChatMessage({ id: 'c', text_content: 'third' }));
-
-      const all = await service.getQueuedMessages();
-      expect(all).toHaveLength(3);
-      expect(all.map((m) => m.id)).toEqual(['a', 'b', 'c']);
-    });
+  it('should enqueue a message and update count', async () => {
+    const msg = createMockMessage();
+    await service.enqueueMessage(msg);
+    expect(mockStore.has('msg-1')).toBe(true);
+    expect(service.queuedCount()).toBe(1);
   });
 
-  describe('removeMessage', () => {
-    it('deletes a queued message by id', async () => {
-      await service.enqueueMessage(makeChatMessage({ id: 'to-remove' }));
-      await service.enqueueMessage(makeChatMessage({ id: 'keep' }));
+  it('should return queued messages', async () => {
+    const msg1 = createMockMessage({ id: 'msg-1' });
+    const msg2 = createMockMessage({ id: 'msg-2', text_content: 'World' });
+    await service.enqueueMessage(msg1);
+    await service.enqueueMessage(msg2);
 
-      await service.removeMessage('to-remove');
-
-      const all = await service.getQueuedMessages();
-      expect(all).toHaveLength(1);
-      expect(all[0].id).toBe('keep');
-    });
-
-    it('is a no-op when the id does not exist', async () => {
-      await service.removeMessage('non-existent');
-      const all = await service.getQueuedMessages();
-      expect(all).toEqual([]);
-    });
+    const messages = await service.getQueuedMessages();
+    expect(messages).toHaveLength(2);
   });
 
-  describe('incrementRetryCount', () => {
-    it('increments retry_count for an existing queued message', async () => {
-      await service.enqueueMessage(makeChatMessage({ id: 'retry-me' }));
+  it('should remove a message and decrement count', async () => {
+    const msg = createMockMessage();
+    await service.enqueueMessage(msg);
+    expect(service.queuedCount()).toBe(1);
 
-      await service.incrementRetryCount('retry-me');
-      await service.incrementRetryCount('retry-me');
-      await service.incrementRetryCount('retry-me');
-
-      const all = await service.getQueuedMessages();
-      expect(all[0].retry_count).toBe(3);
-    });
-
-    it('is a no-op for a non-existent message id', async () => {
-      await expect(service.incrementRetryCount('ghost')).resolves.toBeUndefined();
-    });
+    await service.removeMessage('msg-1');
+    expect(mockStore.has('msg-1')).toBe(false);
+    expect(service.queuedCount()).toBe(0);
   });
 
-  describe('clearAll', () => {
-    it('removes every queued message', async () => {
-      await service.enqueueMessage(makeChatMessage({ id: 'c1' }));
-      await service.enqueueMessage(makeChatMessage({ id: 'c2' }));
+  it('should clear all queued messages', async () => {
+    await service.enqueueMessage(createMockMessage({ id: 'msg-1' }));
+    await service.enqueueMessage(createMockMessage({ id: 'msg-2' }));
+    expect(service.queuedCount()).toBe(2);
 
-      await service.clearAll();
+    await service.clearQueue();
+    const messages = await service.getQueuedMessages();
+    expect(messages).toHaveLength(0);
+    expect(service.queuedCount()).toBe(0);
+  });
 
-      const all = await service.getQueuedMessages();
-      expect(all).toEqual([]);
-    });
+  it('should return empty array when IndexedDB is unavailable', async () => {
+    vi.stubGlobal('indexedDB', undefined);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const noDBService = TestBed.inject(OfflineQueueService);
 
-    it('is a no-op on an already empty store', async () => {
-      await expect(service.clearAll()).resolves.toBeUndefined();
-    });
+    const messages = await noDBService.getQueuedMessages();
+    expect(messages).toEqual([]);
+  });
+
+  it('should not throw when enqueuing without IndexedDB', async () => {
+    vi.stubGlobal('indexedDB', undefined);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const noDBService = TestBed.inject(OfflineQueueService);
+
+    await expect(noDBService.enqueueMessage(createMockMessage())).resolves.toBeUndefined();
+    expect(noDBService.queuedCount()).toBe(0);
   });
 });

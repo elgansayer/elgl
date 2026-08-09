@@ -120,27 +120,9 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       for (const event of typedEvents) {
         const userIds = rsvpsByEventId.get(event.id);
-        if (!userIds) continue;
+        if (!userIds || userIds.length === 0) continue;
 
-<<<<<<< HEAD
-        if (rsvpError) {
-          this.logger.warn(
-            `Could not fetch RSVPs for event ${event.id}`,
-            rsvpError,
-          );
-          continue;
-        }
-
-        if (!rsvps) continue;
-
-        const userIds = rsvps.map((rsvp) => rsvp.user_id);
-        if (userIds.length > 0) {
-          await this.sendRemindersBatch(event.id, event.title, userIds);
-=======
-        for (const userId of userIds) {
-          await this.sendReminder(event.id, event.title, userId);
->>>>>>> origin/main
-        }
+        await this.sendRemindersBatch(event.id, event.title, userIds);
       }
     } catch (err) {
       this.logger.error('Unexpected error in checkReminders', err);
@@ -448,6 +430,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       const { data: events, error } = await supabase
         .from('events')
         .select('id, title, host_id, language_pair, category')
+        .eq('is_cancelled', false)
         .not('language_pair', 'is', null)
         .gte('date_time', new Date(now - tolerance).toISOString())
         .lte('date_time', new Date(now + tolerance).toISOString());
@@ -506,10 +489,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
           roomName,
         );
 
-        // Mark the room as a Language Party
+        // Mark the room as a Language Party and link it to the event
         await supabase
           .from('audio_rooms')
-          .update({ party_type: 'language_party' })
+          .update({ party_type: 'language_party', event_id: event.id })
           .eq('id', room.id);
 
         this.logger.log(
