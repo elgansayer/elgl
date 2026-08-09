@@ -1,3 +1,18 @@
+export class FollowEvent {
+  constructor(
+    public readonly followerId: string,
+    public readonly followedUserId: string,
+  ) {}
+}
+
+export class LikeEvent {
+  constructor(
+    public readonly actorId: string,
+    public readonly ownerId: string,
+    public readonly entityId?: string,
+  ) {}
+}
+
 export class ProfileViewEvent {
   constructor(
     public readonly viewerId: string,

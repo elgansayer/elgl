@@ -106,11 +106,7 @@ describe('AiConversationController', () => {
         message: 'help',
       });
 
-      expect(service.generateReply).toHaveBeenCalledWith(
-        'help',
-        undefined,
-        undefined,
-      );
+      expect(service.generateReply).toHaveBeenCalledWith('help', undefined, undefined);
       expect(result).toEqual({ reply });
     });
   });

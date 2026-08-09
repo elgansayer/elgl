@@ -1210,7 +1210,6 @@ export class UsersService {
         | 'moment_comments'
         | 'moment_likes'
         | 'flashcards'
-        | 'decks'
         | 'chat_messages'
         | 'favourites'
         | 'profile_visits'
@@ -1234,7 +1233,6 @@ export class UsersService {
       { table: 'moment_comments', column: 'author_id' },
       { table: 'moment_likes', column: 'user_id' },
       { table: 'flashcards', column: 'user_id' },
-      { table: 'decks', column: 'user_id' },
       { table: 'chat_messages', column: 'sender_id' },
       { table: 'favourites', column: 'user_id' },
       { table: 'profile_visits', column: 'visitor_id' },
