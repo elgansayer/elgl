@@ -30,7 +30,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                     [src]="visit.visitor?.avatar_url"
                     alt=""
                     class="profile-visitor-avatar-img"
-                   loading="lazy" />
+                  />
                 } @else {
                   <div class="profile-visitor-avatar-placeholder">
                     {{ (visit.visitor?.display_name || '?')[0] }}

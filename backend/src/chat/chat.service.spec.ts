@@ -1,3 +1,19 @@
+// Mock jsdom and dompurify to avoid ESM import failures in Jest (transitively imported through link-preview)
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: {
+      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
+    },
+  })),
+}));
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: jest.fn((d: string) => d.replace(/<[^>]*>/g, '')),
+    setConfig: jest.fn(),
+  })),
+}));
+
 import {
   describe,
   beforeEach,
@@ -191,6 +207,7 @@ describe('ChatService', () => {
         correction_request_payload: null,
         status_reply_payload: null,
         is_view_once: false,
+        delivery_status: 'sent',
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
         message: savedMessage,

@@ -1,7 +1,6 @@
 import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ChatMessage, ChatService } from '../../services/chat.service';
+import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
 import { FavouriteService } from '../../services/favourite.service';
@@ -15,7 +14,13 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, FormsModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent],
+  imports: [
+    CommonModule,
+    LongPressContextMenuComponent,
+    TranslatePipe,
+    CulturalTipComponent,
+    LinkPreviewCardComponent,
+  ],
   template: `
     @if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
@@ -54,74 +59,41 @@ import { environment } from '../../../environments/environment';
               [class.chat-bubble-tail--received]="!isOwnMessage()"
               aria-hidden="true"
             ></span>
+            @if (message().is_forwarded) {
+              <p class="text-xs mb-1 text-gray-400 italic font-medium">
+                {{ 'chatRoom.forwarded' | t }}
+              </p>
+            }
             @if (message().message_type === 'text') {
-              @if (editing()) {
-                <div class="space-y-2">
-                  <textarea
-                    [(ngModel)]="editText"
-                    class="w-full p-2 rounded bg-surface-100 text-text-primary text-sm border border-gray-500 resize-none"
-                    rows="3"
-                    maxlength="5000"
-                  ></textarea>
-                  <div class="flex justify-end gap-2">
-                    <button
-                      (click)="cancelEdit()"
-                      class="text-xs px-3 py-1 rounded bg-gray-600 text-white hover:bg-gray-500"
-                    >
-                      {{ 'common.cancel' | t }}
-                    </button>
-                    <button
-                      (click)="saveEdit()"
-                      class="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500"
-                      [disabled]="saving() || !editText().trim() || editText().trim() === message().text_content"
-                    >
-                      @if (saving()) {
-                        {{ 'chatRoom.saving' | t }}
-                      } @else {
-                        {{ 'common.save' | t }}
-                      }
-                    </button>
-                  </div>
-                </div>
-              } @else {
-                <p class="text-sm">
-                  @for (segment of textSegments(); track $index) {
-                    @if (segment.isMention) {
-                      <span class="font-bold text-blue-400 cursor-pointer">{{ segment.value }}</span>
-                    } @else {
-                      {{ segment.value }}
-                    }
-                  }
-                </p>
-                @if (message().link_preview; as lp) {
-                  <app-link-preview-card
-                    [url]="lp.url"
-                    [title]="lp.title"
-                    [description]="lp.description"
-                    [image]="lp.image"
-                    [siteName]="lp.siteName"
-                  ></app-link-preview-card>
-                }
-                <button
-                  (click)="simplifyText()"
-                  class="text-xs text-blue-400 ms-2 mt-1"
-                  [disabled]="simplifying()"
-                >
-                  @if (simplifying()) {
-                    {{ 'chatRoom.simplifying' | t }}
+              <p class="text-sm">
+                @for (segment of textSegments(); track $index) {
+                  @if (segment.isMention) {
+                    <span class="font-bold text-blue-400 cursor-pointer">{{ segment.value }}</span>
                   } @else {
-                    {{ 'chatRoom.simplifyBtn' | t }}
+                    {{ segment.value }}
                   }
-                </button>
-                @if (isOwnMessage() && !editing()) {
-                  <button
-                    (click)="startEdit()"
-                    class="text-xs text-blue-400 ms-2 mt-1"
-                  >
-                    {{ 'chatRoom.editBtn' | t }}
-                  </button>
                 }
+              </p>
+              @if (message().link_preview; as lp) {
+                <app-link-preview-card
+                  [url]="lp.url"
+                  [title]="lp.title"
+                  [description]="lp.description"
+                  [image]="lp.image"
+                  [siteName]="lp.siteName"
+                ></app-link-preview-card>
               }
+              <button
+                (click)="simplifyText()"
+                class="text-xs text-blue-400 ms-2 mt-1"
+                [disabled]="simplifying()"
+              >
+                @if (simplifying()) {
+                  {{ 'chatRoom.simplifying' | t }}
+                } @else {
+                  {{ 'chatRoom.simplifyBtn' | t }}
+                }
+              </button>
             }
             @if (simplifiedText(); as simplified) {
               <div class="mt-1 ps-4 border-s-2 border-green-500 text-xs text-green-300">
@@ -135,7 +107,11 @@ import { environment } from '../../../environments/environment';
 
             @if (message().message_type === 'voice') {
               <div class="flex items-center gap-2">
-                <button aria-label="Play voice message" (click)="playVoice()" class="p-2 rounded-full hover:bg-black/10">
+                <button
+                  aria-label="Play voice message"
+                  (click)="playVoice()"
+                  class="p-2 rounded-full hover:bg-black/10"
+                >
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
@@ -179,34 +155,84 @@ import { environment } from '../../../environments/environment';
             }
 
             <p class="text-xs mt-1 opacity-60 text-end flex items-center justify-end gap-1">
-              @if (isOwnMessage() && message().is_edited) {
-                <span class="opacity-75 italic">{{ 'chatRoom.edited' | t }}</span>
-              }
               {{ message().created_at | date: 'shortTime' }}
               @if (isOwnMessage() && (message().delivery_status || message().is_read)) {
                 <span class="inline-flex items-center">
-                  @if (message().delivery_status === 'sent' || (!message().delivery_status && message().is_read)) {
+                  @if (
+                    message().delivery_status === 'sent' ||
+                    (!message().delivery_status && message().is_read)
+                  ) {
                     <!-- Single check: sent -->
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   }
                   @if (message().delivery_status === 'delivered') {
                     <!-- Double check: delivered (gray) -->
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
-                    <svg class="w-3.5 h-3.5 -ms-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 -ms-2 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   }
                   @if (message().delivery_status === 'read') {
                     <!-- Double check: read (blue) -->
-                    <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 text-blue-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
-                    <svg class="w-3.5 h-3.5 -ms-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 -ms-2 text-blue-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   }
                 </span>
@@ -255,24 +281,18 @@ export class ChatMessageComponent {
   isFirstMessage = input(false);
 
   readonly messageBlocked = output<string>();
-  readonly messageEdited = output<ChatMessage>();
 
   private authService = inject(AuthService);
   private favouriteService = inject(FavouriteService);
   private safetyService = inject(SafetyService);
   private confirmService = inject(ConfirmService);
   private i18n = inject(I18nService);
-  private chatService = inject(ChatService);
 
   isBlocked = signal(false);
   simplifiedText = signal<string | null>(null);
   simplifying = signal(false);
   voiceTranscription = signal<string | null>(null);
   voiceTranscribing = signal(false);
-
-  editing = signal(false);
-  editText = signal('');
-  saving = signal(false);
 
   textSegments = computed(() => {
     const text = this.message()?.text_content ?? '';
@@ -306,7 +326,12 @@ export class ChatMessageComponent {
 
     effect(() => {
       const msg = this.message();
-      if (msg.message_type === 'voice' && msg.media_url && !this.voiceTranscribing() && !this.voiceTranscription()) {
+      if (
+        msg.message_type === 'voice' &&
+        msg.media_url &&
+        !this.voiceTranscribing() &&
+        !this.voiceTranscription()
+      ) {
         void this.fetchTranscription(msg.media_url);
       }
     });
@@ -406,35 +431,5 @@ export class ChatMessageComponent {
       .catch((err: unknown) => {
         console.error('Report failed', err);
       });
-  }
-
-  startEdit(): void {
-    this.editText.set(this.message().text_content ?? '');
-    this.editing.set(true);
-  }
-
-  cancelEdit(): void {
-    this.editing.set(false);
-    this.editText.set('');
-  }
-
-  async saveEdit(): Promise<void> {
-    const newText = this.editText().trim();
-    if (!newText || newText === this.message().text_content) return;
-
-    this.saving.set(true);
-    try {
-      const updated = await this.chatService.editMessage(
-        this.message().id,
-        newText,
-      );
-      this.messageEdited.emit(updated);
-      this.editing.set(false);
-      this.editText.set('');
-    } catch (err) {
-      console.error('Failed to edit message:', err);
-    } finally {
-      this.saving.set(false);
-    }
   }
 }

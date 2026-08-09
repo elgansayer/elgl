@@ -3,7 +3,6 @@ import { FlashcardService } from './flashcard.service';
 
 @Directive({
   selector: '[appFlashcardContextMenu]',
-  standalone: true,
   host: {
     '(contextmenu)': 'onContextMenu($event)',
     '(touchstart)': 'onTouchStart($event)',
@@ -52,9 +51,9 @@ export class FlashcardContextMenuDirective {
     div.addEventListener('click', async () => {
       try {
         await this.flashcardService.createFlashcard({
-          word,
-          sourceLanguage: lang,
-          contextSentence: context,
+          word_token: word,
+          original_context: context,
+          translation: word,
         });
         // Notify user with a toast if implemented
       } catch (err) {

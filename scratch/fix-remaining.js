@@ -21,7 +21,7 @@ const filesToFix = [
     path: 'frontend/src/app/pages/vip-subscription/vip-subscription.component.html',
     replacements: [
       [/ml-2/g, 'ms-2'],
-      [/—/g, '-'],
+      [/-/g, '-'],
     ],
   },
 ];

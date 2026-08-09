@@ -21,7 +21,7 @@ export interface ChatMessage {
   correction_payload?: CorrectionPayload | null;
   system_event?: SystemEventPayload | null;
   is_read: boolean;
-  delivery_status?: 'sent' | 'delivered' | 'read' | string;
+  delivery_status?: 'sent' | 'delivered' | 'read' | (string & {});
   created_at: string;
   sender?: {
     id: string;
@@ -69,11 +69,8 @@ export interface ChatMessage {
   /** User IDs for whom this message has been soft-deleted */
   deleted_for_user_ids?: string[] | null;
 
-  /** Whether the message has been edited by the sender */
-  is_edited?: boolean;
-
-  /** Timestamp when the message was last edited */
-  edited_at?: string | null;
+  /** Whether this message was forwarded from another conversation */
+  is_forwarded?: boolean;
 }
 
 export interface DeletedAwareMessage extends ChatMessage {

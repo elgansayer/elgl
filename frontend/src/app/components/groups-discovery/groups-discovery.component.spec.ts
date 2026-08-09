@@ -5,7 +5,6 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { GroupsDiscoveryComponent } from './groups-discovery.component';
 import { I18nService } from '../../services/i18n.service';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { Pipe, PipeTransform, signal } from '@angular/core';
 
 @Pipe({ name: 't' })
@@ -80,6 +79,6 @@ describe('GroupsDiscoveryComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(component.error()).toBe('Failed to load groups');
+    expect((component as any).error()).toBe('Failed to load groups');
   });
 });

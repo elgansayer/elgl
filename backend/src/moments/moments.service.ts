@@ -1027,9 +1027,7 @@ export class MomentsService {
 
         if (mentionedUsers) {
           const mentionedUserIds = mentionedUsers
-            .filter(
-              (u) => u.id !== userId && u.id !== momentAuthorId,
-            )
+            .filter((u) => u.id !== userId && u.id !== momentAuthorId)
             .map((u) => u.id);
 
           if (mentionedUserIds.length > 0) {

@@ -4,7 +4,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-chat-backup',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="flex flex-col gap-4 p-4">

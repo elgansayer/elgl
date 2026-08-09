@@ -57,7 +57,6 @@
       @for (w of [2, 4, 8, 14]; track w) {
         <button
           (click)="setBrushWidth(w)"
-          [attr.aria-label]="'doodle.brushSizeAria' | t: { size: w }"
           [class]="
             'px-2.5 py-1 rounded-lg text-xs font-bold transition-all ' +
             (brushWidth === w
