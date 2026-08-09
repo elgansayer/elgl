@@ -75,6 +75,7 @@ export interface UserProfile {
   website_url?: string;
   catalog?: BusinessCatalogItem[];
   status_text?: string;
+  auto_play_voice_notes?: boolean;
   chat_enter_to_send?: boolean;
   chat_text_size?: 'small' | 'medium' | 'large';
   auto_play_voice_notes?: boolean;

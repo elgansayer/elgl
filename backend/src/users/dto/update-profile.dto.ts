@@ -274,6 +274,10 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsBoolean()
+  auto_play_voice_notes?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   sound_effects_enabled?: boolean;
 
   @IsOptional()

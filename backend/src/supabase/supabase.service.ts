@@ -56,6 +56,7 @@ export type UsersRow = {
   privacy_profile_photo?: string | null;
   privacy_about_info?: string | null;
   privacy_status?: string | null;
+  auto_play_voice_notes?: boolean | null;
   sound_effects_enabled?: boolean | null;
   vibration_enabled?: boolean | null;
   chat_enter_to_send?: boolean | null;

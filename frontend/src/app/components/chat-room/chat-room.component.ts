@@ -90,6 +90,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly showParticipantDrawer = signal<boolean>(false);
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
+  readonly autoPlayVoiceNotes = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
   readonly groupParticipants = computed<GroupParticipant[]>(() =>
@@ -194,6 +195,16 @@ export class ChatRoomComponent implements OnDestroy {
     await this.setupRealTime();
     await this.loadParticipants();
     await this.resolvePartnerLanguage();
+    await this.loadAutoPlayPreference();
+  }
+
+  private async loadAutoPlayPreference(): Promise<void> {
+    try {
+      const profile = await this.userService.getMyProfile();
+      this.autoPlayVoiceNotes.set(Boolean(profile?.auto_play_voice_notes));
+    } catch {
+      // keep default false
+    }
   }
 
   /** Requests app unlock (biometric/PIN) before revealing a locked chat's messages. */
@@ -781,26 +792,21 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async playNextVoiceNote(currentMessageId: string): Promise<void> {
-    try {
-      const profile = await this.userService.getMyProfile();
-      if (!profile || !profile.auto_play_voice_notes) return;
+    if (!this.autoPlayVoiceNotes()) return;
 
-      const msgs = this.messages();
-      const currentIndex = msgs.findIndex((m) => m.id === currentMessageId);
-      if (currentIndex === -1) return;
+    const msgs = this.messages();
+    const currentIndex = msgs.findIndex((m) => m.id === currentMessageId);
+    if (currentIndex === -1) return;
 
-      for (let i = currentIndex + 1; i < msgs.length; i++) {
-        const nextMsg = msgs[i];
-        if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
-          const audioElement = document.getElementById(`audio-${nextMsg.id}`);
-          if (audioElement instanceof HTMLAudioElement) {
-            audioElement.play().catch((e) => console.error('Auto-play failed:', e));
-          }
-          break;
+    for (let i = currentIndex + 1; i < msgs.length; i++) {
+      const nextMsg = msgs[i];
+      if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
+        const audioElement = document.getElementById(`audio-${nextMsg.id}`);
+        if (audioElement instanceof HTMLAudioElement) {
+          audioElement.play().catch(() => {});
         }
+        break;
       }
-    } catch (e) {
-      console.error('Failed to auto-play next voice note:', e);
     }
   }
 }
