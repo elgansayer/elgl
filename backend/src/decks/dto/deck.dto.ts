@@ -1,11 +1,9 @@
 import {
-  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
-  Max,
-  Min,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -16,6 +14,7 @@ export class CreateDeckDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(60)
   name!: string;
 
   @ApiPropertyOptional({
@@ -24,6 +23,7 @@ export class CreateDeckDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   description?: string;
 
   @ApiPropertyOptional({
@@ -32,6 +32,7 @@ export class CreateDeckDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(9)
   colour?: string;
 
   @ApiPropertyOptional({
@@ -40,6 +41,7 @@ export class CreateDeckDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(32)
   icon?: string;
 }
 
@@ -51,6 +53,7 @@ export class UpdateDeckDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(60)
   name?: string;
 
   @ApiPropertyOptional({
@@ -59,6 +62,7 @@ export class UpdateDeckDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   description?: string;
 
   @ApiPropertyOptional({
@@ -67,6 +71,7 @@ export class UpdateDeckDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(9)
   colour?: string;
 
   @ApiPropertyOptional({
@@ -75,6 +80,7 @@ export class UpdateDeckDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(32)
   icon?: string;
 }
 

@@ -5,7 +5,6 @@ import type { Lesson } from './lessons.model';
 
 @Component({
   selector: 'app-lessons',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="ps-4 pe-4 py-6">

@@ -1,6 +1,7 @@
 import { Component, signal, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppCardComponent } from '../primitives/card/card.component';
@@ -8,7 +9,7 @@ import { ModerationService, ModerationItem } from '../../services/moderation.ser
 
 @Component({
   selector: 'app-moderation-queue',
-  imports: [DatePipe, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [DatePipe, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './moderation-queue.component.html',
   styleUrls: ['./moderation-queue.component.scss'],
 })

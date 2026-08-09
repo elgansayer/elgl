@@ -1,22 +1,8 @@
 <div class="min-h-screen bg-surface p-6 text-on-surface">
-  <div class="mb-4 flex items-center justify-between">
-    <h1 class="text-2xl font-bold text-text-primary">{{ 'moderation.title' | t }}</h1>
-    <button
-      type="button"
-      class="rounded bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition-colors"
-      (click)="startOnboarding()"
-    >
-      {{ 'moderation.onboarding.startTour' | t }}
-    </button>
-  </div>
+  <app-admin-offline-banner />
+  <h1 class="mb-4 text-2xl font-bold text-text-primary">{{ 'moderation.title' | t }}</h1>
 
-  <div
-    class="mb-4 flex gap-2"
-    joyrideStep="stepTypeTabs"
-    [title]="'moderation.onboarding.stepTypeTabs.title' | t"
-    [text]="'moderation.onboarding.stepTypeTabs.text' | t"
-    stepPosition="bottom"
-  >
+  <div class="mb-4 flex gap-2">
     <button
       class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
       [class.bg-primary]="type() === 'profile'"
@@ -39,13 +25,7 @@
     </button>
   </div>
 
-  <div
-    class="mb-4 flex gap-2"
-    joyrideStep="stepStatusFilters"
-    [title]="'moderation.onboarding.stepStatusFilters.title' | t"
-    [text]="'moderation.onboarding.stepStatusFilters.text' | t"
-    stepPosition="bottom"
-  >
+  <div class="mb-4 flex gap-2">
     <button
       class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
       [class.bg-primary]="!status()"
@@ -88,6 +68,19 @@
     </button>
   </div>
 
+  @if (actionError()) {
+    <div class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm" role="alert">
+      {{ actionError() }}
+      <button
+        type="button"
+        class="ms-2 underline hover:no-underline"
+        (click)="actionError.set(null)"
+      >
+        {{ 'moderation.dismiss' | t }}
+      </button>
+    </div>
+  }
+
   @if (items.isLoading()) {
     <div class="space-y-3">
       @for (i of [1, 2, 3]; track i) {
@@ -121,55 +114,45 @@
   } @else {
     <ul class="space-y-4">
       @for (item of items.value(); track item.id) {
-        <li
-          class="rounded bg-elevated p-4"
-          joyrideStep="stepReportedItems"
-          [title]="'moderation.onboarding.stepReportedItems.title' | t"
-          [text]="'moderation.onboarding.stepReportedItems.text' | t"
-          stepPosition="bottom"
-        >
+        <li class="rounded bg-elevated p-4">
           <div class="flex items-center justify-between">
-            <span class="font-semibold text-text-primary">{{ 'moderation.reason' | t }}: {{ item.reason }}</span>
+            <span class="font-semibold text-text-primary">{{ 'moderation.reason' | t }}: {{ item.reason | sanitiseHtml }}</span>
             <span class="text-sm text-muted">{{ item.created_at | date: 'medium' }}</span>
           </div>
 
           @if (item.type === 'profile' && item.reported_user) {
             <p class="text-text-secondary">
-              {{ 'moderation.user' | t }}: {{ item.reported_user.display_name || item.reported_user.name }}
+              {{ 'moderation.user' | t }}: {{ (item.reported_user.display_name || item.reported_user.name) | sanitiseHtml }}
             </p>
             <button
-              class="mt-2 rounded bg-secondary px-3 py-1 text-sm font-bold"
+              class="mt-2 rounded bg-secondary px-3 py-1 text-sm font-bold disabled:opacity-50"
               (click)="analyse(item)"
-              [disabled]="analysisLoading()"
+              [disabled]="analysisLoading() || actionInProgress() === item.id"
             >
               {{ 'moderation.analyse' | t }}
             </button>
           }
 
           @if (item.type === 'moment' && item.moment_content) {
-            <p class="text-text-secondary">{{ 'moderation.content' | t }}: {{ item.moment_content }}</p>
+            <p class="text-text-secondary">{{ 'moderation.content' | t }}: {{ item.moment_content | sanitiseHtml }}</p>
           }
 
           @if (item.description) {
-            <p class="text-text-secondary">{{ 'moderation.description' | t }}: {{ item.description }}</p>
+            <p class="text-text-secondary">{{ 'moderation.description' | t }}: {{ item.description | sanitiseHtml }}</p>
           }
 
-          <div
-            class="mt-4 flex gap-2"
-            joyrideStep="stepApproveReject"
-            [title]="'moderation.onboarding.stepApproveReject.title' | t"
-            [text]="'moderation.onboarding.stepApproveReject.text' | t"
-            stepPosition="top"
-          >
+          <div class="mt-4 flex gap-2">
             <button
-              class="rounded bg-emerald-600 px-3 py-1 text-white text-sm font-bold hover:bg-emerald-700 transition-colors"
+              class="rounded bg-emerald-600 px-3 py-1 text-white text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50"
               (click)="approve(item)"
+              [disabled]="actionInProgress() === item.id"
             >
               {{ 'moderation.approve' | t }}
             </button>
             <button
-              class="rounded bg-rose-600 px-3 py-1 text-white text-sm font-bold hover:bg-rose-700 transition-colors"
+              class="rounded bg-rose-600 px-3 py-1 text-white text-sm font-bold hover:bg-rose-700 transition-colors disabled:opacity-50"
               (click)="reject(item)"
+              [disabled]="actionInProgress() === item.id"
             >
               {{ 'moderation.reject' | t }}
             </button>
