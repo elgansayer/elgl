@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
+=======
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+>>>>>>> origin/main
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
