@@ -849,6 +849,10 @@ export class I18nService {
     'chatRoom.simplifyBtn': 'Simplify',
     'chatRoom.simplifying': 'Simplifying...',
     'chatRoom.simplifiedTitle': '✅ Simplified:',
+    'chatRoom.edited': 'Edited',
+    'chatRoom.saving': 'Saving...',
+    'chatRoom.editBtn': 'Edit',
+    'chatRoom.editMessage': 'Edit message',
     // Default translation language setting
     'chatRoom.defaultTranslationLanguage': 'Default translation language',
     'chatRoom.lockChat': 'Lock chat',
