@@ -28,7 +28,6 @@ import { TranslatePipe } from '../services/translate.pipe';
       </div>
     </fieldset>
   `,
-  standalone: true,
   imports: [TranslatePipe],
 })
 export class LocationPrivacyToggleComponent {

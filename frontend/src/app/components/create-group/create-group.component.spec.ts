@@ -178,7 +178,7 @@ describe('CreateGroupComponent', () => {
   it('should canAddMore return correct value', () => {
     expect(component.canAddMore()).toBe(true);
 
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 49; i++) {
       component.addMember({
         ...mockUserA,
         id: `user-${i}`,

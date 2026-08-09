@@ -1,63 +1,37 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
 import Redis from 'ioredis';
 import { SupabaseService } from '../supabase/supabase.service';
-import { ProfileUpdatedEvent } from '../notifications/events/notification.events';
+
+/** Redis cache key prefixes used by the matchmaking / discovery subsystem. */
+const MATCHMAKING_CACHE_PATTERNS = {
+  dailyRecommendationsPrefix: 'daily_recommendations:',
+  recommendationsDailyPrefix: 'recommendations:daily:',
+  partnerOfWeekKey: 'partner_of_week_ids',
+} as const;
+
+const SCAN_BATCH_SIZE = 100;
 
 /**
- * Cache key prefixes maintained by the Matchmaking Algorithm module.
- * These prefixes mirror the cache keys written by DiscoveryService and
- * RecommendationsService that must be invalidated when user profiles
- * (languages, interests, privacy, proficiency, streaks) are updated.
+ * Service responsible for invalidating Redis caches associated with the
+ * matchmaking algorithm whenever user profile data that drives matching
+ * (languages, interests, privacy flags, serious-learner status, etc.)
+ * is mutated.
+ *
+ * ## Invalidation Rules
+ *
+ * | Trigger                          | Keys invalidated                            |
+ * |----------------------------------|---------------------------------------------|
+ * | Profile update (langs, privacy)  | `daily_recommendations:{userId}`            |
+ * |                                  | `recommendations:daily:{userId}`            |
+ * |                                  | `partner_of_week_ids`                       |
+ * | Interests update                 | `daily_recommendations:{userId}`            |
+ * |                                  | `recommendations:daily:{userId}`            |
+ * | Block / unblock / report         | (handled by SafetyCacheInvalidationService) |
+ *
+ * The `partner_of_week_ids` key is a single global key that is recalculated
+ * weekly. We invalidate it on relevant profile mutations so stale partner-of-
+ * week flags are not served until the next cron run.
  */
-const MATCHMAKING_AFFECTED_CACHE_PATTERNS = [
-  // Discovery caches (discovery.service.ts)
-  'partner_of_week_ids',
-
-  // Recommendations caches (recommendations.service.ts)
-  'recommendations:daily:',
-  'daily_recommendations:',
-] as const;
-
-/**
- * Profile fields that, when changed, require invalidation of per-user
- * matchmaking caches (daily_recommendations:* and recommendations:daily:*).
- */
-const MATCHMAKING_SENSITIVE_FIELDS = new Set([
-  'native_languages',
-  'target_languages',
-  'interests',
-  'learning_goals',
-  'proficiency_level',
-  'privacy_hide_from_search',
-  'privacy_hide_location',
-  'privacy_hide_exact_location',
-  'location',
-  'mock_location',
-  'mock_country',
-  'mock_city',
-  'study_streak_days',
-  'correction_ratio',
-  'is_serious_learner',
-  'serious_learner_mode',
-  'gender',
-  'age',
-  'country',
-  'city',
-]);
-
-/**
- * Profile fields that, when changed, should trigger a global Partner of
- * the Week cache invalidation because they affect the leaderboard.
- */
-const LEADERBOARD_SENSITIVE_FIELDS = new Set([
-  'correction_ratio',
-  'study_streak_days',
-  'is_serious_learner',
-]);
-
-const SCAN_BATCH_SIZE = 500;
-
 @Injectable()
 export class MatchmakingCacheInvalidationService {
   private readonly logger = new Logger(
@@ -71,49 +45,20 @@ export class MatchmakingCacheInvalidationService {
   }
 
   /**
-   * Auto-invalidate matchmaking caches when a user profile is updated.
-   * Only invalidates if the changed fields actually affect matchmaking.
-   */
-  @OnEvent('profile.updated')
-  async handleProfileUpdated(event: ProfileUpdatedEvent): Promise<void> {
-    const { userId, changedFields } = event;
-
-    const hasMatchmakingSensitiveChange = changedFields.some((field) =>
-      MATCHMAKING_SENSITIVE_FIELDS.has(field),
-    );
-
-    if (!hasMatchmakingSensitiveChange) {
-      this.logger.log(
-        `Profile update for user ${userId} did not affect matchmaking fields; skipping invalidation`,
-      );
-      return;
-    }
-
-    await this.invalidateUserMatchmakingCaches(userId);
-
-    const hasLeaderboardChange = changedFields.some((field) =>
-      LEADERBOARD_SENSITIVE_FIELDS.has(field),
-    );
-
-    if (hasLeaderboardChange) {
-      await this.invalidatePartnerOfWeekCache();
-    }
-  }
-
-  /**
-   * Invalidate all matchmaking caches for a specific user after a profile
-   * update that affects matching (languages, interests, privacy, proficiency,
-   * study streaks, location, etc.).
+   * Invalidate all matchmaking caches associated with a specific user.
+   *
+   * Called after profile updates that affect matching (native/target
+   * languages, privacy flags, serious-learner status, study streak,
+   * correction ratio, proficiency level).
    */
   async invalidateUserMatchmakingCaches(userId: string): Promise<void> {
     const redis = this.getRedis();
     try {
-      const keysToDelete = [
-        `daily_recommendations:${userId}`,
-        `recommendations:daily:${userId}`,
+      const keys = [
+        `${MATCHMAKING_CACHE_PATTERNS.dailyRecommendationsPrefix}${userId}`,
+        `${MATCHMAKING_CACHE_PATTERNS.recommendationsDailyPrefix}${userId}`,
       ];
-
-      const deleted = await redis.del(...keysToDelete);
+      const deleted = await redis.del(...keys);
       if (deleted > 0) {
         this.logger.log(
           `Invalidated ${deleted} matchmaking cache key(s) for user ${userId}`,
@@ -128,16 +73,19 @@ export class MatchmakingCacheInvalidationService {
   }
 
   /**
-   * Invalidate the global Partner of the Week cache.
-   * Should be called when a user's correction_ratio or study_streak
-   * changes significantly enough to potentially affect the leaderboard.
+   * Invalidate the global partner-of-week cache.
+   *
+   * Called when profile attributes that influence the Partner of the Week
+   * algorithm change (correction_ratio, study_streak_days, is_serious_learner).
    */
   async invalidatePartnerOfWeekCache(): Promise<void> {
     const redis = this.getRedis();
     try {
-      const deleted = await redis.del('partner_of_week_ids');
+      const deleted = await redis.del(
+        MATCHMAKING_CACHE_PATTERNS.partnerOfWeekKey,
+      );
       if (deleted > 0) {
-        this.logger.log('Invalidated global partner_of_week_ids cache');
+        this.logger.log('Invalidated partner_of_week_ids cache');
       }
     } catch (err) {
       this.logger.error('Failed to invalidate partner_of_week_ids cache', err);
@@ -145,52 +93,94 @@ export class MatchmakingCacheInvalidationService {
   }
 
   /**
-   * Full invalidation of all matchmaking caches (sweep).
-   * Used after bulk operations such as admin user changes.
+   * Full invalidation for a profile mutation that could affect partner-of-week
+   * rankings as well as the user's own recommendation caches.
    */
-  async invalidateAllMatchmakingCaches(): Promise<void> {
+  async invalidateAfterProfileUpdate(userId: string): Promise<void> {
+    await Promise.all([
+      this.invalidateUserMatchmakingCaches(userId),
+      this.invalidatePartnerOfWeekCache(),
+    ]);
+  }
+
+  /**
+   * Invalidate the daily recommendation caches for a batch of users.
+   * Used after the nightly cron job recalculates recommendations to clear
+   * stale entries for users who were NOT recomputed (i.e. users who were
+   * skipped because they have no language data, or who were excluded).
+   *
+   * The cron job sets new values for each user it processes; this method
+   * ensures that any user whose recommendations were NOT refreshed (e.g.
+   * because their profile changed between cron runs) does not serve stale
+   * data indefinitely.
+   *
+   * When called with `allUsers` = true, it scans for ALL recommendation
+   * keys and removes them (intended to reset the cache before the nightly
+   * cron job populates fresh data).
+   */
+  async invalidateStaleRecommendationCaches(
+    processedUserIds: string[],
+  ): Promise<void> {
     const redis = this.getRedis();
+    const processedSet = new Set(processedUserIds);
+    let staleCount = 0;
+
     try {
-      let totalDeleted = 0;
+      // Scan all daily_recommendations:* keys
+      let cursor = '0';
+      const staleKeys: string[] = [];
 
-      for (const pattern of MATCHMAKING_AFFECTED_CACHE_PATTERNS) {
-        if (pattern.endsWith(':')) {
-          const deleted = await this.deleteByScan(redis, pattern);
-          totalDeleted += deleted;
-        } else {
-          const deleted = await redis.del(pattern);
-          totalDeleted += deleted;
+      do {
+        const [nextCursor, scannedKeys] = await redis.scan(
+          cursor,
+          'MATCH',
+          `${MATCHMAKING_CACHE_PATTERNS.dailyRecommendationsPrefix}*`,
+          'COUNT',
+          SCAN_BATCH_SIZE,
+        );
+        cursor = nextCursor;
+        for (const key of scannedKeys) {
+          const uid = key.slice(
+            MATCHMAKING_CACHE_PATTERNS.dailyRecommendationsPrefix.length,
+          );
+          if (!processedSet.has(uid)) {
+            staleKeys.push(key);
+          }
         }
-      }
+      } while (cursor !== '0');
 
-      if (totalDeleted > 0) {
+      // Also scan recommendations:daily:* keys
+      cursor = '0';
+      do {
+        const [nextCursor, scannedKeys] = await redis.scan(
+          cursor,
+          'MATCH',
+          `${MATCHMAKING_CACHE_PATTERNS.recommendationsDailyPrefix}*`,
+          'COUNT',
+          SCAN_BATCH_SIZE,
+        );
+        cursor = nextCursor;
+        for (const key of scannedKeys) {
+          const uid = key.slice(
+            MATCHMAKING_CACHE_PATTERNS.recommendationsDailyPrefix.length,
+          );
+          if (!processedSet.has(uid)) {
+            staleKeys.push(key);
+          }
+        }
+      } while (cursor !== '0');
+
+      if (staleKeys.length > 0) {
+        staleCount = await redis.del(...staleKeys);
         this.logger.log(
-          `Invalidated ${totalDeleted} matchmaking cache key(s) during full sweep`,
+          `Invalidated ${staleCount} stale recommendation cache key(s) for users not processed in current cron run`,
         );
       }
     } catch (err) {
-      this.logger.error('Failed to invalidate all matchmaking caches', err);
-    }
-  }
-
-  // ----- private helpers -----
-
-  private async deleteByScan(redis: Redis, prefix: string): Promise<number> {
-    let cursor = '0';
-    let deleted = 0;
-    do {
-      const [nextCursor, keys] = await redis.scan(
-        cursor,
-        'MATCH',
-        `${prefix}*`,
-        'COUNT',
-        SCAN_BATCH_SIZE,
+      this.logger.error(
+        'Failed to invalidate stale recommendation caches',
+        err,
       );
-      cursor = nextCursor;
-      if (keys.length > 0) {
-        deleted += await redis.del(...keys);
-      }
-    } while (cursor !== '0');
-    return deleted;
+    }
   }
 }

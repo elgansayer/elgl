@@ -18,9 +18,9 @@ module.exports = {
           900: '#000000',
         },
         primary: {
-          DEFAULT: '#9333EA', // Vibrant purple
-          dark: '#7E22CE',
-          light: '#A855F7',
+          DEFAULT: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
+          dark: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
+          light: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
         },
         secondary: {
           DEFAULT: '#06B6D4', // Cyan

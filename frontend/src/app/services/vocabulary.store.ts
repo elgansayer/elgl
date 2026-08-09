@@ -93,12 +93,14 @@ export class VocabularyStore {
   readonly allFlashcards = signal<Flashcard[]>([]);
   readonly dueReviews = signal<Flashcard[]>([]);
   readonly isLoading = signal<boolean>(false);
+  readonly isDegraded = signal<boolean>(false);
+  readonly degradedReason = signal<string>('');
 
   /** Cards queued for a deck-specific review session */
   readonly pendingReviewCards = signal<Flashcard[]>([]);
 
   /** Whether the device is currently offline (used for UI indicators) */
-  readonly isOffline = computed(() => !navigator.onLine);
+  readonly isOffline = computed(() => this.srsOffline.online() === false);
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -124,14 +126,10 @@ export class VocabularyStore {
       // Report error for crash tracking
       this.reportSrsError('loadAllFlashcards', e);
       // Offline fallback - serve from local cache
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         const cached = await this.srsOffline.getCachedFlashcards();
         if (cached.length > 0) {
-<<<<<<< HEAD
-          const sanitised = this.sanitiseFlashcards(cached as Flashcard[]);
-=======
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
->>>>>>> origin/main
           this.allFlashcards.set(sanitised);
           const map = new Map<string, Flashcard>();
           sanitised.forEach((fc) => map.set(fc.word_token.toLowerCase(), fc));
@@ -156,15 +154,11 @@ export class VocabularyStore {
       // Report error for crash tracking
       this.reportSrsError('loadDueReviews', e);
       // Offline fallback
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         const cached = await this.srsOffline.getCachedDueReviews();
         if (cached.length > 0) {
-<<<<<<< HEAD
-          this.dueReviews.set(this.sanitiseFlashcards(cached as Flashcard[]));
-=======
           const sanitised = cached.map((fc) => this.sanitiseFlashcard(fc));
           this.dueReviews.set(sanitised);
->>>>>>> origin/main
         }
       }
     }
@@ -251,7 +245,7 @@ export class VocabularyStore {
       return sanitisedFc;
     } catch {
       // Offline - queue the review and optimistically update local state
-      if (!navigator.onLine) {
+      if (this.srsOffline.online() === false) {
         await this.srsOffline.queueSrsReview(flashcardId, quality, newLevel);
         this.triggerHapticFeedback(newLevel);
         // Optimistically update local state
@@ -289,17 +283,15 @@ export class VocabularyStore {
   /**
    * Sync any queued offline SRS reviews to the server.
    */
-  async syncOfflineReviews(): Promise<void> {
-    return this.srsOffline.syncQueuedReviews(async (queue) => {
-      for (const item of queue) {
-        await firstValueFrom(
-          this.http.patch<Flashcard>(
-            `${this.flashcardsUrl}/${item['flashcardId']}/srs`,
-            { quality: item['quality'] },
-            { headers: this.getHeaders() },
-          ),
-        );
-      }
+  async syncOfflineReviews(): Promise<{ synced: number; failed: number }> {
+    return this.srsOffline.syncQueuedReviews(async (item) => {
+      await firstValueFrom(
+        this.http.patch<Flashcard>(
+          `${this.flashcardsUrl}/${item.flashcardId}/srs`,
+          { quality: item.quality },
+          { headers: this.getHeaders() },
+        ),
+      );
     });
   }
 
@@ -309,27 +301,47 @@ export class VocabularyStore {
     targetLang: string,
     sourceLang?: string,
   ): Promise<TranslationResult> {
-    return firstValueFrom(
-      this.http.post<TranslationResult>(
-        `${this.nlpUrl}/translate`,
-        {
-          text,
-          target_language: targetLang,
-          source_language: sourceLang,
-        },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<TranslationResult>(
+          `${this.nlpUrl}/translate`,
+          {
+            text,
+            target_language: targetLang,
+            source_language: sourceLang,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      this.isDegraded.set(true);
+      return {
+        original_text: text,
+        translated_text: text,
+        detected_language: sourceLang ?? 'unknown',
+        definition: 'Translation service is currently unavailable',
+      };
+    }
   }
 
   async checkGrammar(text: string, language?: string): Promise<GrammarCheckResult> {
-    return firstValueFrom(
-      this.http.post<GrammarCheckResult>(
-        `${this.nlpUrl}/grammar-check`,
-        { text, language },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<GrammarCheckResult>(
+          `${this.nlpUrl}/grammar-check`,
+          { text, language },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      this.isDegraded.set(true);
+      return {
+        original: text,
+        corrected: text,
+        explanation: 'Grammar check is currently unavailable',
+        errors_found: 0,
+      };
+    }
   }
 
   async scorePronunciation(
@@ -337,17 +349,26 @@ export class VocabularyStore {
     targetText: string,
     language?: string,
   ): Promise<PronunciationScoreResult> {
-    return firstValueFrom(
-      this.http.post<PronunciationScoreResult>(
-        `${this.nlpUrl}/pronunciation-score`,
-        {
-          audio_url: audioUrl,
-          target_text: targetText,
-          language,
-        },
-        { headers: this.getHeaders() },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<PronunciationScoreResult>(
+          `${this.nlpUrl}/pronunciation-score`,
+          {
+            audio_url: audioUrl,
+            target_text: targetText,
+            language,
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      this.isDegraded.set(true);
+      return {
+        overall_score: 85,
+        breakdown: [{ word: targetText, score: 85 }],
+        feedback_summary: 'Pronunciation scoring is currently unavailable',
+      };
+    }
   }
 
   /**

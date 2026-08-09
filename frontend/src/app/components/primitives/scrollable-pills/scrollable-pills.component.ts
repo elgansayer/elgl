@@ -7,12 +7,10 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
     <div
       class="flex overflow-x-auto hide-scrollbar gap-2 px-4 py-2 bg-surface-500"
       role="radiogroup"
-      [attr.aria-label]="label()"
+      [attr.aria-label]="ariaLabel() || null"
     >
       @for (pill of pills(); track pill.id) {
         <button
-          role="radio"
-          [attr.aria-checked]="selected() === pill.id"
           (click)="pillPicked.emit(pill.id)"
           class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200"
           [class.bg-purple-600]="selected() === pill.id"
@@ -21,6 +19,9 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
           [class.text-text-secondary]="selected() !== pill.id"
           [class.border]="selected() !== pill.id"
           [class.border-surface-200]="selected() !== pill.id"
+          role="radio"
+          [attr.aria-checked]="selected() === pill.id"
+          [attr.aria-label]="pill.label"
         >
           {{ pill.label }}
         </button>
@@ -40,9 +41,9 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
   ],
 })
 export class ScrollablePillsComponent {
-  pills = input.required<{ id: string; label: string }[]>();
-  selected = input.required<string>();
-  label = input<string>('');
+  readonly pills = input.required<{ id: string; label: string }[]>();
+  readonly selected = input.required<string>();
+  readonly ariaLabel = input<string>('');
   // Renamed to avoid collision with native DOM events (e.g. 'select')
-  pillPicked = output<string>();
+  readonly pillPicked = output<string>();
 }

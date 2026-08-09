@@ -42,7 +42,11 @@
           <span class="opacity-70">"{{ originalText() }}"</span>
           <span
             class="absolute top-2 end-2 text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full font-bold"
+<<<<<<< HEAD
+            >{{ 'moments.ghostText' | t }}</span
+=======
             >{{ 'correction.ghostTextLabel' | t }}</span
+>>>>>>> origin/main
           >
         </div>
       </div>
@@ -56,9 +60,15 @@
           [ngModel]="correctedText()"
           (ngModelChange)="correctedText.set($event)"
           rows="3"
+<<<<<<< HEAD
+          [placeholder]="'moments.editSentencePlaceholder' | t"
+          class="w-full bg-surface-300 border border-neon-blue/40 rounded-2xl p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-neon-blue resize-none"
+         [attr.aria-label]="'moments.editSentencePlaceholder' | t">
+=======
           [placeholder]="'correction.editPlaceholder' | t"
           class="w-full bg-surface-300 border border-neon-blue/40 rounded-2xl p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-neon-blue resize-none"
          [attr.aria-label]="'correction.editPlaceholder' | t">
+>>>>>>> origin/main
         </textarea>
       </div>
 
@@ -82,9 +92,15 @@
           type="text"
           [ngModel]="explanation()"
           (ngModelChange)="explanation.set($event)"
+<<<<<<< HEAD
+          [placeholder]="'moments.explanationPlaceholder' | t"
+          class="w-full bg-surface-300 border border-surface-100 rounded-2xl px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-surface-100"
+         [attr.aria-label]="'moments.explanationPlaceholder' | t"/>
+=======
           [placeholder]="'correction.explainPlaceholder' | t"
           class="w-full bg-surface-300 border border-surface-100 rounded-2xl px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-surface-100"
          [attr.aria-label]="'correction.explainPlaceholder' | t"/>
+>>>>>>> origin/main
       </div>
     </div>
 

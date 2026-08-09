@@ -1,9 +1,10 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { Room, RoomEvent, Track, RemoteParticipant, VideoPresets } from 'livekit-client';
-import { firstValueFrom } from 'rxjs';
+import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { Room, RoomEvent, Track, RemoteParticipant, RemoteTrack, RemoteTrackPublication, VideoPresets } from 'livekit-client';
+import { firstValueFrom, interval, Subscription } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface VideoCallState {
   roomName: string;
@@ -20,8 +21,15 @@ export interface VideoCallState {
 export class VideoCallService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private destroyRef = inject(DestroyRef);
   private room: Room | null = null;
-  private durationInterval: ReturnType<typeof setInterval> | null = null;
+private durationSubscription: Subscription | null = null;
+  // Bound handlers for cleanup to prevent listener leaks
+  private onParticipantConnectedBound: ((participant: RemoteParticipant) => void) | null = null;
+  private onTrackSubscribedBound: ((track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => void) | null = null;
+  private onTrackUnsubscribedBound: ((track: RemoteTrack, _publication: RemoteTrackPublication, _participant: RemoteParticipant) => void) | null = null;
+  private onDisconnectedBound: (() => void) | null = null;
+  private onConnectionStateChangedBound: ((state: string) => void) | null = null;
 
   readonly callState = signal<VideoCallState | null>(null);
   readonly localVideoTrack = signal<MediaStreamTrack | null>(null);
@@ -71,9 +79,8 @@ export class VideoCallService {
       if (localVideoPublication?.track) {
         this.localVideoTrack.set(localVideoPublication.track.mediaStreamTrack);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.connectionError.set('Failed to start video call');
-      console.error('Video call start error:', error);
       throw error;
     }
   }
@@ -109,20 +116,45 @@ export class VideoCallService {
       if (localVideoPublication?.track) {
         this.localVideoTrack.set(localVideoPublication.track.mediaStreamTrack);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.connectionError.set('Failed to accept video call');
-      console.error('Video call accept error:', error);
       throw error;
     }
   }
 
   async endCall(): Promise<void> {
     if (this.room) {
+      if (this.onParticipantConnectedBound) {
+        this.room.off(RoomEvent.ParticipantConnected, this.onParticipantConnectedBound);
+        this.onParticipantConnectedBound = null;
+      }
+      if (this.onTrackSubscribedBound) {
+        this.room.off(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound);
+        this.onTrackSubscribedBound = null;
+      }
+      if (this.onTrackUnsubscribedBound) {
+        this.room.off(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+        this.onTrackUnsubscribedBound = null;
+      }
+      if (this.onDisconnectedBound) {
+        this.room.off(RoomEvent.Disconnected, this.onDisconnectedBound);
+        this.onDisconnectedBound = null;
+      }
+      if (this.onConnectionStateChangedBound) {
+        this.room.off(RoomEvent.ConnectionStateChanged, this.onConnectionStateChangedBound);
+        this.onConnectionStateChangedBound = null;
+      }
       this.room.disconnect();
       this.room = null;
     }
 
     this.stopDurationTimer();
+
+    // Stop MediaStreamTracks to free camera/mic resources
+    this.localVideoTrack()?.stop();
+    this.remoteVideoTrack()?.stop();
+    this.remoteAudioTrack()?.stop();
+
     this.localVideoTrack.set(null);
     this.remoteVideoTrack.set(null);
     this.remoteAudioTrack.set(null);
@@ -180,11 +212,11 @@ export class VideoCallService {
   private setupRoomListeners(): void {
     if (!this.room) return;
 
-    this.room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
+    this.onParticipantConnectedBound = (participant: RemoteParticipant) => {
       this.handleRemoteParticipantTracks(participant);
-    });
+    };
 
-    this.room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
+    this.onTrackSubscribedBound = (track, _publication, participant) => {
       if (participant instanceof RemoteParticipant) {
         if (track.kind === 'video') {
           this.remoteVideoTrack.set(track.mediaStreamTrack);
@@ -192,25 +224,31 @@ export class VideoCallService {
           this.remoteAudioTrack.set(track.mediaStreamTrack);
         }
       }
-    });
+    };
 
-    this.room.on(RoomEvent.TrackUnsubscribed, (track) => {
+    this.onTrackUnsubscribedBound = (track) => {
       if (track.kind === 'video') {
         this.remoteVideoTrack.set(null);
       } else if (track.kind === 'audio') {
         this.remoteAudioTrack.set(null);
       }
-    });
+    };
 
-    this.room.on(RoomEvent.Disconnected, () => {
+    this.onDisconnectedBound = () => {
       this.endCall();
-    });
+    };
 
-    this.room.on(RoomEvent.ConnectionStateChanged, (state) => {
+    this.onConnectionStateChangedBound = (state) => {
       if (state === 'disconnected') {
         this.endCall();
       }
-    });
+    };
+
+    this.room.on(RoomEvent.ParticipantConnected, this.onParticipantConnectedBound);
+    this.room.on(RoomEvent.TrackSubscribed, this.onTrackSubscribedBound);
+    this.room.on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribedBound);
+    this.room.on(RoomEvent.Disconnected, this.onDisconnectedBound);
+    this.room.on(RoomEvent.ConnectionStateChanged, this.onConnectionStateChangedBound);
   }
 
   private handleRemoteParticipantTracks(participant: RemoteParticipant): void {
@@ -226,21 +264,24 @@ export class VideoCallService {
   }
 
   private startDurationTimer(): void {
-    this.durationInterval = setInterval(() => {
-      const currentState = this.callState();
-      if (currentState) {
-        this.callState.set({
-          ...currentState,
-          callDuration: currentState.callDuration + 1,
-        });
-      }
-    }, 1000);
+    this.stopDurationTimer();
+    this.durationSubscription = interval(1000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const currentState = this.callState();
+        if (currentState) {
+          this.callState.set({
+            ...currentState,
+            callDuration: currentState.callDuration + 1,
+          });
+        }
+      });
   }
 
   private stopDurationTimer(): void {
-    if (this.durationInterval) {
-      clearInterval(this.durationInterval);
-      this.durationInterval = null;
+    if (this.durationSubscription) {
+      this.durationSubscription.unsubscribe();
+      this.durationSubscription = null;
     }
   }
 }

@@ -403,4 +403,26 @@ The full interactive OpenAPI 3.0 documentation is served at:
 GET /api/docs
 ```
 
+<<<<<<< HEAD
 This includes all schema models, request/response examples, authentication requirements, and per-endpoint rate limiting documentation.
+## 14. Postman Collection & Client Generation
+
+A Postman collection can be auto-generated from the OpenAPI spec at `GET /api/docs-json`. Use the following tooling for client SDK generation:
+
+```bash
+# Generate TypeScript/Angular API client
+npx openapi-generator-cli generate -i http://localhost:3000/api/docs-json -g typescript-angular -o ./frontend/src/app/generated-api
+
+# Generate TypeScript/Axios API client for NestJS integration tests
+npx openapi-generator-cli generate -i http://localhost:3000/api/docs-json -g typescript-axios -o ./backend/src/generated-client
+```
+
+### Client Generation Notes
+- All SRS endpoints require the `Bearer` authentication interceptor configured in the generated client.
+- Public curated content endpoints (`GET /articles`, `GET /dialogues`) do not require authentication.
+- The generated client includes all `ApiProperty` descriptions as JSDoc comments for IDE autocompletion.
+- Rate limit headers (`X-RateLimit-Remaining`, `Retry-After`) are automatically parsed when using the Axios interceptor.
+
+=======
+This includes all schema models, request/response examples, authentication requirements, and per-endpoint rate limiting documentation.
+>>>>>>> origin/main

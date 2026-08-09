@@ -25,7 +25,7 @@ export interface TypingUser {
                 [src]="user.avatarUrl ?? '/assets/default-avatar.svg'"
                 [alt]="user.displayName"
                 class="w-5 h-5 rounded-full ring-2 ring-gray-700 object-cover"
-               loading="lazy" />
+              />
             }
             @if (remainingCount() > 0) {
               <span

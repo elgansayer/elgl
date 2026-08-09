@@ -108,7 +108,7 @@ describe('CrashReportService', () => {
       expect(result!.id).toBe('crash-1');
       expect(result!.operation).toBe('createEscrow');
       expect(result!.acknowledged).toBe(false);
-      expect(result!.resolved_at).toBeNull();
+      expect(result!.resolved_at).toBeUndefined();
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
         operation: 'createEscrow',
         escrow_id: 'escrow-1',

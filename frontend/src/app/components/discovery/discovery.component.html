@@ -1,8 +1,13 @@
-<div class="app-screen bg-surface-500">
+<app-discovery-error-boundary
+  [context]="errorBoundaryContext()"
+  [showReportButton]="true"
+  (retry)="searchPartners()"
+>
+  <div class="app-screen bg-surface-500">
   <!-- Offline Indicator Banner -->
   @if (isOffline()) {
     <div
-      class="flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 text-sm font-semibold shadow-md sticky top-0 z-20"
+      class="flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 text-xs sm:text-sm font-semibold shadow-md sticky top-0 z-20"
       role="alert"
       aria-live="assertive"
     >
@@ -15,66 +20,53 @@
   }
 
   <!-- Header & Primary Filters -->
-  <header class="discovery-header bg-surface-400 pt-12 pb-3 border-b border-surface-200 shadow-sm z-10 sticky top-0">
+  <header class="bg-surface-400 pt-12 pb-3 border-b border-surface-200 shadow-sm z-10 sticky top-0">
     <div class="flex items-center justify-between px-4 mb-4">
       <h1
-        joyrideStep="discoveryStepTitle"
-        class="text-xl md:text-2xl font-black text-text-primary tracking-tight"
-      >
+        class="text-xl md:text-2xl font-black text-text-primary tracking-tight">
         {{ 'discovery.title' | t }}
       </h1>
-      <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="rounded-full bg-accent-500/20 px-3 py-1.5 text-xs font-semibold text-accent-500 hover:bg-accent-500/30 transition-colors"
-          (click)="startDiscoveryTour()"
-          [attr.aria-label]="'discovery.startTour' | t"
+      <a
+        routerLink="/notifications"
+        class="p-2 text-xl hover:opacity-80 transition-opacity touch-manipulation"
+        [attr.aria-label]="'nav.notifications' | t"
+        ><span aria-hidden="true">🔔</span
+          ><span class="sr-only">{{ 'nav.notifications' | t }}</span></a
         >
-          {{ 'discovery.startTour' | t }}
-        </button>
-        <a
-          routerLink="/notifications"
-          class="p-2 text-xl hover:opacity-80 transition-opacity"
-          [attr.aria-label]="'nav.notifications' | t"
-          ><span aria-hidden="true">🔔</span
-            ><span class="sr-only">{{ 'nav.notifications' | t }}</span></a
-          >
-      </div>
     </div>
 
     <!-- Top Filter Pills (Horizontal Scroll) -->
-    <div joyrideStep="discoveryStepFilterPills" [text]="'discovery.tour.filterPillsText' | t" stepPosition="bottom">
+    <div>
       <app-scrollable-pills
         [pills]="filterPills()"
         [selected]="selectedFilter()"
-        (select)="onFilterSelect($any($event))"
-        role="radiogroup"
-        [attr.aria-label]="'discovery.filterAriaLabel' | t"
+        [ariaLabel]="'discovery.filterAriaLabel' | t"
+        (pillPicked)="onFilterSelect($event)"
       >
       </app-scrollable-pills>
     </div>
 
     <!-- Language Selection Pills -->
     <div
-      joyrideStep="discoveryStepLanguagePills"
-      [text]="'discovery.tour.languagePillsText' | t"
-      stepPosition="bottom"
-      class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4"
-    >
+           class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-4">
       @for (lang of myTargetLangs(); track lang.code) {
         <button
           (click)="setLanguage(lang.code)"
           [class.bg-surface-200]="selectedTargetLanguage() === lang.code"
           [class.bg-surface-300]="selectedTargetLanguage() !== lang.code"
           class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-text-primary text-sm font-bold border border-surface-100 whitespace-nowrap"
+          role="radio"
+          [attr.aria-checked]="selectedTargetLanguage() === lang.code"
           [attr.aria-label]="lang.labelKey | t"
         >
-          <span>{{ lang.flag }}</span> {{ lang.labelKey | t }}
+          <span aria-hidden="true">{{ lang.flag }}</span> {{ lang.labelKey | t }}
         </button>
       }
       <button
         (click)="setLanguage('')"
         class="flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-200 text-text-secondary font-bold border border-surface-100 whitespace-nowrap"
+        role="radio"
+        [attr.aria-checked]="selectedTargetLanguage() === ''"
         [attr.aria-label]="'discovery.langAny' | t"
       >
         {{ 'discovery.langAny' | t }}
@@ -86,21 +78,63 @@
         ></app-language-picker>
       </div>
     </div>
+
+    <!-- Interests Filter Chips -->
+    <div class="flex overflow-x-auto hide-scrollbar gap-2 px-4 mt-3">
+      <span class="self-center text-[10px] sm:text-xs font-semibold text-text-secondary whitespace-nowrap">{{
+        'discovery.filterInterests' | t
+      }}</span>
+      <button
+        (click)="setInterest('')"
+        [class.bg-accent-500]="selectedInterests() === ''"
+        [class.text-white]="selectedInterests() === ''"
+        [class.bg-surface-200]="selectedInterests() !== ''"
+        [class.text-text-secondary]="selectedInterests() !== ''"
+        class="px-3 py-1.5 rounded-full text-xs font-bold border border-surface-100 whitespace-nowrap transition-colors"
+        role="radio"
+        [attr.aria-checked]="selectedInterests() === ''"
+        [attr.aria-label]="'discovery.interestAny' | t"
+      >
+        {{ 'discovery.interestAny' | t }}
+      </button>
+      @for (tag of visibleInterestTags(); track tag) {
+        <button
+          (click)="setInterest(tag)"
+          [class.bg-accent-500]="selectedInterests() === tag"
+          [class.text-white]="selectedInterests() === tag"
+          [class.bg-surface-200]="selectedInterests() !== tag"
+          [class.text-text-secondary]="selectedInterests() !== tag"
+          class="px-3 py-1.5 rounded-full text-xs font-bold border border-surface-100 whitespace-nowrap capitalize transition-colors"
+          role="radio"
+          [attr.aria-checked]="selectedInterests() === tag"
+          [attr.aria-label]="('discovery.interestLabel' | t) + tag"
+        >
+          {{ tag }}
+        </button>
+      }
+      @if (commonInterestTags.length > 6) {
+        <button
+          (click)="toggleShowAllInterests()"
+          class="px-3 py-1.5 rounded-full bg-surface-200 text-text-secondary text-xs font-medium border border-surface-100 whitespace-nowrap hover:bg-surface-100 transition-colors"
+        >
+          @if (showAllInterests()) {
+            {{ 'common.showLess' | t }}
+          } @else {
+            {{ 'common.showMore' | t }}
+          }
+        </button>
+      }
+    </div>
     <!-- Filter Controls Row - wraps on mobile, single row on md+ -->
-    <div
-      joyrideStep="discoveryStepSortGender"
-      [text]="'discovery.tour.sortGenderText' | t"
-      stepPosition="bottom"
-      class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 mt-3"
-    >
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 mt-3">
       <!-- Sort By Selector -->
-      <div class="flex items-center gap-2">
-        <label for="sortBySelect" class="text-xs font-semibold text-text-secondary whitespace-nowrap">
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <label for="sortBySelect" class="text-[10px] sm:text-xs font-semibold text-text-secondary whitespace-nowrap">
           {{ 'discovery.sortLabel' | t }}
         </label>
         <select
           id="sortBySelect"
-          class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer"
+          class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer"
           [value]="selectedSort()"
           (change)="setSort($any($event.target).value)"
         >
@@ -111,13 +145,13 @@
       </div>
 
       <!-- Gender Filter (VIP only) -->
-      <div class="flex items-center gap-2">
-        <label for="genderSelect" class="text-xs font-semibold text-text-secondary whitespace-nowrap">
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <label for="genderSelect" class="text-[10px] sm:text-xs font-semibold text-text-secondary whitespace-nowrap">
           {{ 'discovery.genderLabel' | t }}
         </label>
         <select
           id="genderSelect"
-          class="bg-surface-200 text-text-primary px-4 py-1.5 rounded-full border border-surface-100 text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           [value]="selectedGender()"
           [disabled]="!isVip()"
           [attr.aria-describedby]="!isVip() ? 'genderVipNote' : null"
@@ -131,7 +165,7 @@
           <a
             id="genderVipNote"
             routerLink="/vip"
-            class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
+            class="text-[10px] sm:text-xs font-bold text-amber-500 bg-amber-500/10 px-1.5 sm:px-2 py-1 rounded-md whitespace-nowrap"
             [attr.aria-label]="'discovery.genderVipRequired' | t"
           >
             {{ 'discovery.genderVipRequired' | t }}
@@ -142,11 +176,7 @@
 
     <!-- Age range + Distance sliders row -->
     <div
-      joyrideStep="discoveryStepAgeDistance"
-      [text]="'discovery.tour.ageDistanceText' | t"
-      stepPosition="bottom"
-      class="flex flex-col md:flex-row md:items-center gap-3 px-4 mt-3"
-    >
+           class="flex flex-col md:flex-row md:items-center gap-3 px-4 mt-3">
       <div class="flex items-center gap-2">
         <app-age-range-slider
           (ageRangeChanged)="onAgeRangeChanged($event)"
@@ -166,7 +196,7 @@
           <a
             id="distanceVipNote"
             routerLink="/vip"
-            class="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md whitespace-nowrap"
+            class="text-[10px] sm:text-xs font-bold text-amber-500 bg-amber-500/10 px-1.5 sm:px-2 py-1 rounded-md whitespace-nowrap"
             [attr.aria-label]="'discovery.vipRadiusNote' | t"
           >
             {{ 'discovery.vipRadiusNote' | t }}
@@ -176,10 +206,10 @@
     </div>
 
     <!-- Toggle switches row -->
-    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 mt-3 pb-3">
+    <div class="flex flex-wrap items-center gap-x-4 sm:gap-x-6 gap-y-2 px-4 mt-3 pb-3">
       <!-- Serious Learner Mode Toggle -->
-      <div class="flex items-center gap-3">
-        <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">{{
+      <div class="flex items-center gap-2 sm:gap-3">
+        <span class="text-[10px] sm:text-xs font-semibold text-text-secondary whitespace-nowrap">{{
           'discovery.seriousModeToggle' | t
         }}</span>
         <div class="flex items-center">
@@ -194,14 +224,14 @@
             'discovery.seriousModeToggle' | t
           }}</label>
         </div>
-        <span class="text-[10px] text-text-secondary leading-tight hidden sm:inline">{{
+        <span class="text-[9px] sm:text-[10px] text-text-secondary leading-tight hidden sm:inline">{{
           'discovery.seriousModeDesc' | t
         }}</span>
       </div>
 
       <!-- Voice Room Active Toggle -->
-      <div class="flex items-center gap-3">
-        <span class="text-xs font-semibold text-text-secondary whitespace-nowrap">{{
+      <div class="flex items-center gap-2 sm:gap-3">
+        <span class="text-[10px] sm:text-xs font-semibold text-text-secondary whitespace-nowrap">{{
           'discovery.voiceRoomActiveToggle' | t
         }}</span>
         <div class="flex items-center">
@@ -216,7 +246,7 @@
             'discovery.voiceRoomActiveToggle' | t
           }}</label>
         </div>
-        <span class="text-[10px] text-text-secondary leading-tight hidden sm:inline">{{
+        <span class="text-[9px] sm:text-[10px] text-text-secondary leading-tight hidden sm:inline">{{
           'discovery.voiceRoomActiveDesc' | t
         }}</span>
       </div>
@@ -226,7 +256,7 @@
   <!-- Prominent Colourful Banner Ad -->
   @if (showBanner()) {
     <div
-      class="mx-4 mt-2 mb-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 p-4 shadow-lg relative overflow-hidden md:mx-6 lg:mx-8"
+      class="mx-4 mt-2 mb-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 p-3 sm:p-4 shadow-lg relative overflow-hidden md:mx-6 lg:mx-8"
       role="complementary"
       [attr.aria-label]="'discovery.bannerPaid' | t"
     >
@@ -240,24 +270,24 @@
         aria-hidden="true"
       ></div>
 
-      <div class="flex justify-between items-center relative z-10">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 relative z-10">
         <div>
-          <h3 class="text-white font-black text-lg tracking-tight shadow-sm">
+          <h3 class="text-white font-black text-base sm:text-lg tracking-tight shadow-sm">
             {{ 'discovery.bannerPaid' | t }}
           </h3>
-          <p class="text-white/90 text-xs font-semibold mt-0.5">{{ 'discovery.bannerDesc' | t }}</p>
+          <p class="text-white/90 text-[10px] sm:text-xs font-semibold mt-0.5">{{ 'discovery.bannerDesc' | t }}</p>
         </div>
-        <div class="flex flex-col items-end gap-2">
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
           <button
             [attr.aria-label]="'common.close' | t"
             (click)="showBanner.set(false)"
-            class="text-white/60 hover:text-white absolute -top-2 -end-2 p-1"
+            class="text-white/60 hover:text-white absolute top-0 end-0 sm:-top-2 sm:-end-2 p-1"
           >
             <span aria-hidden="true">✕</span>
           </button>
           <button
             [routerLink]="['/vip']"
-            class="bg-white text-purple-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-colors shadow-md mt-2"
+            class="bg-white text-purple-700 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider hover:bg-gray-100 transition-colors shadow-md"
             [attr.aria-label]="'discovery.bannerView' | t"
           >
             {{ 'discovery.bannerView' | t }}
@@ -268,64 +298,46 @@
   }
 
   <!-- Global Search Component -->
-  <div
-    joyrideStep="discoveryStepGlobalSearch"
-    [text]="'discovery.tour.globalSearchText' | t"
-    stepPosition="bottom"
-    class="px-4 md:px-6 lg:px-8 mt-4 mb-2"
-  >
+  <div class="px-4 md:px-6 lg:px-8 mt-4 mb-2">
     <app-global-search (searchFilters)="onGlobalSearch($event)"></app-global-search>
   </div>
 
   <!-- Content States -->
-  <main
-    joyrideStep="discoveryStepPartnerCards"
-    [text]="'discovery.tour.partnerCardsText' | t"
-    stepPosition="top"
-    class="p-0"
-  >
+  <main class="p-0">
+    <app-discovery-map-error-boundary
+      [context]="{ component: 'discovery-map', partnerCount: partners().length, filtersApplied: selectedFilter() }"
+      (retry)="retrySearch()"
+    >
     @if (isLoading()) {
-<section aria-live="polite" aria-busy="true">
-        <!-- Skeleton Loading Cards -->
-        <div class="divide-y divide-surface-200" aria-label="Loading partner results">
-          @for (i of skeletonCount; track i) {
-            <div class="flex items-center gap-3 p-4">
-              <!-- Avatar skeleton -->
-              <app-skeleton-loader
-                variant="circle"
-                height="56px"
-                width="56px"
-                borderRadius="50%"
-                customClass="shrink-0"
-              />
-              <!-- Text content skeletons -->
-              <div class="flex-1 min-w-0 space-y-2.5">
-                <app-skeleton-loader height="16px" width="55%" borderRadius="6px" />
-                <app-skeleton-loader height="12px" width="80%" borderRadius="5px" />
-                <app-skeleton-loader height="12px" width="40%" borderRadius="5px" />
-              </div>
-              <!-- Action button skeleton -->
-              <app-skeleton-loader
-                variant="circle"
-                height="40px"
-                width="40px"
-                borderRadius="50%"
-                customClass="shrink-0"
-              />
-            </div>
+      <section aria-live="polite" aria-busy="true" role="status" class="content-state-enter">
+        <span class="sr-only">{{ 'discovery.loadingPartners' | t }}</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200" aria-hidden="true">
+          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+            <app-discovery-skeleton-card [index]="i - 1" />
           }
         </div>
       </section>
-    } @else if (partners().length === 0) {
-      <section aria-live="polite">
+    } @else if (hasError()) {
+      <section aria-live="assertive" class="content-state-enter">
         <app-empty-state
-          [illustration]="'/assets/illustrations/no-users-nearby.svg'"
-          [title]="'discovery.noUsersNearby' | t"
-          [description]="'discovery.noUsersHint' | t"
-          [actionLabel]="'discovery.resetFilters' | t"
+          icon="⚠️"
+          [title]="'discovery.searchErrorTitle' | t"
+          [description]="'discovery.searchErrorDescription' | t"
+          [actionLabel]="'discovery.searchErrorAction' | t"
+          (actionClicked)="searchPartners()"
+          [customClass]="'py-16'"
+        >
+        </app-empty-state>
+      </section>
+    } @else if (partners().length === 0) {
+      <section aria-live="polite" class="content-state-enter">
+        <app-empty-state
+          illustration="/assets/illustrations/no-users-nearby.svg"
+          [title]="'discovery.noResultsTitle' | t"
+          [description]="'discovery.noResultsDescription' | t"
+          [actionLabel]="'discovery.noResultsAction' | t"
           (actionClicked)="resetFilters()"
         >
-          <p class="text-xs text-text-muted mt-1">{{ 'discovery.tryBroadening' | t }}</p>
         </app-empty-state>
       </section>
     } @else {
@@ -337,49 +349,46 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-surface-200" role="list" [attr.aria-label]="'discovery.partnerListLabel' | t">
         @for (partner of partners(); track partner.id) {
           <article
-            class="flex items-center justify-between gap-3 p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer"
+            class="flex items-center justify-between gap-2 sm:gap-3 p-3 sm:p-4 bg-surface-500 hover:bg-surface-400 transition-colors cursor-pointer touch-manipulation active:bg-surface-400"
             [routerLink]="['/chat', partner.id]"
             role="listitem"
+            [attr.aria-label]="('discovery.partnerCardLabel' | t: { name: partner.display_name || ('discovery.partnerFallback' | t) })"
           >
-            <div class="flex items-center gap-3 min-w-0">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <!-- Avatar -->
               <div class="relative shrink-0" [routerLink]="['/profile/user', partner.id]">
                 <img
                   loading="lazy"
                   [src]="partner.avatar_url || 'https://i.pravatar.cc/150?u=' + partner.id"
                   [attr.alt]="('discovery.partnerAvatar' | t: { name: partner.display_name || ('discovery.partnerFallback' | t) })"
-                  class="h-14 w-14 md:h-16 md:w-16 rounded-full object-cover"
+                  class="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 rounded-full object-cover"
                 />
                 <span
-                  class="absolute bottom-0 end-0 w-3.5 h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
+                  class="absolute bottom-0 end-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-green-500 border-2 border-surface-500 rounded-full"
                   aria-hidden="true"
                 ></span>
               </div>
 
               <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 mb-1 flex-wrap">
-                  <p class="truncate text-base font-black text-text-primary">
+                <div class="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
+                  <p class="truncate text-sm sm:text-base font-black text-text-primary">
                     {{ (partner.display_name || ('discovery.partnerFallback' | t)) | sanitiseHtml }}
                   </p>
                   @if (partner.is_vip) {
                     <span
-                      role="img"
-                      [attr.aria-label]="'discovery.vipBadge' | t"
-                      class="rounded bg-yellow-400 px-1.5 py-0.5 text-[9px] font-black uppercase text-black italic"
+                      class="rounded bg-yellow-400 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase text-black italic"
                       >{{ 'discovery.vipBadge' | t }}</span
                     >
                   }
                   @if (partner.is_partner_of_week) {
                     <span
-                      role="img"
-                      [attr.aria-label]="'discovery.partnerOfWeek' | t"
-                      class="rounded bg-purple-500 px-1.5 py-0.5 text-[9px] font-black uppercase text-white"
+                      class="rounded bg-purple-500 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase text-white"
                       >{{ 'discovery.partnerOfWeek' | t }}</span
                     >
                   }
                   @if (partner.mbti_personality_type) {
                     <span
-                      class="rounded bg-surface-200 px-1.5 py-0.5 text-[9px] font-bold text-text-secondary"
+                      class="rounded bg-surface-200 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-text-secondary"
                       >{{ partner.mbti_personality_type | sanitiseHtml }}</span
                     >
                   }
@@ -394,9 +403,9 @@
                           : 'discovery.playAudioIntro'
                         ) | t
                       "
-                      class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-accent-500/20 text-accent-500 hover:bg-accent-500/30 transition-colors"
+                      class="shrink-0 flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-accent-500/20 text-accent-500 hover:bg-accent-500/30 transition-colors"
                     >
-                      <span aria-hidden="true">{{
+                      <span aria-hidden="true" class="text-xs sm:text-sm">{{
                         playingPartnerId() === partner.id ? '⏸️' : '▶️'
                       }}</span>
                     </button>
@@ -408,44 +417,40 @@
                   <app-fluency-indicator
                     [nativeLanguages]="partner.nativeLangs || []"
                     [targetLanguages]="partner.targetLangs || []"
-                    [label]="'discovery.fluencyLabel' | t: { name: partner.display_name || ('discovery.partnerFallback' | t) }"
-                    [nativeLabel]="'discovery.nativeLanguagesLabel' | t"
-                    [targetLabel]="'discovery.learningLanguagesLabel' | t"
                   >
                   </app-fluency-indicator>
                 </div>
 
                 <!-- Active status and distance -->
                 <div class="flex items-center gap-2 mb-1">
-                  <p class="text-xs text-text-secondary mt-0.5 truncate max-w-[200px] lg:max-w-[280px]">
+                  <p class="text-[11px] sm:text-xs text-text-secondary mt-0.5 truncate max-w-[160px] sm:max-w-[200px] lg:max-w-[280px]">
                     {{ (partner.bio_text || ('discovery.partnerBioFallback' | t)) | sanitiseHtml }}
                   </p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                   @if (partner.last_active_at) {
-                    <span class="text-[10px] text-green-500 font-semibold">{{
+                    <span class="text-[9px] sm:text-[10px] text-green-500 font-semibold">{{
                       getActiveStatus(partner.last_active_at)
                     }}</span>
                   }
                   @if (partner.formattedDistance) {
-                    <span class="text-[10px] text-text-muted">{{ partner.formattedDistance }}</span>
+                    <span class="text-[9px] sm:text-[10px] text-text-muted">{{ partner.formattedDistance }}</span>
                   }
                 </div>
 
                 <!-- Interest/hobby tags -->
                 @if (partner.interests && partner.interests.length > 0) {
-                  <div class="flex flex-wrap gap-1 mt-1.5" role="list" [attr.aria-label]="'discovery.interestsLabel' | t">
-                    @for (interest of partner.interests.slice(0, 5); track interest) {
+                  <div class="flex flex-wrap gap-1 mt-1.5">
+                    @for (interest of partner.interests.slice(0, 3); track interest) {
                       <span
-                        role="listitem"
-                        class="px-1.5 py-0.5 rounded-full bg-surface-200 text-[10px] text-text-secondary font-medium"
+                        class="px-1.5 py-0.5 rounded-full bg-surface-200 text-[9px] sm:text-[10px] text-text-secondary font-medium"
                       >
                         {{ interest | sanitiseHtml }}
                       </span>
                     }
-                    @if (partner.interests.length > 5) {
-                      <span class="text-[10px] text-text-muted self-center"
-                        >+{{ partner.interests.length - 5 }}</span
+                    @if (partner.interests.length > 3) {
+                      <span class="text-[9px] sm:text-[10px] text-text-muted self-center"
+                        >+{{ partner.interests.length - 3 }}</span
                       >
                     }
                   </div>
@@ -454,7 +459,7 @@
                 <!-- Shared interests highlight -->
                 @if (partner.shared_interests && partner.shared_interests.length > 0) {
                   <div class="mt-1">
-                    <span class="text-[10px] text-accent-500 font-semibold">
+                    <span class="text-[9px] sm:text-[10px] text-accent-500 font-semibold">
                       {{
                         ('discovery.sharedInterests'
                           | t: { interests: partner.shared_interests.slice(0, 2).join(', ') })
@@ -473,11 +478,13 @@
               [routerLink]="['/chat', partner.id]"
               [ariaLabel]="('discovery.startChat' | t) + ': ' + (partner.display_name || ('discovery.partnerFallback' | t))"
             >
-              <span class="text-xl" aria-hidden="true">👋</span>
+              <span class="text-lg sm:text-xl" aria-hidden="true">👋</span>
             </app-gradient-button>
           </article>
         }
       </div>
     }
+    </app-discovery-map-error-boundary>
   </main>
 </div>
+</app-discovery-error-boundary>
