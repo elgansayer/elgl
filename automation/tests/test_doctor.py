@@ -100,3 +100,28 @@ def test_health_fails_closed_for_malformed_state_payloads(tmp_path: Path) -> Non
     assert not heartbeat.passed
     assert heartbeat.detail == "invalid heartbeat payload"
     assert all(not check.passed for check in jobs)
+
+
+def test_health_fails_closed_when_durable_job_state_is_missing(tmp_path: Path) -> None:
+    checks = job_health_checks(config(tmp_path))
+
+    assert all(not check.passed for check in checks)
+    assert {check.detail for check in checks} == {"durable job state is missing"}
+
+
+def test_health_rejects_a_materially_future_dated_heartbeat(tmp_path: Path) -> None:
+    factory_config = config(tmp_path)
+    now = datetime.now(UTC)
+    atomic_write_json(
+        factory_config.state_dir / "daemon.json",
+        {
+            "status": "running",
+            "updated_at": (now + timedelta(minutes=5)).isoformat(),
+            "active_jobs": [],
+        },
+    )
+
+    check = daemon_health_check(factory_config, now)
+
+    assert not check.passed
+    assert "future timestamp" in check.detail

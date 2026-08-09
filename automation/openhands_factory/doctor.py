@@ -80,6 +80,12 @@ def daemon_health_check(config: FactoryConfig, now: datetime | None = None) -> C
     age = (current - heartbeat).total_seconds()
     active_jobs = payload.get("active_jobs", [])
     active_count = len(active_jobs) if isinstance(active_jobs, list) else 0
+    if age < -maximum_age:
+        return Check(
+            "daemon-heartbeat",
+            False,
+            f"future timestamp by {-age:.0f}s active_jobs={active_count}",
+        )
     return Check(
         "daemon-heartbeat",
         age <= maximum_age,
@@ -89,8 +95,12 @@ def daemon_health_check(config: FactoryConfig, now: datetime | None = None) -> C
 
 def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> list[Check]:
     current = now or datetime.now(UTC)
+    jobs_path = config.state_dir / "jobs.json"
+    if not jobs_path.is_file():
+        detail = "durable job state is missing"
+        return [Check("jobs-quarantined", False, detail), Check("jobs-stalled", False, detail)]
     try:
-        jobs = JobStore(config.state_dir / "jobs.json").load()
+        jobs = JobStore(jobs_path).load()
     except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
         detail = f"unreadable durable job state: {error}"[-1000:]
         return [Check("jobs-quarantined", False, detail), Check("jobs-stalled", False, detail)]

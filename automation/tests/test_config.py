@@ -62,6 +62,21 @@ def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> N
     assert "ProtectControlGroups=false" in unit
     assert "MemoryMax=512M" in unit
     assert "TasksMax=128" in unit
+    for directive in (
+        "PrivateTmp=true",
+        "PrivateDevices=true",
+        "ProtectSystem=strict",
+        "ProtectHome=true",
+        "ProtectKernelTunables=true",
+        "ProtectKernelModules=true",
+        "ProtectKernelLogs=true",
+        "ProtectClock=true",
+        "LockPersonality=true",
+        "RestrictRealtime=true",
+        "SystemCallArchitectures=native",
+        "LimitNOFILE=4096",
+    ):
+        assert directive in unit
 
 
 def test_backend_test_heap_fits_the_service_memory_limit() -> None:
