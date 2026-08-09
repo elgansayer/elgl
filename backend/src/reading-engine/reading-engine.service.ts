@@ -6,6 +6,7 @@ import {
   ReadingProgressRow,
 } from '../supabase/supabase.service';
 import { ReadingEngineCacheService } from './reading-engine-cache.service';
+import { ReadingEngineCrashReportService } from './reading-engine-crash-report.service';
 import { ReadingEngineCacheNamespace } from './interfaces/cache-rules.interface';
 import { CreateReadingResourceDto } from './dto/create-reading-resource.dto';
 import { UpdateReadingResourceDto } from './dto/update-reading-resource.dto';
@@ -24,8 +25,24 @@ export class ReadingEngineService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly cacheService: ReadingEngineCacheService,
+    private readonly crashReportService: ReadingEngineCrashReportService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private async reportServiceCrash(
+    operation: string,
+    error: unknown,
+    context?: Record<string, unknown>,
+  ): Promise<void> {
+    const err = error instanceof Error ? error : new Error(String(error));
+    await this.crashReportService.reportCrash({
+      operation,
+      error_type: err.constructor.name,
+      error_message: err.message,
+      stack_trace: err.stack,
+      context,
+    });
+  }
 
   private get db() {
     return this.supabaseService.getClient();
