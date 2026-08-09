@@ -1,6 +1,5 @@
 import { Injectable, signal, inject, DestroyRef, computed } from '@angular/core';
-import { interval } from 'rxjs';
-import { take } from 'rxjs';
+import { firstValueFrom, interval, take } from 'rxjs';
 
 export type GiftAnimationType = 'float' | 'confetti' | 'premium' | 'sparkle' | 'hearts';
 
@@ -71,7 +70,6 @@ function generateParticles(count: number): SvgParticle[] {
 @Injectable({ providedIn: 'root' })
 export class GiftAnimationService {
   private destroyRef = inject(DestroyRef);
-  private autoHideSub: { unsubscribe: () => void } | null = null;
   private animationFrameId: ReturnType<typeof requestAnimationFrame> | null = null;
   private startTime = 0;
 
@@ -101,35 +99,36 @@ export class GiftAnimationService {
     this.animationFrameId = requestAnimationFrame(this.tick);
 
     // Hide after 5 seconds, then clear the overlay after a short fade-out.
-    const hideSub = interval(5000)
-      .pipe(take(1))
-      .subscribe(() => {
-        this.isVisible.set(false);
-        const cleanupSub = interval(600)
-          .pipe(take(1))
-          .subscribe(() => {
-            this.currentAnimation.set(null);
-            this.cancelParticles();
-            this.isPlaying = false;
-          });
-        this.autoHideSub = cleanupSub;
-      });
-    this.autoHideSub = hideSub;
+    void this.scheduleAutoHide();
 
     this.destroyRef.onDestroy(() => this.cleanup());
+  }
+
+  private async scheduleAutoHide(): Promise<void> {
+    const hideTimeout = interval(5000).pipe(take(1));
+    await firstValueFrom(hideTimeout);
+    this.isVisible.set(false);
+    const cleanupTimeout = interval(600).pipe(take(1));
+    await firstValueFrom(cleanupTimeout);
+    if (this.destroyRef.destroyed) return;
+    this.currentAnimation.set(null);
+    this.cancelParticles();
+    this.isPlaying = false;
   }
 
   dismiss(): void {
     this.cleanup();
     this.isVisible.set(false);
-    const cleanupSub = interval(600)
-      .pipe(take(1))
-      .subscribe(() => {
-        this.currentAnimation.set(null);
-        this.cancelParticles();
-        this.isPlaying = false;
-      });
-    this.autoHideSub = cleanupSub;
+    void this.scheduleCleanup();
+  }
+
+  private async scheduleCleanup(): Promise<void> {
+    const cleanupTimeout = interval(600).pipe(take(1));
+    await firstValueFrom(cleanupTimeout);
+    if (this.destroyRef.destroyed) return;
+    this.currentAnimation.set(null);
+    this.cancelParticles();
+    this.isPlaying = false;
   }
 
   private tick = (): void => {
@@ -180,11 +179,6 @@ export class GiftAnimationService {
   }
 
   private cleanup(): void {
-    // Stop timers & subscriptions.
-    if (this.autoHideSub !== null) {
-      this.autoHideSub.unsubscribe();
-      this.autoHideSub = null;
-    }
     this.cancelParticles();
     this.isPlaying = false;
   }
