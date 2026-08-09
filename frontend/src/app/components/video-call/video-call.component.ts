@@ -596,6 +596,10 @@ export class VideoCallComponent implements OnInit, OnDestroy {
       this.durationSub = null;
     }
 
+    // Detach all remote tracks from video elements before stopping them
+    this.remoteCameraTrack()?.detach();
+    this.remoteScreenShareTrack()?.detach();
+
     if (this.localVideo) {
       this.localVideo.stop();
       this.localVideo = null;
@@ -644,5 +648,8 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     this.remoteCameraTrack.set(null);
     this.remoteScreenShareTrack.set(null);
     this.isScreenSharing.set(false);
+    this.isAudioMuted.set(false);
+    this.isVideoMuted.set(false);
+    this.isInPip.set(false);
   }
 }

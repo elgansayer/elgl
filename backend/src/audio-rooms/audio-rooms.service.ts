@@ -587,6 +587,8 @@ export class AudioRoomsService implements OnModuleInit {
     partyType?: string,
     topic?: string,
     level?: string,
+    limit = 50,
+    offset = 0,
   ): Promise<AudioRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase.from('audio_rooms').select('*').eq('is_active', true);
@@ -606,7 +608,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     const response = await query
       .order('created_at', { ascending: false })
-      .limit(50);
+      .range(offset, offset + limit - 1);
 
     const data = response.data as AudioRoomRow[] | null;
     if (!data || data.length === 0) return [];
@@ -1293,6 +1295,19 @@ export class AudioRoomsService implements OnModuleInit {
       { onConflict: 'room_id' },
     );
 
+    // Tear down the LiveKit room to free SFU resources immediately
+    // rather than waiting for emptyTimeout (3600s).
+    if (this.roomServiceClient && room.room_name) {
+      try {
+        await this.roomServiceClient.deleteRoom(room.room_name);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        this.logger.warn(
+          `Could not delete LiveKit room ${room.room_name}: ${msg}`,
+        );
+      }
+    }
+
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'room_ended',
       room_id: room.id,
@@ -1301,6 +1316,20 @@ export class AudioRoomsService implements OnModuleInit {
 
     this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
+  }
+
+  /**
+   * Explicitly delete a LiveKit room by name. Used during room archival
+   * and periodic cleanup of stale rooms. No-op when LiveKit is not configured.
+   */
+  async deleteLiveKitRoom(roomName: string): Promise<void> {
+    if (!this.roomServiceClient) return;
+    try {
+      await this.roomServiceClient.deleteRoom(roomName);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.logger.warn(`Could not delete LiveKit room ${roomName}: ${msg}`);
+    }
   }
 
   async getDistinctTopics(): Promise<string[]> {
