@@ -7,6 +7,7 @@ import { LlmProxyModule } from '../llm-proxy/llm-proxy.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { CentrifugoService } from './centrifugo.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { TranslationService } from './translation.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
@@ -41,6 +42,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   ],
   providers: [
     CentrifugoService,
+    ReadReceiptsService,
     TranslationService,
     ChatLlmService,
     ChatLlmProxyService,
@@ -55,6 +57,7 @@ import { ChatSystemEventListener } from './listeners/chat-system-event.listener'
   ],
   exports: [
     CentrifugoService,
+    ReadReceiptsService,
     ChatLlmService,
     ChatLlmProxyService,
     ChatService,

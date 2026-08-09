@@ -7,6 +7,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
@@ -60,6 +61,7 @@ export class ChatService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
+    private readonly readReceiptsService: ReadReceiptsService,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,
@@ -533,6 +535,16 @@ export class ChatService {
     // Send an automatic away reply if the receiver has configured one
     if (receiverId && dto.message_type !== 'system') {
       await this.sendAwayReplyIfNeeded(senderId, dto.room_id, receiverId);
+    }
+
+    // Set initial delivery status to 'sent' and mark as delivered for receiver
+    void this.readReceiptsService.setInitialSent(savedMessage.id);
+    if (receiverId) {
+      void this.readReceiptsService.markAsDelivered(
+        savedMessage.id,
+        dto.room_id,
+        receiverId,
+      );
     }
 
     return messageForPublish;
