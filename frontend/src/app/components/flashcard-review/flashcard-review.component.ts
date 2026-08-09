@@ -1,3 +1,5 @@
+
+
 import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
@@ -5,6 +7,7 @@ import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
@@ -351,6 +354,7 @@ export class FlashcardReviewComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
   private errorHandler = inject(ErrorHandler);
+  private haptic = inject(HapticFeedbackService);
 
   readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
 
@@ -453,6 +457,8 @@ export class FlashcardReviewComponent {
 
     const newLevel = this.computeNewLevel(card.srs_level, grade);
 
+    this.triggerHaptic(grade);
+
     this.sessionStats.update((s) => ({ ...s, [grade]: s[grade] + 1 }));
 
     // Persist review to backend
@@ -486,6 +492,16 @@ export class FlashcardReviewComponent {
     audio.play().catch(() => {
       // Audio playback failed silently
     });
+    // Release the Audio object after playback ends to avoid memory leaks
+    // during rapid review sessions where many cards are reviewed in sequence.
+    audio.addEventListener(
+      'ended',
+      () => {
+        audio.src = '';
+        audio.load();
+      },
+      { once: true },
+    );
   }
 
   private computeNewLevel(currentLevel: number, grade: ReviewGrade): number {
@@ -496,6 +512,20 @@ export class FlashcardReviewComponent {
         return currentLevel < 3 ? currentLevel + 1 : 3;
       case 'known':
         return 4;
+    }
+  }
+
+  private triggerHaptic(grade: ReviewGrade): void {
+    switch (grade) {
+      case 'known':
+        this.haptic.trigger('selection');
+        break;
+      case 'good':
+        this.haptic.trigger('medium');
+        break;
+      case 'again':
+        this.haptic.trigger('light');
+        break;
     }
   }
 }

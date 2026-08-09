@@ -39,7 +39,10 @@ export class VideoCallsDegradationService {
   private readonly MAX_DEGRADATION_LOG_SIZE = 500;
 
   /** In-memory fallback cache for recent room tokens (LRU approximation) */
-  private readonly tokenCache = new Map<string, { token: string; expiresAt: number }>();
+  private readonly tokenCache = new Map<
+    string,
+    { token: string; expiresAt: number }
+  >();
   private readonly MAX_TOKEN_CACHE_SIZE = 100;
   private readonly TOKEN_CACHE_TTL_MS = 3_600_000; // 1 hour
 

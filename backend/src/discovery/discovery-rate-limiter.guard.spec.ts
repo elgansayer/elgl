@@ -113,7 +113,7 @@ describe('DiscoveryRateLimiterGuard', () => {
       windowSeconds: 60,
     };
 
-    const handler = async () => {
+    const handler = () => {
       /* empty */
     };
     class TestController {}

@@ -11,7 +11,7 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
-import { firstValueFrom, interval } from 'rxjs';
+import { interval } from 'rxjs';
 import {
   Room,
   RoomEvent,
@@ -425,7 +425,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     });
   }
 
-
   // Integration with LiveKit requires imperative setup; exception permitted per AGENTS.md 5.3
   async ngOnInit(): Promise<void> {
     this.connectionState.set('connecting');
@@ -487,7 +486,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
           `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`,
         );
       });
-    } catch (error: unknown) {
+} catch {
       this.connectionState.set('error');
     }
   }

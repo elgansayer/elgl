@@ -76,8 +76,8 @@ export class MatchmakingOnboardingService {
     this.isTourInProgress.set(false);
     try {
       window.localStorage.setItem(this.storageKey, 'true');
-    } catch {
-      // storage unavailable, ignore
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -94,8 +94,8 @@ export class MatchmakingOnboardingService {
     this.isTourInProgress.set(false);
     try {
       window.localStorage.removeItem(this.storageKey);
-    } catch {
-      // storage unavailable, ignore
+    } catch (e) {
+      console.error(e);
     }
   }
 }

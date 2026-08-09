@@ -4,7 +4,7 @@ import { GiftAnimationOverlayComponent } from './gift-animation-overlay.componen
 import { GiftAnimationService, GiftAnimationOverlay } from '../../services/gift-animation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 vi.mock('lottie-web', () => ({
   default: {
     loadAnimation: vi.fn(() => ({ destroy: vi.fn() })),
@@ -70,7 +70,7 @@ describe('GiftAnimationOverlayComponent', () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
 
-    const iconEl = fixture.nativeElement.querySelector('.drop-shadow-lg');
+    const iconEl = fixture.nativeElement.querySelector(".drop-shadow-lg");
     expect(iconEl).not.toBeNull();
     expect(iconEl.textContent.trim()).toBe('🌹');
 

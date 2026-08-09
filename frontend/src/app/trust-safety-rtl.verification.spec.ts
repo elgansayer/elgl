@@ -66,7 +66,7 @@ function collectFiles(rootPath: string): string[] {
   return files.filter((f) => !f.endsWith('.spec.ts') && TEMPLATE_EXTS.has(extname(f)));
 }
 
-describe('RTL Logical CSS Properties — Trust & Safety Architecture', () => {
+describe('RTL Logical CSS Properties - Trust & Safety Architecture', () => {
   let allContent: string;
   let fileList: string[];
 
