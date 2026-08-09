@@ -26,7 +26,8 @@ export class CreateEscrowHoldDto {
   amount_coins!: number;
 
   @ApiProperty({
-    description: 'Description of the service being paid for via the escrow hold',
+    description:
+      'Description of the service being paid for via the escrow hold',
     maxLength: 500,
     example: 'Payment for 30-minute Spanish lesson',
   })
@@ -35,7 +36,8 @@ export class CreateEscrowHoldDto {
   reason!: string;
 
   @ApiPropertyOptional({
-    description: 'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
+    description:
+      'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
     example: { service_type: 'lesson', lesson_id: 'abc-123' },
   })
   @IsOptional()
@@ -77,6 +79,33 @@ export class CancelEscrowDto {
   })
   @IsString()
   transaction_id!: string;
+}
+
+export class DisputeEscrowDto {
+  @ApiProperty({
+    description: 'UUID of the escrow transaction to dispute',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
+  @IsString()
+  transaction_id!: string;
+
+  @ApiProperty({
+    description: 'Reason for the dispute',
+    example: 'Service was not delivered as agreed',
+    maxLength: 500,
+  })
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({
+    description: 'Supporting evidence or details for the dispute',
+    maxLength: 2000,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  evidence?: string;
 }
 
 export interface EscrowTransactionResponse {

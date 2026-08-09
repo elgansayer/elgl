@@ -31,6 +31,7 @@ import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
+import { BlocksModule } from './blocks/blocks.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
@@ -71,11 +72,12 @@ import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
 import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 import { AssessmentsModule } from './assessments/assessments.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ReadingEngineModule } from './reading-engine/reading-engine.module';
+import { CloudflareModule } from './cloudflare/cloudflare.module';
+import { LivekitModule } from './livekit/livekit.module';
 
 @Module({
   imports: [
@@ -103,6 +105,7 @@ import { ReadingEngineModule } from './reading-engine/reading-engine.module';
     }),
     SharedLoggerModule,
     RetryModule,
+    LivekitModule,
     SupabaseModule,
     LocationModule,
     AuthModule,
@@ -126,6 +129,7 @@ import { ReadingEngineModule } from './reading-engine/reading-engine.module';
     VideoCallsModule,
     LeaderboardModule,
     StreakModule,
+    BlocksModule,
     NotificationsModule,
     CallsModule,
     QuizModule,
@@ -168,6 +172,7 @@ import { ReadingEngineModule } from './reading-engine/reading-engine.module';
     AnalyticsModule,
     MetricsModule,
     ReadingEngineModule,
+    CloudflareModule,
   ],
   controllers: [AppController],
   providers: [
@@ -177,7 +182,6 @@ import { ReadingEngineModule } from './reading-engine/reading-engine.module';
 
       useClass: ThrottlerGuard,
     },
-    PronunciationScoringService,
     AnkiiIntegrationService,
   ],
 })

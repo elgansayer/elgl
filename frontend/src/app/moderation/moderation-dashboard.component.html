@@ -1,41 +1,6 @@
 <div class="ps-4 pe-4 pt-4 pb-4">
   <h2 class="text-2xl font-bold mb-4 text-text-primary">{{ 'moderation.title' | t }}</h2>
 
-  @if (offlineModeration.isOfflineMode()) {
-    <div class="mb-3 p-3 rounded bg-amber-50 border border-amber-300 text-amber-800 text-sm flex items-center gap-2" role="alert">
-      <span aria-hidden="true">&#9888;</span>
-      <span>{{ 'moderation.offlineBanner' | t }}</span>
-    </div>
-  }
-
-  @if (offlineModeration.pendingActionCount() > 0) {
-    <div class="mb-3 p-3 rounded bg-blue-50 border border-blue-300 text-blue-800 text-sm flex items-center gap-2" role="status">
-      <span>{{ 'moderation.pendingActions' | t: { count: offlineModeration.pendingActionCount() } }}</span>
-      @if (!offlineModeration.isOfflineMode()) {
-        <button
-          type="button"
-          class="ms-auto underline hover:no-underline text-blue-700 font-bold"
-          (click)="syncPendingActions()"
-        >
-          {{ 'moderation.syncNow' | t }}
-        </button>
-      }
-    </div>
-  }
-
-  @if (actionError()) {
-    <div class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm" role="alert">
-      {{ actionError() }}
-      <button
-        type="button"
-        class="ms-2 underline hover:no-underline"
-        (click)="actionError.set(null)"
-      >
-        {{ 'moderation.dismiss' | t }}
-      </button>
-    </div>
-  }
-
   <div class="flex gap-2 mb-4">
     <button
       type="button"
@@ -61,7 +26,23 @@
     </button>
   </div>
 
-  @if (items.isLoading() && !showCachedFallback()) {
+  @if (actionError()) {
+    <div
+      class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm"
+      role="alert"
+    >
+      {{ actionError() }}
+      <button
+        type="button"
+        class="ms-2 underline hover:no-underline"
+        (click)="actionError.set(null)"
+      >
+        {{ 'moderation.dismiss' | t }}
+      </button>
+    </div>
+  }
+
+  @if (items.isLoading()) {
     <div class="space-y-3">
       @for (i of [1, 2, 3]; track i) {
         <app-card customClass="p-4 space-y-3">
@@ -78,7 +59,7 @@
         </app-card>
       }
     </div>
-  } @else if (items.error() && !showCachedFallback()) {
+  } @else if (items.error()) {
     <app-empty-state
       icon="⚠️"
       [title]="'safety.moderation.loadError' | t"
@@ -87,32 +68,42 @@
       (actionClicked)="items.reload()"
     />
   } @else {
-    @if (showCachedFallback()) {
-      <p class="text-xs text-amber-600 mb-2">{{ 'moderation.showingCachedData' | t }}</p>
-    }
-    @for (item of displayedItems(); track item.id) {
+    @for (item of items.value(); track item.id) {
       <div class="border border-slate-700 rounded-lg p-4 mb-2 bg-surface">
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reporter' | t }}: {{ item.reporter?.display_name }}
+          {{ 'moderation.reporter' | t }}: {{ item.reporter?.display_name | sanitiseHtml }}
         </p>
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reported_user' | t }}: {{ item.reported_user?.display_name }}
+          {{ 'moderation.reported_user' | t }}:
+          {{ item.reported_user?.display_name | sanitiseHtml }}
         </p>
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reason' | t }}: {{ item.reason }}
+          {{ 'moderation.reason' | t }}: {{ item.reason | sanitiseHtml }}
         </p>
+        @if (item.description) {
+          <p class="text-sm text-text-secondary">
+            {{ 'moderation.description' | t }}: {{ item.description | sanitiseHtml }}
+          </p>
+        }
+        @if (item.moment_content) {
+          <p class="text-sm text-text-secondary">
+            {{ 'moderation.content' | t }}: {{ item.moment_content | sanitiseHtml }}
+          </p>
+        }
 
         @if (analysis()?.userId === item.reported_user?.id) {
           <div class="mt-3 p-3 rounded bg-amber-50 border border-amber-300">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-amber-900">{{ 'moderation.riskScore' | t }}:</span>
+              <span class="text-sm font-semibold text-amber-900"
+                >{{ 'moderation.riskScore' | t }}:</span
+              >
               <span class="text-sm font-mono text-amber-900">{{ analysis()?.riskScore }}</span>
             </div>
             @if (analysis()?.flags?.length) {
               <div class="mt-1 flex flex-wrap gap-1">
                 @for (flag of analysis()?.flags ?? []; track flag) {
                   <span class="text-xs bg-rose-100 text-rose-800 rounded px-2 py-0.5">
-                    {{ flag }}
+                    {{ flag | sanitiseHtml }}
                   </span>
                 }
               </div>
@@ -140,7 +131,6 @@
           <button
             type="button"
             class="rounded border border-slate-300 px-3 py-1 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors text-sm font-bold"
-            [disabled]="actionInProgress() === item.id || offlineModeration.isOfflineMode()"
             (click)="analyse(item)"
           >
             {{ 'moderation.analyse' | t }}

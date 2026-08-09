@@ -1,16 +1,96 @@
-import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, input, output, effect, ErrorHandler } from '@angular/core';
-import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
+import { Component, inject, signal, computed, input, output, viewChild, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
+import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
+import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 
 @Component({
   selector: 'app-word-definition-modal',
-  imports: [TranslatePipe],
-  templateUrl: './word-definition-modal.component.html',
-  styleUrls: ['./word-definition-modal.component.scss'],
+  imports: [TranslatePipe, SrsErrorBoundaryComponent],
+  template: `
+    <app-srs-error-boundary
+      [context]="errorContext()"
+      [showReportButton]="true"
+      (retry)="handleRetry()"
+    >
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-300 p-6 shadow-2xl">
+          @if (isLoading()) {
+            <div class="text-center py-8" role="status" aria-busy="true">
+              <p class="animate-spin text-2xl" aria-hidden="true">&#8635;</p>
+              <p class="mt-3 text-sm text-text-secondary">{{ 'wordModal.loading' | t }}</p>
+            </div>
+          } @else if (translationResult(); as result) {
+            <div class="space-y-4">
+              <div class="flex items-start justify-between">
+                <div>
+                  <h3 class="text-xl font-black text-text-primary">{{ wordToken() }}</h3>
+                  <p class="text-sm font-bold text-emerald-400">{{ result.translated_text }}</p>
+                </div>
+                <button
+                  (click)="close()"
+                  class="rounded-app p-1.5 text-text-muted hover:bg-surface-200 hover:text-text-primary"
+                  [attr.aria-label]="'wordModal.closeAriaLabel' | t"
+                >
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              @if (result.definition) {
+                <p class="text-sm text-text-secondary">{{ result.definition }}</p>
+              }
+              @if (result.pronunciation_url) {
+                <button
+                  (click)="playAudio()"
+                  class="rounded-app border border-surface-100 px-3 py-1.5 text-xs font-bold text-text-secondary hover:bg-surface-200"
+                >
+                  &#128266; {{ 'wordModal.playAudio' | t }}
+                </button>
+              }
+              <div class="border-t border-surface-100 pt-4">
+                <p class="mb-2 text-xs font-bold text-text-primary">{{ 'wordModal.srsLabel' | t }}</p>
+                <div class="flex gap-2">
+                  <button
+                    (click)="setLevel(0)"
+                    [disabled]="isSaving()"
+                    class="flex-1 rounded-app bg-rose-500/20 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/30 disabled:opacity-50"
+                  >
+                    {{ 'wordModal.resetBtn' | t }}
+                  </button>
+                  <button
+                    (click)="setLevel(1)"
+                    [disabled]="isSaving()"
+                    class="flex-1 rounded-app bg-amber-500/20 py-2 text-xs font-bold text-amber-400 hover:bg-amber-500/30 disabled:opacity-50"
+                  >
+                    {{ 'wordModal.learningBtn' | t }}
+                  </button>
+                  <button
+                    (click)="setLevel(4)"
+                    [disabled]="isSaving()"
+                    class="flex-1 rounded-app bg-emerald-500/20 py-2 text-xs font-bold text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50"
+                  >
+                    {{ 'wordModal.knownBtn' | t }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </app-srs-error-boundary>
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
+  private readonly sanitisation = inject(HtmlSanitisationService);
   private errorHandler = inject(ErrorHandler);
 
   wordToken = input.required<string>();
@@ -25,34 +105,56 @@ export class WordDefinitionModalComponent {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
+  readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
+
+  readonly errorContext = computed<SrsErrorContext>(() => ({
+    component: 'word-definition-modal',
+    operation: 'lookup',
+    metadata: {
+      wordToken: this.wordToken(),
+      targetLanguage: this.targetLanguage(),
+      hasExistingCard: !!this.existingCard(),
+    },
+  }));
+
+  readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
+
   constructor() {
-    // Auto-fetch definition when word token changes, replacing ngOnInit
-    effect(() => {
+    this.fetchDefinition().catch(() => undefined);
+  }
+
+  handleRetry(): void {
+    this.fetchDefinition().catch(() => undefined);
+  }
+
+  async fetchDefinition(): Promise<void> {
+    this.isLoading.set(true);
+    try {
       const token = this.wordToken();
-      const target = this.targetLanguage();
+      const targetLang = this.targetLanguage();
       const status = this.vocabStore.getWordStatus(token);
       if (status.flashcard) {
         this.existingCard.set(status.flashcard);
       }
-      void this.fetchDefinition(token, target);
-    });
-  }
-
-  async fetchDefinition(wordToken: string, targetLang: string): Promise<void> {
-    this.isLoading.set(true);
-    try {
-      const res = await this.vocabStore.translateWordOrSentence(wordToken, targetLang);
-      this.translationResult.set(res);
-    } catch (e) {
-      this.reportError('fetchDefinition', e);
-      // Fallback display
+      const res = await this.vocabStore.translateWordOrSentence(token, targetLang);
       this.translationResult.set({
-        original_text: wordToken,
-        translated_text: `Translation of "${wordToken}"`,
+        ...res,
+        original_text: this.sanitisation.sanitiseText(res.original_text),
+        translated_text: this.sanitisation.sanitiseText(res.translated_text),
+        detected_language: this.sanitisation.sanitiseText(res.detected_language),
+        transliteration: res.transliteration ? this.sanitisation.sanitiseText(res.transliteration) : undefined,
+        definition: res.definition ? this.sanitisation.sanitiseText(res.definition) : undefined,
+        pronunciation_url: res.pronunciation_url ? this.sanitisation.sanitiseUrl(res.pronunciation_url) : undefined,
+      });
+    } catch (e) {
+      this.translationResult.set({
+        original_text: this.wordToken(),
+        translated_text: `Translation of "${this.wordToken()}"`,
         detected_language: 'auto',
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
-        transliteration: wordToken,
+        transliteration: this.wordToken(),
       });
+      this.handleError(e, 'fetchDefinition');
     } finally {
       this.isLoading.set(false);
     }
@@ -61,18 +163,19 @@ export class WordDefinitionModalComponent {
   playAudio(): void {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
-      const audio = new Audio(url);
-      audio.play().catch((e) => this.reportError('playAudio', e));
+      const safeUrl = this.sanitisation.sanitiseUrl(url);
+      if (safeUrl) {
+        const audio = new Audio(safeUrl);
+        audio.play().catch((err) => {
+          this.handleError(err, 'playAudio');
+        });
+      }
     }
   }
 
   async setLevel(level: number): Promise<void> {
     this.isSaving.set(true);
     try {
-      // Map old srs_level to SM-2 quality (0-5 scale):
-      //   0 (reset/new) -> quality 0 (complete blackout)
-      //   1 (learning)   -> quality 3 (correct with serious difficulty)
-      //   4 (known)      -> quality 5 (perfect response)
       const qualityMap: Record<number, number> = { 0: 0, 1: 3, 4: 5 };
       const quality = qualityMap[level] ?? 3;
 
@@ -83,7 +186,7 @@ export class WordDefinitionModalComponent {
       } else {
         const created = await this.vocabStore.saveWord({
           word_token: this.wordToken(),
-          translation: this.translationResult()?.translated_text || `Word: ${this.wordToken()}`,
+          translation: this.translationResult()?.translated_text || `Word: ${this.sanitisation.sanitiseText(this.wordToken())}`,
           original_context: this.contextSentence(),
           definition: this.translationResult()?.definition,
           pronunciation_url: this.translationResult()?.pronunciation_url,
@@ -97,9 +200,8 @@ export class WordDefinitionModalComponent {
           this.statusChanged.emit(created);
         }
       }
-    } catch (e) {
-      this.reportError('setLevel', e);
-      showToast('Error updating SRS review schedule.');
+    } catch (err) {
+      this.handleError(err, 'setLevel');
     } finally {
       this.isSaving.set(false);
       this.closed.emit();
@@ -110,12 +212,12 @@ export class WordDefinitionModalComponent {
     this.closed.emit();
   }
 
-  private reportError(operation: string, err: unknown): void {
-    const message = err instanceof Error ? err.message : String(err);
-    const srsError = new Error(`[SRS:WordDefinition] ${operation} failed: ${message}`);
-    if (err instanceof Error && err.stack) {
-      srsError.stack = err.stack;
-    }
-    this.errorHandler.handleError(srsError);
+  private handleError(err: unknown, operation: string): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    this.errorBoundary()?.captureError(error, undefined, {
+      operation,
+      wordToken: this.wordToken(),
+      srsLevel: this.existingCard()?.srs_level,
+    });
   }
 }

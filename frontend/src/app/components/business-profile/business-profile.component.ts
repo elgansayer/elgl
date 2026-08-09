@@ -11,7 +11,6 @@ export interface CatalogItem {
 
 @Component({
   selector: 'app-business-profile',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <section class="mx-auto max-w-2xl px-4 py-6">
