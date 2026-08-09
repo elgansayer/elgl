@@ -17,6 +17,7 @@ describe('DiagnosticQuizComponent', () => {
         { id: 'o1', text: 'I struggle.', points: 1 },
         { id: 'o2', text: 'I can do it slowly.', points: 2 },
         { id: 'o3', text: 'I can do it easily.', points: 3 },
+        { id: 'o4', text: 'I can do it fluently.', points: 4 },
       ],
     },
     {
@@ -26,6 +27,7 @@ describe('DiagnosticQuizComponent', () => {
         { id: 'o1', text: 'Not well.', points: 1 },
         { id: 'o2', text: 'Reasonably well.', points: 2 },
         { id: 'o3', text: 'Very well.', points: 3 },
+        { id: 'o4', text: 'Perfectly.', points: 4 },
       ],
     },
   ];
@@ -165,7 +167,7 @@ describe('DiagnosticQuizComponent', () => {
   });
 
   it('should emit quizCompleted on finish', async () => {
-    let emitted: unknown = null;
+    let emitted: { score: number; suggestedLevel: string; maxScore: number } | null = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
     fixture.detectChanges();
@@ -189,7 +191,7 @@ describe('DiagnosticQuizComponent', () => {
     await fixture.whenStable();
 
     expect(emitted).toBeTruthy();
-    expect((emitted as { score: number }).score).toBe(5);
+    expect(emitted!.score).toBe(5);
   });
 
   it('should compute progress percentage', async () => {
@@ -248,13 +250,14 @@ describe('DiagnosticQuizComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    let emitted: unknown = null;
+    let emitted: { suggestedLevel: string } | null = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
-    component.selectOption('q1', 3);
+    // Score 8/8 = 100% >= 90% → C2
+    component.selectOption('q1', 4);
     component.next();
     fixture.detectChanges();
-    component.selectOption('q2', 3);
+    component.selectOption('q2', 4);
     fixture.detectChanges();
     component.next();
 
@@ -262,7 +265,7 @@ describe('DiagnosticQuizComponent', () => {
     resultsReq.flush({ received: true });
     await fixture.whenStable();
 
-    expect((emitted as { suggestedLevel: string }).suggestedLevel).toBe('C2');
+    expect(emitted!.suggestedLevel).toBe('C2');
   });
 
   it('should handle submit results API failure gracefully', async () => {
@@ -272,7 +275,7 @@ describe('DiagnosticQuizComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    let emitted: unknown = null;
+    let emitted: { suggestedLevel: string } | null = null;
     component.quizCompleted.subscribe((v) => (emitted = v));
 
     component.selectOption('q1', 3);

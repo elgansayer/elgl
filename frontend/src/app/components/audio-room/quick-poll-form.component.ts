@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-quick-poll-form',
-  standalone: true,
   imports: [TranslatePipe, FormsModule],
   template: `
     <div class="bg-surface p-4 rounded-xl shadow-lg">

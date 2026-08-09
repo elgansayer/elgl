@@ -7,22 +7,13 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
 import * as dns from 'dns';
 import * as http from 'http';
 import * as https from 'https';
 import { LinkPreview } from './interfaces/link-preview.interface';
 import Redis from 'ioredis';
-import DOMPurify from 'dompurify';
-import { JSDOM } from 'jsdom';
-
-const window = new JSDOM('').window;
-const purify = DOMPurify(window);
-purify.setConfig({
-  ALLOWED_TAGS: [],
-  ALLOWED_ATTR: [],
-  ALLOW_DATA_ATTR: false,
-  ALLOWED_URI_REGEXP: /^(?!(?:javascript|data):)/i,
-});
 
 function isPrivateIp(ip: string): boolean {
   if (ip.startsWith('127.')) return true;
@@ -78,11 +69,22 @@ const httpsAgent = new https.Agent({ lookup: safeLookup });
 @Injectable()
 export class LinkPreviewService {
   private readonly logger = new Logger(LinkPreviewService.name);
+  private readonly dompurify: ReturnType<typeof DOMPurify>;
+  private readonly httpService: HttpService;
+  private readonly redis: Redis;
 
-  constructor(
-    private readonly httpService: HttpService,
-    @Inject('REDIS_CLIENT') private readonly redis: Redis,
-  ) {}
+  constructor(httpService: HttpService, @Inject('REDIS_CLIENT') redis: Redis) {
+    this.httpService = httpService;
+    this.redis = redis;
+    const window = new JSDOM('').window;
+    this.dompurify = DOMPurify(window);
+    this.dompurify.setConfig({
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: [],
+      ALLOW_DATA_ATTR: false,
+      ALLOWED_URI_REGEXP: /^(?!(?:javascript|data):)/i,
+    });
+  }
 
   async getPreview(url: string): Promise<LinkPreview | null> {
     this.validateUrl(url);
@@ -210,11 +212,11 @@ export class LinkPreviewService {
   }
 
   private sanitizeMetaContent(raw: string): string {
-    const sanitised = purify.sanitize(raw, {
+    const sanitized = this.dompurify.sanitize(raw, {
       ALLOWED_TAGS: [],
       ALLOWED_ATTR: [],
     });
-    const $inner = cheerio.load(`<div>${sanitised}</div>`);
+    const $inner = cheerio.load(`<div>${sanitized}</div>`);
     return $inner('div').text().trim();
   }
 }

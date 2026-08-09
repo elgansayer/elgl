@@ -200,6 +200,16 @@ function isStickerPackRow(value: unknown): value is StickerPackRow {
   );
 }
 
+export interface CoinTransactionRow {
+  id: string;
+  user_id: string;
+  type: string;
+  amount: number;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export interface GiftEventPayload {
   [key: string]: unknown;
   type: 'virtual_gift';
@@ -552,6 +562,21 @@ export class EconomyService {
     this.logger.debug(
       `User ${userId} claimed daily check-in reward of ${reward} coins.`,
     );
+
+    // Best-effort: record the transaction for history
+    try {
+      await supabase.from('coin_transactions').insert({
+        user_id: userId,
+        type: 'daily_checkin',
+        amount: reward,
+        description: `Daily check-in reward`,
+        metadata: { coins_before: coins_balance, coins_after: newBalance },
+      });
+    } catch (txErr: unknown) {
+      this.logger.warn(
+        `Failed to record daily check-in transaction: ${txErr instanceof Error ? txErr.message : 'unknown error'}`,
+      );
+    }
 
     this.invalidateUserEconomyCaches(userId);
 
@@ -1281,6 +1306,17 @@ export class EconomyService {
             `Centrifugo publish to room_${dto.room_id} failed: ${pubMsg}`,
           );
         });
+
+      // Also insert a gift chat message so it appears in the chat feed
+      this.insertGiftChatMessage(senderId, dto.room_id, gift).catch(
+        (insertErr: unknown) => {
+          const insertMsg =
+            insertErr instanceof Error ? insertErr.message : String(insertErr);
+          this.logger.warn(
+            `Failed to insert gift chat message for room ${dto.room_id}: ${insertMsg}`,
+          );
+        },
+      );
     }
 
     this.invalidateUserEconomyCaches(senderId);
@@ -1295,6 +1331,53 @@ export class EconomyService {
       success: true,
       coins_remaining: newSenderBalance,
       gift,
+    });
+  }
+
+  /** Inserts a gift message into the chat feed so GiftAnimationComponent can render it inline. */
+  private async insertGiftChatMessage(
+    senderId: string,
+    roomId: string,
+    gift: VirtualGiftRow,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const { error: insertError, data: savedMessage } = await supabase
+      .from('chat_messages')
+      .insert({
+        room_id: roomId,
+        sender_id: senderId,
+        message_type: 'gift',
+        gift_payload: {
+          gift_id: gift.id,
+          gift_name: gift.name,
+          gift_icon: gift.icon,
+          coin_value: gift.cost_coins,
+          animation_type: gift.animation_type,
+          animation_url: gift.animation_url?.slice(0, 512) ?? null,
+        },
+      })
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .single();
+
+    if (insertError || !savedMessage) {
+      throw new Error(
+        `Failed to insert gift chat message: ${insertError?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    // Publish to Centrifugo chat channel so receivers see it immediately
+    await this.centrifugoService.publish(`chat:${roomId}`, {
+      message: savedMessage,
     });
   }
 
@@ -1497,6 +1580,51 @@ export class EconomyService {
         owned_pack_ids: [],
         user_coins: 50,
       });
+    }
+  }
+
+  /**
+   * Returns the last 50 coin transactions for the authenticated user,
+   * ordered most-recent first. Falls back to an empty array when the
+   * coin_transactions table is unavailable.
+   */
+  async getTransactionHistory(userId: string): Promise<CoinTransactionRow[]> {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await withExponentialBackoff(
+        () =>
+          supabase
+            .from('coin_transactions')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(50),
+        'getTransactionHistory',
+        { logger: this.logger },
+      );
+
+      if (response.error || !response.data) {
+        this.logger.warn(
+          `Failed to fetch transaction history for user ${userId}: ${response.error?.message ?? 'no data'}`,
+        );
+        return [];
+      }
+
+      return (response.data as CoinTransactionRow[]).filter(
+        (row: unknown): row is CoinTransactionRow =>
+          typeof row === 'object' &&
+          row !== null &&
+          'id' in row &&
+          'user_id' in row &&
+          'type' in row &&
+          'amount' in row &&
+          'created_at' in row,
+      );
+    } catch (dbError: unknown) {
+      this.logger.warn(
+        `Database unavailable for transaction history: ${dbError instanceof Error ? dbError.message : 'unknown error'}`,
+      );
+      return [];
     }
   }
 
