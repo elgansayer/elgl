@@ -562,6 +562,19 @@ export class MomentsFeedComponent {
     showToast(this.i18n.translate('moments.correctionSentAlert'));
   }
 
+  async voteOnCorrection(
+    momentId: string,
+    comment: MomentComment,
+    vote: 'up' | 'down',
+  ): Promise<void> {
+    try {
+      await this.momentsStore.voteOnCorrection(momentId, comment.id, vote);
+    } catch (error) {
+      console.error('Failed to vote on correction:', error);
+      showToast(this.i18n.translate('moments.voteErrorAlert'));
+    }
+  }
+
   async copyMomentText(moment: MomentRecord): Promise<void> {
     if (!moment.text_content) return;
     try {
