@@ -1,6 +1,6 @@
 # HelloTalk AI Clone
 
-This project is a premium, pixel-perfect clone of HelloTalk, built autonomously by an AI Swarm. It features an advanced social language exchange platform integrating LiveKit audio/video rooms, real-time messaging, LingQ-style interactive reading, and native speaker corrections.
+This project is a premium HelloTalk-inspired social language exchange platform integrating LiveKit audio and video rooms, real-time messaging, LingQ-style interactive reading, and native-speaker corrections. Development automation is supervised by a bounded OpenHands factory.
 
 ## Table of Contents
 
@@ -145,14 +145,10 @@ The logic enforced by NestJS to drive subscriptions across tiers and power the i
 
 ## Advanced AI Factory Tooling
 
-The AI Swarm has been fully equipped with autonomous workflow management.
+The repository contains a supervised OpenHands factory under `automation/`. It uses ChatGPT Plus subscription
+authentication, OpenCode Go, then Gemini Flash free tier as an ordered provider chain. Every task uses a
+bounded conversation and an isolated rootless Podman worktree. The coding process cannot push to `main` or
+merge its own pull request.
 
-**Tools Installed:**
-
-- **Dependabot:** Fully configured (`.github/dependabot.yml`) to automatically submit PRs for outdated frontend/backend packages every week.
-- **Ngrok:** Installed in the backend for webhook testing. The AI can now test LiveKit and Stripe payments locally using `npx ngrok http 3000`.
-- **Two-Way Sync:** A GitHub Action perfectly syncs `TODO.md` with GitHub Issues.
-
-**Pending Setup (Action Required):**
-
-- **GitHub CodeQL:** To prevent the AI from accidentally writing vulnerable code, please go to your GitHub repository -> Settings -> Code Security and enable "CodeQL Analysis". This will automatically scan every commit the AI pushes for vulnerabilities.
+Production deployment, authentication, recovery, costs, security boundaries and operator commands are
+documented in [the factory runbook](docs/factory/README.md).

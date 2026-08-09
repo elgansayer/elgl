@@ -9,6 +9,7 @@ import {
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { RestorePurchasesButtonComponent } from '../restore-purchases-button/restore-purchases-button.component';
+import { TranslatePipe } from '../../services/translate.pipe';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -17,18 +18,19 @@ import { environment } from '../../../environments/environment';
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,
     RestorePurchasesButtonComponent,
+    TranslatePipe,
   ],
   template: `
-    <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-12 px-4">
+    <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-8 sm:py-12 px-4">
       <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-12">
-          <h1 class="text-4xl font-bold text-white mb-4">Choose Your Plan</h1>
-          <p class="text-slate-300 text-lg">
-            Unlock premium features to accelerate your language learning
+        <div class="text-center mb-8 sm:mb-12">
+          <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">{{ 'subscription.plans.title' | t }}</h1>
+          <p class="text-slate-300 text-sm sm:text-base lg:text-lg">
+            {{ 'subscription.plans.subtitle' | t }}
           </p>
         </div>
 
-        <div class="flex justify-center mb-10">
+        <div class="flex justify-center mb-8 sm:mb-10">
           <div class="bg-slate-800 rounded-full p-1 inline-flex items-center">
             <button
               (click)="billingInterval.set('month')"
@@ -37,9 +39,9 @@ import { environment } from '../../../environments/environment';
                   ? 'bg-purple-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white'
               "
-              class="px-6 py-2 rounded-full font-medium transition-all duration-200"
+              class="px-4 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all duration-200"
             >
-              Monthly
+              {{ 'subscription.plans.monthly' | t }}
             </button>
             <button
               (click)="billingInterval.set('year')"
@@ -48,15 +50,15 @@ import { environment } from '../../../environments/environment';
                   ? 'bg-purple-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white'
               "
-              class="px-6 py-2 rounded-full font-medium transition-all duration-200"
+              class="px-4 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all duration-200"
             >
-              Yearly
-              <span class="text-xs ms-1 text-green-400">Save 48%</span>
+              {{ 'subscription.plans.yearly' | t }}
+              <span class="text-xs ms-1 text-green-400">{{ 'subscription.plans.saveAmount' | t }}</span>
             </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           @for (plan of plans(); track plan.id) {
             <div [class]="getPlanCardClass(plan)">
               @if (plan.badge_text) {
@@ -69,16 +71,16 @@ import { environment } from '../../../environments/environment';
                 </div>
               }
 
-              <div class="p-6">
-                <h3 class="text-xl font-bold text-white mb-2">{{ plan.name }}</h3>
-                <p class="text-slate-400 text-sm mb-6">{{ plan.description }}</p>
+              <div class="p-5 sm:p-6">
+                <h3 class="text-lg sm:text-xl font-bold text-white mb-2">{{ plan.name }}</h3>
+                <p class="text-slate-400 text-xs sm:text-sm mb-6">{{ plan.description }}</p>
 
                 <div class="mb-6">
                   <div class="flex items-baseline">
-                    <span class="text-4xl font-bold text-white">
+                    <span class="text-3xl sm:text-4xl font-bold text-white">
                       {{ getDisplayPrice(plan) }}
                     </span>
-                    <span class="text-slate-400 ms-2">/{{ billingInterval() }}</span>
+                    <span class="text-slate-400 ms-2 text-sm">/{{ billingInterval() }}</span>
                   </div>
                   @if (billingInterval() === 'year' && plan.price_usd > 0) {
                     <p class="text-green-400 text-sm mt-1">
@@ -92,25 +94,25 @@ import { environment } from '../../../environments/environment';
                   <div class="mb-6 space-y-2">
                     @for (benefit of plan.highlighted_benefits; track benefit) {
                       <div class="flex items-start gap-2">
-                        <span class="text-purple-400 mt-0.5">✦</span>
-                        <span class="text-slate-300 text-sm">{{ benefit }}</span>
+                        <span class="text-purple-400 mt-0.5 flex-shrink-0">✦</span>
+                        <span class="text-slate-300 text-xs sm:text-sm">{{ benefit }}</span>
                       </div>
                     }
                   </div>
                 }
 
-                <ul class="space-y-3 mb-8">
+                <ul class="space-y-2 sm:space-y-3 mb-8">
                   @for (feature of plan.features; track feature) {
                     <li class="flex items-start gap-2">
-                      <span class="text-green-400 mt-0.5">✓</span>
-                      <span class="text-slate-300 text-sm">{{ feature }}</span>
+                      <span class="text-green-400 mt-0.5 flex-shrink-0">✓</span>
+                      <span class="text-slate-300 text-xs sm:text-sm">{{ feature }}</span>
                     </li>
                   }
                 </ul>
 
                 @if (plan.price_usd === 0) {
                   <app-button-secondary [disabled]="true" customClass="w-full">
-                    Current Plan
+                    {{ 'subscription.plans.currentPlan' | t }}
                   </app-button-secondary>
                 } @else {
                   <app-button-primary
@@ -119,9 +121,9 @@ import { environment } from '../../../environments/environment';
                     customClass="w-full"
                   >
                     @if (loading()) {
-                      Processing...
+                      {{ 'subscription.plans.processing' | t }}
                     } @else {
-                      Get Started
+                      {{ 'subscription.plans.getStarted' | t }}
                     }
                   </app-button-primary>
                 }
@@ -132,7 +134,7 @@ import { environment } from '../../../environments/environment';
       </div>
       <div class="mt-6 text-center">
         <p class="text-xs text-slate-400 mb-2">
-          Already purchased? Restore your previous purchases below.
+          {{ 'subscription.plans.restorePrompt' | t }}
         </p>
         <app-restore-purchases-button />
       </div>

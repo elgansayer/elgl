@@ -28,35 +28,35 @@ function getAudioContextClass(): typeof AudioContext | undefined {
   imports: [TranslatePipe],
   template: `
     @if (callData(); as data) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-3 sm:px-4">
         <div
-          class="bg-surface-800 border border-slate-700 rounded-3xl p-8 w-full max-w-sm mx-4 shadow-2xl animate-in zoom-in-95 duration-200"
+          class="bg-surface-800 border border-slate-700 rounded-2xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200"
         >
           <!-- Caller Info -->
-          <div class="flex flex-col items-center space-y-4 mb-8">
+          <div class="flex flex-col items-center space-y-3 sm:space-y-4 mb-6 sm:mb-8">
             <div class="relative">
               @if (data.callerAvatarUrl) {
                 <img
                   [src]="data.callerAvatarUrl"
                   [alt]="'voip.callerAvatar' | t: { name: data.callerName }"
-                  class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-500/50"
+                  class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-purple-500/50"
                  loading="lazy" />
               } @else {
                 <div
-                  class="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center ring-4 ring-purple-500/50"
+                  class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center ring-4 ring-purple-500/50"
                 >
-                  <span class="text-4xl font-bold text-white">
+                  <span class="text-3xl sm:text-4xl font-bold text-white">
                     {{ data.callerName.charAt(0).toUpperCase() }}
                   </span>
                 </div>
               }
               <div
-                class="absolute -bottom-1 -end-1 w-8 h-8 rounded-full bg-green-500 border-4 border-slate-900"
+                class="absolute -bottom-1 -end-1 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-green-500 border-4 border-slate-900"
               ></div>
             </div>
             <div class="text-center">
-              <h2 class="text-2xl font-bold text-white">{{ data.callerName }}</h2>
-              <p class="text-text-muted mt-1">
+              <h2 class="text-xl sm:text-2xl font-bold text-white">{{ data.callerName }}</h2>
+              <p class="text-sm text-text-muted mt-1">
                 @if (data.isVideoCall) {
                   {{ 'voip.incomingVideoCall' | t }}
                 } @else {
@@ -67,19 +67,19 @@ function getAudioContextClass(): typeof AudioContext | undefined {
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex justify-center gap-6">
+          <div class="flex justify-center gap-4 sm:gap-6">
             <!-- Decline Button -->
             <button
               (click)="onDecline()"
-              class="flex flex-col items-center gap-2 group"
+              class="flex flex-col items-center gap-1.5 sm:gap-2 group"
               [attr.aria-label]="'voip.decline' | t"
             >
               <div
-                class="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center group-hover:bg-red-500/40 transition-colors duration-150"
+                class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-red-500/20 flex items-center justify-center group-hover:bg-red-500/40 transition-colors duration-150"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  class="w-8 h-8 text-red-500"
+                  class="w-6 h-6 sm:w-8 sm:h-8 text-red-500"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -91,22 +91,22 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
               </div>
-              <span class="text-sm text-text-muted group-hover:text-slate-300">{{ 'voip.decline' | t }}</span>
+              <span class="text-xs sm:text-sm text-text-muted group-hover:text-slate-300">{{ 'voip.decline' | t }}</span>
             </button>
 
             <!-- Accept Button -->
             <button
               (click)="onAccept()"
-              class="flex flex-col items-center gap-2 group"
+              class="flex flex-col items-center gap-1.5 sm:gap-2 group"
               [attr.aria-label]="'voip.accept' | t"
             >
               <div
-                class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/40 transition-colors duration-150 animate-pulse"
+                class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/40 transition-colors duration-150 animate-pulse"
               >
                 @if (data.isVideoCall) {
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="w-8 h-8 text-green-500"
+                    class="w-6 h-6 sm:w-8 sm:h-8 text-green-500"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -120,7 +120,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                 } @else {
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="w-8 h-8 text-green-500"
+                    class="w-6 h-6 sm:w-8 sm:h-8 text-green-500"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -134,7 +134,7 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   </svg>
                 }
               </div>
-              <span class="text-sm text-green-400 group-hover:text-green-300">{{ 'voip.accept' | t }}</span>
+              <span class="text-xs sm:text-sm text-green-400 group-hover:text-green-300">{{ 'voip.accept' | t }}</span>
             </button>
           </div>
         </div>
