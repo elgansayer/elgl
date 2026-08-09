@@ -39,8 +39,11 @@ interface MockOptions {
   partners?: PartnerRecord[];
   blockedIds?: string[];
   partnerOfWeekIds?: string[];
+  partnerOfWeekUnavailable?: boolean;
   partnerDelayMs?: number;
 }
+
+let unexpectedApiRequests: string[] = [];
 
 const transparentAvatar =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"/%3E';
@@ -110,13 +113,18 @@ function userProfile(): PartnerRecord {
 }
 
 function installApplicationMocks(options: MockOptions = {}): void {
+  unexpectedApiRequests = [];
   const responsePartners = options.partners ?? partners();
   const blockedIds = options.blockedIds ?? [];
   const partnerOfWeekIds = options.partnerOfWeekIds ?? ['partner-001'];
 
-  // Fail harmlessly for any newly introduced application bootstrap request. More
-  // specific routes below are registered later and therefore take precedence.
-  cy.intercept('**/api/**', { statusCode: 200, body: {} }).as('unexpectedApi');
+  // Specific routes below are registered later and therefore take precedence.
+  // Any unrecognised request is recorded and failed so the acceptance suite cannot
+  // hide a removed or misspelt integration behind a permissive empty response.
+  cy.intercept('**/api/**', (request) => {
+    unexpectedApiRequests.push(`${request.method} ${new URL(request.url).pathname}`);
+    request.reply({ statusCode: 418, body: { error: 'Unexpected acceptance request' } });
+  });
   cy.intercept('https://mock.supabase.co/**', { statusCode: 200, body: [] });
 
   cy.intercept('GET', '**/api/version/minimum', {
@@ -172,10 +180,16 @@ function installApplicationMocks(options: MockOptions = {}): void {
     statusCode: 200,
     body: userProfile(),
   });
-  cy.intercept('GET', '**/api/discovery/partner-of-week', {
-    statusCode: 200,
-    body: partnerOfWeekIds,
-  }).as('getPartnerOfWeek');
+  if (options.partnerOfWeekUnavailable) {
+    cy.intercept('GET', '**/api/discovery/partner-of-week', { forceNetworkError: true }).as(
+      'getPartnerOfWeek',
+    );
+  } else {
+    cy.intercept('GET', '**/api/discovery/partner-of-week', {
+      statusCode: 200,
+      body: partnerOfWeekIds,
+    }).as('getPartnerOfWeek');
+  }
   cy.intercept('GET', '**/api/discovery/partners*', {
     statusCode: 200,
     body: responsePartners,
@@ -217,6 +231,10 @@ function visitDiscovery(options: MockOptions = {}): void {
 }
 
 describe('Discovery Map browser acceptance', () => {
+  afterEach(() => {
+    expect(unexpectedApiRequests, 'unexpected application API requests').to.deep.equal([]);
+  });
+
   it('renders the Find Partners surface from a controlled client request', () => {
     visitDiscovery();
 
@@ -375,7 +393,7 @@ describe('Discovery Map browser acceptance', () => {
   });
 
   it('degrades safely when the partner-of-week endpoint is unavailable', () => {
-    visitDiscovery({ partnerOfWeekIds: [] });
+    visitDiscovery({ partnerOfWeekUnavailable: true });
 
     cy.contains('Maria Garcia').should('be.visible');
     cy.contains('Partner of the Week').should('not.exist');
