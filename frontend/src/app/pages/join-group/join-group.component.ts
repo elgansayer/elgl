@@ -9,7 +9,6 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-join-group',
-  standalone: true,
   imports: [TranslatePipe, RouterLink],
   templateUrl: './join-group.component.html',
 })

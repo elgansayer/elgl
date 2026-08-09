@@ -2,13 +2,11 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AppCardComponent } from '../../components/primitives/card/card.component';
-import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
-import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 @Component({
   selector: 'app-user-management',
-  imports: [CommonModule, TranslatePipe, AppCardComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe],
   templateUrl: './user-management.component.html',
 })
 export class UserManagementComponent implements OnInit {
@@ -16,7 +14,6 @@ export class UserManagementComponent implements OnInit {
 
   users = signal<AdminUserSummary[]>([]);
   isLoading = signal<boolean>(true);
-  loadError = signal<string | null>(null);
 
   ngOnInit(): void {
     this.loadUsers();
@@ -24,13 +21,11 @@ export class UserManagementComponent implements OnInit {
 
   async loadUsers(): Promise<void> {
     this.isLoading.set(true);
-    this.loadError.set(null);
     try {
       const data = await this.adminService.listUsers('', 1, 50);
       this.users.set(data.users);
     } catch (err) {
       console.error('Failed to load users', err);
-      this.loadError.set('Failed to load users');
     } finally {
       this.isLoading.set(false);
     }

@@ -8,7 +8,6 @@ import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
 @Component({
   selector: 'app-external-profile',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   template: `
     <div class="flex gap-3">

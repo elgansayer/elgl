@@ -1,4 +1,10 @@
 <div class="p-4">
+  <app-admin-offline-banner />
+  @if (vipUpdateError()) {
+    <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+      {{ vipUpdateError() }}
+    </div>
+  }
   <h2 class="text-2xl font-bold mb-4">{{ 'admin.users.title' | t }}</h2>
 
   <div class="flex flex-wrap items-center mb-4 gap-2">
@@ -36,29 +42,122 @@
   </div>
 
   @if (isLoading()) {
-    <div class="space-y-3">
-      @for (i of [1, 2, 3, 4, 5]; track i) {
-        <app-card customClass="flex items-center gap-3 p-3">
-          <app-skeleton-loader height="32px" width="32px" variant="circle" />
-          <div class="flex-1 space-y-2">
-            <app-skeleton-loader height="16px" width="30%" variant="text" />
-            <app-skeleton-loader height="12px" width="50%" variant="text" />
-          </div>
-          <div class="flex gap-2">
-            <app-skeleton-loader height="28px" width="60px" borderRadius="6px" />
-            <app-skeleton-loader height="28px" width="60px" borderRadius="6px" />
-          </div>
-        </app-card>
-      }
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.avatar' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.name' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.nativeLanguages' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.targetLanguages' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.vip' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.coins' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.streak' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.lastActive' | t }}
+            </th>
+            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+              {{ 'admin.users.actions' | t }}
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-slate-100">
+          @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+            <tr>
+              <td class="px-3 py-2">
+                <app-skeleton-loader
+                  [height]="'32px'"
+                  [width]="'32px'"
+                  [variant]="'circle'"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader
+                  [height]="'14px'"
+                  [width]="'80%'"
+                  [variant]="'text'"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader
+                  [height]="'12px'"
+                  [width]="'65%'"
+                  [variant]="'text'"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader
+                  [height]="'12px'"
+                  [width]="'65%'"
+                  [variant]="'text'"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader
+                  [height]="'16px'"
+                  [width]="'40px'"
+                  [borderRadius]="'4px'"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader
+                  [height]="'14px'"
+                  [width]="'30px'"
+                  [variant]="'text'"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader
+                  [height]="'14px'"
+                  [width]="'25px'"
+                  [variant]="'text'"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <app-skeleton-loader
+                  [height]="'12px'"
+                  [width]="'65%'"
+                  [variant]="'text'"
+                />
+              </td>
+              <td class="px-3 py-2">
+                <div class="flex flex-wrap gap-1">
+                  <app-skeleton-loader
+                    [height]="'28px'"
+                    [width]="'55px'"
+                    [borderRadius]="'6px'"
+                  />
+                  <app-skeleton-loader
+                    [height]="'28px'"
+                    [width]="'55px'"
+                    [borderRadius]="'6px'"
+                  />
+                  <app-skeleton-loader
+                    [height]="'28px'"
+                    [width]="'55px'"
+                    [borderRadius]="'6px'"
+                  />
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
-  } @else if (loadError()) {
-    <app-empty-state
-      icon="⚠️"
-      [title]="'admin.users.loadError' | t"
-      [description]="'admin.users.loadErrorDesc' | t"
-      [actionLabel]="'common.retry' | t"
-      (actionClicked)="retry()"
-    />
   } @else if (users().length === 0) {
     <app-empty-state
       icon="👥"
@@ -113,9 +212,9 @@
                   <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
                 }
               </td>
-              <td class="px-3 py-2">{{ user.display_name ?? '-' }}</td>
-              <td class="px-3 py-2">{{ user.native_languages.join(', ') }}</td>
-              <td class="px-3 py-2">{{ user.target_languages.join(', ') }}</td>
+              <td class="px-3 py-2">{{ (user.display_name ?? '-') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ (user.native_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ (user.target_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
               <td class="px-3 py-2">
                 <span
                   [class.text-green-600]="user.is_vip"
@@ -142,32 +241,41 @@
                   <button
                     type="button"
                     (click)="toggleVip(user)"
-                    [disabled]="isVipUpdating() === user.id"
+                    [disabled]="isVipUpdating() === user.id || !isOnline()"
                     class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50 whitespace-nowrap"
                     [attr.aria-label]="'admin.users.disableVip' | t"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
                     {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
                   </button>
                   <button
                     type="button"
                     (click)="warnUser(user)"
-                    [disabled]="isWarning() !== null"
+                    [disabled]="isWarning() !== null || !isOnline()"
                     class="btn btn-sm rounded border border-amber-500 text-amber-600 px-3 py-1 hover:bg-amber-50 disabled:opacity-50 whitespace-nowrap"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
                     {{ 'admin.users.warn' | t }}
                   </button>
                   <button
                     type="button"
                     (click)="banUser(user)"
-                    [disabled]="isBanning() !== null"
+                    [disabled]="isBanning() !== null || !isOnline()"
                     class="btn btn-sm rounded border border-red-500 text-red-600 px-3 py-1 hover:bg-red-50 disabled:opacity-50 whitespace-nowrap"
+                    [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
                     {{ 'admin.users.ban' | t }}
                   </button>
                 </div>
               </td>
             </tr>
-
+          } @empty {
+            <tr>
+              <td colspan="9" class="px-3 py-4 text-center text-slate-400">
+                {{ 'admin.users.empty' | t }}
+              </td>
+            </tr>
+          }
         </tbody>
       </table>
     </div>
@@ -204,8 +312,8 @@
               @for (entry of loginHistory(); track entry.id) {
                 <tr>
                   <td class="px-3 py-2">{{ entry.created_at | date: 'medium' }}</td>
-                  <td class="px-3 py-2">{{ entry.ip_address ?? '-' }}</td>
-                  <td class="px-3 py-2">{{ entry.user_agent ?? '-' }}</td>
+                  <td class="px-3 py-2">{{ (entry.ip_address ?? '-') | sanitiseHtml }}</td>
+                  <td class="px-3 py-2">{{ (entry.user_agent ?? '-') | sanitiseHtml }}</td>
                 </tr>
               }
             </tbody>
