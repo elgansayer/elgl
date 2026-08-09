@@ -1,9 +1,13 @@
 <div class="app-card p-6 max-w-2xl mx-auto shadow-lift">
   <div class="flex items-center justify-between border-b border-surface-100 pb-3 mb-4">
     <h3 class="app-section-title flex items-center gap-2">
-      <span>🎨 Interactive Doodle Pad</span>
+      <span>{{ 'doodle.title' | t }}</span>
     </h3>
-    <button aria-label="Cancel doodle" (click)="cancel()" class="text-text-muted hover:text-text-secondary font-bold text-xl">
+    <button
+      aria-label="Cancel doodle"
+      (click)="cancel()"
+      class="text-text-muted hover:text-text-secondary font-bold text-xl"
+    >
       ✕
     </button>
   </div>
@@ -32,7 +36,8 @@
         'doodle.colorLabel' | t
       }}</span>
       @for (color of colors; track color) {
-        <button [attr.aria-label]="'Select ' + color"
+        <button
+          [attr.aria-label]="'Select ' + color"
           (click)="setColor(color)"
           [class]="
             'w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ' +
@@ -58,6 +63,7 @@
               ? 'bg-primary text-white shadow'
               : 'bg-surface-100 text-text-primary hover:bg-surface-100')
           "
+          [attr.aria-label]="w + 'px stroke width'"
         >
           {{ w }}px
         </button>
@@ -69,15 +75,24 @@
     <button
       (click)="clearCanvas()"
       class="app-button-secondary bg-red-500/20 text-red-400 px-4 py-2 text-sm hover:bg-red-500/30"
+      [attr.aria-label]="'doodle.clearBtn' | t"
     >
       {{ 'doodle.clearBtn' | t }}
     </button>
 
     <div class="flex gap-3">
-      <button (click)="cancel()" class="app-button-secondary px-5 py-2 text-sm">
+      <button
+        (click)="cancel()"
+        class="app-button-secondary px-5 py-2 text-sm"
+        [attr.aria-label]="'doodle.cancelBtn' | t"
+      >
         {{ 'doodle.cancelBtn' | t }}
       </button>
-      <button (click)="save()" class="app-button-primary px-6 py-2 text-sm flex items-center gap-2">
+      <button
+        (click)="save()"
+        class="app-button-primary px-6 py-2 text-sm flex items-center gap-2"
+        [attr.aria-label]="'doodle.sendBtn' | t"
+      >
         <span>{{ 'doodle.sendBtn' | t }}</span>
       </button>
     </div>

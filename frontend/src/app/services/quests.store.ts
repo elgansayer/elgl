@@ -1,5 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface Quest {
@@ -18,14 +19,17 @@ export class QuestStore {
   readonly quests = signal<Quest[]>([]);
   readonly loading = signal(false);
 
-  fetchQuests(): void {
+  async fetchQuests(): Promise<void> {
     this.loading.set(true);
-    this.http.get<Quest[]>(`${environment.apiUrl}/quests`).subscribe({
-      next: (data) => {
-        this.quests.set(data);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    try {
+      const data = await firstValueFrom(
+        this.http.get<Quest[]>(`${environment.apiUrl}/quests`),
+      );
+      this.quests.set(data);
+    } catch {
+      this.quests.set([]);
+    } finally {
+      this.loading.set(false);
+    }
   }
 }

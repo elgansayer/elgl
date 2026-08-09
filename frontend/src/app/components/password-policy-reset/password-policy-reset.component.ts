@@ -1,161 +1,106 @@
 import { Component, signal, computed, inject } from '@angular/core';
-import { I18nService } from '../../services/i18n.service';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { AuthService } from '../../services/auth.service';
+
+function getInputValue(event: Event): string {
+  const target = event.target;
+  return target instanceof HTMLInputElement ? target.value : '';
+}
 
 @Component({
   selector: 'app-password-policy-reset',
   standalone: true,
+  imports: [TranslatePipe],
   template: `
-    <div class="password-reset-container">
-      <h2 class="title">{{ i18n.translate('password.resetTitle') }}</h2>
+    <div class="max-w-md mx-auto my-8 p-6 rounded-xl" style="background: #1e1e1e; color: #e0e0e0;">
+      <h2 class="mb-6 text-xl font-semibold">{{ 'password.resetTitle' | t }}</h2>
 
-      <div class="field">
-        <label for="new-password">{{ i18n.translate('password.newPassword') }}</label>
+      <div class="mb-4">
+        <label for="current-password" class="block mb-1 text-sm" style="color: #aaa;">{{ 'password.currentPassword' | t }}</label>
+        <input
+          id="current-password"
+          type="password"
+          [value]="currentPassword()"
+          (input)="onCurrentPasswordChange($event)"
+          class="w-full p-2 rounded-lg outline-none"
+          style="border: 1px solid #444; background: #121212; color: #e0e0e0;"
+        />
+      </div>
+
+      <div class="mb-4">
+        <label for="new-password" class="block mb-1 text-sm" style="color: #aaa;">{{ 'password.newPassword' | t }}</label>
         <input
           id="new-password"
           type="password"
           [value]="newPassword()"
-          (input)="newPassword.set($any($event.target).value)"
+          (input)="onNewPasswordChange($event)"
+          class="w-full p-2 rounded-lg outline-none"
+          style="border: 1px solid #444; background: #121212; color: #e0e0e0;"
         />
       </div>
 
-      <ul class="requirements">
-        <li [class.valid]="hasMinLength()" [class.invalid]="!hasMinLength()">
-          <span class="icon">{{ hasMinLength() ? '✓' : '✗' }}</span>
-          {{ i18n.translate('password.minLength') }}
+      <ul class="list-none p-0 mb-4">
+        <li class="py-1 text-sm" [class]="hasMinLength() ? 'text-green-500' : 'text-red-500'">
+          <span class="me-1 font-bold">{{ hasMinLength() ? '✓' : '✗' }}</span>
+          {{ 'password.minLength' | t }}
         </li>
-        <li [class.valid]="hasNumber()" [class.invalid]="!hasNumber()">
-          <span class="icon">{{ hasNumber() ? '✓' : '✗' }}</span>
-          {{ i18n.translate('password.hasNumber') }}
+        <li class="py-1 text-sm" [class]="hasNumber() ? 'text-green-500' : 'text-red-500'">
+          <span class="me-1 font-bold">{{ hasNumber() ? '✓' : '✗' }}</span>
+          {{ 'password.hasNumber' | t }}
         </li>
-        <li [class.valid]="hasSymbol()" [class.invalid]="!hasSymbol()">
-          <span class="icon">{{ hasSymbol() ? '✓' : '✗' }}</span>
-          {{ i18n.translate('password.hasSymbol') }}
+        <li class="py-1 text-sm" [class]="hasSymbol() ? 'text-green-500' : 'text-red-500'">
+          <span class="me-1 font-bold">{{ hasSymbol() ? '✓' : '✗' }}</span>
+          {{ 'password.hasSymbol' | t }}
         </li>
       </ul>
 
-      <div class="field">
-        <label for="confirm-password">{{ i18n.translate('password.confirmPassword') }}</label>
+      <div class="mb-4">
+        <label for="confirm-password" class="block mb-1 text-sm" style="color: #aaa;">{{ 'password.confirmPassword' | t }}</label>
         <input
           id="confirm-password"
           type="password"
           [value]="confirmPassword()"
-          (input)="confirmPassword.set($any($event.target).value)"
+          (input)="onConfirmPasswordChange($event)"
+          class="w-full p-2 rounded-lg outline-none"
+          style="border: 1px solid #444; background: #121212; color: #e0e0e0;"
         />
       </div>
 
       @if (confirmPassword().length > 0) {
-        <div class="match-indicator" [class.valid]="passwordsMatch()" [class.invalid]="!passwordsMatch()">
-          <span class="icon">{{ passwordsMatch() ? '✓' : '✗' }}</span>
-          {{ i18n.translate('password.passwordsMatch') }}
+        <div class="mb-4 text-sm" [class]="passwordsMatch() ? 'text-green-500' : 'text-red-500'">
+          <span class="me-1 font-bold">{{ passwordsMatch() ? '✓' : '✗' }}</span>
+          {{ 'password.passwordsMatch' | t }}
         </div>
       }
 
-      <button class="reset-btn" [disabled]="!allValid()" (click)="resetPassword()">
-        {{ i18n.translate('password.resetBtn') }}
+      <button
+        class="block w-full py-2.5 rounded-lg text-white font-semibold cursor-pointer"
+        [disabled]="!allValid() || isSubmitting()"
+        [style.opacity]="(!allValid() || isSubmitting()) ? 0.4 : 1"
+        style="background: linear-gradient(135deg, #7c3aed, #a855f7);"
+        (click)="resetPassword()"
+      >
+        {{ 'password.resetBtn' | t }}
       </button>
 
       @if (successMessage()) {
-        <div class="message success">{{ successMessage() }}</div>
+        <div class="mt-3 p-2 rounded-lg text-sm" style="background: #14532d; color: #bbf7d0;">{{ successMessage()! | t }}</div>
       }
       @if (errorMessage()) {
-        <div class="message error">{{ errorMessage() }}</div>
+        <div class="mt-3 p-2 rounded-lg text-sm" style="background: #7f1d1d; color: #fca5a5;">{{ errorMessage()! | t }}</div>
       }
     </div>
   `,
-  styles: [`
-    .password-reset-container {
-      max-width: 400px;
-      margin: 2rem auto;
-      padding: 1.5rem;
-      background: #1e1e1e;
-      border-radius: 12px;
-      color: #e0e0e0;
-    }
-    .title {
-      margin-bottom: 1.5rem;
-      font-size: 1.25rem;
-      font-weight: 600;
-    }
-    .field {
-      margin-bottom: 1rem;
-    }
-    .field label {
-      display: block;
-      margin-bottom: 0.25rem;
-      font-size: 0.875rem;
-      color: #aaa;
-    }
-    .field input {
-      width: 100%;
-      padding: 0.5rem;
-      border: 1px solid #444;
-      border-radius: 8px;
-      background: #121212;
-      color: #e0e0e0;
-      outline: none;
-    }
-    .field input:focus {
-      border-color: #7c3aed;
-    }
-    .requirements {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 1rem 0;
-    }
-    .requirements li {
-      padding: 0.25rem 0;
-      font-size: 0.875rem;
-    }
-    .icon {
-      margin-inline-end: 0.35rem;
-      font-weight: bold;
-    }
-    .valid .icon { color: #22c55e; }
-    .invalid .icon { color: #ef4444; }
-    .valid { color: #22c55e; }
-    .invalid { color: #ef4444; }
-    .match-indicator {
-      margin-bottom: 1rem;
-      font-size: 0.875rem;
-    }
-    .reset-btn {
-      display: block;
-      width: 100%;
-      padding: 0.625rem;
-      border: none;
-      border-radius: 8px;
-      background: linear-gradient(135deg, #7c3aed, #a855f7);
-      color: #fff;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .reset-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    .message {
-      margin-top: 0.75rem;
-      padding: 0.5rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
-    }
-    .message.success {
-      background: #14532d;
-      color: #bbf7d0;
-    }
-    .message.error {
-      background: #7f1d1d;
-      color: #fca5a5;
-    }
-  `],
 })
 export class PasswordPolicyResetComponent {
-  protected readonly i18n = inject(I18nService);
+  private readonly authService = inject(AuthService);
 
   readonly newPassword = signal('');
   readonly confirmPassword = signal('');
+  readonly currentPassword = signal('');
   readonly successMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly isSubmitting = signal(false);
 
   readonly hasMinLength = computed(() => this.newPassword().length >= 8);
   readonly hasNumber = computed(() => /\d/.test(this.newPassword()));
@@ -163,9 +108,31 @@ export class PasswordPolicyResetComponent {
   readonly passwordsMatch = computed(() => this.newPassword() === this.confirmPassword());
   readonly allValid = computed(() => this.hasMinLength() && this.hasNumber() && this.hasSymbol() && this.passwordsMatch());
 
-  resetPassword(): void {
-    // TODO: implement actual password update via Supabase or backend.
-    this.successMessage.set(this.i18n.translate('password.resetSuccess'));
+  onCurrentPasswordChange(event: Event): void {
+    this.currentPassword.set(getInputValue(event));
+  }
+
+  onNewPasswordChange(event: Event): void {
+    this.newPassword.set(getInputValue(event));
+  }
+
+  onConfirmPasswordChange(event: Event): void {
+    this.confirmPassword.set(getInputValue(event));
+  }
+
+  async resetPassword(): Promise<void> {
+    if (!this.allValid() || this.isSubmitting()) return;
+    this.isSubmitting.set(true);
     this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    try {
+      await this.authService.changePassword(this.currentPassword(), this.newPassword());
+      this.successMessage.set('password.resetSuccess');
+    } catch {
+      this.errorMessage.set('password.resetError');
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 }

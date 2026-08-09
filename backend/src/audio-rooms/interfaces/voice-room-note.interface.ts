@@ -4,6 +4,6 @@ export interface VoiceRoomNote {
   author_id: string;
   author_name: string;
   content: string;
-  vocabulary?: string;
+  vocabulary?: string | null;
   created_at: string;
 }

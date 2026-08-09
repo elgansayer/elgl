@@ -13,6 +13,7 @@ import {CelebrationOverlayComponent} from '../celebration-overlay/celebration-ov
 import {SafetyService} from '../../services/safety.service';
 import {showToast} from '../../services/toast.service';
 import {AchievementsComponent} from '../../achievements/achievements.component';
+import {AudioIntroRecorderComponent} from '../audio-intro-recorder/audio-intro-recorder.component';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
@@ -33,6 +34,7 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
     LanguagePickerComponent,
     CelebrationOverlayComponent,
     AchievementsComponent,
+    AudioIntroRecorderComponent,
   ],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
@@ -291,10 +293,9 @@ export class ProfileComponent implements OnInit {
     }
   }
 
-  playAudioIntro(url: string | undefined): void {
-    if (!url) return;
-    const audio = new Audio(url);
-    audio.play();
+  onAudioIntroSaved(mediaUrl: string): void {
+    this.profile.update((p) => (p ? { ...p, audio_intro_url: mediaUrl } : p));
+    showToast(this.i18n.translate('profile.audioIntroSaved'), 'success', 3000);
   }
 
   async blockProfile(): Promise<void> {

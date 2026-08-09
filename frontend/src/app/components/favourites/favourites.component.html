@@ -1,31 +1,52 @@
 <div class="app-screen">
+  <!-- Header -->
   <section class="app-card app-padded">
     <h1 class="app-section-title">{{ 'favourites.title' | t }}</h1>
     <p class="app-muted">{{ 'favourites.subtitle' | t }}</p>
-    <div class="mt-2 flex flex-wrap gap-1.5">
-      <span class="app-chip">{{ 'favourites.chipPhrases' | t }}</span>
-      <span class="app-chip">{{ 'favourites.chipCorrections' | t }}</span>
-      <span class="app-chip">{{ 'favourites.chipQueue' | t }}</span>
-    </div>
   </section>
 
+  <!-- Tab navigation -->
+  <nav class="mt-3 px-4 overflow-x-auto">
+    <div class="flex gap-1.5 pb-2">
+      @for (tab of tabs; track tab.id) {
+        <button
+          type="button"
+          class="app-chip whitespace-nowrap transition-colors"
+          [class.app-chip-active]="activeTab() === tab.id"
+          (click)="setTab(tab.id)"
+          [attr.aria-label]="tab.labelKey | t"
+        >
+          {{ tab.icon }} {{ tab.labelKey | t }}
+          @if (tab.id === 'all') {
+            <span class="ms-1 text-[10px] opacity-60">({{ favourites().length }})</span>
+          }
+        </button>
+      }
+    </div>
+  </nav>
+
+  <!-- Loading state -->
   @if (isLoading()) {
     <div class="app-empty-state text-text-secondary">
       {{ 'favourites.loading' | t }}
     </div>
   }
 
-  @if (!isLoading() && favourites().length === 0) {
+  <!-- Empty state per tab -->
+  @if (!isLoading() && filteredFavourites().length === 0) {
     <div class="app-empty-state">
-      {{ 'favourites.empty' | t }}
+      {{ emptyStateKey() | t }}
     </div>
   }
 
-  @for (fav of favourites(); track fav.id) {
-    <article class="app-card app-padded">
+  <!-- Favourites list -->
+  @for (fav of filteredFavourites(); track fav.id) {
+    <article class="app-card app-padded mx-4 mt-3">
+      <!-- Header row: avatar, name, date, delete -->
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2.5">
           <img
+            loading="lazy"
             [src]="fav.item_payload?.sender?.avatar_url || 'https://via.placeholder.com/80'"
             alt="avatar"
             class="h-8 w-8 rounded-full border border-surface-100 object-cover"
@@ -34,15 +55,48 @@
             {{ fav.item_payload?.sender?.display_name || ('favourites.partnerFallback' | t) }}
           </p>
         </div>
-        <p class="text-[11px] text-text-muted">{{ fav.created_at | date: 'short' }}</p>
+        <div class="flex items-center gap-2">
+          <p class="text-[11px] text-text-muted">{{ fav.created_at | date: 'short' }}</p>
+          <button
+            type="button"
+            class="p-1 text-text-muted hover:text-red-400 transition-colors"
+            (click)="deleteFavourite(fav)"
+            [attr.aria-label]="'favourites.delete' | t"
+          >
+            <span class="text-sm">&#x1F5D1;</span>
+          </button>
+        </div>
       </div>
-      @if (fav.item_payload?.message_type === 'text') {
+
+      <!-- Item type badge -->
+      <div class="mt-2">
+        @if (fav.item_type === 'audio' || fav.item_payload?.message_type === 'voice') {
+          <span class="app-chip bg-purple-500/20 text-purple-300 text-[11px]">
+            {{ 'favourites.voiceNote' | t }}
+          </span>
+        }
+        @if (fav.item_type === 'moment') {
+          <span class="app-chip bg-blue-500/20 text-blue-300 text-[11px]">
+            {{ 'favourites.momentCard' | t }}
+          </span>
+        }
+        @if (fav.item_type === 'correction' || fav.item_payload?.message_type === 'correction') {
+          <span class="app-chip bg-amber-500/20 text-amber-300 text-[11px]">
+            {{ 'favourites.chipCorrections' | t }}
+          </span>
+        }
+      </div>
+
+      <!-- Text message content -->
+      @if (fav.item_payload?.message_type === 'text' && fav.item_payload?.text_content) {
         <p
           class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary"
         >
-          {{ fav.item_payload?.text_content }}
+          {{ fav.item_payload.text_content }}
         </p>
       }
+
+      <!-- Correction payload -->
       @if (
         fav.item_payload?.message_type === 'correction' && fav.item_payload?.correction_payload
       ) {
@@ -54,11 +108,64 @@
           ></app-visual-diff>
         </div>
       }
+
+      <!-- Voice / audio content -->
+      @if (
+        fav.item_payload?.media_url &&
+        (fav.item_payload?.message_type === 'voice' || fav.item_type === 'audio')
+      ) {
+        <div class="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            class="flex items-center gap-2 rounded-full bg-surface-300 px-4 py-2 text-sm text-text-primary hover:bg-surface-200 transition-colors"
+            (click)="toggleAudio(fav)"
+            [attr.aria-label]="'favourites.audioPause' | t"
+          >
+            <span>{{ audioPlayingId() === fav.id ? '\u23F8' : '\u25B6' }}</span>
+            <span>{{
+              audioPlayingId() === fav.id
+                ? ('favourites.audioPause' | t)
+                : ('favourites.audioPlay' | t)
+            }}</span>
+          </button>
+          @if (fav.item_payload?.text_content) {
+            <span class="text-xs text-text-muted">{{ fav.item_payload.text_content }}</span>
+          }
+        </div>
+      }
+
+      <!-- Moment content -->
+      @if (fav.item_type === 'moment' && fav.item_payload?.text_content) {
+        <p
+          class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary"
+        >
+          {{ fav.item_payload.text_content }}
+        </p>
+      }
+
+      <!-- Correction type (when item_type is 'correction' but payload may differ) -->
+      @if (fav.item_type === 'correction' && !fav.item_payload?.message_type) {
+        <div
+          class="mt-3 rounded-card bg-surface-300 ps-3 pe-3 pt-2.5 pb-2.5 text-sm text-text-primary"
+        >
+          @if (
+            fav.item_payload?.correction_payload?.original &&
+            fav.item_payload?.correction_payload?.corrected
+          ) {
+            <span class="line-through text-red-400 me-2">{{
+              fav.item_payload.correction_payload.original
+            }}</span>
+            <span class="text-green-400">{{ fav.item_payload.correction_payload.corrected }}</span>
+          }
+        </div>
+      }
+
+      <!-- Notes -->
       @if (fav.notes) {
         <p
           class="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 ps-3 pe-3 pt-2 pb-2 text-xs text-amber-400"
         >
-          📝 {{ fav.notes }}
+          &#x1F4DD; {{ fav.notes }}
         </p>
       }
     </article>

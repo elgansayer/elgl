@@ -4,7 +4,7 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'crypto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from '../monetisation/monetisation.service';

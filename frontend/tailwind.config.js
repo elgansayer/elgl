@@ -18,14 +18,32 @@ module.exports = {
           900: '#000000',
         },
         primary: {
-          DEFAULT: '#9333EA', // Vibrant purple
-          dark: '#7E22CE',
-          light: '#A855F7',
+          DEFAULT: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
+          dark: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
+          light: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
         },
         secondary: {
           DEFAULT: '#06B6D4', // Cyan
           dark: '#0891B2',
           light: '#22D3EE',
+        },
+        accent: {
+          50: '#FDF2F8',
+          100: '#FCE7F3',
+          200: '#FBCFE8',
+          300: '#F9A8D4',
+          400: '#F472B6',
+          500: '#EC4899', // HelloTalk pink accent
+          DEFAULT: '#EC4899',
+          600: '#DB2777',
+          700: '#BE185D',
+        },
+        neon: {
+          purple: '#B357EA',
+          pink: '#F53561',
+          cyan: '#00D387',
+          blue: '#3793FF',
+          orange: '#FFA102',
         },
         vip: {
           DEFAULT: '#F59E0B', // Gold/Amber

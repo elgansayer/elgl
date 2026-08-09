@@ -7,6 +7,7 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { TwoFactorService } from './two-factor.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -19,6 +20,7 @@ export class TwoFactorController {
   constructor(private readonly twoFactorService: TwoFactorService) {}
 
   @Post('enable')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async enable(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.id;
     if (!userId) {
@@ -28,6 +30,7 @@ export class TwoFactorController {
   }
 
   @Post('verify')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async verify(
     @Req() req: AuthenticatedRequest,
     @Body() body: { token: string },
@@ -41,6 +44,7 @@ export class TwoFactorController {
   }
 
   @Post('disable')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async disable(
     @Req() req: AuthenticatedRequest,
     @Body() body: { token: string },
