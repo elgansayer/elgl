@@ -13,10 +13,10 @@ export interface AgeRange {
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="flex flex-col" role="group" [attr.aria-label]="'age_range' | t">
-      <label class="text-sm text-on-surface-variant pb-1" id="age-range-label">
+      <span class="text-sm text-on-surface-variant pb-1" id="age-range-label">
         {{ 'age_range' | t }}
         <span class="ps-1">({{ minAge() }} – {{ maxAge() }})</span>
-      </label>
+      </span>
       <div class="relative h-8">
         <!-- min thumb -->
         <input

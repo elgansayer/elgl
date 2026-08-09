@@ -5,6 +5,7 @@ import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 
 jest.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
@@ -40,6 +41,10 @@ describe('DiscoveryController', () => {
           useValue: {
             getProfile: jest.fn(),
           },
+        },
+        {
+          provide: DiscoveryRateLimiterGuard,
+          useValue: { canActivate: jest.fn().mockReturnValue(true) },
         },
       ],
     })

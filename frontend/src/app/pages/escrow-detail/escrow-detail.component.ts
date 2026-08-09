@@ -1,5 +1,5 @@
 import { Component, inject, computed, signal, resource } from '@angular/core';
-import { DatePipe, Location } from '@angular/common';
+import { Location } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';

@@ -80,7 +80,9 @@ describe('CommentMentionNotificationListener', () => {
 
     await listener.handleCommentMention(payload);
 
-    expect(notificationPreferencesService.shouldSendNotification).toHaveBeenCalledTimes(2);
+    expect(
+      notificationPreferencesService.shouldSendNotification,
+    ).toHaveBeenCalledTimes(2);
     expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
   });
 

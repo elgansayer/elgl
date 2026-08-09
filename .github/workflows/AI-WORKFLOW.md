@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-The HelloTalk AI swarm is a fully autonomous software engineering pipeline. It accepts issues, writes code, verifies correctness, reviews pull requests, fixes failures inline, and merges — all without human intervention. When things break on `main`, it reverts automatically and notifies the responsible PR.
+The HelloTalk AI swarm is a fully autonomous software engineering pipeline. It accepts issues, writes code, verifies correctness, reviews pull requests, fixes failures inline, and merges - all without human intervention. When things break on `main`, it reverts automatically and notifies the responsible PR.
 
 Every workflow enforces the same hard rule from the [AGENTS.md](../AGENTS.md) constitution: **fix in the original PR branch, never create follow-up "Fixes:" PRs.**
 
@@ -14,12 +14,12 @@ Every workflow enforces the same hard rule from the [AGENTS.md](../AGENTS.md) co
 
 | #   | File                     | Role                                                        | Trigger                           |
 | --- | ------------------------ | ----------------------------------------------------------- | --------------------------------- |
-| 1   | `openhands.yml`          | **AI Auto-Resolver** — fixes issues, creates PRs            | `/openhands-fix` comment on issue |
-| 2   | `resolver-fast.yml`      | **AI Fast Resolver** — same, faster timeout                 | `/fast-fix` comment on issue      |
-| 3   | `pr-reviewer.yml`        | **PR Reviewer** — reviews, fixes, merges PRs                | `pull_request:opened,reopened`    |
-| 4   | `reviewer-fast.yml`      | **Fast PR Reviewer** — reviews pushes, rebases stale PRs    | `pull_request:synchronize` + cron |
-| 5   | `scheduled-pr-fixer.yml` | **Stale PR Fixer** — rebases open PRs (manual trigger only) | `workflow_dispatch`               |
-| 6   | `guardian.yml`           | **Build Health Monitor** — reverts `main` breakage          | cron `*/5 * * * *`                |
+| 1   | `openhands.yml`          | **AI Auto-Resolver** - fixes issues, creates PRs            | `/openhands-fix` comment on issue |
+| 2   | `resolver-fast.yml`      | **AI Fast Resolver** - same, faster timeout                 | `/fast-fix` comment on issue      |
+| 3   | `pr-reviewer.yml`        | **PR Reviewer** - reviews, fixes, merges PRs                | `pull_request:opened,reopened`    |
+| 4   | `reviewer-fast.yml`      | **Fast PR Reviewer** - reviews pushes, rebases stale PRs    | `pull_request:synchronize` + cron |
+| 5   | `scheduled-pr-fixer.yml` | **Stale PR Fixer** - rebases open PRs (manual trigger only) | `workflow_dispatch`               |
+| 6   | `guardian.yml`           | **Build Health Monitor** - reverts `main` breakage          | cron `*/5 * * * *`                |
 
 ### Dispatch & Monitoring (4 workflows)
 
@@ -57,10 +57,10 @@ pull_request:opened
 
 **Key properties:**
 
-- Always works on the **same PR branch** — never creates a new branch
+- Always works on the **same PR branch** - never creates a new branch
 - Commit flow: fix → push to same branch → re-verify → merge
-- `cancel-in-progress: false` — won't kill in-progress fixes
-- `gh pr merge --squash --delete-branch` — only merge path for PRs
+- `cancel-in-progress: false` - won't kill in-progress fixes
+- `gh pr merge --squash --delete-branch` - only merge path for PRs
 
 ### Flow 2: Push to Open PR (synchronize)
 
@@ -77,7 +77,7 @@ pull_request:synchronize
 
 **Key properties:**
 
-- Triggers on `synchronize` only (not `opened`/`reopened` — those are handled by `pr-reviewer.yml`)
+- Triggers on `synchronize` only (not `opened`/`reopened` - those are handled by `pr-reviewer.yml`)
 - The "Safe merge with main" step prevents merge-conflict surprises
 - Same inline-fix-only policy
 
@@ -99,9 +99,9 @@ Issue with ai-agent-task or priority:high label
 **Key properties:**
 
 - **Inline-fix-first**: before creating a PR, checks `gh pr list --search "Fixes #ISSUE in:body"`
-- Only creates a new PR if none exists — prevents duplicate "Fixes:" PRs
+- Only creates a new PR if none exists - prevents duplicate "Fixes:" PRs
 - Full verification suite (lint, build, test, control-flow, RTL, template bindings)
-- No more `pull_request` or `issues` event triggers — gated by `/openhands-fix` comment only
+- No more `pull_request` or `issues` event triggers - gated by `/openhands-fix` comment only
 
 ### Flow 4: Main Breaks Post-Merge
 
@@ -135,7 +135,7 @@ workflow_run:completed (failure)
 
 **Key properties:**
 
-- Purely informational — no automatic fix cascade
+- Purely informational - no automatic fix cascade
 - Filters out self-referential failures to prevent infinite loops
 - Has explicit `permissions: issues: write` block
 
@@ -155,7 +155,7 @@ reviewer-fast.yml fix_stale_prs (every 15 min)
 
 **Key properties:**
 
-- Rebase-only, never merge — the PR reviewer is the sole merge authority
+- Rebase-only, never merge - the PR reviewer is the sole merge authority
 - Never commits conflict markers (aborts on conflict)
 - Also available manually via `scheduled-pr-fixer.yml` (workflow_dispatch)
 
@@ -201,7 +201,7 @@ Every resolver and reviewer uses a 3-tier AI fallback chain:
 
 - Tier 2 always fires if `check_claude` step itself fails (e.g., gh CLI auth error)
 - Tier 2 fires if Claude "succeeded" but PR was not merged/created
-- Tier 3 has no `continue-on-error` — if it fails, the workflow fails (correctly)
+- Tier 3 has no `continue-on-error` - if it fails, the workflow fails (correctly)
 
 ---
 
@@ -209,7 +209,7 @@ Every resolver and reviewer uses a 3-tier AI fallback chain:
 
 Each resolver/reviewer tier runs verification before committing:
 
-### Resolver (openhands.yml) — Full Suite in Tier 1
+### Resolver (openhands.yml) - Full Suite in Tier 1
 
 ```
 1. cd backend && npm run lint && npm run build && npm test
@@ -220,7 +220,7 @@ Each resolver/reviewer tier runs verification before committing:
 6. Scan for conflict markers (<<<<<<<, =======, >>>>>>>)
 ```
 
-### PR Reviewer (pr-reviewer.yml + reviewer-fast.yml) — Core Suite
+### PR Reviewer (pr-reviewer.yml + reviewer-fast.yml) - Core Suite
 
 ```
 1. cd backend && npm run lint && npm run build && npm test
@@ -311,11 +311,11 @@ workflow_dispatch             → scheduled-pr-fixer.yml
 
 ## Invariants (Hard Rules)
 
-1. **Never create a follow-up "Fixes:" PR** — fix inline in the existing branch
-2. **Never auto-merge after rebase** — the PR reviewer is the sole merge authority
+1. **Never create a follow-up "Fixes:" PR** - fix inline in the existing branch
+2. **Never auto-merge after rebase** - the PR reviewer is the sole merge authority
 3. **Never commit conflict markers** (`<<<<<<<`, `=======`, `>>>>>>>`)
 4. **Never merge without full verification** (lint + build + test)
-5. **Never use `--admin` for merge** — `--squash --delete-branch` only
-6. **Guardian issues never trigger resolver** — `guardian-alert` label isolates them
-7. **No `console.log` in code** — `no-console: error` in ESLint
-8. **No `any` type** — `@typescript-eslint/no-explicit-any: error`
+5. **Never use `--admin` for merge** - `--squash --delete-branch` only
+6. **Guardian issues never trigger resolver** - `guardian-alert` label isolates them
+7. **No `console.log` in code** - `no-console: error` in ESLint
+8. **No `any` type** - `@typescript-eslint/no-explicit-any: error`
