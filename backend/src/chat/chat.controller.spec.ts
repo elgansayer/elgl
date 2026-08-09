@@ -1,3 +1,19 @@
+// Mock jsdom and dompurify to avoid ESM import failures in Jest (transitively imported through chat -> link-preview)
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: {
+      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
+    },
+  })),
+}));
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: jest.fn((d: string) => d.replace(/<[^>]*>/g, '')),
+    setConfig: jest.fn(),
+  })),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
