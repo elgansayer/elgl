@@ -7,12 +7,14 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import { AddFavouriteDto } from './dto/add-favourite.dto';
+import { SendTypingDto } from './dto/send-typing.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
@@ -28,6 +30,7 @@ import {
 } from '../notifications/events/notification.events';
 import { SystemMessageService } from './services/system-message.service';
 import { XpService } from '../xp/xp.service';
+import { UsersService } from '../users/users.service';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
 import { randomUUID } from 'crypto';
@@ -58,6 +61,7 @@ export class ChatService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
+    private readonly readReceiptsService: ReadReceiptsService,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,
@@ -65,6 +69,7 @@ export class ChatService {
     private readonly chatLlmService: ChatLlmService,
     private readonly systemMessageService: SystemMessageService,
     private readonly xpService: XpService,
+    private readonly usersService: UsersService,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -79,6 +84,13 @@ export class ChatService {
     } catch (error) {
       throw new Error(`Failed to generate Centrifugo token: ${error.message}`);
     }
+  }
+
+  async sendTyping(userId: string, dto: SendTypingDto): Promise<void> {
+    await this.centrifugoService.publish(`chat:${dto.room_id}`, {
+      typing: dto.is_typing === 'true',
+      sender_id: userId,
+    });
   }
 
   private async generateCorrectionPayloadIfNeeded(
@@ -122,6 +134,108 @@ export class ChatService {
       // Explanation generation failed; serve the message without it
     }
     return null;
+  }
+
+  /**
+   * Enforces the receiver's message_filters for initial messages.
+   * Only applies to the very first message from sender to receiver in a room.
+   */
+  private async enforceMessageFilters(
+    senderId: string,
+    receiverId: string,
+    roomId: string,
+  ): Promise<void> {
+    // Only enforce for initial messages - check if sender has already sent messages to receiver
+    const supabase = this.supabaseService.getClient();
+    const { count, error: countError } = await supabase
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomId)
+      .eq('sender_id', senderId);
+
+    if (countError) return;
+
+    // If sender has already messaged in this room, skip filter enforcement
+    if ((count ?? 0) > 0) return;
+
+    // Fetch receiver's message filters and profile
+    const { data: receiverProfile, error: profileError } = await supabase
+      .from('users')
+      .select('message_filters, native_languages, age, gender')
+      .eq('id', receiverId)
+      .single();
+
+    if (profileError || !receiverProfile) return;
+
+    const filters = (receiverProfile as Record<string, unknown>)
+      ?.message_filters as
+      | {
+          age_min?: number;
+          age_max?: number;
+          allowed_native_languages?: string[];
+          allowed_genders?: string[];
+        }
+      | undefined;
+
+    if (!filters) return;
+
+    // Fetch sender's profile for validation
+    const { data: senderProfile, error: senderError } = await supabase
+      .from('users')
+      .select('native_languages, age, gender')
+      .eq('id', senderId)
+      .single();
+
+    if (senderError || !senderProfile) return;
+
+    const sender = senderProfile as {
+      native_languages?: string[];
+      age?: number;
+      gender?: string;
+    };
+
+    // Check native language filter - any of sender's native languages must match
+    if (
+      filters.allowed_native_languages &&
+      filters.allowed_native_languages.length > 0
+    ) {
+      const senderNativeLangs = sender.native_languages ?? [];
+      const hasAllowedLanguage = senderNativeLangs.some((lang: string) =>
+        filters.allowed_native_languages!.includes(lang),
+      );
+      if (senderNativeLangs.length > 0 && !hasAllowedLanguage) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their native language filter settings.',
+        );
+      }
+    }
+
+    // Check age filter
+    if (filters.age_min !== undefined || filters.age_max !== undefined) {
+      const senderAge = sender.age;
+      if (senderAge !== undefined && senderAge !== null) {
+        if (filters.age_min !== undefined && senderAge < filters.age_min) {
+          throw new BadRequestException(
+            'You cannot send the first message to this user due to their age filter settings.',
+          );
+        }
+        if (filters.age_max !== undefined && senderAge > filters.age_max) {
+          throw new BadRequestException(
+            'You cannot send the first message to this user due to their age filter settings.',
+          );
+        }
+      }
+    }
+
+    // Check gender filter
+    if (filters.allowed_genders && filters.allowed_genders.length > 0) {
+      const senderGender = sender.gender ?? '';
+      if (senderGender && !filters.allowed_genders.includes(senderGender)) {
+        throw new BadRequestException(
+          'You cannot send the first message to this user due to their gender filter settings.',
+        );
+      }
+    }
   }
 
   async getRooms(currentUserId: string): Promise<ChatRoomRecord[]> {
@@ -249,6 +363,14 @@ export class ChatService {
       if (senderBlockedIds.includes(receiverId)) {
         throw new Error('You cannot send messages to this user.');
       }
+
+      // Enforce receiver's message filters for initial messages only
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
+    }
+
+    // Check message filters for initial (first) message in a room
+    if (receiverId) {
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
     // Spam detection for text messages
@@ -259,6 +381,11 @@ export class ChatService {
           'Your message appears to be a duplicate or spam content.',
         );
       }
+    }
+
+    // Enforce receiver's message filters for initial messages
+    if (receiverId) {
+      await this.enforceMessageFilters(senderId, receiverId, dto.room_id);
     }
 
     const insertResponse = await supabase
@@ -369,6 +496,9 @@ export class ChatService {
       );
     }
 
+    // Emit message.sent event for achievements evaluation
+    this.eventEmitter.emit('message.sent', { userId: senderId });
+
     // ---------- Parse @mentions and emit notifications ----------
     if (dto.message_type === 'text' && dto.text_content) {
       const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
@@ -405,6 +535,16 @@ export class ChatService {
     // Send an automatic away reply if the receiver has configured one
     if (receiverId && dto.message_type !== 'system') {
       await this.sendAwayReplyIfNeeded(senderId, dto.room_id, receiverId);
+    }
+
+    // Set initial delivery status to 'sent' and mark as delivered for receiver
+    void this.readReceiptsService.setInitialSent(savedMessage.id);
+    if (receiverId) {
+      void this.readReceiptsService.markAsDelivered(
+        savedMessage.id,
+        dto.room_id,
+        receiverId,
+      );
     }
 
     return messageForPublish;
@@ -545,6 +685,80 @@ export class ChatService {
     }
   }
 
+  /**
+   * Search messages across ALL rooms the user is a member of.
+   * Uses pg_trgm for fuzzy text search on text_content.
+   */
+  async searchAllMessages(
+    userId: string,
+    term: string,
+    limit = 50,
+    roomId?: string,
+  ): Promise<ChatMessage[]> {
+    const supabase = this.supabaseService.getClient();
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    // Get all room IDs the user is a member of
+    const { data: memberRooms, error: memberErr } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .eq('user_id', userId);
+
+    if (memberErr || !memberRooms || memberRooms.length === 0) {
+      return [];
+    }
+
+    let roomIds = memberRooms.map((r: { room_id: string }) => r.room_id);
+
+    // If a specific roomId is provided, limit to that room only
+    if (roomId) {
+      if (!roomIds.includes(roomId)) return [];
+      roomIds = [roomId];
+    }
+
+    const trimmedTerm = term.trim();
+    if (trimmedTerm.length < 2) return [];
+
+    let query = supabase
+      .from('chat_messages')
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .in('room_id', roomIds)
+      .ilike('text_content', `%${trimmedTerm}%`)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (blockedIds.length > 0) {
+      query = query.not('sender_id', 'in', blockedIds);
+    }
+
+    const response = await query;
+    if (response.error || !response.data) {
+      return [];
+    }
+
+    const messages: DeletedAwareMessage[] = response.data;
+
+    // Filter out deleted messages
+    return messages.filter((msg) => {
+      if (msg.is_deleted) return false;
+      if (
+        Array.isArray(msg.deleted_for_user_ids) &&
+        msg.deleted_for_user_ids.includes(userId)
+      )
+        return false;
+      return true;
+    });
+  }
+
   async getFavourites(userId: string): Promise<FavouriteRecord[]> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
@@ -645,8 +859,8 @@ export class ChatService {
     name: string,
     memberIds: string[],
   ): Promise<ChatRoomRecord> {
-    if (memberIds.length > 49) {
-      throw new Error('Group cannot exceed 50 members');
+    if (memberIds.length > 50) {
+      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
     }
 
     const supabase = this.supabaseService.getClient();
@@ -944,6 +1158,9 @@ export class ChatService {
         ),
       );
     }
+
+    // Emit message.sent event for achievements evaluation
+    this.eventEmitter.emit('message.sent', { userId: senderId });
 
     return savedMessage;
   }
@@ -1375,6 +1592,62 @@ export class ChatService {
     });
   }
 
+  async updateMessageStatus(
+    userId: string,
+    messageId: string,
+    status: 'delivered' | 'read',
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: message, error: fetchError } = await supabase
+      .from('chat_messages')
+      .select('id, room_id, delivery_status')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchError || !message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Only allow upgrading status (sent -> delivered -> read)
+    const order: Record<string, number> = { sent: 0, delivered: 1, read: 2 };
+    const current = message.delivery_status ?? 'sent';
+    if (order[status] <= order[current]) {
+      return;
+    }
+
+    // Verify user is a member of the room
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', message.room_id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ForbiddenException('Not a member of this room');
+    }
+
+    const { error: updateError } = await supabase
+      .from('chat_messages')
+      .update({ delivery_status: status })
+      .eq('id', messageId);
+
+    if (updateError) {
+      throw new Error(
+        `Failed to update message status: ${updateError.message}`,
+      );
+    }
+
+    // Publish status update via Centrifugo so the sender can see it
+    await this.centrifugoService.publish(`chat:${message.room_id}`, {
+      status_update: {
+        message_id: messageId,
+        delivery_status: status,
+      },
+    });
+  }
+
   async viewMessageMedia(userId: string, messageId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
@@ -1418,6 +1691,179 @@ export class ChatService {
 
     // For future releases, delete the actual media from storage here
     // e.g., await this.viewOnceMediaService.deleteMedia(msg.media_url);
+  }
+
+  /**
+   * Forwards a message to one or more target rooms.
+   * The forwarded message is marked with `is_forwarded: true` to prevent spam
+   * and show a visible "Forwarded" label to recipients.
+   */
+  async forwardMessage(
+    userId: string,
+    messageId: string,
+    roomIds: string[],
+  ): Promise<ChatMessage[]> {
+    const supabase = this.supabaseService.getClient();
+
+    // Fetch the original message
+    const { data: originalMsg, error: fetchError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchError || !originalMsg) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Verify the user is a member of the source room
+    const { data: sourceMembership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', originalMsg.room_id)
+      .eq('user_id', userId)
+      .single();
+
+    if (!sourceMembership) {
+      throw new ForbiddenException('You do not have access to this message');
+    }
+
+    // Spam detection: apply to forwarded text messages
+    if (
+      originalMsg.message_type === 'text' &&
+      typeof originalMsg.text_content === 'string' &&
+      originalMsg.text_content
+    ) {
+      const isSpam = this.spamDetectionService.isSpam(originalMsg.text_content);
+      if (isSpam) {
+        throw new BadRequestException('Cannot forward spam content.');
+      }
+    }
+
+    const forwardedMessages: ChatMessage[] = [];
+
+    for (const targetRoomId of roomIds) {
+      // Verify the user is a member of the target room
+      const { data: targetMembership } = await supabase
+        .from('chat_room_members')
+        .select('user_id')
+        .eq('room_id', targetRoomId)
+        .eq('user_id', userId)
+        .single();
+
+      if (!targetMembership) {
+        continue; // Skip rooms the user doesn't belong to
+      }
+
+      // Prevent forwarding a message to its own room
+      if (targetRoomId === originalMsg.room_id) {
+        continue;
+      }
+
+      // Check if the user is blocked by any member of the target room
+      const { data: targetRoomMembers } = await supabase
+        .from('chat_room_members')
+        .select('user_id')
+        .eq('room_id', targetRoomId)
+        .neq('user_id', userId);
+
+      let blocked = false;
+      if (targetRoomMembers && targetRoomMembers.length > 0) {
+        for (const member of targetRoomMembers as { user_id: string }[]) {
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
+            member.user_id,
+          );
+          if (blockedIds.includes(userId)) {
+            blocked = true;
+            break;
+          }
+        }
+      }
+
+      if (blocked) {
+        continue; // Skip rooms where sender is blocked
+      }
+
+      const insertPayload = {
+        room_id: targetRoomId,
+        sender_id: userId,
+        message_type: originalMsg.message_type,
+        text_content: originalMsg.text_content ?? null,
+        media_url: originalMsg.media_url ?? null,
+        correction_payload: originalMsg.correction_payload ?? null,
+        reply_to_id: null, // Forwarded messages start fresh threads
+        correction_request_payload:
+          originalMsg.correction_request_payload ?? null,
+        status_reply_payload: originalMsg.status_reply_payload ?? null,
+        is_view_once: false, // Never preserve view-once on forward
+        is_forwarded: true,
+      };
+
+      const insertResponse = await supabase
+        .from('chat_messages')
+        .insert(insertPayload)
+        .select(
+          `
+          *,
+          sender:users!chat_messages_sender_id_fkey (
+            id,
+            display_name,
+            avatar_url
+          )
+        `,
+        )
+        .single();
+
+      if (insertResponse.error || !insertResponse.data) {
+        continue; // Skip on insert failure
+      }
+
+      const forwardedMsg = insertResponse.data as ChatMessage;
+
+      // Publish to Centrifugo channel for the target room
+      await this.centrifugoService.publish(`chat:${targetRoomId}`, {
+        message: forwardedMsg,
+      });
+
+      // Emit push notification for the target room members
+      const preview = originalMsg.text_content
+        ? originalMsg.text_content.substring(0, 120)
+        : originalMsg.message_type === 'voice'
+          ? '🎤 Voice message'
+          : originalMsg.message_type === 'correction'
+            ? '📝 Correction'
+            : originalMsg.message_type === 'doodle'
+              ? '🎨 Doodle'
+              : '';
+
+      const receiverId =
+        targetRoomMembers && targetRoomMembers.length > 0
+          ? targetRoomMembers[0].user_id
+          : undefined;
+
+      if (receiverId) {
+        this.eventEmitter.emit(
+          'chat.message',
+          new ChatMessageEvent(
+            userId,
+            receiverId,
+            targetRoomId,
+            originalMsg.message_type,
+            preview,
+          ),
+        );
+      }
+
+      forwardedMessages.push(forwardedMsg);
+    }
+
+    if (forwardedMessages.length === 0) {
+      throw new BadRequestException(
+        'Message could not be forwarded to any of the specified rooms. Check your membership and block status.',
+      );
+    }
+
+    return forwardedMessages;
   }
 
   /**

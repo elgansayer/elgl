@@ -6,20 +6,20 @@ import { LegalService } from '../../services/legal.service';
   selector: 'app-privacy',
   imports: [LegalDocumentViewerComponent],
   template: `
-    <app-legal-document-viewer
-      title="Privacy Policy"
-      [lastUpdated]="documentResource.value()?.lastUpdated ?? fallbackDate"
-      [sections]="documentResource.value()?.sections ?? []"
-      [isLoading]="documentResource.isLoading()"
-      [error]="documentResource.error()"
-    ></app-legal-document-viewer>
+    @let doc = privacyResource.value();
+    @if (doc) {
+      <app-legal-document-viewer
+        [title]="doc.title"
+        [lastUpdated]="doc.lastUpdated"
+        [sections]="doc.sections"
+      ></app-legal-document-viewer>
+    }
   `,
 })
 export class PrivacyComponent {
-  private legalService = inject(LegalService);
-  fallbackDate = new Date().toISOString();
+  private readonly legalService = inject(LegalService);
 
-  documentResource = resource({
-    loader: () => this.legalService.getDocument('privacy'),
+  readonly privacyResource = resource({
+    loader: () => this.legalService.fetchPrivacyPolicy(),
   });
 }

@@ -6,14 +6,12 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoverPhotoService } from '../../services/cover-photo.service';
 
 @Component({
   selector: 'app-profile-cover-photo',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   template: `
     <div class="relative w-full rounded-xl overflow-hidden bg-surface">
       @if (previewUrl(); as url) {

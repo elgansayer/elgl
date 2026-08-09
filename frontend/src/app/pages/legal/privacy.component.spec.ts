@@ -1,12 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { PrivacyComponent } from './privacy.component';
-import { DatePipe } from '@angular/common';
-import { describe, it, expect } from 'vitest';
-import { LegalDocumentViewerComponent, LegalSection } from '../../components/legal-document-viewer/legal-document-viewer.component';
-import { Component, Input, input } from '@angular/core';
-import { environment } from '../../../environments/environment';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { LegalDocumentViewerComponent } from '../../components/legal-document-viewer/legal-document-viewer.component';
+import { LegalService } from '../../services/legal.service';
+import { Component, input } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 @Component({
   selector: 'app-legal-document-viewer',
@@ -14,26 +13,20 @@ import { environment } from '../../../environments/environment';
   standalone: true,
 })
 class MockLegalDocumentViewerComponent {
-  title = input.required<string>();
-  @Input() lastUpdated!: Date | string;
-  @Input() sections!: LegalSection[];
-  @Input() isLoading = false;
-  @Input() error: unknown = null;
+  readonly title = input.required<string>();
+  readonly lastUpdated = input.required<Date | string>();
+  readonly sections = input.required<any[]>();
 }
 
-const mockDoc = {
-  title: 'Privacy Policy',
-  lastUpdated: '2026-08-01T00:00:00.000Z',
-  sections: [
-    { id: 'intro', heading: '1. Test', content: 'Test privacy content' },
-  ],
-};
-
 describe('PrivacyComponent', () => {
-  it('should fetch and display privacy policy from the backend', async () => {
+  let component: PrivacyComponent;
+  let fixture: ComponentFixture<PrivacyComponent>;
+  let legalService: LegalService;
+
+  beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PrivacyComponent, DatePipe],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      imports: [PrivacyComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), LegalService],
     })
       .overrideComponent(PrivacyComponent, {
         remove: { imports: [LegalDocumentViewerComponent] },
@@ -41,22 +34,28 @@ describe('PrivacyComponent', () => {
       })
       .compileComponents();
 
-    const fixture = TestBed.createComponent(PrivacyComponent);
-    const component = fixture.componentInstance;
-    const httpTesting = TestBed.inject(HttpTestingController);
+    legalService = TestBed.inject(LegalService);
+    vi.spyOn(legalService, 'fetchPrivacyPolicy').mockResolvedValue({
+      title: 'Privacy Policy',
+      lastUpdated: '2026-07-01',
+      sections: [
+        { id: 'info-collect', heading: '1. Information We Collect', content: 'Test content.' },
+      ],
+    });
 
-    expect(component).toBeTruthy();
-
+    fixture = TestBed.createComponent(PrivacyComponent);
+    component = fixture.componentInstance;
     fixture.detectChanges();
-    const req = httpTesting.expectOne(`${environment.apiUrl}/legal/document/privacy`);
-    expect(req.request.method).toBe('GET');
-    req.flush(mockDoc);
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load privacy policy from LegalService', async () => {
     await fixture.whenStable();
     fixture.detectChanges();
-
-    expect(component.documentResource.value()?.sections.length).toBe(1);
-    expect(component.documentResource.value()?.title).toBe('Privacy Policy');
-
-    httpTesting.verify();
+    expect(legalService.fetchPrivacyPolicy).toHaveBeenCalled();
+    expect(component.privacyResource.value()?.title).toBe('Privacy Policy');
   });
 });

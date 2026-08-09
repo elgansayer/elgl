@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 
 export interface LegalSection {
   id: string;
@@ -15,16 +15,20 @@ export interface LegalDocument {
   sections: LegalSection[];
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class LegalService {
-  private http = inject(HttpClient);
-  private baseUrl = `${environment.apiUrl}/legal`;
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = `${environment.apiUrl}/legal`;
 
-  async getDocument(type: 'tos' | 'privacy'): Promise<LegalDocument> {
+  async fetchTermsOfService(): Promise<LegalDocument> {
     return firstValueFrom(
-      this.http.get<LegalDocument>(`${this.baseUrl}/document/${type}`),
+      this.http.get<LegalDocument>(`${this.baseUrl}/terms`),
+    );
+  }
+
+  async fetchPrivacyPolicy(): Promise<LegalDocument> {
+    return firstValueFrom(
+      this.http.get<LegalDocument>(`${this.baseUrl}/privacy`),
     );
   }
 }

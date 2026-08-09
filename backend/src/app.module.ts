@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { validationSchema } from './config/validation.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { SharedLoggerModule } from './common/logger/logger.module';
+import { RetryModule } from './common/retry/retry.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LocationModule } from './location/location.module';
@@ -16,10 +18,12 @@ import { ProfileVisitsModule } from './profile-visits/profile-visits.module';
 import { ChatModule } from './chat/chat.module';
 import { NlpModule } from './nlp/nlp.module';
 import { FlashcardsModule } from './flashcards/flashcards.module';
+import { DecksModule } from './decks/decks.module';
 import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
+import { EscrowModule } from './escrow/escrow.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { InterestsModule } from './interests/interests.module';
@@ -27,6 +31,7 @@ import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
+import { BlocksModule } from './blocks/blocks.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
@@ -42,6 +47,7 @@ import { ShoppingModule } from './shopping/shopping.module';
 import { StudyStreakModule } from './study-streak/study-streak.module';
 import { HostDashboardModule } from './host-dashboard/host-dashboard.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { LegalModule } from './legal/legal.module';
 import { AiConversationModule } from './ai-conversation/ai-conversation.module';
 import { CorrectorScoreModule } from './corrector-score/corrector-score.module';
 import { AchievementsModule } from './achievements/achievements.module';
@@ -53,7 +59,6 @@ import { MilestonesModule } from './milestones/milestones.module';
 import { StudyBuddiesModule } from './study-buddies/study-buddies.module';
 import { AudioIntroModule } from './audio-intro/audio-intro.module';
 import { StatsModule } from './stats/stats.module';
-import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
 import { EventsModule } from './events/events.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { LinkPreviewModule } from './link-preview/link-preview.module';
@@ -65,10 +70,14 @@ import { LanguageIslandsModule } from './language-islands/language-islands.modul
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
-import { LegalModule } from './legal/legal.module';
-import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
+import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
-import { AssessmentsService } from './assessments/assessments.service';
+import { AssessmentsModule } from './assessments/assessments.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { ReadingEngineModule } from './reading-engine/reading-engine.module';
+import { CloudflareModule } from './cloudflare/cloudflare.module';
+import { LivekitModule } from './livekit/livekit.module';
 
 @Module({
   imports: [
@@ -94,6 +103,9 @@ import { AssessmentsService } from './assessments/assessments.service';
       verboseMemoryLeak: false,
       ignoreErrors: false,
     }),
+    SharedLoggerModule,
+    RetryModule,
+    LivekitModule,
     SupabaseModule,
     LocationModule,
     AuthModule,
@@ -104,10 +116,12 @@ import { AssessmentsService } from './assessments/assessments.service';
     ChatModule,
     NlpModule,
     FlashcardsModule,
+    DecksModule,
     MomentsModule,
     AudioRoomsModule,
     MonetisationModule,
     EconomyModule,
+    EscrowModule,
     SafetyModule,
     HobbyTagsModule,
     InterestsModule,
@@ -115,6 +129,7 @@ import { AssessmentsService } from './assessments/assessments.service';
     VideoCallsModule,
     LeaderboardModule,
     StreakModule,
+    BlocksModule,
     NotificationsModule,
     CallsModule,
     QuizModule,
@@ -126,6 +141,7 @@ import { AssessmentsService } from './assessments/assessments.service';
     StudyStreakModule,
     HostDashboardModule,
     PrivacyModule,
+    LegalModule,
     AiConversationModule,
     AchievementsModule,
     CulturalModule,
@@ -139,7 +155,6 @@ import { AssessmentsService } from './assessments/assessments.service';
     StudyBuddiesModule,
     AudioIntroModule,
     StatsModule,
-    ScheduledDeletionModule,
     EventsModule,
     LessonsModule,
     LinkPreviewModule,
@@ -152,7 +167,12 @@ import { AssessmentsService } from './assessments/assessments.service';
     LanguageIslandsModule,
     EmailModule,
     PasswordResetModule,
-    LegalModule,
+    LinkedAccountsModule,
+    AssessmentsModule,
+    AnalyticsModule,
+    MetricsModule,
+    ReadingEngineModule,
+    CloudflareModule,
   ],
   controllers: [AppController],
   providers: [
@@ -162,9 +182,7 @@ import { AssessmentsService } from './assessments/assessments.service';
 
       useClass: ThrottlerGuard,
     },
-    PronunciationScoringService,
     AnkiiIntegrationService,
-    AssessmentsService,
   ],
 })
 export class AppModule {}

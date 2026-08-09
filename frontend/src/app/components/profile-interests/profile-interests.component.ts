@@ -4,7 +4,6 @@ import { UserInterestsService } from '../../services/user-interests.service';
 
 @Component({
   selector: 'app-profile-interests',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="flex flex-wrap gap-2 ps-2 pe-2">

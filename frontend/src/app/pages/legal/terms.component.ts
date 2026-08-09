@@ -1,25 +1,25 @@
 import { Component, inject, resource } from '@angular/core';
 import { LegalDocumentViewerComponent } from '../../components/legal-document-viewer/legal-document-viewer.component';
-import { LegalService, LegalSection } from '../../services/legal.service';
+import { LegalService } from '../../services/legal.service';
 
 @Component({
   selector: 'app-terms',
   imports: [LegalDocumentViewerComponent],
   template: `
-    <app-legal-document-viewer
-      title="Terms of Service"
-      [lastUpdated]="documentResource.value()?.lastUpdated ?? fallbackDate"
-      [sections]="documentResource.value()?.sections ?? []"
-      [isLoading]="documentResource.isLoading()"
-      [error]="documentResource.error()"
-    ></app-legal-document-viewer>
+    @let doc = termsResource.value();
+    @if (doc) {
+      <app-legal-document-viewer
+        [title]="doc.title"
+        [lastUpdated]="doc.lastUpdated"
+        [sections]="doc.sections"
+      ></app-legal-document-viewer>
+    }
   `,
 })
 export class TermsComponent {
-  private legalService = inject(LegalService);
-  fallbackDate = new Date().toISOString();
+  private readonly legalService = inject(LegalService);
 
-  documentResource = resource({
-    loader: () => this.legalService.getDocument('tos'),
+  readonly termsResource = resource({
+    loader: () => this.legalService.fetchTermsOfService(),
   });
 }
