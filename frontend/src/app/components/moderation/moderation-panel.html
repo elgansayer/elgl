@@ -30,7 +30,11 @@
 
   <div aria-live="polite">
   @if (loading()) {
+<<<<<<< HEAD
+    <div class="space-y-3" role="status" [attr.aria-label]="'safety.moderation.loadingTitle' | t">
+=======
     <div class="space-y-3" aria-busy="true">
+>>>>>>> origin/main
       <p class="text-sm text-text-secondary mb-2">{{ 'safety.moderation.loadingTitle' | t }}</p>
       @for (i of [1, 2, 3]; track i) {
         <app-card customClass="p-3 space-y-2" aria-hidden="true">
@@ -67,8 +71,8 @@
       <div class="border border-slate-700 rounded-lg p-3 mb-3 bg-surface" [attr.aria-label]="'moderation.reportItemAria' | t: { id: item.id }">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-sm text-text-primary"><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ item.reported_user?.name }}</p>
-            <p class="text-xs text-text-secondary"><span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason }}</p>
+            <p class="text-sm text-text-primary"><span class="sr-only">{{ 'moderation.reported_user' | t }}: </span>{{ (item.reported_user?.name ?? "") | sanitiseHtml }}</p>
+            <p class="text-xs text-text-secondary"><span class="sr-only">{{ 'moderation.reason' | t }}: </span>{{ item.reason | sanitiseHtml }}</p>
             <p class="text-xs text-text-secondary"><span class="sr-only">{{ 'moderation.date' | t }}: </span>{{ item.created_at | date: 'short' }}</p>
           </div>
           <div class="flex gap-2">
@@ -94,10 +98,14 @@
           </div>
         </div>
         @if (analysisResult(); as res) {
+<<<<<<< HEAD
+          <div class="mt-2 p-2 bg-slate-800 rounded text-xs" role="status" [attr.aria-label]="'moderation.riskScore' | t">
+=======
           <div class="mt-2 p-2 bg-slate-800 rounded text-xs" role="region" [attr.aria-label]="'moderation.riskAnalysisAria' | t">
+>>>>>>> origin/main
             <p class="text-amber-300">{{ 'moderation.riskScore' | t }}: {{ res.riskScore }}%</p>
             @if (res.flags.length) {
-              <p class="text-red-300 mt-1">{{ 'moderation.flags' | t }}: {{ res.flags.join(', ') }}</p>
+              <p class="text-red-300 mt-1">{{ 'moderation.flags' | t }}: {{ (res.flags?.join(', ') ?? '') | sanitiseHtml }}</p>
             } @else {
               <p class="text-green-300 mt-1">{{ 'moderation.noFlags' | t }}</p>
             }

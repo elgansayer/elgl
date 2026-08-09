@@ -34,11 +34,16 @@ interface CentrifugoMessageData {
     <!-- Overlay container positioned at the bottom of the video stream -->
     <div
       class="absolute bottom-0 start-0 w-full h-72 p-4 flex flex-col justify-end pointer-events-none bg-gradient-to-t from-black/80 via-black/30 to-transparent z-50"
+      role="complementary"
+      [attr.aria-label]="'liveChat.overlayAria' | t"
     >
       <!-- Scrollable message list with top-fade mask -->
       <div
         #scrollContainer
         class="overflow-y-auto flex flex-col gap-3 max-h-full pointer-events-auto scrollbar-hide mask-image-fade-top pb-2"
+        role="log"
+        aria-live="polite"
+        [attr.aria-label]="'liveChat.overlayAria' | t"
       >
         @for (msg of messages(); track msg.id) {
           <div
@@ -83,14 +88,15 @@ interface CentrifugoMessageData {
 export class LiveChatOverlayComponent implements OnInit {
   roomId = input<string>('');
 
-  private centrifugo = inject(CentrifugoService);
-  private i18n = inject(I18nService);
-  private destroyRef = inject(DestroyRef);
   private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
+  centrifugo = inject(CentrifugoService);
+  i18n = inject(I18nService);
+  destroyRef = inject(DestroyRef);
+
   messages = signal<LiveMessage[]>([]);
-  private channelName = '';
-  private subscription: unknown = null;
+  channelName = '';
+  subscription: unknown = null;
 
   // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit() {
@@ -131,7 +137,7 @@ export class LiveChatOverlayComponent implements OnInit {
     });
   }
 
-  private addMessage(msg: LiveMessage) {
+  addMessage(msg: LiveMessage) {
     this.messages.update((msgs) => {
       const newMsgs = [...msgs, msg];
       // Cap at 50 messages to maintain 60 FPS rendering performance
@@ -143,7 +149,7 @@ export class LiveChatOverlayComponent implements OnInit {
     this.scrollToBottom();
   }
 
-  private scrollToBottom() {
+  scrollToBottom() {
     afterNextRender(() => {
       const el = this.scrollContainer()?.nativeElement;
       if (el) {

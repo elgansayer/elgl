@@ -74,7 +74,9 @@ describe('SanitiseHtmlPipe', () => {
   it('should strip all HTML tags from strings', () => {
     expect(pipe.transform('<b>bold</b>', mockMetadata)).toBe('bold');
     expect(pipe.transform('<em>italic</em>', mockMetadata)).toBe('italic');
-    expect(pipe.transform('<img src="x" onerror="alert(1)">', mockMetadata)).toBe('');
+    expect(
+      pipe.transform('<img src="x" onerror="alert(1)">', mockMetadata),
+    ).toBe('');
   });
 
   it('should sanitize array of strings', () => {

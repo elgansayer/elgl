@@ -4,7 +4,6 @@ import { QuickRepliesService, QuickReply } from '../../services/quick-replies.se
 
 @Component({
   selector: 'app-quick-replies',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     @if (replies().length > 0) {

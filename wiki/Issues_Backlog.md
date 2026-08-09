@@ -1,239 +1,34 @@
 # GitHub Issues Backlog
 
-Total open issues: 1000
+Total open issues: 935
 
-- **#2641**: Guardian: frontend build + test failure on main [swarm-active, ai-agent-task, priority:high]
-- **#2568**: Guardian: backend build + test failure on main [swarm-active, ai-agent-task, priority:high]
-- **#2560**: Guardian: backend test failure on main [swarm-active, ai-agent-task, priority:high]
-- **#2436**: Task: Verify RTL logical CSS properties (ps-, pe-) for Trust & Safety [swarm-active]
-- **#2433**: Task: Audit accessibility (ARIA) and screen reader support for Trust & Safety [swarm-active]
-- **#2431**: Task: Set up Datadog monitoring alerts for Trust & Safety [swarm-active]
-- **#2430**: Task: Implement Redis cache invalidation rules for Trust & Safety [swarm-active]
-- **#2426**: Task: Implement graceful degradation fallbacks for Virtual Coin Economy [swarm-active]
-- **#2425**: Task: Review Supabase Row Level Security (RLS) policies for Virtual Coin Economy [swarm-active]
-- **#2424**: Task: Enforce strict TypeScript typings (no-any) on Virtual Coin Economy [swarm-active]
-- **#2423**: Task: Standardise logging levels (Winston/Pino) for Virtual Coin Economy
-- **#2422**: Task: Implement exponential backoff retry logic (HTTP 429) for Virtual Coin Economy
-- **#2421**: Task: Audit memory leaks and payload sizes for Virtual Coin Economy
-- **#2420**: Task: Implement user onboarding tooltips (ngx-joyride) for Virtual Coin Economy
-- **#2419**: Task: Add strict DOMPurify HTML sanitisation to Virtual Coin Economy
-- **#2418**: Task: Optimise database indices (PostgreSQL) and query performance for Virtual Coin Economy
-- **#2417**: Task: Implement robust error boundary handling and crash reporting for Virtual Coin Economy
-- **#2416**: Task: Audit GDPR compliance and data scrubbing for Virtual Coin Economy
-- **#2415**: Task: Implement offline PWA fallback logic for Virtual Coin Economy
-- **#2414**: Task: Audit mobile responsive layouts (Tailwind) for Virtual Coin Economy
-- **#2413**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Virtual Coin Economy
-- **#2412**: Task: Implement automated rate limiting & API throttling for Virtual Coin Economy
-- **#2411**: Task: Verify RTL logical CSS properties (ps-, pe-) for Virtual Coin Economy
-- **#2410**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Virtual Coin Economy
-- **#2409**: Task: Conduct load testing (Artillery) for Virtual Coin Economy
-- **#2408**: Task: Audit accessibility (ARIA) and screen reader support for Virtual Coin Economy
-- **#2407**: Task: Design empty states and skeleton loaders for Virtual Coin Economy
-- **#2406**: Task: Set up Datadog monitoring alerts for Virtual Coin Economy
-- **#2405**: Task: Implement Redis cache invalidation rules for Virtual Coin Economy
-- **#2404**: Task: Write Jest unit tests (NestJS) for Virtual Coin Economy
-- **#2403**: Task: Write Cypress E2E test flows for Virtual Coin Economy
-- **#2402**: Task: Review and optimise Cloudflare edge caching for Escrow Payments
-- **#2401**: Task: Implement graceful degradation fallbacks for Escrow Payments
-- **#2400**: Task: Review Supabase Row Level Security (RLS) policies for Escrow Payments
-- **#2399**: Task: Enforce strict TypeScript typings (no-any) on Escrow Payments
-- **#2398**: Task: Standardise logging levels (Winston/Pino) for Escrow Payments
-- **#2397**: Task: Implement exponential backoff retry logic (HTTP 429) for Escrow Payments
-- **#2396**: Task: Audit memory leaks and payload sizes for Escrow Payments
-- **#2395**: Task: Implement user onboarding tooltips (ngx-joyride) for Escrow Payments
-- **#2394**: Task: Add strict DOMPurify HTML sanitisation to Escrow Payments
-- **#2393**: Task: Optimise database indices (PostgreSQL) and query performance for Escrow Payments
-- **#2392**: Task: Implement robust error boundary handling and crash reporting for Escrow Payments
-- **#2391**: Task: Audit GDPR compliance and data scrubbing for Escrow Payments
-- **#2390**: Task: Implement offline PWA fallback logic for Escrow Payments
-- **#2389**: Task: Audit mobile responsive layouts (Tailwind) for Escrow Payments
-- **#2388**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Escrow Payments
-- **#2387**: Task: Implement automated rate limiting & API throttling for Escrow Payments
-- **#2386**: Task: Verify RTL logical CSS properties (ps-, pe-) for Escrow Payments
-- **#2385**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Escrow Payments
-- **#2384**: Task: Conduct load testing (Artillery) for Escrow Payments
-- **#2383**: Task: Audit accessibility (ARIA) and screen reader support for Escrow Payments
-- **#2382**: Task: Design empty states and skeleton loaders for Escrow Payments
-- **#2381**: Task: Set up Datadog monitoring alerts for Escrow Payments
-- **#2380**: Task: Implement Redis cache invalidation rules for Escrow Payments
-- **#2379**: Task: Write Jest unit tests (NestJS) for Escrow Payments
-- **#2378**: Task: Write Cypress E2E test flows for Escrow Payments
-- **#2377**: Task: Review and optimise Cloudflare edge caching for Admin Moderation Dashboard
-- **#2376**: Task: Implement graceful degradation fallbacks for Admin Moderation Dashboard
-- **#2375**: Task: Review Supabase Row Level Security (RLS) policies for Admin Moderation Dashboard
-- **#2374**: Task: Enforce strict TypeScript typings (no-any) on Admin Moderation Dashboard
-- **#2373**: Task: Standardise logging levels (Winston/Pino) for Admin Moderation Dashboard
-- **#2372**: Task: Implement exponential backoff retry logic (HTTP 429) for Admin Moderation Dashboard
-- **#2371**: Task: Audit memory leaks and payload sizes for Admin Moderation Dashboard
-- **#2370**: Task: Implement user onboarding tooltips (ngx-joyride) for Admin Moderation Dashboard
-- **#2369**: Task: Add strict DOMPurify HTML sanitisation to Admin Moderation Dashboard
-- **#2368**: Task: Optimise database indices (PostgreSQL) and query performance for Admin Moderation Dashboard
-- **#2367**: Task: Implement robust error boundary handling and crash reporting for Admin Moderation Dashboard
-- **#2366**: Task: Audit GDPR compliance and data scrubbing for Admin Moderation Dashboard
-- **#2365**: Task: Implement offline PWA fallback logic for Admin Moderation Dashboard
-- **#2364**: Task: Audit mobile responsive layouts (Tailwind) for Admin Moderation Dashboard
-- **#2363**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Admin Moderation Dashboard
-- **#2362**: Task: Implement automated rate limiting & API throttling for Admin Moderation Dashboard
-- **#2361**: Task: Verify RTL logical CSS properties (ps-, pe-) for Admin Moderation Dashboard
-- **#2360**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Admin Moderation Dashboard
-- **#2359**: Task: Conduct load testing (Artillery) for Admin Moderation Dashboard
-- **#2358**: Task: Audit accessibility (ARIA) and screen reader support for Admin Moderation Dashboard
-- **#2357**: Task: Design empty states and skeleton loaders for Admin Moderation Dashboard
-- **#2356**: Task: Set up Datadog monitoring alerts for Admin Moderation Dashboard
-- **#2355**: Task: Implement Redis cache invalidation rules for Admin Moderation Dashboard
-- **#2354**: Task: Write Jest unit tests (NestJS) for Admin Moderation Dashboard
-- **#2353**: Task: Write Cypress E2E test flows for Admin Moderation Dashboard
-- **#2352**: Task: Review and optimise Cloudflare edge caching for Spaced Repetition (SRS)
-- **#2351**: Task: Implement graceful degradation fallbacks for Spaced Repetition (SRS)
-- **#2350**: Task: Review Supabase Row Level Security (RLS) policies for Spaced Repetition (SRS)
-- **#2349**: Task: Enforce strict TypeScript typings (no-any) on Spaced Repetition (SRS)
-- **#2348**: Task: Standardise logging levels (Winston/Pino) for Spaced Repetition (SRS)
-- **#2347**: Task: Implement exponential backoff retry logic (HTTP 429) for Spaced Repetition (SRS)
-- **#2346**: Task: Audit memory leaks and payload sizes for Spaced Repetition (SRS)
-- **#2345**: Task: Implement user onboarding tooltips (ngx-joyride) for Spaced Repetition (SRS)
-- **#2344**: Task: Add strict DOMPurify HTML sanitisation to Spaced Repetition (SRS)
-- **#2343**: Task: Optimise database indices (PostgreSQL) and query performance for Spaced Repetition (SRS)
-- **#2342**: Task: Implement robust error boundary handling and crash reporting for Spaced Repetition (SRS)
-- **#2341**: Task: Audit GDPR compliance and data scrubbing for Spaced Repetition (SRS)
-- **#2340**: Task: Implement offline PWA fallback logic for Spaced Repetition (SRS)
-- **#2338**: Task: Audit mobile responsive layouts (Tailwind) for Spaced Repetition (SRS)
-- **#2337**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Spaced Repetition (SRS)
-- **#2336**: Task: Implement automated rate limiting & API throttling for Spaced Repetition (SRS)
-- **#2335**: Task: Verify RTL logical CSS properties (ps-, pe-) for Spaced Repetition (SRS)
-- **#2334**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Spaced Repetition (SRS)
-- **#2333**: Task: Conduct load testing (Artillery) for Spaced Repetition (SRS)
-- **#2332**: Task: Audit accessibility (ARIA) and screen reader support for Spaced Repetition (SRS)
-- **#2331**: Task: Design empty states and skeleton loaders for Spaced Repetition (SRS)
-- **#2330**: Task: Set up Datadog monitoring alerts for Spaced Repetition (SRS)
-- **#2329**: Task: Implement Redis cache invalidation rules for Spaced Repetition (SRS)
-- **#2328**: Task: Write Jest unit tests (NestJS) for Spaced Repetition (SRS)
-- **#2327**: Task: Write Cypress E2E test flows for Spaced Repetition (SRS)
-- **#2326**: Task: Review and optimise Cloudflare edge caching for LingQ Reading Engine
-- **#2325**: Task: Implement graceful degradation fallbacks for LingQ Reading Engine
-- **#2324**: Task: Review Supabase Row Level Security (RLS) policies for LingQ Reading Engine
-- **#2323**: Task: Enforce strict TypeScript typings (no-any) on LingQ Reading Engine
-- **#2322**: Task: Standardise logging levels (Winston/Pino) for LingQ Reading Engine
-- **#2321**: Task: Implement exponential backoff retry logic (HTTP 429) for LingQ Reading Engine
-- **#2320**: Task: Audit memory leaks and payload sizes for LingQ Reading Engine
-- **#2319**: Task: Implement user onboarding tooltips (ngx-joyride) for LingQ Reading Engine
-- **#2318**: Task: Add strict DOMPurify HTML sanitisation to LingQ Reading Engine
-- **#2317**: Task: Optimise database indices (PostgreSQL) and query performance for LingQ Reading Engine
-- **#2316**: Task: Implement robust error boundary handling and crash reporting for LingQ Reading Engine
-- **#2315**: Task: Audit GDPR compliance and data scrubbing for LingQ Reading Engine
-- **#2314**: Task: Implement offline PWA fallback logic for LingQ Reading Engine
-- **#2313**: Task: Audit mobile responsive layouts (Tailwind) for LingQ Reading Engine
-- **#2312**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for LingQ Reading Engine
-- **#2311**: Task: Implement automated rate limiting & API throttling for LingQ Reading Engine
-- **#2310**: Task: Verify RTL logical CSS properties (ps-, pe-) for LingQ Reading Engine
-- **#2309**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for LingQ Reading Engine
-- **#2308**: Task: Conduct load testing (Artillery) for LingQ Reading Engine
-- **#2307**: Task: Audit accessibility (ARIA) and screen reader support for LingQ Reading Engine
-- **#2306**: Task: Design empty states and skeleton loaders for LingQ Reading Engine
-- **#2305**: Task: Set up Datadog monitoring alerts for LingQ Reading Engine
-- **#2304**: Task: Implement Redis cache invalidation rules for LingQ Reading Engine
-- **#2303**: Task: Write Jest unit tests (NestJS) for LingQ Reading Engine
-- **#2302**: Task: Write Cypress E2E test flows for LingQ Reading Engine
-- **#2301**: Task: Review and optimise Cloudflare edge caching for Matchmaking Algorithm
-- **#2300**: Task: Implement graceful degradation fallbacks for Matchmaking Algorithm
-- **#2299**: Task: Review Supabase Row Level Security (RLS) policies for Matchmaking Algorithm
-- **#2298**: Task: Enforce strict TypeScript typings (no-any) on Matchmaking Algorithm
-- **#2297**: Task: Standardise logging levels (Winston/Pino) for Matchmaking Algorithm
-- **#2296**: Task: Implement exponential backoff retry logic (HTTP 429) for Matchmaking Algorithm
-- **#2295**: Task: Audit memory leaks and payload sizes for Matchmaking Algorithm
-- **#2294**: Task: Implement user onboarding tooltips (ngx-joyride) for Matchmaking Algorithm
-- **#2293**: Task: Add strict DOMPurify HTML sanitisation to Matchmaking Algorithm
-- **#2292**: Task: Optimise database indices (PostgreSQL) and query performance for Matchmaking Algorithm
-- **#2291**: Task: Implement robust error boundary handling and crash reporting for Matchmaking Algorithm
-- **#2290**: Task: Audit GDPR compliance and data scrubbing for Matchmaking Algorithm
-- **#2289**: Task: Implement offline PWA fallback logic for Matchmaking Algorithm
-- **#2288**: Task: Audit mobile responsive layouts (Tailwind) for Matchmaking Algorithm
-- **#2287**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Matchmaking Algorithm
-- **#2286**: Task: Implement automated rate limiting & API throttling for Matchmaking Algorithm
-- **#2285**: Task: Verify RTL logical CSS properties (ps-, pe-) for Matchmaking Algorithm
-- **#2284**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Matchmaking Algorithm
-- **#2283**: Task: Conduct load testing (Artillery) for Matchmaking Algorithm
-- **#2282**: Task: Audit accessibility (ARIA) and screen reader support for Matchmaking Algorithm
-- **#2281**: Task: Design empty states and skeleton loaders for Matchmaking Algorithm
-- **#2280**: Task: Set up Datadog monitoring alerts for Matchmaking Algorithm
-- **#2279**: Task: Implement Redis cache invalidation rules for Matchmaking Algorithm
-- **#2278**: Task: Write Jest unit tests (NestJS) for Matchmaking Algorithm
-- **#2277**: Task: Write Cypress E2E test flows for Matchmaking Algorithm
-- **#2276**: Task: Review and optimise Cloudflare edge caching for Discovery Map
-- **#2275**: Task: Implement graceful degradation fallbacks for Discovery Map
-- **#2274**: Task: Review Supabase Row Level Security (RLS) policies for Discovery Map
-- **#2273**: Task: Enforce strict TypeScript typings (no-any) on Discovery Map
-- **#2272**: Task: Standardise logging levels (Winston/Pino) for Discovery Map
-- **#2271**: Task: Implement exponential backoff retry logic (HTTP 429) for Discovery Map
-- **#2270**: Task: Audit memory leaks and payload sizes for Discovery Map
-- **#2269**: Task: Implement user onboarding tooltips (ngx-joyride) for Discovery Map
-- **#2268**: Task: Add strict DOMPurify HTML sanitisation to Discovery Map
-- **#2267**: Task: Optimise database indices (PostgreSQL) and query performance for Discovery Map
-- **#2266**: Task: Implement robust error boundary handling and crash reporting for Discovery Map
-- **#2265**: Task: Audit GDPR compliance and data scrubbing for Discovery Map
-- **#2264**: Task: Implement offline PWA fallback logic for Discovery Map
-- **#2263**: Task: Audit mobile responsive layouts (Tailwind) for Discovery Map
-- **#2262**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Discovery Map
-- **#2261**: Task: Implement automated rate limiting & API throttling for Discovery Map
-- **#2260**: Task: Verify RTL logical CSS properties (ps-, pe-) for Discovery Map
-- **#2259**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Discovery Map
-- **#2258**: Task: Conduct load testing (Artillery) for Discovery Map
-- **#2257**: Task: Audit accessibility (ARIA) and screen reader support for Discovery Map
-- **#2256**: Task: Design empty states and skeleton loaders for Discovery Map
-- **#2255**: Task: Set up Datadog monitoring alerts for Discovery Map
-- **#2254**: Task: Implement Redis cache invalidation rules for Discovery Map
-- **#2253**: Task: Write Jest unit tests (NestJS) for Discovery Map
-- **#2252**: Task: Write Cypress E2E test flows for Discovery Map
-- **#2251**: Task: Review and optimise Cloudflare edge caching for Video Classrooms
-- **#2250**: Task: Implement graceful degradation fallbacks for Video Classrooms
-- **#2249**: Task: Review Supabase Row Level Security (RLS) policies for Video Classrooms
-- **#2248**: Task: Enforce strict TypeScript typings (no-any) on Video Classrooms
-- **#2247**: Task: Standardise logging levels (Winston/Pino) for Video Classrooms
-- **#2246**: Task: Implement exponential backoff retry logic (HTTP 429) for Video Classrooms
-- **#2245**: Task: Audit memory leaks and payload sizes for Video Classrooms
-- **#2244**: Task: Implement user onboarding tooltips (ngx-joyride) for Video Classrooms
-- **#2243**: Task: Add strict DOMPurify HTML sanitisation to Video Classrooms
-- **#2242**: Task: Optimise database indices (PostgreSQL) and query performance for Video Classrooms
-- **#2241**: Task: Implement robust error boundary handling and crash reporting for Video Classrooms
-- **#2240**: Task: Audit GDPR compliance and data scrubbing for Video Classrooms
-- **#2239**: Task: Implement offline PWA fallback logic for Video Classrooms
-- **#2238**: Task: Audit mobile responsive layouts (Tailwind) for Video Classrooms
-- **#2237**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Video Classrooms
-- **#2236**: Task: Implement automated rate limiting & API throttling for Video Classrooms
-- **#2235**: Task: Verify RTL logical CSS properties (ps-, pe-) for Video Classrooms
-- **#2234**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Video Classrooms
-- **#2233**: Task: Conduct load testing (Artillery) for Video Classrooms
-- **#2232**: Task: Audit accessibility (ARIA) and screen reader support for Video Classrooms
-- **#2231**: Task: Design empty states and skeleton loaders for Video Classrooms
-- **#2230**: Task: Set up Datadog monitoring alerts for Video Classrooms
-- **#2229**: Task: Implement Redis cache invalidation rules for Video Classrooms
-- **#2228**: Task: Write Jest unit tests (NestJS) for Video Classrooms
-- **#2227**: Task: Write Cypress E2E test flows for Video Classrooms
-- **#2226**: Task: Review and optimise Cloudflare edge caching for Live Audio Rooms
-- **#2225**: Task: Implement graceful degradation fallbacks for Live Audio Rooms
-- **#2224**: Task: Review Supabase Row Level Security (RLS) policies for Live Audio Rooms
-- **#2223**: Task: Enforce strict TypeScript typings (no-any) on Live Audio Rooms
-- **#2222**: Task: Standardise logging levels (Winston/Pino) for Live Audio Rooms
-- **#2221**: Task: Implement exponential backoff retry logic (HTTP 429) for Live Audio Rooms
-- **#2220**: Task: Audit memory leaks and payload sizes for Live Audio Rooms
-- **#2219**: Task: Implement user onboarding tooltips (ngx-joyride) for Live Audio Rooms
-- **#2218**: Task: Add strict DOMPurify HTML sanitisation to Live Audio Rooms
-- **#2217**: Task: Optimise database indices (PostgreSQL) and query performance for Live Audio Rooms
-- **#2216**: Task: Implement robust error boundary handling and crash reporting for Live Audio Rooms
-- **#2215**: Task: Audit GDPR compliance and data scrubbing for Live Audio Rooms
-- **#2214**: Task: Implement offline PWA fallback logic for Live Audio Rooms
-- **#2213**: Task: Audit mobile responsive layouts (Tailwind) for Live Audio Rooms
-- **#2212**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Live Audio Rooms
-- **#2211**: Task: Implement automated rate limiting & API throttling for Live Audio Rooms
-- **#2210**: Task: Verify RTL logical CSS properties (ps-, pe-) for Live Audio Rooms
-- **#2209**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Live Audio Rooms
-- **#2208**: Task: Conduct load testing (Artillery) for Live Audio Rooms
-- **#2207**: Task: Audit accessibility (ARIA) and screen reader support for Live Audio Rooms
-- **#2206**: Task: Design empty states and skeleton loaders for Live Audio Rooms
-- **#2205**: Task: Set up Datadog monitoring alerts for Live Audio Rooms
-- **#2204**: Task: Implement Redis cache invalidation rules for Live Audio Rooms
-- **#2203**: Task: Write Jest unit tests (NestJS) for Live Audio Rooms
-- **#2202**: Task: Write Cypress E2E test flows for Live Audio Rooms
-- **#2201**: Task: Review and optimise Cloudflare edge caching for Group Chat
+- **#3152**: Guardian: repair stale Discovery Map Cypress assertions [guardian-alert, factory-active, factory-quarantined, needs-human]
+- **#2350**: Task: Review Supabase Row Level Security (RLS) policies for Spaced Repetition (SRS) [swarm-active]
+- **#2255**: Task: Set up Datadog monitoring alerts for Discovery Map [swarm-active]
+- **#2240**: Task: Audit GDPR compliance and data scrubbing for Video Classrooms [swarm-active]
+- **#2225**: Task: Implement graceful degradation fallbacks for Live Audio Rooms [swarm-active]
+- **#2222**: Task: Standardise logging levels (Winston/Pino) for Live Audio Rooms [swarm-active]
+- **#2221**: Task: Implement exponential backoff retry logic (HTTP 429) for Live Audio Rooms [swarm-active]
+- **#2220**: Task: Audit memory leaks and payload sizes for Live Audio Rooms [swarm-active]
+- **#2219**: Task: Implement user onboarding tooltips (ngx-joyride) for Live Audio Rooms [swarm-active]
+- **#2218**: Task: Add strict DOMPurify HTML sanitisation to Live Audio Rooms [swarm-active]
+- **#2217**: Task: Optimise database indices (PostgreSQL) and query performance for Live Audio Rooms [swarm-active]
+- **#2216**: Task: Implement robust error boundary handling and crash reporting for Live Audio Rooms [swarm-active]
+- **#2215**: Task: Audit GDPR compliance and data scrubbing for Live Audio Rooms [swarm-active]
+- **#2214**: Task: Implement offline PWA fallback logic for Live Audio Rooms [swarm-active]
+- **#2213**: Task: Audit mobile responsive layouts (Tailwind) for Live Audio Rooms [swarm-active]
+- **#2212**: Task: Draft technical architecture documentation (Swagger/OpenAPI) for Live Audio Rooms [swarm-active]
+- **#2211**: Task: Implement automated rate limiting & API throttling for Live Audio Rooms [swarm-active]
+- **#2210**: Task: Verify RTL logical CSS properties (ps-, pe-) for Live Audio Rooms [swarm-active]
+- **#2209**: Task: Audit strict RxJS unsubscriptions & Angular Signals migration for Live Audio Rooms [swarm-active]
+- **#2208**: Task: Conduct load testing (Artillery) for Live Audio Rooms [swarm-active]
+- **#2207**: Task: Audit accessibility (ARIA) and screen reader support for Live Audio Rooms [swarm-active]
+- **#2206**: Task: Design empty states and skeleton loaders for Live Audio Rooms [swarm-active]
+- **#2205**: Task: Set up Datadog monitoring alerts for Live Audio Rooms [swarm-active]
+- **#2204**: Task: Implement Redis cache invalidation rules for Live Audio Rooms [swarm-active]
+- **#2203**: Task: Write Jest unit tests (NestJS) for Live Audio Rooms [swarm-active]
+- **#2202**: Task: Write Cypress E2E test flows for Live Audio Rooms [swarm-active]
+- **#2201**: Task: Review and optimise Cloudflare edge caching for Group Chat [swarm-active]
 - **#2200**: Task: Implement graceful degradation fallbacks for Group Chat
 - **#2199**: Task: Review Supabase Row Level Security (RLS) policies for Group Chat
 - **#2198**: Task: Enforce strict TypeScript typings (no-any) on Group Chat
@@ -563,31 +358,31 @@ Total open issues: 1000
 - **#1768**: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (recurrence). Investigate root cause and fix the underlying TypeScript build errors that prevent the Angular dev server from compiling within
 - **#1767**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow.
 - **#1766**: Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed).
-- **#1765**: Implement Has Audio Intro required filter.
+- **#1765**: Implement Has Audio Intro required filter. [swarm-active]
 - **#1764**: Implement AI-powered Conversation Starter suggestions in new chat windows based on
 - **#1763**: Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations).
 - **#1762**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the *recurrence* was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in
 - **#1761**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
-- **#1760**: Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections.
+- **#1760**: Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections. [swarm-active]
 - **#1759**: Implement Host Moderation controls (Mute speaker, kick off stage).
 - **#1758**: Initialise NestJS backend (`nest new backend --package-manager npm`).
-- **#1757**: Integrate ngx-lottie or similar to render actual SVG animations for gifts.
+- **#1757**: Integrate ngx-lottie or similar to render actual SVG animations for gifts. [swarm-active]
 - **#1756**: Fix `inviteCoHost` to demote/notify the existing co-host (and stop their publish) before assigning a new one, instead of silently overwriting `co_host_id`.
 - **#1755**: Build NestJS `NlpModule` routing translation and transliteration requests to Azure AI / DeepL.
-- **#1754**: Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2).
-- **#1753**: Audit and add `aria-label` attributes to all icon buttons and interactive tags.
+- **#1754**: Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2). [swarm-active]
+- **#1753**: Audit and add `aria-label` attributes to all icon buttons and interactive tags. [swarm-active]
 - **#1752**: Implement in-app translations and language corrections with an interface mirroring
-- **#1751**: Add Serious Learner toggle to filter for active study streaks.
+- **#1751**: Add Serious Learner toggle to filter for active study streaks. [swarm-active]
 - **#1750**: Build Flashcard Deck UI to organize saved vocabulary.
 - **#1749**: Pin priority chats to the top of the inbox.
 - **#1748**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown.
-- **#1747**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions.
+- **#1747**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
 - **#1746**: Build Angular Admin Portal for user management.
 - **#1745**: Starred messages for easy retrieval.
 - **#1744**: Build User Filter Settings to restrict initial message senders by age or native language.
 - **#1743**: Fix `ChatRoomComponent.sendTextMessage()` (`frontend/src/app/components/chat-room/chat-room.component.ts:171`): it clears `textInput` and calls `draftsService.clearChatDraft()` _before_ `chatService.sendMessage` is awaited, with no restore in the `catch` block. A failed send (offline, server error, moderation rejection) currently loses the message text entirely instead of leaving it recoverable as a draft. Move the clear to after a successful send, matching the pattern already used correctly in `MomentsFeedComponent.submitMoment()`.
-- **#1742**: Build Incoming Call modal with ringtone audio and accept/reject controls.
-- **#1741**: Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`).
+- **#1742**: Build Incoming Call modal with ringtone audio and accept/reject controls. [swarm-active]
+- **#1741**: Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`). [swarm-active]
 - **#1740**: Build NestJS background job calculating top 10 recommended language partners daily.
 - **#1739**: Add Hide Online Status and Hide VIP Status toggles.
 - **#1738**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints. `ThrottlerModule`/`APP_GUARD` was already applied globally (`app.module.ts`, 10 req/60s default) - likely why prior attempts got stuck looking for a dedicated auth endpoint to t...
@@ -624,381 +419,521 @@ Total open issues: 1000
 - **#1707**: Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
 - **#1706**: Build NestJS background worker (`TimelineWorker`) connected to Redis for fan-out processing (`RPUSH timeline_queue:{follower_id}`).
 - **#1705**: Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints.
-- **#1704**: Forwarding messages with a forwarded label to prevent spam.
-- **#1703**: Disappearing messages (set to expire after 24 hours, 7 days, or 90 days).
-- **#1702**: Build Liked By modal listing all users who liked a Moment.
-- **#1701**: Build algorithmic Serious Learner filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`).
-- **#1700**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report).
-- **#1699**: Write NestJS unit tests for `DiscoveryService` PostGIS queries.
-- **#1698**: Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments.
-- **#1697**: Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.
-- **#1696**: Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback.
-- **#1695**: Fix QA test failure: `ReferenceError: describe is not defined`.
-- **#1694**: Fix QA test timeout: `Error: page.fill: Test timeout of 30000ms exceeded.` at `e2e/tests/adversarial/adversarial-chat-video.spec.ts:13` (`await page.fill(input[name="email"], ...)` inside the shared `loginIfNeeded` helper, hit by every test in that spec...
-- **#1693**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the _recurrence_ was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in
-- **#1692**: Add haptic feedback for grading flashcards (e.g., success buzz for Known, gentle pulse for Learning).
-- **#1691**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts.
-- **#1690**: Add Learning Goals free-text field to user profile to state user motivations.
-- **#1689**: Verify clean linting across both projects (`npm run lint`).
-- **#1688**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
-- **#1687**: Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.
-- **#1686**: Fix QA test timeout: `Error: locator.fill: Test timeout of 30000ms exceeded.` waiting for `locator([data-testid="message-input"])`, e.g. `e2e/tests/adversarial/adversarial-chat.spec.ts:136` (`send message containing null byte`) and every other case in t...
-- **#1685**: Chat archiving and hidden chat folders.
-- **#1684**: Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
-- **#1683**: Actually implement the @mention logic in the comments service and frontend (the previous diff only contained audio-room co-host changes).
-- **#1682**: Build Profile Cover Photo upload and positioning.
-- **#1681**: Typing indicators and online status visibility.
-- **#1680**: Implement Translate Bio button on user profile cards and pages.
-- **#1679**: Integrate UnreadCounterService into navigation tabs UI to display unread badges.
-- **#1678**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
-- **#1677**: Setup Cypress inside `frontend/`.
-- **#1676**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences.
-- **#1675**: Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`.
-- **#1674**: Fix QA test failure: `ReferenceError: describe is not defined` in test suites.
-- **#1673**: Build group participant drawer.
-- **#1672**: Build Block Management page to manage and unblock users.
-- **#1671**: Build Virtual Gift picker modal with coin balance auto-deduction.
-- **#1670**: Build Correction Quality rating system (up/down votes) for community corrections on Moments.
-- **#1669**: Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
-- **#1668**: use x-algorithm to power for you on the moments feed.
-- **#1667**: Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`).
-- **#1666**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy.
-- **#1665**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a
-- **#1664**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today).
-- **#1663**: Implement global unread counter service updating app badge and navigation tabs.
-- **#1662**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description.
-- **#1661**: Add Do Not Disturb scheduling.
-- **#1660**: Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`.
-- **#1659**: Allow spending virtual coins to unlock animated sticker packs.
-- **#1648**: The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
-- **#1644**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
-- **#1610**: use x-algorithm to power for you on the moments feed.
-- **#1609**: Ankii intergration
-- **#1599**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost...
-- **#1595**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost...
-- **#1591**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost...
-- **#1589**: Fix QA test timeout: `Error: locator.fill: Test timeout of 30000ms exceeded.` waiting for `locator([data-testid="message-input"])`, e.g. `e2e/tests/adversarial/adversarial-chat.spec.ts:136` (`send message containing null byte`) and every other case in t...
-- **#1587**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost...
-- **#1584**: Fix QA test timeout: `Error: locator.fill: Test timeout of 30000ms exceeded.` waiting for `locator([data-testid="message-input"])`, e.g. `e2e/tests/adversarial/adversarial-chat.spec.ts:136` (`send message containing null byte`) and every other case in t...
-- **#1583**: Fix QA test timeout: `Error: page.fill: Test timeout of 30000ms exceeded.` at `e2e/tests/adversarial/adversarial-chat-video.spec.ts:13` (`await page.fill(input[name="email"], ...)` inside the shared `loginIfNeeded` helper, hit by every test in that spec...
-- **#1575**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost...
-- **#1566**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost...
-- **#1556**: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (recurrence). Investigate root cause and fix the underlying TypeScript build errors that prevent the Angular dev server from compiling within
-- **#1528**: Investigated the claimed third recurrence (`qa-loop.sh` truncation line allegedly unstaged again). This premise was stale/false by the time it was actioned: `git diff -- qa-loop.sh` and `git diff --cached -- qa-loop.sh` were both empty, and `git blame` ...
-- **#1517**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints. `ThrottlerModule`/`APP_GUARD` was already applied globally (`app.module.ts`, 10 req/60s default) - likely why prior attempts got stuck looking for a dedicated auth endpoint to t...
-- **#1516**: Investigated the claimed third recurrence (`qa-loop.sh` truncation line allegedly unstaged again). This premise was stale/false by the time it was actioned: `git diff -- qa-loop.sh` and `git diff --cached -- qa-loop.sh` were both empty, and `git blame` ...
-- **#1515**: Implement a calendar view for users to track all their upcoming
-- **#1514**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time.
-- **#1513**: Build automated push notification reminders (e.g., Your Spanish Learning Event starts in 15 minutes).
-- **#1512**: Implement RSVP functionality allowing users to mark Attending or Interested.
-- **#1510**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description.
-- **#1509**: Build a centralized Events discovery feed for users to find upcoming scheduled activities.
-- **#1507**: Build Private Parties feature (VIP/Pro tier) allowing invite-only audio rooms for specific friends or study partners.
-- **#1505**: Build Language Parties live audio rooms dedicated to spoken practice in a group setting.
-- **#1503**: Build a Groups Discovery tab within the chat interface for users to browse and join active group chats by topic.
-- **#1502**: Implement real-time text correction tools specifically designed to work within Group Chats (allowing members to correct each
-- **#1501**: Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar).
-- **#1499**: Design and implement a Pro subscription tier mimicking Tandem Pro (unlimited translations, advanced visitor logs, nearby members visibility, ad-free).
-- **#1498**: Implement in-app translations and language corrections with an interface mirroring
-- **#1495**: Build a Serious Learner mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals.
-- **#1493**: Build Recommended for You carousel based on mutual interests and activity levels.
-- **#1491**: Add quick-action Send Message and Follow buttons on list items.
-- **#1486**: Build GPS-based Nearby search rendering distance in miles or kilometres.
-- **#1485**: Implement Has Audio Intro required filter.
-- **#1481**: Add Serious Learner toggle to filter for active study streaks.
-- **#1478**: Build Terms of Service and Privacy Policy document viewers.
-- **#1475**: Add Restore Purchases workflow.
-- **#1467**: Add Do Not Disturb scheduling.
-- **#1463**: Add Hide Online Status and Hide VIP Status toggles.
-- **#1461**: Implement Who can message me filters (Age, Gender, Native Language).
-- **#1458**: Add `proficiency_level` (`a1` to `c2`) to `users` table schema and profile UI.
-- **#1457**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow.
-- **#1456**: Build Help & About page displaying App Version, build number, and open-source licences.
-- **#1455**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads).
-- **#1454**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
-- **#1453**: Build Notification Settings toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
-- **#1452**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers.
-- **#1451**: Build Block Management page to manage and unblock users.
-- **#1450**: Build User Filter Settings to restrict initial message senders by age or native language.
-- **#1449**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden).
-- **#1448**: Build Privacy Settings hub.
-- **#1447**: Build Language Settings menu to switch UI language independently of study target.
-- **#1444**: Build Appearance Settings menu.
-- **#1442**: Build Linked Accounts settings page to manage connected social accounts.
-- **#1439**: Build Forgot Password UI and NestJS email dispatch service.
-- **#1437**: Complete implementation of system event bubbles (the diff provided for Phase 62 only touched unrelated configuration files and did not deliver the feature).
-- **#1436**: Build `system-message-bubble` component handling i18n keys system.profileUpdated, system.missedCall and wire to Centrifugo events.
-- **#1435**: Create system message integration (backend Centrifugo publish and frontend i18n bubble).
-- **#1434**: Render custom system event bubbles in chat (e.g., Profile updated, Missed call).
-- **#1433**: Wire `LinkPreviewModule` into the main `AppModule` imports array.
-- **#1432**: Write the actual NestJS code for the OpenGraph scraper (`LinkPreviewModule`, `LinkPreviewController`, `LinkPreviewService`) since only the dependencies were installed in the previous step.
-- **#1431**: Create `LinkPreviewModule`, `LinkPreviewController` and `LinkPreviewService` in `backend/src/link-preview/` that uses `jsdom`/`cheerio` to fetch a URL, extract OpenGraph tags, sanitise with DOMPurify, cache results for 1 hour, and expose `GET /link-preview?url=...`.
-- **#1430**: Implement actual OpenGraph service using installed dependencies (cheerio, dompurify, jsdom).
-- **#1429**: Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed).
-- **#1428**: Complete the implementation of the NestJS OpenGraph scraper and frontend rendering.
-- **#1427**: Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET /link-preview?url=...` for the chat frontend.
-- **#1426**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
-- **#1425**: Fix `ChatRoomComponent.sendTextMessage()` (`frontend/src/app/components/chat-room/chat-room.component.ts:171`): it clears `textInput` and calls `draftsService.clearChatDraft()` _before_ `chatService.sendMessage` is awaited, with no restore in the `catch` block. A failed send (offline, server error, moderation rejection) currently loses the message text entirely instead of leaving it recoverable as a draft. Move the clear to after a successful send, matching the pattern already used correctly in `MomentsFeedComponent.submitMoment()`.
-- **#1424**: Persist unsent chat messages and Moment drafts to `localStorage`. (Added `DraftsService` (`frontend/src/app/services/drafts.service.ts`) with per-room chat draft keys (`hellotalk_chat_draft_{roomId}`) and a single moment compose draft key (`hellotalk_moment_draft`), guarded for SSR/no-`localStorage` environments. Wired into `ChatRoomComponent`: loads the
-- **#1423**: Exempt non-user-authored body fields (client error `stack` traces in `LogClientErrorDto`, Apple/Google IAP webhook payloads) from the global `SanitiseHtmlPipe`, which currently strips angle-bracket content like `<anonymous>` and generic type params from stack traces before they reach analytics.
-- **#1422**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.
-- **#1421**: Design custom vector illustrations for No Messages, No Moments Found, and No Users Nearby.
-- **#1420**: Implement custom Angular `ErrorHandler` logging client crashes to backend analytics.
-- **#1419**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
-- **#1418**: Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
-- **#1416**: Build blocking update modal in Angular if current app version is deprecated.
-- **#1415**: Build NestJS endpoint returning minimum supported app version.
-- **#1413**: Restore backend `banUser` and `warnUser` endpoints (removed in the latest diff) so the admin-actions component can actually call them.
-- **#1412**: Implement 1‑click ban and warning buttons.
-- **#1410**: Admin portal: `AdminService.setVipStatus`/`banUser`/`warnUser` (frontend/src/app/services/admin.service.ts) already propagated real HTTP errors with no mock fallback (verified, not something this pass changed). The remaining gap was the missing client-side guard: `/admin` had no `canActivate`, so a non-admin who browsed there saw the fully populated mock user list before any mutation was attempted. Added `AdminService.checkAdminAccess()` (a real, no-mock-fallback call to `GET /admin/users`, which the
-- **#1408**: Build Angular Admin Portal for user management.
-- **#1407**: The diff provided was STILL for audio-rooms co-hosts. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
-- **#1406**: The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
-- **#1405**: Write Angular unit tests for `VocabularyStore` signals.
-- **#1404**: The latest diff provided was STILL for audio-rooms co-hosts. Please actually write the tests for DiscoveryService in backend/src/discovery/discovery.service.spec.ts.
-- **#1403**: Actually write the NestJS unit tests for `DiscoveryService` PostGIS queries (the previous diff was for audio-room co-hosts).
-- **#1402**: Write NestJS unit tests for `DiscoveryService` PostGIS queries.
-- **#1401**: Write E2E test flows for Authentication, Chat Messaging, and Moment Creation.
-- **#1400**: Actually install and configure Cypress in the frontend directory (the previous diff was for audio-room co-hosts).
-- **#1399**: Setup Cypress inside `frontend/`.
-- **#1398**: Update `frontend/src/app/app.component.html` to visually render the unread badges using `unreadCounter.totalUnread()` (Requires HTML file).
-- **#1397**: The latest provided diff was still for audio-room co-hosts (`inviteCoHost`/`removeCoHost`), not the navigation tabs UI. Please provide the correct frontend changes.
-- **#1396**: Actually implement the UnreadCounterService integration in the frontend navigation tabs (the provided diff was for audio-room co-hosts).
-- **#1395**: Integrate UnreadCounterService into navigation tabs UI to display unread badges.
-- **#1394**: Implement global unread counter service updating app badge and navigation tabs.
-- **#1393**: Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations).
-- **#1392**: Build NestJS background job calculating top 10 recommended language partners daily.
-- **#1391**: Implement the actual frontend Angular component for the swipeable full-screen lightbox (the previous diff only contained audio-room co-host changes).
-- **#1390**: Build swipeable full-screen lightbox for Moments with multiple images.
-- **#1389**: Add settings toggle to auto-play sequential voice notes in chat.
-- **#1388**: Implement the actual caching logic in the frontend chat service/components (the provided diff only contained audio-room co-host changes).
-- **#1387**: Cache translated text client-side to allow toggling between original and translation without extra API calls.
-- **#1386**: Implement backend endpoint for daily check-in coin reward and frontend modal UI.
-- **#1385**: Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
-- **#1384**: Fetch multiple-choice assessment questions from backend database.
-- **#1383**: Implement frontend Angular component for the diagnostic quiz.
-- **#1382**: Build dynamic diagnostic quiz component for new sign-ups.
-- **#1381**: Actually implement the @mention logic in the comments service and frontend (the previous diff only contained audio-room co-host changes).
-- **#1380**: Implement `@mention` notifications when tagged in a comment.
-- **#1378**: Analyse Moments feed screenshots in `original-hello-talk-screenshots/`.
-- **#1367**: Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
-- **#1363**: Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- **#1357**: Build Angular Audio Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid.
-- **#1348**: Build filtering endpoints for Moments feed: `All`, `Classmates` (same target language), and `Following`.
-- **#1346**: Build NestJS background worker (`TimelineWorker`) connected to Redis for fan-out processing (`RPUSH timeline_queue:{follower_id}`).
-- **#1345**: Create Supabase SQL migration (`005_moments.sql`) for `moments`, `moment_comments`, and `moment_likes` tables.
-- **#1344**: Build AI Pronunciation Scoring service (`POST /nlp/pronunciation-score`) grading spoken audio out of 100 with phonetic breakdown.
-- **#1343**: Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments.
-- **#1341**: Build NestJS `FlashcardsController` endpoints (`POST /flashcards`, `PATCH /flashcards/:id/srs`) to save words and update review schedules.
-- **#1340**: Implement daily AI usage rate limiting in Redis (`daily_ai_usage:{user_id}:{date}`): cap at 10 requests/day for free users, unlimited for VIP (8 UKP / $10 USD per month).
-- **#1339**: Build NestJS `NlpModule` routing translation and transliteration requests to Azure AI / DeepL.
-- **#1338**: Build click-to-translate & define pop-up modal (`WordDefinitionModalComponent`) in Angular with dictionary definitions and pronunciation audio.
-- **#1337**: Create Angular Signals vocabulary store (`VocabularyStore`) tracking word tokens mapped to SRS levels (`0`=Blue, `1` to `3`=Yellow, `4`=White).
-- **#1336**: Build the core `TokenisedTextComponent` in Angular using native `Intl.Segmenter` API (`granularity: word`) to render clickable tokens.
-- **#1335**: Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`.
-- **#1334**: Implement client-side and server-side (`pg_trgm`) message search inside chat rooms.
-- **#1333**: Implement a calendar view for users to track all their upcoming
-- **#1332**: Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections.
-- **#1331**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time.
-- **#1330**: Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback.
-- **#1329**: Build automated push notification reminders (e.g., Your Spanish Learning Event starts in 15 minutes).
-- **#1328**: Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations.
-- **#1327**: Implement RSVP functionality allowing users to mark Attending or Interested.
-- **#1326**: Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text).
-- **#1325**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts.
-- **#1323**: Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`).
-- **#1322**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description.
-- **#1321**: Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables.
-- **#1320**: Build a centralized Events discovery feed for users to find upcoming scheduled activities.
-- **#1319**: Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals.
-- **#1317**: Build NestJS endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims.
-- **#1316**: Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub.
-- **#1315**: Build Private Parties feature (VIP/Pro tier) allowing invite-only audio rooms for specific friends or study partners.
-- **#1314**: Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and Serious Learner toggle.
-- **#1312**: Build Angular Who Viewed Me component (`VisitorLogsComponent`): blur visitor avatars and names if user is on the free tier (`is_vip === false`), showing upgrade prompt for 8 UKP / $10 USD.
-- **#1311**: Build Language Parties live audio rooms dedicated to spoken practice in a group setting.
-- **#1310**: Build Angular Profile UI (`ProfileComponent`) with native/target language badges, audio intro player, and study streak display.
-- **#1308**: Build NestJS `ProfileVisitsService` to record profile views and query visitor logs (`GET /users/:id/visitors`).
-- **#1307**: Build a Groups Discovery tab within the chat interface for users to browse and join active group chats by topic.
-- **#1306**: Build algorithmic Serious Learner filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`).
-- **#1305**: Implement real-time text correction tools specifically designed to work within Group Chats (allowing members to correct each
-- **#1304**: Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`).
-- **#1303**: Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar).
-- **#1302**: Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`).
-- **#1300**: Configure Cloudflare R2 SDK (`@aws-sdk/client-s3`) in NestJS `MediaModule`. Create pre-signed URL upload endpoints for avatars and audio intros.
-- **#1299**: Design and implement a Pro subscription tier mimicking Tandem Pro (unlimited translations, advanced visitor logs, nearby members visibility, ad-free).
-- **#1298**: Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles).
-- **#1297**: Implement in-app translations and language corrections with an interface mirroring
-- **#1296**: Verify clean linting across both projects (`npm run lint`).
-- **#1294**: Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints.
-- **#1292**: Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`).
-- **#1291**: Build a Serious Learner mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals.
-- **#1290**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables.
-- **#1288**: Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`.
-- **#1287**: Create comprehensive `.env.example` and setup NestJS `@nestjs/config` environment schema validation (`Joi`/`Zod`) to fail-fast on missing keys or malformed URLs.
-- **#1286**: Build Recommended for You carousel based on mutual interests and activity levels.
-- **#1285**: Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2).
-- **#1283**: Install and configure Tailwind CSS in the Angular project (`tailwind.config.js` & `styles.scss`) using strictly logical properties (`ps-`, `pe-`, `ms-`, `me-`).
-- **#1282**: Add quick-action Send Message and Follow buttons on list items.
-- **#1281**: Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`).
-- **#1279**: Initialise NestJS backend (`nest new backend --package-manager npm`).
-- **#1275**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the _recurrence_ was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in
-- **#1273**: Fix QA test failure: `Error: Process from config.webServer was not able to start. Exit code: 143`. Root cause: `e2e/playwright.config.ts` `webServer` runs `cd ../frontend && npm run start` (Angular dev server), which never reaches a successful compile because the frontend currently has real TypeScript build errors, so `ng serve` keeps failing/restarting until
-- **#1272**: Fix QA test failure: `ReferenceError: describe is not defined`.
-- **#1271**: Build GPS-based Nearby search rendering distance in miles or kilometres.
-- **#1270**: Implement Has Audio Intro required filter.
-- **#1266**: Add Serious Learner toggle to filter for active study streaks.
-- **#1263**: Build Terms of Service and Privacy Policy document viewers.
-- **#1260**: Add Restore Purchases workflow.
-- **#1252**: Add Do Not Disturb scheduling.
-- **#1248**: Add Hide Online Status and Hide VIP Status toggles.
-- **#1246**: Implement Who can message me filters (Age, Gender, Native Language).
-- **#1239**: Implement Who Viewed Me visitor logs.
-- **#1238**: Build direct Send Message and Follow action buttons on external profiles.
-- **#1230**: Build Profile Cover Photo upload and positioning.
-- **#1198**: Block and report users or businesses.
-- **#1196**: Disappearing messages (set to expire after 24 hours, 7 days, or 90 days).
-- **#1195**: End-to-end encryption for all personal messages and calls.
-- **#1177**: End-to-end encrypted voice calls.
-- **#1176**: Doodle message sharing.
-- **#1172**: Voice messages with playback speed control (1x, 1.5x, 2x).
-- **#1171**: Instant video messages (short circular video notes).
-- **#1170**: Photo and video sharing with an HD quality toggle.
-- **#1169**: Rich link previews for URLs.
-- **#1168**: Chat archiving and hidden chat folders.
-- **#1167**: Pin priority chats to the top of the inbox.
-- **#1166**: Search functionality within individual chats or across all conversations.
-- **#1165**: Starred messages for easy retrieval.
-- **#1163**: Edit sent messages within a specific time limit.
-- **#1162**: Forwarding messages with a forwarded label to prevent spam.
-- **#1161**: Reply to specific messages (swipe-to-reply gesture).
-- **#1160**: Message reactions using emojis.
-- **#1159**: Typing indicators and online status visibility.
-- **#1158**: Real-time text messaging with delivery and read receipts (single tick, double tick, blue tick).
-- **#1157**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge).
-- **#1156**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report).
-- **#1155**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a
-- **#1153**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords.
-- **#1152**: Implement Request Correction from Group feature/message type for group chats.
-- **#1150**: Implement Translate Bio button on user profile cards and pages.
-- **#1149**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions.
-- **#1148**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles).
-- **#1147**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience.
-- **#1145**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed.
-- **#1143**: Build shared Voiceroom Notes panel where hosts/speakers can post key vocabulary or discussion topics.
-- **#1142**: Add haptic feedback for grading flashcards (e.g., success buzz for Known, gentle pulse for Learning).
-- **#1141**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed.
-- **#1139**: Implement AI-powered Conversation Starter suggestions in new chat windows based on
-- **#1138**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences.
-- **#1136**: Implement a user-level Corrector Score based on ratings to display on profiles.
-- **#1135**: Build Correction Quality rating system (up/down votes) for community corrections on Moments.
-- **#1134**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts.
-- **#1126**: Implement Word of the Day feature on the
-- **#1123**: Build Lessons module in Angular.
-- **#1122**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today).
-- **#1119**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak).
-- **#1117**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview).
-- **#1115**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown.
-- **#1112**: Add Learning Goals free-text field to user profile to state user motivations.
-- **#1111**: Add Interests filter to Discovery search to match users with shared hobbies.
-- **#1108**: Add `proficiency_level` (`a1` to `c2`) to `users` table schema and profile UI.
-- **#1107**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow.
-- **#1106**: Build Help & About page displaying App Version, build number, and open-source licences.
-- **#1105**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads).
-- **#1104**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send).
-- **#1103**: Build Notification Settings toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms.
-- **#1102**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers.
-- **#1101**: Build Block Management page to manage and unblock users.
-- **#1100**: Build User Filter Settings to restrict initial message senders by age or native language.
-- **#1099**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden).
-- **#1098**: Build Privacy Settings hub.
-- **#1097**: Build Language Settings menu to switch UI language independently of study target.
-- **#1094**: Build Appearance Settings menu.
-- **#1092**: Build Linked Accounts settings page to manage connected social accounts.
-- **#1089**: Build Forgot Password UI and NestJS email dispatch service.
-- **#1087**: Complete implementation of system event bubbles (the diff provided for Phase 62 only touched unrelated configuration files and did not deliver the feature).
-- **#1086**: Build `system-message-bubble` component handling i18n keys system.profileUpdated, system.missedCall and wire to Centrifugo events.
-- **#1085**: Create system message integration (backend Centrifugo publish and frontend i18n bubble).
-- **#1084**: Render custom system event bubbles in chat (e.g., Profile updated, Missed call).
-- **#1083**: Wire `LinkPreviewModule` into the main `AppModule` imports array.
-- **#1082**: Write the actual NestJS code for the OpenGraph scraper (`LinkPreviewModule`, `LinkPreviewController`, `LinkPreviewService`) since only the dependencies were installed in the previous step.
-- **#1081**: Create `LinkPreviewModule`, `LinkPreviewController` and `LinkPreviewService` in `backend/src/link-preview/` that uses `jsdom`/`cheerio` to fetch a URL, extract OpenGraph tags, sanitise with DOMPurify, cache results for 1 hour, and expose `GET /link-preview?url=...`.
-- **#1080**: Implement actual OpenGraph service using installed dependencies (cheerio, dompurify, jsdom).
-- **#1079**: Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed).
-- **#1078**: Complete the implementation of the NestJS OpenGraph scraper and frontend rendering.
-- **#1077**: Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET /link-preview?url=...` for the chat frontend.
-- **#1076**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat.
-- **#1075**: Fix `ChatRoomComponent.sendTextMessage()` (`frontend/src/app/components/chat-room/chat-room.component.ts:171`): it clears `textInput` and calls `draftsService.clearChatDraft()` _before_ `chatService.sendMessage` is awaited, with no restore in the `catch` block. A failed send (offline, server error, moderation rejection) currently loses the message text entirely instead of leaving it recoverable as a draft. Move the clear to after a successful send, matching the pattern already used correctly in `MomentsFeedComponent.submitMoment()`.
-- **#1074**: Persist unsent chat messages and Moment drafts to `localStorage`. (Added `DraftsService` (`frontend/src/app/services/drafts.service.ts`) with per-room chat draft keys (`hellotalk_chat_draft_{roomId}`) and a single moment compose draft key (`hellotalk_moment_draft`), guarded for SSR/no-`localStorage` environments. Wired into `ChatRoomComponent`: loads the
-- **#1073**: Exempt non-user-authored body fields (client error `stack` traces in `LogClientErrorDto`, Apple/Google IAP webhook payloads) from the global `SanitiseHtmlPipe`, which currently strips angle-bracket content like `<anonymous>` and generic type params from stack traces before they reach analytics.
-- **#1072**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.
-- **#1071**: Design custom vector illustrations for No Messages, No Moments Found, and No Users Nearby.
-- **#1070**: Implement custom Angular `ErrorHandler` logging client crashes to backend analytics.
-- **#1069**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics.
-- **#1068**: Create `.github/workflows/deploy.yml` for automated testing and Docker image builds.
-- **#1066**: Build blocking update modal in Angular if current app version is deprecated.
-- **#1065**: Build NestJS endpoint returning minimum supported app version.
-- **#1063**: Restore backend `banUser` and `warnUser` endpoints (removed in the latest diff) so the admin-actions component can actually call them.
-- **#1058**: Build Angular Admin Portal for user management.
-- **#1057**: The diff provided was STILL for audio-rooms co-hosts. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
-- **#1056**: The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts.
-- **#1055**: Write Angular unit tests for `VocabularyStore` signals.
-- **#1054**: The latest diff provided was STILL for audio-rooms co-hosts. Please actually write the tests for DiscoveryService in backend/src/discovery/discovery.service.spec.ts.
-- **#1053**: Actually write the NestJS unit tests for `DiscoveryService` PostGIS queries (the previous diff was for audio-room co-hosts).
-- **#1052**: Write NestJS unit tests for `DiscoveryService` PostGIS queries.
-- **#1051**: Write E2E test flows for Authentication, Chat Messaging, and Moment Creation.
-- **#1050**: Actually install and configure Cypress in the frontend directory (the previous diff was for audio-room co-hosts).
-- **#1049**: Setup Cypress inside `frontend/`.
-- **#1048**: Update `frontend/src/app/app.component.html` to visually render the unread badges using `unreadCounter.totalUnread()` (Requires HTML file).
-- **#1047**: The latest provided diff was still for audio-room co-hosts (`inviteCoHost`/`removeCoHost`), not the navigation tabs UI. Please provide the correct frontend changes.
-- **#1046**: Actually implement the UnreadCounterService integration in the frontend navigation tabs (the provided diff was for audio-room co-hosts).
-- **#1045**: Integrate UnreadCounterService into navigation tabs UI to display unread badges.
-- **#1044**: Implement global unread counter service updating app badge and navigation tabs.
-- **#1043**: Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations).
-- **#1042**: Build NestJS background job calculating top 10 recommended language partners daily.
-- **#1041**: Implement the actual frontend Angular component for the swipeable full-screen lightbox (the previous diff only contained audio-room co-host changes).
-- **#1040**: Build swipeable full-screen lightbox for Moments with multiple images.
-- **#1039**: Add settings toggle to auto-play sequential voice notes in chat.
-- **#1038**: Implement the actual caching logic in the frontend chat service/components (the provided diff only contained audio-room co-host changes).
-- **#1037**: Cache translated text client-side to allow toggling between original and translation without extra API calls.
-- **#1036**: Implement backend endpoint for daily check-in coin reward and frontend modal UI.
-- **#1035**: Build daily login modal granting 5 to 10 free virtual coins upon first daily login.
-- **#1034**: Fetch multiple-choice assessment questions from backend database.
-- **#1033**: Implement frontend Angular component for the diagnostic quiz.
-- **#1032**: Build dynamic diagnostic quiz component for new sign-ups.
-- **#1031**: Actually implement the @mention logic in the comments service and frontend (the previous diff only contained audio-room co-host changes).
-- **#1030**: Implement `@mention` notifications when tagged in a comment.
-- **#1029**: Create Angular component for the Liked By modal.
-- **#1027**: Build Liked By modal listing all users who liked a Moment.
-- **#1026**: Fix race condition where the `co_host_removed`/`co_host_invited` Centrifugo events published in `inviteCoHost` can arrive out of order (both are fire-and-forget, unawaited HTTP calls), and the
-- **#1025**: Fix `inviteCoHost` to demote/notify the existing co-host (and stop their publish) before assigning a new one, instead of silently overwriting `co_host_id`.
-- **#1024**: Implement Invite Co-Host split-screen video layout.
-- **#1022**: Create GiftAnimationComponent and integrate it into chat/feed for gift payloads.
-- **#1021**: Integrate ngx-lottie or similar to render actual SVG animations for gifts.
-- **#1020**: Implement full-screen SVG gift animations when viewers tip the host.
-- **#1019**: Build scrolling live chat comment overlay over host video stream.
-- **#1018**: Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks.
-- **#1017**: Implement WebSocket connection rate limiting in Centrifugo.
-- **#1016**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
-- **#1014**: Analyse Moments feed screenshots in `original-hello-talk-screenshots/`.
-- **#1003**: Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard.
-- **#999**: Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views.
-- **#993**: Build Angular Audio Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid.
-- **#984**: Build filtering endpoints for Moments feed: `All`, `Classmates` (same target language), and `Following`.
-- **#982**: Build NestJS background worker (`TimelineWorker`) connected to Redis for fan-out processing (`RPUSH timeline_queue:{follower_id}`).
-- **#981**: Create Supabase SQL migration (`005_moments.sql`) for `moments`, `moment_comments`, and `moment_likes` tables.
-- **#980**: Build AI Pronunciation Scoring service (`POST /nlp/pronunciation-score`) grading spoken audio out of 100 with phonetic breakdown.
-- **#979**: Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments.
-- **#977**: Build NestJS `FlashcardsController` endpoints (`POST /flashcards`, `PATCH /flashcards/:id/srs`) to save words and update review schedules.
-- **#976**: Implement daily AI usage rate limiting in Redis (`daily_ai_usage:{user_id}:{date}`): cap at 10 requests/day for free users, unlimited for VIP (8 UKP / $10 USD per month).
-- **#975**: Build NestJS `NlpModule` routing translation and transliteration requests to Azure AI / DeepL.
-- **#974**: Build click-to-translate & define pop-up modal (`WordDefinitionModalComponent`) in Angular with dictionary definitions and pronunciation audio.
-- **#973**: Create Angular Signals vocabulary store (`VocabularyStore`) tracking word tokens mapped to SRS levels (`0`=Blue, `1` to `3`=Yellow, `4`=White).
-- **#972**: Build the core `TokenisedTextComponent` in Angular using native `Intl.Segmenter` API (`granularity: word`) to render clickable tokens.
-- **#971**: Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`.
-- **#970**: Implement client-side and server-side (`pg_trgm`) message search inside chat rooms.
-- **#969**: Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections.
-- **#968**: Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback.
-- **#967**: Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations.
-- **#966**: Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text).
-- **#965**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts.
+- **#1704**: Forwarding messages with a forwarded label to prevent spam. [swarm-active]
+- **#1703**: Disappearing messages (set to expire after 24 hours, 7 days, or 90 days). [swarm-active]
+- **#1702**: Build Liked By modal listing all users who liked a Moment. [swarm-active]
+- **#1701**: Build algorithmic Serious Learner filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`). [swarm-active]
+- **#1700**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
+- **#1699**: Write NestJS unit tests for `DiscoveryService` PostGIS queries. [swarm-active]
+- **#1698**: Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments. [swarm-active]
+- **#1697**: Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals. [swarm-active]
+- **#1696**: Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback. [swarm-active]
+- **#1695**: Fix QA test failure: `ReferenceError: describe is not defined`. [swarm-active]
+- **#1694**: Fix QA test timeout: `Error: page.fill: Test timeout of 30000ms exceeded.` at `e2e/tests/adversarial/adversarial-chat-video.spec.ts:13` (`await page.fill(input[name="email"], ...)` inside the shared `loginIfNeeded` helper, hit by every test in that spec... [swarm-active]
+- **#1693**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the _recurrence_ was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in [swarm-active]
+- **#1692**: Add haptic feedback for grading flashcards (e.g., success buzz for Known, gentle pulse for Learning). [swarm-active]
+- **#1691**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts. [swarm-active]
+- **#1690**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
+- **#1689**: Verify clean linting across both projects (`npm run lint`). [swarm-active]
+- **#1688**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics. [swarm-active]
+- **#1687**: Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub. [swarm-active]
+- **#1686**: Fix QA test timeout: `Error: locator.fill: Test timeout of 30000ms exceeded.` waiting for `locator([data-testid="message-input"])`, e.g. `e2e/tests/adversarial/adversarial-chat.spec.ts:136` (`send message containing null byte`) and every other case in t... [swarm-active]
+- **#1685**: Chat archiving and hidden chat folders. [swarm-active]
+- **#1684**: Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles). [swarm-active]
+- **#1683**: Actually implement the @mention logic in the comments service and frontend (the previous diff only contained audio-room co-host changes). [swarm-active]
+- **#1682**: Build Profile Cover Photo upload and positioning. [swarm-active]
+- **#1681**: Typing indicators and online status visibility. [swarm-active]
+- **#1680**: Implement Translate Bio button on user profile cards and pages. [swarm-active]
+- **#1679**: Integrate UnreadCounterService into navigation tabs UI to display unread badges. [swarm-active]
+- **#1678**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat. [swarm-active]
+- **#1677**: Setup Cypress inside `frontend/`. [swarm-active]
+- **#1676**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
+- **#1675**: Analyse chat UI screenshots in `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`. [swarm-active]
+- **#1674**: Fix QA test failure: `ReferenceError: describe is not defined` in test suites. [swarm-active]
+- **#1673**: Build group participant drawer. [swarm-active]
+- **#1672**: Build Block Management page to manage and unblock users. [swarm-active]
+- **#1671**: Build Virtual Gift picker modal with coin balance auto-deduction. [swarm-active]
+- **#1670**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
+- **#1669**: Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks. [swarm-active]
+- **#1668**: use x-algorithm to power for you on the moments feed. [swarm-active]
+- **#1667**: Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`). [swarm-active]
+- **#1666**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy. [swarm-active]
+- **#1665**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
+- **#1664**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
+- **#1663**: Implement global unread counter service updating app badge and navigation tabs. [swarm-active]
+- **#1662**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description. [swarm-active]
+- **#1661**: Add Do Not Disturb scheduling. [swarm-active]
+- **#1660**: Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`. [swarm-active]
+- **#1659**: Allow spending virtual coins to unlock animated sticker packs. [swarm-active]
+- **#1648**: The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts. [swarm-active]
+- **#1644**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables. [swarm-active]
+- **#1610**: use x-algorithm to power for you on the moments feed. [swarm-active]
+- **#1609**: Ankii intergration [swarm-active]
+- **#1599**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost... [swarm-active]
+- **#1595**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost... [swarm-active]
+- **#1591**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost... [swarm-active]
+- **#1589**: Fix QA test timeout: `Error: locator.fill: Test timeout of 30000ms exceeded.` waiting for `locator([data-testid="message-input"])`, e.g. `e2e/tests/adversarial/adversarial-chat.spec.ts:136` (`send message containing null byte`) and every other case in t... [swarm-active]
+- **#1587**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost... [swarm-active]
+- **#1584**: Fix QA test timeout: `Error: locator.fill: Test timeout of 30000ms exceeded.` waiting for `locator([data-testid="message-input"])`, e.g. `e2e/tests/adversarial/adversarial-chat.spec.ts:136` (`send message containing null byte`) and every other case in t... [swarm-active]
+- **#1583**: Fix QA test timeout: `Error: page.fill: Test timeout of 30000ms exceeded.` at `e2e/tests/adversarial/adversarial-chat-video.spec.ts:13` (`await page.fill(input[name="email"], ...)` inside the shared `loginIfNeeded` helper, hit by every test in that spec... [swarm-active]
+- **#1575**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost... [swarm-active]
+- **#1566**: Fix QA test failure: `[WebServer] error: TypeError: fetch failed`. Per `qa_errors.log`, this is the surface symptom of an `AggregateError [ECONNREFUSED]` on every Angular `HttpClient` call made during the e2e `webServer` boot (e.g. `GET http://localhost... [swarm-active]
+- **#1556**: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (recurrence). Investigate root cause and fix the underlying TypeScript build errors that prevent the Angular dev server from compiling within [swarm-active]
+- **#1528**: Investigated the claimed third recurrence (`qa-loop.sh` truncation line allegedly unstaged again). This premise was stale/false by the time it was actioned: `git diff -- qa-loop.sh` and `git diff --cached -- qa-loop.sh` were both empty, and `git blame` ... [swarm-active]
+- **#1517**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints. `ThrottlerModule`/`APP_GUARD` was already applied globally (`app.module.ts`, 10 req/60s default) - likely why prior attempts got stuck looking for a dedicated auth endpoint to t... [swarm-active]
+- **#1516**: Investigated the claimed third recurrence (`qa-loop.sh` truncation line allegedly unstaged again). This premise was stale/false by the time it was actioned: `git diff -- qa-loop.sh` and `git diff --cached -- qa-loop.sh` were both empty, and `git blame` ... [swarm-active]
+- **#1515**: Implement a calendar view for users to track all their upcoming [swarm-active]
+- **#1514**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time. [swarm-active]
+- **#1513**: Build automated push notification reminders (e.g., Your Spanish Learning Event starts in 15 minutes). [swarm-active]
+- **#1512**: Implement RSVP functionality allowing users to mark Attending or Interested. [swarm-active]
+- **#1510**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description. [swarm-active]
+- **#1509**: Build a centralized Events discovery feed for users to find upcoming scheduled activities. [swarm-active]
+- **#1507**: Build Private Parties feature (VIP/Pro tier) allowing invite-only audio rooms for specific friends or study partners. [swarm-active]
+- **#1505**: Build Language Parties live audio rooms dedicated to spoken practice in a group setting. [swarm-active]
+- **#1503**: Build a Groups Discovery tab within the chat interface for users to browse and join active group chats by topic. [swarm-active]
+- **#1502**: Implement real-time text correction tools specifically designed to work within Group Chats (allowing members to correct each [swarm-active]
+- **#1501**: Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar). [swarm-active]
+- **#1499**: Design and implement a Pro subscription tier mimicking Tandem Pro (unlimited translations, advanced visitor logs, nearby members visibility, ad-free). [swarm-active]
+- **#1498**: Implement in-app translations and language corrections with an interface mirroring [swarm-active]
+- **#1495**: Build a Serious Learner mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals. [swarm-active]
+- **#1493**: Build Recommended for You carousel based on mutual interests and activity levels. [swarm-active]
+- **#1491**: Add quick-action Send Message and Follow buttons on list items. [swarm-active]
+- **#1486**: Build GPS-based Nearby search rendering distance in miles or kilometres. [swarm-active]
+- **#1485**: Implement Has Audio Intro required filter. [swarm-active]
+- **#1481**: Add Serious Learner toggle to filter for active study streaks. [swarm-active]
+- **#1478**: Build Terms of Service and Privacy Policy document viewers. [swarm-active]
+- **#1475**: Add Restore Purchases workflow. [swarm-active]
+- **#1467**: Add Do Not Disturb scheduling. [swarm-active]
+- **#1463**: Add Hide Online Status and Hide VIP Status toggles. [swarm-active]
+- **#1461**: Implement Who can message me filters (Age, Gender, Native Language). [swarm-active]
+- **#1458**: Add `proficiency_level` (`a1` to `c2`) to `users` table schema and profile UI. [swarm-active]
+- **#1457**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow. [swarm-active]
+- **#1456**: Build Help & About page displaying App Version, build number, and open-source licences. [swarm-active]
+- **#1455**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads). [swarm-active]
+- **#1454**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send). [swarm-active]
+- **#1453**: Build Notification Settings toggles for Push Alerts and Badges across Direct Messages, Groups, Likes, and Voicerooms. [swarm-active]
+- **#1452**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers. [swarm-active]
+- **#1451**: Build Block Management page to manage and unblock users. [swarm-active]
+- **#1450**: Build User Filter Settings to restrict initial message senders by age or native language. [swarm-active]
+- **#1449**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden). [swarm-active]
+- **#1448**: Build Privacy Settings hub. [swarm-active]
+- **#1447**: Build Language Settings menu to switch UI language independently of study target. [swarm-active]
+- **#1444**: Build Appearance Settings menu. [swarm-active]
+- **#1442**: Build Linked Accounts settings page to manage connected social accounts. [swarm-active]
+- **#1439**: Build Forgot Password UI and NestJS email dispatch service. [swarm-active]
+- **#1437**: Complete implementation of system event bubbles (the diff provided for Phase 62 only touched unrelated configuration files and did not deliver the feature). [swarm-active]
+- **#1436**: Build `system-message-bubble` component handling i18n keys system.profileUpdated, system.missedCall and wire to Centrifugo events. [swarm-active]
+- **#1435**: Create system message integration (backend Centrifugo publish and frontend i18n bubble). [swarm-active]
+- **#1434**: Render custom system event bubbles in chat (e.g., Profile updated, Missed call). [swarm-active]
+- **#1433**: Wire `LinkPreviewModule` into the main `AppModule` imports array. [swarm-active]
+- **#1432**: Write the actual NestJS code for the OpenGraph scraper (`LinkPreviewModule`, `LinkPreviewController`, `LinkPreviewService`) since only the dependencies were installed in the previous step. [swarm-active]
+- **#1431**: Create `LinkPreviewModule`, `LinkPreviewController` and `LinkPreviewService` in `backend/src/link-preview/` that uses `jsdom`/`cheerio` to fetch a URL, extract OpenGraph tags, sanitise with DOMPurify, cache results for 1 hour, and expose `GET /link-preview?url=...`. [swarm-active]
+- **#1430**: Implement actual OpenGraph service using installed dependencies (cheerio, dompurify, jsdom). [swarm-active]
+- **#1429**: Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed). [swarm-active]
+- **#1428**: Complete the implementation of the NestJS OpenGraph scraper and frontend rendering. [swarm-active]
+- **#1427**: Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET /link-preview?url=...` for the chat frontend. [swarm-active]
+- **#1426**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat. [swarm-active]
+- **#1425**: Fix `ChatRoomComponent.sendTextMessage()` (`frontend/src/app/components/chat-room/chat-room.component.ts:171`): it clears `textInput` and calls `draftsService.clearChatDraft()` _before_ `chatService.sendMessage` is awaited, with no restore in the `catch` block. A failed send (offline, server error, moderation rejection) currently loses the message text entirely instead of leaving it recoverable as a draft. Move the clear to after a successful send, matching the pattern already used correctly in `MomentsFeedComponent.submitMoment()`. [swarm-active]
+- **#1424**: Persist unsent chat messages and Moment drafts to `localStorage`. (Added `DraftsService` (`frontend/src/app/services/drafts.service.ts`) with per-room chat draft keys (`hellotalk_chat_draft_{roomId}`) and a single moment compose draft key (`hellotalk_moment_draft`), guarded for SSR/no-`localStorage` environments. Wired into `ChatRoomComponent`: loads the [swarm-active]
+- **#1423**: Exempt non-user-authored body fields (client error `stack` traces in `LogClientErrorDto`, Apple/Google IAP webhook payloads) from the global `SanitiseHtmlPipe`, which currently strips angle-bracket content like `<anonymous>` and generic type params from stack traces before they reach analytics. [swarm-active]
+- **#1422**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text. [swarm-active]
+- **#1421**: Design custom vector illustrations for No Messages, No Moments Found, and No Users Nearby. [swarm-active]
+- **#1420**: Implement custom Angular `ErrorHandler` logging client crashes to backend analytics. [swarm-active]
+- **#1419**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics. [swarm-active]
+- **#1418**: Create `.github/workflows/deploy.yml` for automated testing and Docker image builds. [swarm-active]
+- **#1416**: Build blocking update modal in Angular if current app version is deprecated. [swarm-active]
+- **#1415**: Build NestJS endpoint returning minimum supported app version. [swarm-active]
+- **#1413**: Restore backend `banUser` and `warnUser` endpoints (removed in the latest diff) so the admin-actions component can actually call them. [swarm-active]
+- **#1412**: Implement 1‑click ban and warning buttons. [swarm-active]
+- **#1410**: Admin portal: `AdminService.setVipStatus`/`banUser`/`warnUser` (frontend/src/app/services/admin.service.ts) already propagated real HTTP errors with no mock fallback (verified, not something this pass changed). The remaining gap was the missing client-side guard: `/admin` had no `canActivate`, so a non-admin who browsed there saw the fully populated mock user list before any mutation was attempted. Added `AdminService.checkAdminAccess()` (a real, no-mock-fallback call to `GET /admin/users`, which the [swarm-active]
+- **#1408**: Build Angular Admin Portal for user management. [swarm-active]
+- **#1407**: The diff provided was STILL for audio-rooms co-hosts. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts. [swarm-active]
+- **#1406**: The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts. [swarm-active]
+- **#1405**: Write Angular unit tests for `VocabularyStore` signals. [swarm-active]
+- **#1404**: The latest diff provided was STILL for audio-rooms co-hosts. Please actually write the tests for DiscoveryService in backend/src/discovery/discovery.service.spec.ts. [swarm-active]
+- **#1403**: Actually write the NestJS unit tests for `DiscoveryService` PostGIS queries (the previous diff was for audio-room co-hosts). [swarm-active]
+- **#1402**: Write NestJS unit tests for `DiscoveryService` PostGIS queries. [swarm-active]
+- **#1401**: Write E2E test flows for Authentication, Chat Messaging, and Moment Creation. [swarm-active]
+- **#1400**: Actually install and configure Cypress in the frontend directory (the previous diff was for audio-room co-hosts). [swarm-active]
+- **#1399**: Setup Cypress inside `frontend/`. [swarm-active]
+- **#1398**: Update `frontend/src/app/app.component.html` to visually render the unread badges using `unreadCounter.totalUnread()` (Requires HTML file). [swarm-active]
+- **#1397**: The latest provided diff was still for audio-room co-hosts (`inviteCoHost`/`removeCoHost`), not the navigation tabs UI. Please provide the correct frontend changes. [swarm-active]
+- **#1396**: Actually implement the UnreadCounterService integration in the frontend navigation tabs (the provided diff was for audio-room co-hosts). [swarm-active]
+- **#1395**: Integrate UnreadCounterService into navigation tabs UI to display unread badges. [swarm-active]
+- **#1394**: Implement global unread counter service updating app badge and navigation tabs. [swarm-active]
+- **#1393**: Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations). [swarm-active]
+- **#1392**: Build NestJS background job calculating top 10 recommended language partners daily. [swarm-active]
+- **#1391**: Implement the actual frontend Angular component for the swipeable full-screen lightbox (the previous diff only contained audio-room co-host changes). [swarm-active]
+- **#1390**: Build swipeable full-screen lightbox for Moments with multiple images. [swarm-active]
+- **#1389**: Add settings toggle to auto-play sequential voice notes in chat. [swarm-active]
+- **#1388**: Implement the actual caching logic in the frontend chat service/components (the provided diff only contained audio-room co-host changes). [swarm-active]
+- **#1387**: Cache translated text client-side to allow toggling between original and translation without extra API calls. [swarm-active]
+- **#1386**: Implement backend endpoint for daily check-in coin reward and frontend modal UI. [swarm-active]
+- **#1385**: Build daily login modal granting 5 to 10 free virtual coins upon first daily login. [swarm-active]
+- **#1384**: Fetch multiple-choice assessment questions from backend database. [swarm-active]
+- **#1383**: Implement frontend Angular component for the diagnostic quiz. [swarm-active]
+- **#1382**: Build dynamic diagnostic quiz component for new sign-ups. [swarm-active]
+- **#1381**: Actually implement the @mention logic in the comments service and frontend (the previous diff only contained audio-room co-host changes). [swarm-active]
+- **#1380**: Implement `@mention` notifications when tagged in a comment. [swarm-active]
+- **#1378**: Analyse Moments feed screenshots in `original-hello-talk-screenshots/`. [swarm-active]
+- **#1367**: Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard. [swarm-active]
+- **#1363**: Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views. [swarm-active]
+- **#1357**: Build Angular Audio Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid. [swarm-active]
+- **#1348**: Build filtering endpoints for Moments feed: `All`, `Classmates` (same target language), and `Following`. [swarm-active]
+- **#1346**: Build NestJS background worker (`TimelineWorker`) connected to Redis for fan-out processing (`RPUSH timeline_queue:{follower_id}`). [swarm-active]
+- **#1345**: Create Supabase SQL migration (`005_moments.sql`) for `moments`, `moment_comments`, and `moment_likes` tables. [swarm-active]
+- **#1344**: Build AI Pronunciation Scoring service (`POST /nlp/pronunciation-score`) grading spoken audio out of 100 with phonetic breakdown. [swarm-active]
+- **#1343**: Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments. [swarm-active]
+- **#1341**: Build NestJS `FlashcardsController` endpoints (`POST /flashcards`, `PATCH /flashcards/:id/srs`) to save words and update review schedules. [swarm-active]
+- **#1340**: Implement daily AI usage rate limiting in Redis (`daily_ai_usage:{user_id}:{date}`): cap at 10 requests/day for free users, unlimited for VIP (8 UKP / $10 USD per month). [swarm-active]
+- **#1339**: Build NestJS `NlpModule` routing translation and transliteration requests to Azure AI / DeepL. [swarm-active]
+- **#1338**: Build click-to-translate & define pop-up modal (`WordDefinitionModalComponent`) in Angular with dictionary definitions and pronunciation audio. [swarm-active]
+- **#1337**: Create Angular Signals vocabulary store (`VocabularyStore`) tracking word tokens mapped to SRS levels (`0`=Blue, `1` to `3`=Yellow, `4`=White). [swarm-active]
+- **#1336**: Build the core `TokenisedTextComponent` in Angular using native `Intl.Segmenter` API (`granularity: word`) to render clickable tokens. [swarm-active]
+- **#1335**: Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`. [swarm-active]
+- **#1334**: Implement client-side and server-side (`pg_trgm`) message search inside chat rooms. [swarm-active]
+- **#1333**: Implement a calendar view for users to track all their upcoming [swarm-active]
+- **#1332**: Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections. [swarm-active]
+- **#1331**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time. [swarm-active]
+- **#1330**: Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback. [swarm-active]
+- **#1329**: Build automated push notification reminders (e.g., Your Spanish Learning Event starts in 15 minutes). [swarm-active]
+- **#1328**: Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations. [swarm-active]
+- **#1327**: Implement RSVP functionality allowing users to mark Attending or Interested. [swarm-active]
+- **#1326**: Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text). [swarm-active]
+- **#1325**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts. [swarm-active]
+- **#1323**: Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`). [swarm-active]
+- **#1322**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description. [swarm-active]
+- **#1321**: Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables. [swarm-active]
+- **#1320**: Build a centralized Events discovery feed for users to find upcoming scheduled activities. [swarm-active]
+- **#1319**: Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals. [swarm-active]
+- **#1317**: Build NestJS endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims. [swarm-active]
+- **#1316**: Setup Centrifugo server configuration (`config.json`) and connect to Redis instance for pub/sub. [swarm-active]
+- **#1315**: Build Private Parties feature (VIP/Pro tier) allowing invite-only audio rooms for specific friends or study partners. [swarm-active]
+- **#1314**: Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and Serious Learner toggle. [swarm-active]
+- **#1312**: Build Angular Who Viewed Me component (`VisitorLogsComponent`): blur visitor avatars and names if user is on the free tier (`is_vip === false`), showing upgrade prompt for 8 UKP / $10 USD. [swarm-active]
+- **#1311**: Build Language Parties live audio rooms dedicated to spoken practice in a group setting. [swarm-active]
+- **#1310**: Build Angular Profile UI (`ProfileComponent`) with native/target language badges, audio intro player, and study streak display. [swarm-active]
+- **#1308**: Build NestJS `ProfileVisitsService` to record profile views and query visitor logs (`GET /users/:id/visitors`). [swarm-active]
+- **#1307**: Build a Groups Discovery tab within the chat interface for users to browse and join active group chats by topic. [swarm-active]
+- **#1306**: Build algorithmic Serious Learner filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`). [swarm-active]
+- **#1305**: Implement real-time text correction tools specifically designed to work within Group Chats (allowing members to correct each [swarm-active]
+- **#1304**: Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`). [swarm-active]
+- **#1303**: Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar). [swarm-active]
+- **#1302**: Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`). [swarm-active]
+- **#1300**: Configure Cloudflare R2 SDK (`@aws-sdk/client-s3`) in NestJS `MediaModule`. Create pre-signed URL upload endpoints for avatars and audio intros. [swarm-active]
+- **#1299**: Design and implement a Pro subscription tier mimicking Tandem Pro (unlimited translations, advanced visitor logs, nearby members visibility, ad-free). [swarm-active]
+- **#1298**: Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles). [swarm-active]
+- **#1297**: Implement in-app translations and language corrections with an interface mirroring [swarm-active]
+- **#1296**: Verify clean linting across both projects (`npm run lint`). [swarm-active]
+- **#1294**: Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints. [swarm-active]
+- **#1292**: Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`). [swarm-active]
+- **#1291**: Build a Serious Learner mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals. [swarm-active]
+- **#1290**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables. [swarm-active]
+- **#1288**: Create Supabase SQL migration (`001_initial_schema.sql`) for `users` table with PostGIS geography columns, `is_vip`, `coins_balance`, `study_streak_days`, and `correction_ratio`. [swarm-active]
+- **#1287**: Create comprehensive `.env.example` and setup NestJS `@nestjs/config` environment schema validation (`Joi`/`Zod`) to fail-fast on missing keys or malformed URLs. [swarm-active]
+- **#1286**: Build Recommended for You carousel based on mutual interests and activity levels. [swarm-active]
+- **#1285**: Create Docker Compose orchestration configuration (`docker-compose.yml` & `docker-compose.dev.yml`) orchestrating `api` (NestJS), `web` (Angular), `cache` (Redis 7), `websocket` (Centrifugo v5), and `sfu` (LiveKit v2). [swarm-active]
+- **#1283**: Install and configure Tailwind CSS in the Angular project (`tailwind.config.js` & `styles.scss`) using strictly logical properties (`ps-`, `pe-`, `ms-`, `me-`). [swarm-active]
+- **#1282**: Add quick-action Send Message and Follow buttons on list items. [swarm-active]
+- **#1281**: Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`). [swarm-active]
+- **#1279**: Initialise NestJS backend (`nest new backend --package-manager npm`). [swarm-active]
+- **#1275**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the _recurrence_ was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in [swarm-active]
+- **#1273**: Fix QA test failure: `Error: Process from config.webServer was not able to start. Exit code: 143`. Root cause: `e2e/playwright.config.ts` `webServer` runs `cd ../frontend && npm run start` (Angular dev server), which never reaches a successful compile because the frontend currently has real TypeScript build errors, so `ng serve` keeps failing/restarting until [swarm-active]
+- **#1272**: Fix QA test failure: `ReferenceError: describe is not defined`. [swarm-active]
+- **#1271**: Build GPS-based Nearby search rendering distance in miles or kilometres. [swarm-active]
+- **#1270**: Implement Has Audio Intro required filter. [swarm-active]
+- **#1266**: Add Serious Learner toggle to filter for active study streaks. [swarm-active]
+- **#1263**: Build Terms of Service and Privacy Policy document viewers. [swarm-active]
+- **#1260**: Add Restore Purchases workflow. [swarm-active]
+- **#1252**: Add Do Not Disturb scheduling. [swarm-active]
+- **#1248**: Add Hide Online Status and Hide VIP Status toggles. [swarm-active]
+- **#1246**: Implement Who can message me filters (Age, Gender, Native Language). [swarm-active]
+- **#1239**: Implement Who Viewed Me visitor logs. [swarm-active]
+- **#1238**: Build direct Send Message and Follow action buttons on external profiles. [swarm-active]
+- **#1230**: Build Profile Cover Photo upload and positioning. [swarm-active]
+- **#1198**: Block and report users or businesses. [swarm-active]
+- **#1196**: Disappearing messages (set to expire after 24 hours, 7 days, or 90 days). [swarm-active]
+- **#1195**: End-to-end encryption for all personal messages and calls. [swarm-active]
+- **#1177**: End-to-end encrypted voice calls. [swarm-active]
+- **#1176**: Doodle message sharing. [swarm-active]
+- **#1172**: Voice messages with playback speed control (1x, 1.5x, 2x). [swarm-active]
+- **#1171**: Instant video messages (short circular video notes). [swarm-active]
+- **#1170**: Photo and video sharing with an HD quality toggle. [swarm-active]
+- **#1169**: Rich link previews for URLs. [swarm-active]
+- **#1168**: Chat archiving and hidden chat folders. [swarm-active]
+- **#1167**: Pin priority chats to the top of the inbox. [swarm-active]
+- **#1165**: Starred messages for easy retrieval. [swarm-active]
+- **#1163**: Edit sent messages within a specific time limit. [swarm-active]
+- **#1162**: Forwarding messages with a forwarded label to prevent spam. [swarm-active]
+- **#1161**: Reply to specific messages (swipe-to-reply gesture). [swarm-active]
+- **#1160**: Message reactions using emojis. [swarm-active]
+- **#1159**: Typing indicators and online status visibility. [swarm-active]
+- **#1158**: Real-time text messaging with delivery and read receipts (single tick, double tick, blue tick). [swarm-active]
+- **#1157**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge). [swarm-active]
+- **#1156**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
+- **#1155**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
+- **#1153**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords. [swarm-active]
+- **#1149**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
+- **#1147**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience. [swarm-active]
+- **#1145**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed. [swarm-active]
+- **#1143**: Build shared Voiceroom Notes panel where hosts/speakers can post key vocabulary or discussion topics. [swarm-active]
+- **#1142**: Add haptic feedback for grading flashcards (e.g., success buzz for Known, gentle pulse for Learning). [swarm-active]
+- **#1139**: Implement AI-powered Conversation Starter suggestions in new chat windows based on [swarm-active]
+- **#1138**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
+- **#1136**: Implement a user-level Corrector Score based on ratings to display on profiles. [swarm-active]
+- **#1135**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
+- **#1134**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts. [swarm-active]
+- **#1126**: Implement Word of the Day feature on the [swarm-active]
+- **#1123**: Build Lessons module in Angular. [swarm-active]
+- **#1122**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
+- **#1115**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown. [swarm-active]
+- **#1112**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
+- **#1111**: Add Interests filter to Discovery search to match users with shared hobbies. [swarm-active]
+- **#1108**: Add `proficiency_level` (`a1` to `c2`) to `users` table schema and profile UI. [swarm-active]
+- **#1105**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads). [swarm-active]
+- **#1100**: Build User Filter Settings to restrict initial message senders by age or native language. [swarm-active]
+- **#1099**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden). [swarm-active]
+- **#1098**: Build Privacy Settings hub. [swarm-active]
+- **#1097**: Build Language Settings menu to switch UI language independently of study target. [swarm-active]
+- **#1094**: Build Appearance Settings menu. [swarm-active]
+- **#1092**: Build Linked Accounts settings page to manage connected social accounts. [swarm-active]
+- **#1087**: Complete implementation of system event bubbles (the diff provided for Phase 62 only touched unrelated configuration files and did not deliver the feature). [swarm-active]
+- **#1086**: Build `system-message-bubble` component handling i18n keys system.profileUpdated, system.missedCall and wire to Centrifugo events. [swarm-active]
+- **#1085**: Create system message integration (backend Centrifugo publish and frontend i18n bubble). [swarm-active]
+- **#1084**: Render custom system event bubbles in chat (e.g., Profile updated, Missed call). [swarm-active]
+- **#1083**: Wire `LinkPreviewModule` into the main `AppModule` imports array. [swarm-active]
+- **#1082**: Write the actual NestJS code for the OpenGraph scraper (`LinkPreviewModule`, `LinkPreviewController`, `LinkPreviewService`) since only the dependencies were installed in the previous step. [swarm-active]
+- **#1081**: Create `LinkPreviewModule`, `LinkPreviewController` and `LinkPreviewService` in `backend/src/link-preview/` that uses `jsdom`/`cheerio` to fetch a URL, extract OpenGraph tags, sanitise with DOMPurify, cache results for 1 hour, and expose `GET /link-preview?url=...`. [swarm-active]
+- **#1079**: Write the NestJS controller and service logic for the OpenGraph scraper (dependencies are installed). [swarm-active]
+- **#1078**: Complete the implementation of the NestJS OpenGraph scraper and frontend rendering. [swarm-active]
+- **#1077**: Implement the NestJS OpenGraph parser service: fetch URL, extract title/description/image with `cheerio` + `dompurify`, cache results, and expose `GET /link-preview?url=...` for the chat frontend. [swarm-active]
+- **#1076**: Build NestJS OpenGraph scraper rendering rich link preview cards in chat. [swarm-active]
+- **#1075**: Fix `ChatRoomComponent.sendTextMessage()` (`frontend/src/app/components/chat-room/chat-room.component.ts:171`): it clears `textInput` and calls `draftsService.clearChatDraft()` _before_ `chatService.sendMessage` is awaited, with no restore in the `catch` block. A failed send (offline, server error, moderation rejection) currently loses the message text entirely instead of leaving it recoverable as a draft. Move the clear to after a successful send, matching the pattern already used correctly in `MomentsFeedComponent.submitMoment()`. [swarm-active]
+- **#1074**: Persist unsent chat messages and Moment drafts to `localStorage`. (Added `DraftsService` (`frontend/src/app/services/drafts.service.ts`) with per-room chat draft keys (`hellotalk_chat_draft_{roomId}`) and a single moment compose draft key (`hellotalk_moment_draft`), guarded for SSR/no-`localStorage` environments. Wired into `ChatRoomComponent`: loads the [swarm-active]
+- **#1073**: Exempt non-user-authored body fields (client error `stack` traces in `LogClientErrorDto`, Apple/Google IAP webhook payloads) from the global `SanitiseHtmlPipe`, which currently strips angle-bracket content like `<anonymous>` and generic type params from stack traces before they reach analytics. [swarm-active]
+- **#1072**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text. [swarm-active]
+- **#1071**: Design custom vector illustrations for No Messages, No Moments Found, and No Users Nearby. [swarm-active]
+- **#1069**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics. [swarm-active]
+- **#1063**: Restore backend `banUser` and `warnUser` endpoints (removed in the latest diff) so the admin-actions component can actually call them. [swarm-active]
+- **#1058**: Build Angular Admin Portal for user management. [swarm-active]
+- **#1057**: The diff provided was STILL for audio-rooms co-hosts. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts. [swarm-active]
+- **#1056**: The latest diff provided was for audio-rooms co-hosts, not VocabularyStore. Please actually write the Angular unit tests for VocabularyStore signals in frontend/src/app/services/vocabulary.store.spec.ts. [swarm-active]
+- **#1052**: Write NestJS unit tests for `DiscoveryService` PostGIS queries. [swarm-active]
+- **#1051**: Write E2E test flows for Authentication, Chat Messaging, and Moment Creation. [swarm-active]
+- **#1050**: Actually install and configure Cypress in the frontend directory (the previous diff was for audio-room co-hosts). [swarm-active]
+- **#1047**: The latest provided diff was still for audio-room co-hosts (`inviteCoHost`/`removeCoHost`), not the navigation tabs UI. Please provide the correct frontend changes. [swarm-active]
+- **#1046**: Actually implement the UnreadCounterService integration in the frontend navigation tabs (the provided diff was for audio-room co-hosts). [swarm-active]
+- **#1045**: Integrate UnreadCounterService into navigation tabs UI to display unread badges. [swarm-active]
+- **#1043**: Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations). [swarm-active]
+- **#1040**: Build swipeable full-screen lightbox for Moments with multiple images. [swarm-active]
+- **#1039**: Add settings toggle to auto-play sequential voice notes in chat. [swarm-active]
+- **#1037**: Cache translated text client-side to allow toggling between original and translation without extra API calls. [swarm-active]
+- **#1032**: Build dynamic diagnostic quiz component for new sign-ups. [swarm-active]
+- **#1029**: Create Angular component for the Liked By modal. [swarm-active]
+- **#1027**: Build Liked By modal listing all users who liked a Moment. [swarm-active]
+- **#1025**: Fix `inviteCoHost` to demote/notify the existing co-host (and stop their publish) before assigning a new one, instead of silently overwriting `co_host_id`. [swarm-active]
+- **#1024**: Implement Invite Co-Host split-screen video layout. [swarm-active]
+- **#1022**: Create GiftAnimationComponent and integrate it into chat/feed for gift payloads. [swarm-active]
+- **#1014**: Analyse Moments feed screenshots in `original-hello-talk-screenshots/`. [swarm-active]
+- **#1003**: Build Developer Tier (20 UKP / $26 USD per month) API key management and developer analytics dashboard. [swarm-active]
+- **#999**: Enforce consumer VIP benefits across API (8 UKP / $10 USD per month or 6 UKP / $8 annual equivalent): unlimited AI, 3 target languages, location spoofing, incognito profile views. [swarm-active]
+- **#993**: Build Angular Audio Room UI (`AudioRoomComponent`) displaying Host, Speaker Stage Grid, and Listener Audience Grid. [swarm-active]
+- **#984**: Build filtering endpoints for Moments feed: `All`, `Classmates` (same target language), and `Following`. [swarm-active]
+- **#982**: Build NestJS background worker (`TimelineWorker`) connected to Redis for fan-out processing (`RPUSH timeline_queue:{follower_id}`). [swarm-active]
+- **#981**: Create Supabase SQL migration (`005_moments.sql`) for `moments`, `moment_comments`, and `moment_likes` tables. [swarm-active]
+- **#979**: Build AI Grammar Checker pre-send utility (`POST /nlp/grammar-check`) flagging sentence errors before sending in chat or moments. [swarm-active]
+- **#977**: Build NestJS `FlashcardsController` endpoints (`POST /flashcards`, `PATCH /flashcards/:id/srs`) to save words and update review schedules. [swarm-active]
+- **#975**: Build NestJS `NlpModule` routing translation and transliteration requests to Azure AI / DeepL. [swarm-active]
+- **#974**: Build click-to-translate & define pop-up modal (`WordDefinitionModalComponent`) in Angular with dictionary definitions and pronunciation audio. [swarm-active]
+- **#973**: Create Angular Signals vocabulary store (`VocabularyStore`) tracking word tokens mapped to SRS levels (`0`=Blue, `1` to `3`=Yellow, `4`=White). [swarm-active]
+- **#971**: Create Supabase SQL migration (`004_flashcards_srs.sql`) for `flashcards` table indexed by `user_id` and `word_token`. [swarm-active]
+- **#970**: Implement client-side and server-side (`pg_trgm`) message search inside chat rooms. [swarm-active]
+- **#969**: Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections. [swarm-active]
+- **#968**: Build hold-to-record voice note recorder (`VoiceRecorderComponent`) in Angular with Cloudflare R2 direct upload and inline audio playback. [swarm-active]
+- **#967**: Build HTML5 Canvas Doodle Tool component (`DoodlePadComponent`) in Angular allowing users to draw and transmit visual explanations. [swarm-active]
+- **#966**: Implement custom JSON diff rendering (`VisualDiffComponent`) in Angular for language corrections (red strikethrough for original, green for fixed text). [swarm-active]
+- **#965**: Build Angular 1-on-1 and Group Chat UI (`ChatRoomComponent`) with real-time message stream, typing indicators, and read receipts. [swarm-active]
+- **#964**: Build NestJS endpoint `POST /chat/messages` to validate messages, persist to Supabase `chat_messages` table, and publish to Centrifugo via HTTP API (`/api/publish`). [swarm-active]
+- **#963**: Create Supabase SQL migration (`003_chat_and_favourites.sql`) for `chat_messages` and `favourites` tables. [swarm-active]
+- **#962**: Install `centrifuge-js` in Angular and build a resilient global `CentrifugeService` with reconnection and connection state signals. [swarm-active]
+- **#961**: Build NestJS endpoint (`POST /chat/token`) to mint Centrifugo connection JWTs with user sub claims. [swarm-active]
+- **#959**: Build Angular Matchmaking & Discovery UI (`DiscoveryComponent`) with distance slider, language filters, and Serious Learner toggle. [swarm-active]
+- **#958**: Build Angular Who Viewed Me component (`VisitorLogsComponent`): blur visitor avatars and names if user is on the free tier (`is_vip === false`), showing upgrade prompt for 8 UKP / $10 USD. [swarm-active]
+- **#957**: Build Angular Profile UI (`ProfileComponent`) with native/target language badges, audio intro player, and study streak display. [swarm-active]
+- **#956**: Build NestJS `ProfileVisitsService` to record profile views and query visitor logs (`GET /users/:id/visitors`). [swarm-active]
+- **#955**: Build algorithmic Serious Learner filtering in discovery (`study_streak_days > 7` and `correction_ratio >= 0.8`). [swarm-active]
+- **#954**: Implement VIP location spoofing logic in `DiscoveryService` (override real GPS coordinates with `mock_location` when `is_vip === true`). [swarm-active]
+- **#953**: Build NestJS `DiscoveryController` PostGIS matching algorithm: Find users within customizable radius (`ST_DWithin`). [swarm-active]
+- **#952**: Configure Cloudflare R2 SDK (`@aws-sdk/client-s3`) in NestJS `MediaModule`. Create pre-signed URL upload endpoints for avatars and audio intros. [swarm-active]
+- **#951**: Create NestJS `UsersController` & `UsersService` to handle profile updates (bio, native language, target languages up to 3 for VIP, privacy toggles). [swarm-active]
+- **#950**: Verify clean linting across both projects (`npm run lint`). [swarm-active]
+- **#949**: Create NestJS `SupabaseAuthGuard` and `CurrentUser` decorator to validate Supabase JWTs on all REST and WebSocket endpoints. [swarm-active]
+- **#948**: Implement Supabase JWT email/password and OAuth authentication service in Angular (`AuthService`). [swarm-active]
+- **#947**: Create Supabase SQL migration (`002_trust_and_safety.sql`) for `profile_visits`, `blocks`, and `reports` tables. [swarm-active]
+- **#942**: Initialise Angular frontend (`ng new frontend --style=scss --routing=true --ssr=false`). [swarm-active]
+- **#938**: Fix QA test failure: `Error: Process from config.webServer was not able to start. Exit code: 143`. Root cause: `e2e/playwright.config.ts` `webServer` runs `cd ../frontend && npm run start` (Angular dev server), which never reaches a successful compile because the frontend currently has real TypeScript build errors, so `ng serve` keeps failing/restarting until [swarm-active]
+- **#937**: Fix QA test failure: `ReferenceError: describe is not defined`. [swarm-active]
+- **#934**: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (from `e2e/playwright.config.ts`, whose `webServer.command` runs `cd ../frontend && npm run start`). Root cause per `qa_errors.log`: the Angular dev server never reaches a successful compile because of a real TypeScript build error, `TS4111: Property status comes from an index signature, so it must be accessed with [status]` at `frontend/src/app/services/moderation.service.ts:41` (`params.status = status;`, where `params` is typed `Record<string, string>`). Because `ng serve` keeps failing/restarting, [swarm-active]
+- **#896**: Fix QA test failure: `TS2307: Cannot find module ../../../environments/environment or its corresponding type declarations.` in `frontend/src/app/services/faq.service.ts:4` and `frontend/src/app/services/moderation.service.ts:5` (per `qa_errors.log`). Both files sit at `frontend/src/app/services/` but use a 3-level-up relative import (`../../../environments/environment`), whereas every sibling service in that same directory (e.g. `notification.service.ts`, `user.service.ts`, `chat.service.ts`) correctly uses 2 levels up (`../../environments/environment`) to reach `frontend/src/environments/environment.ts`. Fix: correct both imports to `../../environments/environment`. [swarm-active]
+- **#878**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules. (Added `FontScaleService` (`frontend/src/app/services/font-scale.service.ts`), which persists a 80-150% scale to `localStorage` and sets `document.documentElement.style.fontSize` so every Tailwind `rem` utility across the app scales together. Wired a slider into `SettingsComponent` under a new Accessibility section, and injected the service in `AppComponent` so the persisted scale applies on boot. Verified: `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json` are clean, and `ng test --no-watch` passes 115/119 (28/28 spec files, 4 pre-existing skips) including the new `font-scale.service.spec.ts`. Follow-up review found `font-scale.service.ts` and `font-scale.service.spec.ts` were left untracked by git (`??`), so they were invisible to `git diff HEAD` and would have been silently dropped from the next commit even though `SettingsComponent`/`AppComponent` already depend on them; `git add`ed both to fix.) [swarm-active]
+- **#875**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the *recurrence* was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in [swarm-active]
+- **#871**: Fix QA test failure: `ReferenceError: describe is not defined` in test suites. [swarm-active]
+- **#857**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time. [swarm-active]
+- **#855**: Implement RSVP functionality allowing users to mark Attending or Interested. [swarm-active]
+- **#853**: Implement Create Event modal requiring fields: Title (What), Date & Time (When), Platform/Location (Where - e.g., Audio Room, Zoom, In-person), and Description. [swarm-active]
+- **#852**: Build a centralized Events discovery feed for users to find upcoming scheduled activities. [swarm-active]
+- **#845**: Implement real-time text correction tools specifically designed to work within Group Chats (allowing members to correct each [swarm-active]
+- **#844**: Build Group Chats feature allowing 2 to 19 partners to collaborate in a single thread based on specific interests (e.g., Beginner French Grammar). [swarm-active]
+- **#841**: Implement in-app translations and language corrections with an interface mirroring [swarm-active]
+- **#838**: Build a Serious Learner mode toggle that hides social feeds and prioritizes 1-on-1 matching based on strict language goals. [swarm-active]
+- **#836**: Build Recommended for You carousel based on mutual interests and activity levels. [swarm-active]
+- **#835**: Build Recommended for You carousel based on mutual interests and activity levels. [swarm-active]
+- **#832**: Add quick-action Send Message and Follow buttons on list items. [swarm-active]
+- **#831**: Add quick-action Send Message and Follow buttons on list items. [swarm-active]
+- **#822**: Build GPS-based Nearby search rendering distance in miles or kilometres. [swarm-active]
+- **#821**: Build GPS-based Nearby search rendering distance in miles or kilometres. [swarm-active]
+- **#820**: Implement Has Audio Intro required filter. [swarm-active]
+- **#819**: Implement Has Audio Intro required filter. [swarm-active]
+- **#813**: Add Serious Learner toggle to filter for active study streaks. [swarm-active]
+- **#812**: Add Serious Learner toggle to filter for active study streaks. [swarm-active]
+- **#807**: Build Terms of Service and Privacy Policy document viewers. [swarm-active]
+- **#801**: Add Restore Purchases workflow. [swarm-active]
+- **#800**: Add Restore Purchases workflow. [swarm-active]
+- **#785**: Add Do Not Disturb scheduling. [swarm-active]
+- **#784**: Add Do Not Disturb scheduling. [swarm-active]
+- **#777**: Add Hide Online Status and Hide VIP Status toggles. [swarm-active]
+- **#776**: Add Hide Online Status and Hide VIP Status toggles. [swarm-active]
+- **#773**: Implement Who can message me filters (Age, Gender, Native Language). [swarm-active]
+- **#772**: Implement Who can message me filters (Age, Gender, Native Language). [swarm-active]
+- **#759**: Implement Who Viewed Me visitor logs. [swarm-active]
+- **#758**: Implement Who Viewed Me visitor logs. [swarm-active]
+- **#757**: Build direct Send Message and Follow action buttons on external profiles. [swarm-active]
+- **#756**: Build direct Send Message and Follow action buttons on external profiles. [swarm-active]
+- **#742**: Build Profile Cover Photo upload and positioning. [swarm-active]
+- **#741**: Build Profile Cover Photo upload and positioning. [swarm-active]
+- **#714**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge). [swarm-active]
+- **#713**: Build Language Challenge system with coin-based entry fees and prize pools (e.g., 7-day writing streak challenge). [swarm-active]
+- **#712**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
+- **#711**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
+- **#710**: Allow spending virtual coins to unlock premium one-off AI services (e.g., Conversation Analysis Report). [swarm-active]
+- **#709**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
+- **#708**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
+- **#707**: Build Suggest Flashcards feature to auto-detect and suggest new vocabulary from a [swarm-active]
+- **#703**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords. [swarm-active]
+- **#702**: Add a Mute Word client-side filter for the Moments feed to hide posts with specific keywords. [swarm-active]
+- **#700**: Implement Request Correction from Group feature/message type for group chats. [swarm-active]
+- **#699**: Implement Request Correction from Group feature/message type for group chats. [swarm-active]
+- **#698**: Implement Request Correction from Group feature/message type for group chats. [swarm-active]
+- **#694**: Implement Translate Bio button on user profile cards and pages. [swarm-active]
+- **#693**: Implement Translate Bio button on user profile cards and pages. [swarm-active]
+- **#692**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
+- **#691**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
+- **#690**: Build Audio Intros feed in Discovery to browse users by listening to their spoken introductions. [swarm-active]
+- **#688**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles). [swarm-active]
+- **#687**: Add a Soundboard feature for hosts to play pre-recorded audio clips (e.g., applause, jingles). [swarm-active]
+- **#686**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience. [swarm-active]
+- **#685**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience. [swarm-active]
+- **#684**: Build a Quick Poll feature for Voiceroom hosts to create multiple-choice questions for the audience. [swarm-active]
+- **#680**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed. [swarm-active]
+- **#679**: Add AI-generated Session Summary to the archived audio room recording, listing key topics and vocabulary discussed. [swarm-active]
+- **#672**: Build shared Voiceroom Notes panel where hosts/speakers can post key vocabulary or discussion topics. [swarm-active]
+- **#671**: Add haptic feedback for grading flashcards (e.g., success buzz for Known, gentle pulse for Learning). [swarm-active]
+- **#670**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed. [swarm-active]
+- **#669**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed. [swarm-active]
+- **#668**: Implement Partner of the Week algorithm to highlight highly-rated language partners in the Discovery feed. [swarm-active]
+- **#664**: Implement AI-powered Conversation Starter suggestions in new chat windows based on [swarm-active]
+- **#663**: Implement AI-powered Conversation Starter suggestions in new chat windows based on [swarm-active]
+- **#662**: Implement AI-powered Conversation Starter suggestions in new chat windows based on [swarm-active]
+- **#661**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
+- **#660**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
+- **#659**: Build Simplify this text AI feature in the message context menu for learners to understand complex sentences. [swarm-active]
+- **#655**: Implement a user-level Corrector Score based on ratings to display on profiles. [swarm-active]
+- **#654**: Implement a user-level Corrector Score based on ratings to display on profiles. [swarm-active]
+- **#653**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
+- **#652**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
+- **#651**: Build Correction Quality rating system (up/down votes) for community corrections on Moments. [swarm-active]
+- **#650**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts. [swarm-active]
+- **#649**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts. [swarm-active]
+- **#648**: Implement Create Flashcard context menu option for any text selection within chat messages and moment posts. [swarm-active]
+- **#628**: Implement Word of the Day feature on the [swarm-active]
+- **#626**: Implement Word of the Day feature on the [swarm-active]
+- **#619**: Build Lessons module in Angular. [swarm-active]
+- **#618**: Build Lessons module in Angular. [swarm-active]
+- **#617**: Build Lessons module in Angular. [swarm-active]
+- **#616**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
+- **#615**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
+- **#614**: Build Daily/Weekly Quests feature with coin rewards (e.g., Correct 3 moments today). [swarm-active]
+- **#607**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak). [swarm-active]
+- **#605**: Build Achievements service in NestJS to award badges for milestones (e.g., 100 messages sent, 7-day streak). [swarm-active]
+- **#601**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview). [swarm-active]
+- **#599**: Build Role-play scenarios for AI chat (e.g., ordering coffee, job interview). [swarm-active]
+- **#596**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown. [swarm-active]
+- **#595**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown. [swarm-active]
+- **#594**: Add Explain this context menu option on corrected text to get AI-generated grammar breakdown. [swarm-active]
+- **#587**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
+- **#586**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
+- **#585**: Add Learning Goals free-text field to user profile to state user motivations. [swarm-active]
+- **#584**: Add Interests filter to Discovery search to match users with shared hobbies. [swarm-active]
+- **#583**: Add Interests filter to Discovery search to match users with shared hobbies. [swarm-active]
+- **#582**: Add Interests filter to Discovery search to match users with shared hobbies. [swarm-active]
+- **#571**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow. [swarm-active]
+- **#570**: Build Personal Data Collection GDPR hub with Request My Data Archive button and automated Delete Account workflow. [swarm-active]
+- **#569**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy. [swarm-active]
+- **#568**: Build Legal & Privacy Notices viewer for Terms of Service and Privacy Policy. [swarm-active]
+- **#565**: Build Help & About page displaying App Version, build number, and open-source licences. [swarm-active]
+- **#564**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads). [swarm-active]
+- **#562**: Build Data & Storage page (Clear Local Cache, toggle cellular data auto-downloads). [swarm-active]
+- **#561**: Build Chat Settings page (Toggle Auto-Translate, Read Receipts, Enter-to-Send). [swarm-active]
+- **#553**: Build unified Notifications Area (Inbox) for system alerts, likes, comments, and followers. [swarm-active]
+- **#551**: Build Block Management page to manage and unblock users. [swarm-active]
+- **#545**: Implement Who can see my profile toggle (Everyone, VIPs only, Hidden). [swarm-active]
+- **#543**: Build Privacy Settings hub. [swarm-active]
+- **#541**: Build Privacy Settings hub. [swarm-active]
+- **#538**: Build Language Settings menu to switch UI language independently of study target. [swarm-active]
+- **#533**: Build Appearance Settings menu. [swarm-active]
+- **#520**: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously. [swarm-active]
+- **#519**: AUTONOMOUS DIRECTIVE: Execute complete codebase audit. Verify zero hardcoded strings exist, confirm visual match against `/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`, run test suites, and append any remaining visual bugs as new tasks below. Leave this box unchecked to loop continuously. [swarm-active]
+- **#517**: Build Forgot Password UI and NestJS email dispatch service. [swarm-active]
+- **#508**: Persist unsent chat messages and Moment drafts to `localStorage`. [swarm-active]
+- **#506**: Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text. [swarm-active]
+- **#504**: Design custom vector illustrations for No Messages, No Moments Found, and No Users Nearby. [swarm-active]
+- **#497**: Configure Prometheus and Grafana Docker containers for NestJS and Centrifugo metrics. [swarm-active]
+- **#481**: Implement 1-click ban and warning buttons. [swarm-active]
+- **#480**: Implement 1-click ban and warning buttons. [swarm-active]
+- **#461**: Setup Cypress inside `frontend/`. [swarm-active]
+- **#456**: Build NestJS background job calculating top 10 recommended language partners daily. [swarm-active]
+- **#453**: Build swipeable full-screen lightbox for Moments with multiple images. [swarm-active]
+- **#452**: Build swipeable full-screen lightbox for Moments with multiple images. [swarm-active]
+- **#449**: Add settings toggle to auto-play sequential voice notes in chat. [swarm-active]
+- **#443**: Build daily login modal granting 5 to 10 free virtual coins upon first daily login. [swarm-active]
+- **#440**: Fetch multiple-choice assessment questions from backend database. [swarm-active]
+- **#431**: Build Liked By modal listing all users who liked a Moment. [swarm-active]
+- **#429**: Implement Invite Co-Host split-screen video layout. [swarm-active]
+- **#418**: Configure STUN/TURN server credentials in LiveKit for strict corporate NAT networks. [swarm-active]
+- **#406**: Allow VIP users to select custom primary accent colours. [swarm-active]
+- **#402**: Allow VIP users to select custom primary accent colours. [swarm-active]
+- **#395**: Build My Stats dashboard tracking study hours, messages sent, and corrections made. [swarm-active]
+- **#389**: Allow spending virtual coins to unlock animated sticker packs. [swarm-active]
+- **#385**: Build Sticker Store UI. [swarm-active]
+- **#380**: Implement Download My Data button triggering a NestJS JSON export worker. [swarm-active]
+- **#379**: Implement Download My Data button triggering a NestJS JSON export worker. [swarm-active]
+- **#377**: Build dynamic Terms of Service and Privacy Policy document viewer. [swarm-active]
+- **#376**: Build dynamic Terms of Service and Privacy Policy document viewer. [swarm-active]
+- **#371**: Configure Angular Universal (SSR) for public Voiceroom preview pages. [swarm-active]
+- **#368**: Configure Angular Universal (SSR) for public Voiceroom preview pages. [swarm-active]
+- **#359**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules. [swarm-active]
+- **#353**: Build global No Network Connection banner component. [swarm-active]
+- **#350**: Implement IndexedDB message queuing for offline chat composition. [swarm-active]
+- **#348**: Configure Angular Service Worker (`@angular/pwa`) for asset caching. [swarm-active]
+- **#334**: Implement Host Moderation controls (Mute speaker, kick off stage). [swarm-active]
+- **#331**: Build Voiceroom Creation modal (Title, Language Pair, Topic). [swarm-active]
+- **#330**: Build Voiceroom Creation modal (Title, Language Pair, Topic). [swarm-active]
+- **#328**: Add Voice Room Active filter to find users currently hosting streams. [swarm-active]
+- **#326**: Add Voice Room Active filter to find users currently hosting streams. [swarm-active]
+- **#292**: Build interactive Flashcard Review UI (Flip animations and grading buttons). [swarm-active]
+- **#291**: Build interactive Flashcard Review UI (Flip animations and grading buttons). [swarm-active]
+- **#286**: Build Flashcard Deck UI to organize saved vocabulary. [swarm-active]
+- **#285**: Build Flashcard Deck UI to organize saved vocabulary. [swarm-active, factory-active]
+- **#275**: Build Restore Purchases button for app store compliance. [swarm-active, factory-active]
+- **#262**: Build Incoming Call modal with ringtone audio and accept/reject controls. [swarm-active, factory-active]
+- **#258**: Add long-press context menu on mobile to copy, favourite, or report messages. [swarm-active, factory-active, factory-quarantined, needs-human]

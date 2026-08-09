@@ -18,12 +18,18 @@ import {
   VoiceroomCreateModalComponent,
   VoiceroomCreatePayload,
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
+import {
+  PrivatePartyCreateModalComponent,
+  PrivatePartyCreatePayload,
+} from '../private-party-create-modal/private-party-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
 import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
+import { SoundboardComponent } from '../soundboard/soundboard.component';
+import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -31,9 +37,11 @@ import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.comp
     TranslatePipe,
     RoomChatComponent,
     VideoRoomComponent,
+    VideoClassroomErrorBoundaryComponent,
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
+    PrivatePartyCreateModalComponent,
     ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
     QuickPollFormComponent,
@@ -41,6 +49,7 @@ import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.comp
     LiveChatOverlayComponent,
     TipHostModalComponent,
     VoiceroomNotesComponent,
+    SoundboardComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -52,6 +61,7 @@ export class AudioRoomComponent implements OnInit {
   private readonly confirmService = inject(ConfirmService);
 
   readonly showCreateModal = signal<boolean>(false);
+  readonly showPrivatePartyModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
   readonly showTipModal = signal<boolean>(false);
   readonly showSafetyModal = signal<boolean>(false);
@@ -96,6 +106,7 @@ export class AudioRoomComponent implements OnInit {
     await Promise.all([
       this.store.loadActiveRooms(),
       this.store.loadRoomsByLanguage(),
+      this.store.loadPrivateRooms(),
     ]);
     try {
       const result = await firstValueFrom(
@@ -141,6 +152,23 @@ export class AudioRoomComponent implements OnInit {
     }
   }
 
+  async createPrivateParty(payload: PrivatePartyCreatePayload): Promise<void> {
+    try {
+      const room = await this.store.createPrivateParty({
+        title: payload.title,
+        languagePair: payload.languagePair,
+        topicTag: payload.topicTag,
+        isVideoStream: payload.isVideoStream,
+        invitedUserIds: payload.invitedUserIds,
+      });
+      this.showPrivatePartyModal.set(false);
+      await this.store.joinRoom(room);
+    } catch (e) {
+      console.error('Error creating private party:', e);
+      showToast(this.i18n.translate('privateParty.createError'));
+    }
+  }
+
   async join(room: AudioRoomRecord): Promise<void> {
     await this.store.joinRoom(room);
   }
@@ -171,8 +199,7 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async kick(targetUserId: string): Promise<void> {
-    // Kicking off stage is functionally demoting them back to a listener
-    await this.store.demoteSpeaker(targetUserId);
+    await this.store.kickSpeaker(targetUserId);
   }
 
   async archive(): Promise<void> {

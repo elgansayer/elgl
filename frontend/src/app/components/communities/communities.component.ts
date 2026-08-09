@@ -5,7 +5,6 @@ import { CommunitiesService } from '../../services/communities.service';
 
 @Component({
   selector: 'app-communities',
-  standalone: true,
   imports: [FormsModule, TranslatePipe],
   template: `
     <div class="p-4">
