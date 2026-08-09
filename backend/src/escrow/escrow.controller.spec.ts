@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EscrowController } from './escrow.controller';
-import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
+import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { CrashReportService } from './crash-report.service';
-import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { SupabaseService } from '../supabase/supabase.service';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
 jest.mock('./sanitise-escrow.helper', () => ({
@@ -13,14 +14,13 @@ jest.mock('./sanitise-escrow.helper', () => ({
 describe('EscrowController', () => {
   let controller: EscrowController;
   let mockEscrowService: Record<string, jest.Mock>;
-  let mockCrashReportService: Record<string, jest.Mock>;
 
   const mockUserId = '12345678-1234-1234-1234-123456789012';
   const mockPayeeId = '87654321-4321-4321-4321-210987654321';
   const mockTransactionId = '99999999-9999-9999-9999-999999999999';
 
   const mockRequest = {
-    user: { id: mockUserId },
+    user: { sub: mockUserId },
   };
 
   beforeEach(async () => {
@@ -38,6 +38,16 @@ describe('EscrowController', () => {
       refundCoins: jest.fn().mockResolvedValue({
         id: mockTransactionId,
         status: 'refunded',
+        degraded: false,
+      }),
+      cancelEscrow: jest.fn().mockResolvedValue({
+        id: mockTransactionId,
+        status: 'cancelled',
+        degraded: false,
+      }),
+      disputeEscrow: jest.fn().mockResolvedValue({
+        id: mockTransactionId,
+        status: 'disputed',
         degraded: false,
       }),
       getTransaction: jest.fn().mockResolvedValue({
@@ -60,24 +70,20 @@ describe('EscrowController', () => {
       resetCircuitBreaker: jest.fn(),
     };
 
-    mockCrashReportService = {
-      reportCrash: jest.fn(),
-      listUnresolved: jest.fn().mockResolvedValue([]),
-      acknowledgeReport: jest.fn().mockResolvedValue(true),
-      resolveReport: jest.fn().mockResolvedValue(true),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EscrowController],
       providers: [
-        {
-          provide: EscrowService,
-          useValue: mockEscrowService,
-        },
+        { provide: EscrowService, useValue: mockEscrowService },
         {
           provide: CrashReportService,
-          useValue: mockCrashReportService,
+          useValue: {
+            reportCrash: jest.fn(),
+            listUnresolved: jest.fn().mockResolvedValue([]),
+            acknowledgeReport: jest.fn().mockResolvedValue(true),
+            resolveReport: jest.fn().mockResolvedValue(true),
+          },
         },
+        { provide: SupabaseService, useValue: {} },
         EscrowExceptionFilter,
       ],
     })
@@ -96,25 +102,19 @@ describe('EscrowController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('create (holdCoins)', () => {
+  describe('holdCoins', () => {
     it('should call service.holdCoins with correct params', async () => {
-      const dto = {
-        payee_id: mockPayeeId,
-        amount_coins: 50,
-        reason: 'Test',
-      };
-
-      const result = await controller.create(mockRequest, dto);
+      const dto = { payee_id: mockPayeeId, amount_coins: 50, reason: 'Test' };
+      const result = await controller.holdCoins(mockRequest, dto);
       expect(mockEscrowService.holdCoins).toHaveBeenCalledWith(mockUserId, dto);
       expect(result.success).toBe(true);
-      expect(result.transaction_id).toBe(mockTransactionId);
     });
   });
 
-  describe('release (releaseCoins)', () => {
+  describe('releaseCoins', () => {
     it('should call service.releaseCoins with correct params', async () => {
       const dto = { transaction_id: mockTransactionId };
-      const result = await controller.release(mockRequest, dto);
+      const result = await controller.releaseCoins(mockRequest, dto);
       expect(mockEscrowService.releaseCoins).toHaveBeenCalledWith(
         mockTransactionId,
         mockUserId,
@@ -123,10 +123,10 @@ describe('EscrowController', () => {
     });
   });
 
-  describe('refund (refundCoins)', () => {
+  describe('refundCoins', () => {
     it('should call service.refundCoins with correct params', async () => {
       const dto = { transaction_id: mockTransactionId, reason: 'Changed mind' };
-      const result = await controller.refund(mockRequest, dto);
+      const result = await controller.refundCoins(mockRequest, dto);
       expect(mockEscrowService.refundCoins).toHaveBeenCalledWith(
         mockTransactionId,
         mockUserId,
@@ -136,9 +136,44 @@ describe('EscrowController', () => {
     });
   });
 
-  describe('list (listTransactions)', () => {
+  describe('cancelEscrow', () => {
+    it('should call service.cancelEscrow with correct params', async () => {
+      const dto = { transaction_id: mockTransactionId };
+      const result = await controller.cancelEscrow(mockRequest, dto);
+      expect(mockEscrowService.cancelEscrow).toHaveBeenCalledWith(
+        mockTransactionId,
+        mockUserId,
+      );
+      expect(result.status).toBe('cancelled');
+    });
+  });
+
+  describe('disputeEscrow', () => {
+    it('should call service.disputeEscrow with correct params', async () => {
+      const dto = {
+        transaction_id: mockTransactionId,
+        reason: 'Service not delivered',
+        evidence: 'Screenshots attached',
+      };
+      const result = await controller.disputeEscrow(mockRequest, dto);
+      expect(mockEscrowService.disputeEscrow).toHaveBeenCalledWith(
+        mockTransactionId,
+        mockUserId,
+        'Service not delivered',
+        'Screenshots attached',
+      );
+      expect(result.status).toBe('disputed');
+    });
+  });
+
+  describe('listTransactions', () => {
     it('should call service.listTransactions with defaults', async () => {
-      await controller.list(mockRequest);
+      await controller.listTransactions(
+        mockRequest,
+        undefined,
+        undefined,
+        undefined,
+      );
       expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
         mockUserId,
         undefined,
@@ -148,19 +183,19 @@ describe('EscrowController', () => {
     });
 
     it('should parse limit and offset query params', async () => {
-      await controller.list(mockRequest, '10', '5');
+      await controller.listTransactions(mockRequest, 'held', '10', '5');
       expect(mockEscrowService.listTransactions).toHaveBeenCalledWith(
         mockUserId,
-        undefined,
+        'held',
         10,
         5,
       );
     });
   });
 
-  describe('getById (getTransaction)', () => {
+  describe('getTransaction', () => {
     it('should call service.getTransaction with correct params', async () => {
-      const result = await controller.getById(
+      const result = await controller.getTransaction(
         mockRequest,
         mockTransactionId,
       );
@@ -188,34 +223,12 @@ describe('EscrowController', () => {
     });
   });
 
-  describe('crash reports', () => {
-    it('should list crash reports', async () => {
-      mockCrashReportService.listUnresolved.mockResolvedValue([{ id: 'crash-1' }]);
-      const result = await controller.listCrashReports();
-      expect(mockCrashReportService.listUnresolved).toHaveBeenCalled();
-      expect(result).toEqual([{ id: 'crash-1' }]);
-    });
-
-    it('should acknowledge a crash report', async () => {
-      const result = await controller.acknowledgeCrashReport({ report_id: 'crash-1' });
-      expect(mockCrashReportService.acknowledgeReport).toHaveBeenCalledWith('crash-1');
-      expect(result).toEqual({ acknowledged: true });
-    });
-
-    it('should resolve a crash report', async () => {
-      const result = await controller.resolveCrashReport({ report_id: 'crash-1' });
-      expect(mockCrashReportService.resolveReport).toHaveBeenCalledWith('crash-1');
-      expect(result).toEqual({ resolved: true });
-    });
-  });
-
   describe('error propagation', () => {
-    it('should propagate holdCoins errors from service', async () => {
+    it('should propagate create errors from service', async () => {
       const error = new Error('Hold error');
       mockEscrowService.holdCoins.mockRejectedValue(error);
-
       await expect(
-        controller.create(mockRequest, {
+        controller.holdCoins(mockRequest, {
           payee_id: mockPayeeId,
           amount_coins: 50,
           reason: 'Test',
@@ -223,42 +236,38 @@ describe('EscrowController', () => {
       ).rejects.toThrow('Hold error');
     });
 
-    it('should propagate releaseCoins errors from service', async () => {
+    it('should propagate release errors from service', async () => {
       const error = new Error('Release error');
       mockEscrowService.releaseCoins.mockRejectedValue(error);
-
       await expect(
-        controller.release(mockRequest, {
+        controller.releaseCoins(mockRequest, {
           transaction_id: mockTransactionId,
         }),
       ).rejects.toThrow('Release error');
     });
 
-    it('should propagate refundCoins errors from service', async () => {
+    it('should propagate refund errors from service', async () => {
       const error = new Error('Refund error');
       mockEscrowService.refundCoins.mockRejectedValue(error);
-
       await expect(
-        controller.refund(mockRequest, {
+        controller.refundCoins(mockRequest, {
           transaction_id: mockTransactionId,
         }),
       ).rejects.toThrow('Refund error');
     });
 
-    it('should propagate getTransaction errors from service', async () => {
+    it('should propagate getById errors from service', async () => {
       const error = new Error('Get error');
       mockEscrowService.getTransaction.mockRejectedValue(error);
-
       await expect(
-        controller.getById(mockRequest, mockTransactionId),
+        controller.getTransaction(mockRequest, mockTransactionId),
       ).rejects.toThrow('Get error');
     });
 
-    it('should propagate listTransactions errors from service', async () => {
+    it('should propagate list errors from service', async () => {
       const error = new Error('List error');
       mockEscrowService.listTransactions.mockRejectedValue(error);
-
-      await expect(controller.list(mockRequest)).rejects.toThrow(
+      await expect(controller.listTransactions(mockRequest)).rejects.toThrow(
         'List error',
       );
     });

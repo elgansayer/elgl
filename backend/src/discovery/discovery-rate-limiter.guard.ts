@@ -98,7 +98,8 @@ export class DiscoveryRateLimiterGuard implements CanActivate {
         throw new HttpException(
           {
             statusCode: HttpStatus.TOO_MANY_REQUESTS,
-            message: 'Too many discovery requests. Please wait before refreshing the map.',
+            message:
+              'Too many discovery requests. Please wait before refreshing the map.',
             retryAfter,
           },
           HttpStatus.TOO_MANY_REQUESTS,
@@ -143,7 +144,7 @@ export class DiscoveryRateLimiterGuard implements CanActivate {
         .eq('id', userId)
         .single();
 
-      const isVip = (!error && data) ? Boolean(data.is_vip) : false;
+      const isVip = !error && data ? Boolean(data.is_vip) : false;
 
       try {
         await redis.set(

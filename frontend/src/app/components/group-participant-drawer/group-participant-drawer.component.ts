@@ -70,7 +70,7 @@ export interface GroupParticipant {
                     [src]="user.avatar_url"
                     [alt]="user.display_name"
                     class="object-cover w-full h-full"
-                   loading="lazy" />
+                  />
                 } @else {
                   <div
                     class="flex items-center justify-center w-full h-full text-slate-300 font-bold text-lg"

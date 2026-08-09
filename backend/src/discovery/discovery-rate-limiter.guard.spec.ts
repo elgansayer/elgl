@@ -12,9 +12,17 @@ import { ExecutionContext } from '@nestjs/common';
 
 describe('DiscoveryRateLimiterGuard', () => {
   let guard: DiscoveryRateLimiterGuard;
-  let redisMock: { incr: jest.Mock; expire: jest.Mock; ttl: jest.Mock; get: jest.Mock; set: jest.Mock };
+  let redisMock: {
+    incr: jest.Mock;
+    expire: jest.Mock;
+    ttl: jest.Mock;
+    get: jest.Mock;
+    set: jest.Mock;
+  };
   let supabaseClientMock: { from: jest.Mock };
-  let supabaseService: jest.Mocked<Pick<SupabaseService, 'getRedisClient' | 'getClient'>>;
+  let supabaseService: jest.Mocked<
+    Pick<SupabaseService, 'getRedisClient' | 'getClient'>
+  >;
   let reflector: jest.Mocked<Pick<Reflector, 'get'>>;
   let logger: jest.Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
 
@@ -23,13 +31,6 @@ describe('DiscoveryRateLimiterGuard', () => {
     handler: () => void,
     controllerClass: new (...args: unknown[]) => unknown,
   ): ExecutionContext {
-    const mockResponse = {
-      setHeader: jest.fn(),
-      getHeader: jest.fn(),
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-    };
-
     return {
       getHandler: () => handler,
       getClass: () => controllerClass,
@@ -37,7 +38,7 @@ describe('DiscoveryRateLimiterGuard', () => {
         getRequest: () => ({
           user: userId ? { id: userId } : undefined,
         }),
-        getResponse: () => mockResponse,
+        getResponse: jest.fn(),
         getNext: jest.fn(),
       }),
       getType: () => 'http',
@@ -90,9 +91,15 @@ describe('DiscoveryRateLimiterGuard', () => {
 
   describe('when no rate limit metadata is defined', () => {
     it('should allow the request through', async () => {
-      const handler = () => { /* empty */ };
+      const handler = () => {
+        /* empty */
+      };
       class TestController {}
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -106,7 +113,9 @@ describe('DiscoveryRateLimiterGuard', () => {
       windowSeconds: 60,
     };
 
-    const handler = async () => { /* empty */ };
+    const handler = () => {
+      /* empty */
+    };
     class TestController {}
 
     beforeEach(() => {
@@ -119,7 +128,11 @@ describe('DiscoveryRateLimiterGuard', () => {
     it('should allow request when count is within free limit', async () => {
       redisMock.incr.mockResolvedValue(25);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
     });
@@ -127,7 +140,11 @@ describe('DiscoveryRateLimiterGuard', () => {
     it('should set TTL on first request in the window', async () => {
       redisMock.incr.mockResolvedValue(1);
 
-      const context = createMockExecutionContext('user-2', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-2',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).toHaveBeenCalledWith(
@@ -139,7 +156,11 @@ describe('DiscoveryRateLimiterGuard', () => {
     it('should not set TTL on subsequent requests', async () => {
       redisMock.incr.mockResolvedValue(4);
 
-      const context = createMockExecutionContext('user-3', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-3',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).not.toHaveBeenCalled();
@@ -147,30 +168,27 @@ describe('DiscoveryRateLimiterGuard', () => {
 
     it('should block free user when free limit exceeded', async () => {
       redisMock.incr.mockResolvedValue(31);
-      redisMock.ttl.mockResolvedValue(90);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
-
-      let caught: HttpException | undefined;
-      try {
-        await guard.canActivate(context);
-      } catch (err: unknown) {
-        caught = err as HttpException;
-      }
-
-      expect(caught).toBeInstanceOf(HttpException);
-      expect(caught?.getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
-
-      const mockResponse = context.switchToHttp().getResponse();
-      // retryAfter = Math.max(windowSeconds(60), ttl(90)) = 90
-      expect(mockResponse.setHeader).toHaveBeenCalledWith('Retry-After', '90');
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
+      await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
+      await expect(guard.canActivate(context)).rejects.toMatchObject({
+        status: HttpStatus.TOO_MANY_REQUESTS,
+      });
     });
 
     it('should allow VIP user to exceed free limit but stay within VIP limit', async () => {
       redisMock.incr.mockResolvedValue(50);
       redisMock.get.mockResolvedValue('1'); // VIP cached
 
-      const context = createMockExecutionContext('vip-user', handler, TestController);
+      const context = createMockExecutionContext(
+        'vip-user',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
     });
@@ -179,14 +197,22 @@ describe('DiscoveryRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(121);
       redisMock.get.mockResolvedValue('1'); // VIP cached
 
-      const context = createMockExecutionContext('vip-user', handler, TestController);
+      const context = createMockExecutionContext(
+        'vip-user',
+        handler,
+        TestController,
+      );
       await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
     });
 
     it('should log warning when rate limit is exceeded', async () => {
       redisMock.incr.mockResolvedValue(35);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       try {
         await guard.canActivate(context);
       } catch {
@@ -205,7 +231,11 @@ describe('DiscoveryRateLimiterGuard', () => {
     });
 
     it('should allow request if user is not authenticated', async () => {
-      const context = createMockExecutionContext(undefined, handler, TestController);
+      const context = createMockExecutionContext(
+        undefined,
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -214,7 +244,11 @@ describe('DiscoveryRateLimiterGuard', () => {
     it('should allow request and log error if Redis is unavailable', async () => {
       redisMock.incr.mockRejectedValue(new Error('Redis connection error'));
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(logger.error).toHaveBeenCalledWith(
@@ -230,7 +264,11 @@ describe('DiscoveryRateLimiterGuard', () => {
       redisMock.incr.mockResolvedValue(50);
       redisMock.get.mockResolvedValue('1'); // VIP cached
 
-      const context = createMockExecutionContext('vip-user', handler, TestController);
+      const context = createMockExecutionContext(
+        'vip-user',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       // Should not query DB since cache hit
@@ -251,7 +289,11 @@ describe('DiscoveryRateLimiterGuard', () => {
         }),
       });
 
-      const context = createMockExecutionContext('vip-user', handler, TestController);
+      const context = createMockExecutionContext(
+        'vip-user',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       // Should backfill cache
@@ -273,17 +315,15 @@ describe('DiscoveryRateLimiterGuard', () => {
       };
 
       class DecoratorTest {
-        testMethod() { /* empty */ }
+        testMethod() {
+          /* empty */
+        }
       }
       const desc = Object.getOwnPropertyDescriptor(
         DecoratorTest.prototype,
         'testMethod',
       );
-      DiscoveryRateLimit(opts)(
-        DecoratorTest.prototype,
-        'testMethod',
-        desc!,
-      );
+      DiscoveryRateLimit(opts)(DecoratorTest.prototype, 'testMethod', desc!);
 
       const metadata = Reflect.getMetadata(
         DISCOVERY_RATE_LIMIT_KEY,

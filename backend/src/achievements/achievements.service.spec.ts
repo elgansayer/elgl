@@ -324,7 +324,7 @@ describe('AchievementsService', () => {
         error: null,
       });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
+      jest.spyOn(service, 'hasAchievement').mockResolvedValue(false);
       const awardSpy = jest
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -345,68 +345,7 @@ describe('AchievementsService', () => {
         error: null,
       });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([
-        {
-          id: '1',
-          user_id: 'user-1',
-          achievement_id: 'a',
-          earned_at: 'now',
-          achievements: {
-            id: 'a',
-            code: 'first_message',
-            name: '',
-            description: '',
-          },
-        },
-        {
-          id: '2',
-          user_id: 'user-1',
-          achievement_id: 'b',
-          earned_at: 'now',
-          achievements: {
-            id: 'b',
-            code: '100_messages',
-            name: '',
-            description: '',
-          },
-        },
-        {
-          id: '3',
-          user_id: 'user-1',
-          achievement_id: 'c',
-          earned_at: 'now',
-          achievements: {
-            id: 'c',
-            code: '500_messages',
-            name: '',
-            description: '',
-          },
-        },
-        {
-          id: '4',
-          user_id: 'user-1',
-          achievement_id: 'd',
-          earned_at: 'now',
-          achievements: {
-            id: 'd',
-            code: '7_day_streak',
-            name: '',
-            description: '',
-          },
-        },
-        {
-          id: '5',
-          user_id: 'user-1',
-          achievement_id: 'e',
-          earned_at: 'now',
-          achievements: {
-            id: 'e',
-            code: '30_day_streak',
-            name: '',
-            description: '',
-          },
-        },
-      ]);
+      jest.spyOn(service, 'hasAchievement').mockResolvedValue(true);
       const awardSpy = jest
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -423,7 +362,7 @@ describe('AchievementsService', () => {
         error: null,
       });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
+      jest.spyOn(service, 'hasAchievement').mockResolvedValue(false);
       const awardSpy = jest
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -447,7 +386,7 @@ describe('AchievementsService', () => {
         error: null,
       });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
+      jest.spyOn(service, 'hasAchievement').mockResolvedValue(false);
       const awardSpy = jest
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -467,7 +406,7 @@ describe('AchievementsService', () => {
         error: { message: 'db error' },
       });
 
-      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
+      jest.spyOn(service, 'hasAchievement').mockResolvedValue(false);
       const awardSpy = jest
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);

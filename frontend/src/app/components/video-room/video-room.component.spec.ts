@@ -3,8 +3,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
 import { vi, Mocked } from 'vitest';
-import { JoyrideModule, JoyrideService } from 'ngx-joyride';
-import { of } from 'rxjs';
 import { VideoRoomComponent } from './video-room.component';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
@@ -48,20 +46,12 @@ describe('VideoRoomComponent', () => {
     } as unknown as Mocked<Partial<AuthService>>;
 
     await TestBed.configureTestingModule({
-      imports: [VideoRoomComponent, JoyrideModule.forRoot()],
+      imports: [VideoRoomComponent],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: AudioRoomsStore, useValue: mockStore },
         { provide: AuthService, useValue: mockAuthService },
-        {
-          provide: JoyrideService,
-          useValue: {
-            startTour: vi.fn().mockReturnValue(of(undefined)),
-            closeTour: vi.fn(),
-            isTourInProgress: vi.fn().mockReturnValue(false),
-          },
-        },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();

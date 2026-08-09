@@ -1,6 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
-import { JoyrideService } from 'ngx-joyride';
-import { I18nService } from './i18n.service';
+import { Injectable, signal } from '@angular/core';
 
 const STORAGE_KEY = 'hellotalk_video_classroom_onboarding_done';
 
@@ -12,13 +10,11 @@ export interface VideoClassroomOnboardingStep {
 
 /**
  * Manages the onboarding tour state for the Video Classrooms feature.
- * Steps correspond to `joyrideStep` directive names in the template.
+ * Previously powered by ngx-joyride which has been removed.
+ * Now provides step definitions for potential future re-implementation.
  */
 @Injectable({ providedIn: 'root' })
 export class VideoClassroomOnboardingService {
-  private readonly joyrideService = inject(JoyrideService);
-  private readonly i18n = inject(I18nService);
-
   readonly isTourInProgress = signal(false);
 
   readonly steps: VideoClassroomOnboardingStep[] = [
@@ -69,47 +65,13 @@ export class VideoClassroomOnboardingService {
   }
 
   startMarketplaceTour(): void {
-    if (this.joyrideService.isTourInProgress()) return;
-    this.isTourInProgress.set(true);
-
-    this.joyrideService.startTour({
-      steps: this.marketplaceStepNames,
-      stepDefaultPosition: 'bottom',
-      themeColor: '#a855f7',
-      showCounter: true,
-      showPrevButton: true,
-      customTexts: {
-        prev: this.i18n.translate('tour.prev'),
-        next: this.i18n.translate('tour.next'),
-        done: this.i18n.translate('tour.done'),
-        close: this.i18n.translate('tour.close'),
-      },
-    }).subscribe({
-      complete: () => this.markComplete(),
-      error: () => this.isTourInProgress.set(false),
-    });
+    // ngx-joyride removed - onboarding tour not available
+    this.markComplete();
   }
 
   startRoomTour(): void {
-    if (this.joyrideService.isTourInProgress()) return;
-    this.isTourInProgress.set(true);
-
-    this.joyrideService.startTour({
-      steps: this.roomStepNames,
-      stepDefaultPosition: 'bottom',
-      themeColor: '#a855f7',
-      showCounter: true,
-      showPrevButton: true,
-      customTexts: {
-        prev: this.i18n.translate('tour.prev'),
-        next: this.i18n.translate('tour.next'),
-        done: this.i18n.translate('tour.done'),
-        close: this.i18n.translate('tour.close'),
-      },
-    }).subscribe({
-      complete: () => this.markComplete(),
-      error: () => this.isTourInProgress.set(false),
-    });
+    // ngx-joyride removed - onboarding tour not available
+    this.markComplete();
   }
 
   markComplete(): void {

@@ -246,7 +246,7 @@ export class EscrowComponent {
     this.escrowOnboarding.startTour();
   }
 
-  protected onFilterChange(status: StatusFilter): void {
+  onFilterChange(status: StatusFilter): void {
     this.selectedStatus.set(status);
   }
 

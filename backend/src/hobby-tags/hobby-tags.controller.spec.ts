@@ -1,0 +1,164 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { HobbyTagsController } from './hobby-tags.controller';
+import { HobbyTagsService } from './hobby-tags.service';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+
+describe('HobbyTagsController', () => {
+  let controller: HobbyTagsController;
+  let service: HobbyTagsService;
+
+  const mockTag = {
+    id: 'tag-1',
+    name: 'Photography',
+    category: 'Arts',
+    icon: '📸',
+    target_vocabulary: [
+      { word: 'camera', translation: 'cámara', language: 'es' },
+    ],
+    created_at: '2026-01-01T00:00:00Z',
+  };
+
+  const mockUserTag = {
+    id: 'ut-1',
+    user_id: 'user-1',
+    hobby_tag_id: 'tag-1',
+    proficiency_level: 0,
+    created_at: '2026-01-01T00:00:00Z',
+    hobby_tag: mockTag,
+  };
+
+  const mockVocabularyItem = {
+    id: 'vocab-1',
+    word: 'camera',
+    translation: 'cámara',
+    hobbyTagName: 'Photography',
+    difficulty: 'beginner',
+    context_sentence: 'Learn this word from your Photography hobby vocabulary.',
+    hobby_tag: { icon: '📸', name: 'Photography' },
+  };
+
+  beforeEach(async () => {
+    const mockService = {
+      getAllTags: jest.fn(),
+      createTag: jest.fn(),
+      getUserTags: jest.fn(),
+      addUserTag: jest.fn(),
+      removeUserTag: jest.fn(),
+      updateProficiency: jest.fn(),
+      getVocabularyForTag: jest.fn(),
+      getUserVocabulary: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [HobbyTagsController],
+      providers: [
+        { provide: HobbyTagsService, useValue: mockService },
+      ],
+    })
+      .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
+
+    controller = module.get<HobbyTagsController>(HobbyTagsController);
+    service = module.get<HobbyTagsService>(HobbyTagsService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('getAllTags', () => {
+    it('should return all tags', async () => {
+      (service.getAllTags as jest.Mock).mockResolvedValue([mockTag]);
+      const result = await controller.getAllTags();
+      expect(result).toEqual([mockTag]);
+    });
+  });
+
+  describe('createGlobalTag', () => {
+    it('should create a global tag', async () => {
+      (service.createTag as jest.Mock).mockResolvedValue(mockTag);
+      const result = await controller.createGlobalTag({
+        name: 'photography',
+        category: 'Arts',
+        icon: '📸',
+      });
+      expect(result).toEqual(mockTag);
+      expect(service.createTag).toHaveBeenCalledWith('photography', 'Arts', '📸');
+    });
+  });
+
+  describe('getMyTags', () => {
+    it('should return user tags', async () => {
+      (service.getUserTags as jest.Mock).mockResolvedValue([mockUserTag]);
+      const result = await controller.getMyTags({ user: { id: 'user-1' } });
+      expect(result).toEqual([mockUserTag]);
+      expect(service.getUserTags).toHaveBeenCalledWith('user-1');
+    });
+  });
+
+  describe('getUserVocabulary', () => {
+    it('should return vocabulary for user tags', async () => {
+      (service.getUserVocabulary as jest.Mock).mockResolvedValue([mockVocabularyItem]);
+      const result = await controller.getUserVocabulary(
+        { user: { id: 'user-1' } },
+        'es',
+      );
+      expect(result).toEqual([mockVocabularyItem]);
+      expect(service.getUserVocabulary).toHaveBeenCalledWith('user-1', 'es');
+    });
+
+    it('should default language to en', async () => {
+      (service.getUserVocabulary as jest.Mock).mockResolvedValue([]);
+      await controller.getUserVocabulary({ user: { id: 'user-1' } }, '');
+      expect(service.getUserVocabulary).toHaveBeenCalledWith('user-1', 'en');
+    });
+  });
+
+  describe('getTagVocabulary', () => {
+    it('should return vocabulary for a specific tag', async () => {
+      const vocab = [{ word: 'camera', translation: 'cámara', language: 'es' }];
+      (service.getVocabularyForTag as jest.Mock).mockResolvedValue(vocab);
+      const result = await controller.getTagVocabulary('tag-1', 'es');
+      expect(result).toEqual(vocab);
+      expect(service.getVocabularyForTag).toHaveBeenCalledWith('tag-1', 'es');
+    });
+  });
+
+  describe('addTag', () => {
+    it('should add a user tag', async () => {
+      (service.addUserTag as jest.Mock).mockResolvedValue(mockUserTag);
+      const result = await controller.addTag(
+        { user: { id: 'user-1' } },
+        { hobby_tag_id: 'tag-1', proficiency_level: 2 },
+      );
+      expect(result).toEqual(mockUserTag);
+      expect(service.addUserTag).toHaveBeenCalledWith('user-1', 'tag-1', 2);
+    });
+  });
+
+  describe('removeTag', () => {
+    it('should remove a user tag', async () => {
+      (service.removeUserTag as jest.Mock).mockResolvedValue(undefined);
+      const result = await controller.removeTag(
+        { user: { id: 'user-1' } },
+        'tag-1',
+      );
+      expect(result).toEqual({ message: 'Hobby tag removed successfully' });
+      expect(service.removeUserTag).toHaveBeenCalledWith('user-1', 'tag-1');
+    });
+  });
+
+  describe('updateProficiency', () => {
+    it('should update proficiency level', async () => {
+      (service.updateProficiency as jest.Mock).mockResolvedValue(mockUserTag);
+      const result = await controller.updateProficiency(
+        { user: { id: 'user-1' } },
+        'tag-1',
+        { proficiency_level: 3 },
+      );
+      expect(result).toEqual(mockUserTag);
+      expect(service.updateProficiency).toHaveBeenCalledWith('user-1', 'tag-1', 3);
+    });
+  });
+});

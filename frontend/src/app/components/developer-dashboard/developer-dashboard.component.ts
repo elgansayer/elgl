@@ -1,7 +1,6 @@
 import { Component, inject, signal, resource } from '@angular/core';
-import { CommonModule, UpperCasePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { UpperCasePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { EconomyStore } from '../../services/economy.store';
 import { AuthService } from '../../services/auth.service';
 import { DiscoveryService, SearchFilterParams } from '../../services/discovery.service';
