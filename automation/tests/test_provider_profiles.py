@@ -55,9 +55,9 @@ def test_openai_credentials_must_exist_and_be_non_empty(tmp_path: Path) -> None:
     credentials = tmp_path / ".openhands" / "auth" / "openai_oauth.json"
     credentials.parent.mkdir(parents=True)
 
-    assert not openai_credentials_available(tmp_path)
+    assert not openai_credentials_available(home=tmp_path)
     credentials.write_text("{}", encoding="utf-8")
-    assert openai_credentials_available(tmp_path)
+    assert openai_credentials_available(home=tmp_path)
 
 
 def test_opencode_catalogue_accepts_exact_model() -> None:

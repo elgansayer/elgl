@@ -42,6 +42,22 @@ class ConversationRunner:
         started = time.monotonic()
         conversation = self.factory(workspace, self.config.max_conversation_turns)
         completed = False
+        
+        from openhands_factory.provider_health import ProviderHealthStore, CircuitBreaker, classify_failure
+        from openhands_factory.models import ProviderName
+        from openhands_factory.provider_profiles import openai_credentials_available
+        
+        store = ProviderHealthStore(self.config.state_dir / "health.json")
+        breakers = store.load()
+        if not breakers:
+            breakers = [
+                CircuitBreaker(ProviderName.OPENAI_SUBSCRIPTION, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+                CircuitBreaker(ProviderName.OPENCODE_GO, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+                CircuitBreaker(ProviderName.GEMINI, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+            ]
+            
+        primary_provider = ProviderName.OPENAI_SUBSCRIPTION if openai_credentials_available(self.config) else ProviderName.OPENCODE_GO
+
         try:
             conversation.send_message(prompt)
             conversation.run()
@@ -50,7 +66,26 @@ class ConversationRunner:
                 conversation.pause()
                 raise FactoryError("Conversation exceeded the maximum task duration")
             completed = True
+            
+            for b in breakers:
+                if b.provider == primary_provider:
+                    b.record_success()
+            store.save(breakers)
+            
             return ConversationResult(task.identifier, elapsed, completed)
+        except Exception as error:
+            status_code = getattr(error, "status_code", None)
+            kind = classify_failure(status_code, str(error))
+            for b in breakers:
+                if b.provider == primary_provider:
+                    b.record_failure(kind)
+            store.save(breakers)
+            
+            try:
+                conversation.pause()
+            except Exception:
+                pass
+            raise
         finally:
             conversation.close()
 

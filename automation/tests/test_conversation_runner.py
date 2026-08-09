@@ -29,6 +29,7 @@ def test_one_bounded_conversation_is_closed(tmp_path: Path) -> None:
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
             "GITHUB_TOKEN": "token",
             "GEMINI_ENABLED": "false",
+            "FACTORY_STATE_DIR": str(tmp_path),
         }
     )
     conversation = Conversation()
