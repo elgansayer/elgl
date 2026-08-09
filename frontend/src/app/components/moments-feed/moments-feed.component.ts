@@ -16,6 +16,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { MomentsStore, MomentRecord, MomentComment } from '../../services/moments.store';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
@@ -78,6 +79,7 @@ export class MomentsFeedComponent {
   private readonly userService = inject(UserService);
   private readonly i18n = inject(I18nService);
   private readonly draftService = inject(DraftService);
+  private readonly translationCacheService = inject(TranslationCacheService);
 
   private readonly destroyRef = inject(DestroyRef);
   readonly pageSize = 15;
@@ -319,10 +321,19 @@ export class MomentsFeedComponent {
       return;
     }
 
+    // Check persistent translation cache (issue #1037)
+    const persistentCached = this.translationCacheService.get(moment.text_content, 'en');
+    if (persistentCached) {
+      this.translationCache.update((prev) => ({ ...prev, [cacheKey]: persistentCached }));
+      this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
+      return;
+    }
+
     // Fetch from API and cache the result
     moment.isTranslating = true;
     try {
       const res = await this.vocabStore.translateWordOrSentence(moment.text_content, 'en');
+      this.translationCacheService.set(moment.text_content, 'en', res.translated_text);
       this.translationCache.update((prev) => ({ ...prev, [cacheKey]: res.translated_text }));
       this.showTranslationMap.update((prev) => ({ ...prev, [cacheKey]: true }));
     } catch (e) {
