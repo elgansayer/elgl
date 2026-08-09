@@ -11,15 +11,12 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
-import { JoyrideModule } from 'ngx-joyride';
 import { AuthService } from './services/auth.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
-import { CoinEconomyTourService } from './services/coin-economy-tour.service';
-import { I18nService } from './services/i18n.service';
 import { routeAnimations } from './animations/route.animations';
 import { DOCUMENT, isPlatformServer } from '@angular/common';
 import {
@@ -37,11 +34,15 @@ import { ForcedUpdateModalComponent } from './components/forced-update-modal/for
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
 import { FontScaleService } from './services/font-scale.service';
+import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
+import { TourService } from './services/tour.service';
+import { NotificationService } from './services/notification.service';
+import { ChatService } from './services/chat.service';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -54,7 +55,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     RouterLink,
     RouterLinkActive,
     TranslatePipe,
-    JoyrideModule,
     IncomingCallModalComponent,
     ToastComponent,
     ReportUserModalComponent,
@@ -79,10 +79,11 @@ export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
 
   public startProductTour(): void {
-    this.coinEconomyTour.startTour();
+    this.tourService.startEconomyTour();
   }
   authService = inject(AuthService);
   economyStore = inject(EconomyStore);
+  private tourService = inject(TourService);
   centrifugeService = inject(CentrifugeService);
   fcmService = inject(FcmService);
   private safetyService = inject(SafetyService);
@@ -91,12 +92,13 @@ export class AppComponent implements OnInit {
   readonly versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
-  private coinEconomyTour = inject(CoinEconomyTourService);
   private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
   private platformId = inject(PLATFORM_ID);
+  private notificationService = inject(NotificationService);
+  private chatService = inject(ChatService);
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -256,9 +258,43 @@ export class AppComponent implements OnInit {
         }
       });
 
+      // Load initial unread counts from backend
+      await this.loadInitialUnreadCounts();
+
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
+    }
+  }
+
+  private async loadInitialUnreadCounts(): Promise<void> {
+    try {
+      const [notificationCount] = await Promise.all([
+        this.notificationService.getUnreadCount(),
+      ]);
+      this.unreadCounter.setNotificationUnread(notificationCount);
+    } catch {
+      // Silently ignore - real-time events will update counts
+    }
+
+    // Load chat unread counts from backend
+    try {
+      const rooms = await this.chatService.getRooms();
+      let totalChatUnread = 0;
+      for (const room of rooms) {
+        try {
+          const messages = await this.chatService.getMessages(room.id);
+          const currentUserId = this.authService.currentUser()?.id;
+          totalChatUnread += messages.filter(
+            (m) => !m.is_read && m.sender_id !== currentUserId,
+          ).length;
+        } catch {
+          // Skip rooms with errors
+        }
+      }
+      this.unreadCounter.setChatUnread(totalChatUnread);
+    } catch {
+      // Silently ignore - real-time events will update counts
     }
   }
 

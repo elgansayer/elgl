@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DecksService } from './decks.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { PinoLogger } from 'nestjs-pino';
+import { InjectPinoLogger } from 'nestjs-pino';
 
 describe('DecksService', () => {
   let service: DecksService;
@@ -23,6 +26,7 @@ describe('DecksService', () => {
       upsert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
       then: undefined as any,
@@ -36,9 +40,32 @@ describe('DecksService', () => {
       providers: [
         DecksService,
         {
+          provide: MetricsService,
+          useValue: {
+            recordSrsFlashcardCreated: jest.fn(),
+            recordSrsReviewCompleted: jest.fn(),
+            setSrsDueCards: jest.fn(),
+            setSrsAverageEasinessFactor: jest.fn(),
+            setSrsReviewSuccessRate: jest.fn(),
+            setSrsCardsPerLevel: jest.fn(),
+            setSrsCardsStuck: jest.fn(),
+            setSrsDecksTotal: jest.fn(),
+            recordSrsDeckCreated: jest.fn(),
+          },
+        },
+        {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: `PinoLogger:${DecksService.name}`,
+          useValue: {
+            error: jest.fn(),
+            warn: jest.fn(),
+            info: jest.fn(),
+            debug: jest.fn(),
           },
         },
       ],

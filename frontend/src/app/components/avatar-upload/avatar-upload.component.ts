@@ -9,7 +9,6 @@ import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-avatar-upload',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './avatar-upload.component.html',
   styleUrls: ['./avatar-upload.component.scss'],

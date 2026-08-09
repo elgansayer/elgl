@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { UserSettings, SocialPrivacySettings } from '../models/settings.model';
+import { UserSettings, SocialPrivacySettings, ProfileDiscoverySettings, AccountSettings } from '../models/settings.model';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
@@ -12,6 +12,8 @@ export class SettingsService {
   readonly settings = this.state.asReadonly();
   readonly isLoading = this.loading.asReadonly();
   readonly privacySettings = computed(() => this.state()?.social ?? null);
+  readonly profileSettings = computed(() => this.state()?.profile ?? null);
+  readonly accountSettings = computed(() => this.state()?.account ?? null);
   readonly theme = computed(() => this.state()?.preferences.appearance.theme ?? 'System');
 
   // Actions
@@ -47,6 +49,40 @@ export class SettingsService {
     } catch {
       // 3. Rollback on failure
       this.error.set('Failed to update privacy settings. Reverting.');
+      this.state.set(currentState);
+    }
+  }
+
+  async updateProfileSettings(_newSettings: Partial<ProfileDiscoverySettings>) {
+    const currentState = this.state();
+    if (!currentState) return;
+
+    this.state.update((state) => ({
+      ...state!,
+      profile: { ...state!.profile, ..._newSettings },
+    }));
+
+    try {
+      await this.mockPatchProfileSettings(_newSettings);
+    } catch {
+      this.error.set('Failed to update profile settings. Reverting.');
+      this.state.set(currentState);
+    }
+  }
+
+  async updateAccountSettings(_newSettings: Partial<AccountSettings>) {
+    const currentState = this.state();
+    if (!currentState) return;
+
+    this.state.update((state) => ({
+      ...state!,
+      account: { ...state!.account, ..._newSettings },
+    }));
+
+    try {
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
+    } catch {
+      this.error.set('Failed to update account settings. Reverting.');
       this.state.set(currentState);
     }
   }
@@ -138,6 +174,14 @@ export class SettingsService {
 
   private async mockPatchPrivacySettings(
     _newSettings: Partial<SocialPrivacySettings>,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(), 500);
+    });
+  }
+
+  private async mockPatchProfileSettings(
+    _newSettings: Partial<ProfileDiscoverySettings>,
   ): Promise<void> {
     return new Promise((resolve) => {
       setTimeout(() => resolve(), 500);
