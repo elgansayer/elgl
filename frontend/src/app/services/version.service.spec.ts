@@ -31,12 +31,11 @@ describe('VersionService', () => {
     expect(service).toBeTruthy();
   });
 
-it('should fetch version info via GET request', () => {
+  it('should fetch version info via GET request', () => {
     const mockVersion: VersionInfo = {
       current: '1.0.0',
       latest: '1.1.0',
-      updateUrl: 'https://example.com/update',
-    };
+      updateUrl: 'https://example.com/update',    };
 
     service.getVersion().subscribe((version) => {
       expect(version).toEqual(mockVersion);

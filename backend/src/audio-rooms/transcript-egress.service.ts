@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import {
   EgressClient,
   EncodedFileOutput,
@@ -13,13 +14,16 @@ import {
  */
 @Injectable()
 export class TranscriptEgressService {
-  private readonly logger = new Logger(TranscriptEgressService.name);
   private readonly egressClient: EgressClient;
 
   /** room_name → egress_id  (in‑memory; restarts lose unfinished egresses) */
   private readonly egressMap = new Map<string, string>();
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectPinoLogger(TranscriptEgressService.name)
+    private readonly logger: PinoLogger,
+  ) {
     const livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
@@ -72,7 +76,7 @@ export class TranscriptEgressService {
       );
       const egressId = result.egressId;
       this.egressMap.set(roomName, egressId);
-      this.logger.log(
+      this.logger.info(
         `Egress started for room "${roomName}" – id: ${egressId}`,
       );
       return egressId;
@@ -116,13 +120,164 @@ export class TranscriptEgressService {
    * In production this should call Azure Speech Services or similar.
    * Returns a mock transcript for development purposes.
    */
-  generateTranscriptFromAudioUrl(audioUrl: string): string {
-    this.logger.log(`Generating transcript for audio URL: ${audioUrl}`);
-    // TODO: replace with real Azure Speech-to-Text integration
-    return (
-      'This is a simulated transcript for the audio recording.\n' +
-      'Speaker 1: Welcome to the room.\n' +
-      'Speaker 2: Thank you.'
-    );
+  async generateTranscriptFromAudioUrl(audioUrl: string): Promise<string> {
+    this.logger.info(`Generating transcript for audio URL: ${audioUrl}`);
+
+    const azureKey = this.configService.get<string>('AZURE_SPEECH_KEY');
+    const region =
+      this.configService.get<string>('AZURE_SPEECH_REGION') ?? 'eastus';
+
+    if (!azureKey) {
+      this.logger.warn(
+        'Azure Speech API key not configured. Returning mock transcript.',
+      );
+      return (
+        'This is a simulated transcript for the audio recording.\n' +
+        'Speaker 1: Welcome to the room.\n' +
+        'Speaker 2: Thank you.'
+      );
+    }
+
+    try {
+      // Create a batch transcription job
+      const url = `https://${region}.api.cognitive.microsoft.com/speechtotext/v3.1/transcriptions`;
+
+      const createResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          contentUrls: [audioUrl],
+          locale: 'en-US',
+          displayName: `Audio Room Transcription ${Date.now()}`,
+          properties: {
+            wordLevelTimestampsEnabled: false,
+            displayFormWordLevelTimestampsEnabled: false,
+          },
+        }),
+      });
+
+      if (!createResponse.ok) {
+        const errorBody = await createResponse.text();
+        this.logger.warn(
+          `Azure Speech API error (create job): ${createResponse.status} ${errorBody}`,
+        );
+        return '';
+      }
+
+      const jobData = (await createResponse.json()) as { self: string };
+      const jobUrl = jobData.self;
+
+      // Poll for job completion
+      let status = 'Running';
+      let statusResponse: Response;
+      let statusData: { status: string; links?: { files?: string } };
+
+      while (status === 'Running' || status === 'NotStarted') {
+        // Wait 5 seconds before checking status again
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        statusResponse = await fetch(jobUrl, {
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!statusResponse.ok) {
+          const errorBody = await statusResponse.text();
+          this.logger.warn(
+            `Azure Speech API error (poll job): ${statusResponse.status} ${errorBody}`,
+          );
+          return '';
+        }
+
+        statusData = (await statusResponse.json()) as {
+          status: string;
+          links?: { files?: string };
+        };
+        status = statusData.status;
+      }
+
+      if (status !== 'Succeeded') {
+        this.logger.warn(
+          `Azure Speech API transcription job failed with status: ${status}`,
+        );
+        return '';
+      }
+
+      // Fetch the files associated with the job
+      if (!statusData!.links?.files) {
+        this.logger.warn(
+          'Azure Speech API transcription job succeeded but no files link returned',
+        );
+        return '';
+      }
+
+      const filesResponse = await fetch(statusData!.links.files, {
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!filesResponse.ok) {
+        const errorBody = await filesResponse.text();
+        this.logger.warn(
+          `Azure Speech API error (fetch files list): ${filesResponse.status} ${errorBody}`,
+        );
+        return '';
+      }
+
+      const filesData = (await filesResponse.json()) as {
+        values: Array<{ kind: string; links: { contentUrl: string } }>;
+      };
+
+      const transcriptionFile = filesData.values.find(
+        (f) => f.kind === 'Transcription',
+      );
+      if (!transcriptionFile) {
+        this.logger.warn(
+          'Azure Speech API transcription job succeeded but no transcription file found in results',
+        );
+        return '';
+      }
+
+      // Download the actual transcript
+      const transcriptResponse = await fetch(
+        transcriptionFile.links.contentUrl,
+      );
+      if (!transcriptResponse.ok) {
+        const errorBody = await transcriptResponse.text();
+        this.logger.warn(
+          `Azure Speech API error (download transcript): ${transcriptResponse.status} ${errorBody}`,
+        );
+        return '';
+      }
+
+      const transcriptData = (await transcriptResponse.json()) as {
+        combinedRecognizedPhrases?: Array<{ display: string }>;
+      };
+
+      const finalTranscript =
+        transcriptData.combinedRecognizedPhrases?.[0]?.display ?? '';
+
+      // Delete the job (cleanup)
+      await fetch(jobUrl, {
+        method: 'DELETE',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+        },
+      });
+
+      return finalTranscript;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Error generating transcript: ${msg}`);
+      return '';
+    }
   }
 }

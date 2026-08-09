@@ -8,7 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [TranslatePipe],
   template: `
     <div
-      class="study-streak-widget bg-[#121212] rounded-xl ps-4 pe-4 pt-4 pb-4 flex items-center gap-3"
+      class="study-streak-widget rounded-sheet border border-surface-100 bg-surface-200 ps-4 pe-4 pt-4 pb-4 flex flex-wrap items-center gap-3"
     >
       <span class="text-2xl" aria-hidden="true">🔥</span>
       <div class="flex flex-col" aria-live="polite">

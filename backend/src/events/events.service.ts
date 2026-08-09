@@ -122,9 +122,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         const userIds = rsvpsByEventId.get(event.id);
         if (!userIds) continue;
 
-        for (const userId of userIds) {
-          await this.sendReminder(event.id, event.title, userId);
-        }
+        await this.sendRemindersBatch(event.id, event.title, userIds);
       }
     } catch (err) {
       this.logger.error('Unexpected error in checkReminders', err);
@@ -132,53 +130,64 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Placeholder method that logs a reminder message and, in the future,
-   * will send an actual push notification via Firebase or a similar service.
+   * Sends an actual push notification via Firebase or a similar service to a batch of users.
    */
-  private async sendReminder(
+  private async sendRemindersBatch(
     eventId: string,
     eventTitle: string,
-    userId: string,
+    userIds: string[],
   ): Promise<void> {
+    if (userIds.length === 0) return;
+
     const supabase = this.supabaseService.getClient();
 
-    // Deduplicate: check if we already sent a reminder for this (event, user)
+    // Deduplicate: check if we already sent a reminder for this event to these users
     const { data: existing, error: fetchErr } = await supabase
       .from('event_reminders_sent')
-      .select('id')
+      .select('user_id')
       .eq('event_id', eventId)
-      .eq('user_id', userId)
-      .maybeSingle();
+      .in('user_id', userIds);
 
     if (fetchErr) {
-      this.logger.warn('Could not check existing reminder', fetchErr);
+      this.logger.warn('Could not check existing reminders', fetchErr);
       return;
     }
-    if (existing) {
-      // Already notified
+
+    const existingUserIds = new Set(existing?.map((r) => r.user_id) ?? []);
+    const usersToNotify = userIds.filter((id) => !existingUserIds.has(id));
+
+    if (usersToNotify.length === 0) {
+      // All users already notified
       return;
     }
 
     // Send push notification using the existing NotificationsService
     const title = `Event Reminder: ${eventTitle}`;
     const body = `Your event "${eventTitle}" starts in 15 minutes.`;
-    await this.notificationsService.sendPushNotification(userId, {
-      type: 'event_reminder',
-      title,
-      body,
-      category: 'groups',
-    });
+
+    await Promise.allSettled(
+      usersToNotify.map((userId) =>
+        this.notificationsService.sendPushNotification(userId, {
+          type: 'event_reminder',
+          title,
+          body,
+          category: 'groups',
+        }),
+      ),
+    );
 
     // Record that we sent the reminder to avoid duplicates
+    const recordsToInsert = usersToNotify.map((userId) => ({
+      event_id: eventId,
+      user_id: userId,
+    }));
+
     const { error: insertErr } = await supabase
       .from('event_reminders_sent')
-      .insert<{ event_id: string; user_id: string }>({
-        event_id: eventId,
-        user_id: userId,
-      });
+      .insert<{ event_id: string; user_id: string }>(recordsToInsert);
 
     if (insertErr) {
-      this.logger.warn('Failed to record sent reminder', insertErr);
+      this.logger.warn('Failed to record sent reminders', insertErr);
     }
   }
 
@@ -421,6 +430,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       const { data: events, error } = await supabase
         .from('events')
         .select('id, title, host_id, language_pair, category')
+        .eq('is_cancelled', false)
         .not('language_pair', 'is', null)
         .gte('date_time', new Date(now - tolerance).toISOString())
         .lte('date_time', new Date(now + tolerance).toISOString());
@@ -479,10 +489,10 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
           roomName,
         );
 
-        // Mark the room as a Language Party
+        // Mark the room as a Language Party and link it to the event
         await supabase
           .from('audio_rooms')
-          .update({ party_type: 'language_party' })
+          .update({ party_type: 'language_party', event_id: event.id })
           .eq('id', room.id);
 
         this.logger.log(
