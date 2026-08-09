@@ -38,19 +38,20 @@ class Factory:
         return Conversation(workspace, self.stuck)
 
 
-def config() -> FactoryConfig:
+def config(tmp_path: Path) -> FactoryConfig:
     return FactoryConfig.from_environment(
         {
             "OPENCODE_GO_API_KEY": "key",
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
             "GITHUB_TOKEN": "token",
             "GEMINI_ENABLED": "false",
+            "FACTORY_STATE_DIR": str(tmp_path),
         }
     )
 
 
 def test_one_bounded_conversation_is_closed(tmp_path: Path) -> None:
-    runner = ConversationRunner(config(), Factory())
+    runner = ConversationRunner(config(tmp_path), Factory())
 
     result = runner.run(Task("one", "Task", "body", "test", 1), tmp_path, "prompt")
 
@@ -60,7 +61,7 @@ def test_one_bounded_conversation_is_closed(tmp_path: Path) -> None:
 
 def test_stuck_conversation_is_cancelled_at_the_wall_clock_deadline(tmp_path: Path) -> None:
     runner = ConversationRunner(
-        config(), Factory(stuck=True), timeout_seconds=0.2, cancellation_grace_seconds=1
+        config(tmp_path), Factory(stuck=True), timeout_seconds=0.2, cancellation_grace_seconds=1
     )
     started = time.monotonic()
 

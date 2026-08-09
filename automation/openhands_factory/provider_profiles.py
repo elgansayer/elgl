@@ -38,9 +38,19 @@ class ProviderProfile:
     api_key: SecretStr | None
 
 
-def openai_credentials_available(home: Path | None = None) -> bool:
+def openai_credentials_available(config: FactoryConfig | None = None, home: Path | None = None) -> bool:
     credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
-    return credentials.is_file() and credentials.stat().st_size > 0
+    if not (credentials.is_file() and credentials.stat().st_size > 0):
+        return False
+    if config is not None:
+        from openhands_factory.provider_health import ProviderHealthStore
+        from openhands_factory.models import ProviderName
+        store = ProviderHealthStore(config.state_dir / "health.json")
+        for breaker in store.load():
+            if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION:
+                if not breaker.permits_call():
+                    return False
+    return True
 
 
 def _model_identifiers(payload: object) -> set[str]:
@@ -178,7 +188,7 @@ def build_llm(config: FactoryConfig) -> LLM:
         fallback_llms=fallback_names,
         profile_store_dir=config.profile_store,
     )
-    if not openai_credentials_available():
+    if not openai_credentials_available(config):
         opencode_fallbacks = fallback_names[1:]
         if not opencode_fallbacks:
             return opencode

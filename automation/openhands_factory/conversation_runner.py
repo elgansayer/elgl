@@ -137,11 +137,40 @@ class ConversationRunner:
         result_connection.close()
         exit_code = process.exitcode
         process.close()
+        
+        from openhands_factory.provider_health import ProviderHealthStore, CircuitBreaker, classify_failure
+        from openhands_factory.models import ProviderName
+        from openhands_factory.provider_profiles import openai_credentials_available
+        
+        store = ProviderHealthStore(self.config.state_dir / "health.json")
+        breakers = store.load()
+        if not breakers:
+            breakers = [
+                CircuitBreaker(ProviderName.OPENAI_SUBSCRIPTION, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+                CircuitBreaker(ProviderName.OPENCODE_GO, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+                CircuitBreaker(ProviderName.GEMINI, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+            ]
+        
+        primary_provider = ProviderName.OPENAI_SUBSCRIPTION if openai_credentials_available(self.config) else ProviderName.OPENCODE_GO
+
         if not isinstance(outcome, dict) or outcome.get("completed") is not True:
+            status_code = outcome.get("status_code") if isinstance(outcome, dict) else None
             detail = outcome.get("error") if isinstance(outcome, dict) else None
             if not isinstance(detail, str):
                 detail = f"conversation process exited with status {exit_code}"
+                
+            kind = classify_failure(status_code, detail)
+            for b in breakers:
+                if b.provider == primary_provider:
+                    b.record_failure(kind)
+            store.save(breakers)
             raise FactoryError(detail)
+            
+        for b in breakers:
+            if b.provider == primary_provider:
+                b.record_success()
+        store.save(breakers)
+            
         return ConversationResult(task.identifier, elapsed, True)
 
 
