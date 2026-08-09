@@ -1,3 +1,0 @@
-* Priority: Medium Impact
-* Description: Implement the App Settings & Preferences UI.
-* Technical Implementation: Refactor existing appearance settings components or create `AppSettingsComponent` to encapsulate Accessibility (TTS, screen reader options), Appearance (theme, compact mode), and Media (inline images, link previews, auto-play GIFs). Use Angular Signals to instantly apply theming/appearance changes to the root document (`document.documentElement`) in parallel with the backend save.

@@ -50,7 +50,7 @@ export class AuthService {
       return true;
     } catch (error) {
       throw new BadRequestException(
-        error.message || 'Failed to verify 2FA token',
+        (error as Error).message || 'Failed to verify 2FA token',
       );
     }
   }

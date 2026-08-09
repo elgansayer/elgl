@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
+import { SafetyService } from './safety.service';
 import { GiftAnimationService, GiftAnimationType } from './gift-animation.service';
 import { OfflineEconomyService } from './offline-economy.service';
 import { NetworkStatusService } from './network-status.service';
@@ -86,6 +87,7 @@ export class EconomyStore {
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private safetyService = inject(SafetyService);
   private giftAnimationService = inject(GiftAnimationService);
   private offlineEconomy = inject(OfflineEconomyService);
   private networkStatus = inject(NetworkStatusService);
@@ -196,7 +198,11 @@ export class EconomyStore {
   private getDefaultCatalog(): VirtualGift[] {
     return [
       { id: 'gift_rose', name: 'Rose', icon: '🌹', cost_coins: 10, animation_type: 'float' },
-      { id: 'gift_heart', name: 'Heart', icon: '❤️', cost_coins: 20, animation_type: 'float' },
+      { id: 'gift_heart', name: 'Heart', icon: '❤️', cost_coins: 20, animation_type: 'hearts' },
+      { id: 'gift_confetti', name: 'Confetti Burst', icon: '🎉', cost_coins: 30, animation_type: 'confetti' },
+      { id: 'gift_sparkle', name: 'Sparkle', icon: '✨', cost_coins: 50, animation_type: 'sparkle' },
+      { id: 'gift_crown', name: 'Crown', icon: '👑', cost_coins: 100, animation_type: 'premium' },
+      { id: 'gift_diamond', name: 'Diamond', icon: '💎', cost_coins: 200, animation_type: 'premium' },
     ];
   }
 
@@ -470,13 +476,11 @@ export class EconomyStore {
 
   async reportUser(reportedId: string, reason: string, details?: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.post(
-          `${this.safetyUrl}/report`,
-          { reported_id: reportedId, reason, details },
-          { headers: this.getHeaders() },
-        ),
-      );
+      await this.safetyService.reportUser({
+        reported_id: reportedId,
+        reason_category: reason,
+        description: details,
+      });
       showToast(
         '🛡️ Thank you. Your report has been submitted to our Trust & Safety moderation team for review within 24 hours.',
       );
@@ -488,13 +492,7 @@ export class EconomyStore {
 
   async blockUser(blockedId: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.post(
-          `${this.safetyUrl}/block`,
-          { blocked_id: blockedId },
-          { headers: this.getHeaders() },
-        ),
-      );
+      await this.safetyService.blockUserAsync(blockedId);
       const set = new Set(this.blockedUserIds());
       set.add(blockedId);
       this.blockedUserIds.set(set);
