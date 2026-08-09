@@ -28,7 +28,7 @@ export class AdminUserActionsComponent {
     try {
       await this.adminService.banUser(this.userId());
     } catch (error) {
-      console.error('Ban failed', error);
+      console.warn('Ban failed', error);
     }
   }
 
@@ -37,7 +37,7 @@ export class AdminUserActionsComponent {
     try {
       await this.adminService.warnUser(this.userId());
     } catch (error) {
-      console.error('Warn failed', error);
+      console.warn('Warn failed', error);
     }
   }
 }

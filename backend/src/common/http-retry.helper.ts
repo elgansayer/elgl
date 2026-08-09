@@ -1,4 +1,8 @@
-import { Logger } from '@nestjs/common';
+/** Minimal logger interface for retry operations. Compatible with both NestJS Logger and PinoLogger. */
+export interface RetryLogger {
+  warn(message: string): void;
+  debug(message: string): void;
+}
 
 export interface RetryOptions {
   /** Maximum number of retry attempts (default: 5) */
@@ -8,7 +12,7 @@ export interface RetryOptions {
   /** Maximum total delay across all retries in milliseconds (default: 60000) */
   maxTotalDelayMs?: number;
   /** Optional logger instance for debug output */
-  logger?: Logger;
+  logger?: RetryLogger;
 }
 
 /**
@@ -20,10 +24,10 @@ export interface RetryOptions {
  * where jitter is ±25% of the exponential delay.
  */
 export async function withExponentialBackoff<T>(
-  operation: () => Promise<T>,
+  operation: () => T | PromiseLike<T>,
   operationName: string,
   options: RetryOptions = {},
-): Promise<T> {
+): Promise<Awaited<T>> {
   const {
     maxRetries = 5,
     baseDelayMs = 1000,
@@ -91,14 +95,6 @@ function isHttp429Error(error: unknown): boolean {
 
   // Plain HTTP error with status field
   if (err.status === 429) {
-    return true;
-  }
-
-  // AxiosError with status field (some versions)
-  if (
-    typeof err.status === 'number' &&
-    (err.status as number) === 429
-  ) {
     return true;
   }
 

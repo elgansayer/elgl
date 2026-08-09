@@ -67,14 +67,21 @@ describe('AdminService', () => {
     expect(result.total).toBe(1);
   });
 
-  it('falls back to mock data when the users request errors', async () => {
-    const promise = service.listUsers('', 1, 20);
+  it('falls back to mock data only on network errors (status 0), propagates HTTP errors', async () => {
+    // Network error (status 0) - should fall back to mock data
+    const networkPromise = service.listUsers('', 1, 20);
+    const netReq = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
+    netReq.error(new ProgressEvent('network error'));
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
-    req.error(new ProgressEvent('network error'));
+    const netResult = await networkPromise;
+    expect(netResult.users.length).toBeGreaterThan(0);
 
-    const result = await promise;
-    expect(result.users.length).toBeGreaterThan(0);
+    // HTTP error (status 403) - should propagate
+    const httpPromise = service.listUsers('', 1, 20);
+    const httpReq = httpMock.expectOne(`${environment.apiUrl}/admin/users?page=1&pageSize=20`);
+    httpReq.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+
+    await expect(httpPromise).rejects.toBeTruthy();
   });
 
   it('sends a PATCH request to toggle VIP status', async () => {
