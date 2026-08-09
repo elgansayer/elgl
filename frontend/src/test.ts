@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto';
 import { getTestBed } from '@angular/core/testing';
 import {
   BrowserDynamicTestingModule,
@@ -8,3 +9,4 @@ getTestBed().initTestEnvironment(
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting()
 );
+import 'fake-indexeddb/auto';

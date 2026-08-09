@@ -1,6 +1,25 @@
 <div class="mx-auto max-w-5xl space-y-4">
   @if (store.currentRoom(); as room) {
     <section class="app-card app-padded space-y-4">
+      <!-- Degradation notice banner -->
+      @if (store.isOperatingInDegradedMode()) {
+        <div
+          class="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+          role="alert"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-lg">⚠️</span>
+            <div>
+              <p class="font-bold">{{ 'audioRoom.degradedModeBanner' | t }}</p>
+              <ul class="mt-1 list-disc ps-5 text-xs opacity-80">
+                @for (reason of store.degradationSummary(); track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
+            </div>
+          </div>
+        </div>
+      }
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p class="app-muted font-bold uppercase tracking-wide">
@@ -76,11 +95,23 @@
         </div>
       </div>
 
+      @if (room.host_id) {
+        <app-soundboard
+          [roomId]="room.id"
+          [hostUserId]="room.host_id"
+        ></app-soundboard>
+      }
+
       <div class="flex flex-wrap gap-1.5">
         <span class="app-chip">{{ 'audioRoom.chipListening' | t }}</span>
         <span class="app-chip">{{ 'audioRoom.chipQueue' | t }}</span>
         <span class="app-chip">{{ 'audioRoom.chipSubtitles' | t }}</span>
       </div>
+
+      <app-soundboard
+        [roomId]="room.id"
+        [hostUserId]="room.host_id"
+      ></app-soundboard>
 
       @if (showExclusivePicker() && authService.currentUser()?.is_vip) {
         <div class="flex flex-wrap gap-2 p-2 bg-surface-200 rounded-card">
@@ -210,6 +241,12 @@
                        [attr.aria-label]="'audioRoom.demoteBtn' | t">
                         {{ 'audioRoom.demoteBtn' | t }}
                       </button>
+                      <button
+                        (click)="kick(participant.user_id)"
+                        class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-red-600/30"
+                      >
+                        {{ 'audioRoom.kickBtn' | t }}
+                      </button>
                     </div>
                   }
                 </div>
@@ -289,11 +326,45 @@
           </section>
         </div>
 
+<<<<<<< HEAD
+        <div>
+          <div class="flex border-b border-surface-100 mb-2">
+            <button
+              (click)="sidebarTab.set('chat')"
+              class="flex-1 px-3 py-2 text-xs font-bold transition-colors"
+              [class.border-b-2]="sidebarTab() === 'chat'"
+              [class.border-purple-500]="sidebarTab() === 'chat'"
+              [class.text-purple-300]="sidebarTab() === 'chat'"
+              [class.text-text-muted]="sidebarTab() !== 'chat'"
+            >
+              💬 {{ 'audioRoom.tabChat' | t }}
+            </button>
+            <button
+              (click)="sidebarTab.set('notes')"
+              class="flex-1 px-3 py-2 text-xs font-bold transition-colors"
+              [class.border-b-2]="sidebarTab() === 'notes'"
+              [class.border-purple-500]="sidebarTab() === 'notes'"
+              [class.text-purple-300]="sidebarTab() === 'notes'"
+              [class.text-text-muted]="sidebarTab() !== 'notes'"
+            >
+              📝 {{ 'audioRoom.tabNotes' | t }}
+            </button>
+          </div>
+          @if (sidebarTab() === 'chat') {
+            <app-room-chat></app-room-chat>
+          } @else {
+            <app-voiceroom-notes [roomId]="store.currentRoom()?.id ?? ''"></app-voiceroom-notes>
+          }
+=======
         <div class="flex flex-col gap-4">
           <app-room-chat></app-room-chat>
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
           @if (showNotesPanel()) {
             <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
           }
+>>>>>>> origin/main
         </div>
       </div>
     </section>
@@ -380,6 +451,14 @@
          [attr.aria-label]="'audioRoom.launchRoomBtn' | t">
           {{ 'audioRoom.launchRoomBtn' | t }}
         </button>
+        @if (authService.currentUser()?.is_vip) {
+          <button
+            (click)="showPrivatePartyModal.set(true)"
+            class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-xs self-start bg-gradient-to-r from-pink-500 to-purple-600"
+           [attr.aria-label]="'privateParty.launchBtn' | t">
+            {{ 'privateParty.launchBtn' | t }}
+          </button>
+        }
       </div>
     </section>
 
@@ -391,6 +470,44 @@
 
     @if (store.isLoading()) {
       <div class="app-empty-state text-text-secondary">{{ 'audioRoom.loading' | t }}</div>
+    }
+
+    <!-- Private Rooms Section -->
+    @if (!store.isLoading() && store.privateRooms().length > 0) {
+      <section class="space-y-3">
+        <h2 class="text-base font-bold text-pink-400 flex items-center gap-2">
+          <span aria-hidden="true">&#128274;</span>
+          {{ 'privateParty.yourPrivateRoomsHeading' | t }}
+        </h2>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          @for (room of store.privateRooms(); track room.id) {
+            <article class="app-card app-padded space-y-3 border-pink-500/30 border">
+              <div class="flex items-center justify-between">
+                <span class="app-chip bg-pink-500/20 text-pink-400">{{ 'privateParty.privateTag' | t }}</span>
+                <span class="app-chip text-primary">{{ room.language_pair }}</span>
+              </div>
+              <h3 class="text-base font-black text-text-primary">{{ room.title }}</h3>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="app-chip">{{ room.topic_tag }}</span>
+              </div>
+              <p class="text-xs text-text-secondary">
+                {{ 'audioRoom.hostLabel' | t }}:
+                <span class="font-semibold text-text-primary">{{
+                  room.host?.display_name || ('audioRoom.hostFallback' | t)
+                }}</span>
+              </p>
+              <div class="flex items-center justify-between border-t border-surface-100 pt-3">
+                <span class="app-muted">{{
+                  'audioRoom.listenersCount' | t: { count: room.listeners_count }
+                }}</span>
+                <button (click)="join(room)" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs" [attr.aria-label]="'audioRoom.joinRoomBtn' | t">
+                  {{ 'audioRoom.joinRoomBtn' | t }}
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
     }
 
     @if (!store.isLoading() && store.activeRooms().length === 0) {
@@ -474,5 +591,12 @@
       (closed)="showCreateModal.set(false)"
       (created)="createRoom($event)"
     ></app-voiceroom-create-modal>
+  }
+
+  @if (showPrivatePartyModal()) {
+    <app-private-party-create-modal
+      (closed)="showPrivatePartyModal.set(false)"
+      (created)="createPrivateParty($event)"
+    ></app-private-party-create-modal>
   }
 </div>

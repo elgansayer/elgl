@@ -44,7 +44,7 @@ export class OfflineDiscoveryCacheService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest)) return;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
         const db = target.result;
         if (!db.objectStoreNames.contains(STORE_PARTNERS)) {
           db.createObjectStore(STORE_PARTNERS, { keyPath: 'id' });
@@ -215,5 +215,54 @@ export class OfflineDiscoveryCacheService {
     } catch {
       // Silently handle clear failures
     }
+  }
+
+  /**
+   * Evicts stale cache entries older than CACHE_TTL_MS.
+   * Call periodically (e.g., on app startup) to prevent unlimited IndexedDB growth.
+   */
+  async evictStaleEntries(): Promise<void> {
+    if (!this.isAvailable()) return;
+    const db = await this.ensureDB();
+    const cutoff = Date.now() - CACHE_TTL_MS;
+
+    // Purge stale partner entries
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_PARTNERS, 'readwrite');
+      const store = tx.objectStore(STORE_PARTNERS);
+      const req = store.openCursor();
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) return;
+        const entry = cursor.value as (UserProfile & { _cachedAt?: number });
+        if (entry._cachedAt && entry._cachedAt < cutoff) {
+          void cursor.delete();
+        }
+        void cursor.continue();
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
+    // Purge stale search result entries
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_SEARCH, 'readwrite');
+      const store = tx.objectStore(STORE_SEARCH);
+      const req = store.openCursor();
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) return;
+        const entry = cursor.value as CacheEntry<unknown>;
+        if (entry.cachedAt < cutoff) {
+          void cursor.delete();
+        }
+        void cursor.continue();
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
+    // Re-check availability after cleanup
+    void this.refreshAvailability();
   }
 }

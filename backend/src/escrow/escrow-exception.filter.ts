@@ -23,8 +23,7 @@ export class EscrowExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const user = (request as unknown as Record<string, unknown>).user as
-      | { id: string }
-      | undefined;
+      { id: string } | undefined;
 
     const status =
       exception instanceof HttpException
@@ -32,9 +31,7 @@ export class EscrowExceptionFilter implements ExceptionFilter {
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
     const httpExceptionResponse =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : undefined;
+      exception instanceof HttpException ? exception.getResponse() : undefined;
 
     const message =
       typeof httpExceptionResponse === 'object' &&
