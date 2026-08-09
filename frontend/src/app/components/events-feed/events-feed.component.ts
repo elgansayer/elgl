@@ -5,7 +5,6 @@ import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-events-feed',
-  standalone: true,
   imports: [CommonModule, TranslatePipe, DatePipe],
   template: `
     <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>

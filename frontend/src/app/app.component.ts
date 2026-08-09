@@ -34,17 +34,15 @@ import { ForcedUpdateModalComponent } from './components/forced-update-modal/for
 import { ThemeSelectorComponent } from './components/theme-selector/theme-selector.component';
 import { FontScaleSliderComponent } from './components/font-scale-slider/font-scale-slider.component';
 import { FontScaleService } from './services/font-scale.service';
-import { ThemeService } from './services/theme.service';
 import { I18nService } from './services/i18n.service';
 import { AppLanguageSelectorComponent } from './components/app-language-selector/app-language-selector.component';
 import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
-<<<<<<< HEAD
-import { UserService } from './services/user.service';
-=======
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
->>>>>>> origin/main
+import { TourService } from './services/tour.service';
+import { NotificationService } from './services/notification.service';
+import { ChatService } from './services/chat.service';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -81,10 +79,11 @@ export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
 
   public startProductTour(): void {
-    // Placeholder method for the interactive product tour feature.
+    this.tourService.startEconomyTour();
   }
   authService = inject(AuthService);
   economyStore = inject(EconomyStore);
+  private tourService = inject(TourService);
   centrifugeService = inject(CentrifugeService);
   fcmService = inject(FcmService);
   private safetyService = inject(SafetyService);
@@ -92,14 +91,14 @@ export class AppComponent implements OnInit {
   readonly unreadCounter = inject(UnreadCounterService);
   readonly versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
-  private themeService = inject(ThemeService);
-  private userService = inject(UserService);
   readonly i18n = inject(I18nService);
   private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
   private platformId = inject(PLATFORM_ID);
+  private notificationService = inject(NotificationService);
+  private chatService = inject(ChatService);
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -180,14 +179,6 @@ export class AppComponent implements OnInit {
     if (user && token) {
       await this.economyStore.loadInitialData();
 
-      // Load user profile to apply saved accent colour globally
-      try {
-        const profile = await this.userService.getMyProfile();
-        this.themeService.loadFromProfile(profile);
-      } catch {
-        // Silently fail - default accent already applied
-      }
-
       // Load the blocked user list once the user is available
       await this.safetyService.loadBlockedUsers();
 
@@ -267,9 +258,43 @@ export class AppComponent implements OnInit {
         }
       });
 
+      // Load initial unread counts from backend
+      await this.loadInitialUnreadCounts();
+
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
+    }
+  }
+
+  private async loadInitialUnreadCounts(): Promise<void> {
+    try {
+      const [notificationCount] = await Promise.all([
+        this.notificationService.getUnreadCount(),
+      ]);
+      this.unreadCounter.setNotificationUnread(notificationCount);
+    } catch {
+      // Silently ignore - real-time events will update counts
+    }
+
+    // Load chat unread counts from backend
+    try {
+      const rooms = await this.chatService.getRooms();
+      let totalChatUnread = 0;
+      for (const room of rooms) {
+        try {
+          const messages = await this.chatService.getMessages(room.id);
+          const currentUserId = this.authService.currentUser()?.id;
+          totalChatUnread += messages.filter(
+            (m) => !m.is_read && m.sender_id !== currentUserId,
+          ).length;
+        } catch {
+          // Skip rooms with errors
+        }
+      }
+      this.unreadCounter.setChatUnread(totalChatUnread);
+    } catch {
+      // Silently ignore - real-time events will update counts
     }
   }
 
