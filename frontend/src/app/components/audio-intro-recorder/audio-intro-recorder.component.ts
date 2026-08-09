@@ -1,5 +1,6 @@
-import { Component, output, signal, inject, OnDestroy, input } from '@angular/core';
-import { interval, Subscription } from 'rxjs';
+import { Component, output, signal, inject, input, DestroyRef } from '@angular/core';
+import { interval } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
 
@@ -10,8 +11,9 @@ import { UserService } from '../../services/user.service';
   templateUrl: './audio-intro-recorder.component.html',
   styleUrls: ['./audio-intro-recorder.component.scss'],
 })
-export class AudioIntroRecorderComponent implements OnDestroy {
+export class AudioIntroRecorderComponent {
   private userService = inject(UserService);
+  private destroyRef = inject(DestroyRef);
 
   // Inputs
   existingAudioUrl = input<string | null>(null);
@@ -31,7 +33,23 @@ export class AudioIntroRecorderComponent implements OnDestroy {
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
   private audioStream: MediaStream | null = null;
-  private timerSub: Subscription | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.cleanupRecording();
+    });
+  }
+
+  private cleanupRecording(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+    }
+    this.audioStream?.getTracks().forEach((t) => t.stop());
+    this.audioStream = null;
+    if (this.recordingUrl()) {
+      URL.revokeObjectURL(this.recordingUrl());
+    }
+  }
 
   formatTime(seconds: number): string {
     const mins = Math.floor(seconds / 60);
@@ -41,6 +59,7 @@ export class AudioIntroRecorderComponent implements OnDestroy {
 
   async startRecording(): Promise<void> {
     this.recordError.set(null);
+    this.duration.set(0);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.audioStream = stream;
@@ -60,35 +79,28 @@ export class AudioIntroRecorderComponent implements OnDestroy {
         this.recordingUrl.set(URL.createObjectURL(blob));
         this.isRecording.set(false);
         this.recordingComplete.emit(this.recordingUrl());
-        this.cleanupTimer();
       };
       this.mediaRecorder.start();
       this.isRecording.set(true);
-      this.startTimer();
+
+      // Timer with auto-cleanup via takeUntilDestroyed
+      interval(1000)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          this.duration.update((d) => d + 1);
+          if (this.duration() >= this.maxDuration) {
+            this.stopRecording();
+          }
+        });
     } catch {
       this.recordError.set('Failed to start recording');
     }
-  }
-
-  private startTimer(): void {
-    this.timerSub = interval(1000).subscribe(() => {
-      this.duration.update((d) => d + 1);
-      if (this.duration() >= this.maxDuration) {
-        this.stopRecording();
-      }
-    });
-  }
-
-  private cleanupTimer(): void {
-    this.timerSub?.unsubscribe();
-    this.timerSub = null;
   }
 
   stopRecording(): void {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
     }
-    this.cleanupTimer();
   }
 
   async uploadRecording(): Promise<void> {
@@ -122,14 +134,5 @@ export class AudioIntroRecorderComponent implements OnDestroy {
       this.isPlaying.set(true);
       audio.onended = () => this.isPlaying.set(false);
     });
-  }
-
-  ngOnDestroy(): void {
-    this.cleanupTimer();
-    this.audioStream?.getTracks().forEach((t) => t.stop());
-    this.audioStream = null;
-    if (this.recordingUrl()) {
-      URL.revokeObjectURL(this.recordingUrl());
-    }
   }
 }

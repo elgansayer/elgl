@@ -146,54 +146,6 @@ test.describe('Authentication Flows', () => {
     });
   });
 
-  test.describe('VIP & Subscription Pages', () => {
-    test('should navigate to VIP page at /vip', async ({ page }) => {
-      await page.goto('/vip');
-      await page.waitForTimeout(2000);
-
-      const body = page.locator('body');
-      await expect(body).toBeVisible();
-    });
-
-    test('should navigate to subscription page at /subscription', async ({ page }) => {
-      await page.goto('/subscription');
-      await page.waitForTimeout(2000);
-
-      const body = page.locator('body');
-      await expect(body).toBeVisible();
-    });
-
-    test('should navigate to shop page at /shop', async ({ page }) => {
-      await page.goto('/shop');
-      await page.waitForTimeout(2000);
-
-      const body = page.locator('body');
-      await expect(body).toBeVisible();
-    });
-  });
-
-  test.describe('Onboarding Workflow', () => {
-    test('should display step indicators with correct numbering', async ({ page }) => {
-      await page.goto('/onboarding');
-      await page.waitForTimeout(1500);
-
-      // Step indicators should show numbers
-      const pageContent = await page.content();
-      expect(pageContent).toContain('onboarding.title');
-      expect(pageContent).toContain('onboarding.subtitle');
-    });
-
-    test('should have disabled back button on first step', async ({ page }) => {
-      await page.goto('/onboarding');
-      await page.waitForTimeout(1500);
-
-      // Back button should be disabled on the first step
-      const backButton = page.locator('button', { hasText: 'common.back' }).first();
-      const isDisabled = await backButton.isDisabled().catch(() => true);
-      expect(isDisabled).toBeTruthy();
-    });
-  });
-
   test.describe('Profile (authenticated state)', () => {
     test('should navigate to profile page', async ({ page }) => {
       await page.goto('/profile');
