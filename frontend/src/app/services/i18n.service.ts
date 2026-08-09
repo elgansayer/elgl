@@ -84,6 +84,7 @@ export class I18nService {
     'notifications.repliedComment': 'replied to your comment',
     'notifications.followedYou': 'started following you',
     'notifications.viewedProfile': 'viewed your profile',
+    'notifications.mentionedInComment': 'mentioned you in a comment',
     'notifications.mentionedInChat': 'mentioned you in a chat',
     'notifications.systemAlert': 'System alert',
     'notifications.tabSystem': 'System',
