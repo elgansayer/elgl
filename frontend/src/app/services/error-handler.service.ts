@@ -38,8 +38,8 @@ function parseStackFrames(stack: string): ClientErrorStackFrame[] {
       const m = STACK_FRAME_RE.exec(line);
       if (!m) return null;
 
-      const fnName = m.groups?.functionName;
-      const rawSource = m.groups?.source ?? m.groups?.sourceOnly;
+      const fnName = m.groups?.['functionName'];
+      const rawSource = m.groups?.['source'] ?? m.groups?.['sourceOnly'];
 
       if (!rawSource) {
         return fnName ? { functionName: fnName } : null;
@@ -123,8 +123,11 @@ export class GlobalErrorHandler implements ErrorHandler {
     let metadata: Record<string, unknown> | undefined;
 
     if (typeof err === 'object' && err !== null) {
-      const obj = err as Record<string, unknown>;
-      message = String(obj['message'] ?? obj['toString']?.() ?? 'Unknown error object');
+      const obj: Record<string, unknown> = Object(err);
+      const objStr = obj['toString'];
+      message = String(
+        obj['message'] ?? (typeof objStr === 'function' ? objStr() : 'Unknown error object'),
+      );
       metadata = { rawType: obj.constructor?.name ?? typeof err };
     } else {
       message = String(err);
@@ -140,10 +143,7 @@ export class GlobalErrorHandler implements ErrorHandler {
     });
   }
 
-  private sendPayload(
-    payload: Omit<ClientErrorPayload, 'stackFrames'>,
-    rawStack?: string,
-  ): void {
+  private sendPayload(payload: Omit<ClientErrorPayload, 'stackFrames'>, rawStack?: string): void {
     const fullPayload: ClientErrorPayload = {
       ...payload,
       stackFrames: rawStack ? parseStackFrames(rawStack) : undefined,

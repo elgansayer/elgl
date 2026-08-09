@@ -9,7 +9,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class PurchaseCoinsDto {
   @ApiProperty({
-    description: 'Receipt token from Apple, Google Play, or Stripe checkout session ID',
+    description:
+      'Receipt token from the platform (Stripe session ID, Apple receipt data, Google Play purchase token)',
     example: 'cs_test_a1b2c3d4e5f6',
   })
   @IsString()
@@ -17,7 +18,7 @@ export class PurchaseCoinsDto {
   receipt_token!: string;
 
   @ApiPropertyOptional({
-    description: 'Payment platform. Auto-detected from receipt if omitted',
+    description: 'Platform the purchase was made on. Auto-detected if omitted.',
     enum: ['ios', 'android', 'web'],
     example: 'web',
   })
@@ -29,7 +30,8 @@ export class PurchaseCoinsDto {
 
 export class VerifyReceiptDto {
   @ApiProperty({
-    description: 'Receipt token to verify with the store',
+    description:
+      'Receipt token from the platform (Stripe session ID, Apple receipt data, Google Play purchase token)',
     example: 'cs_test_a1b2c3d4e5f6',
   })
   @IsString()
@@ -37,9 +39,9 @@ export class VerifyReceiptDto {
   receipt_token!: string;
 
   @ApiProperty({
-    description: 'Platform the receipt originated from',
+    description: 'Platform the receipt is from',
     enum: ['ios', 'android', 'web'],
-    example: 'ios',
+    example: 'web',
   })
   @IsString()
   @IsNotEmpty()
@@ -48,15 +50,16 @@ export class VerifyReceiptDto {
 
 export class VerifiedPurchaseDto {
   @ApiProperty({
-    description: 'Unique transaction identifier from the store',
-    example: 'txn_2f3g4h5i6j7k',
+    description: 'Platform-specific transaction identifier',
+    example: 'cs_test_a1b2c3d4e5f6',
   })
   @IsString()
   @IsNotEmpty()
   transaction_id!: string;
 
   @ApiProperty({
-    description: 'Product identifier matching a coin package',
+    description:
+      'Product ID from the platform (must match a COIN_PACKAGES platform_product_id entry)',
     example: 'coins_small_web',
   })
   @IsString()
@@ -75,7 +78,8 @@ export class VerifiedPurchaseDto {
 
 export class CreateCoinCheckoutSessionDto {
   @ApiProperty({
-    description: 'Coin package ID (coins_small, coins_medium, coins_large, coins_mega)',
+    description: 'ID of the coin package to purchase',
+    enum: ['coins_small', 'coins_medium', 'coins_large', 'coins_mega'],
     example: 'coins_small',
   })
   @IsString()
@@ -85,8 +89,8 @@ export class CreateCoinCheckoutSessionDto {
 
 export class UnlockStickerPackDto {
   @ApiProperty({
-    description: 'Sticker pack ID to unlock with coins',
-    example: 'sticker_pack_summer_2026',
+    description: 'ID of the sticker pack to unlock',
+    example: 'stk_pack_1',
   })
   @IsString()
   @IsNotEmpty()
@@ -95,22 +99,26 @@ export class UnlockStickerPackDto {
 
 export class SendGiftDto {
   @ApiProperty({
-    description: 'UUID of the gift recipient',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'UUID of the user receiving the gift',
+    example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+    format: 'uuid',
   })
   @IsUUID()
   receiver_id!: string;
 
   @ApiProperty({
-    description: 'UUID of the virtual gift from the catalog',
-    example: '550e8400-e29b-41d4-a716-446655440001',
+    description: 'UUID of the gift from the catalog',
+    example: 'gift_rose',
+    format: 'uuid',
   })
   @IsUUID()
   gift_id!: string;
 
   @ApiPropertyOptional({
-    description: 'UUID of the chat room. Required only for in-room gift sending',
-    example: '550e8400-e29b-41d4-a716-446655440002',
+    description:
+      'UUID of the audio room where the gift is being sent (for room-level gift broadcasts)',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef0123456789',
+    format: 'uuid',
   })
   @IsOptional()
   @IsUUID()

@@ -4,6 +4,13 @@ import { GiftAnimationOverlayComponent } from './gift-animation-overlay.componen
 import { GiftAnimationService, GiftAnimationOverlay } from '../../services/gift-animation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
+
+vi.mock('lottie-web', () => ({
+  default: {
+    loadAnimation: vi.fn(() => ({ destroy: vi.fn() })),
+  },
+}));
+
 describe('GiftAnimationOverlayComponent', () => {
   let fixture: ComponentFixture<GiftAnimationOverlayComponent>;
   let component: GiftAnimationOverlayComponent;
@@ -44,26 +51,27 @@ describe('GiftAnimationOverlayComponent', () => {
   });
 
   it('should not render when no animation is active', () => {
-    const overlay = fixture.nativeElement.querySelector('.fixed.inset-0');
-    expect(overlay).toBeNull();
+    const innerOverlay = fixture.nativeElement.querySelector('.fixed.inset-0');
+    expect(innerOverlay).toBeNull();
   });
 
-  it('should render SVG animation when animation is active', () => {
+  it('should render Lottie container when animation is active', () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
 
     const container = fixture.nativeElement.querySelector('.fixed.inset-0');
     expect(container).not.toBeNull();
 
-    const svg = container.querySelector('svg');
-    expect(svg).not.toBeNull();
+    const lottieContainer = fixture.nativeElement.querySelector('#lottie-container');
+    expect(lottieContainer).not.toBeNull();
   });
 
   it('should display gift icon and banners', () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
 
-    const iconEl = fixture.nativeElement.querySelector('.text-7xl');
+    const iconEl = fixture.nativeElement.querySelector(".drop-shadow-lg");
+    expect(iconEl).not.toBeNull();
     expect(iconEl.textContent.trim()).toBe('🌹');
 
     const buttons = fixture.nativeElement.querySelectorAll('button');
@@ -80,36 +88,36 @@ describe('GiftAnimationOverlayComponent', () => {
     expect(container.getAttribute('aria-label')).toBeTruthy();
   });
 
-  it('should render confetti animation type', () => {
+  it('should render Lottie container for confetti animation type', () => {
     animationService.playAnimation({ ...mockOverlay, animationType: 'confetti' });
     fixture.detectChanges();
 
-    const rects = fixture.nativeElement.querySelectorAll('rect.confetti-piece');
-    expect(rects.length).toBe(40);
+    const lottieContainer = fixture.nativeElement.querySelector('#lottie-container');
+    expect(lottieContainer).not.toBeNull();
   });
 
-  it('should render hearts animation type', () => {
+  it('should render Lottie container for hearts animation type', () => {
     animationService.playAnimation({ ...mockOverlay, animationType: 'hearts' });
     fixture.detectChanges();
 
-    const hearts = fixture.nativeElement.querySelectorAll('path.heart-particle');
-    expect(hearts.length).toBe(20);
+    const lottieContainer = fixture.nativeElement.querySelector('#lottie-container');
+    expect(lottieContainer).not.toBeNull();
   });
 
-  it('should render sparkle animation type', () => {
+  it('should render Lottie container for sparkle animation type', () => {
     animationService.playAnimation({ ...mockOverlay, animationType: 'sparkle' });
     fixture.detectChanges();
 
-    const stars = fixture.nativeElement.querySelectorAll('polygon.sparkle-particle');
-    expect(stars.length).toBe(25);
+    const lottieContainer = fixture.nativeElement.querySelector('#lottie-container');
+    expect(lottieContainer).not.toBeNull();
   });
 
-  it('should render premium animation type', () => {
+  it('should render Lottie container for premium animation type', () => {
     animationService.playAnimation({ ...mockOverlay, animationType: 'premium' });
     fixture.detectChanges();
 
-    const rings = fixture.nativeElement.querySelectorAll('circle.premium-ring');
-    expect(rings.length).toBe(5);
+    const lottieContainer = fixture.nativeElement.querySelector('#lottie-container');
+    expect(lottieContainer).not.toBeNull();
   });
 
   it('should dismiss animation when button is clicked', () => {
@@ -142,15 +150,14 @@ describe('GiftAnimationOverlayComponent', () => {
     expect(banner).not.toBeNull();
   });
 
-  it('should regenerate particles for new animations', () => {
+  it('should show Lottie container when switching to a new animation', () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
 
     animationService.playAnimation({ ...mockOverlay, giftName: 'Heart' });
     fixture.detectChanges();
 
-    // Particles should still exist
-    const secondFloat = fixture.nativeElement.querySelector('.float-particle');
-    expect(secondFloat).not.toBeNull();
+    const lottieContainer = fixture.nativeElement.querySelector('#lottie-container');
+    expect(lottieContainer).not.toBeNull();
   });
 });

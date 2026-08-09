@@ -10,8 +10,8 @@ import { EconomyStore } from '../../services/economy.store';
     <!-- Backdrop -->
     <div
       class="fixed inset-0 z-40 bg-black/20 transition-opacity"
-      (click)="close.emit()"
-      (keydown.enter)="close.emit()"
+      (click)="dismiss.emit()"
+      (keydown.enter)="dismiss.emit()"
       tabindex="0"
       role="button"
     ></div>
@@ -24,8 +24,8 @@ import { EconomyStore } from '../../services/economy.store';
       <!-- Handle -->
       <div
         class="flex justify-center pt-3 pb-2 cursor-pointer"
-        (click)="close.emit()"
-        (keydown.enter)="close.emit()"
+        (click)="dismiss.emit()"
+        (keydown.enter)="dismiss.emit()"
         tabindex="0"
         role="button"
       >
@@ -111,7 +111,7 @@ export class StickerPickerComponent {
 
   readonly isOpen = input<boolean>(false);
   readonly selectSticker = output<string>();
-  readonly close = output<void>();
+  readonly dismiss = output<void>();
 
   readonly defaultStickers = [
     { id: 'default_happy', url: 'assets/stickers/happy.png', name: 'Happy', is_animated: false },
@@ -139,6 +139,6 @@ export class StickerPickerComponent {
 
   onSelectSticker(url: string): void {
     this.selectSticker.emit(url);
-    this.close.emit();
+    this.dismiss.emit();
   }
 }
