@@ -1,4 +1,4 @@
-import { Component, input, output, effect, viewChild, ElementRef } from '@angular/core';
+import { Component, input, output, effect, viewChild, ElementRef, afterNextRender } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -6,11 +6,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [TranslatePipe],
   template: `
     <div
+      #overlay
       class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4 animate-fadeIn"
       role="dialog"
       aria-modal="true"
       [attr.aria-labelledby]="dialogTitleId"
-      (keydown.escape)="closed.emit()"
+      tabindex="-1"
+      (click)="onBackdropClick($event)"
     >
       <div
         class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-sm w-full shadow-2xl border border-surface-100 text-center space-y-3 sm:space-y-4 max-h-[90vh] overflow-y-auto"
@@ -33,13 +35,17 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
     </div>
   `,
+  host: {
+    '(document:keydown.escape)': 'onEscapeKey()',
+  },
 })
 export class DailyLoginModalComponent {
   coins = input(0);
   closed = output<void>();
 
   readonly dialogTitleId = 'daily-login-title-' + Math.random().toString(36).substring(2, 9);
-  private readonly primaryButton = viewChild.required<ElementRef<HTMLElement>>('primaryButton');
+  private readonly primaryButton = viewChild<ElementRef<HTMLElement>>('primaryButton');
+  private readonly overlay = viewChild<ElementRef<HTMLElement>>('overlay');
 
   constructor() {
     effect(() => {
@@ -52,5 +58,25 @@ export class DailyLoginModalComponent {
         });
       }
     });
+
+    afterNextRender(() => {
+      setTimeout(() => {
+        const el = this.overlay();
+        if (el?.nativeElement) {
+          el.nativeElement.focus();
+        }
+      });
+    });
+  }
+
+  protected onEscapeKey(): void {
+    this.closed.emit();
+  }
+
+  protected onBackdropClick(event: MouseEvent): void {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.classList.contains('animate-fadeIn')) {
+      this.closed.emit();
+    }
   }
 }

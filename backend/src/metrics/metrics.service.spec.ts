@@ -16,6 +16,33 @@ describe('MetricsService', () => {
     expect(service).toBeDefined();
   });
 
+<<<<<<< HEAD
+  it('should return Prometheus content type', () => {
+    const contentType = service.getContentType();
+    expect(contentType).toContain('text/plain');
+  });
+
+  it('should return metrics string with default metrics', async () => {
+    const metrics = await service.getMetrics();
+    expect(typeof metrics).toBe('string');
+    expect(metrics.length).toBeGreaterThan(0);
+    expect(metrics).toContain('hellotalk_');
+  });
+
+  it('should expose HTTP request duration histogram', () => {
+    expect(service.httpRequestDuration).toBeDefined();
+    service.httpRequestDuration.observe({ method: 'GET', route: '/test', status_code: '200' }, 0.1);
+  });
+
+  it('should expose HTTP requests total counter', () => {
+    expect(service.httpRequestsTotal).toBeDefined();
+    service.httpRequestsTotal.inc({ method: 'GET', route: '/test', status_code: '200' });
+  });
+
+  it('should expose WebSocket connections gauge', () => {
+    expect(service.websocketConnections).toBeDefined();
+    service.websocketConnections.set(5);
+=======
   it('should return metrics string from getMetrics()', async () => {
     const metrics = await service.getMetrics();
     expect(typeof metrics).toBe('string');
@@ -41,6 +68,7 @@ describe('MetricsService', () => {
   it('should expose a registry', () => {
     const registry = service.getRegister();
     expect(registry).toBeDefined();
+>>>>>>> origin/main
   });
 
   describe('SRS metrics', () => {
@@ -182,7 +210,9 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_ts_moderation_actions_total');
       expect(metrics).toContain('hellotalk_ts_dating_risk_score');
       expect(metrics).toContain('hellotalk_ts_reports_by_category_total');
-      expect(metrics).toContain('hellotalk_ts_moderation_queue_latency_seconds');
+      expect(metrics).toContain(
+        'hellotalk_ts_moderation_queue_latency_seconds',
+      );
     });
   });
 
@@ -248,7 +278,9 @@ describe('MetricsService', () => {
     });
 
     it('should set daily active readers gauge', () => {
-      expect(() => service.setReadingEngineDailyActiveReaders(128)).not.toThrow();
+      expect(() =>
+        service.setReadingEngineDailyActiveReaders(128),
+      ).not.toThrow();
     });
 
     it('should include reading engine metrics in getMetrics output', async () => {
@@ -261,13 +293,25 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_reading_engine_sessions_total');
       expect(metrics).toContain('hellotalk_reading_engine_ai_requests_total');
       expect(metrics).toContain('hellotalk_reading_engine_ai_errors_total');
-      expect(metrics).toContain('hellotalk_reading_engine_flashcard_saves_total');
-      expect(metrics).toContain('hellotalk_reading_engine_daily_active_readers');
-      expect(metrics).toContain('hellotalk_reading_engine_session_duration_seconds');
-      expect(metrics).toContain('hellotalk_reading_engine_words_looked_up_total');
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_flashcard_saves_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_daily_active_readers',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_session_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_words_looked_up_total',
+      );
       expect(metrics).toContain('hellotalk_reading_engine_words_parsed_total');
-      expect(metrics).toContain('hellotalk_reading_engine_tokenisation_duration_seconds');
-      expect(metrics).toContain('hellotalk_reading_engine_ai_request_duration_seconds');
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_tokenisation_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_ai_request_duration_seconds',
+      );
     });
   });
 
@@ -363,18 +407,14 @@ describe('MetricsService', () => {
       expect(metrics).toContain(
         'hellotalk_matchmaking_fallback_tier_used_total',
       );
-      expect(metrics).toContain(
-        'hellotalk_matchmaking_empty_results_total',
-      );
+      expect(metrics).toContain('hellotalk_matchmaking_empty_results_total');
       expect(metrics).toContain(
         'hellotalk_matchmaking_request_duration_seconds',
       );
       expect(metrics).toContain(
         'hellotalk_matchmaking_daily_cache_misses_total',
       );
-      expect(metrics).toContain(
-        'hellotalk_matchmaking_tier_success_rate',
-      );
+      expect(metrics).toContain('hellotalk_matchmaking_tier_success_rate');
     });
   });
 
@@ -428,7 +468,9 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_escrow_transactions_created_total');
       expect(metrics).toContain('hellotalk_escrow_transactions_released_total');
       expect(metrics).toContain('hellotalk_escrow_transactions_refunded_total');
-      expect(metrics).toContain('hellotalk_escrow_transactions_cancelled_total');
+      expect(metrics).toContain(
+        'hellotalk_escrow_transactions_cancelled_total',
+      );
       expect(metrics).toContain('hellotalk_escrow_total_held');
       expect(metrics).toContain('hellotalk_escrow_total_coins_held');
       expect(metrics).toContain('hellotalk_escrow_amount_per_transaction');
@@ -438,98 +480,85 @@ describe('MetricsService', () => {
     });
   });
 
-  describe('Discovery Map metrics', () => {
-    it('should record discovery search', () => {
+  describe('Video Classrooms metrics', () => {
+    it('should record video classroom created', () => {
+      expect(() => service.recordVideoClassroomCreated()).not.toThrow();
+    });
+
+    it('should record video classroom creation failed', () => {
       expect(() =>
-        service.recordDiscoverySearch('partners', true, 0.5, 25),
+        service.recordVideoClassroomCreationFailed('Error'),
       ).not.toThrow();
     });
 
-    it('should record discovery fallback to mock', () => {
-      expect(() => service.recordDiscoveryFallbackToMock('partners')).not.toThrow();
+    it('should record video classroom creation failed with default', () => {
+      expect(() => service.recordVideoClassroomCreationFailed()).not.toThrow();
     });
 
-    it('should record PostGIS query (success)', () => {
+    it('should record video classroom joined', () => {
+      expect(() => service.recordVideoClassroomJoined()).not.toThrow();
+    });
+
+    it('should record video classroom join failed', () => {
       expect(() =>
-        service.recordDiscoveryPostgisQuery('success', 0.2),
+        service.recordVideoClassroomJoinFailed('Error'),
       ).not.toThrow();
     });
 
-    it('should record PostGIS query (error)', () => {
+    it('should record video classroom join failed with default', () => {
+      expect(() => service.recordVideoClassroomJoinFailed()).not.toThrow();
+    });
+
+    it('should set video classrooms active rooms', () => {
+      expect(() => service.setVideoClassroomsActiveRooms(5)).not.toThrow();
+    });
+
+    it('should record video classroom token generation duration', () => {
       expect(() =>
-        service.recordDiscoveryPostgisQuery('error', 0.5),
+        service.recordVideoClassroomTokenGenerationDuration('create', 0.15),
       ).not.toThrow();
     });
 
-    it('should record daily recs', () => {
+    it('should record video classroom token generation duration for join', () => {
       expect(() =>
-        service.recordDiscoveryDailyRecs(120, 500),
+        service.recordVideoClassroomTokenGenerationDuration('join', 0.25),
       ).not.toThrow();
     });
 
-    it('should record Partner of the Week calc', () => {
+    it('should record video classroom room duration', () => {
       expect(() =>
-        service.recordDiscoveryPartnerOfWeekCalc(1.5),
+        service.recordVideoClassroomRoomDuration(600, 2),
       ).not.toThrow();
     });
 
-    it('should record audio intro request', () => {
-      expect(() => service.recordDiscoveryAudioIntroRequest()).not.toThrow();
-    });
-
-    it('should record recent native speaker request', () => {
+    it('should set video classroom participant max', () => {
       expect(() =>
-        service.recordDiscoveryRecentNativeSpeakerRequest(),
+        service.setVideoClassroomParticipantMax('video_abc', 2),
       ).not.toThrow();
     });
 
-    it('should record spotlight request', () => {
-      expect(() => service.recordDiscoverySpotlightRequest()).not.toThrow();
-    });
-
-    it('should record language pair request', () => {
-      expect(() => service.recordDiscoveryLanguagePairRequest()).not.toThrow();
-    });
-
-    it('should record location search request', () => {
-      expect(() =>
-        service.recordDiscoveryLocationSearchRequest(true, false),
-      ).not.toThrow();
-    });
-
-    it('should set discovery error rate', () => {
-      expect(() => service.setDiscoveryErrorRate(0.05)).not.toThrow();
-    });
-
-    it('should include discovery metrics in getMetrics output', async () => {
-      service.recordDiscoverySearch('partners', true, 0.3, 15);
-      service.recordDiscoveryFallbackToMock('partners');
-      service.recordDiscoveryPostgisQuery('success', 0.15);
-      service.recordDiscoveryDailyRecs(60, 1000);
-      service.recordDiscoveryPartnerOfWeekCalc(2.0);
-      service.recordDiscoveryAudioIntroRequest();
-      service.recordDiscoveryRecentNativeSpeakerRequest();
-      service.recordDiscoverySpotlightRequest();
-      service.recordDiscoveryLanguagePairRequest();
-      service.recordDiscoveryLocationSearchRequest(true, true);
-      service.setDiscoveryErrorRate(0.02);
-
+    it('should include video classroom metrics in getMetrics output', async () => {
+      service.recordVideoClassroomCreated();
+      service.recordVideoClassroomJoined();
+      service.setVideoClassroomsActiveRooms(3);
+      service.recordVideoClassroomCreationFailed('Error');
       const metrics = await service.getMetrics();
-      expect(metrics).toContain('hellotalk_discovery_search_requests_total');
-      expect(metrics).toContain('hellotalk_discovery_search_duration_seconds');
-      expect(metrics).toContain('hellotalk_discovery_search_result_count');
-      expect(metrics).toContain('hellotalk_discovery_fallback_to_mock_total');
-      expect(metrics).toContain('hellotalk_discovery_postgis_queries_total');
-      expect(metrics).toContain('hellotalk_discovery_postgis_query_duration_seconds');
-      expect(metrics).toContain('hellotalk_discovery_daily_recs_duration_seconds');
-      expect(metrics).toContain('hellotalk_discovery_daily_recs_users_processed');
-      expect(metrics).toContain('hellotalk_discovery_partner_of_week_calc_duration_seconds');
-      expect(metrics).toContain('hellotalk_discovery_audio_intro_requests_total');
-      expect(metrics).toContain('hellotalk_discovery_recent_native_speaker_requests_total');
-      expect(metrics).toContain('hellotalk_discovery_spotlight_requests_total');
-      expect(metrics).toContain('hellotalk_discovery_language_pair_requests_total');
-      expect(metrics).toContain('hellotalk_discovery_location_search_requests_total');
-      expect(metrics).toContain('hellotalk_discovery_error_rate');
+      expect(metrics).toContain('hellotalk_video_classrooms_created_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_joined_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_active_rooms');
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_failed_creations_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_failed_joins_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_room_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_token_generation_duration_seconds',
+      );
+      expect(metrics).toContain('hellotalk_video_classrooms_participant_max');
     });
   });
 });

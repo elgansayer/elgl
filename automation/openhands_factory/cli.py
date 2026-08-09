@@ -1,0 +1,105 @@
+"""Factory operator command line interface."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+
+from openhands_factory.authentication import authenticate_openai
+from openhands_factory.config import FactoryConfig
+from openhands_factory.daemon import FactoryDaemon, set_paused
+from openhands_factory.doctor import run_doctor
+from openhands_factory.exceptions import FactoryError
+from openhands_factory.metrics import MetricsStore
+from openhands_factory.provider_profiles import discover_gemini_models, discover_opencode_models
+from openhands_factory.state import read_json
+
+
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(prog="hellotalk-factory")
+    subcommands = result.add_subparsers(dest="command", required=True)
+    doctor = subcommands.add_parser("doctor")
+    doctor.add_argument("--online", action="store_true")
+    auth = subcommands.add_parser("auth")
+    auth.add_argument("provider", choices=("openai",))
+    auth.add_argument("--force", action="store_true")
+    models = subcommands.add_parser("models")
+    models.add_argument("provider", choices=("opencode-go", "gemini"))
+    providers = subcommands.add_parser("providers")
+    providers.add_argument("action", choices=("check",))
+    task = subcommands.add_parser("task")
+    task.add_argument("action", choices=("run",))
+    task.add_argument("--issue", type=int)
+    task.add_argument("--dry-run", action="store_true")
+    subcommands.add_parser("daemon")
+    subcommands.add_parser("status")
+    subcommands.add_parser("pause")
+    subcommands.add_parser("resume")
+    subcommands.add_parser("metrics")
+    return result
+
+
+def _config() -> FactoryConfig:
+    return FactoryConfig.from_environment()
+
+
+def main(arguments: list[str] | None = None) -> int:
+    args = parser().parse_args(arguments)
+    try:
+        config = _config()
+        if args.command == "doctor":
+            checks = run_doctor(config, online=args.online)
+            for check in checks:
+                print(f"{'PASS' if check.passed else 'FAIL'} {check.name}: {check.detail}")
+            return 0 if all(check.passed for check in checks) else 1
+        if args.command == "auth":
+            authenticate_openai(config, force=args.force)
+            return 0
+        if args.command == "models":
+            models = (
+                discover_opencode_models(config)
+                if args.provider == "opencode-go"
+                else discover_gemini_models(config)
+            )
+            print("\n".join(sorted(models)))
+            return 0
+        if args.command == "providers":
+            checks = run_doctor(config, online=True)
+            provider_checks = [check for check in checks if check.name in {"opencode-go", "gemini"}]
+            for check in provider_checks:
+                print(f"{'PASS' if check.passed else 'FAIL'} {check.name}: {check.detail}")
+            return 0 if all(check.passed for check in provider_checks) else 1
+        if args.command == "task":
+            if not args.dry_run:
+                print(
+                    "Refusing direct task execution until doctor and isolation gates pass",
+                    file=sys.stderr,
+                )
+                return 2
+            print(
+                json.dumps(
+                    {"dry_run": True, "issue": args.issue, "llm_contacted": False, "mutated": False}
+                )
+            )
+            return 0
+        if args.command == "daemon":
+            return FactoryDaemon(config).run()
+        if args.command in {"pause", "resume"}:
+            set_paused(config, args.command == "pause")
+            print(f"Factory {args.command}d")
+            return 0
+        if args.command == "status":
+            print(
+                json.dumps(
+                    read_json(config.state_dir / "daemon.json", {"status": "unknown"}), indent=2
+                )
+            )
+            return 0
+        if args.command == "metrics":
+            print(json.dumps(MetricsStore(config.state_dir / "metrics.json").snapshot(), indent=2))
+            return 0
+    except FactoryError as error:
+        print(f"Factory error: {error}", file=sys.stderr)
+        return 2
+    return 2

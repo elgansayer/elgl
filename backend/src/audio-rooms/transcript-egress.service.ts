@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import {
   EgressClient,
   EncodedFileOutput,
@@ -13,13 +14,16 @@ import {
  */
 @Injectable()
 export class TranscriptEgressService {
-  private readonly logger = new Logger(TranscriptEgressService.name);
   private readonly egressClient: EgressClient;
 
   /** room_name → egress_id  (in‑memory; restarts lose unfinished egresses) */
   private readonly egressMap = new Map<string, string>();
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectPinoLogger(TranscriptEgressService.name)
+    private readonly logger: PinoLogger,
+  ) {
     const livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
@@ -72,7 +76,7 @@ export class TranscriptEgressService {
       );
       const egressId = result.egressId;
       this.egressMap.set(roomName, egressId);
-      this.logger.log(
+      this.logger.info(
         `Egress started for room "${roomName}" – id: ${egressId}`,
       );
       return egressId;
@@ -117,16 +121,14 @@ export class TranscriptEgressService {
    * Returns a mock transcript for development purposes.
    */
   async generateTranscriptFromAudioUrl(audioUrl: string): Promise<string> {
-    this.logger.log(`Generating transcript for audio URL: ${audioUrl}`);
+    this.logger.info(`Generating transcript for audio URL: ${audioUrl}`);
 
     const azureKey = this.configService.get<string>('AZURE_SPEECH_KEY');
     const region =
       this.configService.get<string>('AZURE_SPEECH_REGION') ?? 'eastus';
 
     if (!azureKey) {
-      this.logger.warn(
-        'Azure Speech API key not configured. Returning mock transcript.',
-      );
+      this.logger.warn('Azure Speech API key not configured. Returning mock transcript.');
       return (
         'This is a simulated transcript for the audio recording.\n' +
         'Speaker 1: Welcome to the room.\n' +
@@ -151,16 +153,14 @@ export class TranscriptEgressService {
           displayName: `Audio Room Transcription ${Date.now()}`,
           properties: {
             wordLevelTimestampsEnabled: false,
-            displayFormWordLevelTimestampsEnabled: false,
-          },
+            displayFormWordLevelTimestampsEnabled: false
+          }
         }),
       });
 
       if (!createResponse.ok) {
         const errorBody = await createResponse.text();
-        this.logger.warn(
-          `Azure Speech API error (create job): ${createResponse.status} ${errorBody}`,
-        );
+        this.logger.warn(`Azure Speech API error (create job): ${createResponse.status} ${errorBody}`);
         return '';
       }
 
@@ -185,32 +185,23 @@ export class TranscriptEgressService {
 
         if (!statusResponse.ok) {
           const errorBody = await statusResponse.text();
-          this.logger.warn(
-            `Azure Speech API error (poll job): ${statusResponse.status} ${errorBody}`,
-          );
+          this.logger.warn(`Azure Speech API error (poll job): ${statusResponse.status} ${errorBody}`);
           return '';
         }
 
-        statusData = (await statusResponse.json()) as {
-          status: string;
-          links?: { files?: string };
-        };
+        statusData = (await statusResponse.json()) as { status: string; links?: { files?: string } };
         status = statusData.status;
       }
 
       if (status !== 'Succeeded') {
-        this.logger.warn(
-          `Azure Speech API transcription job failed with status: ${status}`,
-        );
+        this.logger.warn(`Azure Speech API transcription job failed with status: ${status}`);
         return '';
       }
 
       // Fetch the files associated with the job
       if (!statusData!.links?.files) {
-        this.logger.warn(
-          'Azure Speech API transcription job succeeded but no files link returned',
-        );
-        return '';
+         this.logger.warn('Azure Speech API transcription job succeeded but no files link returned');
+         return '';
       }
 
       const filesResponse = await fetch(statusData!.links.files, {
@@ -222,35 +213,25 @@ export class TranscriptEgressService {
 
       if (!filesResponse.ok) {
         const errorBody = await filesResponse.text();
-        this.logger.warn(
-          `Azure Speech API error (fetch files list): ${filesResponse.status} ${errorBody}`,
-        );
+        this.logger.warn(`Azure Speech API error (fetch files list): ${filesResponse.status} ${errorBody}`);
         return '';
       }
 
       const filesData = (await filesResponse.json()) as {
-        values: Array<{ kind: string; links: { contentUrl: string } }>;
+         values: Array<{ kind: string; links: { contentUrl: string } }>
       };
 
-      const transcriptionFile = filesData.values.find(
-        (f) => f.kind === 'Transcription',
-      );
+      const transcriptionFile = filesData.values.find((f) => f.kind === 'Transcription');
       if (!transcriptionFile) {
-        this.logger.warn(
-          'Azure Speech API transcription job succeeded but no transcription file found in results',
-        );
+        this.logger.warn('Azure Speech API transcription job succeeded but no transcription file found in results');
         return '';
       }
 
       // Download the actual transcript
-      const transcriptResponse = await fetch(
-        transcriptionFile.links.contentUrl,
-      );
+      const transcriptResponse = await fetch(transcriptionFile.links.contentUrl);
       if (!transcriptResponse.ok) {
         const errorBody = await transcriptResponse.text();
-        this.logger.warn(
-          `Azure Speech API error (download transcript): ${transcriptResponse.status} ${errorBody}`,
-        );
+        this.logger.warn(`Azure Speech API error (download transcript): ${transcriptResponse.status} ${errorBody}`);
         return '';
       }
 
@@ -258,8 +239,7 @@ export class TranscriptEgressService {
         combinedRecognizedPhrases?: Array<{ display: string }>;
       };
 
-      const finalTranscript =
-        transcriptData.combinedRecognizedPhrases?.[0]?.display ?? '';
+      const finalTranscript = transcriptData.combinedRecognizedPhrases?.[0]?.display ?? '';
 
       // Delete the job (cleanup)
       await fetch(jobUrl, {
