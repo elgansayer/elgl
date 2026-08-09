@@ -199,8 +199,7 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async kick(targetUserId: string): Promise<void> {
-    // Kicking off stage is functionally demoting them back to a listener
-    await this.store.demoteSpeaker(targetUserId);
+    await this.store.kickSpeaker(targetUserId);
   }
 
   async archive(): Promise<void> {

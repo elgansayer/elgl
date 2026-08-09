@@ -241,6 +241,12 @@
                        [attr.aria-label]="'audioRoom.demoteBtn' | t">
                         {{ 'audioRoom.demoteBtn' | t }}
                       </button>
+                      <button
+                        (click)="kick(participant.user_id)"
+                        class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-red-600/30"
+                      >
+                        {{ 'audioRoom.kickBtn' | t }}
+                      </button>
                     </div>
                   }
                 </div>

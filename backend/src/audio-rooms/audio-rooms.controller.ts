@@ -557,6 +557,15 @@ export class AudioRoomsController {
     return await this.audioRoomsService.muteSpeaker(user.id, dto);
   }
 
+  @Post('kick-speaker')
+  async kickSpeaker(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.kickSpeaker(user.id, dto);
+  }
+
   @Post('demote-speaker')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
