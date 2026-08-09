@@ -1111,6 +1111,8 @@ export class I18nService {
     'suggest_flashcards.loading': 'Analysing text for useful vocabulary...',
     'suggest_flashcards.error': 'Could not generate suggestions. Please try again.',
     'suggest_flashcards.noWordsFound': 'No new words found in this text. Try a different sentence.',
+    'suggest_flashcards.addButton': 'Add',
+    'suggest_flashcards.addedButton': 'Added',
     'deck.title': '📚 Flashcard Decks',
     'deck.subtitle': 'Organise your saved vocabulary into custom decks',
     'deck.browseBtn': 'Browse decks',
