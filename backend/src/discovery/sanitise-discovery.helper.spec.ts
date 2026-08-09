@@ -30,7 +30,9 @@ import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
 
 describe('sanitiseDiscoveryData', () => {
   it('should strip script tags from strings', () => {
-    expect(sanitiseDiscoveryData('<script>alert("xss")</script>')).toBe('alert("xss")');
+    expect(sanitiseDiscoveryData('<script>alert("xss")</script>')).toBe(
+      'alert("xss")',
+    );
   });
 
   it('should strip all HTML tags and return plain text', () => {
@@ -39,7 +41,9 @@ describe('sanitiseDiscoveryData', () => {
   });
 
   it('should strip tags from complex HTML', () => {
-    expect(sanitiseDiscoveryData('<p>Hello <b>world</b></p>')).toBe('Hello world');
+    expect(sanitiseDiscoveryData('<p>Hello <b>world</b></p>')).toBe(
+      'Hello world',
+    );
   });
 
   it('should preserve plain text unchanged', () => {

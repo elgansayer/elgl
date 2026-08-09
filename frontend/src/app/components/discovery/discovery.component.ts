@@ -1,6 +1,17 @@
-import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  OnInit,
+  OnDestroy,
+  DestroyRef,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
+import { Subject, debounceTime } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { DiscoveryService } from '../../services/discovery.service';
@@ -9,11 +20,7 @@ import { SafetyService } from '../../services/safety.service';
 import { AuthService } from '../../services/auth.service';
 import { OfflineDiscoveryCacheService } from '../../services/offline-discovery-cache.service';
 import { DiscoveryOnboardingService } from '../../services/discovery-onboarding.service';
-import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
-import {
-  DiscoveryErrorBoundaryComponent,
-  DiscoveryErrorContext,
-} from '../discovery-error-boundary/discovery-error-boundary.component';
+import { MatchmakingOnboardingService } from '../../services/matchmaking-onboarding.service';
 
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { FluencyIndicatorComponent } from '../primitives/fluency-indicator/fluency-indicator.component';
@@ -28,6 +35,7 @@ import { AgeRangeSliderComponent, AgeRange } from '../age-range-slider/age-range
 import { DistanceSliderComponent } from '../distance-slider/distance-slider.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
+import { DiscoveryMapErrorBoundaryComponent } from './discovery-map-error-boundary.component';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 /** Milliseconds to debounce partner search calls triggered by interaction changes. */
@@ -48,7 +56,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     DistanceSliderComponent,
     AppEmptyStateComponent,
     DiscoverySkeletonCardComponent,
-    DiscoveryErrorBoundaryComponent,
+    DiscoveryMapErrorBoundaryComponent,
     SanitiseHtmlPipe,
   ],
   templateUrl: './discovery.component.html',
@@ -62,30 +70,18 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly safetyService = inject(SafetyService);
   private readonly offlineCache = inject(OfflineDiscoveryCacheService);
-  private readonly discoveryErrorHandler = inject(DiscoveryErrorHandlerService);
   private readonly discoveryOnboarding = inject(DiscoveryOnboardingService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly matchmakingOnboarding = inject(MatchmakingOnboardingService);
 
   private currentAudio: HTMLAudioElement | null = null;
   readonly playingPartnerId = signal<string | null>(null);
 
   /** Whether currently offline and serving cached data */
   readonly isOffline = computed(() => !this.offlineCache.isOnline());
-  readonly isUsingCachedData = computed(() => this.isOffline() && this.offlineCache.cachedDataAvailable());
-
-  /** Error boundary context - provides rich diagnostic data on crash */
-  readonly errorBoundaryContext = computed<DiscoveryErrorContext>(() => ({
-    component: "discovery-map",
-    filterType: this.selectedFilter(),
-    targetLanguage: this.selectedTargetLanguage() || undefined,
-    nativeLanguage: this.selectedNativeLanguage() || undefined,
-    partnerCount: this.partners().length,
-    sortMode: this.selectedSort(),
-    radiusKm: this.selectedDistanceKm(),
-    metadata: {
-      isLoading: this.isLoading(),
-      isOffline: this.isOffline(),
-    },
-  }));
+  readonly isUsingCachedData = computed(
+    () => this.isOffline() && this.offlineCache.cachedDataAvailable(),
+  );
 
   readonly partners = signal<
     (UserProfile & {
@@ -97,7 +93,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     })[]
   >([]);
   readonly isLoading = signal<boolean>(true);
-  readonly hasError = signal<boolean>(false);
+  readonly searchError = signal<string | null>(null);
+  readonly hasError = computed(() => this.searchError() !== null);
   readonly myTargetLangs = signal<{ code: string; flag: string; labelKey: string }[]>([]);
   readonly blockedUserIds = signal<string[]>([]);
 
@@ -114,14 +111,18 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
 
-  /** Debounce timer handle for throttling rapid search calls. */
-  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** RxJS Subject for debounced search triggering, auto-cleans up via takeUntilDestroyed. */
+  private readonly searchTrigger$ = new Subject<void>();
   /** Abort controller for cancelling in-flight partner search. */
   private searchAbortController: AbortController | null = null;
 
   private readonly discoveryTourEffect = effect(() => {
     // Start the onboarding tour once partners have loaded and tour not yet completed
-    if (!this.isLoading() && this.partners().length > 0 && !this.discoveryOnboarding.hasCompletedTour()) {
+    if (
+      !this.isLoading() &&
+      this.partners().length > 0 &&
+      !this.discoveryOnboarding.hasCompletedTour()
+    ) {
       queueMicrotask(() => this.discoveryOnboarding.startTour());
     }
   });
@@ -194,6 +195,13 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit(): Promise<void> {
+    // Wire up RxJS-based debounced search auto-unsubscribed via takeUntilDestroyed
+    this.searchTrigger$
+      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        void this.searchPartners();
+      });
+
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
@@ -233,31 +241,33 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     if (this.searchAbortController) {
       this.searchAbortController.abort();
     }
-    this.searchAbortController = new AbortController();
-    const signal = this.searchAbortController.signal;
+    const controller = new AbortController();
+    this.searchAbortController = controller;
+    const signal = controller.signal;
 
     this.isLoading.set(true);
-    this.hasError.set(false);
+    this.searchError.set(null);
     try {
       const genderVal = this.selectedGender() || undefined;
       const isVip = this.authService.currentUser()?.is_vip ?? false;
-      const results = await this.discoveryService.findPartners({
-        radius_metres: this.selectedDistanceKm() * 1000,
-        native_languages: this.selectedNativeLanguage() || undefined,
-        target_language: this.selectedTargetLanguage() || undefined,
-        serious_learner_only: this.seriousLearnerOnly(),
-        gender: isVip ? genderVal : undefined,
-        age_min: this.ageRangeMin(),
-        age_max: this.ageRangeMax(),
-        serious_learner_mode: this.seriousLearnerMode(),
-        proficiency_level: this.selectedProficiencyLevel() || undefined,
-        available_time_start:
-          this.availableTimeStart() || undefined,
-        available_time_end:
-          this.availableTimeEnd() || undefined,
-        sort: this.selectedSort(),
-        voice_room_active: this.voiceRoomActive() || undefined,
-      }, signal);
+      const results = await this.discoveryService.findPartners(
+        {
+          radius_metres: this.selectedDistanceKm() * 1000,
+          native_languages: this.selectedNativeLanguage() || undefined,
+          target_language: this.selectedTargetLanguage() || undefined,
+          serious_learner_only: this.seriousLearnerOnly(),
+          gender: isVip ? genderVal : undefined,
+          age_min: this.ageRangeMin(),
+          age_max: this.ageRangeMax(),
+          serious_learner_mode: this.seriousLearnerMode(),
+          proficiency_level: this.selectedProficiencyLevel() || undefined,
+          available_time_start: this.availableTimeStart() || undefined,
+          available_time_end: this.availableTimeEnd() || undefined,
+          sort: this.selectedSort(),
+          voice_room_active: this.voiceRoomActive() || undefined,
+        },
+        signal,
+      );
       // If request was aborted, don't update the UI with stale results
       if (signal.aborted) return;
 
@@ -269,46 +279,38 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       const mapped = filtered.map((partner) => ({
         ...partner,
         nativeLangs: (partner.native_languages || ['EN']).map((code) => ({ code, level: 5 })),
-        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map((code) => ({
-          code,
-          level: 1,
-        })),
+        targetLangs: (partner.target_languages?.length ? partner.target_languages : ['JA']).map(
+          (code) => ({
+            code,
+            level: 1,
+          }),
+        ),
         formattedDistance: this.formatDistanceHelper(partner.distance_metres),
       }));
 
       this.partners.set(mapped);
     } catch (e) {
-      // Don't log aborted request errors - they are expected
-      if (!(e instanceof DOMException && e.name === 'AbortError')) {
-        this.hasError.set(true);
-        this.discoveryErrorHandler.reportDiscoveryCrash(
-          e instanceof Error ? e : new Error(String(e)),
-          {
-            action: 'searchPartners',
-            filterType: this.selectedFilter(),
-            targetLanguage: this.selectedTargetLanguage() || undefined,
-            nativeLanguage: this.selectedNativeLanguage() || undefined,
-            partnerCount: this.partners().length,
-            sortMode: this.selectedSort(),
-            radiusKm: this.selectedDistanceKm(),
-            isVip: this.isVip(),
-          },
-        );
+      // Do not report failures from an intentionally superseded request.
+      if (!signal.aborted) {
+        console.error('Partner search failed:', e);
+        this.searchError.set(this.i18n.translate('discovery.searchError'));
       }
     } finally {
-      this.isLoading.set(false);
+      // An older aborted request must not clear the loading state owned by its replacement.
+      if (this.searchAbortController === controller) {
+        this.searchAbortController = null;
+        this.isLoading.set(false);
+      }
     }
   }
 
-  /** Schedules a debounced search; cancels any prior pending timer. */
+  /** Debounced search via RxJS Subject - no manual timer, auto-cleans up. */
   private scheduleSearch(): void {
-    if (this.searchDebounceTimer !== null) {
-      clearTimeout(this.searchDebounceTimer);
-    }
-    this.searchDebounceTimer = setTimeout(() => {
-      this.searchDebounceTimer = null;
-      void this.searchPartners();
-    }, SEARCH_DEBOUNCE_MS);
+    this.searchTrigger$.next();
+  }
+
+  retrySearch(): void {
+    void this.searchPartners();
   }
 
   toggleVoiceRoomActive(): void {
@@ -327,14 +329,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       }
       await this.searchPartners();
     } catch (e) {
-      this.discoveryErrorHandler.reportDiscoveryCrash(
-        e instanceof Error ? e : new Error(String(e)),
-        {
-          action: 'toggleSeriousLearnerMode',
-          filterType: this.selectedFilter(),
-          isVip: this.isVip(),
-        },
-      );
+      console.error('Failed to update serious learner mode', e);
     }
   }
 
@@ -410,11 +405,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
       this.searchAbortController.abort();
       this.searchAbortController = null;
     }
-    // Clear debounce timer
-    if (this.searchDebounceTimer !== null) {
-      clearTimeout(this.searchDebounceTimer);
-      this.searchDebounceTimer = null;
-    }
+    // Debounce subscription auto-unsubscribed via takeUntilDestroyed
+    this.searchTrigger$.complete();
     this.stopAudioIntro();
   }
 
@@ -450,5 +442,20 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
     void this.searchPartners();
+  }
+
+  /** Start the matchmaking algorithm onboarding tour. */
+  startMatchmakingTour(): void {
+    this.matchmakingOnboarding.startTour();
+  }
+
+  /** Whether the matchmaking onboarding tour is currently active. */
+  isMatchmakingTourActive(): boolean {
+    return this.matchmakingOnboarding.isTourInProgress();
+  }
+
+  /** Close the matchmaking onboarding tour and mark it complete. */
+  closeMatchmakingTour(): void {
+    this.matchmakingOnboarding.markComplete();
   }
 }

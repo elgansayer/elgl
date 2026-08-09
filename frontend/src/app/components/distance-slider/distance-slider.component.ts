@@ -5,7 +5,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-distance-slider',
-  standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="flex flex-col w-full">
@@ -27,7 +26,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
           step="1"
           class="w-full h-8 appearance-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           [style.accent-color]="'var(--color-primary)'"
-          aria-label="{{ 'discovery.radiusLabel' | t: { radius: currentDistanceKm() } }}"
+          aria-valuemin="{{ minKm() }}"
+          aria-valuemax="{{ maxKm() }}"
+          aria-valuenow="{{ currentDistanceKm() }}"
+          aria-valuetext="{{ currentDistanceKm() }} km"
         />
       </div>
     </div>

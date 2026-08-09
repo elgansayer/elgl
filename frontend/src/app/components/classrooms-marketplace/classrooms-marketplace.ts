@@ -3,12 +3,11 @@ import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.sto
 import { AuthService } from '../../services/auth.service';
 import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
 import { VideoClassroomOnboardingService } from '../../services/video-classroom-onboarding.service';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { OfflineVideoClassroomService } from '../../services/offline-video-classroom.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-import { JoyrideModule } from 'ngx-joyride';
 import { withRetry } from '../../services/http-retry';
 import { firstValueFrom, interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -17,7 +16,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [SanitiseHtmlPipe, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
+  imports: [TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })
@@ -28,6 +27,7 @@ export class ClassroomsMarketplace implements OnInit {
   private errorHandler = inject(VideoClassroomErrorHandlerService);
   private destroyRef = inject(DestroyRef);
   private onboardingService = inject(VideoClassroomOnboardingService);
+  private offlineService = inject(OfflineVideoClassroomService);
   private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
   readonly rooms = signal<AudioRoomRecord[]>([]);
@@ -80,13 +80,22 @@ export class ClassroomsMarketplace implements OnInit {
             ),
           ),
       );
-      this.rooms.set(Array.isArray(list) ? list : []);
+      const rooms = Array.isArray(list) ? list : [];
+      this.rooms.set(rooms);
+      // Cache successful fetch for offline use
+      void this.offlineService.cacheClassroomListing(rooms);
     } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      this.errorMessage.set(error.message);
-      this.errorHandler.reportVideoClassroomCrash(error, {
-        action: 'loadClassrooms',
-      });
+      // Attempt to serve cached data when offline or on fetch failure
+      const cached = await this.offlineService.getCachedClassroomListing();
+      if (cached && cached.length > 0) {
+        this.rooms.set(cached);
+      } else {
+        const error = err instanceof Error ? err : new Error(String(err));
+        this.errorMessage.set(error.message);
+        this.errorHandler.reportVideoClassroomCrash(error, {
+          action: 'loadClassrooms',
+        });
+      }
     } finally {
       this.isLoading.set(false);
     }

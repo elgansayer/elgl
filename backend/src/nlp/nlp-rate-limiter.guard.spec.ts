@@ -28,16 +28,13 @@ describe('NlpRateLimiterGuard', () => {
     if (metadata) {
       Reflect.defineMetadata(NLP_RATE_LIMIT_KEY, metadata, handler);
     }
-    const request = userId
-      ? { user: { id: userId } }
-      : { user: undefined };
+    const request = userId ? { user: { id: userId } } : { user: undefined };
     return {
       getHandler: () => handler,
       getClass: () => ({ name: 'NlpController' }),
       switchToHttp: () => ({
         getRequest: () => request,
       }),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   };
 

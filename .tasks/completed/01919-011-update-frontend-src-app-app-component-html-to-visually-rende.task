@@ -1,1 +1,0 @@
-Update `frontend/src/app/app.component.html` to visually render the unread badges using `unreadCounter.totalUnread()` (Requires HTML file).

@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, DestroyRef } from '@angular/core';
-import { Room, RoomEvent, Track, RemoteParticipant, VideoPresets } from 'livekit-client';
+import { Room, RoomEvent, Track, RemoteParticipant, RemoteTrack, RemoteTrackPublication, VideoPresets } from 'livekit-client';
 import { firstValueFrom, interval, Subscription } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
@@ -26,8 +26,8 @@ export class VideoCallService {
 private durationSubscription: Subscription | null = null;
   // Bound handlers for cleanup to prevent listener leaks
   private onParticipantConnectedBound: ((participant: RemoteParticipant) => void) | null = null;
-  private onTrackSubscribedBound: ((...args: unknown[]) => void) | null = null;
-  private onTrackUnsubscribedBound: ((...args: unknown[]) => void) | null = null;
+  private onTrackSubscribedBound: ((track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => void) | null = null;
+  private onTrackUnsubscribedBound: ((track: RemoteTrack, _publication: RemoteTrackPublication, _participant: RemoteParticipant) => void) | null = null;
   private onDisconnectedBound: (() => void) | null = null;
   private onConnectionStateChangedBound: ((state: string) => void) | null = null;
 
@@ -149,6 +149,12 @@ private durationSubscription: Subscription | null = null;
     }
 
     this.stopDurationTimer();
+
+    // Stop MediaStreamTracks to free camera/mic resources
+    this.localVideoTrack()?.stop();
+    this.remoteVideoTrack()?.stop();
+    this.remoteAudioTrack()?.stop();
+
     this.localVideoTrack.set(null);
     this.remoteVideoTrack.set(null);
     this.remoteAudioTrack.set(null);

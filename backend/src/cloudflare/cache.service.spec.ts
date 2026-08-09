@@ -6,12 +6,22 @@ describe('CloudflareCacheService', () => {
   let service: CloudflareCacheService;
   let configService: ConfigService;
   let fetchMock: jest.Mock;
-  let loggerMock: { info: jest.Mock; warn: jest.Mock; debug: jest.Mock; error: jest.Mock };
+  let loggerMock: {
+    info: jest.Mock;
+    warn: jest.Mock;
+    debug: jest.Mock;
+    error: jest.Mock;
+  };
 
   beforeEach(async () => {
     fetchMock = jest.fn();
-    global.fetch = fetchMock as unknown as typeof fetch;
-    loggerMock = { info: jest.fn(), warn: jest.fn(), debug: jest.fn(), error: jest.fn() };
+    global.fetch = fetchMock;
+    loggerMock = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      error: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -109,17 +119,13 @@ describe('CloudflareCacheService', () => {
         }),
       });
 
-      await expect(
-        service.purgeByCacheTags(['invalid']),
-      ).resolves.toBe(false);
+      await expect(service.purgeByCacheTags(['invalid'])).resolves.toBe(false);
     });
 
     it('should return false when fetch throws', async () => {
       fetchMock.mockRejectedValue(new Error('Network error'));
 
-      await expect(
-        service.purgeByCacheTags(['tag1']),
-      ).resolves.toBe(false);
+      await expect(service.purgeByCacheTags(['tag1'])).resolves.toBe(false);
     });
   });
 });

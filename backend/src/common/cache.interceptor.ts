@@ -138,6 +138,8 @@ export const CACHE_TAG_SUGGESTIONS = 'flashcards:suggest';
 export const CACHE_TAG_AUDIO_ROOMS = 'audio-rooms';
 export const CACHE_TAG_AUDIO_ROOM_STAGE = 'audio-rooms:stage';
 export const CACHE_TAG_AUDIO_ROOM_POLLS = 'audio-rooms:polls';
+export const CACHE_TAG_AUDIO_ROOM_TRANSCRIPT = 'audio-rooms:transcript';
+export const CACHE_TAG_AUDIO_ROOM_NOTES = 'audio-rooms:notes';
 export const CACHE_TAG_CALLS = 'calls';
 export const CACHE_TAG_ESCROW = 'escrow';
 

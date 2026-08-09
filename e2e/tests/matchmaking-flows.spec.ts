@@ -897,4 +897,4 @@ test.describe('Matchmaking - VIP and Monetisation Integration', () => {
     const body = page.locator('body');
     await expect(body).toBeVisible();
   });
-});
+}); 

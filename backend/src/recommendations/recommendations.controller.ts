@@ -1,27 +1,26 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseFilters, UseGuards } from '@nestjs/common';
 import {
-  ApiTags,
   ApiBearerAuth,
   ApiOperation,
-  ApiOkResponse,
-  ApiUnauthorizedResponse,
-  ApiTooManyRequestsResponse,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   RecommendationsService,
   RecommendedUserDto,
 } from './recommendations.service';
-import { RecommendedUserResponseDto } from './dto/recommendations-response.dto';
+import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 
 interface AuthenticatedRequest {
   user?: { id: string };
 }
 
+@ApiTags('Matchmaking & Discovery')
 @Controller('recommendations')
 @UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
-@ApiTags('Matchmaking')
+@UseFilters(MatchmakingExceptionFilter)
 export class RecommendationsController {
   constructor(
     private readonly recommendationsService: RecommendationsService,
@@ -53,23 +52,63 @@ export class RecommendationsController {
    */
   @Get('for-you')
   @ApiOperation({
-    summary: 'Multi-tier personalised partner recommendations',
-    description: `Orchestrates a four-tier matchmaking pipeline with graceful degradation:
-
-1. **Interest-based** -- shared user_interests tags, ranked by count and quality signals.
-2. **Language exchange** -- complementary native/target language pairings.
-3. **Most active users** -- global leaderboard by study streak.
-4. **Mock data** -- hard-coded fallback ensuring the frontend always receives content.
-
-Results are capped at **20 candidates**. Blocked users are excluded at every tier.
-The matchTier field on each returned object indicates the tier that produced it.`,
+    summary: 'Get personalised "For You" recommendations',
+    description:
+      'Returns recommended language partners using a multi-tier matchmaking algorithm. ' +
+      'Tier 1: interest-based matching via shared user_interests tags. ' +
+      'Tier 2: language-exchange matching (complementary native/target languages). ' +
+      'Tier 3: most active users by study_streak_days. ' +
+      'Tier 4: mock data as ultimate fallback. ' +
+      'Each tier degrades gracefully to the next when empty or unavailable.',
   })
-  @ApiOkResponse({
-    description: 'A list of recommended partner profiles.',
-    type: [RecommendedUserResponseDto],
+  @ApiResponse({
+    status: 200,
+    description:
+      'Array of recommended users with matchTier indicating which algorithm tier produced each result.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+          },
+          displayName: {
+            type: 'string',
+            nullable: true,
+            example: 'Taro Yamada',
+          },
+          avatarUrl: {
+            type: 'string',
+            nullable: true,
+            example: 'https://r2.example.com/avatars/taro.jpg',
+          },
+          nativeLanguage: { type: 'string', nullable: true, example: 'ja-JP' },
+          targetLanguages: {
+            type: 'array',
+            nullable: true,
+            items: { type: 'string' },
+            example: ['en', 'ko'],
+          },
+          sharedInterests: { type: 'number', example: 3 },
+          isSeriousLearner: { type: 'boolean', nullable: true, example: true },
+          studyStreakDays: { type: 'number', nullable: true, example: 30 },
+          correctionRatio: { type: 'number', nullable: true, example: 0.95 },
+          matchTier: {
+            type: 'string',
+            nullable: true,
+            enum: ['interest', 'language_exchange', 'active_users', 'mock'],
+            example: 'interest',
+          },
+        },
+      },
+    },
   })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async getForYou(
     @Req() req: AuthenticatedRequest,
   ): Promise<RecommendedUserDto[]> {
@@ -88,22 +127,54 @@ The matchTier field on each returned object indicates the tier that produced it.
    */
   @Get('daily')
   @ApiOperation({
-    summary: 'Cached daily language-exchange recommendations',
-    description: `Returns the top 10 language-exchange partners pre-computed
-by a nightly cron job. Data is served from a Redis cache key
-\`recommendations:daily:{userId}\` with a **24-hour TTL**.
-
-On cache miss the endpoint performs a live language-exchange query.
-If that also fails, an empty array is returned (this endpoint does
-**not** use mock fallback data).`,
-  })
-  @ApiOkResponse({
+    summary: 'Get daily cached language exchange recommendations',
     description:
-      'A list of up to 10 recommended language-exchange partners.',
-    type: [RecommendedUserResponseDto],
+      'Returns up to 10 language exchange partners cached in Redis via the nightly cron job. ' +
+      'Gracefully degrades: Redis cache -> live language-exchange computation -> empty array. ' +
+      'The nightly calculation uses complementary native/target language matching ordered by is_serious_learner.',
   })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Array of up to 10 recommended language exchange partners. May be empty if no cache exists and live computation returns no results.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789',
+          },
+          displayName: {
+            type: 'string',
+            nullable: true,
+            example: 'Maria Garcia',
+          },
+          avatarUrl: {
+            type: 'string',
+            nullable: true,
+            example: 'https://r2.example.com/avatars/maria.jpg',
+          },
+          nativeLanguage: { type: 'string', nullable: true, example: 'es' },
+          targetLanguages: {
+            type: 'array',
+            nullable: true,
+            items: { type: 'string' },
+            example: ['en', 'fr'],
+          },
+          sharedInterests: { type: 'number', example: 0 },
+          isSeriousLearner: { type: 'boolean', nullable: true, example: true },
+          studyStreakDays: { type: 'number', nullable: true, example: 15 },
+          correctionRatio: { type: 'number', nullable: true, example: 0.88 },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async getDaily(
     @Req() req: AuthenticatedRequest,
   ): Promise<RecommendedUserDto[]> {

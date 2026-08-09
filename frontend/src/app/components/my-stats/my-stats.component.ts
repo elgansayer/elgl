@@ -41,7 +41,7 @@ interface MyStatsResponse {
             <h2 class="text-lg font-semibold mb-4 text-text-primary">
               {{ 'stats.myStats.studyHours' | t }}
             </h2>
-            <canvas baseChart [data]="lineChartData()" [options]="lineChartOptions()" [type]="'line'">
+            <canvas baseChart [data]="lineChartData()" [options]="lineChartOptions" [type]="'line'">
             </canvas>
           </div>
 
@@ -81,7 +81,7 @@ export class MyStatsComponent {
   private readonly authService = inject(AuthService);
   private readonly i18nService = inject(I18nService);
 
-  readonly statsResource = resource<MyStatsResponse, unknown>({
+  protected readonly statsResource = resource<MyStatsResponse, unknown>({
     loader: () => {
       const token = this.authService.getAccessToken();
       if (!token) {
@@ -96,12 +96,12 @@ export class MyStatsComponent {
     },
   });
 
-  readonly stats = computed(() => this.statsResource.value() ?? null);
+  protected readonly stats = computed(() => this.statsResource.value() ?? null);
 
-  readonly lineChartData = computed<ChartConfiguration<'line'>['data']>(() => {
+  protected readonly lineChartData = computed<ChartConfiguration<'line'>['data']>(() => {
     const data = this.statsResource.value();
     const labels = data?.study_hours?.map((s) =>
-      this.i18nService.translate(`stats.dayAbbr.${s.day.toLowerCase()}`),
+      this.i18nService.translate(`stats.dayAbbr.${s.day.toLowerCase()}`)
     ) ?? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const hours = data?.study_hours?.map((s) => s.hours) ?? [0, 0, 0, 0, 0, 0, 0];
 
@@ -120,7 +120,7 @@ export class MyStatsComponent {
     };
   });
 
-  readonly lineChartOptions = computed<ChartOptions<'line'>>(() => ({
+  protected readonly lineChartOptions: ChartOptions<'line'> = {
     responsive: true,
     plugins: {
       legend: { display: false },
@@ -134,9 +134,9 @@ export class MyStatsComponent {
         },
       },
     },
-  }));
+  };
 
-  readonly pieChartData = computed<ChartConfiguration<'pie'>['data']>(() => {
+  protected readonly pieChartData = computed<ChartConfiguration<'pie'>['data']>(() => {
     const data = this.statsResource.value();
     return {
       labels: [
@@ -157,7 +157,7 @@ export class MyStatsComponent {
     };
   });
 
-  readonly pieChartOptions: ChartOptions<'pie'> = {
+  protected readonly pieChartOptions: ChartOptions<'pie'> = {
     responsive: true,
     plugins: {
       legend: {

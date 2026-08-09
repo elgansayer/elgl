@@ -41,6 +41,8 @@ import { GiftAnimationOverlayComponent } from './components/gift-animation-overl
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
 import { TourService } from './services/tour.service';
+import { NotificationService } from './services/notification.service';
+import { ChatService } from './services/chat.service';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -95,6 +97,8 @@ export class AppComponent implements OnInit {
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
   private platformId = inject(PLATFORM_ID);
+  private notificationService = inject(NotificationService);
+  private chatService = inject(ChatService);
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -166,7 +170,7 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Font scale and base rem sizing are handled globally by FontScaleService.
     // Block the app immediately if the installed version is deprecated.
-    await this.versionCheckService.checkVersion();
+    this.versionCheckService.checkVersion();
 
     // Subscribe to personal user notification channel for direct virtual gifts
     const user = this.authService.currentUser();
@@ -254,9 +258,43 @@ export class AppComponent implements OnInit {
         }
       });
 
+      // Load initial unread counts from backend
+      await this.loadInitialUnreadCounts();
+
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
+    }
+  }
+
+  private async loadInitialUnreadCounts(): Promise<void> {
+    try {
+      const [notificationCount] = await Promise.all([
+        this.notificationService.getUnreadCount(),
+      ]);
+      this.unreadCounter.setNotificationUnread(notificationCount);
+    } catch {
+      // Silently ignore - real-time events will update counts
+    }
+
+    // Load chat unread counts from backend
+    try {
+      const rooms = await this.chatService.getRooms();
+      let totalChatUnread = 0;
+      for (const room of rooms) {
+        try {
+          const messages = await this.chatService.getMessages(room.id);
+          const currentUserId = this.authService.currentUser()?.id;
+          totalChatUnread += messages.filter(
+            (m) => !m.is_read && m.sender_id !== currentUserId,
+          ).length;
+        } catch {
+          // Skip rooms with errors
+        }
+      }
+      this.unreadCounter.setChatUnread(totalChatUnread);
+    } catch {
+      // Silently ignore - real-time events will update counts
     }
   }
 

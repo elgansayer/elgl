@@ -6,13 +6,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import {
-  ApiTags,
   ApiBearerAuth,
   ApiOperation,
-  ApiOkResponse,
-  ApiUnauthorizedResponse,
-  ApiTooManyRequestsResponse,
   ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -21,12 +19,14 @@ import { UserProfile } from '../users/interfaces/user-profile.interface';
 import { UsersService } from '../users/users.service';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { LanguagePairQueryDto } from './dto/language-pair-query.dto';
-import { DiscoveryService } from './discovery.service';
+import { DiscoveryService, DiscoveryResult } from './discovery.service';
+import { DiscoveryDegradationService } from './discovery-degradation.service';
 import {
   DiscoveryCacheInterceptor,
   DISCOVERY_CACHE_PUBLIC_LONG,
   DISCOVERY_CACHE_PUBLIC_SHORT,
   DISCOVERY_CACHE_PRIVATE_SHORT,
+  DISCOVERY_CACHE_NO_STORE,
 } from './cache.interceptor';
 import {
   DiscoveryRateLimiterGuard,
@@ -34,14 +34,58 @@ import {
 } from './discovery-rate-limiter.guard';
 import { sanitiseDiscoveryData } from './sanitise-discovery.helper';
 
+const userProfileSchema = {
+  type: 'array',
+  items: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789' },
+      display_name: { type: 'string', nullable: true, example: 'Taro Yamada' },
+      avatar_url: {
+        type: 'string',
+        nullable: true,
+        example: 'https://r2.example.com/avatars/taro.jpg',
+      },
+      native_languages: {
+        type: 'array',
+        items: { type: 'string' },
+        example: ['ja-JP'],
+      },
+      target_languages: {
+        type: 'array',
+        items: { type: 'string' },
+        example: ['en', 'ko'],
+      },
+      bio_text: {
+        type: 'string',
+        nullable: true,
+        example: 'Hello! I want to practise English.',
+      },
+      audio_intro_url: {
+        type: 'string',
+        nullable: true,
+        example: 'https://r2.example.com/audio/taro.mp3',
+      },
+      is_vip: { type: 'boolean', example: false },
+      is_serious_learner: { type: 'boolean', example: true },
+      study_streak_days: { type: 'number', example: 30 },
+      correction_ratio: { type: 'number', example: 0.95 },
+      is_partner_of_week: { type: 'boolean', example: false },
+      distance_metres: { type: 'number', nullable: true, example: 1500 },
+      proficiency_level: { type: 'string', nullable: true, example: 'B1' },
+    },
+  },
+};
+
+@ApiTags('Matchmaking & Discovery')
 @Controller('discovery')
 @UseGuards(SupabaseAuthGuard, DiscoveryRateLimiterGuard)
 @ApiBearerAuth()
-@ApiTags('Matchmaking')
 export class DiscoveryController {
   constructor(
     private readonly discoveryService: DiscoveryService,
     private readonly usersService: UsersService,
+    private readonly degradationService: DiscoveryDegradationService,
   ) {}
 
   /**
@@ -56,30 +100,23 @@ export class DiscoveryController {
   })
   @ApiOperation({
     summary: 'Search for language exchange partners',
-    description: `Performs a personalised partner search using location-aware spatial queries
-(via PostGIS search_nearby_users RPC) with graceful fallback to direct
-Supabase queries and mock data.
-
-Supports filters:
-- Native language and target language
-- Serious-learner mode (auto-enabled when the requesting user has it active)
-- Proficiency level
-- Gender (VIP users only)
-- Age range
-- Interests (overlap filter)
-- Audio intro availability
-- Country and city
-- Learning goals and availability windows
-- Distance radius (metres)
-- Voice room activity
-
-Sort options: best_match | nearest | newest | online_now`,
+    description:
+      'Personalised partner search with extensive filtering options. ' +
+      'Supports location-based proximity queries via PostGIS ST_DWithin, ' +
+      'language pair matching, serious learner filtering, interest overlap, ' +
+      'age range, gender (VIP only), country/city, availability, and audio room active filters. ' +
+      'Results are sorted by the specified sort parameter and enriched with Partner of the Week flags. ' +
+      'VIP users benefit from location and country/city spoofing via mock_location and mock_country/mock_city profile fields.',
   })
-  @ApiOkResponse({
-    description: 'A list of matching user profiles.',
+  @ApiResponse({
+    status: 200,
+    description: 'Filtered list of user profiles matching the search criteria.',
+    schema: userProfileSchema,
   })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async findPartners(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -89,9 +126,12 @@ Sort options: best_match | nearest | newest | online_now`,
     if (profile?.is_serious_learner === true) {
       query.serious_learner_mode = true;
     }
-    return sanitiseDiscoveryData(
-      await this.discoveryService.searchPartners(user.id, profile, query),
+    const result = await this.discoveryService.searchPartnersWithDegradation(
+      user.id,
+      profile,
+      query,
     );
+    return result.data;
   }
 
   /**
@@ -105,24 +145,19 @@ Sort options: best_match | nearest | newest | online_now`,
     windowSeconds: 60,
   })
   @ApiOperation({
-    summary: 'Get Partner of the Week IDs',
-    description: `Returns a list of user IDs selected as Partners of the Week. Refreshed
-every Sunday at midnight by a cron job. Results are cached in Redis
-with a 7-day TTL and served with public CDN caching headers.
-
-Users qualify based on:
-- correction_ratio > 0.5
-- Highest correction_ratio and study_streak_days`,
+    summary: 'Get Partner of the Week user IDs',
+    description:
+      'Returns the current Partner of the Week user IDs, computed weekly by a cron job (Sundays at midnight). ' +
+      'Partners are selected from top users with correction_ratio > 0.5, ordered by correction_ratio and study_streak_days. ' +
+      'Results are cached in Redis for 7 days with public CDN caching.',
   })
-  @ApiOkResponse({
-    description: 'A list of user IDs for the current Partners of the Week.',
+  @ApiResponse({
+    status: 200,
+    description: 'Array of up to 10 Partner of the Week user IDs.',
     schema: {
       type: 'array',
       items: { type: 'string' },
-      example: [
-        'a1b2c3d4-0000-4000-8000-000000000001',
-        'a1b2c3d4-0000-4000-8000-000000000002',
-      ],
+      example: ['uuid-1', 'uuid-2'],
     },
   })
   async getPartnerOfWeek(): Promise<string[]> {
@@ -140,23 +175,30 @@ Users qualify based on:
     windowSeconds: 60,
   })
   @ApiOperation({
-    summary: 'Discover users with audio introductions',
-    description: `Returns user profiles that have an audio intro URL set. Applies the same
-filter parameters as the partner search, but only returns profiles
-with non-null, non-empty audio_intro_url values.`,
+    summary: 'Discover partners with audio introductions',
+    description:
+      'Returns partners filtered by the same SearchQueryDto parameters, additionally filtered to only include users who have uploaded an audio introduction.',
   })
-  @ApiOkResponse({
-    description: 'A list of users with audio introductions.',
+  @ApiResponse({
+    status: 200,
+    description: 'Filtered list of user profiles with audio introductions.',
+    schema: userProfileSchema,
   })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token.' })
-  @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async getAudioIntros(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
-    const result = await this.discoveryService.getAudioIntros(user.id, profile, query);
+    const result = await this.discoveryService.getAudioIntros(
+      user.id,
+      profile,
+      query,
+    );
     return sanitiseDiscoveryData(result);
   }
 
@@ -171,14 +213,19 @@ with non-null, non-empty audio_intro_url values.`,
     windowSeconds: 60,
   })
   @ApiOperation({
-    summary: 'Recently joined native speakers',
-    description: `Returns users who joined within the last 7 days and have at least one
-native language set. Ordered by creation date descending, limited to 10
-results. Served with public CDN caching.`,
-  })
-  @ApiOkResponse({
+    summary: 'Get recently joined native speakers',
     description:
-      'A list of up to 10 recently joined users with native languages.',
+      'Returns up to 10 users who joined within the last 7 days and have at least one native language set. ' +
+      'Results are publicly cached for a short duration and enriched with Partner of the Week flags.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Recently joined native speakers.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
   })
   async getRecentNativeSpeakers(
     @CurrentUser() user: User | null,
@@ -199,12 +246,19 @@ results. Served with public CDN caching.`,
     windowSeconds: 60,
   })
   @ApiOperation({
-    summary: 'Spotlight users',
-    description: `Returns the 5 most recently created users with at least one native
-language set. Served with public CDN caching.`,
+    summary: 'Get spotlight users',
+    description:
+      'Returns up to 5 recently created users with native languages set. ' +
+      'Results are publicly cached for a short duration and enriched with Partner of the Week flags.',
   })
-  @ApiOkResponse({
-    description: 'A list of up to 5 spotlight user profiles.',
+  @ApiResponse({
+    status: 200,
+    description: 'Spotlight user profiles.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
   })
   async getSpotlight(@CurrentUser() user: User | null): Promise<UserProfile[]> {
     if (!user) return [];
@@ -224,22 +278,30 @@ language set. Served with public CDN caching.`,
   })
   @ApiOperation({
     summary: 'Find partners by language pair',
-    description: `Searches for users whose native and target languages match the specified
-pair. Supports pagination with page and limit parameters.
-
-Sort options:
-- best_match (default): ranked by study streak and correction ratio
-- newest: ordered by creation date`,
+    description:
+      'Search for partners matching a specific language pair. ' +
+      'When both native_language and target_language are provided, returns reciprocal language exchange partners. ' +
+      'Supports cursor pagination (page/limit), sort ordering (best_match/newest), and additional filters for level, audio intro, country, city, learning goals, availability, and voice room activity. ' +
+      'Results are enriched with Partner of the Week flags and promoted in best_match sort order.',
   })
-  @ApiOkResponse({
-    description: 'A paginated list of users matching the language pair.',
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated, filtered list of language pair matches.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
   })
   async findByLanguagePair(
     @CurrentUser() user: User | null,
     @Query() query: LanguagePairQueryDto,
   ): Promise<UserProfile[]> {
     if (!user) return [];
-    const result = await this.discoveryService.findByLanguagePair(user.id, query);
+    const result = await this.discoveryService.findByLanguagePair(
+      user.id,
+      query,
+    );
     return sanitiseDiscoveryData(result);
   }
 
@@ -254,24 +316,31 @@ Sort options:
     windowSeconds: 60,
   })
   @ApiOperation({
-    summary: 'Search users by country or city',
-    description: `Performs a case-insensitive ILIKE search on the country and/or city
-columns. At least one of country or city should be provided.`,
+    summary: 'Search partners by country and/or city',
+    description:
+      'Simple location-based search by country and/or city using case-insensitive ILIKE matching. ' +
+      'Returns up to 50 matching user profiles.',
   })
   @ApiQuery({
     name: 'country',
     required: false,
-    description: 'Country name to search for (case-insensitive partial match)',
+    description: 'Country name (case-insensitive partial match).',
     example: 'Japan',
   })
   @ApiQuery({
     name: 'city',
     required: false,
-    description: 'City name to search for (case-insensitive partial match)',
+    description: 'City name (case-insensitive partial match).',
     example: 'Tokyo',
   })
-  @ApiOkResponse({
-    description: 'A list of users matching the location criteria.',
+  @ApiResponse({
+    status: 200,
+    description: 'User profiles matching the location filter.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
   })
   async searchByLocation(
     @CurrentUser() user: User | null,
@@ -284,5 +353,49 @@ columns. At least one of country or city should be provided.`,
       city,
     });
     return sanitiseDiscoveryData(result);
+  }
+
+  /**
+   * Degradation status endpoint: returns current circuit breaker states
+   * and recent degradation events for monitoring.
+   */
+  @Get('degradation-status')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
+  async getDegradationStatus(): Promise<{
+    breakers: Record<string, unknown>;
+    events: unknown[];
+  }> {
+    const breakers = this.degradationService.getAllBreakerStates();
+    const events = await this.degradationService.getRecentDegradationEvents();
+    return {
+      breakers: Object.fromEntries(breakers),
+      events,
+    };
+  }
+
+  /**
+   * Degradation-aware partner search: returns both data and degradation marker.
+   */
+  @Get('partners-with-degradation')
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
+  async findPartnersWithDegradation(
+    @CurrentUser() user: User | null,
+    @Query() query: SearchQueryDto,
+  ): Promise<DiscoveryResult> {
+    if (!user) {
+      return {
+        data: [],
+        marker: { degraded: false, fallbackSource: 'none' },
+      };
+    }
+    const profile = await this.usersService.getProfile(user.id);
+    if (profile?.is_serious_learner === true) {
+      query.serious_learner_mode = true;
+    }
+    return this.discoveryService.searchPartnersWithDegradation(
+      user.id,
+      profile,
+      query,
+    );
   }
 }
