@@ -127,4 +127,27 @@ export class GroupsService {
       }),
     );
   }
+
+  getDiscoverableGroups(): Promise<DiscoverableGroup[]> {
+    return firstValueFrom(
+      this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/discoverable`)
+    );
+  }
+
+  joinGroup(groupId: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/join`, {})
+    );
+  }
+}
+
+export interface DiscoverableGroup {
+  id: string;
+  name: string;
+  owner_id: string;
+  max_members: number;
+  member_count: number;
+  is_member: boolean;
+  interest_id?: string;
+  created_at: string;
 }

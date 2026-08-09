@@ -3,11 +3,28 @@ import { SuggestFlashcardsService } from './suggest-flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 
+interface MockLogger {
+  info: jest.Mock;
+  error: jest.Mock;
+  warn: jest.Mock;
+  debug: jest.Mock;
+}
+
+interface MockQueryBuilder {
+  select: jest.Mock;
+  eq: jest.Mock;
+  then?: jest.Mock;
+}
+
+interface MockSupabaseClient {
+  from: jest.Mock;
+}
+
 describe('SuggestFlashcardsService', () => {
   let service: SuggestFlashcardsService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
-  let mockLogger: any;
+  let mockSupabaseClient: MockSupabaseClient;
+  let mockQueryBuilder: MockQueryBuilder;
+  let mockLogger: MockLogger;
 
   beforeEach(async () => {
     mockLogger = {
@@ -20,6 +37,7 @@ describe('SuggestFlashcardsService', () => {
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {
@@ -109,7 +127,9 @@ describe('SuggestFlashcardsService', () => {
 
     it('should exclude known words when user_id is provided and exclude_known is not false', async () => {
       mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.then = (resolve: any) =>
+      mockQueryBuilder.then = (
+        resolve: (value: { data: unknown[]; error: null }) => void,
+      ) =>
         resolve({
           data: [{ word_token: 'hello' }, { word_token: 'world' }],
           error: null,
@@ -158,8 +178,9 @@ describe('SuggestFlashcardsService', () => {
 
     it('should handle known words query returning null data gracefully', async () => {
       mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.then = (resolve: any) =>
-        resolve({ data: null, error: null });
+      mockQueryBuilder.then = (
+        resolve: (value: { data: null; error: null }) => void,
+      ) => resolve({ data: null, error: null });
 
       const result = await service.suggestFromMessage({
         message: 'Hello world!',

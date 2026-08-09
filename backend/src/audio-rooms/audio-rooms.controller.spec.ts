@@ -13,6 +13,15 @@ describe('AudioRoomsController', () => {
       controllers: [AudioRoomsController],
       providers: [
         {
+          provide: 'PinoLogger:AudioRoomsController',
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
+        {
           provide: AudioRoomsService,
           useValue: {
             createRoom: jest.fn(),
