@@ -1,15 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException } from '@nestjs/common';
 import { CallsService } from './calls.service';
-
-const mockPinoLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-  trace: jest.fn(),
-};
 
 describe('CallsService', () => {
   let service: CallsService;
@@ -32,8 +25,8 @@ describe('CallsService', () => {
           },
         },
         {
-          provide: 'PinoLogger:CallsService',
-          useValue: mockPinoLogger,
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn() },
         },
       ],
     }).compile();

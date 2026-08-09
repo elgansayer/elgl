@@ -1,21 +1,43 @@
+<<<<<<< HEAD
+<section role="region" aria-label="Classrooms marketplace">
+  <p>classrooms-marketplace works!</p>
+</section>
+=======
 <app-video-classroom-error-boundary>
   <div class="p-4 sm:p-6 space-y-6">
     <!-- Header -->
-    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-black text-white">{{ 'classroomsMarketplace.title' | t }}</h1>
-        <p class="text-sm text-slate-400 mt-1">{{ 'classroomsMarketplace.subtitle' | t }}</p>
+    <header
+      class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    >
+      <div class="flex items-center gap-3">
+        <div>
+          <h1 class="text-2xl font-black text-white">{{ 'classroomsMarketplace.title' | t }}</h1>
+          <p class="text-sm text-slate-400 mt-1">{{ 'classroomsMarketplace.subtitle' | t }}</p>
+        </div>
       </div>
-      @if (isHosting()) {
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-500/20 px-3 py-1 text-xs font-semibold text-purple-300">
-          &#127909;&#65039; {{ 'classroomsMarketplace.hostingBadge' | t }}
-        </span>
-      }
+      <div class="flex items-center gap-2">
+        @if (isHosting()) {
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-purple-500/20 px-3 py-1 text-xs font-semibold text-purple-300">
+            &#127909;&#65039; {{ 'classroomsMarketplace.hostingBadge' | t }}
+          </span>
+        }
+        <button
+          type="button"
+          (click)="startOnboardingTour()"
+          class="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm font-bold"
+          [attr.aria-label]="'videoClassroomTour.helpBtn' | t"
+        >
+          ?
+        </button>
+      </div>
     </header>
 
     <!-- Language Filter Pills -->
     @if (languagePairOptions().length > 1) {
-      <nav aria-label="Language filters" class="flex flex-wrap gap-2">
+      <nav
+        aria-label="Language filters"
+        class="flex flex-wrap gap-2"
+      >
         <button
           type="button"
           (click)="selectLanguage(null)"
@@ -47,7 +69,9 @@
 
     <!-- Loading state: Skeleton Loaders -->
     @if (isLoading()) {
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      >
         @for (i of [1, 2, 3, 4, 5, 6]; track i) {
           <div class="rounded-2xl bg-surface-200 border border-slate-700 overflow-hidden">
             <app-skeleton-loader
@@ -125,7 +149,9 @@
 
     <!-- Room Grid -->
     @if (!isLoading() && !errorMessage() && videoRooms().length > 0) {
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      >
         @for (room of videoRooms(); track room.id) {
           <article
             class="rounded-2xl bg-surface-200 border border-slate-700 overflow-hidden hover:border-purple-500/50 transition-all cursor-pointer group"
@@ -180,3 +206,4 @@
     }
   </div>
 </app-video-classroom-error-boundary>
+>>>>>>> origin/main

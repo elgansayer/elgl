@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { randomUUID as uuidv4 } from 'crypto';
 import * as crypto from 'crypto';
@@ -9,7 +9,7 @@ import * as crypto from 'crypto';
 export class CallsService {
   private livekitHost: string;
 
-  // Active calls per user (userId -> (roomName -> { roomName, isHeld, e2eeKey, calleeToken }))
+  // Active calls per user (userId -> (roomName -> { roomName, isHeld, e2eeKey, calleeToken, callerId }))
   private readonly activeCalls: Map<
     string,
     Map<
@@ -22,6 +22,7 @@ export class CallsService {
         isGroup: boolean;
         calleeToken: string | null;
         isVideo: boolean;
+        callerId: string | null;
       }
     >
   > = new Map();
@@ -35,13 +36,13 @@ export class CallsService {
       calleeToken: string;
       e2eeKey: string;
       isVideo: boolean;
+      callerId: string;
     }>
   > = new Map();
 
   constructor(
     private configService: ConfigService,
-    @InjectPinoLogger(CallsService.name)
-    private readonly logger: PinoLogger,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.livekitHost =
       this.configService.get<string>('LIVEKIT_URL') || 'http://localhost:7880';
@@ -59,6 +60,7 @@ export class CallsService {
       isGroup: boolean;
       calleeToken: string | null;
       isVideo: boolean;
+      callerId: string | null;
     }
   > {
     if (!this.activeCalls.has(userId)) {
@@ -75,6 +77,7 @@ export class CallsService {
     isGroup: boolean = false,
     calleeToken: string | null = null,
     isVideo: boolean = true,
+    callerId: string | null = null,
   ): void {
     const userCalls = this.ensureUser(userId);
     userCalls.set(roomName, {
@@ -85,6 +88,7 @@ export class CallsService {
       isGroup,
       calleeToken,
       isVideo,
+      callerId,
     });
   }
 
@@ -147,52 +151,57 @@ export class CallsService {
   holdCall(userId: string, roomName: string): void {
     const userCalls = this.activeCalls.get(userId);
     if (!userCalls || !userCalls.has(roomName)) {
-      this.logger.warn(
-        { userId, roomName },
-        `Hold failed: call "${roomName}" not found for user ${userId}`,
-      );
       throw new BadRequestException('Call not found');
     }
     userCalls.get(roomName)!.isHeld = true;
-    this.logger.info(
-      { userId, roomName },
-      `Call "${roomName}" put on hold by user ${userId}`,
-    );
   }
 
   resumeCall(userId: string, roomName: string): void {
     const userCalls = this.activeCalls.get(userId);
     if (!userCalls || !userCalls.has(roomName)) {
-      this.logger.warn(
-        { userId, roomName },
-        `Resume failed: call "${roomName}" not found for user ${userId}`,
-      );
       throw new BadRequestException('Call not found');
     }
     userCalls.get(roomName)!.isHeld = false;
-    this.logger.info(
-      { userId, roomName },
-      `Call "${roomName}" resumed by user ${userId}`,
-    );
   }
 
   leaveCall(userId: string, roomName: string): void {
     const userCalls = this.activeCalls.get(userId);
     if (!userCalls || !userCalls.has(roomName)) {
-      this.logger.warn(
-        { userId, roomName },
-        `Leave failed: call "${roomName}" not found for user ${userId}`,
-      );
       throw new BadRequestException('Call not found');
     }
+    const callInfo = userCalls.get(roomName)!;
+
+    // When a caller hangs up before the callee answered, emit a missed-call event.
+    // callInfo.callerId stores the calleeId for calls initiated by this user.
+    if (callInfo.callerId) {
+      const calleeId = callInfo.callerId;
+
+      // Clean up any waiting entry for this call
+      const waitingList = this.waitingCalls.get(calleeId);
+      if (waitingList) {
+        const waitingIdx = waitingList.findIndex(
+          (w) => w.roomName === roomName,
+        );
+        if (waitingIdx !== -1) {
+          waitingList.splice(waitingIdx, 1);
+          if (waitingList.length === 0) {
+            this.waitingCalls.delete(calleeId);
+          }
+        }
+      }
+
+      // Emit missed call event for notification system to broadcast
+      this.eventEmitter.emit('call.missed', {
+        callerId: userId,
+        calleeId,
+        isVideo: callInfo.isVideo,
+      });
+    }
+
     userCalls.delete(roomName);
     if (userCalls.size === 0) {
       this.activeCalls.delete(userId);
     }
-    this.logger.info(
-      { userId, roomName },
-      `User ${userId} left call "${roomName}"`,
-    );
   }
 
   /* ---------- Call‑waiting ---------- */
@@ -314,31 +323,19 @@ export class CallsService {
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const apiSecret = this.configService.get<string>('LIVEKIT_SECRET');
     if (!apiKey || !apiSecret) {
-      this.logger.error(
-        { callerId, calleeId },
-        'Cannot initiate call: LiveKit credentials not configured',
-      );
       throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
     }
 
     // Create the room for the 1:1 call
-    try {
-      const roomService = new RoomServiceClient(
-        this.livekitHost,
-        apiKey,
-        apiSecret,
-      );
-      await roomService.createRoom({
-        name: roomName,
-        maxParticipants: 2,
-      });
-    } catch (error) {
-      this.logger.error(
-        { error, roomName, callerId, calleeId },
-        `Failed to create LiveKit room for call between ${callerId} and ${calleeId}`,
-      );
-      throw error;
-    }
+    const roomService = new RoomServiceClient(
+      this.livekitHost,
+      apiKey,
+      apiSecret,
+    );
+    await roomService.createRoom({
+      name: roomName,
+      maxParticipants: 2,
+    });
 
     // Generate a random 32‑byte key for end‑to‑end encryption
     const e2eeKey = this.generateE2eeKey();
@@ -380,6 +377,7 @@ export class CallsService {
         false,
         null,
         isVideo,
+        calleeId,
       );
 
       const waitingEntry = {
@@ -387,16 +385,12 @@ export class CallsService {
         calleeToken,
         e2eeKey,
         isVideo,
+        callerId,
       };
       if (!this.waitingCalls.has(calleeId)) {
         this.waitingCalls.set(calleeId, []);
       }
       this.waitingCalls.get(calleeId)!.push(waitingEntry);
-
-      this.logger.info(
-        { roomName, callerId, calleeId, isVideo, waiting: true },
-        `Call "${roomName}" initiated, callee ${calleeId} busy - queued as waiting`,
-      );
 
       return {
         room_name: roomName,
@@ -419,6 +413,7 @@ export class CallsService {
       false,
       null,
       isVideo,
+      calleeId,
     );
     this.registerParticipant(
       calleeId,
@@ -428,11 +423,7 @@ export class CallsService {
       false,
       null,
       isVideo,
-    );
-
-    this.logger.info(
-      { roomName, callerId, calleeId, isVideo, waiting: false },
-      `Call "${roomName}" initiated and connected between ${callerId} and ${calleeId}`,
+      callerId,
     );
 
     return {
@@ -455,10 +446,6 @@ export class CallsService {
     const effectiveLimit = participantLimit ?? 10;
 
     if (!Number.isInteger(effectiveLimit) || effectiveLimit < 2) {
-      this.logger.warn(
-        { callerId, participantLimit: effectiveLimit },
-        `Group call creation failed: invalid participant_limit ${effectiveLimit}`,
-      );
       throw new BadRequestException(
         `participant_limit must be an integer greater than or equal to 2`,
       );
@@ -469,10 +456,6 @@ export class CallsService {
     }
 
     if (participantIds.length > effectiveLimit) {
-      this.logger.warn(
-        { callerId, count: participantIds.length, limit: effectiveLimit },
-        `Group call creation failed: participant count (${participantIds.length}) exceeds limit (${effectiveLimit})`,
-      );
       throw new BadRequestException(
         `Number of participants (${participantIds.length}) exceeds the limit (${effectiveLimit})`,
       );
@@ -482,31 +465,19 @@ export class CallsService {
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const apiSecret = this.configService.get<string>('LIVEKIT_SECRET');
     if (!apiKey || !apiSecret) {
-      this.logger.error(
-        { callerId },
-        'Cannot create group call: LiveKit credentials not configured',
-      );
       throw new Error('LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured');
     }
 
     // Create the room with a maximum participant limit
-    try {
-      const roomService = new RoomServiceClient(
-        this.livekitHost,
-        apiKey,
-        apiSecret,
-      );
-      await roomService.createRoom({
-        name: roomName,
-        maxParticipants: effectiveLimit,
-      });
-    } catch (error) {
-      this.logger.error(
-        { error, roomName, callerId, participantCount: participantIds.length },
-        `Failed to create LiveKit group room "${roomName}"`,
-      );
-      throw error;
-    }
+    const roomService = new RoomServiceClient(
+      this.livekitHost,
+      apiKey,
+      apiSecret,
+    );
+    await roomService.createRoom({
+      name: roomName,
+      maxParticipants: effectiveLimit,
+    });
 
     const e2eeKey = this.generateE2eeKey();
     const metadata = JSON.stringify({
@@ -544,16 +515,6 @@ export class CallsService {
         true,
       );
     }
-
-    this.logger.info(
-      {
-        roomName,
-        callerId,
-        participantCount: participantIds.length,
-        limit: effectiveLimit,
-      },
-      `Group call "${roomName}" created with ${participantIds.length} participants`,
-    );
 
     return {
       room_name: roomName,

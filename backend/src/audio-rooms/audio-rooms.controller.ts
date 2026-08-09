@@ -67,6 +67,8 @@ import {
   CACHE_TAG_AUDIO_ROOMS,
   CACHE_TAG_AUDIO_ROOM_STAGE,
   CACHE_TAG_AUDIO_ROOM_POLLS,
+  CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+  CACHE_TAG_AUDIO_ROOM_NOTES,
 } from '../common/cache.interceptor';
 
 // Type representing the authenticated user fields used in the controller.
@@ -108,7 +110,10 @@ export class AudioRoomsController {
         language_pair: { type: 'string', example: 'en-es' },
         topic_tag: { type: 'string', example: 'conversation' },
         is_video_stream: { type: 'boolean', example: false },
-        host_id: { type: 'string', example: 'd290f1ee-6c54-4b01-90e6-d701748f0851' },
+        host_id: {
+          type: 'string',
+          example: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
+        },
         participants_count: { type: 'number', example: 1 },
         created_at: { type: 'string', example: '2026-08-07T10:30:00.000Z' },
       },
@@ -158,7 +163,11 @@ export class AudioRoomsController {
     schema: {
       type: 'object',
       properties: {
-        token: { type: 'string', description: 'LiveKit access token', example: 'eyJhbGciOi...' },
+        token: {
+          type: 'string',
+          description: 'LiveKit access token',
+          example: 'eyJhbGciOi...',
+        },
         room_name: { type: 'string', example: 'room_a1b2c3d4' },
       },
     },
@@ -173,16 +182,35 @@ export class AudioRoomsController {
   }
 
   @Get('list')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOMS]))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [
+      CACHE_TAG_AUDIO_ROOMS,
+    ]),
+  )
   @ApiOperation({
     summary: 'List active audio rooms',
     description:
       'Returns all currently active audio rooms, optionally filtered by party type, topic, or level. ' +
       'Responses are cached very briefly for performance.',
   })
-  @ApiQuery({ name: 'type', required: false, description: 'Filter by party type', example: 'language_party' })
-  @ApiQuery({ name: 'topic', required: false, description: 'Filter by topic', example: 'conversation' })
-  @ApiQuery({ name: 'level', required: false, description: 'Filter by proficiency level', example: 'intermediate' })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    description: 'Filter by party type',
+    example: 'language_party',
+  })
+  @ApiQuery({
+    name: 'topic',
+    required: false,
+    description: 'Filter by topic',
+    example: 'conversation',
+  })
+  @ApiQuery({
+    name: 'level',
+    required: false,
+    description: 'Filter by proficiency level',
+    example: 'intermediate',
+  })
   @ApiResponse({
     status: 200,
     description: 'Array of active audio rooms.',
@@ -201,7 +229,11 @@ export class AudioRoomsController {
   }
 
   @Get('by-language')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOMS]))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [
+      CACHE_TAG_AUDIO_ROOMS,
+    ]),
+  )
   @ApiOperation({
     summary: 'List active rooms grouped by language pair',
     description:
@@ -233,7 +265,11 @@ export class AudioRoomsController {
   @ApiResponse({
     status: 200,
     description: 'Array of distinct topic strings.',
-    schema: { type: 'array', items: { type: 'string' }, example: ['conversation', 'grammar', 'culture'] },
+    schema: {
+      type: 'array',
+      items: { type: 'string' },
+      example: ['conversation', 'grammar', 'culture'],
+    },
   })
   async getDistinctTopics(): Promise<string[]> {
     return await this.audioRoomsService.getDistinctTopics();
@@ -250,7 +286,11 @@ export class AudioRoomsController {
   @ApiResponse({
     status: 200,
     description: 'Array of distinct level strings.',
-    schema: { type: 'array', items: { type: 'string' }, example: ['beginner', 'intermediate', 'advanced'] },
+    schema: {
+      type: 'array',
+      items: { type: 'string' },
+      example: ['beginner', 'intermediate', 'advanced'],
+    },
   })
   async getDistinctLevels(): Promise<string[]> {
     return await this.audioRoomsService.getDistinctLevels();
@@ -314,12 +354,20 @@ export class AudioRoomsController {
   }
 
   @Get(':id')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOM_STAGE]))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [
+      CACHE_TAG_AUDIO_ROOM_STAGE,
+    ]),
+  )
   @ApiOperation({
     summary: 'Get room details by ID',
     description: 'Returns full details for a specific audio room by its ID.',
   })
-  @ApiParam({ name: 'id', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'id',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 200,
     description: 'Audio room record.',
@@ -329,13 +377,21 @@ export class AudioRoomsController {
   }
 
   @Get(':id/stage')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOM_STAGE]))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [
+      CACHE_TAG_AUDIO_ROOM_STAGE,
+    ]),
+  )
   @ApiOperation({
     summary: 'Get stage information for a room',
     description:
       'Returns the current stage state including speakers, hand-raised listeners, and co-hosts.',
   })
-  @ApiParam({ name: 'id', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'id',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 200,
     description: 'Stage information.',
@@ -351,7 +407,11 @@ export class AudioRoomsController {
     description:
       'Reorders the speakers on the stage for a given audio room. Only the host or co-host can perform this action.',
   })
-  @ApiParam({ name: 'id', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'id',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 201,
     description: 'Stage speakers reordered successfully.',
@@ -377,7 +437,11 @@ export class AudioRoomsController {
     description:
       'Removes all speakers from the stage. Only the host can perform this action.',
   })
-  @ApiParam({ name: 'id', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'id',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 201,
     description: 'Stage cleared successfully.',
@@ -537,7 +601,8 @@ export class AudioRoomsController {
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Remove a co-host',
-    description: 'The host removes a co-host, revoking their management permissions.',
+    description:
+      'The host removes a co-host, revoking their management permissions.',
   })
   @ApiResponse({
     status: 201,
@@ -615,7 +680,11 @@ export class AudioRoomsController {
     description:
       'Adds a personal note to an audio room. Notes can include vocabulary references.',
   })
-  @ApiParam({ name: 'roomId', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'roomId',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 201,
     description: 'Note added successfully.',
@@ -631,12 +700,18 @@ export class AudioRoomsController {
   }
 
   @Get(':roomId/notes')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_AUDIO_ROOM_NOTES]),
+  )
   @ApiOperation({
     summary: 'Get notes for an audio room',
     description: 'Returns all notes associated with a specific audio room.',
   })
-  @ApiParam({ name: 'roomId', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'roomId',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 200,
     description: 'Array of voice room notes.',
@@ -652,8 +727,16 @@ export class AudioRoomsController {
     description:
       'Deletes a specific note by ID. Only the note author can delete their own notes.',
   })
-  @ApiParam({ name: 'roomId', description: 'Audio room ID', example: 'room_a1b2c3d4' })
-  @ApiParam({ name: 'noteId', description: 'Note ID to delete', example: 'note_xyz789' })
+  @ApiParam({
+    name: 'roomId',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
+  @ApiParam({
+    name: 'noteId',
+    description: 'Note ID to delete',
+    example: 'note_xyz789',
+  })
   @ApiResponse({
     status: 200,
     description: 'Note deleted successfully.',
@@ -674,24 +757,48 @@ export class AudioRoomsController {
    */
   @Get(':id/transcript')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [
+      CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+    ]),
+  )
   @ApiOperation({
     summary: 'Get the transcript for a completed audio room session',
     description:
       'Returns the recording URL, transcript text, session summary, and vocabulary list ' +
       'for a completed audio room if available.',
   })
-  @ApiParam({ name: 'id', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'id',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 200,
     description: 'Transcript data.',
     schema: {
       type: 'object',
       properties: {
-        recording_url: { type: 'string', nullable: true, example: 'https://r2.example.com/recordings/room_a1b2c3d4.mp3' },
-        transcript_text: { type: 'string', nullable: true, example: 'Speaker A: Hola...' },
-        session_summary: { type: 'string', nullable: true, example: 'Practised greetings and introductions in Spanish.' },
-        vocabulary: { type: 'array', items: { type: 'string' }, example: ['hola', 'gracias', 'adios'] },
+        recording_url: {
+          type: 'string',
+          nullable: true,
+          example: 'https://r2.example.com/recordings/room_a1b2c3d4.mp3',
+        },
+        transcript_text: {
+          type: 'string',
+          nullable: true,
+          example: 'Speaker A: Hola...',
+        },
+        session_summary: {
+          type: 'string',
+          nullable: true,
+          example: 'Practised greetings and introductions in Spanish.',
+        },
+        vocabulary: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['hola', 'gracias', 'adios'],
+        },
       },
     },
   })
@@ -711,14 +818,21 @@ export class AudioRoomsController {
     description:
       'Creates a poll with multiple options for participants in the audio room to vote on.',
   })
-  @ApiParam({ name: 'roomId', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'roomId',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 201,
     description: 'Poll created successfully.',
     schema: {
       type: 'object',
       properties: {
-        poll_id: { type: 'string', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' },
+        poll_id: {
+          type: 'string',
+          example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        },
       },
     },
   })
@@ -753,22 +867,41 @@ export class AudioRoomsController {
   }
 
   @Get(':roomId/polls/:pollId')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [CACHE_TAG_AUDIO_ROOM_POLLS]))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_PUBLIC_VERY_SHORT, [
+      CACHE_TAG_AUDIO_ROOM_POLLS,
+    ]),
+  )
   @ApiOperation({
     summary: 'Get poll results',
     description:
       'Returns the current results for a specific poll, including vote counts per option.',
   })
-  @ApiParam({ name: 'roomId', description: 'Audio room ID', example: 'room_a1b2c3d4' })
-  @ApiParam({ name: 'pollId', description: 'Poll ID', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @ApiParam({
+    name: 'roomId',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
+  @ApiParam({
+    name: 'pollId',
+    description: 'Poll ID',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+  })
   @ApiResponse({
     status: 200,
     description: 'Poll results.',
     schema: {
       type: 'object',
       properties: {
-        question: { type: 'string', example: 'Which topic should we discuss next?' },
-        options: { type: 'array', items: { type: 'string' }, example: ['Travel', 'Food', 'Music'] },
+        question: {
+          type: 'string',
+          example: 'Which topic should we discuss next?',
+        },
+        options: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['Travel', 'Food', 'Music'],
+        },
         votes: { type: 'array', items: { type: 'number' }, example: [5, 3, 8] },
         totalVotes: { type: 'number', example: 16 },
       },
@@ -817,7 +950,11 @@ export class AudioRoomsController {
       type: 'object',
       properties: {
         success: { type: 'boolean', example: true },
-        soundUrl: { type: 'string', nullable: true, example: 'https://r2.example.com/sounds/applause.mp3' },
+        soundUrl: {
+          type: 'string',
+          nullable: true,
+          example: 'https://r2.example.com/sounds/applause.mp3',
+        },
       },
     },
   })
@@ -837,7 +974,11 @@ export class AudioRoomsController {
     description:
       'Sends an animated emoji reaction to the room, visible to all participants.',
   })
-  @ApiParam({ name: 'roomId', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'roomId',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 201,
     description: 'Reaction sent successfully.',
@@ -845,7 +986,10 @@ export class AudioRoomsController {
       type: 'object',
       properties: {
         emojiId: { type: 'string', example: 'emoji_heart_eyes' },
-        animationUrl: { type: 'string', example: 'https://r2.example.com/emojis/heart_eyes.json' },
+        animationUrl: {
+          type: 'string',
+          example: 'https://r2.example.com/emojis/heart_eyes.json',
+        },
       },
     },
   })
@@ -867,7 +1011,11 @@ export class AudioRoomsController {
       'Sends a coin tip to the host of the specified audio room. ' +
       'Deducts coins from the sender and credits the host.',
   })
-  @ApiParam({ name: 'roomId', description: 'Audio room ID', example: 'room_a1b2c3d4' })
+  @ApiParam({
+    name: 'roomId',
+    description: 'Audio room ID',
+    example: 'room_a1b2c3d4',
+  })
   @ApiResponse({
     status: 201,
     description: 'Tip sent successfully.',
@@ -876,7 +1024,10 @@ export class AudioRoomsController {
       properties: {
         tip_id: { type: 'string', example: 'tip_abc123' },
         amount_coins: { type: 'number', example: 10 },
-        receiver_id: { type: 'string', example: 'd290f1ee-6c54-4b01-90e6-d701748f0851' },
+        receiver_id: {
+          type: 'string',
+          example: 'd290f1ee-6c54-4b01-90e6-d701748f0851',
+        },
         receiver_new_balance: { type: 'number', example: 260 },
       },
     },

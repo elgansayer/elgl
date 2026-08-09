@@ -4,14 +4,14 @@ import { RoomServiceClient } from 'livekit-server-sdk';
 import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
 import { NlpModule } from '../nlp/nlp.module';
+import { CloudflareModule } from '../cloudflare/cloudflare.module';
 import { AudioRoomsController } from './audio-rooms.controller';
 import { AudioRoomsService } from './audio-rooms.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
-import { SharedLoggerModule } from '../common/logger/logger.module';
 
 @Module({
-  imports: [UsersModule, ChatModule, NlpModule, SharedLoggerModule],
+  imports: [UsersModule, ChatModule, NlpModule, CloudflareModule],
   controllers: [AudioRoomsController],
   providers: [
     AudioRoomsService,

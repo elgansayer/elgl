@@ -6,6 +6,7 @@ import { MetricsInterceptor } from './metrics.interceptor';
 import { SrsMetricsAggregator } from './srs-metrics.aggregator';
 import { TrustSafetyMetricsAggregator } from './ts-metrics.aggregator';
 import { EscrowMetricsAggregator } from './escrow-metrics.aggregator';
+import { RecommendationsMetricsAggregator } from './recommendations-metrics.aggregator';
 
 @Global()
 @Module({
@@ -15,6 +16,7 @@ import { EscrowMetricsAggregator } from './escrow-metrics.aggregator';
     SrsMetricsAggregator,
     TrustSafetyMetricsAggregator,
     EscrowMetricsAggregator,
+    RecommendationsMetricsAggregator,
     {
       provide: APP_INTERCEPTOR,
       useClass: MetricsInterceptor,
