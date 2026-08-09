@@ -6,6 +6,7 @@ import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
 type DeckView = 'list' | 'detail';
 
@@ -374,6 +375,7 @@ export class FlashcardDeckComponent {
   private i18n = inject(I18nService);
   private router = inject(Router);
   private errorHandler = inject(ErrorHandler);
+  private sanitisation = inject(HtmlSanitisationService);
 
   // View state
   readonly activeView = signal<DeckView>('list');
@@ -413,20 +415,30 @@ export class FlashcardDeckComponent {
     deckId: this.selectedDeck()?.id,
   }));
 
+  /** Sanitises user-authored string fields of a deck against XSS via DOMPurify. */
+  private sanitiseDeck(d: Deck): Deck {
+    return {
+      ...d,
+      name: this.sanitisation.sanitiseText(d.name),
+      description: d.description ? this.sanitisation.sanitiseText(d.description) : undefined,
+    };
+  }
+
   handleRetry(): void {
     void this.loadDecks();
   }
 
   private reportDeckError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
     const deckError = new Error(
-      `[SRS:flashcard-deck] ${operation} failed: ${(err as Error)?.message ?? String(err)}`,
+      `[SRS:flashcard-deck] ${operation} failed: ${message}`,
     );
     deckError.name = 'SrsDeckError';
     if (err instanceof Error && err.stack) {
       deckError.stack = err.stack;
     }
-    (deckError as Error & { srsOperation?: string }).srsOperation = operation;
-    this.errorHandler.handleError(deckError);
+    const enriched = Object.assign(deckError, { srsOperation: operation });
+    this.errorHandler.handleError(enriched);
   }
 
   constructor() {
@@ -437,7 +449,7 @@ export class FlashcardDeckComponent {
     this.isLoading.set(true);
     try {
       const result = await this.deckService.getDecks();
-      this.decks.set(result);
+      this.decks.set(result.map((d) => this.sanitiseDeck(d)));
     } catch (e) {
       this.reportDeckError('loadDecks', e);
       // ignore
@@ -465,13 +477,15 @@ export class FlashcardDeckComponent {
     this.isCreating.set(true);
     try {
       const dto: CreateDeckDto = {
-        name,
-        description: this.newDeckDescription().trim() || undefined,
+        name: this.sanitisation.sanitiseText(name),
+        description: this.newDeckDescription().trim()
+          ? this.sanitisation.sanitiseText(this.newDeckDescription().trim())
+          : undefined,
         colour: this.newDeckColour(),
         icon: this.newDeckIcon(),
       };
       const deck = await this.deckService.createDeck(dto);
-      this.decks.update((list) => [deck, ...list]);
+      this.decks.update((list) => [this.sanitiseDeck(deck), ...list]);
       this.toggleCreateForm();
     } catch (e) {
       this.reportDeckError('createDeck', e);
@@ -580,15 +594,18 @@ export class FlashcardDeckComponent {
     if (!deck) return;
     try {
       const updated = await this.deckService.updateDeck(deck.id, {
-        name: this.editDeckName().trim(),
-        description: this.editDeckDescription().trim() || undefined,
+        name: this.sanitisation.sanitiseText(this.editDeckName().trim()),
+        description: this.editDeckDescription().trim()
+          ? this.sanitisation.sanitiseText(this.editDeckDescription().trim())
+          : undefined,
         colour: this.editDeckColour(),
         icon: this.editDeckIcon(),
       });
 
       if (updated) {
-        this.selectedDeck.set(updated);
-        this.decks.update((list) => list.map((d) => (d.id === updated.id ? updated : d)));
+        const sanitised = this.sanitiseDeck(updated);
+        this.selectedDeck.set(sanitised);
+        this.decks.update((list) => list.map((d) => (d.id === sanitised.id ? sanitised : d)));
       }
       this.showEditForm.set(false);
     } catch (e) {

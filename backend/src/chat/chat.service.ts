@@ -665,6 +665,80 @@ export class ChatService {
     }
   }
 
+  /**
+   * Search messages across ALL rooms the user is a member of.
+   * Uses pg_trgm for fuzzy text search on text_content.
+   */
+  async searchAllMessages(
+    userId: string,
+    term: string,
+    limit = 50,
+    roomId?: string,
+  ): Promise<ChatMessage[]> {
+    const supabase = this.supabaseService.getClient();
+    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
+
+    // Get all room IDs the user is a member of
+    const { data: memberRooms, error: memberErr } = await supabase
+      .from('chat_room_members')
+      .select('room_id')
+      .eq('user_id', userId);
+
+    if (memberErr || !memberRooms || memberRooms.length === 0) {
+      return [];
+    }
+
+    let roomIds = memberRooms.map((r: { room_id: string }) => r.room_id);
+
+    // If a specific roomId is provided, limit to that room only
+    if (roomId) {
+      if (!roomIds.includes(roomId)) return [];
+      roomIds = [roomId];
+    }
+
+    const trimmedTerm = term.trim();
+    if (trimmedTerm.length < 2) return [];
+
+    let query = supabase
+      .from('chat_messages')
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .in('room_id', roomIds)
+      .ilike('text_content', `%${trimmedTerm}%`)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (blockedIds.length > 0) {
+      query = query.not('sender_id', 'in', blockedIds);
+    }
+
+    const response = await query;
+    if (response.error || !response.data) {
+      return [];
+    }
+
+    const messages: DeletedAwareMessage[] = response.data;
+
+    // Filter out deleted messages
+    return messages.filter((msg) => {
+      if (msg.is_deleted) return false;
+      if (
+        Array.isArray(msg.deleted_for_user_ids) &&
+        msg.deleted_for_user_ids.includes(userId)
+      )
+        return false;
+      return true;
+    });
+  }
+
   async getFavourites(userId: string): Promise<FavouriteRecord[]> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
@@ -806,80 +880,6 @@ export class ChatService {
     }
 
     return room;
-  }
-
-  private async enforceMessageFilters(
-    senderId: string,
-    receiverId: string,
-    roomId: string,
-  ): Promise<void> {
-    // Only apply to the first message from this sender in this room
-    const supabase = this.supabaseService.getClient();
-    const { data: existingMessages } = await supabase
-      .from('chat_messages')
-      .select('id')
-      .eq('room_id', roomId)
-      .eq('sender_id', senderId)
-      .limit(1);
-
-    if (existingMessages && existingMessages.length > 0) {
-      return; // Not the first message; skip filter enforcement
-    }
-
-    // Load receiver's message filters
-    const filters = await this.usersService.getMessageFilters(receiverId);
-    if (!filters || Object.keys(filters).length === 0) {
-      return; // No filters configured
-    }
-
-    // Load sender's profile for validation
-    const senderProfile = await this.usersService.getProfile(senderId);
-    if (!senderProfile) {
-      return; // Can't validate without profile
-    }
-
-    // Check age filter
-    if (filters.age_min !== undefined || filters.age_max !== undefined) {
-      const senderAge = senderProfile.age;
-      if (senderAge !== undefined && senderAge !== null) {
-        if (filters.age_min !== undefined && senderAge < filters.age_min) {
-          throw new ForbiddenException(
-            "Your age does not meet the recipient's minimum age requirement.",
-          );
-        }
-        if (filters.age_max !== undefined && senderAge > filters.age_max) {
-          throw new ForbiddenException(
-            "Your age exceeds the recipient's maximum age requirement.",
-          );
-        }
-      }
-    }
-
-    // Check native language filter
-    if (
-      filters.allowed_native_languages &&
-      filters.allowed_native_languages.length > 0
-    ) {
-      const senderLanguages = senderProfile.native_languages ?? [];
-      const hasAllowedLanguage = senderLanguages.some((lang) =>
-        filters.allowed_native_languages!.includes(lang),
-      );
-      if (!hasAllowedLanguage) {
-        throw new ForbiddenException(
-          "Your native language is not allowed by the recipient's message filters.",
-        );
-      }
-    }
-
-    // Check gender filter
-    if (filters.allowed_genders && filters.allowed_genders.length > 0) {
-      const senderGender = senderProfile.gender;
-      if (!senderGender || !filters.allowed_genders.includes(senderGender)) {
-        throw new ForbiddenException(
-          "Your gender is not allowed by the recipient's message filters.",
-        );
-      }
-    }
   }
 
   private async verifyAdmin(userId: string, roomId: string): Promise<void> {
@@ -1674,6 +1674,179 @@ export class ChatService {
   }
 
   /**
+   * Forwards a message to one or more target rooms.
+   * The forwarded message is marked with `is_forwarded: true` to prevent spam
+   * and show a visible "Forwarded" label to recipients.
+   */
+  async forwardMessage(
+    userId: string,
+    messageId: string,
+    roomIds: string[],
+  ): Promise<ChatMessage[]> {
+    const supabase = this.supabaseService.getClient();
+
+    // Fetch the original message
+    const { data: originalMsg, error: fetchError } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchError || !originalMsg) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Verify the user is a member of the source room
+    const { data: sourceMembership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', originalMsg.room_id)
+      .eq('user_id', userId)
+      .single();
+
+    if (!sourceMembership) {
+      throw new ForbiddenException('You do not have access to this message');
+    }
+
+    // Spam detection: apply to forwarded text messages
+    if (
+      originalMsg.message_type === 'text' &&
+      typeof originalMsg.text_content === 'string' &&
+      originalMsg.text_content
+    ) {
+      const isSpam = this.spamDetectionService.isSpam(originalMsg.text_content);
+      if (isSpam) {
+        throw new BadRequestException('Cannot forward spam content.');
+      }
+    }
+
+    const forwardedMessages: ChatMessage[] = [];
+
+    for (const targetRoomId of roomIds) {
+      // Verify the user is a member of the target room
+      const { data: targetMembership } = await supabase
+        .from('chat_room_members')
+        .select('user_id')
+        .eq('room_id', targetRoomId)
+        .eq('user_id', userId)
+        .single();
+
+      if (!targetMembership) {
+        continue; // Skip rooms the user doesn't belong to
+      }
+
+      // Prevent forwarding a message to its own room
+      if (targetRoomId === originalMsg.room_id) {
+        continue;
+      }
+
+      // Check if the user is blocked by any member of the target room
+      const { data: targetRoomMembers } = await supabase
+        .from('chat_room_members')
+        .select('user_id')
+        .eq('room_id', targetRoomId)
+        .neq('user_id', userId);
+
+      let blocked = false;
+      if (targetRoomMembers && targetRoomMembers.length > 0) {
+        for (const member of targetRoomMembers as { user_id: string }[]) {
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
+            member.user_id,
+          );
+          if (blockedIds.includes(userId)) {
+            blocked = true;
+            break;
+          }
+        }
+      }
+
+      if (blocked) {
+        continue; // Skip rooms where sender is blocked
+      }
+
+      const insertPayload = {
+        room_id: targetRoomId,
+        sender_id: userId,
+        message_type: originalMsg.message_type,
+        text_content: originalMsg.text_content ?? null,
+        media_url: originalMsg.media_url ?? null,
+        correction_payload: originalMsg.correction_payload ?? null,
+        reply_to_id: null, // Forwarded messages start fresh threads
+        correction_request_payload:
+          originalMsg.correction_request_payload ?? null,
+        status_reply_payload: originalMsg.status_reply_payload ?? null,
+        is_view_once: false, // Never preserve view-once on forward
+        is_forwarded: true,
+      };
+
+      const insertResponse = await supabase
+        .from('chat_messages')
+        .insert(insertPayload)
+        .select(
+          `
+          *,
+          sender:users!chat_messages_sender_id_fkey (
+            id,
+            display_name,
+            avatar_url
+          )
+        `,
+        )
+        .single();
+
+      if (insertResponse.error || !insertResponse.data) {
+        continue; // Skip on insert failure
+      }
+
+      const forwardedMsg = insertResponse.data as ChatMessage;
+
+      // Publish to Centrifugo channel for the target room
+      await this.centrifugoService.publish(`chat:${targetRoomId}`, {
+        message: forwardedMsg,
+      });
+
+      // Emit push notification for the target room members
+      const preview = originalMsg.text_content
+        ? originalMsg.text_content.substring(0, 120)
+        : originalMsg.message_type === 'voice'
+          ? '🎤 Voice message'
+          : originalMsg.message_type === 'correction'
+            ? '📝 Correction'
+            : originalMsg.message_type === 'doodle'
+              ? '🎨 Doodle'
+              : '';
+
+      const receiverId =
+        targetRoomMembers && targetRoomMembers.length > 0
+          ? targetRoomMembers[0].user_id
+          : undefined;
+
+      if (receiverId) {
+        this.eventEmitter.emit(
+          'chat.message',
+          new ChatMessageEvent(
+            userId,
+            receiverId,
+            targetRoomId,
+            originalMsg.message_type,
+            preview,
+          ),
+        );
+      }
+
+      forwardedMessages.push(forwardedMsg);
+    }
+
+    if (forwardedMessages.length === 0) {
+      throw new BadRequestException(
+        'Message could not be forwarded to any of the specified rooms. Check your membership and block status.',
+      );
+    }
+
+    return forwardedMessages;
+  }
+
+  /**
    * Exports full chat history for the given room as an array of ChatMessage.
    * The caller must be a member of the room.
    */
@@ -2079,116 +2252,5 @@ export class ChatService {
     await this.centrifugoService.publish(`chat:${roomId}`, {
       message: awayMessageChat,
     });
-  }
-
-  /**
-   * Checks the receiver's message filters (age, native language, gender) and
-   * rejects the message if the sender does not meet the criteria. Only applies
-   * to the first message in a room (when there are no prior messages from the
-   * sender to the receiver).
-   */
-  private async enforceMessageFilters(
-    senderId: string,
-    receiverId: string,
-    roomId: string,
-  ): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-
-    // Check if there are already messages from the sender in this room
-    const { count, error: countError } = await supabase
-      .from('chat_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('room_id', roomId)
-      .eq('sender_id', senderId);
-
-    if (countError) return;
-    if ((count ?? 0) > 0) return; // Not the first message - skip filter check
-
-    // Fetch receiver's message filters
-    const { data: receiverData, error: receiverError } = await supabase
-      .from('users')
-      .select('message_filters')
-      .eq('id', receiverId)
-      .single();
-
-    if (receiverError || !receiverData) return;
-
-    const filters = (
-      receiverData as { message_filters?: Record<string, unknown> }
-    )?.message_filters;
-
-    if (!filters) return;
-
-    // Fetch sender's profile for age, native_languages, and gender
-    const { data: senderProfile, error: senderError } = await supabase
-      .from('users')
-      .select('age, native_languages, gender')
-      .eq('id', senderId)
-      .single();
-
-    if (senderError || !senderProfile) return;
-
-    const senderProfileTyped = senderProfile as {
-      age?: number | null;
-      native_languages?: string[] | null;
-      gender?: string | null;
-    };
-
-    // Check age filter
-    const ageMin =
-      typeof filters.age_min === 'number' ? filters.age_min : undefined;
-    const ageMax =
-      typeof filters.age_max === 'number' ? filters.age_max : undefined;
-
-    if (ageMin !== undefined || ageMax !== undefined) {
-      const senderAge = senderProfileTyped.age;
-      if (senderAge == null) {
-        throw new BadRequestException(
-          'The recipient has set age restrictions and your age is not available.',
-        );
-      }
-      if (ageMin !== undefined && senderAge < ageMin) {
-        throw new BadRequestException(
-          `The recipient only accepts messages from users aged ${ageMin} and above.`,
-        );
-      }
-      if (ageMax !== undefined && senderAge > ageMax) {
-        throw new BadRequestException(
-          `The recipient only accepts messages from users aged ${ageMax} and below.`,
-        );
-      }
-    }
-
-    // Check native language filter
-    const allowedLanguages = Array.isArray(filters.allowed_native_languages)
-      ? (filters.allowed_native_languages as string[])
-      : undefined;
-
-    if (allowedLanguages && allowedLanguages.length > 0) {
-      const senderNativeLanguages = senderProfileTyped.native_languages ?? [];
-      const hasIntersection = senderNativeLanguages.some((lang) =>
-        allowedLanguages.includes(lang),
-      );
-
-      if (!hasIntersection) {
-        throw new BadRequestException(
-          'The recipient only accepts messages from users speaking specific native languages.',
-        );
-      }
-    }
-
-    // Check gender filter
-    const allowedGenders = Array.isArray(filters.allowed_genders)
-      ? (filters.allowed_genders as string[])
-      : undefined;
-
-    if (allowedGenders && allowedGenders.length > 0) {
-      const senderGender = senderProfileTyped.gender;
-      if (!senderGender || !allowedGenders.includes(senderGender)) {
-        throw new BadRequestException(
-          'The recipient only accepts messages from specific genders.',
-        );
-      }
-    }
   }
 }

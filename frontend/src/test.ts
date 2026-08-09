@@ -9,3 +9,4 @@ getTestBed().initTestEnvironment(
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting()
 );
+import 'fake-indexeddb/auto';

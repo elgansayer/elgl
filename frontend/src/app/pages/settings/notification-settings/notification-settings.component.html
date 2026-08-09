@@ -8,13 +8,13 @@
 
   @if (loadError()) {
     <div class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400 mb-6">
-      {{ loadError() | t }}
+      {{ loadError() ?? '' | t }}
     </div>
   }
 
   @if (error()) {
     <div class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400 mb-6">
-      {{ error() | t }}
+      {{ error() ?? '' | t }}
     </div>
   }
 
@@ -22,7 +22,9 @@
     <div class="bg-slate-800/80 px-4 py-3 border-b border-slate-700">
       <div class="flex">
         <div class="flex-1">
-          <span class="text-sm font-semibold text-slate-200">{{ 'notification_settings.toggle_header' | t }}</span>
+          <span class="text-sm font-semibold text-slate-200">{{
+            'notification_settings.toggle_header' | t
+          }}</span>
         </div>
         @for (ch of channels; track ch) {
           <div class="w-16 text-center">
@@ -33,9 +35,13 @@
     </div>
 
     @for (cat of categories; track cat.key) {
-      <div class="flex items-center px-4 py-3 border-b border-slate-700/50 last:border-b-0 hover:bg-slate-800/30 transition-colors">
+      <div
+        class="flex items-center px-4 py-3 border-b border-slate-700/50 last:border-b-0 hover:bg-slate-800/30 transition-colors"
+      >
         <div class="flex-1 flex items-center gap-3">
-          <span class="text-lg" role="img" [attr.aria-label]="cat.labelKey | t">{{ cat.icon }}</span>
+          <span class="text-lg" role="img" [attr.aria-label]="cat.labelKey | t">{{
+            cat.icon
+          }}</span>
           <span class="text-sm text-slate-200">{{ cat.labelKey | t }}</span>
         </div>
         @for (ch of channels; track ch) {
