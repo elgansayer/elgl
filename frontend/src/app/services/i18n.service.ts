@@ -794,6 +794,9 @@ export class I18nService {
     'splitScreen.hostVideoAria': 'Host video',
     'splitScreen.coHostVideoAria': 'Co-host video',
     'splitScreen.inviteCoHostAria': 'Invite a co-host to split screen',
+    'splitScreen.hostBadge': '(Host)',
+    'splitScreen.coHostBadge': '(Co-Host)',
+    'splitScreen.inviteCoHostBtn': 'Invite Co-Host',
 
     // Live Chat Overlay Component
     'liveChat.overlayAria': 'Live chat messages',
