@@ -1,3 +1,0 @@
-* Priority: High Impact
-* Description: Implement the Profile & Discovery Settings UI (HelloTalk/Bumble style).
-* Technical Implementation: Create `ProfileSettingsComponent` to manage bio, native language, target languages (with JLPT/Kana display sub-options), age filters, distance radius, and matching preferences. Utilize a reactive form array (`FormArray`) for `targetLanguages`. For distance radius, integrate a slider control bound directly to the signal update method on `change`.

@@ -3,7 +3,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-voip-active-call',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './voip-active-call.component.html',
   styleUrl: './voip-active-call.component.scss',

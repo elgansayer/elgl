@@ -5,6 +5,7 @@ import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
+import { VideoClassroomOnboardingService } from '../../services/video-classroom-onboarding.service';
 
 @Component({
   selector: 'app-video-room',
@@ -20,21 +21,35 @@ import { AuthService } from '../../services/auth.service';
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-3 sm:mb-4 text-white">
           <h2 class="text-lg sm:text-xl font-bold line-clamp-2">{{ room.title }}</h2>
 
-          @if (isHost() && !hasCoHost()) {
-            @if (eligibleSpeakers().length > 0) {
-              <button
-                (click)="showInvitePicker.set(!showInvitePicker())"
-                [attr.aria-label]="'videoRoom.inviteCoHostAria' | t"
-                [attr.aria-expanded]="showInvitePicker()"
-                [attr.aria-haspopup]="'listbox'"
-                class="bg-blue-600 hover:bg-blue-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-white whitespace-nowrap self-start sm:self-auto"
-              >
-                {{ 'audioRoom.inviteCoHostBtn' | t }}
-              </button>
-            } @else {
-              <p class="app-muted text-xs" role="status">{{ 'videoRoom.noEligibleSpeakers' | t }}</p>
+          <div class="flex items-center gap-2">
+            @if (isHost() && !hasCoHost()) {
+              @if (eligibleSpeakers().length > 0) {
+                <span
+                  
+                >
+                  <button
+                    (click)="showInvitePicker.set(!showInvitePicker())"
+                    [attr.aria-label]="'videoRoom.inviteCoHostAria' | t"
+                    [attr.aria-expanded]="showInvitePicker()"
+                    [attr.aria-haspopup]="'listbox'"
+                    class="bg-blue-600 hover:bg-blue-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-white whitespace-nowrap self-start sm:self-auto"
+                  >
+                    {{ 'audioRoom.inviteCoHostBtn' | t }}
+                  </button>
+                </span>
+              } @else {
+                <p class="app-muted text-xs" role="status">{{ 'videoRoom.noEligibleSpeakers' | t }}</p>
+              }
             }
-          }
+            <button
+              type="button"
+              (click)="startOnboardingTour()"
+              class="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm font-bold"
+              [attr.aria-label]="'videoClassroomTour.helpBtn' | t"
+            >
+              ?
+            </button>
+          </div>
         </div>
 
         @if (showInvitePicker()) {
@@ -47,6 +62,7 @@ import { AuthService } from '../../services/auth.service';
               <button
                 (click)="selectCoHost(speakerId)"
                 role="option"
+                [attr.aria-selected]="false"
                 [attr.aria-label]="'videoRoom.speakerOptionAria' | t: { id: speakerId.slice(0, 6) }"
                 [attr.aria-setsize]="eligibleSpeakers().length"
                 class="bg-surface-100 hover:bg-surface-200 text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-white"
@@ -69,6 +85,7 @@ import { AuthService } from '../../services/auth.service';
             class="relative bg-black rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center shadow-lg min-h-0"
             role="region"
             [attr.aria-label]="'videoRoom.hostBadge' | t"
+            
           >
             @if (!hasHostVideo()) {
 <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 sm:gap-3 p-4 sm:p-6">
@@ -112,6 +129,7 @@ import { AuthService } from '../../services/auth.service';
               class="relative bg-black rounded-xl overflow-hidden border-2 border-blue-500 flex items-center justify-center shadow-lg animate-fade-in min-h-0"
               role="region"
               [attr.aria-label]="'videoRoom.coHostBadge' | t"
+              
             >
               @if (!hasCoHostVideo()) {
 <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 sm:gap-2 p-3 sm:p-4">
@@ -211,6 +229,7 @@ import { AuthService } from '../../services/auth.service';
 export class VideoRoomComponent {
   readonly store = inject(AudioRoomsStore);
   private readonly authService = inject(AuthService);
+  private readonly onboardingService = inject(VideoClassroomOnboardingService);
 
   readonly showInvitePicker = signal(false);
 
@@ -295,5 +314,10 @@ export class VideoRoomComponent {
 
   removeCoHost(): void {
     void this.store.removeCoHost();
+  }
+
+  /** Start the video classroom room-level onboarding tour using ngx-joyride. */
+  startOnboardingTour(): void {
+    this.onboardingService.startRoomTour();
   }
 }

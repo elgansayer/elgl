@@ -2,14 +2,30 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ModerationService } from './moderation.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { PinoLogger } from 'nestjs-pino';
+
+const mockPinoLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+};
 
 describe('ModerationService', () => {
   let service: ModerationService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
   let mockMetricsService: any;
+  let mockLogger: any;
 
   beforeEach(async () => {
+    mockLogger = {
+      warn: jest.fn(),
+      error: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+    };
+
     mockQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
@@ -39,6 +55,10 @@ describe('ModerationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ModerationService,
+        {
+          provide: 'PinoLogger:ModerationService',
+          useValue: mockPinoLogger,
+        },
         {
           provide: SupabaseService,
           useValue: {

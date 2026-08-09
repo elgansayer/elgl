@@ -12,7 +12,8 @@ import { EconomyStore } from '../../services/economy.store';
       class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4"
       role="dialog"
       aria-modal="true"
-      [attr.aria-labelledby]="dialogTitleId"
+      [attr.aria-labelledby]="titleId"
+      [attr.aria-describedby]="subtitleId"
       (keydown.escape)="closed.emit()"
       (click)="onBackdropClick($event)"
     >
@@ -20,13 +21,12 @@ import { EconomyStore } from '../../services/economy.store';
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 [id]="dialogTitleId" class="text-xl font-black text-text-primary">{{ 'audioRoom.tipModalTitle' | t }}</h3>
-            <p class="text-xs text-text-secondary">
+            <h3 [id]="titleId" class="text-xl font-black text-text-primary">{{ 'audioRoom.tipModalTitle' | t }}</h3>
+            <p [id]="subtitleId" class="text-xs text-text-secondary">
               {{ 'audioRoom.tipModalSubtitle' | t }}
             </p>
           </div>
           <button
-            type="button"
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
             [attr.aria-label]="'common.close' | t"
@@ -36,18 +36,14 @@ import { EconomyStore } from '../../services/economy.store';
         </div>
 
         <!-- Balance -->
-        <div
-          class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
-          role="region"
-          [attr.aria-label]="'audioRoom.tipBalanceLabel' | t"
-        >
+        <div class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
               <span class="text-[10px] uppercase font-black text-amber-400 block">{{
                 'audioRoom.tipBalanceLabel' | t
               }}</span>
-              <span class="text-lg font-extrabold text-amber-950">{{
+              <span class="text-lg font-extrabold text-amber-950" aria-live="polite">{{
                 economyStore.coinsBalance()
               }} 🪙</span>
             </div>
@@ -56,20 +52,19 @@ import { EconomyStore } from '../../services/economy.store';
 
         <!-- Preset amounts -->
         <fieldset>
-          <legend class="text-xs font-bold text-text-primary mb-2">{{ 'audioRoom.tipPresetAmounts' | t }}</legend>
+          <legend class="sr-only">{{ 'audioRoom.tipPresetLabel' | t }}</legend>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             @for (amount of presetAmounts(); track amount) {
               <button
-                type="button"
                 (click)="selectAmount(amount)"
-                [attr.aria-pressed]="selectedAmount() === amount"
-                [attr.aria-label]="amount + ' ' + ('common.coins' | t)"
                 [class]="
                   'p-3 sm:p-4 rounded-2xl border-2 transition-all font-extrabold text-center text-sm sm:text-base ' +
                   (selectedAmount() === amount
                     ? 'border-amber-500 bg-amber-500/20 text-amber-500'
                     : 'border-surface-100 bg-surface-300 text-text-primary hover:border-amber-500/50')
                 "
+                [attr.aria-label]="('audioRoom.tipAmountAria' | t: { amount: amount })"
+                [attr.aria-pressed]="selectedAmount() === amount"
               >
                 {{ amount }} 🪙
               </button>
@@ -79,21 +74,21 @@ import { EconomyStore } from '../../services/economy.store';
 
         <!-- Custom amount -->
         <div class="flex items-center gap-3">
-          <label for="tip-custom-amount" class="sr-only">{{ 'audioRoom.tipCustomAmount' | t }}</label>
+          <label [for]="customAmountId" class="sr-only">{{ 'audioRoom.tipCustomAmountLabel' | t }}</label>
           <input
-            id="tip-custom-amount"
+            [id]="customAmountId"
             type="number"
             [ngModel]="customAmount()"
             (ngModelChange)="onCustomAmountChange($event)"
-            placeholder="Custom amount"
+            [placeholder]="'audioRoom.tipCustomPlaceholder' | t"
             min="1"
             class="flex-1 bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary text-sm font-bold focus:border-amber-500 focus:outline-none"
           />
           <button
-            type="button"
             (click)="selectAmount(customAmount())"
             [disabled]="!customAmount() || customAmount() < 1"
             class="px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40"
+            [attr.aria-label]="('audioRoom.tipCustomAria' | t: { amount: customAmount() })"
           >
             {{ 'audioRoom.tipCustom' | t }}
           </button>
@@ -102,18 +97,16 @@ import { EconomyStore } from '../../services/economy.store';
         <!-- Actions -->
         <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
           <button
-            type="button"
             (click)="closed.emit()"
             class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary"
           >
             {{ 'audioRoom.tipCancelBtn' | t }}
           </button>
           <button
-            type="button"
             [disabled]="!selectedAmount() || selectedAmount()! < 1 || isSending() || selectedAmount()! > economyStore.coinsBalance()"
             (click)="confirmSend()"
-            [attr.aria-label]="isSending() ? ('common.sending' | t) : ('audioRoom.tipSendBtn' | t: { amount: selectedAmount() ?? 0 })"
             class="px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+            [attr.aria-label]="('audioRoom.tipSendAria' | t: { amount: selectedAmount() ?? 0 })"
           >
             {{
               isSending()
@@ -153,9 +146,12 @@ export class TipHostModalComponent {
   readonly selectedAmount = signal<number | null>(null);
   readonly customAmount = signal<number>(0);
   readonly isSending = signal<boolean>(false);
-  readonly dialogTitleId = 'tip-host-title-' + Math.random().toString(36).substring(2, 9);
 
   readonly presetAmounts = signal<number[]>([10, 50, 100, 500]);
+
+  readonly titleId = 'tip-host-title-' + Math.random().toString(36).substring(2, 9);
+  readonly subtitleId = 'tip-host-subtitle-' + Math.random().toString(36).substring(2, 9);
+  readonly customAmountId = 'tip-host-custom-' + Math.random().toString(36).substring(2, 9);
 
   selectAmount(amount: number): void {
     if (amount >= 1) {

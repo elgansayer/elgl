@@ -68,6 +68,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
             [class.text-text-secondary]="selectedStatus() !== f"
             [class.hover:bg-surface-50]="selectedStatus() !== f"
             (click)="onFilterChange(f)"
+            [attr.aria-pressed]="selectedStatus() === f"
           >
             {{ ('escrow.status.' + f) | t }}
             @if (f === 'all') {
@@ -245,7 +246,7 @@ export class EscrowComponent {
     this.escrowOnboarding.startTour();
   }
 
-  protected onFilterChange(status: StatusFilter): void {
+  onFilterChange(status: StatusFilter): void {
     this.selectedStatus.set(status);
   }
 

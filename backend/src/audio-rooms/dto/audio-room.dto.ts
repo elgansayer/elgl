@@ -90,7 +90,8 @@ export class JoinRoomDto {
 
 export class RaiseHandDto {
   @ApiProperty({
-    description: 'ID of the audio room where the user wants to raise their hand',
+    description:
+      'ID of the audio room where the user wants to raise their hand',
     example: 'room_a1b2c3d4',
   })
   @IsString()

@@ -4,12 +4,14 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-chat-settings',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="p-4 max-w-md mx-auto space-y-6 bg-[#121212] min-h-screen">
       <h2 class="text-xl font-semibold text-white">{{ 'chat_settings.title' | t }}</h2>
 
+      @if (!loaded()) {
+        <div class="text-gray-400 text-center py-8">{{ 'common.loading' | t }}</div>
+      } @else {
       <!-- Auto-Translate -->
       <div class="bg-[#1e1e1e] rounded-xl p-4 flex items-center justify-between">
         <div class="flex flex-col">
@@ -88,6 +90,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
           {{ 'chat_settings.reset_defaults' | t }}
         </button>
       </div>
+      }
     </div>
   `,
 })
