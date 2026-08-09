@@ -6,6 +6,9 @@ import { environment } from '../../environments/environment';
 export interface PreferenceChannel {
   push: boolean;
   badge: boolean;
+  email: boolean;
+  in_app: boolean;
+  badges: boolean;
 }
 
 export interface NotificationPreferences {
@@ -20,7 +23,7 @@ export interface NotificationPreferences {
 
 export type NotificationCategory = 'direct_messages' | 'groups' | 'likes' | 'voice_rooms';
 
-export type NotificationChannel = 'push' | 'badge';
+export type NotificationChannel = 'push' | 'badge' | 'email' | 'in_app' | 'badges';
 
 export interface LegacyChannelPreference {
   push: boolean;
@@ -58,10 +61,7 @@ export class NotificationPreferencesService {
 
   async updatePreferences(dto: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
     const response = await firstValueFrom(
-      this.http.put<{ success: boolean; preferences: NotificationPreferences }>(
-        this.baseUrl,
-        dto,
-      ),
+      this.http.put<{ success: boolean; preferences: NotificationPreferences }>(this.baseUrl, dto),
     );
     return response.preferences;
   }
@@ -83,10 +83,10 @@ export class NotificationPreferencesService {
 
   resetToDefaults(): Promise<NotificationPreferences> {
     return this.updatePreferences({
-      direct_messages: { push: true, badge: true },
-      groups: { push: true, badge: true },
-      likes: { push: true, badge: true },
-      voice_rooms: { push: true, badge: true },
+      direct_messages: { push: true, badge: true, email: false, in_app: true, badges: false },
+      groups: { push: true, badge: true, email: false, in_app: true, badges: false },
+      likes: { push: true, badge: true, email: false, in_app: true, badges: false },
+      voice_rooms: { push: true, badge: true, email: false, in_app: true, badges: false },
     });
   }
 

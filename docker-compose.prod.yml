@@ -105,7 +105,11 @@ services:
       retries: 3
       start_period: 15s
 
+<<<<<<< HEAD
+prometheus:
+=======
   prometheus:
+>>>>>>> origin/main
     image: prom/prometheus:latest
     restart: always
     command:
@@ -118,7 +122,11 @@ services:
       - '9090:9090'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+<<<<<<< HEAD
+      - prometheus_data:/prometheus
+=======
       - prometheus_prod_data:/prometheus
+>>>>>>> origin/main
     depends_on:
       - api
       - websocket
@@ -138,7 +146,11 @@ services:
     ports:
       - '3001:3000'
     volumes:
+<<<<<<< HEAD
+      - grafana_data:/var/lib/grafana
+=======
       - grafana_prod_data:/var/lib/grafana
+>>>>>>> origin/main
       - ./grafana/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/dashboards:/var/lib/grafana/dashboards
@@ -151,7 +163,7 @@ services:
       retries: 3
       start_period: 30s
 
-datadog:
+  datadog:
     image: gcr.io/datadoghq/agent:7
     restart: always
     env_file:
@@ -188,5 +200,10 @@ datadog:
 
 volumes:
   redis_prod_data:
+<<<<<<< HEAD
+  prometheus_data:
+  grafana_data:
+=======
   prometheus_prod_data:
   grafana_prod_data:
+>>>>>>> origin/main

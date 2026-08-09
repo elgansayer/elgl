@@ -32,10 +32,72 @@ prometheus_scrape:
       - hellotalk_srs_cards_stuck: gauge
       - hellotalk_srs_decks_total: gauge
       - hellotalk_srs_decks_created_total: counter
+      # Trust & Safety metrics (Datadog custom metrics)
+      - hellotalk_ts_reports_submitted_total: counter
+      - hellotalk_ts_blocks_created_total: counter
+      - hellotalk_ts_blocks_removed_total: counter
+      - hellotalk_ts_pending_reports: gauge
+      - hellotalk_ts_active_blocks_total: gauge
+      - hellotalk_ts_moderation_actions_total: counter
+      - hellotalk_ts_dating_risk_score: histogram
+      - hellotalk_ts_reports_by_category_total: counter
+      - hellotalk_ts_moderation_queue_latency_seconds: histogram
+      # LingQ Reading Engine metrics (Datadog custom metrics)
+      - hellotalk_reading_engine_sessions_total: counter
+      - hellotalk_reading_engine_words_parsed_total: counter
+      - hellotalk_reading_engine_tokenisation_duration_seconds: histogram
+      - hellotalk_reading_engine_ai_requests_total: counter
+      - hellotalk_reading_engine_ai_request_duration_seconds: histogram
+      - hellotalk_reading_engine_ai_errors_total: counter
+      - hellotalk_reading_engine_flashcard_saves_total: counter
+      - hellotalk_reading_engine_session_duration_seconds: histogram
+      - hellotalk_reading_engine_words_looked_up_total: counter
+      - hellotalk_reading_engine_daily_active_readers: gauge
+      # Escrow Payment metrics (Datadog custom metrics, #2381)
+      - hellotalk_escrow_transactions_created_total: counter
+      - hellotalk_escrow_transactions_released_total: counter
+      - hellotalk_escrow_transactions_refunded_total: counter
+      - hellotalk_escrow_transactions_cancelled_total: counter
+      - hellotalk_escrow_total_held: gauge
+      - hellotalk_escrow_total_coins_held: gauge
+      - hellotalk_escrow_amount_per_transaction: histogram
+      - hellotalk_escrow_stale_held_count: gauge
+      - hellotalk_escrow_auto_refund_total: counter
+      - hellotalk_escrow_degraded_queue_size: gauge
       # Infrastructure metrics
       - hellotalk_http_request_duration_seconds: histogram
       - hellotalk_http_requests_total: counter
       - hellotalk_active_connections: gauge
+      # Matchmaking / Recommendations metrics (Datadog custom metrics, #2280)
+      - hellotalk_matchmaking_recommendations_generated_total: counter
+      - hellotalk_matchmaking_recommendations_per_request: histogram
+      - hellotalk_matchmaking_fallback_tier_used_total: counter
+      - hellotalk_matchmaking_empty_results_total: counter
+      - hellotalk_matchmaking_request_duration_seconds: histogram
+      - hellotalk_matchmaking_daily_cache_misses_total: counter
+      - hellotalk_matchmaking_tier_success_rate: gauge
+      # Coin economy metrics (Datadog custom metrics)
+      - hellotalk_coin_purchases_total: counter
+      - hellotalk_coin_purchase_value_total: counter
+      - hellotalk_coin_balance_total: gauge
+      - hellotalk_coin_high_balance_users: gauge
+      - hellotalk_coin_daily_claims_total: counter
+      - hellotalk_coin_gifts_total: counter
+      - hellotalk_coin_gift_value_total: counter
+      - hellotalk_coin_sticker_purchases_total: counter
+      - hellotalk_coin_sticker_revenue_total: counter
+      - hellotalk_coin_purchase_errors_total: counter
+      - hellotalk_coin_fraud_attempts_total: counter
+      - hellotalk_coin_transaction_latency_seconds: histogram
+      # Video Classrooms metrics (Datadog custom metrics, #2230)
+      - hellotalk_video_classrooms_created_total: counter
+      - hellotalk_video_classrooms_joined_total: counter
+      - hellotalk_video_classrooms_active_rooms: gauge
+      - hellotalk_video_classrooms_failed_creations_total: counter
+      - hellotalk_video_classrooms_failed_joins_total: counter
+      - hellotalk_video_classrooms_room_duration_seconds: histogram
+      - hellotalk_video_classrooms_token_generation_duration_seconds: histogram
+      - hellotalk_video_classrooms_participant_max: gauge
       # Node.js default metrics (prefixed with hellotalk_)
       - hellotalk_nodejs_heap_size_total_bytes: gauge
       - hellotalk_nodejs_heap_size_used_bytes: gauge

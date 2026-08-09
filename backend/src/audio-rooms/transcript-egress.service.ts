@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import {
   EgressClient,
   EncodedFileOutput,
@@ -13,13 +14,16 @@ import {
  */
 @Injectable()
 export class TranscriptEgressService {
-  private readonly logger = new Logger(TranscriptEgressService.name);
   private readonly egressClient: EgressClient;
 
   /** room_name → egress_id  (in‑memory; restarts lose unfinished egresses) */
   private readonly egressMap = new Map<string, string>();
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectPinoLogger(TranscriptEgressService.name)
+    private readonly logger: PinoLogger,
+  ) {
     const livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
       'https://mock.livekit.cloud';
@@ -72,7 +76,7 @@ export class TranscriptEgressService {
       );
       const egressId = result.egressId;
       this.egressMap.set(roomName, egressId);
-      this.logger.log(
+      this.logger.info(
         `Egress started for room "${roomName}" – id: ${egressId}`,
       );
       return egressId;
@@ -117,7 +121,7 @@ export class TranscriptEgressService {
    * Returns a mock transcript for development purposes.
    */
   async generateTranscriptFromAudioUrl(audioUrl: string): Promise<string> {
-    this.logger.log(`Generating transcript for audio URL: ${audioUrl}`);
+    this.logger.info(`Generating transcript for audio URL: ${audioUrl}`);
 
     const azureKey = this.configService.get<string>('AZURE_SPEECH_KEY');
     const region =

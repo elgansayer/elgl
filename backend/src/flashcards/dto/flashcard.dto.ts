@@ -4,9 +4,11 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateFlashcardDto {
   @ApiProperty({
@@ -15,6 +17,7 @@ export class CreateFlashcardDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   word_token!: string;
 
   @ApiPropertyOptional({
@@ -23,14 +26,17 @@ export class CreateFlashcardDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   original_context?: string;
 
   @ApiProperty({
-    description: "Translation of the word token into the user's native language",
+    description:
+      "Translation of the word token into the user's native language",
     example: 'hello',
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(500)
   translation!: string;
 
   @ApiPropertyOptional({
@@ -39,6 +45,7 @@ export class CreateFlashcardDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   definition?: string;
 
   @ApiPropertyOptional({
@@ -47,6 +54,7 @@ export class CreateFlashcardDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   pronunciation_url?: string;
 }
 
@@ -62,4 +70,66 @@ export class UpdateSrsDto {
   @Min(0)
   @Max(5)
   quality!: number;
+}
+
+export class QueryFlashcardsDto {
+  @ApiPropertyOptional({
+    description: 'Maximum number of flashcards to return (hard cap at 200)',
+    example: 50,
+    default: 50,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  limit?: number = 50;
+
+  @ApiPropertyOptional({
+    description: 'Number of flashcards to skip for pagination',
+    example: 0,
+    default: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  offset?: number = 0;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional SRS level filter. 0: New (Blue), 1-3: Learning (Yellow), 4: Known (White).',
+    example: '2',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(4)
+  level?: number;
+}
+
+export class QueryDueReviewsDto {
+  @ApiPropertyOptional({
+    description: 'Maximum number of due reviews to return (hard cap at 100)',
+    example: 20,
+    default: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 20;
+
+  @ApiPropertyOptional({
+    description: 'Number of due reviews to skip for pagination',
+    example: 0,
+    default: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  offset?: number = 0;
 }
