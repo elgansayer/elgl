@@ -22,6 +22,9 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:spam-detec
 
 # Run the Escrow Payments load test
 API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-payments
+
+# Run the LingQ Reading Engine load test
+API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:reading-engine
 ```
 
 ## Test Scripts
@@ -31,11 +34,19 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-pay
 | `test:trust-safety` | `trust-and-safety.load.yml` | Load tests all Safety, Moderation, and Blocks endpoints |
 | `test:spam-detection` | `spam-detection.load.yml` | Load tests the SpamDetectionService `/spam-detection/check` endpoint |
 | `test:economy` | `economy.load.yml` | Load tests the Virtual Coin Economy: gift catalog, coin packages, balance, daily check-in, checkout, purchase, gift sending, sticker packs |
+| `test:matchmaking` | `matchmaking.load.yml` | Load tests the Discovery/Matchmaking Algorithm: partner search, language pair matching, location search, partner of the week, audio intros, recent native speakers, spotlight |
+| `test:matchmaking:report` | (output + HTML) | Runs the Matchmaking test and generates an HTML report |
 | `test:trust-safety:report` | (output + HTML) | Runs the Trust & Safety test and generates an HTML report |
 | `test:srs-flashcards` | `srs-flashcards.load.yml` | SRS flashcard creation, review (SM-2), and retrieval load testing |
 | `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
 | `test:escrow-payments` | `escrow-payments.load.yml` | Load tests the Escrow Payments endpoints |
 | `test:escrow-payments:report` | (output + HTML) | Runs the Escrow Payments test and generates an HTML report |
+| `test:video-classrooms` | `video-classrooms.load.yml` | Load tests the Video Classrooms endpoints (LiveKit room creation and joining) |
+| `test:video-classrooms:report` | (output + HTML) | Runs the Video Classrooms test and generates an HTML report |
+| `test:discovery-map` | `discovery-map.load.yml` | Load tests all Discovery Map endpoints including partner search, language pair matching, location search, audio intros, partner of the week, recent native speakers, and spotlight users |
+| `test:discovery-map:report` | (output + HTML) | Runs the Discovery Map test and generates an HTML report |
+| `test:reading-engine` | `reading-engine.load.yml` | Load tests the LingQ Reading Engine: resource CRUD, tokenisation, reading progress, and cache admin |
+| `test:reading-engine:report` | (output + HTML) | Runs the Reading Engine test and generates an HTML report |
 
 ## Configuration
 
@@ -107,6 +118,15 @@ Both test scripts include the following phases:
 - `POST /escrow/transactions/:id/cancel` - Cancel a pending escrow transaction
 - `GET /escrow/summary` - Get escrow summary statistics
 
+### Discovery / Matchmaking Module (`/discovery`)
+- `GET /discovery/partners` - Partner search with filters (language, level, distance, age, interests, serious learners, availability, learning goals, voice room, audio intro)
+- `GET /discovery/partner-of-week` - Weekly partner of the week list
+- `GET /discovery/audio-intros` - Audio intro discovery
+- `GET /discovery/recent-native-speakers` - Recently joined native speakers
+- `GET /discovery/spotlight` - Spotlight users
+- `GET /discovery/language-pair` - Language pair matching
+- `GET /discovery/search-by-location` - Location-based search by country/city
+
 ### Economy Module (`/economy`)
 - `GET /economy/catalog` - Virtual gift catalog
 - `GET /economy/packages` - Coin package definitions
@@ -117,3 +137,27 @@ Both test scripts include the following phases:
 - `POST /economy/send-gift` - Send virtual gift to another user
 - `GET /economy/sticker-packs` - Sticker pack storefront
 - `POST /economy/unlock-sticker-pack` - Unlock a sticker pack
+
+### Video Classrooms Module (`/video-calls`)
+- `POST /video-calls/start` - Create a new LiveKit video room and return an access token
+- `POST /video-calls/accept` - Join an existing LiveKit video room with a room name
+
+### Discovery Module (`/discovery`)
+- `GET /discovery/partners` - Personalised partner search with filters (language, location, level, age, gender, interests, availability, serious learner mode)
+- `GET /discovery/partner-of-week` - Partner of the Week cached list
+- `GET /discovery/audio-intros` - Audio intro discovery with language filters
+- `GET /discovery/recent-native-speakers` - Recently joined native speakers
+- `GET /discovery/spotlight` - Spotlight user profiles
+- `GET /discovery/language-pair` - Language pair matching with pagination and sorting
+- `GET /discovery/search-by-location` - Location-based user search by country and city
+
+### LingQ Reading Engine (`/reading`)
+- `POST /reading/resources` - Create a new reading resource
+- `GET /reading/resources` - List reading resources with filters (language, difficulty, topic)
+- `GET /reading/resources/:id` - Get a single reading resource
+- `PUT /reading/resources/:id` - Update a reading resource
+- `DELETE /reading/resources/:id` - Delete a reading resource
+- `GET /reading/resources/:id/tokenise` - Tokenise a resource using Intl.Segmenter
+- `GET /reading/progress` - Get authenticated user's reading progress
+- `POST /reading/progress/session` - Record a completed reading session
+- `DELETE /reading/cache/user` - Clear reading-engine caches for authenticated user

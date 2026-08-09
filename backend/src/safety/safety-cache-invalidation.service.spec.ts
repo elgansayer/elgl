@@ -2,11 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 
 describe('SafetyCacheInvalidationService', () => {
   let service: SafetyCacheInvalidationService;
   let mockRedis: Record<string, jest.Mock>;
   let mockSupabaseService: { getRedisClient: jest.Mock };
+  let mockCloudflareCacheService: { purgeByCacheTags: jest.Mock };
 
   beforeEach(async () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
@@ -27,12 +29,20 @@ describe('SafetyCacheInvalidationService', () => {
       getRedisClient: jest.fn().mockReturnValue(mockRedis),
     };
 
+    mockCloudflareCacheService = {
+      purgeByCacheTags: jest.fn().mockResolvedValue(true),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SafetyCacheInvalidationService,
         {
           provide: SupabaseService,
           useValue: mockSupabaseService,
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: mockCloudflareCacheService,
         },
       ],
     }).compile();
@@ -107,6 +117,20 @@ describe('SafetyCacheInvalidationService', () => {
         'admin:login-history:user-1',
         'admin:login-history:user-2',
       );
+    });
+
+    it('should purge Cloudflare edge caches after Redis keys are deleted', async () => {
+      // Simulate a successful deletion (some keys found)
+      mockRedis.del.mockResolvedValue(1);
+      mockCloudflareCacheService.purgeByCacheTags.mockClear();
+
+      await service.invalidateTrustAndSafetyCaches();
+
+      // Best-effort purge of discovery:public and discovery:private tags
+      expect(mockCloudflareCacheService.purgeByCacheTags).toHaveBeenCalledWith([
+        'discovery:public',
+        'discovery:private',
+      ]);
     });
 
     it('should handle Redis errors gracefully', async () => {

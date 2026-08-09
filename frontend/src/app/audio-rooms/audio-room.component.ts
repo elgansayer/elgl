@@ -13,7 +13,6 @@ export interface AudioRoomParticipant {
 
 @Component({
   selector: 'app-audio-room',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './audio-room.component.html',
   styleUrl: './audio-room.component.scss',

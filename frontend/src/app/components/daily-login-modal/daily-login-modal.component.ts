@@ -6,14 +6,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [TranslatePipe],
   template: `
     <div
-      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-fadeIn"
+      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4 animate-fadeIn"
       role="dialog"
       aria-modal="true"
       [attr.aria-labelledby]="dialogTitleId"
       (keydown.escape)="closed.emit()"
     >
       <div
-        class="bg-surface-200 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-surface-100 text-center space-y-4"
+        class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-sm w-full shadow-2xl border border-surface-100 text-center space-y-3 sm:space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div class="text-6xl mb-2" aria-hidden="true">🎁</div>
         <h3 [id]="dialogTitleId" class="text-2xl font-black text-text-primary">

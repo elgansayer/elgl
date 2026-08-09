@@ -26,6 +26,22 @@
     </button>
   </div>
 
+  @if (actionError()) {
+    <div
+      class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm"
+      role="alert"
+    >
+      {{ actionError() }}
+      <button
+        type="button"
+        class="ms-2 underline hover:no-underline"
+        (click)="actionError.set(null)"
+      >
+        {{ 'moderation.dismiss' | t }}
+      </button>
+    </div>
+  }
+
   @if (items.isLoading()) {
     <div class="space-y-3">
       @for (i of [1, 2, 3]; track i) {
@@ -55,26 +71,39 @@
     @for (item of items.value(); track item.id) {
       <div class="border border-slate-700 rounded-lg p-4 mb-2 bg-surface">
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reporter' | t }}: {{ item.reporter?.display_name }}
+          {{ 'moderation.reporter' | t }}: {{ item.reporter?.display_name | sanitiseHtml }}
         </p>
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reported_user' | t }}: {{ item.reported_user?.display_name }}
+          {{ 'moderation.reported_user' | t }}:
+          {{ item.reported_user?.display_name | sanitiseHtml }}
         </p>
         <p class="text-sm text-text-secondary">
-          {{ 'moderation.reason' | t }}: {{ item.reason }}
+          {{ 'moderation.reason' | t }}: {{ item.reason | sanitiseHtml }}
         </p>
+        @if (item.description) {
+          <p class="text-sm text-text-secondary">
+            {{ 'moderation.description' | t }}: {{ item.description | sanitiseHtml }}
+          </p>
+        }
+        @if (item.moment_content) {
+          <p class="text-sm text-text-secondary">
+            {{ 'moderation.content' | t }}: {{ item.moment_content | sanitiseHtml }}
+          </p>
+        }
 
         @if (analysis()?.userId === item.reported_user?.id) {
           <div class="mt-3 p-3 rounded bg-amber-50 border border-amber-300">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-amber-900">{{ 'moderation.riskScore' | t }}:</span>
+              <span class="text-sm font-semibold text-amber-900"
+                >{{ 'moderation.riskScore' | t }}:</span
+              >
               <span class="text-sm font-mono text-amber-900">{{ analysis()?.riskScore }}</span>
             </div>
             @if (analysis()?.flags?.length) {
               <div class="mt-1 flex flex-wrap gap-1">
                 @for (flag of analysis()?.flags ?? []; track flag) {
                   <span class="text-xs bg-rose-100 text-rose-800 rounded px-2 py-0.5">
-                    {{ flag }}
+                    {{ flag | sanitiseHtml }}
                   </span>
                 }
               </div>
