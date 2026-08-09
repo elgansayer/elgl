@@ -3,7 +3,6 @@ import { FlashcardService } from './flashcard.service';
 
 @Directive({
   selector: '[appFlashcardContextMenu]',
-  standalone: true,
   host: {
     '(contextmenu)': 'onContextMenu($event)',
     '(touchstart)': 'onTouchStart($event)',
@@ -58,11 +57,8 @@ export class FlashcardContextMenuDirective {
         });
         // Notify user with a toast if implemented
       } catch (err) {
-        const flashcardError = new Error(
-          `[SRS:FlashcardContextMenu] createFlashcard failed: ${err instanceof Error ? err.message : String(err)}`,
-        );
-        flashcardError.name = 'SrsFlashcardContextMenuError';
-        this.errorHandler.handleError(flashcardError);
+        this.reportError('createFlashcard', err);
+        // Show error toast
       }
       this.removeOverlay();
     });
@@ -92,5 +88,14 @@ export class FlashcardContextMenuDirective {
       this.overlay.parentNode.removeChild(this.overlay);
     }
     this.overlay = null;
+  }
+
+  private reportError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    const ctxError = new Error(`[SRS:FlashcardContextMenu] ${operation} failed: ${message}`);
+    if (err instanceof Error && err.stack) {
+      ctxError.stack = err.stack;
+    }
+    this.errorHandler.handleError(ctxError);
   }
 }

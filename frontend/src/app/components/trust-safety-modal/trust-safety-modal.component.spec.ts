@@ -77,4 +77,73 @@ describe('TrustSafetyModalComponent', () => {
       expect(templateContent).not.toMatch(/Additional context/);
     });
   });
+
+  describe('ARIA accessibility compliance', () => {
+    let templateContent: string;
+
+    beforeAll(() => {
+      const content = readFileSync(
+        resolve(__dirname, 'trust-safety-modal.component.ts'),
+        'utf-8',
+      );
+      const match = content.match(/template:\s*`([\s\S]*?)`\s*,/);
+      templateContent = match ? match[1] : content;
+    });
+
+    it('should have dialog role with aria-modal on the root container', () => {
+      expect(templateContent).toContain('role="dialog"');
+      expect(templateContent).toContain('aria-modal="true"');
+    });
+
+    it('should have aria-labelledby and aria-describedby for screen reader context', () => {
+      expect(templateContent).toContain('aria-labelledby="trust-safety-title"');
+      expect(templateContent).toContain('aria-describedby="trust-safety-description"');
+      expect(templateContent).toContain('id="trust-safety-title"');
+      expect(templateContent).toContain('id="trust-safety-description"');
+    });
+
+    it('should have tablist role with aria-label for the tab container', () => {
+      expect(templateContent).toContain('role="tablist"');
+      expect(templateContent).toContain("'safety.tabListLabel'");
+    });
+
+    it('should have proper tab roles with aria-selected, aria-controls, and tabindex', () => {
+      // Report tab
+      expect(templateContent).toContain('id="trust-safety-tab-report"');
+      expect(templateContent).toMatch(/role="tab"[^>]*aria-selected/);
+      expect(templateContent).toMatch(/aria-controls\]="'trust-safety-panel-report'"/);
+      // Block tab
+      expect(templateContent).toContain('id="trust-safety-tab-block"');
+      expect(templateContent).toMatch(/aria-controls\]="'trust-safety-panel-block'"/);
+    });
+
+    it('should have tabpanel roles with aria-labelledby pointing to tab ids', () => {
+      expect(templateContent).toContain('role="tabpanel"');
+      expect(templateContent).toContain('aria-labelledby="trust-safety-tab-report"');
+      expect(templateContent).toContain('aria-labelledby="trust-safety-tab-block"');
+    });
+
+    it('should mark the select element as required with aria-required', () => {
+      expect(templateContent).toContain('aria-required="true"');
+    });
+
+    it('should use role="alert" for the block warning section', () => {
+      expect(templateContent).toContain('role="alert"');
+    });
+
+    it('should indicate loading state with aria-busy', () => {
+      expect(templateContent).toContain('aria-busy="true"');
+      expect(templateContent).toContain("'safety.categoriesLoading'");
+    });
+
+    it('should have keyboard event handler for Escape and tab navigation', () => {
+      expect(templateContent).toContain('(keydown)="onKeydown($event)"');
+      expect(templateContent).toContain('(keydown)="onTabKeydown($event,');
+    });
+
+    it('should have descriptive aria-labels on action buttons', () => {
+      expect(templateContent).toContain("'safety.submitReportAria'");
+      expect(templateContent).toContain("'safety.confirmBlockAria'");
+    });
+  });
 });

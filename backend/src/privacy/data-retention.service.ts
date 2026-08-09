@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 
 /**
@@ -14,7 +15,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class DataRetentionService {
   private readonly logger = new Logger(DataRetentionService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Purge login history older than 180 days.
@@ -67,6 +71,42 @@ export class DataRetentionService {
     if (count && count > 0) {
       this.logger.log(
         `Purged ${count} terminal reports older than ${cutoff.toISOString()}`,
+      );
+    }
+  }
+
+  /**
+   * Purge reading progress records belonging to users who have been
+   * inactive for more than 730 days (2 years).
+   *
+   * Reading progress is behavioural data under GDPR and should not be
+   * retained indefinitely. A 2-year retention window balances the user's
+   * right to erasure (Article 17) with the legitimate interest of
+   * maintaining progress for returning learners.
+   *
+   * Runs once per day at 02:00 UTC.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async purgeInactiveReadingProgress(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 730);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('reading_progress')
+      .delete({ count: 'exact' })
+      .lt('last_read_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(
+        `Failed to purge inactive reading progress: ${error.message}`,
+      );
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} inactive reading progress records (last read before ${cutoff.toISOString()})`,
       );
     }
   }
@@ -141,40 +181,87 @@ export class DataRetentionService {
 
   /**
    * Remove all personal data for a user from related tables.
+   *
+   * Covers the full Virtual Coin Economy surface area so that no PII or
+   * financial-linkable records survive the GDPR deletion. Receipt tokens
+   * and transaction IDs are destroyed; coin balances are already zeroed
+   * on the anonymised user row.
    */
   private async wipeUserData(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    // Delete chat messages
+    // Chat / social content
     await supabase.from('chat_messages').delete().eq('sender_id', userId);
-
-    // Delete moments
     await supabase.from('moments').delete().eq('author_id', userId);
-
-    // Delete moment comments
     await supabase.from('moment_comments').delete().eq('author_id', userId);
 
-    // Delete flashcards
+    // Flashcards / decks
     await supabase.from('flashcards').delete().eq('user_id', userId);
-
-    // Delete decks
     await supabase.from('decks').delete().eq('user_id', userId);
 
-    // Delete favourites
+    // Favourites
     await supabase.from('favourites').delete().eq('user_id', userId);
 
-    // Delete blocks (both directions)
+    // Blocks (both directions)
     await supabase.from('blocks').delete().eq('blocker_id', userId);
     await supabase.from('blocks').delete().eq('blocked_id', userId);
 
-    // Delete login history
+    // Login history
     await supabase.from('login_history').delete().eq('user_id', userId);
 
-    // Delete reports
+    // Reports
     await supabase.from('reports').delete().eq('reporter_id', userId);
 
-    // Delete notifications
+    // Notifications
     await supabase.from('notifications').delete().eq('recipient_id', userId);
+
+    // LingQ Reading Engine: reading progress and authored resources
+    await supabase.from('reading_progress').delete().eq('user_id', userId);
+    await supabase.from('reading_resources').delete().eq('created_by', userId);
+
+    // Invalidate reading-engine Redis caches for this user
+    try {
+      this.eventEmitter.emit('reading.user_data_cleared', { userId });
+    } catch {
+      // Non-critical: cache invalidation failure should not block deletion
+    }
+
+    // --- Virtual Coin Economy ---
+    // Coin purchases (receipt tokens, transaction IDs -- PII under GDPR)
+    await supabase.from('coin_purchases').delete().eq('user_id', userId);
+
+    // Gift transactions (both sent and received)
+    await supabase.from('gift_transactions').delete().eq('sender_id', userId);
+    await supabase.from('gift_transactions').delete().eq('receiver_id', userId);
+
+    // Escrow transactions (payer_id and payee_id link to users; reason and
+    // metadata may contain PII under GDPR)
+    await supabase.from('escrow_transactions').delete().eq('payer_id', userId);
+    await supabase.from('escrow_transactions').delete().eq('payee_id', userId);
+
+    // Sticker pack ownership
+    await supabase.from('user_sticker_packs').delete().eq('user_id', userId);
+
+    // User statistics (may contain coin-related aggregated data)
+    await supabase.from('user_statistics').delete().eq('user_id', userId);
+
+    // Purge recommendation cache (GDPR "right to erasure")
+    // The Redis cache contains PII (display names, avatar URLs) and must be
+    // purged immediately.  Other users' caches containing this user will
+    // expire naturally within 24 hours (DAILY_REDIS_TTL).
+    try {
+      const redis = this.supabaseService.getRedisClient();
+      const ownKey = `recommendations:daily:${userId}`;
+      await redis.del(ownKey);
+      this.logger.log(
+        `Purged recommendation cache for user ${userId} (GDPR erasure)`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to purge recommendation cache for user ${userId}`,
+        err,
+      );
+    }
 
     this.logger.log(`Wiped personal data for user ${userId}`);
   }

@@ -7,7 +7,6 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-lesson-manager',
-  standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './lesson-manager.component.html',
 })

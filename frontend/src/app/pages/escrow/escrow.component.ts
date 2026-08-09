@@ -3,6 +3,7 @@ import { DatePipe, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EscrowService, EscrowTransaction } from '../../services/escrow.service';
+import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
 import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
@@ -26,7 +27,9 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
   ],
   template: `
     <div class="app-screen app-padded pb-10">
-      <header class="flex items-center gap-3 pt-2">
+      <header
+        class="flex items-center gap-3 pt-2"
+      >
         <button
           type="button"
           (click)="goBack()"
@@ -39,10 +42,22 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
           <h1 class="app-section-title">{{ 'escrow.title' | t }}</h1>
           <p class="app-muted">{{ 'escrow.subtitle' | t }}</p>
         </div>
+        <button
+          type="button"
+          (click)="startOnboardingTour()"
+          class="ms-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white hover:bg-primary/80 transition-colors text-sm font-bold"
+          [attr.aria-label]="'escrow.onboarding.helpBtn' | t"
+          [title]="'escrow.onboarding.helpBtn' | t"
+        >
+          ?
+        </button>
       </header>
 
       <!-- Status Filter Pills -->
-      <nav class="flex gap-2 overflow-x-auto py-3" aria-label="{{ 'escrow.filterLabel' | t }}">
+      <nav
+        class="flex gap-2 overflow-x-auto py-3"
+        aria-label="{{ 'escrow.filterLabel' | t }}"
+      >
         @for (f of statusFilters; track f) {
           <button
             type="button"
@@ -53,6 +68,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
             [class.text-text-secondary]="selectedStatus() !== f"
             [class.hover:bg-surface-50]="selectedStatus() !== f"
             (click)="onFilterChange(f)"
+            [attr.aria-pressed]="selectedStatus() === f"
           >
             {{ ('escrow.status.' + f) | t }}
             @if (f === 'all') {
@@ -118,7 +134,9 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 
       <!-- Escrow List -->
       @if (!loading() && !error() && filteredEscrows().length > 0) {
-        <div class="space-y-3">
+        <div
+          class="space-y-3"
+        >
           @for (escrow of filteredEscrows(); track escrow.id) {
             <a
               [routerLink]="['/escrow', escrow.id]"
@@ -162,6 +180,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 export class EscrowComponent {
   private readonly location = inject(Location);
   private readonly escrowService = inject(EscrowService);
+  private readonly escrowOnboarding = inject(EscrowOnboardingService);
 
   protected readonly statusFilters: StatusFilter[] = [...STATUS_FILTERS];
   protected readonly selectedStatus = signal<StatusFilter>('all');
@@ -208,14 +227,14 @@ export class EscrowComponent {
     return this.countsByStatus()[status] ?? 0;
   }
 
-  protected statusColour(status: string): 'success' | 'warning' | 'error' | 'neutral' | 'info' {
+  protected statusColour(status: string): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
     switch (status) {
       case 'released':
         return 'success';
       case 'pending':
         return 'info';
       case 'disputed':
-        return 'error';
+        return 'danger';
       case 'refunded':
         return 'warning';
       default:
@@ -223,7 +242,11 @@ export class EscrowComponent {
     }
   }
 
-  protected onFilterChange(status: StatusFilter): void {
+  startOnboardingTour(): void {
+    this.escrowOnboarding.startTour();
+  }
+
+  onFilterChange(status: StatusFilter): void {
     this.selectedStatus.set(status);
   }
 
