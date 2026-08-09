@@ -35,11 +35,14 @@ export interface MomentFeedItem {
   created_at: string;
 }
 
+import { AuthService } from './auth.service';
+
 @Injectable({
   providedIn: 'root',
 })
 export class SafetyService {
   private http = inject(HttpClient);
+  private authService = inject(AuthService);
   private apiUrl = environment.apiUrl;
 
   // Local cache for blocked user IDs (bidirectional: blocked + blocker)
@@ -81,7 +84,7 @@ export class SafetyService {
   addMutedWord(word: string): void {
     const trimmed = word.trim().toLowerCase();
     if (!trimmed) return;
-    this._mutedWords.update(prev => {
+    this._mutedWords.update((prev) => {
       if (prev.includes(trimmed)) return prev;
       return [...prev, trimmed];
     });
@@ -90,7 +93,7 @@ export class SafetyService {
 
   removeMutedWord(word: string): void {
     const trimmed = word.trim().toLowerCase();
-    this._mutedWords.update(prev => prev.filter(w => w !== trimmed));
+    this._mutedWords.update((prev) => prev.filter((w) => w !== trimmed));
     this.persistMutedWords();
   }
 
@@ -105,15 +108,19 @@ export class SafetyService {
     }
   }
 
-  /** Apply mute‑word filter to an array of moments. */
-  filterMomentsByMutedWords(moments: MomentFeedItem[] | null | undefined): MomentFeedItem[] {
+  /** Apply mute‑word filter to an array of moments. Accepts both MomentFeedItem (content_text) and MomentRecord (text_content). */
+  filterMomentsByMutedWords<
+    T extends { content_text?: string | null; text_content?: string | null },
+  >(moments: T[] | null | undefined): T[] {
     if (!moments || moments.length === 0) return [];
     const muted = this._mutedWords();
     if (muted.length === 0) return moments;
-    return moments.filter(moment => {
-      if (!moment.content_text) return true;
-      const text: string = moment.content_text.toLowerCase();
-      return !muted.some(word => text.includes(word));
+    return moments.filter((moment) => {
+      const m = moment as Record<string, unknown>;
+      const rawText = m['content_text'] ?? m['text_content'];
+      if (!rawText || typeof rawText !== 'string') return true;
+      const text: string = rawText.toLowerCase();
+      return !muted.some((word) => text.includes(word));
     });
   }
 
@@ -122,6 +129,7 @@ export class SafetyService {
    * Should be called once after user login / app init.
    */
   async loadBlockedUsers(): Promise<void> {
+    if (!this.authService.getAccessToken()) return;
     try {
       const ids = await firstValueFrom(
         this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`),
@@ -140,7 +148,7 @@ export class SafetyService {
 
   /** Updates local block cache without contacting the server. */
   setBlockedUserLocal(userId: string, blocked: boolean): void {
-    this._blockedUserIds.update(prev => {
+    this._blockedUserIds.update((prev) => {
       const next = new Set(prev);
       if (blocked) {
         next.add(userId);
@@ -195,6 +203,7 @@ export class SafetyService {
   }
 
   getBlockedIds(): Promise<string[]> {
+    if (!this.authService.getAccessToken()) return Promise.resolve([]);
     return firstValueFrom(this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids`));
   }
 
@@ -285,6 +294,7 @@ export class SafetyService {
   ];
 
   async getBlockedUserIds(userId: string): Promise<string[]> {
+    if (!this.authService.getAccessToken()) return [];
     try {
       return await firstValueFrom(
         this.http.get<string[]>(`${this.apiUrl}/safety/blocked-ids/${userId}`),
@@ -296,6 +306,7 @@ export class SafetyService {
   }
 
   async getBlockerUserIds(userId: string): Promise<string[]> {
+    if (!this.authService.getAccessToken()) return [];
     try {
       return await firstValueFrom(
         this.http.get<string[]>(`${this.apiUrl}/safety/blocker-ids/${userId}`),
@@ -307,6 +318,7 @@ export class SafetyService {
   }
 
   async getBlockedAndBlockerIds(userId: string): Promise<string[]> {
+    if (!this.authService.getAccessToken()) return [];
     try {
       const ids: string[] = await firstValueFrom(
         this.http.get<string[]>(`${this.apiUrl}/safety/blocked-and-blocker-ids/${userId}`),
@@ -323,6 +335,7 @@ export class SafetyService {
     if (this.isUserBlockedCached(userId)) {
       return { blocked: true };
     }
+    if (!this.authService.getAccessToken()) return { blocked: false };
     try {
       return await firstValueFrom(
         this.http.get<{ blocked: boolean }>(`${this.apiUrl}/safety/is-blocked/${userId}`),

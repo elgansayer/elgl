@@ -19,7 +19,7 @@
 
     <div class="form-group">
       <label class="form-label">
-        {{ 'group.addMembers' | t }} ({{ selectedCount }}/{{ MAX_MEMBERS }})
+        {{ 'group.addMembers' | t }} ({{ selectedCount() }}/{{ MAX_MEMBERS }})
       </label>
 
       <div class="search-row">
@@ -34,15 +34,15 @@
             (ngModelChange)="searchUsers()"
             class="search-input"
             [placeholder]="'group.searchPlaceholder' | t"
-            [disabled]="!canAddMore"
-          />
+            [disabled]="!canAddMore()"
+           [attr.aria-label]="'text input'"/>
           @if (isSearching()) {
             <span class="search-spinner"></span>
           }
         </div>
       </div>
 
-      @if (!canAddMore) {
+      @if (!canAddMore()) {
         <p class="max-hint">{{ 'group.maxMembersReached' | t: { max: MAX_MEMBERS } }}</p>
       }
 
@@ -53,10 +53,10 @@
               class="search-result-item"
               (click)="addMember(user)"
               [disabled]="selectedMemberIds().includes(user.id)"
-            >
+             [attr.aria-label]="(user.display_name || user.id)">
               <div class="user-avatar">
                 @if (user.avatar_url) {
-                  <img [src]="user.avatar_url" alt="" class="avatar-img" />
+                  <img loading="lazy" [src]="user.avatar_url" alt="" class="avatar-img" />
                 } @else {
                   <span class="avatar-placeholder">{{ (user.display_name || user.id).charAt(0).toUpperCase() }}</span>
                 }
@@ -75,7 +75,7 @@
 
       <div class="selected-section">
         <h3 class="selected-heading">
-          {{ 'group.selectedMembers' | t }} ({{ selectedCount }})
+          {{ 'group.selectedMembers' | t }} ({{ selectedCount() }})
         </h3>
         @if (selectedMembers().length === 0) {
           <div class="no-selection">
@@ -87,7 +87,7 @@
               <li class="selected-item">
                 <div class="user-avatar small">
                   @if (member.avatar_url) {
-                    <img [src]="member.avatar_url" alt="" class="avatar-img" />
+                    <img loading="lazy" [src]="member.avatar_url" alt="" class="avatar-img" />
                   } @else {
                     <span class="avatar-placeholder">{{ (member.display_name || member.id).charAt(0).toUpperCase() }}</span>
                   }
@@ -125,7 +125,7 @@
       class="create-btn"
       (click)="createGroup()"
       [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
-    >
+     [attr.aria-label]="'group.creatingBtn' | t">
       @if (isCreating()) {
         <span class="btn-spinner"></span>
         {{ 'group.creatingBtn' | t }}

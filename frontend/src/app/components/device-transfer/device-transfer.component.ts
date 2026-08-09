@@ -1,4 +1,5 @@
-import {Component, inject, signal} from '@angular/core';import { ActivatedRoute, Router } from '@angular/router';
+import {Component, inject, signal, PLATFORM_ID} from '@angular/core';import { isPlatformServer } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
@@ -6,7 +7,6 @@ import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-device-transfer',
-  standalone: true,
   template: `
     <div class="flex flex-col items-center justify-center min-h-screen p-8 bg-surface text-on-surface">
       <h1 class="text-2xl font-bold mb-4">Device Transfer</h1>
@@ -42,14 +42,15 @@ export class DeviceTransferComponent {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private supabaseService = inject(SupabaseService);
+  private platformId = inject(PLATFORM_ID);
 
   readonly deviceLink = signal<string>('');
   readonly status = signal<'generating' | 'ready' | 'consuming' | 'done' | 'error'>('generating');
   readonly errorMessage = signal<string>('');
 
   constructor() {
+    if (isPlatformServer(this.platformId)) return;
     const tokenParam = this.route.snapshot.queryParamMap.get('token');
-    // If a token is present in the URL, we are on the receiving device
     if (tokenParam) {
       this.onReceive(tokenParam);
     } else {

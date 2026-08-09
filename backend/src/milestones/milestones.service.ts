@@ -6,10 +6,10 @@ export interface Milestone {
   id: string;
   userId: string;
   title: string;
-  description: string | null;
-  completed: boolean;
-  completedAt: string | null;
-  createdAt: string;
+  description: string | null | undefined;
+  completed: boolean | undefined;
+  completedAt: string | null | undefined;
+  createdAt: string | undefined;
 }
 
 export interface MilestoneProgress {
@@ -22,10 +22,10 @@ interface MilestoneRow {
   id: string;
   user_id: string;
   title: string;
-  description: string | null;
-  completed: boolean;
-  completed_at: string | null;
-  created_at: string;
+  description?: string | null | undefined;
+  completed?: boolean;
+  completed_at?: string | null;
+  created_at?: string;
 }
 
 @Injectable()

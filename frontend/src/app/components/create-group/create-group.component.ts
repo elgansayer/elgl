@@ -20,25 +20,19 @@ export class CreateGroupComponent {
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
 
-  readonly MAX_MEMBERS = 49;
+  readonly MAX_MEMBERS = 50;
 
   groupName = '';
   searchQuery = '';
   selectedMembers = signal<UserProfile[]>([]);
   selectedMemberIds = computed(() => this.selectedMembers().map((m) => m.id));
+  selectedCount = computed(() => this.selectedMembers().length);
+  canAddMore = computed(() => this.selectedCount() < this.MAX_MEMBERS);
   searchResults = signal<UserProfile[]>([]);
   isSearching = signal(false);
   isCreating = signal(false);
   error = signal<string | null>(null);
   success = signal(false);
-
-  get canAddMore(): boolean {
-    return this.selectedMembers().length < this.MAX_MEMBERS;
-  }
-
-  get selectedCount(): number {
-    return this.selectedMembers().length;
-  }
 
   async searchUsers(): Promise<void> {
     const query = this.searchQuery.trim();
@@ -70,7 +64,7 @@ export class CreateGroupComponent {
   }
 
   addMember(profile: UserProfile): void {
-    if (!this.canAddMore) return;
+    if (!this.canAddMore()) return;
     if (this.selectedMemberIds().includes(profile.id)) return;
     this.selectedMembers.update((members) => [...members, profile]);
     this.searchResults.update((results) => results.filter((r) => r.id !== profile.id));
@@ -94,9 +88,7 @@ export class CreateGroupComponent {
       const memberIds = this.selectedMembers().map((m) => m.id);
       await this.chatService.createGroup(this.groupName.trim(), memberIds);
       this.success.set(true);
-      setTimeout(() => {
-        this.router.navigate(['/']);
-      }, 1500);
+      await this.router.navigate(['/']);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : this.i18n.translate('group.errorCreate');
       this.error.set(message);

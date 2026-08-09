@@ -7,11 +7,10 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { TransferService } from '../transfer/transfer.service';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
 interface RequestWithUser {
@@ -25,21 +24,8 @@ export class AuthController {
     private readonly transferService: TransferService,
   ) {}
 
-  @Post('request-password-reset')
-  async requestPasswordReset(@Body() dto: ForgotPasswordDto) {
-    await this.authService.requestPasswordReset(dto.email);
-    return {
-      message: 'If the email address exists, a reset link has been sent.',
-    };
-  }
-
-  @Post('reset-password')
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    await this.authService.resetPassword(dto.token, dto.newPassword);
-    return { message: 'Password successfully reset' };
-  }
-
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('change-password')
   async changePassword(
     @Req() req: RequestWithUser,
@@ -51,6 +37,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   @Post('two-factor/enable')
   async enableTwoFactor(
     @Req() req: RequestWithUser,
@@ -60,6 +47,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('two-factor/verify')
   async verifyTwoFactor(
     @Req() req: RequestWithUser,
@@ -77,6 +65,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('two-factor/disable')
   async disableTwoFactor(
     @Req() req: RequestWithUser,
@@ -98,6 +87,7 @@ export class AuthController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('transfer/generate')
   async generateTransferLink(
     @Req() req: RequestWithUser,
@@ -109,6 +99,7 @@ export class AuthController {
     return { url };
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/consume')
   async consumeTransferLink(
     @Body('token') token: string,
@@ -120,6 +111,7 @@ export class AuthController {
     return { swapToken };
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('transfer/swap')
   async swapTransferLink(@Body('swapToken') swapToken: string): Promise<{
     access_token: string;

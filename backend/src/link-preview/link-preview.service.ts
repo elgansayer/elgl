@@ -7,17 +7,84 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as cheerio from 'cheerio';
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+import * as dns from 'dns';
+import * as http from 'http';
+import * as https from 'https';
 import { LinkPreview } from './interfaces/link-preview.interface';
 import Redis from 'ioredis';
+
+function isPrivateIp(ip: string): boolean {
+  if (ip.startsWith('127.')) return true;
+  if (ip.startsWith('10.')) return true;
+  if (ip.startsWith('169.254.')) return true;
+  if (ip.startsWith('192.168.')) return true;
+  if (ip.startsWith('0.')) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)) return true;
+  if (ip === '::1') return true;
+  if (/^[fF][cCdD]/.test(ip)) return true;
+  if (/^[fF][eE][89aAbB][0-9a-fA-F]/.test(ip)) return true;
+  if (ip.toLowerCase().startsWith('::ffff:')) {
+    return isPrivateIp(ip.substring(7));
+  }
+  return false;
+}
+
+const safeLookup = (
+  hostname: string,
+  options: dns.LookupOptions | number,
+  callback: (
+    err: NodeJS.ErrnoException | null,
+    address: string | dns.LookupAddress[],
+    family: number,
+  ) => void,
+) => {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+
+  dns.lookup(hostname, options as dns.LookupOptions, (err, address, family) => {
+    if (err) return callback(err, address, family);
+
+    const ip =
+      typeof address === 'string'
+        ? address
+        : address[0] && (address[0] as any).address;
+    if (ip && isPrivateIp(ip)) {
+      return callback(
+        new Error(`SSRF blocked: Private IP ${ip} is not allowed.`),
+        address,
+        family,
+      );
+    }
+    callback(null, address, family);
+  });
+};
+
+const httpAgent = new http.Agent({ lookup: safeLookup });
+const httpsAgent = new https.Agent({ lookup: safeLookup });
 
 @Injectable()
 export class LinkPreviewService {
   private readonly logger = new Logger(LinkPreviewService.name);
+  private readonly dompurify: ReturnType<typeof DOMPurify>;
+  private readonly httpService: HttpService;
+  private readonly redis: Redis;
 
-  constructor(
-    private readonly httpService: HttpService,
-    @Inject('REDIS_CLIENT') private readonly redis: Redis,
-  ) {}
+  constructor(httpService: HttpService, @Inject('REDIS_CLIENT') redis: Redis) {
+    this.httpService = httpService;
+    this.redis = redis;
+    const window = new JSDOM('').window;
+    this.dompurify = DOMPurify(window);
+    this.dompurify.setConfig({
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: [],
+      ALLOW_DATA_ATTR: false,
+      ALLOWED_URI_REGEXP: /^(?!(?:javascript|data):)/i,
+    });
+  }
 
   async getPreview(url: string): Promise<LinkPreview | null> {
     this.validateUrl(url);
@@ -80,7 +147,12 @@ export class LinkPreviewService {
 
   private async fetchPreview(url: string): Promise<LinkPreview | null> {
     const response = await firstValueFrom(
-      this.httpService.get<string>(url, { timeout: 5000, maxRedirects: 3 }),
+      this.httpService.get<string>(url, {
+        timeout: 5000,
+        maxRedirects: 3,
+        httpAgent,
+        httpsAgent,
+      }),
     );
 
     const rawContentType =
@@ -140,8 +212,11 @@ export class LinkPreviewService {
   }
 
   private sanitizeMetaContent(raw: string): string {
-    const $inner = cheerio.load(`<div>${raw}</div>`);
-    $inner('script, style, noscript').remove();
+    const sanitized = this.dompurify.sanitize(raw, {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: [],
+    });
+    const $inner = cheerio.load(`<div>${sanitized}</div>`);
     return $inner('div').text().trim();
   }
 }

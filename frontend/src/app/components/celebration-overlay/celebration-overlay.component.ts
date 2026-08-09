@@ -27,7 +27,6 @@ interface Particle {
 
 @Component({
   selector: 'app-celebration-overlay',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './celebration-overlay.component.html',
   styleUrl: './celebration-overlay.component.scss',

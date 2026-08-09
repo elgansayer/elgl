@@ -27,10 +27,13 @@ export class VersionService implements OnModuleInit {
   private readonly currentVersion: string;
   private latestVersion: string;
   private updateUrl?: string;
+  private readonly minimumSupportedVersion: string;
 
   constructor() {
     this.currentVersion = process.env.npm_package_version || '0.0.0';
     this.latestVersion = this.currentVersion;
+    this.minimumSupportedVersion =
+      process.env.MINIMUM_SUPPORTED_APP_VERSION || '1.0.0';
   }
 
   async onModuleInit(): Promise<void> {
@@ -96,11 +99,23 @@ export class VersionService implements OnModuleInit {
     }
   }
 
-  getVersion(): { current: string; latest: string; updateUrl?: string } {
+  getVersion(): {
+    current: string;
+    latest: string;
+    updateUrl?: string;
+    minimumSupported: string;
+  } {
     return {
       current: this.currentVersion,
       latest: this.latestVersion,
       updateUrl: this.updateUrl,
+      minimumSupported: this.minimumSupportedVersion,
+    };
+  }
+
+  getMinimumSupportedVersion(): { minimumSupported: string } {
+    return {
+      minimumSupported: this.minimumSupportedVersion,
     };
   }
 }

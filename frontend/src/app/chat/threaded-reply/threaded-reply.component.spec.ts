@@ -21,6 +21,7 @@ describe('ReplyPreviewComponent', () => {
   };
 
   beforeEach(async () => {
+    TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ReplyPreviewComponent],
       providers: [I18nService],

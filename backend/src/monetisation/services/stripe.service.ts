@@ -1,21 +1,27 @@
 import {
   Injectable,
-  Logger,
   BadRequestException,
   InternalServerErrorException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import Stripe from 'stripe';
 import { SubscriptionPlansService } from './subscription-plans.service';
+import { MonetisationService } from '../monetisation.service';
 
 @Injectable()
 export class StripeService {
-  private readonly logger = new Logger(StripeService.name);
   private readonly stripe: Stripe;
 
   constructor(
+    @InjectPinoLogger(StripeService.name)
+    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly plansService: SubscriptionPlansService,
+    @Inject(forwardRef(() => MonetisationService))
+    private readonly monetisationService: MonetisationService,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
@@ -133,38 +139,70 @@ export class StripeService {
     }
   }
 
-  handleSubscriptionCreated(event: Stripe.Event): void {
+  private getTierForPlan(planId?: string, interval?: string): string {
+    if (!planId) {
+      return interval === 'year' ? 'developer' : 'consumer';
+    }
+    if (planId.startsWith('consumer_')) return 'consumer';
+    if (planId.startsWith('pro_')) return 'pro';
+    if (planId.startsWith('developer_')) return 'developer';
+    return interval === 'year' ? 'developer' : 'consumer';
+  }
+
+  async handleSubscriptionCreated(event: Stripe.Event): Promise<void> {
     const subscription = event.data.object as Stripe.Subscription;
     const metadata = subscription.metadata;
     const userId = metadata.userId;
     const planId = metadata.planId;
     const interval = metadata.interval;
 
-    this.logger.log(
+    this.logger.info(
       `Subscription created for user ${userId}: plan ${planId}, interval ${interval}`,
     );
 
-    // TODO: Update user's subscription status in database
-    // This will be handled by the MonetisationService
+    const tier = this.getTierForPlan(planId, interval);
+    const isActive =
+      subscription.status === 'active' || subscription.status === 'trialing';
+
+    await this.monetisationService.updateVipStatusFromWebhook(
+      userId,
+      isActive,
+      isActive ? tier : null,
+    );
   }
 
-  handleSubscriptionUpdated(event: Stripe.Event): void {
+  async handleSubscriptionUpdated(event: Stripe.Event): Promise<void> {
     const subscription = event.data.object as Stripe.Subscription;
     const metadata = subscription.metadata;
     const userId = metadata.userId;
     const planId = metadata.planId;
 
-    this.logger.log(
+    this.logger.info(
       `Subscription updated for user ${userId}: plan ${planId}, status ${subscription.status}`,
+    );
+
+    const tier = this.getTierForPlan(planId, metadata.interval);
+    const isActive =
+      subscription.status === 'active' || subscription.status === 'trialing';
+
+    await this.monetisationService.updateVipStatusFromWebhook(
+      userId,
+      isActive,
+      isActive ? tier : null,
     );
   }
 
-  handleSubscriptionDeleted(event: Stripe.Event): void {
+  async handleSubscriptionDeleted(event: Stripe.Event): Promise<void> {
     const subscription = event.data.object as Stripe.Subscription;
     const metadata = subscription.metadata;
     const userId = metadata.userId;
 
-    this.logger.log(`Subscription cancelled for user ${userId}`);
+    this.logger.info(`Subscription cancelled for user ${userId}`);
+    await this.monetisationService.updateVipStatusFromWebhook(
+      userId,
+      false,
+      null,
+    );
   }
 
   async handleInvoicePaymentSucceeded(event: Stripe.Event): Promise<void> {
@@ -175,7 +213,7 @@ export class StripeService {
     const metadata = subscription.metadata;
     const userId = metadata.userId;
 
-    this.logger.log(
+    this.logger.info(
       `Payment succeeded for user ${userId}, subscription ${subscriptionId}`,
     );
   }

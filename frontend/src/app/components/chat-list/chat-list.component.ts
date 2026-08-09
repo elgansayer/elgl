@@ -7,7 +7,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service';
+import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { GroupsDiscoveryComponent } from '../groups-discovery/groups-discovery.component';
 
 interface ChatRoomPreview {
   id: string;
@@ -16,6 +19,8 @@ interface ChatRoomPreview {
   avatar: string;
   isOnline: boolean;
   isPinned: boolean;
+  isVip: boolean;
+  flagEmoji: string | null;
   lastMessageText: string;
   lastMessageAt: string | null;
   unreadCount: number;
@@ -23,19 +28,23 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent, GroupsDiscoveryComponent],
   templateUrl: './chat-list.component.html',
 })
 export class ChatListComponent implements OnInit {
   private readonly chatService = inject(ChatService);
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
+  private readonly unreadCounter = inject(UnreadCounterService);
 
   readonly isLoading = signal<boolean>(true);
   readonly labels = signal<string[]>([]);
   readonly selectedLabel = signal<string | null>(null);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
+
+  /** Active tab: 'chats' | 'groups' */
+  readonly activeTab = signal<'chats' | 'groups'>('chats');
 
   // ---------- Locked chat state ----------
   readonly lockedRoomIds = signal<string[]>([]);
@@ -173,6 +182,9 @@ export class ChatListComponent implements OnInit {
       });
 
       this.previews.set(previewList);
+      // Sync global chat unread counter
+      const totalChatUnread = previewList.reduce((sum, p) => sum + p.unreadCount, 0);
+      this.unreadCounter.setChatUnread(totalChatUnread);
     } catch (error) {
       console.error('Failed to load chat rooms:', error);
       this.previews.set([]);
@@ -251,10 +263,27 @@ export class ChatListComponent implements OnInit {
       avatar: room.avatar,
       isOnline: room.is_online,
       isPinned: room.is_pinned,
+      isVip: room.is_vip ?? false,
+      flagEmoji: this.getFlagEmoji(room.native_languages),
       lastMessageText: this.toMessagePreview(lastMessage),
       lastMessageAt: lastMessage?.created_at ?? null,
       unreadCount,
     };
+  }
+
+  private getFlagEmoji(languages?: string[]): string | null {
+    if (!languages || languages.length === 0) return null;
+    const flagMap: Record<string, string> = {
+      'en': '\u{1F1EC}\u{1F1E7}', 'es': '\u{1F1EA}\u{1F1F8}', 'fr': '\u{1F1EB}\u{1F1F7}',
+      'de': '\u{1F1E9}\u{1F1EA}', 'it': '\u{1F1EE}\u{1F1F9}', 'pt': '\u{1F1F5}\u{1F1F9}',
+      'ru': '\u{1F1F7}\u{1F1FA}', 'zh': '\u{1F1E8}\u{1F1F3}', 'ja': '\u{1F1EF}\u{1F1F5}',
+      'ko': '\u{1F1F0}\u{1F1F7}', 'ar': '\u{1F1F8}\u{1F1E6}', 'hi': '\u{1F1EE}\u{1F1F3}',
+      'tr': '\u{1F1F9}\u{1F1F7}', 'nl': '\u{1F1F3}\u{1F1F1}', 'pl': '\u{1F1F5}\u{1F1F1}',
+      'sv': '\u{1F1F8}\u{1F1EA}', 'da': '\u{1F1E9}\u{1F1F0}', 'fi': '\u{1F1EB}\u{1F1EE}',
+      'no': '\u{1F1F3}\u{1F1F4}', 'cs': '\u{1F1E8}\u{1F1FF}', 'he': '\u{1F1EE}\u{1F1F1}',
+      'th': '\u{1F1F9}\u{1F1ED}', 'vi': '\u{1F1FB}\u{1F1F3}', 'id': '\u{1F1EE}\u{1F1E9}',
+    };
+    return flagMap[languages[0]] ?? null;
   }
 
   private toMessagePreview(message: ChatMessage | null): string {

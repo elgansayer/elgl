@@ -5,6 +5,8 @@ export interface AudioRoomRecord {
   target_language: string;
   language_pair?: string;
   topic_tag?: string;
+  party_type?: string | null;
+  event_id?: string | null;
   host_id: string;
   co_host_id?: string | null;
   is_video_stream: boolean;
@@ -12,7 +14,7 @@ export interface AudioRoomRecord {
   speakers: string[];
   raised_hands: string[];
   listeners_count: number;
-  recording_url: string | null;
+  recording_url?: string | null;
   created_at: string;
   is_private?: boolean;
   invited_user_ids?: string[];

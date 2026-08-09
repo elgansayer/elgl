@@ -75,7 +75,35 @@ describe('AudioIntroRecorderComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should stop the media stream and clear the timer when destroyed mid-recording', async () => {
+  it('should start and stop recording with rxjs interval timer', async () => {
+    vi.useFakeTimers();
+    try {
+      await component.startRecording();
+      expect(component.isRecording()).toBe(true);
+
+      component.stopRecording();
+      await vi.waitFor(() => expect(component.isRecording()).toBe(false));
+      expect(component.hasRecording()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should auto-stop after 30 seconds', async () => {
+    vi.useFakeTimers();
+    try {
+      await component.startRecording();
+      expect(component.isRecording()).toBe(true);
+
+      // Advance 30 seconds
+      vi.advanceTimersByTime(31000);
+      await vi.waitFor(() => expect(component.isRecording()).toBe(false));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should stop media stream and clean up timer when destroyed mid-recording', async () => {
     vi.useFakeTimers();
     try {
       await component.startRecording();
