@@ -1,4 +1,9 @@
-<div class="app-screen bg-surface-500">
+<app-discovery-error-boundary
+  [context]="errorBoundaryContext()"
+  [showReportButton]="true"
+  (retry)="searchPartners()"
+>
+  <div class="app-screen bg-surface-500">
   <!-- Offline Indicator Banner -->
   @if (isOffline()) {
     <div
@@ -482,3 +487,4 @@
     </app-discovery-map-error-boundary>
   </main>
 </div>
+</app-discovery-error-boundary>
