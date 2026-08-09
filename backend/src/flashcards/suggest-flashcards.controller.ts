@@ -20,6 +20,7 @@ import { SrsRateLimit, SrsRateLimiterGuard } from './srs-rate-limiter.guard';
 import {
   CacheControlInterceptor,
   CACHE_EDGE_SHORT,
+  CACHE_TAG_SUGGESTIONS,
 } from '../common/cache.interceptor';
 
 @ApiTags('Spaced Repetition (SRS) / Suggest')
@@ -36,7 +37,9 @@ export class SuggestFlashcardsController {
   @Get()
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @SrsRateLimit({ maxRequests: 20, windowSeconds: 60 })
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_SUGGESTIONS]),
+  )
   @ApiOperation({
     summary: 'Suggest new vocabulary from a user message',
     description:
