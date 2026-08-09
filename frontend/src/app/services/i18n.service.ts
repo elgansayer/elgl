@@ -1573,6 +1573,9 @@ export class I18nService {
       '🎉 Successfully purchased {{coins}} coins! Your new balance is {{newBalance}} coins.',
     'economy.purchaseConfirmError':
       'Could not confirm coin purchase. Please contact support if you were charged.',
+    'economy.dailyCheckInError': 'Could not claim daily reward. Please try again later.',
+    'economy.dailyCheckInAlreadyClaimed': 'You have already claimed your daily reward. Come back tomorrow!',
+    'economy.offlinePurchaseUnavailable': 'Purchase unavailable while offline. Please check your connection.',
 
     // Coin Economy Dashboard
     'coinEconomy.title': 'Virtual Coin Economy',
