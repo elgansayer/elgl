@@ -94,6 +94,16 @@ const TAG_BASE_VOCABULARY: Record<string, BaseVocabularyItem[]> = {
   ],
 };
 
+function isTargetVocabularyItem(value: unknown): value is TargetVocabularyItem {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'word' in value &&
+    'translation' in value &&
+    'language' in value
+  );
+}
+
 @Injectable()
 export class HobbyTagsService {
   private readonly logger = new Logger(HobbyTagsService.name);
@@ -257,7 +267,9 @@ export class HobbyTagsService {
     const deepLKey = this.configService.get<string>('DEEPL_API_KEY');
 
     if (!deepLKey) {
-      this.logger.warn('DeepL API key not configured, skipping vocabulary translation');
+      this.logger.warn(
+        'DeepL API key not configured, skipping vocabulary translation',
+      );
       return translations;
     }
 
@@ -327,11 +339,12 @@ export class HobbyTagsService {
       const hobbyTag = uht.hobby_tag;
       if (!hobbyTag) continue;
 
-      const targetVocab: TargetVocabularyItem[] = Array.isArray(
-        hobbyTag.target_vocabulary,
-      )
+      const rawVocab = Array.isArray(hobbyTag.target_vocabulary)
         ? hobbyTag.target_vocabulary
         : [];
+      const targetVocab: TargetVocabularyItem[] = rawVocab.filter(
+        isTargetVocabularyItem,
+      );
 
       const cachedVocab = targetVocab.filter((v) => v.language === language);
 
@@ -414,15 +427,19 @@ export class HobbyTagsService {
 
         const updatedVocab = [...tnt.existingVocab, ...newVocabItems];
 
-        setImmediate(async () => {
-          try {
-            await supabase
-              .from('hobby_tags')
-              .update({ target_vocabulary: updatedVocab })
-              .eq('id', tnt.hobbyTagId);
-          } catch (err) {
-            this.logger.warn(`Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`);
-          }
+        setImmediate(() => {
+          void (async () => {
+            try {
+              await supabase
+                .from('hobby_tags')
+                .update({ target_vocabulary: updatedVocab })
+                .eq('id', tnt.hobbyTagId);
+            } catch (err) {
+              this.logger.warn(
+                `Failed to cache vocabulary for tag ${tnt.tagName}: ${err}`,
+              );
+            }
+          })();
         });
       }
     }

@@ -1,18 +1,18 @@
-import { Component, input } from '@angular/core';
+import { Component, input, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslatePipe } from '../../services/translate.pipe';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
 @Component({
   selector: 'app-link-preview-card',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule],
   template: `
     <a
-      [href]="url()"
+      [href]="sanitisedUrl()"
       target="_blank"
       rel="noopener noreferrer"
       class="block mt-2 rounded-xl border border-surface-100 bg-surface-100 overflow-hidden hover:border-primary/40 transition-colors no-underline"
     >
-      @if (image(); as img) {
+      @if (sanitisedImage(); as img) {
         <div class="w-full h-36 overflow-hidden bg-surface-300">
           <img
             [src]="img"
@@ -38,7 +38,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           </p>
         }
         <p class="text-[10px] text-text-muted mt-1.5 truncate">
-          {{ url() }}
+          {{ sanitisedUrl() }}
         </p>
       </div>
     </a>
@@ -59,11 +59,19 @@ import { TranslatePipe } from '../../services/translate.pipe';
   ],
 })
 export class LinkPreviewCardComponent {
-  url = input.required<string>();
+  private readonly sanitisation = inject(HtmlSanitisationService);
+
+  url = input<string>('');
   title = input('');
   description = input('');
   image = input('');
   siteName = input('');
+
+  readonly sanitisedUrl = computed(() => this.sanitisation.sanitiseUrl(this.url()));
+  readonly sanitisedImage = computed(() => {
+    const img = this.image();
+    return img ? this.sanitisation.sanitiseUrl(img) : '';
+  });
 
   onImageError(): void {
     // Image failed to load; no fallback needed as the card works without it.

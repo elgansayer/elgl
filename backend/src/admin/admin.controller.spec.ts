@@ -1,8 +1,36 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ExecutionContext, CallHandler } from '@nestjs/common';
+import { of, throwError } from 'rxjs';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
+import { CacheControlInterceptor } from '../common/cache.interceptor';
+
+function createMockContext(): {
+  executionContext: ExecutionContext;
+  setHeader: jest.Mock;
+  response: Record<string, unknown>;
+} {
+  const setHeader = jest.fn();
+  const response = { setHeader };
+
+  const executionContext = {
+    switchToHttp: () => ({
+      getResponse: () => response,
+    }),
+  } as ExecutionContext;
+
+  return { executionContext, setHeader, response };
+}
+
+function capturedHeaders(setHeader: jest.Mock): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const call of setHeader.mock.calls) {
+    headers[call[0]] = call[1];
+  }
+  return headers;
+}
 
 describe('AdminController', () => {
   let controller: AdminController;
@@ -115,6 +143,66 @@ describe('AdminController', () => {
 
       expect(adminService.removeBlock).toHaveBeenCalledWith('block-42');
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('Cloudflare edge caching headers', () => {
+    it('sets private no-store headers on mutation endpoints', () => {
+      const noStoreInterceptor = new CacheControlInterceptor({
+        'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        'CDN-Cache-Control': 'private, no-store',
+      });
+      const { executionContext, setHeader } = createMockContext();
+      const callHandler: CallHandler = { handle: () => of(null) };
+
+      noStoreInterceptor.intercept(executionContext, callHandler).subscribe();
+
+      const headers = capturedHeaders(setHeader);
+      expect(headers['Cache-Control']).toBe(
+        'private, no-store, no-cache, must-revalidate',
+      );
+      expect(headers['CDN-Cache-Control']).toBe('private, no-store');
+    });
+
+    it('sets private medium-cache headers on read endpoints', () => {
+      const mediumInterceptor = new CacheControlInterceptor({
+        'Cache-Control':
+          'private, max-age=60, s-maxage=300, stale-while-revalidate=120, stale-if-error=600',
+        'CDN-Cache-Control': 'private, max-age=300, stale-while-revalidate=120',
+      });
+      const { executionContext, setHeader } = createMockContext();
+      const callHandler: CallHandler = { handle: () => of(null) };
+
+      mediumInterceptor.intercept(executionContext, callHandler).subscribe();
+
+      const headers = capturedHeaders(setHeader);
+      expect(headers['Cache-Control']).toContain('private');
+      expect(headers['Cache-Control']).toContain('max-age=60');
+      expect(headers['Cache-Control']).toContain('stale-while-revalidate=120');
+      expect(headers['CDN-Cache-Control']).toContain('private');
+      expect(headers['CDN-Cache-Control']).toContain('max-age=300');
+    });
+
+    it('overrides cache headers to no-store on error from any endpoint', () => {
+      const interceptor = new CacheControlInterceptor({
+        'Cache-Control': 'private, max-age=60',
+        'CDN-Cache-Control': 'private, max-age=300',
+      });
+      const { executionContext, setHeader } = createMockContext();
+      const callHandler: CallHandler = {
+        handle: () => throwError(() => new Error('simulated failure')),
+      };
+
+      interceptor.intercept(executionContext, callHandler).subscribe({
+        error: () => {
+          /* expected */
+        },
+      });
+
+      // After error, headers should be overridden to no-store
+      const headers = capturedHeaders(setHeader);
+      expect(headers['Cache-Control']).toBe('private, no-store');
+      expect(headers['CDN-Cache-Control']).toBe('private, no-store');
     });
   });
 });

@@ -1,15 +1,110 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ConfigService } from '@nestjs/config';
+import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrivacyService } from './privacy.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SafetyCacheInvalidationService } from '../safety/safety-cache-invalidation.service';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+
+// Mock the sanitise-economy helper to avoid loading jsdom/dompurify ESM
+// dependencies that the privacy spec does not need.
+jest.mock('../economy/sanitise-economy.helper', () => ({
+  sanitiseEconomyData: jest.fn((value: unknown) => value),
+  scrubReceiptToken: jest.fn((token: string | null | undefined) => {
+    if (token == null || token === '') return token as null;
+    if (token.length < 8) return '[REDACTED-SHORT-TOKEN]';
+    return '***...' + token.slice(-4);
+  }),
+  scrubCoinPurchaseForArchive: jest.fn(
+    (
+      record: Record<string, unknown> | null | undefined,
+    ): Record<string, unknown> | null | undefined => {
+      if (record == null) return record;
+      const scrubbed = { ...record };
+      for (const key of ['receipt_token', 'transaction_id']) {
+        if (typeof scrubbed[key] === 'string') {
+          const val = scrubbed[key];
+          scrubbed[key] =
+            val.length < 8
+              ? '[REDACTED-SHORT-TOKEN]'
+              : '***...' + val.slice(-4);
+        }
+      }
+      return scrubbed;
+    },
+  ),
+  scrubCoinPurchasesForArchive: jest.fn(
+    (records: unknown[] | null | undefined): unknown[] | null | undefined => {
+      if (records == null || !Array.isArray(records)) return records;
+      return records.map((record) => {
+        if (record !== null && typeof record === 'object') {
+          const r = record as Record<string, unknown>;
+          const scrubbed = { ...r };
+          for (const key of ['receipt_token', 'transaction_id']) {
+            if (typeof scrubbed[key] === 'string') {
+              const val = scrubbed[key];
+              scrubbed[key] =
+                val.length < 8
+                  ? '[REDACTED-SHORT-TOKEN]'
+                  : '***...' + val.slice(-4);
+            }
+          }
+          return scrubbed;
+        }
+        return record;
+      });
+    },
+  ),
+  scrubEscrowTransactionForArchive: jest.fn(
+    (
+      record: Record<string, unknown> | null | undefined,
+    ): Record<string, unknown> | null | undefined => {
+      if (record == null) return record;
+      const scrubbed = { ...record };
+      scrubbed['payer_id'] = '00000000-0000-0000-0000-000000000000';
+      scrubbed['payee_id'] = '00000000-0000-0000-0000-000000000000';
+      if (typeof scrubbed['description'] === 'string') {
+        scrubbed['description'] = null;
+      }
+      if (typeof scrubbed['reference_id'] === 'string') {
+        scrubbed['reference_id'] = null;
+      }
+      return scrubbed;
+    },
+  ),
+  scrubEscrowTransactionsForArchive: jest.fn(
+    (
+      records: unknown[] | null | undefined,
+      userId: string,
+    ): Record<string, unknown>[] => {
+      if (records == null || !Array.isArray(records)) return [];
+      return records.map((record) => {
+        if (record !== null && typeof record === 'object') {
+          const r = record as Record<string, unknown>;
+          const scrubbed = { ...r };
+          scrubbed['payer_id'] =
+            r['payer_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['payee_id'] =
+            r['payee_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['description'] = null;
+          scrubbed['reference_id'] = null;
+          return scrubbed;
+        }
+        return record as Record<string, unknown>;
+      });
+    },
+  ),
+}));
 
 describe('PrivacyService', () => {
   let service: PrivacyService;
   const mockFrom = jest.fn();
   const mockSelect = jest.fn();
   const mockEq = jest.fn();
-  const mockSingle = jest.fn();
   const mockOrder = jest.fn();
   const mockInsert = jest.fn();
   const mockUpdate = jest.fn();
@@ -38,14 +133,72 @@ describe('PrivacyService', () => {
     mockInsert.mockReturnValue({ eq: mockEq });
     mockUpdate.mockReturnValue({ eq: mockEq });
 
-    // For collection queries (collectUserData)
+    // For collection queries (collectUserData):
+    // Each from() call returns a new object, so mockFrom always returns a
+    // fresh object.  collectUserData calls .from() many times, so we set up
+    // mockFrom to return a helper that can handle each table name properly.
+    mockFrom.mockImplementation((table: string) => {
+      // Return empty data for economy tables we don't need to test in detail
+      if (table === 'coin_purchases') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === 'gift_transactions') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === 'escrow_transactions') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === 'user_sticker_packs') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+        };
+      }
+      // Default for users, moments, moment_comments, chat_messages,
+      // flashcards, decks, deck_flashcards, favourites
+      return {
+        select: mockSelect,
+        insert: mockInsert,
+        update: mockUpdate,
+      };
+    });
+
     mockSelect.mockReturnValue({
       eq: mockEq,
       order: mockOrder,
+      // For deck_flashcards .in() call
+      in: jest.fn().mockReturnValue({
+        order: jest.fn().mockResolvedValue({ data: [], error: null }),
+      }),
     });
-    mockEq.mockReturnValue({ single: mockSingle, order: mockOrder });
-    mockOrder.mockReturnValue({ eq: mockEq });
-    mockSingle.mockReturnValue({ data: null, error: null });
+    mockEq.mockReturnValue({
+      single: jest.fn().mockResolvedValue({ data: {}, error: null }),
+      order: mockOrder,
+    });
+    mockOrder.mockReturnValue({
+      eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -57,6 +210,16 @@ describe('PrivacyService', () => {
         {
           provide: ConfigService,
           useValue: { get: jest.fn() },
+        },
+        {
+          provide: SafetyCacheInvalidationService,
+          useValue: {
+            invalidateUserCaches: jest.fn().mockResolvedValue(undefined),
+            invalidateTrustAndSafetyCaches: jest
+              .fn()
+              .mockResolvedValue(undefined),
+            invalidateUserPairCaches: jest.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();
@@ -76,7 +239,7 @@ describe('PrivacyService', () => {
       );
     });
 
-    it('should set scheduled_for_deletion_at 30 days in the future', async () => {
+    it('should set scheduled_for_deletion_at 30 days in the future and scrub location', async () => {
       const dto: DeleteAccountDto = { confirm_delete: true };
       mockEq.mockResolvedValue({ error: null });
 
@@ -87,6 +250,11 @@ describe('PrivacyService', () => {
 
       const updateArg = mockUpdate.mock.calls[0][0];
       expect(updateArg.is_deletion_pending).toBe(true);
+      expect(updateArg.privacy_hide_from_search).toBe(true);
+      expect(updateArg.location).toBeNull();
+      expect(updateArg.mock_location).toBeNull();
+      expect(updateArg.mock_country).toBeNull();
+      expect(updateArg.mock_city).toBeNull();
       expect(updateArg.scheduled_for_deletion_at).toBeDefined();
       expect(updateArg.deletion_requested_at).toBeDefined();
 
@@ -164,6 +332,190 @@ describe('PrivacyService', () => {
 
       expect(mockUpload).toHaveBeenCalled();
       expect(mockInsert).toHaveBeenCalled();
+    });
+
+    it('should include escrow transactions in the archive', async () => {
+      // Override escrow_transactions mock to return data
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'coin_purchases') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'gift_transactions') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'escrow_transactions') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({
+                  data: [
+                    {
+                      id: 'esc_1',
+                      payer_id: 'user-1',
+                      payee_id: 'other-user',
+                      amount_coins: 50,
+                      status: 'held',
+                      reason: 'Lesson payment',
+                      metadata: { type: 'conversation' },
+                    },
+                  ],
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'user_sticker_packs') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        return {
+          select: mockSelect,
+          insert: mockInsert,
+          update: mockUpdate,
+        };
+      });
+
+      mockUpload.mockResolvedValue({ error: null });
+      mockGetPublicUrl.mockReturnValue({
+        data: { publicUrl: 'https://example.com/archive.json' },
+      });
+      mockInsert.mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      });
+
+      await service.requestArchive('user-1', {
+        receipt_id: null,
+        app_store: null,
+      });
+
+      expect(mockUpload).toHaveBeenCalled();
+      const uploadArgs = mockUpload.mock.calls[0];
+      const jsonBlob = uploadArgs[1];
+      const parsed = JSON.parse(jsonBlob);
+
+      expect(parsed.escrow_transactions).toBeDefined();
+      expect(Array.isArray(parsed.escrow_transactions)).toBe(true);
+      expect(parsed.escrow_transactions.length).toBeGreaterThanOrEqual(1);
+
+      const escrowRecord = parsed.escrow_transactions[0];
+      expect(escrowRecord.id).toBe('esc_1');
+      expect(escrowRecord.amount_coins).toBe(50);
+      expect(escrowRecord.status).toBe('held');
+      expect(escrowRecord.reason).toBe('Lesson payment');
+      // Role tag should be present
+      expect(escrowRecord.role).toBeDefined();
+      expect(['payer', 'payee']).toContain(escrowRecord.role);
+    });
+
+    it('should include scrubbed coin purchases in the archive', async () => {
+      // Override the coin_purchases mock to return sensitive data
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'coin_purchases') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({
+                  data: [
+                    {
+                      id: 'cp_1',
+                      user_id: 'user-1',
+                      receipt_token: 'cs_test_sensitive_session_abc123',
+                      transaction_id: 'txn_long_transaction_id_xyz789',
+                      status: 'completed',
+                      coins_added: 100,
+                    },
+                  ],
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'gift_transactions') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'escrow_transactions') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'user_sticker_packs') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        return {
+          select: mockSelect,
+          insert: mockInsert,
+          update: mockUpdate,
+        };
+      });
+
+      mockUpload.mockResolvedValue({ error: null });
+      mockGetPublicUrl.mockReturnValue({
+        data: { publicUrl: 'https://example.com/archive.json' },
+      });
+      mockInsert.mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      });
+
+      // The upload call contains the JSON blob. We can inspect mockUpload to
+      // verify the scrubbing happened.
+      await service.requestArchive('user-1', {
+        receipt_id: null,
+        app_store: null,
+      });
+
+      expect(mockUpload).toHaveBeenCalled();
+      const uploadArgs = mockUpload.mock.calls[0];
+      const jsonBlob = uploadArgs[1];
+      expect(typeof jsonBlob).toBe('string');
+
+      const parsed = JSON.parse(jsonBlob);
+      expect(parsed.coin_purchases).toBeDefined();
+      expect(Array.isArray(parsed.coin_purchases)).toBe(true);
+
+      const purchaseRecord = parsed.coin_purchases[0];
+      // receipt_token should be scrubbed (only last 4 chars)
+      expect(purchaseRecord.receipt_token).toBe('***...c123');
+      // transaction_id should be scrubbed
+      expect(purchaseRecord.transaction_id).toBe('***...z789');
+      // Non-sensitive fields preserved
+      expect(purchaseRecord.id).toBe('cp_1');
+      expect(purchaseRecord.status).toBe('completed');
+      expect(purchaseRecord.coins_added).toBe(100);
     });
 
     it('should throw BadRequestException on upload error', async () => {

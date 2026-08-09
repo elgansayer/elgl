@@ -64,6 +64,14 @@ export const routes: Routes = [
       import('./audio-rooms/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
+    path: 'classrooms',
+    loadComponent: () =>
+      import('./components/classrooms-marketplace/classrooms-marketplace').then(
+        (m) => m.ClassroomsMarketplace,
+      ),
+    title: 'Video Classrooms - HelloTalk',
+  },
+  {
     path: 'chat',
     loadComponent: () =>
       import('./components/chat-list/chat-list.component').then((m) => m.ChatListComponent),
@@ -172,6 +180,12 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: () =>
       import('./components/settings/settings.component').then((m) => m.SettingsComponent),
+  },
+  {
+    path: 'settings/account',
+    loadComponent: () =>
+      import('./pages/settings/account/account.component').then((m) => m.AccountSettingsComponent),
+    title: 'Account Settings - HelloTalk',
   },
   {
     path: 'settings/notification',
@@ -553,6 +567,14 @@ export const routes: Routes = [
     title: 'Study Buddy Matching - HelloTalk',
   },
   {
+    path: 'read',
+    loadComponent: () =>
+      import('./components/reading-engine/reading-engine.component').then(
+        (m) => m.ReadingEngineComponent,
+      ),
+    title: 'LingQ Reading Engine - HelloTalk',
+  },
+  {
     path: 'resource-library',
     loadComponent: () =>
       import('./components/resource-library/resource-library.component').then(
@@ -575,6 +597,20 @@ export const routes: Routes = [
         (m) => m.MySubscriptionComponent,
       ),
     title: 'My Subscription - HelloTalk',
+  },
+  {
+    path: 'escrow',
+    loadComponent: () =>
+      import('./pages/escrow/escrow.component').then((m) => m.EscrowComponent),
+    title: 'Escrow Payments - HelloTalk',
+  },
+  {
+    path: 'escrow/:id',
+    loadComponent: () =>
+      import('./pages/escrow-detail/escrow-detail.component').then(
+        (m) => m.EscrowDetailComponent,
+      ),
+    title: 'Escrow Details - HelloTalk',
   },
   {
     path: 'account/deletion',
@@ -643,5 +679,13 @@ export const routes: Routes = [
         (m) => m.ChangePasswordComponent,
       ),
     title: 'Change Password - HelloTalk',
+  },
+  {
+    path: 'coin-economy',
+    loadComponent: () =>
+      import('./components/coin-economy-dashboard/coin-economy-dashboard.component').then(
+        (m) => m.CoinEconomyDashboardComponent,
+      ),
+    title: 'Virtual Coin Economy - HelloTalk',
   },
 ];

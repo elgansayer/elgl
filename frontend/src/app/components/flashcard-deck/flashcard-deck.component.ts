@@ -1,10 +1,14 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ErrorHandler } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { JoyrideDirective } from 'ngx-joyride';
+import { SrsTourTriggerComponent } from '../srs-tour-trigger/srs-tour-trigger.component';
 import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
+import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
 type DeckView = 'list' | 'detail';
 
@@ -15,8 +19,17 @@ const DRAG_THRESHOLD_PX = 60;
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+<<<<<<< HEAD
+  imports: [FormsModule, TranslatePipe, JoyrideDirective, SrsTourTriggerComponent],
+=======
+  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
+>>>>>>> origin/main
   template: `
+    <app-srs-error-boundary
+      [context]="errorContext()"
+      [showReportButton]="true"
+      (retry)="handleRetry()"
+    >
     <div class="mx-auto max-w-4xl space-y-6 pb-20">
       <!-- Header -->
       <section class="app-card app-padded space-y-4">
@@ -25,13 +38,16 @@ const DRAG_THRESHOLD_PX = 60;
             <h2 class="app-section-title">{{ 'deck.title' | t }}</h2>
             <p class="app-muted">{{ 'deck.subtitle' | t }}</p>
           </div>
-          <button
-            type="button"
-            (click)="activeView.set('list')"
-            class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
-          >
-            {{ 'deck.browseBtn' | t }}
-          </button>
+          <div class="flex items-center gap-2">
+            <app-srs-tour-trigger />
+            <button
+              type="button"
+              (click)="activeView.set('list')"
+              class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
+            >
+              {{ 'deck.browseBtn' | t }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -132,7 +148,13 @@ const DRAG_THRESHOLD_PX = 60;
               <p class="app-muted text-xs mt-1">{{ 'deck.emptyDesc' | t }}</p>
             </div>
           } @else {
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              joyrideStep="srsTourFlashcardDecks"
+              [title]="'srsTour.flashcardDecksTitle' | t"
+              [text]="'srsTour.flashcardDecksText' | t"
+              stepPosition="bottom"
+            >
               @for (deck of decks(); track deck.id) {
                 <article
                   class="rounded-card border border-surface-100 p-4 group transition-shadow cursor-pointer relative overflow-hidden"
@@ -350,6 +372,7 @@ const DRAG_THRESHOLD_PX = 60;
         }
       }
     </div>
+    </app-srs-error-boundary>
   `,
   styles: [
     `
@@ -365,6 +388,8 @@ export class FlashcardDeckComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
   private router = inject(Router);
+  private errorHandler = inject(ErrorHandler);
+  private sanitisation = inject(HtmlSanitisationService);
 
   // View state
   readonly activeView = signal<DeckView>('list');
@@ -398,6 +423,38 @@ export class FlashcardDeckComponent {
     return all.filter((fc) => !inDeck.has(fc.id));
   });
 
+  readonly errorContext = computed<SrsErrorContext>(() => ({
+    component: 'flashcard-deck',
+    operation: this.activeView(),
+    deckId: this.selectedDeck()?.id,
+  }));
+
+  /** Sanitises user-authored string fields of a deck against XSS via DOMPurify. */
+  private sanitiseDeck(d: Deck): Deck {
+    return {
+      ...d,
+      name: this.sanitisation.sanitiseText(d.name),
+      description: d.description ? this.sanitisation.sanitiseText(d.description) : undefined,
+    };
+  }
+
+  handleRetry(): void {
+    void this.loadDecks();
+  }
+
+  private reportDeckError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    const deckError = new Error(
+      `[SRS:flashcard-deck] ${operation} failed: ${message}`,
+    );
+    deckError.name = 'SrsDeckError';
+    if (err instanceof Error && err.stack) {
+      deckError.stack = err.stack;
+    }
+    const enriched = Object.assign(deckError, { srsOperation: operation });
+    this.errorHandler.handleError(enriched);
+  }
+
   constructor() {
     this.loadDecks();
   }
@@ -406,8 +463,9 @@ export class FlashcardDeckComponent {
     this.isLoading.set(true);
     try {
       const result = await this.deckService.getDecks();
-      this.decks.set(result);
-    } catch {
+      this.decks.set(result.map((d) => this.sanitiseDeck(d)));
+    } catch (e) {
+      this.reportDeckError('loadDecks', e);
       // ignore
     } finally {
       this.isLoading.set(false);
@@ -433,15 +491,18 @@ export class FlashcardDeckComponent {
     this.isCreating.set(true);
     try {
       const dto: CreateDeckDto = {
-        name,
-        description: this.newDeckDescription().trim() || undefined,
+        name: this.sanitisation.sanitiseText(name),
+        description: this.newDeckDescription().trim()
+          ? this.sanitisation.sanitiseText(this.newDeckDescription().trim())
+          : undefined,
         colour: this.newDeckColour(),
         icon: this.newDeckIcon(),
       };
       const deck = await this.deckService.createDeck(dto);
-      this.decks.update((list) => [deck, ...list]);
+      this.decks.update((list) => [this.sanitiseDeck(deck), ...list]);
       this.toggleCreateForm();
-    } catch {
+    } catch (e) {
+      this.reportDeckError('createDeck', e);
       // error silently
     } finally {
       this.isCreating.set(false);
@@ -483,7 +544,8 @@ export class FlashcardDeckComponent {
       this.selectedDeck.update((d) =>
         d ? { ...d, card_count: d.card_count + 1 } : null,
       );
-    } catch {
+    } catch (e) {
+      this.reportDeckError('addCardToDeck', e);
       // ignore
     }
   }
@@ -504,7 +566,8 @@ export class FlashcardDeckComponent {
       this.selectedDeck.update((d) =>
         d ? { ...d, card_count: Math.max(0, d.card_count - 1) } : null,
       );
-    } catch {
+    } catch (e) {
+      this.reportDeckError('removeCardFromDeck', e);
       // ignore
     }
   }
@@ -514,7 +577,8 @@ export class FlashcardDeckComponent {
     try {
       await this.deckService.deleteDeck(deckId);
       this.decks.update((list) => list.filter((d) => d.id !== deckId));
-    } catch {
+    } catch (e) {
+      this.reportDeckError('deleteDeck', e);
       // ignore
     }
   }
@@ -544,18 +608,22 @@ export class FlashcardDeckComponent {
     if (!deck) return;
     try {
       const updated = await this.deckService.updateDeck(deck.id, {
-        name: this.editDeckName().trim(),
-        description: this.editDeckDescription().trim() || undefined,
+        name: this.sanitisation.sanitiseText(this.editDeckName().trim()),
+        description: this.editDeckDescription().trim()
+          ? this.sanitisation.sanitiseText(this.editDeckDescription().trim())
+          : undefined,
         colour: this.editDeckColour(),
         icon: this.editDeckIcon(),
       });
 
       if (updated) {
-        this.selectedDeck.set(updated);
-        this.decks.update((list) => list.map((d) => (d.id === updated.id ? updated : d)));
+        const sanitised = this.sanitiseDeck(updated);
+        this.selectedDeck.set(sanitised);
+        this.decks.update((list) => list.map((d) => (d.id === sanitised.id ? sanitised : d)));
       }
       this.showEditForm.set(false);
-    } catch {
+    } catch (e) {
+      this.reportDeckError('saveDeckEdits', e);
       // ignore
     }
   }

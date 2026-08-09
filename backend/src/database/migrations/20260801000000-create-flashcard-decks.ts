@@ -6,7 +6,7 @@ export async function up(client: SupabaseClient): Promise<void> {
     sql: `
       CREATE TABLE IF NOT EXISTS decks (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         description TEXT,
         colour TEXT DEFAULT '#6366f1',

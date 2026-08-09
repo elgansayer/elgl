@@ -34,7 +34,8 @@
           <button
             (click)="goToMySubscription()"
             class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
-           [attr.aria-label]="'settings.mySubscription' | t">
+            [attr.aria-label]="'settings.mySubscription' | t"
+          >
             <span>{{ 'settings.mySubscription' | t }}</span>
             <span class="text-text-secondary" aria-hidden="true">→</span>
           </button>
@@ -66,7 +67,20 @@
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.chatSection' | t }}
         </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
+          <a
+            routerLink="/chat-settings"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+            [attr.aria-label]="'chat_settings.title' | t"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">💬</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'chat_settings.title' | t
+              }}</span>
+            </div>
+            <span class="text-text-secondary">→</span>
+          </a>
           <a
             routerLink="/settings/message-filters"
             class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
@@ -108,9 +122,7 @@
           {{ 'settings.privacySection' | t }}
         </h2>
 
-        <div
-          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm"
-        >
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
           <a
             routerLink="/settings/privacy"
             class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
@@ -118,9 +130,7 @@
           >
             <div class="flex items-center gap-3">
               <span class="text-xl">🔒</span>
-              <span class="text-sm font-medium text-text-primary">{{
-                'privacy.title' | t
-              }}</span>
+              <span class="text-sm font-medium text-text-primary">{{ 'privacy.title' | t }}</span>
             </div>
             <span class="text-text-secondary">→</span>
           </a>
@@ -157,7 +167,8 @@
             }}</span>
             <input
               type="checkbox"
-              [(ngModel)]="autoPlayVoiceNotes"
+              [ngModel]="autoPlayVoiceNotes()"
+              (ngModelChange)="autoPlayVoiceNotes.set($event)"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
             />
           </label>
@@ -182,7 +193,8 @@
               [ngModel]="chatTextSize()"
               (ngModelChange)="chatTextSize.set($event)"
               class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-             [attr.aria-label]="'Select'">
+              [attr.aria-label]="'Select'"
+            >
               <option value="small">{{ 'settings.textSizeSmall' | t }}</option>
               <option value="medium">{{ 'settings.textSizeMedium' | t }}</option>
               <option value="large">{{ 'settings.textSizeLarge' | t }}</option>
@@ -199,35 +211,43 @@
           class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
         >
           <div class="p-4 space-y-4">
-            <p class="text-xs text-text-secondary">{{ 'settings.messageFiltersDescription' | t }}</p>
+            <p class="text-xs text-text-secondary">
+              {{ 'settings.messageFiltersDescription' | t }}
+            </p>
 
             <!-- Age range -->
             <div class="flex items-center gap-3">
-              <span class="text-sm font-medium text-text-primary w-16">{{ 'settings.age' | t }}</span>
+              <span class="text-sm font-medium text-text-primary w-16">{{
+                'settings.age' | t
+              }}</span>
               <input
                 type="number"
                 [ngModel]="filterAgeMin()"
                 (ngModelChange)="filterAgeMin.set($event ? +$event : undefined)"
-                [placeholder]="('settings.ageMinPlaceholder' | t)"
+                [placeholder]="'settings.ageMinPlaceholder' | t"
                 min="0"
                 max="120"
                 class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30 w-20"
-               [attr.aria-label]="'settings.ageMinPlaceholder' | t" />
+                [attr.aria-label]="'settings.ageMinPlaceholder' | t"
+              />
               <span class="text-text-secondary text-xs">{{ 'settings.ageRangeTo' | t }}</span>
               <input
                 type="number"
                 [ngModel]="filterAgeMax()"
                 (ngModelChange)="filterAgeMax.set($event ? +$event : undefined)"
-                [placeholder]="('settings.ageMaxPlaceholder' | t)"
+                [placeholder]="'settings.ageMaxPlaceholder' | t"
                 min="0"
                 max="120"
                 class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30 w-20"
-               [attr.aria-label]="'settings.ageMaxPlaceholder' | t" />
+                [attr.aria-label]="'settings.ageMaxPlaceholder' | t"
+              />
             </div>
 
             <!-- Gender filter -->
             <div>
-              <span class="text-sm font-medium text-text-primary block mb-2">{{ 'settings.allowedGenders' | t }}</span>
+              <span class="text-sm font-medium text-text-primary block mb-2">{{
+                'settings.allowedGenders' | t
+              }}</span>
               <div class="flex flex-wrap gap-2">
                 @for (gender of genderOptions; track gender) {
                   <button
@@ -241,7 +261,7 @@
                     [class.border-surface-300]="!filterAllowedGenders().includes(gender)"
                     class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                   >
-                    {{ ('gender.' + gender) | t }}
+                    {{ 'gender.' + gender | t }}
                   </button>
                 }
               </div>
@@ -249,7 +269,9 @@
 
             <!-- Native language filter -->
             <div>
-              <span class="text-sm font-medium text-text-primary block mb-2">{{ 'settings.allowedNativeLanguages' | t }}</span>
+              <span class="text-sm font-medium text-text-primary block mb-2">{{
+                'settings.allowedNativeLanguages' | t
+              }}</span>
               <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
                 @for (lang of availableLanguages(); track lang.code) {
                   <button
@@ -288,7 +310,8 @@
               [ngModel]="autoDownloadMedia() ? autoDownloadPreference() : 'off'"
               (ngModelChange)="updateAutoDownloadMode($event)"
               class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-             [attr.aria-label]="'Select'">
+              [attr.aria-label]="'Select'"
+            >
               <option value="off">{{ 'settings.off' | t }}</option>
               <option value="wifi">{{ 'settings.autoDownloadWifiOnly' | t }}</option>
               <option value="cellular">{{ 'settings.autoDownloadCellular' | t }}</option>
@@ -299,7 +322,8 @@
             (click)="clearCache()"
             [disabled]="isClearingCache()"
             class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
-           [attr.aria-label]="'settings.clearCache' | t">
+            [attr.aria-label]="'settings.clearCache' | t"
+          >
             <span>{{ 'settings.clearCache' | t }}</span>
             @if (isClearingCache()) {
               <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
@@ -312,7 +336,8 @@
             (click)="deleteOldMedia()"
             [disabled]="isDeletingOldMedia()"
             class="w-full flex items-center justify-between p-4 hover:bg-surface-200 transition-colors text-sm font-medium text-text-primary"
-           [attr.aria-label]="'settings.deleteOldMedia' | t">
+            [attr.aria-label]="'settings.deleteOldMedia' | t"
+          >
             <span>{{ 'settings.deleteOldMedia' | t }}</span>
             @if (isDeletingOldMedia()) {
               <span class="text-xs text-text-secondary">{{ 'common.loading' | t }}</span>
@@ -320,6 +345,27 @@
               <span class="text-xs uppercase text-primary">{{ 'common.delete' | t }}</span>
             }
           </button>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.notificationsSection' | t }}
+        </h2>
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+          <a
+            routerLink="/settings/notification"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+            [attr.aria-label]="'settings.notificationsSection' | t"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">🔔</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'settings.notificationsSection' | t
+              }}</span>
+            </div>
+            <span class="text-text-secondary">→</span>
+          </a>
         </div>
       </section>
 
@@ -333,7 +379,8 @@
           <button
             (click)="toggleSoundEffects()"
             class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
-           [attr.aria-label]="'settings.soundEffects' | t">
+            [attr.aria-label]="'settings.soundEffects' | t"
+          >
             <span class="text-sm font-medium text-text-primary">{{
               'settings.soundEffects' | t
             }}</span>
@@ -345,7 +392,8 @@
           <button
             (click)="toggleVibration()"
             class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
-           [attr.aria-label]="'settings.vibration' | t">
+            [attr.aria-label]="'settings.vibration' | t"
+          >
             <span class="text-sm font-medium text-text-primary">{{
               'settings.vibration' | t
             }}</span>
@@ -396,7 +444,8 @@
                 [class.text-text-primary]="!interests().includes(item)"
                 [class.border-surface-300]="!interests().includes(item)"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
-               [attr.aria-label]="item">
+                [attr.aria-label]="item"
+              >
                 {{ item }}
               </button>
             }
@@ -404,30 +453,30 @@
         </div>
       </section>
 
-        <section class="space-y-4">
-          <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
-            {{ 'settings.linkedAccountsSection' | t }}
-          </h2>
-          <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
-            <a
-              routerLink="/settings/linked-accounts"
-              class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
-             [attr.aria-label]="'settings.linkedAccounts.title' | t">
-              <div class="flex items-center gap-3">
-                <span class="text-xl">&#128279;</span>
-                <span class="text-sm font-medium text-text-primary">{{
-                  'settings.linkedAccounts.title' | t
-                }}</span>
-                @if (linkedCount() > 0) {
-                  <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                    {{ linkedCount() }} {{ 'settings.linkedAccounts.active' | t }}
-                  </span>
-                }
-              </div>
-              <span class="text-text-secondary">&rarr;</span>
-            </a>
-          </div>
-        </section>
+      <section class="space-y-4">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.linkedAccountsSection' | t }}
+        </h2>
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+          <a
+            routerLink="/settings/linked-accounts"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+            [attr.aria-label]="'settings.linkedAccounts.title' | t"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">&#128279;</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'settings.linkedAccounts.title' | t
+              }}</span>
+              @if (linkedCount() > 0) {
+                <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                  {{ linkedCount() }} {{ 'settings.linkedAccounts.active' | t }}
+                </span>
+              }
+            </div>
+            <span class="text-text-secondary">&rarr;</span>
+          </a>
+        </div>
       </section>
 
       <section class="space-y-4 pt-2">
@@ -462,10 +511,57 @@
               (click)="downloadData()"
               [disabled]="isDownloading()"
               class="w-full bg-surface-200 hover:bg-surface-300 text-text-primary border border-surface-300 py-3 rounded-xl font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50"
-             [attr.aria-label]="'common.loading' | t">
+              [attr.aria-label]="'common.loading' | t"
+            >
               {{ isDownloading() ? ('common.loading' | t) : ('settings.downloadDataBtn' | t) }}
             </button>
           </div>
+        </div>
+      </section>
+
+      <section class="space-y-4 pt-2">
+        <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
+          {{ 'settings.legalSection' | t }}
+        </h2>
+        <div
+          class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
+        >
+          <a
+            routerLink="/terms"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">📄</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'settings.termsOfService' | t
+              }}</span>
+            </div>
+            <span class="text-text-secondary">→</span>
+          </a>
+          <a
+            routerLink="/privacy"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">🔒</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'settings.privacyPolicy' | t
+              }}</span>
+            </div>
+            <span class="text-text-secondary">→</span>
+          </a>
+          <a
+            routerLink="/help-about"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">ℹ️</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'helpAbout.title' | t
+              }}</span>
+            </div>
+            <span class="text-text-secondary">→</span>
+          </a>
         </div>
       </section>
 
@@ -473,7 +569,8 @@
         <button
           (click)="saveSettings()"
           class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95"
-         [attr.aria-label]="'settings.saveBtn' | t">
+          [attr.aria-label]="'settings.saveBtn' | t"
+        >
           {{ 'settings.saveBtn' | t }}
         </button>
       </div>

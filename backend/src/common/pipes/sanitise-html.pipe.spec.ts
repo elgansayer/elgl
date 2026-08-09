@@ -71,6 +71,14 @@ describe('SanitiseHtmlPipe', () => {
     );
   });
 
+  it('should strip all HTML tags from strings', () => {
+    expect(pipe.transform('<b>bold</b>', mockMetadata)).toBe('bold');
+    expect(pipe.transform('<em>italic</em>', mockMetadata)).toBe('italic');
+    expect(
+      pipe.transform('<img src="x" onerror="alert(1)">', mockMetadata),
+    ).toBe('');
+  });
+
   it('should sanitize array of strings', () => {
     expect(
       pipe.transform(['<script>alert("xss")</script>', 'safe'], mockMetadata),
@@ -142,9 +150,14 @@ describe('SanitiseHtmlPipe', () => {
       ],
       safeField: '<b>bold text</b>',
     };
-    const result = pipe.transform(input, mockMetadata) as Record<string, unknown>;
+    const result = pipe.transform(input, mockMetadata) as Record<
+      string,
+      unknown
+    >;
     expect(result['message']).toBe('user');
-    expect(result['stack']).toBe('TypeError: foo\n    at <anonymous> (app.ts:10:5)');
+    expect(result['stack']).toBe(
+      'TypeError: foo\n    at <anonymous> (app.ts:10:5)',
+    );
     expect(result['componentStack']).toBe('<anonymous>\n    at AppComponent');
     expect(result['stackFrames']).toEqual([
       {
@@ -162,7 +175,10 @@ describe('SanitiseHtmlPipe', () => {
       rawBody: '{"data":"<event>payload</event>"}',
       signedPayload: '<sig>abc123</sig>',
     };
-    const result = pipe.transform(input, mockMetadata) as Record<string, unknown>;
+    const result = pipe.transform(input, mockMetadata) as Record<
+      string,
+      unknown
+    >;
     expect(result['message']).toBe('');
     expect(result['rawBody']).toBe('{"data":"<event>payload</event>"}');
     expect(result['signedPayload']).toBe('<sig>abc123</sig>');

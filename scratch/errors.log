@@ -2,27 +2,27 @@
 ⚠️  [SPELLING WARNING] .agents/skills/angular-developer/references/host-elements.md:16 -> Found 'color', prefer British English 'colour/colours'.
 ⚠️  [SPELLING WARNING] .agents/skills/angular-developer/references/host-elements.md:25 -> Found 'color', prefer British English 'colour/colours'.
 ❌ [EM DASH VIOLATION] .agents/skills/angular-developer/references/pipes.md:31
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-developer/references/pipes.md:56
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-developer/references/pipes.md:68
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-developer/references/pipes.md:82
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-developer/references/pipes.md:97
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-developer/references/signal-forms.md:177
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-new-app/SKILL.md:36
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-new-app/SKILL.md:37
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-new-app/SKILL.md:38
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-new-app/SKILL.md:39
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ❌ [EM DASH VIOLATION] .agents/skills/angular-new-app/SKILL.md:40
-   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).
+   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).
 ⚠️  [SPELLING WARNING] docs/chat-ui-specifications.md:17 -> Found 'Color', prefer British English 'colour/colours'.
 ⚠️  [SPELLING WARNING] docs/chat-ui-specifications.md:38 -> Found 'color', prefer British English 'colour/colours'.
 ⚠️  [SPELLING WARNING] docs/chat-ui-specifications.md:64 -> Found 'Color', prefer British English 'colour/colours'.
