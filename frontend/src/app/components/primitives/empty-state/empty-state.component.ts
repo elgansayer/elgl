@@ -1,16 +1,20 @@
-import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import { Component, input, output, computed } from '@angular/core';
 
 @Component({
-  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-empty-state',
   template: `
-    <div [class]="containerClasses()">
+    <div [class]="containerClasses()" class="empty-state-fade-in">
       @if (illustration()) {
         <div class="mb-4" aria-hidden="true">
-          <img [src]="illustration()" alt="" class="w-48 h-auto mx-auto" />
+          <img
+            [src]="illustration()"
+            alt=""
+            class="w-48 h-auto mx-auto"
+            loading="lazy"
+          />
         </div>
       } @else {
-        <div class="text-4xl mb-3" aria-hidden="true">{{ icon() }}</div>
+        <div class="text-4xl mb-3 empty-state-icon" aria-hidden="true">{{ icon() }}</div>
       }
       @if (title()) {
         <h3 class="font-bold text-base text-text-primary mb-1">{{ title() }}</h3>

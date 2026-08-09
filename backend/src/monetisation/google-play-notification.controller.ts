@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Post,
-  HttpCode,
-  Body,
-  Headers,
-} from '@nestjs/common';
+import { Controller, Post, HttpCode, Body, Headers } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 

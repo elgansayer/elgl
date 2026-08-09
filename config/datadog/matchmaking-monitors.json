@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "description": "Datadog monitors for the Matchmaking Algorithm (Recommendations Service). All monitors target Prometheus-style metrics exposed by the NestJS backend via OpenMetrics and ingested by the Datadog Agent.",
+  "monitors": [
+    {
+      "name": "[Matchmaking] High fallback rate to tier-4 mock data",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_matchmaking_fallback_tier_used_total{to_tier:mock}.as_rate() > 10",
+      "message": "{{#is_alert}}\nThe matchmaking algorithm is falling back to mock data at a rate of more than 10 requests per second over the last 30 minutes. This indicates that tiers 1-3 (interest, language exchange, active users) are all failing.\n\n**Current value:** {{value}} req/s\n**Threshold:** 10 req/s\n\n**Actions:**\n1. Check Supabase / PostgreSQL database health.\n2. Verify the user_interests table is populated and indexed.\n3. Check if a recent deployment broke the recommendations pipeline.\n4. Inspect backend logs for tier-specific errors.\n{{/is_alert}}\n\n{{#is_warning}}\nMock data fallback rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:matchmaking", "severity:critical"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 10,
+          "warning": 5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Matchmaking] Zero recommendations returned",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_matchmaking_empty_results_total{*}.as_rate() > 5",
+      "message": "{{#is_alert}}\nThe matchmaking algorithm is returning zero recommendations at a rate of more than 5 empty responses per second. This means users are seeing empty states on the discovery page.\n\n**Current value:** {{value}} req/s\n**Threshold:** 5 req/s\n\n**Actions:**\n1. Check if the user table has sufficient active users.\n2. Verify privacy_hide_from_search flag is not incorrectly set on all users.\n3. Check if a filter or language selection is too restrictive.\n4. Inspect the recommendations API health endpoint.\n{{/is_alert}}\n\n{{#is_warning}}\nEmpty recommendation rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:matchmaking", "severity:critical"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 5,
+          "warning": 2
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Matchmaking] High request latency",
+      "type": "query alert",
+      "query": "avg(last_10m):avg:hellotalk_matchmaking_request_duration_seconds{outcome:success} > 5",
+      "message": "{{#is_alert}}\nThe average matchmaking request duration has exceeded 5 seconds over the last 10 minutes. This is likely caused by slow Supabase/PostgreSQL queries, missing indexes, or connection pool exhaustion.\n\n**Current value:** {{value}}s\n**Threshold:** 5s\n\n**Actions:**\n1. Check Supabase / PostgreSQL query performance (EXPLAIN ANALYZE on user_interests and users queries).\n2. Verify indexes exist on user_interests(tag), user_interests(user_id), users(native_language), users(target_languages).\n3. Check for connection pool saturation or rate limiting.\n4. Investigate whether a large batch of users is hitting the endpoint simultaneously.\n{{/is_alert}}\n\n{{#is_warning}}\nMatchmaking latency elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:matchmaking", "severity:warning"],
+      "options": {
+        "evaluation_delay": 120,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 5,
+          "warning": 2
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Matchmaking] Daily cache miss rate high",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_matchmaking_daily_cache_misses_total{*}.as_rate() > 20",
+      "message": "{{#is_alert}}\nThe matchmaking daily cache miss rate has exceeded 20 per second over the last hour. This indicates Redis is either unavailable, evicting keys prematurely, or the daily pre-computation cron job is not populating the cache.\n\n**Current value:** {{value}} req/s\n**Threshold:** 20 req/s\n\n**Actions:**\n1. Check Redis memory usage and eviction policy.\n2. Verify the calculateDailyRecommendations() cron job is running successfully.\n3. Check if the Redis connection pool is exhausted.\n4. Inspect the recommendations cache TTL (currently 86400s).\n{{/is_alert}}\n\n{{#is_warning}}\nCache miss rate elevated.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:matchmaking", "severity:warning"],
+      "options": {
+        "evaluation_delay": 300,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 20,
+          "warning": 10
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Matchmaking] Tier-1 success rate low",
+      "type": "query alert",
+      "query": "avg(last_1h):avg:hellotalk_matchmaking_tier_success_rate{*} < 0.3",
+      "message": "{{#is_alert}}\nThe tier-1 (interest-based) matchmaking success rate has dropped below 30% over the last hour. This means fewer than 3 in 10 users are getting interest-based recommendations and are falling back to lower-quality tiers.\n\n**Current value:** {{value}}\n**Threshold:** 0.3\n\n**Actions:**\n1. Check the user_interests table for data quality issues.\n2. Verify the interest tag taxonomy is not stale or too sparse.\n3. Investigate whether new users are not onboarding through the interests selection flow.\n4. Consider broadening interest matching criteria or adding a 'popular interests' fallback.\n{{/is_alert}}\n\n{{#is_warning}}\nTier-1 success rate declining.\n{{/is_warning}}",
+      "tags": ["service:hellotalk", "team:matchmaking", "severity:warning"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": false,
+        "renotify_interval": 60,
+        "thresholds": {
+          "critical": 0.3,
+          "warning": 0.5
+        },
+        "timeout_h": 0
+      }
+    },
+    {
+      "name": "[Matchmaking] No recommendation activity for 30 minutes",
+      "type": "query alert",
+      "query": "avg(last_30m):avg:hellotalk_matchmaking_recommendations_generated_total{*} by {endpoint}.as_count() <= 0",
+      "message": "{{#is_alert}}\nNo recommendation results have been served in the last 30 minutes. This indicates either a complete outage of the matchmaking pipeline or zero user activity on the discovery page.\n\n**Actions:**\n1. Check the recommendations API health endpoint.\n2. Verify the NestJS backend is running and Supabase connection is healthy.\n3. Check if discovery page is rendering correctly in the frontend.\n4. Check for deployment or infrastructure incidents.\n{{/is_alert}}",
+      "tags": ["service:hellotalk", "team:matchmaking", "severity:critical"],
+      "options": {
+        "evaluation_delay": 600,
+        "include_tags": true,
+        "new_group_delay": 60,
+        "notify_no_data": true,
+        "no_data_timeframe": 30,
+        "renotify_interval": 30,
+        "thresholds": {
+          "critical": 0
+        },
+        "timeout_h": 0
+      }
+    }
+  ]
+}

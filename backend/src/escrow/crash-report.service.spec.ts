@@ -2,10 +2,26 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
+type CrashReportQueryResult = {
+  data: unknown;
+  error: { message: string } | null;
+};
+
+type CrashReportQueryBuilder = {
+  select: jest.Mock;
+  insert: jest.Mock;
+  update: jest.Mock;
+  eq: jest.Mock;
+  is: jest.Mock;
+  order: jest.Mock;
+  limit: jest.Mock;
+  single: jest.Mock<Promise<CrashReportQueryResult>>;
+};
+
 describe('CrashReportService', () => {
   let service: CrashReportService;
-  let mockSupabaseClient: any;
-  let mockQueryBuilder: any;
+  let mockSupabaseClient: { from: jest.Mock };
+  let mockQueryBuilder: CrashReportQueryBuilder;
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -92,7 +108,7 @@ describe('CrashReportService', () => {
       expect(result!.id).toBe('crash-1');
       expect(result!.operation).toBe('createEscrow');
       expect(result!.acknowledged).toBe(false);
-      expect(result!.resolved_at).toBeNull();
+      expect(result!.resolved_at).toBeUndefined();
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith({
         operation: 'createEscrow',
         escrow_id: 'escrow-1',
