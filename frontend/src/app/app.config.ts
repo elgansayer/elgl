@@ -11,7 +11,7 @@ import { JoyrideModule } from 'ngx-joyride';
 import { routes } from './app.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
-import { httpRetryInterceptor } from './interceptors/http-retry.interceptor';
+import { retryInterceptor } from './interceptors/retry.interceptor';
 
 export function createTranslateLoader(http: HttpClient): TranslateHttpLoader {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
@@ -43,14 +43,13 @@ function initialiseDeepLinks(): () => void {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withFetch(), withInterceptors([httpRetryInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([retryInterceptor])),
     provideClientHydration(),
     provideAnimations(),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
     }),
-    importProvidersFrom(JoyrideModule.forRoot()),
     ...(TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -59,11 +58,13 @@ export const appConfig: ApplicationConfig = {
       },
       defaultLanguage: 'en-GB',
     }).providers ?? []),
+    importProvidersFrom(JoyrideModule.forRoot()),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     {
       provide: APP_INITIALIZER,
       useFactory: initialiseDeepLinks,
       multi: true,
     },
+    importProvidersFrom(JoyrideModule.forRoot()),
   ],
 };

@@ -1,19 +1,20 @@
-import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, afterNextRender, ErrorHandler } from '@angular/core';
+
+
+import { Component, inject, signal, computed, input, viewChild, ElementRef, effect, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-import { SrsOnboardingTourService } from '../../services/srs-onboarding-tour.service';
-import { JoyrideModule } from 'ngx-joyride';
+import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-flashcard-review',
   standalone: true,
-  imports: [TranslatePipe, SrsErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
+  imports: [TranslatePipe, SrsErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -21,6 +22,15 @@ type ReviewGrade = 'again' | 'good' | 'known';
       (retry)="handleRetry()"
     >
     <div class="mx-auto max-w-md space-y-6 pb-20 pt-4">
+      <!-- Graceful degradation banner -->
+      @if (isDegraded()) {
+        <div class="rounded-sheet border border-amber-500/30 bg-amber-500/10 p-3 text-center" role="status" aria-live="polite">
+          <p class="text-xs font-bold text-amber-400">{{ 'review.degradedBanner' | t }}</p>
+          @if (degradedReason()) {
+            <p class="mt-1 text-[11px] text-text-muted">{{ degradedReason() }}</p>
+          }
+        </div>
+      }
       @if (isLoading()) {
         <!-- Skeleton loading state -->
         <section class="app-card app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
@@ -52,14 +62,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
         />
       } @else {
         <!-- Header with progress -->
-        <section
-          class="app-card app-padded space-y-3"
-          aria-label="{{ 'review.title' | t }}"
-          joyrideStep="srsTourStep3Review"
-          [title]="'srsTour.reviewTitle' | t"
-          [text]="'srsTour.reviewText' | t"
-          stepPosition="bottom"
-        >
+        <section class="app-card app-padded space-y-3" aria-label="{{ 'review.title' | t }}">
           <div class="flex items-center justify-between">
             <h2 class="app-section-title">{{ 'review.title' | t }}</h2>
             <span class="text-xs font-bold text-text-muted" aria-live="polite">
@@ -351,7 +354,7 @@ export class FlashcardReviewComponent {
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
   private errorHandler = inject(ErrorHandler);
-  private srsTourService = inject(SrsOnboardingTourService);
+  private haptic = inject(HapticFeedbackService);
 
   readonly flashcardEl = viewChild<ElementRef<HTMLElement>>('flashcardEl');
 
@@ -370,6 +373,9 @@ export class FlashcardReviewComponent {
   readonly isSaving = signal(false);
   readonly isLoading = signal(false);
   readonly loadError = signal(false);
+  /** True when the SRS backend is degraded (circuit breaker open, offline queue in use) */
+  readonly isDegraded = signal(false);
+  readonly degradedReason = signal('');
 
   readonly currentCard = computed(() => this.reviewCards()[this.currentIndex()] ?? null);
   readonly isComplete = computed(
@@ -413,16 +419,11 @@ export class FlashcardReviewComponent {
     // After card changes, return focus to flashcard for keyboard navigation
     effect(() => {
       if (!this.isFlipped() && !this.isComplete() && this.currentCard()) {
-        // Small delay to allow DOM to update
-        setTimeout(() => {
-          this.flashcardEl()?.nativeElement?.focus();
-        }, 0);
-      }
-    });
-
-    afterNextRender(() => {
-      if (!this.srsTourService.hasCompletedTour() && !this.srsTourService.isTourInProgress()) {
-        setTimeout(() => this.srsTourService.startTour(), 500);
+        const elRef = this.flashcardEl();
+        if (elRef) {
+          // Schedule focus on next animation frame after DOM update
+          requestAnimationFrame(() => elRef.nativeElement.focus());
+        }
       }
     });
   }
@@ -438,6 +439,9 @@ export class FlashcardReviewComponent {
     } finally {
       this.isLoading.set(false);
     }
+    // Mirror the store's degraded state
+    this.isDegraded.set(this.vocabStore.isDegraded());
+    this.degradedReason.set(this.vocabStore.degradedReason());
   }
 
   flipCard(): void {
@@ -452,6 +456,8 @@ export class FlashcardReviewComponent {
     if (!card) return;
 
     const newLevel = this.computeNewLevel(card.srs_level, grade);
+
+    this.triggerHaptic(grade);
 
     this.sessionStats.update((s) => ({ ...s, [grade]: s[grade] + 1 }));
 
@@ -486,6 +492,16 @@ export class FlashcardReviewComponent {
     audio.play().catch(() => {
       // Audio playback failed silently
     });
+    // Release the Audio object after playback ends to avoid memory leaks
+    // during rapid review sessions where many cards are reviewed in sequence.
+    audio.addEventListener(
+      'ended',
+      () => {
+        audio.src = '';
+        audio.load();
+      },
+      { once: true },
+    );
   }
 
   private computeNewLevel(currentLevel: number, grade: ReviewGrade): number {
@@ -496,6 +512,20 @@ export class FlashcardReviewComponent {
         return currentLevel < 3 ? currentLevel + 1 : 3;
       case 'known':
         return 4;
+    }
+  }
+
+  private triggerHaptic(grade: ReviewGrade): void {
+    switch (grade) {
+      case 'known':
+        this.haptic.trigger('selection');
+        break;
+      case 'good':
+        this.haptic.trigger('medium');
+        break;
+      case 'again':
+        this.haptic.trigger('light');
+        break;
     }
   }
 }

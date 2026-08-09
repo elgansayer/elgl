@@ -71,7 +71,25 @@
       "next": "Next",
       "pageIndicator": "Page {page} of {totalPages}",
       "paginationAria": "Block list pagination"
+    },
+    "offline": {
+      "banner": "You are offline",
+      "cachedDataAvailable": "\u2013 viewing cached data",
+      "actionsDisabled": "Moderation actions are unavailable while offline",
+      "cachedDataNote": "Cached data"
     }
+  },
+  "discovery": {
+    "title": "Find partners",
+    "offlineBanner": "You are offline",
+    "offlineCachedData": "\u2013 viewing cached data",
+    "loadingPartners": "Searching for language partners...",
+    "noResultsTitle": "No partners match your search",
+    "noResultsDescription": "Try adjusting your filters or widening your search area to discover more language partners.",
+    "noResultsAction": "Reset Filters",
+    "searchErrorTitle": "Something went wrong",
+    "searchErrorDescription": "We couldn't load partner results. Please check your connection and try again.",
+    "searchErrorAction": "Try Again"
   },
   "aiConversation": {
     "chooseScenario": "Choose a role-play scenario",
@@ -80,5 +98,6 @@
     "send": "Send",
     "typing": "Writing...",
     "backToScenarios": "Back to scenarios"
-  }
+  },
+  "moderation": {}
 }

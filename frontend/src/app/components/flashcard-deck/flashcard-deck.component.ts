@@ -1,13 +1,14 @@
-import { Component, inject, signal, computed, afterNextRender, ErrorHandler } from '@angular/core';
+import { Component, inject, signal, computed, ErrorHandler } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { JoyrideDirective } from 'ngx-joyride';
+import { SrsTourTriggerComponent } from '../srs-tour-trigger/srs-tour-trigger.component';
 import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
-import { SrsOnboardingTourService } from '../../services/srs-onboarding-tour.service';
-import { JoyrideModule } from 'ngx-joyride';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
 type DeckView = 'list' | 'detail';
 
@@ -17,7 +18,11 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent, JoyrideModule],
+<<<<<<< HEAD
+  imports: [FormsModule, TranslatePipe, JoyrideDirective, SrsTourTriggerComponent],
+=======
+  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
+>>>>>>> origin/main
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -26,25 +31,22 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
     >
     <div class="mx-auto max-w-4xl space-y-6 pb-20">
       <!-- Header -->
-      <section
-        class="app-card app-padded space-y-4"
-        joyrideStep="srsTourStep1DeckList"
-        [title]="'srsTour.deckListTitle' | t"
-        [text]="'srsTour.deckListText' | t"
-        stepPosition="bottom"
-      >
+      <section class="app-card app-padded space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="app-section-title">{{ 'deck.title' | t }}</h2>
             <p class="app-muted">{{ 'deck.subtitle' | t }}</p>
           </div>
-          <button
-            type="button"
-            (click)="activeView.set('list')"
-            class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
-          >
-            {{ 'deck.browseBtn' | t }}
-          </button>
+          <div class="flex items-center gap-2">
+            <app-srs-tour-trigger />
+            <button
+              type="button"
+              (click)="activeView.set('list')"
+              class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
+            >
+              {{ 'deck.browseBtn' | t }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -57,10 +59,6 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               type="button"
               (click)="toggleCreateForm()"
               class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold disabled:opacity-60"
-              joyrideStep="srsTourStep2CreateDeck"
-              [title]="'srsTour.createDeckTitle' | t"
-              [text]="'srsTour.createDeckText' | t"
-              stepPosition="right"
             >
               {{ (showCreateForm() ? 'deck.cancelBtn' : 'deck.createBtn') | t }}
             </button>
@@ -149,7 +147,13 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               <p class="app-muted text-xs mt-1">{{ 'deck.emptyDesc' | t }}</p>
             </div>
           } @else {
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              joyrideStep="srsTourFlashcardDecks"
+              [title]="'srsTour.flashcardDecksTitle' | t"
+              [text]="'srsTour.flashcardDecksText' | t"
+              stepPosition="bottom"
+            >
               @for (deck of decks(); track deck.id) {
                 <article
                   class="rounded-card border border-surface-100 p-4 group transition-shadow cursor-pointer relative overflow-hidden"
@@ -386,7 +390,7 @@ export class FlashcardDeckComponent {
   private i18n = inject(I18nService);
   private router = inject(Router);
   private errorHandler = inject(ErrorHandler);
-  private srsTourService = inject(SrsOnboardingTourService);
+  private sanitisation = inject(HtmlSanitisationService);
 
   // View state
   readonly activeView = signal<DeckView>('list');
@@ -426,6 +430,15 @@ export class FlashcardDeckComponent {
     deckId: this.selectedDeck()?.id,
   }));
 
+  /** Sanitises user-authored string fields of a deck against XSS via DOMPurify. */
+  private sanitiseDeck(d: Deck): Deck {
+    return {
+      ...d,
+      name: this.sanitisation.sanitiseText(d.name),
+      description: d.description ? this.sanitisation.sanitiseText(d.description) : undefined,
+    };
+  }
+
   handleRetry(): void {
     void this.loadDecks();
   }
@@ -445,18 +458,13 @@ export class FlashcardDeckComponent {
 
   constructor() {
     this.loadDecks();
-    afterNextRender(() => {
-      if (!this.srsTourService.hasCompletedTour() && !this.srsTourService.isTourInProgress()) {
-        setTimeout(() => this.srsTourService.startTour(), 500);
-      }
-    });
   }
 
   async loadDecks(): Promise<void> {
     this.isLoading.set(true);
     try {
       const result = await this.deckService.getDecks();
-      this.decks.set(result);
+      this.decks.set(result.map((d) => this.sanitiseDeck(d)));
     } catch (e) {
       this.reportDeckError('loadDecks', e);
       // ignore
@@ -484,13 +492,15 @@ export class FlashcardDeckComponent {
     this.isCreating.set(true);
     try {
       const dto: CreateDeckDto = {
-        name,
-        description: this.newDeckDescription().trim() || undefined,
+        name: this.sanitisation.sanitiseText(name),
+        description: this.newDeckDescription().trim()
+          ? this.sanitisation.sanitiseText(this.newDeckDescription().trim())
+          : undefined,
         colour: this.newDeckColour(),
         icon: this.newDeckIcon(),
       };
       const deck = await this.deckService.createDeck(dto);
-      this.decks.update((list) => [deck, ...list]);
+      this.decks.update((list) => [this.sanitiseDeck(deck), ...list]);
       this.toggleCreateForm();
     } catch (e) {
       this.reportDeckError('createDeck', e);
@@ -599,15 +609,18 @@ export class FlashcardDeckComponent {
     if (!deck) return;
     try {
       const updated = await this.deckService.updateDeck(deck.id, {
-        name: this.editDeckName().trim(),
-        description: this.editDeckDescription().trim() || undefined,
+        name: this.sanitisation.sanitiseText(this.editDeckName().trim()),
+        description: this.editDeckDescription().trim()
+          ? this.sanitisation.sanitiseText(this.editDeckDescription().trim())
+          : undefined,
         colour: this.editDeckColour(),
         icon: this.editDeckIcon(),
       });
 
       if (updated) {
-        this.selectedDeck.set(updated);
-        this.decks.update((list) => list.map((d) => (d.id === updated.id ? updated : d)));
+        const sanitised = this.sanitiseDeck(updated);
+        this.selectedDeck.set(sanitised);
+        this.decks.update((list) => list.map((d) => (d.id === sanitised.id ? sanitised : d)));
       }
       this.showEditForm.set(false);
     } catch (e) {
