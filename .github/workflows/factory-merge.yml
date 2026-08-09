@@ -1,0 +1,32 @@
+name: Factory Merge Gate
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: factory-merge-gate
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge eligible factory pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh pr list --repo "${GITHUB_REPOSITORY}" --state open --label factory-reviewed --json number,isDraft,headRefName,mergeStateStatus,statusCheckRollup \
+            --jq '.[] | select(.isDraft == false and .mergeStateStatus == "CLEAN" and ([.statusCheckRollup[]? | select((.context // .name) == "factory/independent-review" and (.state == "SUCCESS" or .conclusion == "SUCCESS"))] | length) == 1 and ([.statusCheckRollup[]? | select((.status == "COMPLETED" and .conclusion != "SUCCESS") or (.state != null and .state != "SUCCESS"))] | length) == 0) | .number' \
+            | while read -r number; do
+                [ -n "$number" ] || continue
+                gh pr merge "$number" --repo "${GITHUB_REPOSITORY}" --squash --delete-branch
+              done

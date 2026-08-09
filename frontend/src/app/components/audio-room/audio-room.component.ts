@@ -18,9 +18,18 @@ import {
   VoiceroomCreateModalComponent,
   VoiceroomCreatePayload,
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
+import {
+  PrivatePartyCreateModalComponent,
+  PrivatePartyCreatePayload,
+} from '../private-party-create-modal/private-party-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
 import { QuickPollDisplayComponent } from './quick-poll-display.component';
-import { ApproveSpeakerModalComponent } from '../approve-speaker-modal/approve-speaker-modal.component';
+import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
+import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
+import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
+import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
+import { SoundboardComponent } from '../soundboard/soundboard.component';
+import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -28,13 +37,19 @@ import { ApproveSpeakerModalComponent } from '../approve-speaker-modal/approve-s
     TranslatePipe,
     RoomChatComponent,
     VideoRoomComponent,
+    VideoClassroomErrorBoundaryComponent,
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
+    PrivatePartyCreateModalComponent,
     ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
     QuickPollFormComponent,
     QuickPollDisplayComponent,
+    LiveChatOverlayComponent,
+    TipHostModalComponent,
+    VoiceroomNotesComponent,
+    SoundboardComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -46,11 +61,13 @@ export class AudioRoomComponent implements OnInit {
   private readonly confirmService = inject(ConfirmService);
 
   readonly showCreateModal = signal<boolean>(false);
+  readonly showPrivatePartyModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
+  readonly showTipModal = signal<boolean>(false);
   readonly showSafetyModal = signal<boolean>(false);
+  readonly showApprovalModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
-  readonly showApproveSpeakerModal = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
 
   readonly audiencePlaceholderAvatars = computed(() => {
@@ -68,6 +85,7 @@ export class AudioRoomComponent implements OnInit {
 
   readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
   readonly showExclusivePicker = signal<boolean>(false);
+  readonly showNotesPanel = signal<boolean>(false);
 
   /** Toggle between flat list view and language-grouped view */
   readonly viewMode = signal<'flat' | 'grouped'>('grouped');
@@ -88,6 +106,7 @@ export class AudioRoomComponent implements OnInit {
     await Promise.all([
       this.store.loadActiveRooms(),
       this.store.loadRoomsByLanguage(),
+      this.store.loadPrivateRooms(),
     ]);
     try {
       const result = await firstValueFrom(
@@ -133,6 +152,23 @@ export class AudioRoomComponent implements OnInit {
     }
   }
 
+  async createPrivateParty(payload: PrivatePartyCreatePayload): Promise<void> {
+    try {
+      const room = await this.store.createPrivateParty({
+        title: payload.title,
+        languagePair: payload.languagePair,
+        topicTag: payload.topicTag,
+        isVideoStream: payload.isVideoStream,
+        invitedUserIds: payload.invitedUserIds,
+      });
+      this.showPrivatePartyModal.set(false);
+      await this.store.joinRoom(room);
+    } catch (e) {
+      console.error('Error creating private party:', e);
+      showToast(this.i18n.translate('privateParty.createError'));
+    }
+  }
+
   async join(room: AudioRoomRecord): Promise<void> {
     await this.store.joinRoom(room);
   }
@@ -147,6 +183,11 @@ export class AudioRoomComponent implements OnInit {
 
   async approve(targetUserId: string): Promise<void> {
     await this.store.approveSpeaker(targetUserId);
+  }
+
+  async handleApproveSpeaker(targetUserId: string): Promise<void> {
+    await this.approve(targetUserId);
+    this.showApprovalModal.set(false);
   }
 
   async demote(targetUserId: string): Promise<void> {

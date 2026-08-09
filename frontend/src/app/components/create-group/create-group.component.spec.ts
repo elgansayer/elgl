@@ -22,6 +22,7 @@ const mockUserA = {
   privacy_hide_location: false,
   privacy_hide_from_search: false,
   privacy_hide_gender: false,
+  created_at: '2026-01-01',
 };
 
 const mockUserB = {
@@ -40,6 +41,7 @@ const mockUserB = {
   privacy_hide_location: false,
   privacy_hide_from_search: false,
   privacy_hide_gender: false,
+  created_at: '2026-01-02',
 };
 
 describe('CreateGroupComponent', () => {
@@ -176,7 +178,7 @@ describe('CreateGroupComponent', () => {
   it('should canAddMore return correct value', () => {
     expect(component.canAddMore()).toBe(true);
 
-    for (let i = 0; i < 49; i++) {
+    for (let i = 0; i < 50; i++) {
       component.addMember({
         ...mockUserA,
         id: `user-${i}`,

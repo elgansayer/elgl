@@ -1,3 +1,76 @@
+export const MOCK_LINKED_ACCOUNTS = [
+  {
+    user_id: 'fake-1',
+    provider: 'google',
+    name: 'sakura@gmail.com',
+    active: true,
+    created_at: '2024-01-15T00:00:00Z',
+  },
+  {
+    user_id: 'fake-1',
+    provider: 'email',
+    name: 'sakura1@example.com',
+    active: true,
+    created_at: '2024-01-10T00:00:00Z',
+  },
+  {
+    user_id: 'fake-2',
+    provider: 'facebook',
+    name: 'Minjun Kim',
+    active: true,
+    created_at: '2024-02-20T00:00:00Z',
+  },
+  {
+    user_id: 'fake-2',
+    provider: 'twitter',
+    name: '@minjun_dev',
+    active: true,
+    created_at: '2024-02-15T00:00:00Z',
+  },
+  {
+    user_id: 'fake-3',
+    provider: 'apple',
+    name: 'emma@icloud.com',
+    active: true,
+    created_at: '2024-03-01T00:00:00Z',
+  },
+  {
+    user_id: 'fake-3',
+    provider: 'google',
+    name: 'emma.writes@gmail.com',
+    active: false,
+    created_at: '2024-03-05T00:00:00Z',
+  },
+  {
+    user_id: 'fake-4',
+    provider: 'email',
+    name: 'liam@example.com',
+    active: true,
+    created_at: '2024-04-01T00:00:00Z',
+  },
+  {
+    user_id: 'fake-5',
+    provider: 'google',
+    name: 'olivia@gmail.com',
+    active: true,
+    created_at: '2024-04-10T00:00:00Z',
+  },
+  {
+    user_id: 'fake-5',
+    provider: 'apple',
+    name: 'olivia@icloud.com',
+    active: true,
+    created_at: '2024-04-05T00:00:00Z',
+  },
+  {
+    user_id: 'fake-5',
+    provider: 'twitter',
+    name: '@olivia_creator',
+    active: true,
+    created_at: '2024-04-08T00:00:00Z',
+  },
+];
+
 export const MOCK_USERS = Array.from({ length: 150 }, (_, i) => {
   const nativeLangs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
   const targetLangs = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'no'];
@@ -38,7 +111,7 @@ export const MOCK_USERS = Array.from({ length: 150 }, (_, i) => {
   return {
     id: `fake-${i + 1}`,
     display_name: `${name}${i + 1}`,
-    native_languages: native,
+    native_languages: [native],
     target_languages: targets,
     bio_text: `Hi! I want to learn ${targets.join(', ').toUpperCase()} and I can teach ${native.toUpperCase()}. Let's chat!`,
     avatar_url: `https://i.pravatar.cc/150?u=fake-${i + 1}`,

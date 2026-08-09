@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
-import { ThemeService } from './theme.service';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
   let service: ThemeService;
@@ -9,14 +8,11 @@ describe('ThemeService', () => {
     TestBed.resetTestingModule();
 
     // Mock localStorage
-    Object.defineProperty(window, 'localStorage', {
-      value: {
+    vi.stubGlobal('localStorage', {
         getItem: vi.fn(),
         setItem: vi.fn(),
         removeItem: vi.fn(),
         clear: vi.fn(),
-      },
-      writable: true
     });
 
     // Mock matchMedia
@@ -42,6 +38,7 @@ describe('ThemeService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('should be created', () => {
@@ -150,8 +147,8 @@ describe('ThemeService', () => {
     }));
 
     expect(changeListener).toBeTruthy();
-    if (changeListener && typeof changeListener === 'function') {
-      changeListener(new Event('change'));
+    if (changeListener) {
+      (changeListener as EventListener)(new Event('change'));
     }
 
     expect(document.documentElement.classList.toggle).toHaveBeenCalledWith('dark', true);
