@@ -56,7 +56,6 @@ const EXPECTED_MODULE_NAMES = [
   'RecommendationsModule',
   'AdminModule',
   'HelpModule',
-  'PasswordResetModule',
   'ProficiencyModule',
   'VersionModule',
   'StudyStreakModule',
