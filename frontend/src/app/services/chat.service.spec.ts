@@ -26,6 +26,7 @@ describe('ChatService', () => {
   let enqueueMessageMock: ReturnType<typeof vi.fn>;
   let getQueuedMessagesMock: ReturnType<typeof vi.fn>;
   let removeMessageMock: ReturnType<typeof vi.fn>;
+  let incrementRetryCountMock: ReturnType<typeof vi.fn>;
   let hapticTapMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -37,6 +38,7 @@ describe('ChatService', () => {
     enqueueMessageMock = vi.fn().mockResolvedValue(undefined);
     getQueuedMessagesMock = vi.fn().mockResolvedValue([]);
     removeMessageMock = vi.fn().mockResolvedValue(undefined);
+    incrementRetryCountMock = vi.fn().mockResolvedValue(undefined);
     hapticTapMock = vi.fn();
 
     TestBed.configureTestingModule({
@@ -67,6 +69,7 @@ describe('ChatService', () => {
             enqueueMessage: enqueueMessageMock,
             getQueuedMessages: getQueuedMessagesMock,
             removeMessage: removeMessageMock,
+            incrementRetryCount: incrementRetryCountMock,
           } as unknown as OfflineQueueService,
         },
         {
@@ -254,9 +257,7 @@ describe('ChatService', () => {
 
       const promise = service.sendMessage({ room_id: 'room-1', message_type: 'text', text_content: 'hi' });
 
-      const membersReq = httpMock.expectOne(`${baseUrl}/rooms/room-1/members`);
-      membersReq.flush([{ user_id: 'user-1' }, { user_id: 'user-2' }]);
-
+      // Offline path short-circuits BEFORE any HTTP calls, including room members
       const queued = await promise;
       expect(queued.room_id).toBe('room-1');
       expect(queued.text_content).toBe('hi');
