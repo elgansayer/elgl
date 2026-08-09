@@ -37,7 +37,7 @@ interface UserRow {
   id: string;
   display_name?: string | null;
   avatar_url?: string | null;
-  native_language?: string | null;
+  native_languages?: string[] | null;
   target_languages?: string[] | null;
   is_serious_learner?: boolean | null;
   study_streak_days?: number | null;
@@ -78,7 +78,7 @@ export class RecommendationsService {
     try {
       const { data: users, error } = await supabase
         .from('users')
-        .select('id, native_language, target_languages')
+        .select('id, native_languages, target_languages')
         .match(GDPR_MATCHMAKING_FILTERS)
         .not('target_languages', 'is', null)
         .limit(CRON_USERS_LIMIT);
@@ -91,50 +91,97 @@ export class RecommendationsService {
         `Computing recommendations for ${users.length} users...`,
       );
 
+      // Collect unique language pairs to batch query, avoiding N+1 queries
+      const pairSet = new Set<string>();
+      const pairIndex = new Map<
+        string,
+        Array<{ userId: string; nativeLang: string; targetLang: string }>
+      >();
+
       for (const user of users) {
-        const targetLanguages = user.target_languages as string[] | null;
-        if (!targetLanguages || targetLanguages.length === 0) continue;
+        const nativeLangs = user['native_languages'] as string[] | null;
+        const targetLangs = user['target_languages'] as string[] | null;
+        if (!nativeLangs?.length || !targetLangs?.length) continue;
 
-        const nativeLang = user.native_language as string | null;
+        const native = nativeLangs[0];
+        const target = targetLangs[0];
+        const key = `${target}:${native}`;
+        pairSet.add(key);
+        const bucket = pairIndex.get(key) ?? [];
+        bucket.push({
+          userId: user.id,
+          nativeLang: native,
+          targetLang: target,
+        });
+        pairIndex.set(key, bucket);
+      }
 
-        const { data: matches } = await supabase
-          .from('users')
-          .select(
-            'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
-          )
-          .neq('id', user.id)
-          .match(GDPR_MATCHMAKING_FILTERS)
-          .in('native_language', targetLanguages)
-          .contains('target_languages', nativeLang ? [nativeLang] : [])
-          .order('is_serious_learner', { ascending: false })
-          .limit(DAILY_LIMIT);
+      // Batch-fetch matches for each unique language pair
+      const MAX_PAIR_BATCH = 20;
+      const pairs = Array.from(pairSet);
+      const batches: string[][] = [];
+      for (let i = 0; i < pairs.length; i += MAX_PAIR_BATCH) {
+        batches.push(pairs.slice(i, i + MAX_PAIR_BATCH));
+      }
 
-        if (matches && matches.length > 0) {
-          const dtos: RecommendedUserDto[] = (matches as UserRow[]).map(
-            (m) => ({
-              id: m.id,
-              displayName: m.display_name ?? null,
-              avatarUrl: m.avatar_url ?? null,
-              nativeLanguage: m.native_language ?? null,
-              targetLanguages: m.target_languages ?? null,
-              sharedInterests: 0,
-              isSeriousLearner: m.is_serious_learner ?? null,
-              studyStreakDays: m.study_streak_days ?? null,
-              correctionRatio: m.correction_ratio ?? null,
-            }),
-          );
+      for (const batchPairs of batches) {
+        const queries = batchPairs.map((pairKey) => {
+          const [targetCode, nativeCode] = pairKey.split(':');
+          return supabase
+            .from('users')
+            .select(
+              'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+            )
+            .match(GDPR_MATCHMAKING_FILTERS)
+            .overlaps('native_languages', [targetCode])
+            .overlaps('target_languages', [nativeCode])
+            .order('is_serious_learner', { ascending: false })
+            .limit(DAILY_LIMIT);
+        });
 
-          pipeline.set(
-            `recommendations:daily:${user.id}`,
-            JSON.stringify(dtos),
-            'EX',
-            DAILY_REDIS_TTL,
-          );
-          pipelineOps++;
-          totalCached++;
+        const results = await Promise.all(queries);
 
-          if (pipelineOps >= REDIS_PIPELINE_BATCH) {
-            await flushPipeline();
+        for (let i = 0; i < batchPairs.length; i++) {
+          const pairKey = batchPairs[i];
+          const matchesData = results[i];
+          const matchRows = matchesData.data as UserRow[] | null;
+
+          if (!matchRows || matchRows.length === 0) {
+            continue;
+          }
+
+          const userEntries = pairIndex.get(pairKey) ?? [];
+
+          for (const entry of userEntries) {
+            const filtered = matchRows.filter(
+              (m) => m.id !== entry.userId,
+            );
+            if (filtered.length > 0) {
+              const dtos: RecommendedUserDto[] = filtered.map((m) => ({
+                id: m.id,
+                displayName: m.display_name ?? null,
+                avatarUrl: m.avatar_url ?? null,
+                nativeLanguage: m.native_languages?.[0] ?? null,
+                targetLanguages: m.target_languages ?? null,
+                sharedInterests: 0,
+                isSeriousLearner: m.is_serious_learner ?? null,
+                studyStreakDays: m.study_streak_days ?? null,
+                correctionRatio: m.correction_ratio ?? null,
+              }));
+
+              pipeline.set(
+                `recommendations:daily:${entry.userId}`,
+                JSON.stringify(dtos),
+                'EX',
+                DAILY_REDIS_TTL,
+              );
+              pipelineOps++;
+              totalCached++;
+
+              if (pipelineOps >= REDIS_PIPELINE_BATCH) {
+                await flushPipeline();
+              }
+            }
           }
         }
       }
@@ -330,7 +377,8 @@ export class RecommendationsService {
   ): Promise<void> {
     try {
       const err = error instanceof Error ? error : new Error(String(error));
-      const circuitOpen = !this.circuitBreakerService.isAvailable('matchmaking');
+      const circuitOpen =
+        !this.circuitBreakerService.isAvailable('matchmaking');
 
       await this.crashReportService.reportCrash({
         operation,
@@ -407,7 +455,7 @@ export class RecommendationsService {
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
       )
       .in('id', candidateIds)
       .match(GDPR_MATCHMAKING_FILTERS);
@@ -421,7 +469,7 @@ export class RecommendationsService {
         id: u.id,
         displayName: u.display_name,
         avatarUrl: u.avatar_url,
-        nativeLanguage: u.native_language,
+        nativeLanguage: u.native_languages?.[0] ?? null,
         targetLanguages: u.target_languages,
         sharedInterests: sharedCount.get(u.id) ?? 0,
         isSeriousLearner: u.is_serious_learner,
@@ -448,7 +496,7 @@ export class RecommendationsService {
     const { data: user, error: userError } = await withRetry(() =>
       supabase
         .from('users')
-        .select('native_language, target_languages')
+        .select('native_languages, target_languages')
         .eq('id', userId)
         .maybeSingle(),
     );
@@ -459,22 +507,22 @@ export class RecommendationsService {
       );
     }
 
-    const nativeLang = user['native_language'] as string | null;
+    const nativeLangs = user['native_languages'] as string[] | null;
     const targetLanguages = user['target_languages'] as string[] | null;
 
-    if (!nativeLang || !targetLanguages || targetLanguages.length === 0) {
+    if (!nativeLangs?.length || !targetLanguages?.length) {
       return [];
     }
 
     const { data: matches, error: matchError } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
       )
       .neq('id', userId)
       .match(GDPR_MATCHMAKING_FILTERS)
-      .in('native_language', targetLanguages)
-      .contains('target_languages', [nativeLang])
+      .overlaps('native_languages', targetLanguages)
+      .overlaps('target_languages', nativeLangs)
       .order('is_serious_learner', { ascending: false })
       .limit(FALLBACK_LIMIT);
 
@@ -490,7 +538,7 @@ export class RecommendationsService {
       id: m.id,
       displayName: m.display_name ?? null,
       avatarUrl: m.avatar_url ?? null,
-      nativeLanguage: m.native_language ?? null,
+      nativeLanguage: m.native_languages?.[0] ?? null,
       targetLanguages: m.target_languages ?? null,
       sharedInterests: 0,
       isSeriousLearner: m.is_serious_learner ?? null,
@@ -507,7 +555,7 @@ export class RecommendationsService {
     const { data: users, error } = await supabase
       .from('users')
       .select(
-        'id, display_name, avatar_url, native_language, target_languages, is_serious_learner, study_streak_days, correction_ratio',
+        'id, display_name, avatar_url, native_languages, target_languages, is_serious_learner, study_streak_days, correction_ratio',
       )
       .neq('id', userId)
       .match(GDPR_MATCHMAKING_FILTERS)
@@ -526,7 +574,7 @@ export class RecommendationsService {
       id: u.id,
       displayName: u.display_name ?? null,
       avatarUrl: u.avatar_url ?? null,
-      nativeLanguage: u.native_language ?? null,
+      nativeLanguage: u.native_languages?.[0] ?? null,
       targetLanguages: u.target_languages ?? null,
       sharedInterests: 0,
       isSeriousLearner: u.is_serious_learner ?? null,

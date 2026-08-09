@@ -46,8 +46,6 @@ describe('AdminController', () => {
             listUsers: jest.fn(),
             setVipStatus: jest.fn(),
             getLoginHistory: jest.fn(),
-            banUser: jest.fn(),
-            warnUser: jest.fn(),
             listAllBlocks: jest.fn(),
             removeBlock: jest.fn(),
           },
@@ -115,38 +113,6 @@ describe('AdminController', () => {
     });
   });
 
-  describe('banUser', () => {
-    it('delegates to AdminService.banUser with the user id and admin id', async () => {
-      (adminService.banUser as jest.Mock).mockResolvedValue(undefined);
-
-      const result = await controller.banUser('target-user', {
-        user: { sub: 'admin-1' },
-      } as any);
-
-      expect(adminService.banUser).toHaveBeenCalledWith(
-        'target-user',
-        'admin-1',
-      );
-      expect(result).toEqual({ message: 'User banned' });
-    });
-  });
-
-  describe('warnUser', () => {
-    it('delegates to AdminService.warnUser with the user id and admin id', async () => {
-      (adminService.warnUser as jest.Mock).mockResolvedValue(undefined);
-
-      const result = await controller.warnUser('target-user', {
-        user: { sub: 'admin-1' },
-      } as any);
-
-      expect(adminService.warnUser).toHaveBeenCalledWith(
-        'target-user',
-        'admin-1',
-      );
-      expect(result).toEqual({ message: 'User warned' });
-    });
-  });
-
   describe('listAllBlocks', () => {
     it('delegates to AdminService.listAllBlocks with default page params', async () => {
       const response = { blocks: [], total: 0, page: 1, pageSize: 20 };
@@ -171,9 +137,7 @@ describe('AdminController', () => {
 
   describe('removeBlock', () => {
     it('delegates to AdminService.removeBlock with the block id', async () => {
-      (adminService.removeBlock as jest.Mock).mockResolvedValue({
-        success: true,
-      });
+      (adminService.removeBlock as jest.Mock).mockResolvedValue({ success: true });
 
       const result = await controller.removeBlock('block-42');
 

@@ -3,7 +3,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-social-login-buttons',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="flex flex-col gap-3 ps-4 pe-4">

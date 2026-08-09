@@ -61,7 +61,7 @@ export class LegalService {
           id: 'changes',
           heading: '6. Changes to Terms',
           content:
-            "We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material we will try to provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.",
+            'We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material we will try to provide at least 30 days\' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.',
         },
         {
           id: 'governing-law',
@@ -125,9 +125,9 @@ export class LegalService {
         },
         {
           id: 'children',
-          heading: "7. Children's Privacy",
+          heading: '7. Children\'s Privacy',
           content:
-            "Our service is not directed to persons under 13 years of age. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we take steps to remove such information and terminate the child's account.",
+            'Our service is not directed to persons under 13 years of age. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we take steps to remove such information and terminate the child\'s account.',
         },
         {
           id: 'changes-privacy',

@@ -1,12 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { IncomingCallModalComponent } from './incoming-call-modal.component';
+import { IncomingCallModalComponent, IncomingCallData } from './incoming-call-modal.component';
 import { I18nService } from '../../services/i18n.service';
 import { vi } from 'vitest';
 
 describe('IncomingCallModalComponent', () => {
   let component: IncomingCallModalComponent;
   let fixture: ComponentFixture<IncomingCallModalComponent>;
+
+  const mockCallData: IncomingCallData = {
+    callerId: 'caller-1',
+    callerName: 'Test User',
+    roomName: 'room-1',
+    isVideoCall: false,
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
