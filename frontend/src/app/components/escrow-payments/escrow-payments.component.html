@@ -27,10 +27,6 @@
   <!-- Header -->
   <div
     class="flex items-center gap-3 ps-3 pe-3 sm:ps-4 sm:pe-4 py-3 sm:py-4"
-    joyrideStep="escrowStepTitle"
-    [title]="'escrow.onboarding.stepTitleTitle' | t"
-    [text]="'escrow.onboarding.stepTitleText' | t"
-    stepPosition="bottom"
   >
     <button
       (click)="goBack()"
@@ -55,10 +51,6 @@
   <!-- Status filter pills -->
   <div
     class="ps-3 pe-3 sm:ps-4 sm:pe-4 pb-3 flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide"
-    joyrideStep="escrowStepFilters"
-    [title]="'escrow.onboarding.stepFiltersTitle' | t"
-    [text]="'escrow.onboarding.stepFiltersText' | t"
-    stepPosition="bottom"
   >
     @for (filter of statusFilters; track filter.value) {
       <button
@@ -90,10 +82,6 @@
   } @else {
     <div
       class="ps-3 pe-3 sm:ps-4 sm:pe-4 space-y-3 pb-8"
-      joyrideStep="escrowStepTransactions"
-      [title]="'escrow.onboarding.stepTransactionsTitle' | t"
-      [text]="'escrow.onboarding.stepTransactionsText' | t"
-      stepPosition="top"
     >
       @for (escrow of escrows(); track escrow.id) {
         <div

@@ -8,6 +8,8 @@ import { I18nService } from '../../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
 import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
 
+const DEFAULT_ACCENT = '#4f46e5';
+
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
@@ -31,7 +33,7 @@ export class AppearanceSettingsComponent {
 
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
 
-  readonly primaryAccentColor = signal('#4f46e5');
+  readonly primaryAccentColor = signal(DEFAULT_ACCENT);
   readonly isVip = signal(false);
 
   readonly availableColors = [
@@ -49,7 +51,9 @@ export class AppearanceSettingsComponent {
         const profile = await this.userService.getMyProfile();
         if (profile) {
           this.isVip.set(Boolean(profile.is_vip));
-          this.primaryAccentColor.set(profile.primary_accent_color ?? '#4f46e5');
+          const accent = profile.primary_accent_color ?? DEFAULT_ACCENT;
+          this.primaryAccentColor.set(accent);
+          this.themeService.setPrimaryAccentColor(accent);
         }
         return profile;
       } catch {
@@ -86,6 +90,7 @@ export class AppearanceSettingsComponent {
       await this.userService.updateMyProfile({
         primary_accent_color: this.primaryAccentColor(),
       });
+      this.themeService.setPrimaryAccentColor(this.primaryAccentColor());
       this.successMessage.set('settings.saved');
     } catch {
       this.errorMessage.set('Failed to save settings');

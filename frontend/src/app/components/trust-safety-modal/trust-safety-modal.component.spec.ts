@@ -48,7 +48,12 @@ describe('TrustSafetyModalComponent', () => {
       const keys = [
         'safety.title', 'safety.subtitle', 'safety.closeBtn',
         'safety.tabReport', 'safety.tabBlock',
+<<<<<<< HEAD
+        'safety.reasonLabel',
+        'safety.detailsLabel', 'safety.detailsPlaceholder',
+=======
         'safety.reasonLabel', 'safety.detailsLabel', 'safety.detailsPlaceholder',
+>>>>>>> origin/main
         'safety.blockWarning', 'safety.blockList1', 'safety.blockList2', 'safety.blockList3',
         'safety.cancelBtn', 'safety.submitReportBtn', 'safety.confirmBlockBtn',
       ];

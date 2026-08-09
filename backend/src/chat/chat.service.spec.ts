@@ -1022,9 +1022,7 @@ describe('ChatService', () => {
         .mockImplementationOnce((resolve: any) =>
           resolve({ data: { user_id: 'user-1' }, error: null }),
         )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ error: null }),
-        );
+        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
 
       await service.updateMessageStatus('user-1', 'msg-1', 'delivered');
 
@@ -1060,9 +1058,7 @@ describe('ChatService', () => {
         .mockImplementationOnce((resolve: any) =>
           resolve({ data: { user_id: 'user-1' }, error: null }),
         )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ error: null }),
-        );
+        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
 
       await service.updateMessageStatus('user-1', 'msg-2', 'read');
 
@@ -1161,9 +1157,7 @@ describe('ChatService', () => {
         .mockImplementationOnce((resolve: any) =>
           resolve({ data: { user_id: 'user-1' }, error: null }),
         )
-        .mockImplementationOnce((resolve: any) =>
-          resolve({ error: null }),
-        );
+        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
 
       await service.updateMessageStatus('user-1', 'msg-6', 'delivered');
 
