@@ -2,11 +2,25 @@
   <!-- Top App Bar -->
   <header class="bg-surface-400 pt-12 pb-3 border-b border-surface-200 shadow-sm z-10 sticky top-0">
     <div class="flex items-center justify-between px-4 mb-4">
-      <a routerLink="/visitors" class="text-text-primary text-xl" [attr.aria-label]="'nav.profile' | t">👤</a>
+      <a
+        routerLink="/visitors"
+        class="text-text-primary text-xl"
+        [attr.aria-label]="'nav.profile' | t"
+        >👤</a
+      >
       <h1 class="text-xl font-black text-text-primary tracking-tight">{{ 'moments.title' | t }}</h1>
       <div class="flex items-center gap-3">
-        <a routerLink="/notifications" class="text-text-primary text-xl" [attr.aria-label]="'nav.notifications' | t">🔔</a>
-        <button (click)="showComposeForm.set(!showComposeForm())" class="text-text-primary" [attr.aria-label]="'nav.compose' | t">
+        <a
+          routerLink="/notifications"
+          class="text-text-primary text-xl"
+          [attr.aria-label]="'nav.notifications' | t"
+          >🔔</a
+        >
+        <button
+          (click)="showComposeForm.set(!showComposeForm())"
+          class="text-text-primary"
+          [attr.aria-label]="'nav.compose' | t"
+        >
           <!-- Camera / Post Icon -->
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -71,7 +85,8 @@
               @if (newMediaType() === 'audio') {
                 <audio [src]="url" controls class="h-8 max-w-[200px] rounded-full"></audio>
               }
-              <button aria-label="Remove media"
+              <button
+                aria-label="Remove media"
                 (click)="removeMedia(i)"
                 class="absolute -top-2 -end-2 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white"
               >
@@ -94,7 +109,8 @@
 
       <div class="mt-3 ms-13 flex justify-between items-center">
         <div class="flex items-center gap-2">
-          <button aria-label="Record voice"
+          <button
+            aria-label="Record voice"
             (click)="showVoiceRecorder.set(true)"
             class="p-2 rounded-full bg-surface-300 text-purple-400 hover:text-purple-300"
           >
@@ -108,8 +124,13 @@
               [(ngModel)]="tempImageUrlInput"
               [placeholder]="'moments.imageUrlPlaceholder' | t"
               class="bg-transparent border-none text-xs w-24 text-text-primary outline-none px-2"
+              [attr.aria-label]="'text input'"
             />
-            <button (click)="addTempImageUrl()" class="text-[10px] font-bold text-purple-400">
+            <button
+              (click)="addTempImageUrl()"
+              class="text-[10px] font-bold text-purple-400"
+              [attr.aria-label]="'moments.addImageBtn' | t"
+            >
               {{ 'moments.addImageBtn' | t | uppercase }}
             </button>
           </div>
@@ -118,6 +139,7 @@
           [disabled]="isCreating() || (!newText().trim() && newMediaUrls().length === 0)"
           (click)="submitMoment(); showComposeForm.set(false)"
           class="bg-gradient-to-r from-orange-400 to-yellow-400 text-slate-900 font-bold text-xs px-4 py-1.5 rounded-full shadow-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
+          [attr.aria-label]="'moments.postingBtn' | t"
         >
           {{ isCreating() ? ('moments.postingBtn' | t) : ('moments.postBtn' | t) }}
         </button>
@@ -138,17 +160,93 @@
 
   <main class="divide-y divide-surface-200 p-0">
     @if (momentsStore.isLoading()) {
-      <div class="p-8 text-center font-bold text-text-secondary">{{ 'moments.loading' | t }}</div>
+      <app-empty-state [title]="'moments.loading' | t" [customClass]="'py-16'"> </app-empty-state>
     }
 
     @if (!momentsStore.isLoading() && momentsStore.feed().length === 0) {
-      <div class="p-8 text-center">
-        <p class="font-bold text-text-primary text-lg">{{ 'moments.empty' | t }}</p>
-      </div>
+      <app-empty-state
+        [illustration]="'/assets/illustrations/no-moments.svg'"
+        [title]="'moments.noMomentsFound' | t"
+        [description]="'moments.noMomentsHint' | t"
+        [actionLabel]="'moments.createFirstBtn' | t"
+        (actionClicked)="showComposeForm.set(true)"
+        [customClass]="'py-16'"
+      >
+      </app-empty-state>
     }
 
+    <!-- Mute Word Filter: Collapsible panel -->
+    <div class="px-4 pt-3 border-b border-surface-200 bg-surface-400">
+      <button
+        (click)="showMutePanel.set(!showMutePanel())"
+        class="flex items-center gap-1.5 text-xs font-bold text-text-secondary hover:text-text-primary transition-colors"
+      >
+        <span>{{ 'moments.muteWord' | t }}</span>
+        @if (mutedWords().length > 0) {
+          <span
+            class="bg-purple-600 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center"
+            >{{ mutedWords().length }}</span
+          >
+        }
+        <span class="text-[10px] ms-1">{{ showMutePanel() ? '▲' : '▼' }}</span>
+      </button>
+
+      @if (isFilteringByMutedWords()) {
+        <div
+          class="flex items-center gap-1.5 mt-2 text-xs text-amber-400 bg-amber-500/10 rounded-xl px-3 py-1.5"
+        >
+          <span>⚠️</span>
+          <span>{{ 'moments.mutedByWordAlert' | t }}</span>
+        </div>
+      }
+
+      @if (showMutePanel()) {
+        <div class="mt-3 mb-1 bg-surface-300 rounded-2xl p-3">
+          <!-- Add form -->
+          <div class="flex gap-2 items-center">
+            <input
+              type="text"
+              [ngModel]="newMuteWord()"
+              (ngModelChange)="newMuteWord.set($event)"
+              (keyup.enter)="addMutedWord()"
+              [placeholder]="'moments.muteWordAddPlaceholder' | t"
+              class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none"
+            />
+            <button
+              (click)="addMutedWord()"
+              [disabled]="!newMuteWord().trim()"
+              class="bg-purple-600 text-white text-xs font-bold rounded-full px-4 py-2 disabled:opacity-50 transition-opacity"
+            >
+              {{ 'moments.muteWordAddBtn' | t }}
+            </button>
+          </div>
+          <!-- Active muted words list -->
+          @if (mutedWords().length > 0) {
+            <div class="flex flex-wrap gap-1.5 mt-3">
+              @for (word of mutedWords(); track word) {
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-surface-200 px-3 py-1 text-xs text-text-primary"
+                >
+                  {{ word }}
+                  <button
+                    (click)="removeMutedWord(word)"
+                    [attr.aria-label]="'moments.muteWordRemoveAria' | t: { word: word }"
+                    class="text-text-muted hover:text-red-400 font-bold text-[10px] ms-0.5"
+                  >
+                    ✕
+                  </button>
+                </span>
+              }
+            </div>
+          } @else {
+            <p class="text-[11px] text-text-muted mt-3 ps-1">{{ 'moments.muteWordEmpty' | t }}</p>
+          }
+        </div>
+      }
+    </div>
+
     <!-- Moments Feed List -->
-    @for (moment of momentsStore.feed().slice(0, visibleCount()); track moment.id) {
+    @for (moment of feedToDisplay().slice(0, visibleCount()); track moment.id) {
       <article
         class="p-4 bg-surface-500 hover:bg-surface-400/50 transition-colors"
         [class.bg-surface-400]="moment.is_pinned"
@@ -193,6 +291,7 @@
                 <button
                   (click)="momentsStore.togglePin(moment.id)"
                   class="text-xs text-text-muted hover:text-text-primary"
+                  [attr.aria-label]="'moments.unpinBtn' | t"
                 >
                   {{ moment.is_pinned ? ('moments.unpinBtn' | t) : ('moments.pinBtn' | t) }}
                 </button>
@@ -211,6 +310,7 @@
                   <button
                     (click)="toggleMomentExpansion(moment.id)"
                     class="text-xs font-bold text-purple-400 block mt-1"
+                    [attr.aria-label]="'moments.showLess' | t"
                   >
                     {{
                       expandedMomentIds().has(moment.id)
@@ -227,44 +327,75 @@
               <div class="mt-3">
                 @if (moment.media_type === 'images') {
                   <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    @for (url of moment.media_urls; track url) {
+                    @for (url of moment.media_urls; track url; let i = $index) {
                       <img
                         [src]="url"
-                        class="rounded-xl border border-surface-200 object-cover w-full h-32"
+                        class="rounded-xl border border-surface-200 object-cover w-full h-32 cursor-pointer hover:opacity-90 transition-opacity"
                         loading="lazy"
+                        (click)="openLightbox(moment.media_urls ?? [], i)"
+                        [alt]="'lightbox.imageAlt' | t: { current: i + 1, total: moment.media_urls?.length ?? 0 }"
                       />
                     }
                   </div>
                 }
                 @if (moment.media_type === 'audio') {
                   <div class="bg-surface-300 rounded-full py-1 px-3 inline-block">
-                    <audio [src]="moment.media_urls?.[0] ?? ''" controls class="h-8 w-[200px]"></audio>
+                    <audio
+                      [src]="moment.media_urls?.[0] ?? ''"
+                      controls
+                      class="h-8 w-[200px]"
+                    ></audio>
                   </div>
                 }
               </div>
             }
 
-            @if (moment.translatedText) {
+            @if (showTranslationMap()[moment.id] && translationCache()[moment.id]) {
               <div
                 class="mt-3 rounded-xl border border-purple-500/30 bg-purple-500/10 p-3 text-[14px] text-text-primary"
               >
-                {{ moment.translatedText }}
+                {{ translationCache()[moment.id] }}
               </div>
             }
 
             <!-- Action Bar -->
             <div class="flex items-center gap-5 mt-4 text-text-secondary text-xs flex-wrap">
+<<<<<<< HEAD
+              <div class="flex items-center gap-1.5">
+                <button
+                  (click)="momentsStore.toggleLike(moment.id)"
+                  class="transition-colors"
+                  [class.text-red-500]="moment.is_liked_by_me"
+                  [attr.aria-label]="moment.is_liked_by_me ? ('moments.unlikeBtn' | t) : ('moments.likeBtn' | t)"
+                >
+                  <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
+                </button>
+                <button
+                  (click)="openLikedBy(moment)"
+                  class="font-bold hover:text-text-primary transition-colors"
+                  [attr.aria-label]="'moments.likedBy' | t"
+                >{{ moment.likes_count || 0 }}</button>
+              </div>
+=======
               <button
                 (click)="momentsStore.toggleLike(moment.id)"
                 class="flex items-center gap-1.5 transition-colors"
                 [class.text-red-500]="moment.is_liked_by_me"
+                [attr.aria-label]="'moments.likeBtn' | t"
               >
                 <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
-                <span class="font-bold">{{ moment.likes_count || ('moments.likeBtn' | t) }}</span>
               </button>
+              <button
+                (click)="openLikedBy(moment)"
+                class="flex items-center gap-1.5 hover:text-text-primary transition-colors font-bold"
+              >
+                <span>{{ moment.likes_count || 0 }}</span>
+              </button>
+>>>>>>> origin/main
               <button
                 (click)="toggleComments(moment)"
                 class="flex items-center gap-1.5 hover:text-text-primary transition-colors"
+                [attr.aria-label]="'moments.commentBtn' | t"
               >
                 <span class="text-lg leading-none">💬</span>
                 <span class="font-bold">{{
@@ -279,21 +410,24 @@
                 <button
                   (click)="openGhostCorrection(moment)"
                   class="flex items-center gap-1.5 text-amber-400 hover:opacity-80 font-bold transition-opacity"
+                  [attr.aria-label]="'moments.correctBtn' | t"
                 >
                   <span>✏️</span> <span>{{ 'moments.correctBtn' | t }}</span>
                 </button>
                 <button
                   (click)="quoteTextToComment(moment, moment.text_content)"
                   class="flex items-center gap-1 hover:text-text-primary font-bold transition-colors"
+                  [attr.aria-label]="'moments.quoteBtn' | t"
                 >
                   <span>💬</span> <span>{{ 'moments.quoteBtn' | t }}</span>
                 </button>
                 <button
                   (click)="toggleInlineTranslation(moment)"
                   class="flex items-center gap-1 hover:text-purple-400 transition-colors ms-auto font-bold"
+                  [attr.aria-label]="'moments.hideTranslation' | t"
                 >
                   {{
-                    moment.translatedText
+                    showTranslationMap()[moment.id]
                       ? ('moments.hideTranslation' | t)
                       : ('moments.translate' | t)
                   }}
@@ -318,6 +452,7 @@
                           <button
                             (click)="openGhostCorrection(moment, comment.text_content)"
                             class="text-[10px] text-amber-400 font-bold hover:underline"
+                            [attr.aria-label]="'moments.correctBtn' | t"
                           >
                             ✏️ {{ 'moments.correctBtn' | t }}
                           </button>
@@ -325,6 +460,7 @@
                         <button
                           (click)="startReply(moment.id, comment)"
                           class="text-[10px] text-purple-400 font-bold hover:underline"
+                          [attr.aria-label]="'moments.replyBtn' | t"
                         >
                           {{ 'moments.replyBtn' | t }}
                         </button>
@@ -342,6 +478,29 @@
                         [corrected]="comment.correction_payload.corrected"
                         [explanation]="comment.correction_payload.explanation"
                       ></app-visual-diff>
+                      <!-- Correction quality voting -->
+                      <div class="flex items-center gap-3 mt-2">
+                        <button
+                          (click)="voteOnCorrection(moment.id, comment, 'up')"
+                          class="flex items-center gap-1 text-xs font-bold transition-colors"
+                          [class.text-green-400]="comment.userVote === 'up'"
+                          [class.text-text-muted]="comment.userVote !== 'up'"
+                          [attr.aria-label]="'moments.voteUp' | t"
+                        >
+                          <span class="text-base leading-none">👍</span>
+                          <span>{{ comment.upVotes ?? 0 }}</span>
+                        </button>
+                        <button
+                          (click)="voteOnCorrection(moment.id, comment, 'down')"
+                          class="flex items-center gap-1 text-xs font-bold transition-colors"
+                          [class.text-red-400]="comment.userVote === 'down'"
+                          [class.text-text-muted]="comment.userVote !== 'down'"
+                          [attr.aria-label]="'moments.voteDown' | t"
+                        >
+                          <span class="text-base leading-none">👎</span>
+                          <span>{{ comment.downVotes ?? 0 }}</span>
+                        </button>
+                      </div>
                     }
                   </div>
                 }
@@ -355,7 +514,7 @@
                     <button
                       (click)="cancelReply(moment.id)"
                       class="text-xs text-text-muted hover:text-white font-bold"
-                      aria-label="Cancel reply"
+                      [attr.aria-label]="'moments.cancelReply' | t"
                     >
                       ✕
                     </button>
@@ -363,20 +522,53 @@
                 }
 
                 <!-- Write Comment -->
-                <div class="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    [(ngModel)]="commentInputMap[moment.id]"
-                    (keyup.enter)="submitComment(moment)"
-                    [placeholder]="replyingToMap[moment.id] ? ('moments.commentReplyPlaceholder' | t) : ('moments.commentPlaceholder' | t)"
-                    class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none"
-                  />
-                  <button aria-label="Submit comment"
-                    (click)="submitComment(moment)"
-                    class="bg-purple-600 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"
-                  >
-                    ➤
-                  </button>
+                <div class="relative">
+                  @if ((mentionSuggestionsMap()[moment.id] ?? []).length > 0) {
+                    <ul
+                      id="comment-mention-listbox"
+                      role="listbox"
+                      [attr.aria-label]="'chatRoom.mentionListLabel' | t"
+                      class="absolute bottom-full start-0 mb-1 bg-surface-300 border border-surface-400 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto min-w-[180px]"
+                    >
+                      @for (member of mentionSuggestionsMap()[moment.id]; track member.id; let i = $index) {
+                        <li
+                          role="option"
+                          [id]="'comment-mention-option-' + moment.id + '-' + i"
+                          [attr.aria-selected]="i === (mentionActiveIndexMap()[moment.id] ?? 0)"
+                          [class.bg-surface-400]="i === (mentionActiveIndexMap()[moment.id] ?? 0)"
+                          (click)="selectMention(moment.id, member)"
+                          (mousedown)="$event.preventDefault()"
+                          class="px-3 py-2 text-xs text-text-primary cursor-pointer hover:bg-surface-400 flex items-center gap-2"
+                        >
+                          @if (member.avatar_url) {
+                            <img [src]="member.avatar_url" alt="" class="w-5 h-5 rounded-full object-cover" loading="eager" />
+                          }
+                          <span class="font-medium">&#64;{{ member.display_name }}</span>
+                        </li>
+                      }
+                    </ul>
+                  }
+                  <div class="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      [(ngModel)]="commentInputMap[moment.id]"
+                      (input)="onCommentInput($event, moment.id)"
+                      (keydown)="onCommentKeydown($event, moment)"
+                      [placeholder]="replyingToMap[moment.id] ? ('moments.commentReplyPlaceholder' | t) : ('moments.commentPlaceholder' | t)"
+                      class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none"
+                      [attr.aria-autocomplete]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'list' : null"
+                      [attr.aria-controls]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'comment-mention-listbox' : null"
+                      [attr.aria-expanded]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0"
+                      [attr.aria-activedescendant]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'comment-mention-option-' + moment.id + '-' + (mentionActiveIndexMap()[moment.id] ?? 0) : null"
+                      [attr.aria-label]="'text input'"
+                    />
+                    <button aria-label="Submit comment"
+                      (click)="submitComment(moment)"
+                      class="bg-purple-600 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"
+                    >
+                      ➤
+                    </button>
+                  </div>
                 </div>
               </div>
             }
@@ -402,5 +594,28 @@
       (cancelled)="activeCorrectionMomentId.set(null)"
     >
     </app-correction-modal>
+  }
+
+  <!-- Liked By Modal -->
+<<<<<<< HEAD
+  @if (activeLikedByMomentId()) {
+    <app-liked-by-modal
+      [momentId]="activeLikedByMomentId()!"
+=======
+  @if (activeLikedByMomentId(); as likedMomentId) {
+    <app-liked-by-modal
+      [momentId]="likedMomentId"
+>>>>>>> origin/main
+      (closeModal)="closeLikedBy()"
+    ></app-liked-by-modal>
+  }
+
+  <!-- Lightbox -->
+  @if (lightboxImages().length > 0) {
+    <app-lightbox
+      [images]="lightboxImages()"
+      [initialIndex]="lightboxInitialIndex()"
+      (closed)="closeLightbox()"
+    ></app-lightbox>
   }
 </div>

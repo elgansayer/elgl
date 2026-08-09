@@ -3,12 +3,17 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Patch,
   Post,
   Query,
+  Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -22,19 +27,21 @@ import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto'
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
+import { ForwardMessageDto } from './dto/forward-message.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
+<<<<<<< HEAD
+import { SendTypingDto } from './dto/send-typing.dto';
+=======
 import { UpdateMessageStatusDto } from './dto/update-message-status.dto';
+>>>>>>> origin/main
 import {
   ChatMessage,
   ChatRoomRecord,
   FavouriteRecord,
 } from './interfaces/chat-message.interface';
 import { ChatService } from './chat.service';
-import {
-  ReadReceiptsService,
-  MessageReceiptStatus,
-} from './read-receipts.service';
+import { CentrifugoService } from './centrifugo.service';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
 
@@ -43,7 +50,7 @@ import { TranslationService } from './translation.service';
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
-    private readonly readReceiptsService: ReadReceiptsService,
+    private readonly centrifugoService: CentrifugoService,
     private readonly conversationStarterService: ConversationStarterService,
     private readonly translationService: TranslationService,
   ) {}
@@ -52,15 +59,48 @@ export class ChatController {
   // signed Centrifugo connection token, the most auth-sensitive operation this
   // backend issues (actual login/signup is delegated entirely to Supabase Auth,
   // which is not part of this codebase and has its own rate limiting).
+  // Additionally enforces Redis-backed sliding-window WebSocket connection
+  // rate limiting (CENTRIFUGO_CONNECTION_RATE_LIMIT per window).
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('token')
   async getConnectionToken(
     @CurrentUser() user: User | null,
-  ): Promise<{ token: string } | null> {
-    if (!user) return null;
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (!user) {
+      res.status(HttpStatus.UNAUTHORIZED).json(null);
+      return;
+    }
+
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+      req.ip ??
+      undefined;
+
+    const result = await this.centrifugoService.checkConnectionRateLimit(
+      user.id,
+      clientIp,
+    );
+
+    if (!result.allowed) {
+      const retryAfterSec = Math.ceil(result.retryAfterMs / 1000);
+      res
+        .status(HttpStatus.TOO_MANY_REQUESTS)
+        .header('Retry-After', String(retryAfterSec))
+        .json({
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message:
+            'Too many WebSocket connection attempts. Please wait before reconnecting.',
+          error: 'Too Many Requests',
+          retryAfterSec,
+        });
+      return;
+    }
+
     const token =
       (await this.chatService.generateConnectionToken?.(user.id)) ?? '';
-    return { token };
+    res.json({ token });
   }
 
   @Post('messages')
@@ -80,6 +120,23 @@ export class ChatController {
   ): Promise<ChatMessage | null> {
     if (!user) return null;
     return await this.chatService.shareContact(user.id, dto);
+  }
+
+  @Get('search')
+  async searchMessages(
+    @CurrentUser() user: User | null,
+    @Query('term') term?: string,
+    @Query('limit') limit?: string,
+    @Query('roomId') roomId?: string,
+  ): Promise<ChatMessage[]> {
+    if (!user) return [];
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    return await this.chatService.searchAllMessages(
+      user.id,
+      term ?? '',
+      limitNum,
+      roomId,
+    );
   }
 
   @Get('rooms')
@@ -272,6 +329,20 @@ export class ChatController {
     return { success: true };
   }
 
+  @Post('messages/:messageId/forward')
+  async forwardMessage(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: ForwardMessageDto,
+  ): Promise<ChatMessage[]> {
+    if (!user) return [];
+    return await this.chatService.forwardMessage(
+      user.id,
+      messageId,
+      dto.room_ids,
+    );
+  }
+
   @Delete('messages/:messageId')
   async deleteMessage(
     @CurrentUser() user: User | null,
@@ -407,35 +478,14 @@ export class ChatController {
     return { wallpaperUrl };
   }
 
-  // -- Read Receipt endpoints --
-
-  @Post('messages/:messageId/read')
-  async markAsRead(
+  @Post('typing')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async sendTyping(
     @CurrentUser() user: User | null,
-    @Param('messageId') messageId: string,
-    @Body() dto: { roomId: string },
+    @Body() dto: SendTypingDto,
   ): Promise<{ success: boolean } | null> {
     if (!user) return null;
-    await this.readReceiptsService.markAsRead(messageId, dto.roomId, user.id);
+    await this.chatService.sendTyping(user.id, dto);
     return { success: true };
-  }
-
-  @Post('rooms/:roomId/read-all')
-  async markAllAsRead(
-    @CurrentUser() user: User | null,
-    @Param('roomId') roomId: string,
-  ): Promise<{ success: boolean } | null> {
-    if (!user) return null;
-    await this.readReceiptsService.markAllAsRead(roomId, user.id);
-    return { success: true };
-  }
-
-  @Get('messages/:messageId/receipts')
-  async getMessageReceipts(
-    @CurrentUser() user: User | null,
-    @Param('messageId') messageId: string,
-  ): Promise<MessageReceiptStatus | null> {
-    if (!user) return null;
-    return this.readReceiptsService.getReceiptStatus(messageId);
   }
 }

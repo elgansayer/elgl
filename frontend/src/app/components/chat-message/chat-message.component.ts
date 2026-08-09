@@ -3,18 +3,24 @@ import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
 import { LongPressContextMenuComponent } from '../long-press-context-menu/long-press-context-menu.component';
-import { ReadReceiptComponent } from '../read-receipt/read-receipt.component';
 import { FavouriteService } from '../../services/favourite.service';
 import { SafetyService } from '../../services/safety.service';
 import { ConfirmService } from '../../services/confirm.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
+import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, LongPressContextMenuComponent, ReadReceiptComponent, TranslatePipe, CulturalTipComponent],
+  imports: [
+    CommonModule,
+    LongPressContextMenuComponent,
+    TranslatePipe,
+    CulturalTipComponent,
+    LinkPreviewCardComponent,
+  ],
   template: `
     @if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
@@ -26,9 +32,11 @@ import { environment } from '../../../environments/environment';
         [messageType]="message().message_type"
         [senderId]="message().sender_id"
         [roomId]="message().room_id"
+        [isBlocked]="isBlocked()"
         (copyMessage)="onCopy($event)"
         (favourite)="onFavourite($event)"
         (report)="onReport($event)"
+        (block)="onBlockToggle($event)"
       >
         <div
           class="flex"
@@ -51,6 +59,11 @@ import { environment } from '../../../environments/environment';
               [class.chat-bubble-tail--received]="!isOwnMessage()"
               aria-hidden="true"
             ></span>
+            @if (message().is_forwarded) {
+              <p class="text-xs mb-1 text-gray-400 italic font-medium">
+                {{ 'chatRoom.forwarded' | t }}
+              </p>
+            }
             @if (message().message_type === 'text') {
               <p class="text-sm">
                 @for (segment of textSegments(); track $index) {
@@ -61,6 +74,15 @@ import { environment } from '../../../environments/environment';
                   }
                 }
               </p>
+              @if (message().link_preview; as lp) {
+                <app-link-preview-card
+                  [url]="lp.url"
+                  [title]="lp.title"
+                  [description]="lp.description"
+                  [image]="lp.image"
+                  [siteName]="lp.siteName"
+                ></app-link-preview-card>
+              }
               <button
                 (click)="simplifyText()"
                 class="text-xs text-blue-400 ms-2 mt-1"
@@ -85,7 +107,11 @@ import { environment } from '../../../environments/environment';
 
             @if (message().message_type === 'voice') {
               <div class="flex items-center gap-2">
-                <button aria-label="Play voice message" (click)="playVoice()" class="p-2 rounded-full hover:bg-black/10">
+                <button
+                  aria-label="Play voice message"
+                  (click)="playVoice()"
+                  class="p-2 rounded-full hover:bg-black/10"
+                >
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
@@ -128,17 +154,90 @@ import { environment } from '../../../environments/environment';
               />
             }
 
-            <div class="flex items-center justify-end gap-1 mt-1">
-              @if (isOwnMessage()) {
-                <app-read-receipt
-                  [messageId]="message().id"
-                  [deliveryStatus]="message().delivery_status ?? undefined"
-                />
+            <p class="text-xs mt-1 opacity-60 text-end flex items-center justify-end gap-1">
+              {{ message().created_at | date: 'shortTime' }}
+              @if (isOwnMessage() && (message().delivery_status || message().is_read)) {
+                <span class="inline-flex items-center">
+                  @if (
+                    message().delivery_status === 'sent' ||
+                    (!message().delivery_status && message().is_read)
+                  ) {
+                    <!-- Single check: sent -->
+                    <svg
+                      class="w-3.5 h-3.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  }
+                  @if (message().delivery_status === 'delivered') {
+                    <!-- Double check: delivered (gray) -->
+                    <svg
+                      class="w-3.5 h-3.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <svg
+                      class="w-3.5 h-3.5 -ms-2 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  }
+                  @if (message().delivery_status === 'read') {
+                    <!-- Double check: read (blue) -->
+                    <svg
+                      class="w-3.5 h-3.5 text-blue-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <svg
+                      class="w-3.5 h-3.5 -ms-2 text-blue-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  }
+                </span>
               }
-              <span class="text-xs opacity-60">
-                {{ message().created_at | date: 'shortTime' }}
-              </span>
-            </div>
+            </p>
           </div>
         </div>
       </app-long-press-context-menu>
@@ -227,7 +326,12 @@ export class ChatMessageComponent {
 
     effect(() => {
       const msg = this.message();
-      if (msg.message_type === 'voice' && msg.media_url && !this.voiceTranscribing() && !this.voiceTranscription()) {
+      if (
+        msg.message_type === 'voice' &&
+        msg.media_url &&
+        !this.voiceTranscribing() &&
+        !this.voiceTranscription()
+      ) {
         void this.fetchTranscription(msg.media_url);
       }
     });
@@ -298,6 +402,18 @@ export class ChatMessageComponent {
 
   onFavourite(event: { messageId: string; content: string; messageType: string }): void {
     this.favouriteService.addFavourite({ message_id: event.messageId }).catch(() => {});
+  }
+
+  onBlockToggle(event: { senderId: string; blocked: boolean }): void {
+    if (event.blocked) {
+      this.safetyService.blockUser(event.senderId).catch(console.error);
+    } else {
+      this.safetyService.unblockUser(event.senderId).catch(console.error);
+    }
+    this.isBlocked.set(event.blocked);
+    if (event.blocked) {
+      this.messageBlocked.emit(event.senderId);
+    }
   }
 
   async onReport(event: { messageId: string; senderId: string }): Promise<void> {

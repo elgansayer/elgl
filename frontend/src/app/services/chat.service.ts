@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
+import { ChatCacheService } from './chat-cache.service';
 import { Router } from '@angular/router';
 
 export interface CorrectionPayload {
@@ -14,18 +15,12 @@ export interface CorrectionPayload {
   explanation?: string;
 }
 
-export interface ReadReceiptUser {
-  userId: string;
-  displayName: string;
-  avatarUrl?: string | null;
-  readAt: string;
-}
-
-export interface MessageReceiptStatus {
-  messageId: string;
-  deliveryStatus: 'sent' | 'delivered' | 'read';
-  readBy: ReadReceiptUser[];
-  totalMembers: number;
+export interface LinkPreview {
+  url: string;
+  title: string;
+  description: string;
+  image: string;
+  siteName: string;
 }
 
 export interface ChatMessage {
@@ -54,12 +49,15 @@ export interface ChatMessage {
     [param: string]: unknown;
   };
   is_read: boolean;
+  delivery_status?: 'sent' | 'delivered' | 'read';
   created_at: string;
   sender?: {
     id: string;
     display_name?: string;
     avatar_url?: string | null;
   };
+  /** OpenGraph link preview scraped from URLs in the message */
+  link_preview?: LinkPreview | null;
   /** ID of the parent message this replies to (threaded replies) */
   reply_to_id?: string;
   /** Preview of the parent message for inline display */
@@ -85,8 +83,8 @@ export interface ChatMessage {
   /** True when the message has been soft‑deleted for all users */
   is_deleted?: boolean;
 
-  /** Delivery status for read receipts */
-  delivery_status?: 'sent' | 'delivered' | 'read';
+  /** Whether this message was forwarded from another conversation */
+  is_forwarded?: boolean;
 }
 
 export interface FavouriteRecord {
@@ -119,6 +117,9 @@ export interface GroupMember {
     id: string;
     display_name?: string;
     avatar_url?: string | null;
+    native_language?: string | null;
+    target_languages?: string[] | null;
+    is_vip?: boolean | null;
   };
 }
 
@@ -177,12 +178,16 @@ export class ChatService {
   private safetyService = inject(SafetyService);
   private offlineQueue = inject(OfflineQueueService);
   private hapticFeedback = inject(HapticFeedbackService);
+  private chatCache = inject(ChatCacheService);
   private router = inject(Router);
   private baseUrl = `${environment.apiUrl}/chat`;
 
   // Blocked user list is loaded on demand, never in the constructor,
   // to avoid premature HTTP calls that break test environments.
   private readonly blockedUsers = signal<Set<string>>(new Set<string>());
+
+  /** Exposed for UI: count of messages queued offline waiting for sync. */
+  readonly queuedCount = this.offlineQueue.queueSize;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -245,26 +250,9 @@ export class ChatService {
       status_text: string;
     };
   }): Promise<ChatMessage> {
-    // Check if the receiver is blocked before sending
     const currentUser = this.authService.currentUser();
-    if (currentUser?.id) {
-      // Get room members to find the receiver
-      const roomMembers = await firstValueFrom(
-        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, {
-          headers: this.getHeaders(),
-        }),
-      ).catch(() => []);
-      if (roomMembers && roomMembers.length > 0) {
-        const receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
-        if (receiverId) {
-          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
-          if (blockedIds.includes(receiverId)) {
-            throw new Error('You cannot send messages to this user.');
-          }
-        }
-      }
-    }
 
+    // Offline: queue the message in IndexedDB and return immediately.
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       const queuedMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -285,16 +273,43 @@ export class ChatService {
       return queuedMsg;
     }
 
+    // Check if the receiver is blocked before sending
+    if (currentUser?.id) {
+      // Get room members to find the receiver
+      const roomMembers = await firstValueFrom(
+        this.http.get<{ user_id: string }[]>(`${this.baseUrl}/rooms/${payload.room_id}/members`, {
+          headers: this.getHeaders(),
+        }),
+      ).catch(() => []);
+      if (roomMembers && roomMembers.length > 0) {
+        const receiverId = roomMembers.find((m) => m.user_id !== currentUser.id)?.user_id;
+        if (receiverId) {
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+          if (blockedIds.includes(receiverId)) {
+            throw new Error('You cannot send messages to this user.');
+          }
+        }
+      }
+    }
+
     const message = await firstValueFrom(
       this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
         headers: this.getHeaders(),
       }),
     );
     this.hapticFeedback.tap();
+    // Append the new message to the room's cached messages so the cache stays warm
+    void this.chatCache.appendCachedMessage(payload.room_id, message);
     return message;
   }
 
-  private async syncOfflineMessages(): Promise<void> {
+  /** Attempt to sync all offline queued messages. Individual failures do not block the rest. */
+  async syncOfflineMessages(): Promise<{ sent: number; failed: number }> {
+    let sent = 0;
+    let failed = 0;
+    const token = this.authService.getAccessToken();
+    if (!token) return { sent, failed };
+
     try {
       const messages = await this.offlineQueue.getQueuedMessages();
       for (const msg of messages) {
@@ -309,25 +324,50 @@ export class ChatService {
           status_reply_payload: msg.status_reply_payload,
         };
 
-        await firstValueFrom(
-          this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
-            headers: this.getHeaders(),
-          }),
-        );
-        await this.offlineQueue.removeMessage(msg.id);
+        try {
+          await firstValueFrom(
+            this.http.post<ChatMessage>(`${this.baseUrl}/messages`, payload, {
+              headers: this.getHeaders(),
+            }),
+          );
+          await this.offlineQueue.removeMessage(msg.id);
+          sent++;
+        } catch {
+          failed++;
+        }
       }
     } catch (error) {
       console.error('Failed to sync offline messages:', error);
     }
+    return { sent, failed };
   }
 
   async getMessages(roomId: string, search?: string): Promise<ChatMessage[]> {
     if (!this.authService.getAccessToken()) {
       return [];
     }
+
+    const hasSearch = search && search.trim().length > 0;
+
+    // Try cache first for normal (non-search) loads
+    if (!hasSearch) {
+      const cached = await this.chatCache.getCachedMessages(roomId);
+      if (cached) {
+        // Still filter blocked users from cached results
+        const currentUser = this.authService.currentUser();
+        if (currentUser?.id) {
+          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(currentUser.id);
+          if (blockedIds.length > 0) {
+            return cached.filter((msg) => !blockedIds.includes(msg.sender_id));
+          }
+        }
+        return cached;
+      }
+    }
+
     let params = new HttpParams();
-    if (search && search.trim().length > 0) {
-      params = params.set('search', search.trim());
+    if (hasSearch) {
+      params = params.set('search', search!.trim());
     }
 
     const messages = await firstValueFrom(
@@ -336,6 +376,11 @@ export class ChatService {
         params,
       }),
     );
+
+    // Cache the result for non-search loads
+    if (!hasSearch) {
+      void this.chatCache.cacheMessages(roomId, messages);
+    }
 
     // Filter out messages from blocked users
     const currentUser = this.authService.currentUser();
@@ -353,9 +398,19 @@ export class ChatService {
     if (!this.authService.getAccessToken()) {
       return [];
     }
+
+    // Try cache first
+    const cached = await this.chatCache.getCachedRooms();
+    if (cached) {
+      return cached;
+    }
+
     const rooms = await firstValueFrom(
       this.http.get<ChatRoom[]>(`${this.baseUrl}/rooms`, { headers: this.getHeaders() }),
     );
+
+    // Cache the result
+    void this.chatCache.cacheRooms(rooms);
 
     // Filter out rooms where the other participant is blocked
     const currentUser = this.authService.currentUser();
@@ -428,6 +483,7 @@ export class ChatService {
       body: JSON.stringify({ message_id: messageId, note_text: noteText }),
     });
     if (!response.ok) throw new Error('Failed to add favourite');
+    void this.chatCache.invalidateFavourites();
   }
 
   async reportMessage(messageId: string, reason: string): Promise<void> {
@@ -446,15 +502,46 @@ export class ChatService {
     if (!response.ok) throw new Error('Failed to report message');
   }
 
+  /**
+   * Search messages across all conversations (or within a specific room).
+   * Calls GET /chat/search?term=...&roomId=...&limit=...
+   */
+  async searchMessages(term: string, roomId?: string, limit = 50): Promise<ChatMessage[]> {
+    if (!this.authService.getAccessToken()) {
+      return [];
+    }
+    let params = new HttpParams().set('term', term.trim()).set('limit', String(limit));
+    if (roomId) {
+      params = params.set('roomId', roomId);
+    }
+    return firstValueFrom(
+      this.http.get<ChatMessage[]>(`${this.baseUrl}/search`, {
+        headers: this.getHeaders(),
+        params,
+      }),
+    );
+  }
+
   async getFavourites(): Promise<FavouriteRecord[]> {
     if (!this.authService.getAccessToken()) {
       return [];
     }
-    return firstValueFrom(
+
+    // Try cache first
+    const cached = await this.chatCache.getCachedFavourites();
+    if (cached) {
+      return cached;
+    }
+
+    const favourites = await firstValueFrom(
       this.http.get<FavouriteRecord[]>(`${this.baseUrl}/favourites`, {
         headers: this.getHeaders(),
       }),
     );
+
+    // Cache the result
+    void this.chatCache.cacheFavourites(favourites);
+    return favourites;
   }
 
   async removeFavourite(favouriteId: string): Promise<void> {
@@ -463,6 +550,7 @@ export class ChatService {
         headers: this.getHeaders(),
       }),
     );
+    void this.chatCache.invalidateFavourites();
   }
 
   async loadBlockedUsers(): Promise<void> {
@@ -527,13 +615,15 @@ export class ChatService {
   }
 
   async createGroup(name: string, memberIds: string[]): Promise<ChatRoom> {
-    return firstValueFrom(
+    const room = await firstValueFrom(
       this.http.post<ChatRoom>(
         `${this.baseUrl}/groups`,
         { name, memberIds },
         { headers: this.getHeaders() },
       ),
     );
+    void this.chatCache.invalidateRooms();
+    return room;
   }
 
   async renameGroup(roomId: string, name: string): Promise<void> {
@@ -544,6 +634,7 @@ export class ChatService {
         { headers: this.getHeaders() },
       ),
     );
+    void this.chatCache.invalidateRooms();
   }
 
   async addGroupMembers(roomId: string, memberIds: string[]): Promise<void> {
@@ -713,6 +804,23 @@ export class ChatService {
     return response.wallpaperUrl;
   }
 
+  async sendTypingIndicator(roomId: string, isTyping: boolean): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.post(
+          `${this.baseUrl}/typing`,
+          {
+            room_id: roomId,
+            is_typing: isTyping ? 'true' : 'false',
+          },
+          { headers: this.getHeaders() },
+        ),
+      );
+    } catch {
+      // Silently ignore typing indicator errors -- not critical
+    }
+  }
+
   async deleteMessage(messageId: string, scope: 'self' | 'everyone' = 'self'): Promise<void> {
     await firstValueFrom(
       this.http.delete(`${this.baseUrl}/messages/${messageId}`, {
@@ -739,32 +847,15 @@ export class ChatService {
     );
   }
 
-  // -- Read Receipts --
-
-  async markAsRead(messageId: string, roomId: string): Promise<void> {
+  /**
+   * Updates the delivery status of a message (delivered / read).
+   * Called by the recipient of a message.
+   */
+  async markMessageStatus(messageId: string, status: 'delivered' | 'read'): Promise<void> {
     await firstValueFrom(
-      this.http.post(
-        `${this.baseUrl}/messages/${messageId}/read`,
-        { roomId },
-        { headers: this.getHeaders() },
-      ),
-    );
-  }
-
-  async markAllAsRead(roomId: string): Promise<void> {
-    await firstValueFrom(
-      this.http.post(
-        `${this.baseUrl}/rooms/${roomId}/read-all`,
-        {},
-        { headers: this.getHeaders() },
-      ),
-    );
-  }
-
-  async getMessageReceipts(messageId: string): Promise<MessageReceiptStatus> {
-    return firstValueFrom(
-      this.http.get<MessageReceiptStatus>(
-        `${this.baseUrl}/messages/${messageId}/receipts`,
+      this.http.patch(
+        `${this.baseUrl}/messages/${messageId}/status`,
+        { status },
         { headers: this.getHeaders() },
       ),
     );

@@ -19,6 +19,15 @@ import { UsersService } from '../users/users.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
+import { ChatLlmService } from '../chat/chat-llm.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
+import {
+  CACHE_TAG_AUDIO_ROOMS,
+  CACHE_TAG_AUDIO_ROOM_STAGE,
+  CACHE_TAG_AUDIO_ROOM_POLLS,
+  CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+  CACHE_TAG_AUDIO_ROOM_NOTES,
+} from '../common/cache.interceptor';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { SubmitVoteDto } from './dto/submit-vote.dto';
 import { PlaySoundDto } from './dto/play-sound.dto';
@@ -119,6 +128,8 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly transcriptEgress: TranscriptEgressService,
     private readonly nlpService: NlpService,
     private readonly r2Service: R2Service,
+    private readonly chatLlmService: ChatLlmService,
+    private readonly cloudflareCache: CloudflareCacheService,
   ) {
     this.livekitUrl =
       this.configService.get<string>('LIVEKIT_URL') ||
@@ -173,12 +184,35 @@ export class AudioRoomsService implements OnModuleInit {
       .update({ recording_url: r2RecordingUrl, is_active: false })
       .eq('id', room.id);
 
+    // Generate transcript from audio recording for session summary
+    const transcriptText =
+      await this.transcriptEgress.generateTranscriptFromAudioUrl(
+        r2RecordingUrl,
+      );
+
+    // Generate AI-powered session summary
+    const sessionSummary = await this.generateAiSessionSummary(transcriptText);
+
+    if (sessionSummary.summary || sessionSummary.vocabulary.length > 0) {
+      await supabase.from('audio_room_transcripts').upsert(
+        {
+          room_id: room.id,
+          recording_url: r2RecordingUrl,
+          transcript_text: transcriptText,
+          session_summary: sessionSummary.summary,
+          vocabulary_list: sessionSummary.vocabulary,
+        },
+        { onConflict: 'room_id' },
+      );
+    }
+
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'room_archived',
       room_id: room.id,
       recording_url: r2RecordingUrl,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -333,6 +367,7 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const profile = await this.usersService.getProfile(hostId);
+    this.invalidateAudioRoomCache();
     return {
       ...row,
       host: {
@@ -420,6 +455,7 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const profile = await this.usersService.getProfile(hostId);
+    this.invalidateAudioRoomCache();
     return {
       ...row,
       host: {
@@ -466,6 +502,7 @@ export class AudioRoomsService implements OnModuleInit {
       this.logger.warn('Failed to set private fields', error);
     }
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -530,6 +567,10 @@ export class AudioRoomsService implements OnModuleInit {
         .eq('id', room.id);
     }
 
+    this.invalidateAudioRoomCache([
+      CACHE_TAG_AUDIO_ROOMS,
+      CACHE_TAG_AUDIO_ROOM_STAGE,
+    ]);
     return {
       token: jwtToken,
       room_id: room.id,
@@ -691,6 +732,7 @@ export class AudioRoomsService implements OnModuleInit {
       speaker_order: speakerOrder,
       room_id: roomId,
     });
+    this.invalidateAudioRoomCache();
     return this.getRoom(roomId);
   }
 
@@ -712,6 +754,7 @@ export class AudioRoomsService implements OnModuleInit {
       type: 'stage_cleared',
       room_id: roomId,
     });
+    this.invalidateAudioRoomCache();
     return this.getRoom(roomId);
   }
 
@@ -726,6 +769,7 @@ export class AudioRoomsService implements OnModuleInit {
     const room = response.data as AudioRoomRow;
 
     if (room.raised_hands.includes(userId) || room.speakers.includes(userId)) {
+      this.invalidateAudioRoomCache();
       return this.getRoom(dto.room_id);
     }
 
@@ -742,6 +786,7 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -783,6 +828,7 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -810,6 +856,7 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -850,6 +897,7 @@ export class AudioRoomsService implements OnModuleInit {
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -900,24 +948,17 @@ export class AudioRoomsService implements OnModuleInit {
       })
       .eq('id', room.id);
 
-    if (previousCoHostId) {
-      // Awaited so the outgoing co-host's removal is guaranteed to arrive before the
-      // incoming co-host's invite, preventing the invite from being clobbered by a
-      // late-arriving removal for a different user.
-      await this.centrifugoService.publish(`room_${room.id}`, {
-        type: 'co_host_removed',
-        target_user_id: previousCoHostId,
-        room_id: room.id,
-      });
-    }
-
-    // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
+    // Publish a single atomic co_host_changed event to prevent out-of-order delivery
+    // of separate co_host_removed / co_host_invited Centrifugo messages.
+    // The frontend resolves the full transition from a single payload.
     await this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'co_host_invited',
+      type: 'co_host_changed',
       target_user_id: dto.target_user_id,
+      previous_co_host_id: previousCoHostId,
       room_id: room.id,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -948,13 +989,14 @@ export class AudioRoomsService implements OnModuleInit {
 
     if (removedUserId) {
       // Notify the removed co-host via Centrifugo to unpublish camera and leave the split-screen layout
-      void this.centrifugoService.publish(`room_${room.id}`, {
+      await this.centrifugoService.publish(`room_${room.id}`, {
         type: 'co_host_removed',
         target_user_id: removedUserId,
         room_id: room.id,
       });
     }
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -965,6 +1007,7 @@ export class AudioRoomsService implements OnModuleInit {
     const supabase = this.supabaseService.getClient();
     const profile = await this.usersService.getProfile(userId);
     const speakerName = profile?.display_name ?? 'Speaker';
+    const sanitisedContent = (dto.text_content ?? '').slice(0, 500);
 
     const response = await supabase
       .from('audio_room_captions')
@@ -972,7 +1015,7 @@ export class AudioRoomsService implements OnModuleInit {
         room_id: dto.room_id,
         speaker_id: userId,
         speaker_name: speakerName,
-        text_content: dto.text_content,
+        text_content: sanitisedContent,
       })
       .select()
       .single();
@@ -991,6 +1034,7 @@ export class AudioRoomsService implements OnModuleInit {
       caption,
     });
 
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_TRANSCRIPT]);
     return caption;
   }
 
@@ -1071,7 +1115,11 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const sessionSummary = transcriptText
-      ? this.nlpService.generateSessionSummary(transcriptText)
+<<<<<<< HEAD
+      ? await this.nlpService.generateSessionSummary(transcriptText)
+=======
+      ? await this.generateAiSessionSummary(transcriptText)
+>>>>>>> origin/main
       : { summary: 'No transcript available.', vocabulary: [] };
 
     await supabase
@@ -1097,6 +1145,7 @@ export class AudioRoomsService implements OnModuleInit {
       recording_url: recordingUrl,
     });
 
+    this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
   }
 
@@ -1179,14 +1228,16 @@ export class AudioRoomsService implements OnModuleInit {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('audio_rooms')
-      .select('host_id')
+      .select('host_id, is_private')
       .eq('is_active', true);
     if (error || !data) {
       this.logger.warn('Could not fetch active host IDs', error);
       return [];
     }
-    const rows = data as Array<{ host_id: string }>;
-    return [...new Set(rows.map((r) => r.host_id))];
+    const rows = data as Array<{ host_id: string; is_private?: boolean }>;
+    // Only return hosts of public active rooms
+    const publicHosts = rows.filter((r) => !r.is_private).map((r) => r.host_id);
+    return [...new Set(publicHosts)];
   }
 
   /**
@@ -1248,6 +1299,7 @@ export class AudioRoomsService implements OnModuleInit {
       question: dto.question,
       options: dto.options,
     });
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_POLLS]);
     return { poll_id: data.id };
   }
 
@@ -1280,6 +1332,8 @@ export class AudioRoomsService implements OnModuleInit {
       poll_id: dto.pollId,
       option_index: dto.optionIndex,
     });
+
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_POLLS]);
   }
 
   async getPollResults(
@@ -1360,16 +1414,18 @@ export class AudioRoomsService implements OnModuleInit {
       note: noteRow,
     });
 
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_NOTES]);
     return noteRow;
   }
 
-  async getNotes(roomId: string): Promise<VoiceRoomNote[]> {
+  async getNotes(roomId: string, limit = 50): Promise<VoiceRoomNote[]> {
     const supabase = this.supabaseService.getClient();
     const response = await supabase
       .from('audio_room_notes')
       .select('*')
       .eq('room_id', roomId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(limit);
     if (response.error) {
       throw new Error(`Failed to fetch notes: ${response.error.message}`);
     }
@@ -1405,6 +1461,8 @@ export class AudioRoomsService implements OnModuleInit {
       note_id: noteId,
       room_id: room.id,
     });
+
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_NOTES]);
   }
 
   /**
@@ -1478,6 +1536,7 @@ export class AudioRoomsService implements OnModuleInit {
       timestamp: new Date().toISOString(),
     };
     await this.centrifugoService.publish(`room_${room.id}`, reactionPayload);
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_STAGE]);
     return { emojiId: dto.emojiId, animationUrl: emoji.animationUrl };
   }
 
@@ -1693,19 +1752,113 @@ export class AudioRoomsService implements OnModuleInit {
 
     const tipRow = tipResponse.data as { id: string };
 
+    const senderUser = senderResponse.data as {
+      display_name?: string | null;
+    } | null;
+    const senderName = senderUser?.display_name || 'Someone';
+
     void this.centrifugoService.publish(`room_${room.id}`, {
       type: 'host_tip',
       tip: {
+        tip_id: tipRow.id,
         amount_coins: amount,
         sender_user_id: userId,
+        sender_name: senderName,
+        receiver_user_id: room.host_id,
       },
     });
 
+    this.invalidateAudioRoomCache([CACHE_TAG_AUDIO_ROOM_STAGE]);
     return {
       tip_id: tipRow.id,
       amount_coins: amount,
       receiver_id: room.host_id,
       receiver_new_balance: newReceiverBalance,
     };
+  }
+
+  /**
+   * Generates an AI-powered session summary listing key topics and vocabulary discussed.
+   * Uses the configured LLM for intelligent summarisation, falling back to the NLP
+   * heuristic if the LLM is unavailable.
+   */
+  private async generateAiSessionSummary(
+    transcriptText: string | null,
+  ): Promise<{ summary: string; vocabulary: string[] }> {
+    if (!transcriptText || transcriptText.trim().length === 0) {
+      return { summary: '', vocabulary: [] };
+    }
+
+    const prompt = `Please analyse the following transcript of a language exchange audio room session. 
+
+Provide a concise summary of the key topics discussed (2-4 bullet points) and a list of 5-10 key vocabulary words or phrases that were important in the conversation. 
+
+Format your response as a JSON object with exactly two fields:
+- "summary": a string containing bullet-point topics separated by newlines
+- "vocabulary": an array of strings, each being a key word or phrase
+
+Transcript:
+${transcriptText.substring(0, 4000)}`;
+
+    try {
+      const llmResponse = await this.chatLlmService.chatCompletion(
+        [
+          {
+            role: 'system',
+            content:
+              'You are a language learning assistant. Analyse conversation transcripts and extract key topics and vocabulary into the requested JSON format. Respond ONLY with valid JSON.',
+          },
+          { role: 'user', content: prompt },
+        ],
+        { temperature: 0.3, maxTokens: 1024 },
+      );
+
+      // Try to parse JSON from LLM response
+      const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as {
+          summary?: string;
+          vocabulary?: string[];
+        };
+        return {
+          summary: parsed.summary ?? '',
+          vocabulary: Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [],
+        };
+      }
+    } catch (error) {
+      this.logger.warn(
+        'AI session summary generation failed, falling back to NLP heuristic',
+        error,
+      );
+    }
+
+    // Fallback to NLP heuristic
+    return this.nlpService.generateSessionSummary(transcriptText);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cloudflare edge cache invalidation helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Fire-and-forget invalidation of Cloudflare edge caches for audio room data.
+   *
+   * Called after every mutation that changes room state (create, archive, stage
+   * changes, polls, notes, transcript generation, etc.).  The invalidation is
+   * best-effort -- Cloudflare edge TTLs are short enough that the stale window
+   * is bounded even if the purge API call fails.
+   *
+   * @param tags -- specific Cache-Tag values to purge (e.g. ['audio-rooms', 'audio-rooms:stage'])
+   */
+  private invalidateAudioRoomCache(
+    tags: string[] = [
+      CACHE_TAG_AUDIO_ROOMS,
+      CACHE_TAG_AUDIO_ROOM_STAGE,
+      CACHE_TAG_AUDIO_ROOM_POLLS,
+      CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+      CACHE_TAG_AUDIO_ROOM_NOTES,
+    ],
+  ): void {
+    void this.cloudflareCache.purgeByCacheTags(tags);
   }
 }
