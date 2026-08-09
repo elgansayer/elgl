@@ -70,6 +70,8 @@ export class VipSubscriptionComponent {
         return '🌟';
       case 'consumer_8_ukp_10_usd':
         return '👑';
+      case 'pro_12_ukp_15_usd':
+        return '💎';
       case 'developer_20_ukp_26_usd':
         return '⚡';
       default:
@@ -78,20 +80,25 @@ export class VipSubscriptionComponent {
   }
 
   getFeatureCategories(): Array<{ name: string; getValue: (plan: SubscriptionPlan) => boolean }> {
+    const isVip = (p: SubscriptionPlan): boolean => p.id !== 'free';
+    const isPro = (p: SubscriptionPlan): boolean => p.id === 'pro_12_ukp_15_usd';
+    const isDeveloper = (p: SubscriptionPlan): boolean => p.id === 'developer_20_ukp_26_usd';
     return [
       { name: 'Target Languages', getValue: (p) => p.id !== 'free' || true },
-      { name: 'AI Translations', getValue: (p) => p.id !== 'free' },
-      { name: 'Voice & Video Messages', getValue: (p) => p.id !== 'free' },
+      { name: 'AI Translations (Unlimited)', getValue: isVip },
+      { name: 'Voice & Video Messages', getValue: isVip },
       {
         name: 'Location Spoofing',
-        getValue: (p) => p.id === 'consumer_8_ukp_10_usd' || p.id === 'developer_20_ukp_26_usd',
+        getValue: isVip,
       },
-      { name: 'Priority Search', getValue: (p) => p.id !== 'free' },
-      { name: 'Profile Views', getValue: (p) => p.id !== 'free' },
-      { name: 'Ad-Free', getValue: (p) => p.id !== 'free' },
-      { name: 'API Access', getValue: (p) => p.id === 'developer_20_ukp_26_usd' },
-      { name: 'Developer Analytics', getValue: (p) => p.id === 'developer_20_ukp_26_usd' },
-      { name: 'Diagnostic Logs', getValue: (p) => p.id === 'developer_20_ukp_26_usd' },
+      { name: 'Advanced Visitor Logs', getValue: isPro },
+      { name: 'Nearby Visibility Boost', getValue: isPro },
+      { name: 'Priority Search', getValue: isVip },
+      { name: 'Profile Views', getValue: isVip },
+      { name: 'Ad-Free', getValue: isVip },
+      { name: 'API Access', getValue: isDeveloper },
+      { name: 'Developer Analytics', getValue: isDeveloper },
+      { name: 'Diagnostic Logs', getValue: isDeveloper },
     ];
   }
 

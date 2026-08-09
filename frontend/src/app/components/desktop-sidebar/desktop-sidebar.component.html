@@ -16,11 +16,11 @@
         >
           <span class="text-xl leading-none" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.key | t }}</span>
-          @if (item.path === '/chat' && unreadCounter.totalUnread() > 0) {
+          @if (unreadCounter.tabCount(item.tab) > 0) {
             <span
               class="ms-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
-              {{ unreadCounter.totalUnread() > 99 ? '99+' : unreadCounter.totalUnread() }}
+              {{ unreadCounter.tabCount(item.tab) > 99 ? '99+' : unreadCounter.tabCount(item.tab) }}
             </span>
           }
         </a>

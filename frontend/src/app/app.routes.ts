@@ -65,6 +65,14 @@ export const routes: Routes = [
       import('./audio-rooms/audio-room.component').then((m) => m.AudioRoomComponent),
   },
   {
+    path: 'classrooms',
+    loadComponent: () =>
+      import('./components/classrooms-marketplace/classrooms-marketplace').then(
+        (m) => m.ClassroomsMarketplace,
+      ),
+    title: 'Video Classrooms - HelloTalk',
+  },
+  {
     path: 'chat',
     loadComponent: () =>
       import('./components/chat-list/chat-list.component').then((m) => m.ChatListComponent),
@@ -673,4 +681,12 @@ export const routes: Routes = [
       ),
     title: 'Change Password - HelloTalk',
   },
-  ];
+  {
+    path: 'coin-economy',
+    loadComponent: () =>
+      import('./components/coin-economy-dashboard/coin-economy-dashboard.component').then(
+        (m) => m.CoinEconomyDashboardComponent,
+      ),
+    title: 'Virtual Coin Economy - HelloTalk',
+  },
+];

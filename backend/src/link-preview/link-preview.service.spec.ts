@@ -1,3 +1,54 @@
+// Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation((_html: string) => ({
+    window: {
+      document: {
+        createElement: jest.fn(),
+        createDocumentFragment: jest.fn(),
+      },
+      Node: {
+        ELEMENT_NODE: 1,
+        TEXT_NODE: 3,
+        DOCUMENT_FRAGMENT_NODE: 11,
+      },
+      NodeFilter: {
+        SHOW_ELEMENT: 1,
+        SHOW_TEXT: 4,
+      },
+    },
+  })),
+}));
+
+// Strict DOMPurify mock that strips ALL HTML tags (matching strict config)
+const mockSanitize = (dirty: string): string => {
+  if (typeof dirty !== 'string') return dirty;
+  // Remove script/style elements and their content entirely
+  let result = dirty
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
+  // Strip all remaining HTML tags
+  result = result.replace(/<[^>]*>/g, '');
+  // Decode common HTML entities
+  result = result
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'");
+  return result;
+};
+
+jest.mock('dompurify', () => {
+  return {
+    __esModule: true,
+    default: jest.fn(() => ({
+      sanitize: mockSanitize,
+      setConfig: jest.fn(),
+    })),
+  };
+});
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';

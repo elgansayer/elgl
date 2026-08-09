@@ -46,7 +46,7 @@ export class OfflineAdminStorageService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest)) return;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
         const db = target.result;
         const stores: StoreName[] = [
           'adminUsers',

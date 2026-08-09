@@ -30,7 +30,7 @@ export class OfflineQueueService {
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
         const target = event.target;
-        if (!(target instanceof IDBOpenDBRequest)) {
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) {
           return;
         }
         const db = target.result;

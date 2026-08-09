@@ -1014,7 +1014,7 @@ export class MomentsService {
 
     // Parse @mentions and emit notifications
     if (dto.text_content) {
-      const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+      const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
       const matches = [...dto.text_content.matchAll(mentionRegex)];
       const mentionedNames = matches.map((m) => m[1]);
 
@@ -1026,24 +1026,23 @@ export class MomentsService {
         const mentionedUsers = data as UserProfileRow[] | null;
 
         if (mentionedUsers) {
-          for (const mentionedUser of mentionedUsers) {
-            // Don't notify if they are the author (already notified above) or the commenter themselves
-            if (
-              mentionedUser.id !== userId &&
-              mentionedUser.id !== momentAuthorId
-            ) {
-              this.eventEmitter.emit(
-                'moment.mention',
-                new MomentCommentEvent(
-                  momentId,
-                  userId,
-                  mentionedUser.id,
-                  preview,
-                  dto.parent_comment_id,
-                  dto.reply_to_user_id,
-                ),
-              );
-            }
+          const mentionedUserIds = mentionedUsers
+            .filter((u) => u.id !== userId && u.id !== momentAuthorId)
+            .map((u) => u.id);
+
+          if (mentionedUserIds.length > 0) {
+            this.eventEmitter.emit(
+              'moment.mention',
+              new MomentCommentEvent(
+                momentId,
+                userId,
+                momentAuthorId ?? '',
+                preview,
+                dto.parent_comment_id,
+                dto.reply_to_user_id,
+                mentionedUserIds,
+              ),
+            );
           }
         }
       }
