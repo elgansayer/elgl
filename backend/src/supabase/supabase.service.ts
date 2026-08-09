@@ -652,6 +652,14 @@ export type ChatMessageRow = {
     status_update_id: string;
     status_text: string;
   } | null;
+  gift_payload?: {
+    gift_id: string;
+    gift_name: string;
+    gift_icon: string;
+    coin_value: number;
+    animation_type?: string;
+    animation_url?: string | null;
+  } | null;
   reply_to_id?: string | null;
   is_view_once?: boolean;
   viewed_at?: string | null;

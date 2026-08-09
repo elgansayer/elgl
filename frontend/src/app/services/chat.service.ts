@@ -23,6 +23,17 @@ export interface LinkPreview {
   siteName: string;
 }
 
+export interface GiftPayload {
+  gift_id: string;
+  gift_name: string;
+  gift_icon: string;
+  coin_value: number;
+  animation_type?: string;
+  animation_url?: string;
+  sender_name?: string;
+  receiver_name?: string;
+}
+
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -36,7 +47,8 @@ export interface ChatMessage {
     | 'system'
     | 'correction_request'
     | 'status_reply'
-    | 'view_once_media';
+    | 'view_once_media'
+    | 'gift';
   text_content?: string;
   media_url?: string;
   correction_payload?: CorrectionPayload;
@@ -48,6 +60,7 @@ export interface ChatMessage {
     type: string;
     [param: string]: unknown;
   };
+  gift_payload?: GiftPayload;
   is_read: boolean;
   delivery_status?: 'sent' | 'delivered' | 'read';
   created_at: string;
