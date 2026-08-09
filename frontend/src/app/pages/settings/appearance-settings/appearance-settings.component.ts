@@ -6,11 +6,14 @@ import { Theme, ThemeService } from '../../../services/theme.service';
 import { UserService, UserProfile } from '../../../services/user.service';
 import { I18nService } from '../../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
+import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
+
+const DEFAULT_ACCENT = '#4f46e5';
 
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [TranslatePipe, FormsModule],
+  imports: [TranslatePipe, FormsModule, FontScaleSliderComponent],
   templateUrl: './appearance-settings.component.html',
 })
 export class AppearanceSettingsComponent {
@@ -24,12 +27,13 @@ export class AppearanceSettingsComponent {
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
-  readonly fontScale = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
+  readonly fontScalePercent = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
+  readonly fontScalePercentLabel = computed(() => `${this.fontScalePercent()}%`);
   readonly currentTheme = this.themeService.currentTheme;
 
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
 
-  readonly primaryAccentColor = signal('#4f46e5');
+  readonly primaryAccentColor = signal(DEFAULT_ACCENT);
   readonly isVip = signal(false);
 
   readonly availableColors = [
@@ -47,7 +51,9 @@ export class AppearanceSettingsComponent {
         const profile = await this.userService.getMyProfile();
         if (profile) {
           this.isVip.set(Boolean(profile.is_vip));
-          this.primaryAccentColor.set(profile.primary_accent_color ?? '#4f46e5');
+          const accent = profile.primary_accent_color ?? DEFAULT_ACCENT;
+          this.primaryAccentColor.set(accent);
+          this.themeService.setPrimaryAccentColor(accent);
         }
         return profile;
       } catch {
@@ -63,17 +69,16 @@ export class AppearanceSettingsComponent {
     this.themeService.setTheme(theme);
   }
 
-  onFontScaleChange(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    const percent = Number(target.value);
-    if (Number.isNaN(percent)) return;
-    this.fontScaleService.setScale(percent / 100);
-  }
-
   setAccentColor(color: string): void {
     if (!this.isVip()) return;
     this.primaryAccentColor.set(color);
+  }
+
+  onCustomColorChange(event: Event): void {
+    if (!this.isVip()) return;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    this.primaryAccentColor.set(target.value);
   }
 
   async saveSettings(): Promise<void> {
@@ -85,6 +90,7 @@ export class AppearanceSettingsComponent {
       await this.userService.updateMyProfile({
         primary_accent_color: this.primaryAccentColor(),
       });
+      this.themeService.setPrimaryAccentColor(this.primaryAccentColor());
       this.successMessage.set('settings.saved');
     } catch {
       this.errorMessage.set('Failed to save settings');

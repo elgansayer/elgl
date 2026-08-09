@@ -1,4 +1,5 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { PronunciationService, PronunciationFeedback } from '../../services/pronunciation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -67,6 +68,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 })
 export class PronunciationFeedbackComponent {
   private pronunciationService = inject(PronunciationService);
+  private destroyRef = inject(DestroyRef);
 
   readonly sentence = signal<string>('');
   readonly isRecording = signal(false);
@@ -103,23 +105,26 @@ export class PronunciationFeedbackComponent {
     this.isRecording.set(false);
 
     // Give time for data to accumulate
-    setTimeout(() => {
+    const timerId = window.setTimeout(() => {
       if (this.audioChunks.length === 0) return;
       const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
       this.sendForAnalysis(blob);
     }, 200);
+    this.destroyRef.onDestroy(() => clearTimeout(timerId));
   }
 
   private sendForAnalysis(blob: Blob): void {
     const ref = this.sentence().trim();
-    this.pronunciationService.analyse(blob, ref || undefined).subscribe({
-      next: (result) => {
-        this.feedback.set(result);
-      },
-      error: () => {
-        // show error toast
-        this.feedback.set(null);
-      },
-    });
+    this.pronunciationService.analyse(blob, ref || undefined)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.feedback.set(result);
+        },
+        error: () => {
+          // show error toast
+          this.feedback.set(null);
+        },
+      });
   }
 }

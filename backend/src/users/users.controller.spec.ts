@@ -214,12 +214,73 @@ describe('UsersController', () => {
 
   describe('getUserProfile', () => {
     it('should return profile for a specific user ID', async () => {
-      const mockProfile: any = { id: 'target-user', display_name: 'Target' };
+      const mockProfile: any = {
+        id: 'target-user',
+        display_name: 'Target',
+        profile_visibility: 'everyone',
+      };
       (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
 
-      const result = await controller.getUserProfile('target-user');
+      const result = await controller.getUserProfile('target-user', null);
       expect(usersService.getProfile).toHaveBeenCalledWith('target-user');
       expect(result).toEqual(mockProfile);
+    });
+
+    it('should reject hidden profile for unauthenticated user', async () => {
+      const mockProfile: any = {
+        id: 'target-user',
+        display_name: 'Target',
+        profile_visibility: 'hidden',
+      };
+      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+
+      await expect(
+        controller.getUserProfile('target-user', null),
+      ).rejects.toThrow('This profile is not visible');
+    });
+
+    it('should reject vips_only profile for non-VIP user', async () => {
+      const mockTargetProfile: any = {
+        id: 'target-user',
+        display_name: 'Target',
+        profile_visibility: 'vips_only',
+        is_vip: false,
+      };
+      (usersService.getProfile as jest.Mock).mockResolvedValueOnce(
+        mockTargetProfile,
+      );
+      (usersService.getProfile as jest.Mock).mockResolvedValueOnce({
+        ...mockTargetProfile,
+        is_vip: false,
+      });
+
+      await expect(
+        controller.getUserProfile('target-user', {
+          id: 'non-vip-user',
+          is_vip: false,
+        } as any),
+      ).rejects.toThrow('This profile is visible to VIP members only');
+    });
+
+    it('should allow vips_only profile for VIP user', async () => {
+      const mockTargetProfile: any = {
+        id: 'target-user',
+        display_name: 'Target',
+        profile_visibility: 'vips_only',
+      };
+      (usersService.getProfile as jest.Mock).mockResolvedValueOnce(
+        mockTargetProfile,
+      );
+      (usersService.getProfile as jest.Mock).mockResolvedValueOnce({
+        ...mockTargetProfile,
+        is_vip: true,
+      });
+
+      const result = await controller.getUserProfile('target-user', {
+        id: 'vip-user',
+        is_vip: true,
+      } as any);
+      expect(result).toEqual(mockTargetProfile);
     });
   });
 

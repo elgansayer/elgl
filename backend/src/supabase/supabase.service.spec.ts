@@ -116,8 +116,8 @@ describe('SupabaseService', () => {
     });
 
     it('should log redis error when error event is emitted', () => {
-      const consoleSpy = jest
-        .spyOn(console, 'error')
+      const loggerSpy = jest
+        .spyOn(require('@nestjs/common').Logger.prototype, 'error')
         .mockImplementation(() => {});
 
       const errorCallback = mockRedisInstance.on.mock.calls.find(
@@ -126,11 +126,10 @@ describe('SupabaseService', () => {
 
       expect(errorCallback).toBeDefined();
       errorCallback(new Error('Redis connection failed'));
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Redis connection error in SupabaseService:',
-        'Redis connection failed',
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Redis connection error in SupabaseService: Redis connection failed',
       );
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 

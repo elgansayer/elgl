@@ -35,6 +35,7 @@ describe('AssessmentsService', () => {
           options: [{ id: 'o1', text: 'Option 1', points: 1 }],
           correct_option_id: 'o1',
           skill_area: 'speaking',
+          category: 'self_assessment',
           difficulty_level: 1,
         },
       ];
@@ -76,7 +77,7 @@ describe('AssessmentsService', () => {
       });
 
       const result = await service.getQuestions('en');
-      expect(result.length).toBe(3);
+      expect(result.length).toBe(10);
       expect(result[0].id).toBe('q1');
     });
 
@@ -97,7 +98,7 @@ describe('AssessmentsService', () => {
       });
 
       const result = await service.getQuestions('en');
-      expect(result.length).toBe(3);
+      expect(result.length).toBe(10);
     });
 
     it('should default language to en', async () => {
@@ -119,12 +120,12 @@ describe('AssessmentsService', () => {
       await service.getQuestions();
       // Should not throw and return fallback
       const result = await service.getQuestions();
-      expect(result.length).toBe(3);
+      expect(result.length).toBe(10);
     });
   });
 
   describe('getFallbackQuestions', () => {
-    it('should return 3 fallback questions', async () => {
+    it('should return 10 fallback questions', async () => {
       const mockSelect = jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
           order: jest.fn().mockResolvedValue({
@@ -141,13 +142,14 @@ describe('AssessmentsService', () => {
       });
 
       const result = await service.getQuestions('en');
-      expect(result).toHaveLength(3);
+      expect(result).toHaveLength(10);
       result.forEach((q) => {
         expect(q).toHaveProperty('id');
         expect(q).toHaveProperty('question_text');
         expect(q).toHaveProperty('options');
         expect(q).toHaveProperty('correct_option_id');
         expect(q).toHaveProperty('skill_area');
+        expect(q).toHaveProperty('category');
         expect(q).toHaveProperty('difficulty_level');
       });
     });

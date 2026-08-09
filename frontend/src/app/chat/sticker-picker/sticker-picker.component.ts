@@ -7,7 +7,6 @@ interface Sticker {
 
 @Component({
   selector: 'app-sticker-picker',
-  standalone: true,
   template: `
     @if (isOpen()) {
       <div class="fixed inset-0 z-50 bg-black/50" tabindex="0" (keydown.enter)="$event.preventDefault(); closeDrawer()" (click)="closeDrawer()">
