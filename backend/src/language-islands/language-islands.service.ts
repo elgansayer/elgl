@@ -11,7 +11,7 @@ import { CreateLanguageIslandDto } from './dto/create-language-island.dto';
 import { UpdateLanguageIslandDto } from './dto/update-language-island.dto';
 import { QueryLanguageIslandsDto } from './dto/query-language-islands.dto';
 
-interface LanguageIslandRow {
+export interface LanguageIslandRow {
   id: string;
   name: string;
   description: string | null;
@@ -23,7 +23,7 @@ interface LanguageIslandRow {
   updated_at: string;
 }
 
-interface LanguageIslandMemberRow {
+interface _LanguageIslandMemberRow {
   island_id: string;
   user_id: string;
   role: 'host' | 'member';

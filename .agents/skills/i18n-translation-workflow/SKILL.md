@@ -35,7 +35,7 @@ Use `{{placeholder}}` syntax for interpolated params inside the dictionary strin
 
 1. Add the English (`en-GB`, British spelling) string to `baseDictionary` in `frontend/src/app/services/i18n.service.ts`.
 2. Reference it from the template/component via `| t` or `i18n.translate(...)` - never inline the literal string anywhere else.
-3. If the string includes a price, always show dual currency: `'8 UKP / $10 USD'` (never a single currency).
+3. If the string includes a price, ensure the price is formatted properly.
 4. If the string could reasonably need localisation nuance (pluralisation, gendered forms), note it as a follow-up rather than baking English-only logic into the key.
 5. For dynamically-fetched UI dictionaries in other locales, the backend `POST /nlp/translate-ui` endpoint (`NlpService#translateUi`) merges a Redis-cached per-locale dictionary over the caller-supplied English dictionary - new keys automatically flow through once added to `baseDictionary`, but non-English translations for that key won't exist until the backend dictionary/cache is updated too.
 

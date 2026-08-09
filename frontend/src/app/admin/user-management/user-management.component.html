@@ -1,97 +1,97 @@
-<div class="p-6 max-w-7xl mx-auto">
-  <h1 class="text-2xl font-bold mb-6 text-start">User Management</h1>
+<div class="p-4 sm:p-6 max-w-7xl mx-auto">
+  <h1 class="text-2xl font-bold mb-6 text-start">{{ 'admin.userManagement.title' | t }}</h1>
 
   @if (isLoading()) {
-    <div class="text-start text-gray-500">Loading users...</div>
+    <div class="text-start text-gray-500">{{ 'admin.userManagement.loading' | t }}</div>
   } @else {
-    <div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-900">
+    <div class="overflow-x-auto rounded-lg shadow">
+      <table class="min-w-full divide-y divide-surface-100">
+        <thead class="bg-surface-100">
           <tr>
             <th
               scope="col"
-              class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-4 py-3 text-start text-xs font-medium text-text-secondary uppercase tracking-wider"
             >
-              User
+              {{ 'admin.userManagement.table.user' | t }}
             </th>
             <th
               scope="col"
-              class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-4 py-3 text-start text-xs font-medium text-text-secondary uppercase tracking-wider hidden sm:table-cell"
             >
-              Native Lang
+              {{ 'admin.userManagement.table.nativeLang' | t }}
             </th>
             <th
               scope="col"
-              class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-4 py-3 text-start text-xs font-medium text-text-secondary uppercase tracking-wider"
             >
-              Coins
+              {{ 'admin.userManagement.table.coins' | t }}
             </th>
             <th
               scope="col"
-              class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-4 py-3 text-start text-xs font-medium text-text-secondary uppercase tracking-wider hidden sm:table-cell"
             >
-              Streak
+              {{ 'admin.userManagement.table.streak' | t }}
             </th>
             <th
               scope="col"
-              class="px-6 py-3 text-start text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-4 py-3 text-start text-xs font-medium text-text-secondary uppercase tracking-wider"
             >
-              VIP Status
+              {{ 'admin.userManagement.table.vipStatus' | t }}
             </th>
             <th
               scope="col"
-              class="px-6 py-3 text-end text-xs font-medium text-gray-500 uppercase tracking-wider"
+              class="px-4 py-3 text-end text-xs font-medium text-text-secondary uppercase tracking-wider"
             >
-              Actions
+              {{ 'admin.userManagement.table.actions' | t }}
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody class="divide-y divide-surface-100">
           @for (user of users(); track user.id) {
             <tr>
-              <td class="px-6 py-4 whitespace-nowrap text-start">
-                <div class="flex items-center">
+              <td class="px-4 py-3 text-start">
+                <div class="flex items-center gap-3">
                   <div class="flex-shrink-0 h-10 w-10">
-                    <img
+                    <img loading="lazy"
                       class="h-10 w-10 rounded-full object-cover"
                       [src]="user.avatar_url || 'assets/default-avatar.png'"
                       alt=""
                     />
                   </div>
-                  <div class="ms-4">
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ user.display_name || 'Unknown' }}
+                  <div>
+                    <div class="text-sm font-medium text-text-primary">
+                      {{ (user.display_name || ('common.unknownUser' | t)) | sanitiseHtml }}
                     </div>
-                    <div class="text-sm text-gray-500">{{ user.id }}</div>
+                    <div class="text-xs text-text-secondary truncate max-w-[8rem]">{{ user.id }}</div>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">
-                {{ user.native_languages.join(', ') }}
+              <td class="px-4 py-3 text-start text-sm text-text-secondary hidden sm:table-cell">
+                {{ user.native_languages.join(', ') | sanitiseHtml }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">
+              <td class="px-4 py-3 text-start text-sm text-text-secondary">
                 {{ user.coins_balance }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-start text-sm text-gray-500">
-                {{ user.study_streak_days }} days
+              <td class="px-4 py-3 text-start text-sm text-text-secondary hidden sm:table-cell">
+                {{ 'admin.userManagement.streakDays' | t: { days: user.study_streak_days } }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-start">
+              <td class="px-4 py-3 text-start">
                 <span
                   class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                  [class.bg-green-100]="user.is_vip"
-                  [class.text-green-800]="user.is_vip"
-                  [class.bg-gray-100]="!user.is_vip"
-                  [class.text-gray-800]="!user.is_vip"
+                  [class.bg-green-600/20]="user.is_vip"
+                  [class.text-green-600]="user.is_vip"
+                  [class.bg-surface-100]="!user.is_vip"
+                  [class.text-text-secondary]="!user.is_vip"
                 >
-                  {{ user.is_vip ? user.vip_tier : 'Free' }}
+                  {{ user.is_vip ? user.vip_tier : ('admin.userManagement.vip.free' | t) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
+              <td class="px-4 py-3 text-end text-sm font-medium">
                 <button
                   (click)="toggleVip(user)"
-                  class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                >
-                  Toggle VIP
+                  class="text-primary hover:text-primary/80 transition-colors"
+                 [attr.aria-label]="'admin.userManagement.action.toggleVip' | t">
+                  {{ 'admin.userManagement.action.toggleVip' | t }}
                 </button>
               </td>
             </tr>

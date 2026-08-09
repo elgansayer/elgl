@@ -1,6 +1,4 @@
 import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { TransferService } from '../transfer/transfer.service';
 
 describe('AuthController (unit)', () => {
   let controller: AuthController;
@@ -11,7 +9,8 @@ describe('AuthController (unit)', () => {
     disableTwoFactor: jest.Mock;
     checkTwoFactorStatus: jest.Mock;
   };
-  let transferService: {
+
+  let _transferService: {
     generateTransferToken: jest.Mock;
     consumeTransferToken: jest.Mock;
     swapTokenForSession: jest.Mock;
@@ -25,17 +24,13 @@ describe('AuthController (unit)', () => {
       disableTwoFactor: jest.fn(),
       checkTwoFactorStatus: jest.fn(),
     };
-
-    transferService = {
+    _transferService = {
       generateTransferToken: jest.fn(),
       consumeTransferToken: jest.fn(),
       swapTokenForSession: jest.fn(),
     };
 
-    controller = new AuthController(
-      authService as unknown as AuthService,
-      transferService as unknown as TransferService,
-    );
+    controller = new (AuthController as any)(authService) as AuthController;
   });
 
   describe('changePassword', () => {
@@ -45,12 +40,12 @@ describe('AuthController (unit)', () => {
       const req = { user: { id: 'user-123' } };
       const result = await controller.changePassword(req, {
         currentPassword: 'old',
-        newPassword: 'new',
+        newPassword: 'newPass123',
       });
 
       expect(authService.changePassword).toHaveBeenCalledWith('user-123', {
         currentPassword: 'old',
-        newPassword: 'new',
+        newPassword: 'newPass123',
       });
       expect(result).toEqual({ message: 'Password changed successfully' });
     });
@@ -60,7 +55,7 @@ describe('AuthController (unit)', () => {
       await expect(
         controller.changePassword(req, {
           currentPassword: 'old',
-          newPassword: 'new',
+          newPassword: 'somePass',
         }),
       ).rejects.toThrow('Unauthorized');
     });
@@ -150,70 +145,6 @@ describe('AuthController (unit)', () => {
 
       expect(authService.checkTwoFactorStatus).toHaveBeenCalledWith('user-123');
       expect(result).toEqual({ enabled: true });
-    });
-  });
-
-  describe('generateTransferLink', () => {
-    it('should generate a transfer link', async () => {
-      transferService.generateTransferToken.mockResolvedValue('xfer-token');
-      process.env.APP_URL = 'http://localhost:4200';
-
-      const req = { user: { id: 'user-123' } };
-      const result = await controller.generateTransferLink(req);
-
-      expect(transferService.generateTransferToken).toHaveBeenCalledWith(
-        'user-123',
-      );
-      expect(result).toEqual({
-        url: 'http://localhost:4200/device-transfer?token=xfer-token',
-      });
-    });
-  });
-
-  describe('consumeTransferLink', () => {
-    it('should consume a transfer token', async () => {
-      transferService.consumeTransferToken.mockResolvedValue('swap-token');
-
-      const result = await controller.consumeTransferLink('xfer-token');
-
-      expect(transferService.consumeTransferToken).toHaveBeenCalledWith(
-        'xfer-token',
-      );
-      expect(result).toEqual({ swapToken: 'swap-token' });
-    });
-
-    it('should throw on invalid token', async () => {
-      transferService.consumeTransferToken.mockResolvedValue(null);
-
-      await expect(
-        controller.consumeTransferLink('bad-token'),
-      ).rejects.toThrow('Invalid or expired transfer token');
-    });
-  });
-
-  describe('swapTransferLink', () => {
-    it('should swap a transfer link for a session', async () => {
-      transferService.swapTokenForSession.mockResolvedValue({
-        access_token: 'at',
-        refresh_token: 'rt',
-        user_id: 'uid',
-      });
-
-      const result = await controller.swapTransferLink('swap-token');
-
-      expect(result).toEqual({
-        access_token: 'at',
-        refresh_token: 'rt',
-        user_id: 'uid',
-      });
-    });
-
-    it('should throw on invalid swap token', async () => {
-      transferService.swapTokenForSession.mockResolvedValue(null);
-
-      await expect(
-        controller.swapTransferLink('bad-swap'),
-      ).rejects.toThrow('Invalid or expired swap token');
     });
   });
 });

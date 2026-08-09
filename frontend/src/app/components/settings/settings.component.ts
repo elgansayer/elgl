@@ -1,18 +1,16 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { I18nService } from '../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
-import { UserService, LinkedAccount } from '../../services/user.service';
+import { UserService } from '../../services/user.service';
 import { CacheService } from '../../services/cache.service';
-import { Router } from '@angular/router';
-import { FontScaleService } from '../../services/font-scale.service';
+import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
-import { LanguageSelectorComponent } from '../language-selector/language-selector.component';
-
+import { LinkedAccountsService, LinkedAccount } from '../../services/linked-accounts.service';
+import { I18nService } from '../../services/i18n.service';
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, TranslatePipe, LanguageSelectorComponent],
+  imports: [FormsModule, TranslatePipe, RouterModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
@@ -21,12 +19,9 @@ export class SettingsComponent implements OnInit {
   private userService = inject(UserService);
   private location = inject(Location);
   private router = inject(Router);
-  private fontScaleService = inject(FontScaleService);
   private chatSettingsService = inject(ChatSettingsService);
+  private linkedAccountsService = inject(LinkedAccountsService);
   private i18nService = inject(I18nService);
-
-  readonly availableLanguages = this.i18nService.availableLanguages;
-  readonly uiLanguage = computed(() => this.i18nService.currentLang());
 
   readonly isLoading = signal(true);
   readonly isDownloading = signal(false);
@@ -35,57 +30,37 @@ export class SettingsComponent implements OnInit {
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
 
-  readonly fontScale = computed(() => Math.round(this.fontScaleService.scaleFactor() * 100));
-
   readonly isVip = signal(false);
-  readonly primaryAccentColor = signal<string | null>(null);
   readonly interests = signal<string[]>([]);
   readonly availableInterests = signal<string[]>([]);
 
-  readonly availableColors = [
-    '#4f46e5', // Indigo (default)
-    '#e11d48', // Rose
-    '#16a34a', // Green
-    '#d97706', // Amber
-    '#9333ea', // Purple
-    '#0891b2', // Cyan
-  ];
-
-  privacyHideLocation = false;
-  privacyHideSearch = false;
-  privacyHideAge = false;
-  privacyHideGender = false;
-  privacyHideExactLocation = false;
-  privacyHideOnlineStatus = false;
-  privacyHideVipStatus = false;
-  autoPlayVoiceNotes = false;
+  autoPlayVoiceNotes = signal(false);
   soundEffectsEnabled = false;
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
+  readonly linkedCount = computed(() => this.linkedAccounts().filter(a => a.active).length);
   readonly autoDownloadMedia = signal(false);
   readonly autoDownloadPreference = signal<'wifi' | 'cellular'>('wifi');
   protected chatEnterToSend = signal(false);
   protected chatTextSize = signal<'small' | 'medium' | 'large'>('medium');
 
+  /** Message filter fields */
+  readonly filterAgeMin = signal<number | undefined>(undefined);
+  readonly filterAgeMax = signal<number | undefined>(undefined);
+  readonly filterAllowedLanguages = signal<string[]>([]);
+  readonly filterAllowedGenders = signal<string[]>([]);
+  readonly availableLanguages = computed(() => this.i18nService.availableLanguages);
+
   /** Providers we support linking */
   readonly supportedProviders: readonly string[] = ['google', 'facebook', 'twitter', 'apple'];
-
+  readonly genderOptions: readonly string[] = ['male', 'female', 'non_binary', 'other'];
   async ngOnInit(): Promise<void> {
-    // Font scale is handled by FontScaleService and applied globally.
     try {
       const profile = await this.userService.getMyProfile();
       if (profile) {
         this.isVip.set(Boolean(profile.is_vip));
-        this.primaryAccentColor.set(profile.primary_accent_color || '#4f46e5');
-        this.privacyHideLocation = Boolean(profile.privacy_hide_location);
-        this.privacyHideSearch = Boolean(profile.privacy_hide_from_search);
-        this.privacyHideAge = Boolean(profile.privacy_hide_age);
-        this.privacyHideGender = Boolean(profile.privacy_hide_gender);
-        this.privacyHideExactLocation = Boolean(profile.privacy_hide_exact_location);
-        this.privacyHideOnlineStatus = Boolean(profile.privacy_hide_online_status);
-        this.privacyHideVipStatus = Boolean(profile.privacy_hide_vip_status);
-        this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
+        this.autoPlayVoiceNotes.set(Boolean(profile.auto_play_voice_notes));
         this.autoDownloadMedia.set(Boolean(profile.auto_download_media));
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
         this.vibrationEnabled = Boolean(profile.vibration_enabled);
@@ -96,20 +71,18 @@ export class SettingsComponent implements OnInit {
         }
       }
 
-      // Load linked accounts
-      const accounts: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
+      const accounts = await this.linkedAccountsService.getLinkedAccounts();
       this.linkedAccounts.set(accounts ?? []);
 
       const available = await this.userService.getAvailableInterests();
       this.availableInterests.set(available);
     } catch {
-      this.autoDownloadPreference.set('wifi'); // Default to Wi-Fi only
+      this.autoDownloadPreference.set('wifi');
       this.errorMessage.set('Failed to load profile or linked accounts');
     } finally {
       this.isLoading.set(false);
     }
 
-    // Load chat-specific settings
     try {
       await this.chatSettingsService.loadSettings();
       this.chatEnterToSend.set(this.chatSettingsService.enterToSend());
@@ -117,94 +90,51 @@ export class SettingsComponent implements OnInit {
     } catch {
       // keep service defaults
     }
-  }
 
-  async linkAccount(provider: string): Promise<void> {
-    this.errorMessage.set('');
-    this.successMessage.set('');
+    // Load message filters
     try {
-      await this.userService.linkAccount(provider);
-      const updated: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
-      this.linkedAccounts.set(updated ?? []);
-      this.successMessage.set(`Linked account (${provider})`);
+      const filters = await this.userService.getMessageFilters();
+      if (filters) {
+        this.filterAgeMin.set(filters.age_min);
+        this.filterAgeMax.set(filters.age_max);
+        this.filterAllowedGenders.set(filters.allowed_genders ?? []);
+        this.filterAllowedLanguages.set(filters.allowed_native_languages ?? []);
+      }
     } catch {
-      this.errorMessage.set(`Failed to link ${provider}`);
+      // keep defaults (empty filters)
     }
-  }
-
-  async unlinkAccount(provider: string): Promise<void> {
-    this.errorMessage.set('');
-    this.successMessage.set('');
-    try {
-      await this.userService.unlinkAccount(provider);
-      const updated: LinkedAccount[] | null = await this.userService.getLinkedAccounts();
-      this.linkedAccounts.set(updated ?? []);
-      this.successMessage.set(`Unlinked account (${provider})`);
-    } catch {
-      this.errorMessage.set(`Failed to unlink ${provider}`);
-    }
-  }
-
-  /** Returns true if the given provider is already linked */
-  isLinked(provider: string): boolean {
-    return this.linkedAccounts().some((a) => a.provider === provider);
-  }
-
-  /** Returns a simple icon (emoji or letter) for a provider */
-  providerIcon(provider: string): string {
-    const icons: Record<string, string> = {
-      google: 'G',
-      facebook: 'F',
-      twitter: '𝕏',
-      apple: '⌘',
-    };
-    return icons[provider] ?? '?';
-  }
-
-  /** Returns the linked account object for a provider if it exists */
-  getLinkedAccount(provider: string): LinkedAccount | undefined {
-    return this.linkedAccounts().find((a) => a.provider === provider);
   }
 
   goBack(): void {
     this.location.back();
   }
 
-  changeUiLanguage(lang: string): void {
-    this.i18nService.setLanguage(lang);
-  }
-
   goToMySubscription(): void {
     this.router.navigate(['/my-subscription']);
   }
 
-  onFontScaleChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLInputElement) {
-      const percent = Number(target.value);
-      if (!Number.isNaN(percent)) {
-        const scale = percent / 100;
-        this.fontScaleService.setScale(scale);
-      }
-    }
-  }
-
-  setAccentColor(color: string): void {
-    if (this.isVip()) {
-      this.primaryAccentColor.set(color);
-    }
-  }
-
   toggleInterest(interest: string): void {
-    this.interests.update(arr =>
-      arr.includes(interest)
-        ? arr.filter((x) => x !== interest)
-        : [...arr, interest],
+    this.interests.update((arr) =>
+      arr.includes(interest) ? arr.filter((x) => x !== interest) : [...arr, interest],
     );
   }
 
   removeInterest(index: number): void {
-    this.interests.update(arr => arr.filter((_, i) => i !== index));
+    this.interests.update((arr) => arr.filter((_, i) => i !== index));
+  }
+
+  toggleGenderFilter(gender: string): void {
+    this.filterAllowedGenders.update((arr) =>
+      arr.includes(gender) ? arr.filter((g) => g !== gender) : [...arr, gender],
+    );
+  }
+
+  toggleLanguageFilter(languageCode: string): void {
+    this.filterAllowedLanguages.update((arr) =>
+      arr.includes(languageCode)
+        ? arr.filter((l) => l !== languageCode)
+        : [...arr, languageCode],
+    );
   }
 
   toggleSoundEffects(): void {
@@ -231,28 +161,25 @@ export class SettingsComponent implements OnInit {
 
     try {
       await this.userService.updateMyProfile({
-        privacy_hide_location: this.privacyHideLocation,
-        privacy_hide_from_search: this.privacyHideSearch,
-        privacy_hide_age: this.privacyHideAge,
-        privacy_hide_gender: this.privacyHideGender,
-        privacy_hide_exact_location: this.privacyHideExactLocation,
-        privacy_hide_online_status: this.privacyHideOnlineStatus,
-        privacy_hide_vip_status: this.privacyHideVipStatus,
-        auto_play_voice_notes: this.autoPlayVoiceNotes,
+        auto_play_voice_notes: this.autoPlayVoiceNotes(),
         auto_download_media: this.autoDownloadMedia(),
         sound_effects_enabled: this.soundEffectsEnabled,
         vibration_enabled: this.vibrationEnabled,
         auto_download_preference: this.autoDownloadPreference(),
-        auto_download_wifi_only: this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
-        primary_accent_color: this.primaryAccentColor() ?? undefined,
+        auto_download_wifi_only:
+          this.autoDownloadMedia() && this.autoDownloadPreference() === 'wifi',
         interests: this.interests(),
       });
 
-      await this.chatSettingsService.updateSetting(
-        'enterToSend',
-        this.chatEnterToSend(),
-      );
+      await this.chatSettingsService.updateSetting('enterToSend', this.chatEnterToSend());
       await this.chatSettingsService.updateSetting('textSize', this.chatTextSize());
+
+      await this.userService.setMessageFilters({
+        age_min: this.filterAgeMin(),
+        age_max: this.filterAgeMax(),
+        allowed_genders: this.filterAllowedGenders().length > 0 ? this.filterAllowedGenders() : undefined,
+        allowed_native_languages: this.filterAllowedLanguages().length > 0 ? this.filterAllowedLanguages() : undefined,
+      });
 
       this.successMessage.set('Settings saved successfully');
     } catch {

@@ -8,12 +8,12 @@ export class NotificationPreferencesService {
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getPreferences(userId: string): Promise<any> {
+  async getPreferences(userId: string): Promise<unknown> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
       .select('*')
-      .eq('userId', userId)
+      .eq('user_id', userId)
       .single();
     // Not found case
     if (error && error.code !== 'PGRST116') {
@@ -28,11 +28,11 @@ export class NotificationPreferencesService {
   async updatePreferences(
     userId: string,
     dto: UpdateNotificationPreferencesDto,
-  ): Promise<any> {
+  ): Promise<unknown> {
     return this.upsertPreferences(userId, dto);
   }
 
-  async resetToDefaults(userId: string): Promise<any> {
+  async resetToDefaults(userId: string): Promise<unknown> {
     const defaults = this.getDefaultPreferences(userId);
     return this.upsertPreferences(userId, defaults);
   }
@@ -40,20 +40,31 @@ export class NotificationPreferencesService {
   private async upsertPreferences(
     userId: string,
     changes: object,
-  ): Promise<any> {
+  ): Promise<unknown> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from(this.table)
-      .upsert({ userId, ...changes, updatedAt: new Date().toISOString() })
+      .upsert({
+        user_id: userId,
+        ...changes,
+        updated_at: new Date().toISOString(),
+      })
       .single();
     if (error) throw error;
     return data;
   }
 
   private getDefaultPreferences(userId: string) {
-    const defaultCategory = { push: false, email: false, in_app: true };
+    const defaultCategory = {
+      push: false,
+      email: false,
+      in_app: true,
+      badges: true,
+    };
     return {
-      userId,
+      user_id: userId,
+      direct_message: { ...defaultCategory },
+      group_message: { ...defaultCategory },
       new_message: { ...defaultCategory },
       call_invite: { ...defaultCategory },
       moment_like: { ...defaultCategory },
@@ -70,7 +81,7 @@ export class NotificationPreferencesService {
       do_not_disturb: false,
       customToneUrl: null,
       vibrationPattern: null,
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
   }
 }

@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { SafetyService } from './safety.service';
 import { OfflineQueueService } from './offline-queue.service';
 import { HapticFeedbackService } from './haptic-feedback.service';
+import { ChatCacheService } from './chat-cache.service';
 import { environment } from '../../environments/environment';
 
 const baseUrl = `${environment.apiUrl}/chat`;
@@ -71,6 +72,21 @@ describe('ChatService', () => {
         {
           provide: HapticFeedbackService,
           useValue: { tap: hapticTapMock } as unknown as HapticFeedbackService,
+        },
+        {
+          provide: ChatCacheService,
+          useValue: {
+            getCachedMessages: vi.fn().mockReturnValue(Promise.resolve(null)),
+            getCachedRooms: vi.fn().mockReturnValue(Promise.resolve(null)),
+            getCachedFavourites: vi.fn().mockReturnValue(Promise.resolve(null)),
+            cacheMessages: vi.fn().mockReturnValue(Promise.resolve()),
+            cacheRooms: vi.fn().mockReturnValue(Promise.resolve()),
+            cacheFavourites: vi.fn().mockReturnValue(Promise.resolve()),
+            appendCachedMessage: vi.fn().mockReturnValue(Promise.resolve()),
+            invalidateMessages: vi.fn().mockReturnValue(Promise.resolve()),
+            invalidateRooms: vi.fn().mockReturnValue(Promise.resolve()),
+            invalidateFavourites: vi.fn().mockReturnValue(Promise.resolve()),
+          } as unknown as ChatCacheService,
         },
       ],
     });
@@ -258,6 +274,9 @@ describe('ChatService', () => {
 
       const promise = service.getMessages('room-1');
 
+      // Allow cache-check microtask to settle before the HTTP call is issued
+      await new Promise((r) => setTimeout(r, 0));
+
       const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1`);
       expect(req.request.method).toBe('GET');
       req.flush([
@@ -273,6 +292,9 @@ describe('ChatService', () => {
     it('should include a trimmed search param when provided', async () => {
       const promise = service.getMessages('room-1', '  hello  ');
 
+      // Allow microtask to settle
+      await new Promise((r) => setTimeout(r, 0));
+
       const req = httpMock.expectOne((r) => r.url === `${baseUrl}/messages/room-1` && r.params.get('search') === 'hello');
       req.flush([]);
 
@@ -283,6 +305,9 @@ describe('ChatService', () => {
   describe('rooms', () => {
     it('should fetch chat rooms', async () => {
       const promise = service.getRooms();
+
+      // Allow cache-check microtask to settle
+      await new Promise((r) => setTimeout(r, 0));
 
       const req = httpMock.expectOne(`${baseUrl}/rooms`);
       expect(req.request.method).toBe('GET');
@@ -524,6 +549,10 @@ describe('ChatService', () => {
 
     it('should fetch favourites over HTTP', async () => {
       const promise = service.getFavourites();
+
+      // Allow cache-check microtask to settle
+      await new Promise((r) => setTimeout(r, 0));
+
       const req = httpMock.expectOne(`${baseUrl}/favourites`);
       req.flush([]);
 
@@ -566,6 +595,16 @@ describe('ChatService', () => {
       await expect(service.downloadChatHistory('room-1')).resolves.toBeUndefined();
 
       globalThis.window = originalWindow;
+    });
+  });
+
+  describe('syncOfflineMessages', () => {
+    it('should return zero counts when no token is available', async () => {
+      getAccessTokenMock.mockReturnValue(null);
+      const result = await service.syncOfflineMessages();
+      expect(result.sent).toBe(0);
+      expect(result.failed).toBe(0);
+      getAccessTokenMock.mockReturnValue('test-token');
     });
   });
 });

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, catchError, of } from 'rxjs';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom, catchError, of, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -32,6 +32,24 @@ export interface LoginHistoryEntry {
   ip_address?: string | null;
   user_agent?: string | null;
   created_at: string;
+}
+
+export interface AdminBlockEntry {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  blocker_name?: string | null;
+  blocked_name?: string | null;
+  blocker_avatar?: string | null;
+  blocked_avatar?: string | null;
+  created_at: string;
+}
+
+export interface AdminBlocksListResult {
+  blocks: AdminBlockEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 const MOCK_ADMIN_USERS: AdminUserSummary[] = [
@@ -79,18 +97,19 @@ const MOCK_ADMIN_USERS: AdminUserSummary[] = [
   },
 ];
 
+// GDPR-compliant mock data: IP addresses are scrubbed (last octet zeroed)
 const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
   {
     id: 'login-1',
     user_id: 'partner-1',
-    ip_address: '203.0.113.5',
+    ip_address: '203.0.113.0',
     user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
     created_at: new Date(Date.now() - 3600000).toISOString(),
   },
   {
     id: 'login-2',
     user_id: 'partner-1',
-    ip_address: '203.0.113.5',
+    ip_address: '203.0.113.0',
     user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
     created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
   },
@@ -142,18 +161,21 @@ export class AdminService {
           params,
         })
         .pipe(
-          catchError(() =>
-            of({
-              users: search
-                ? MOCK_ADMIN_USERS.filter((u) =>
-                    (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
-                  )
-                : MOCK_ADMIN_USERS,
-              total: MOCK_ADMIN_USERS.length,
-              page,
-              pageSize,
-            }),
-          ),
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of({
+                users: search
+                  ? MOCK_ADMIN_USERS.filter((u) =>
+                      (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
+                    )
+                  : MOCK_ADMIN_USERS,
+                total: MOCK_ADMIN_USERS.length,
+                page,
+                pageSize,
+              });
+            }
+            return throwError(() => err);
+          }),
         ),
     );
   }
@@ -176,7 +198,14 @@ export class AdminService {
         .get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
           headers: this.getHeaders(),
         })
-        .pipe(catchError(() => of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId)))),
+        .pipe(
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId));
+            }
+            return throwError(() => err);
+          }),
+        ),
     );
   }
 
@@ -199,4 +228,50 @@ export class AdminService {
       ),
     );
   }
+
+  async listAllBlocks(page = 1, pageSize = 20): Promise<AdminBlocksListResult> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+
+    return firstValueFrom(
+      this.http
+        .get<AdminBlocksListResult>(`${this.baseUrl}/blocks`, {
+          headers: this.getHeaders(),
+          params,
+        })
+        .pipe(
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of({ blocks: [], total: 0, page, pageSize });
+            }
+            return throwError(() => err);
+          }),
+        ),
+    );
+  }
+
+  async removeBlock(blockId: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.delete<{ success: boolean }>(`${this.baseUrl}/blocks/${blockId}`, {
+        headers: this.getHeaders(),
+      }),
+    );
+  }
+
+  async listBlockedUsers(): Promise<AdminBlockEntry[]> {
+    const result = await this.listAllBlocks(1, 100);
+    return result.blocks;
+  }
+
+  async adminUnblockUser(userId: string): Promise<{ success: boolean }> {
+    const blocks = await this.listBlockedUsers();
+    const block = blocks.find((b) => b.blocked_id === userId);
+    if (!block) {
+      throw new Error('Block not found');
+    }
+    return this.removeBlock(block.id);
+  }
 }
+
+export type AdminBlockedUser = AdminBlockEntry;

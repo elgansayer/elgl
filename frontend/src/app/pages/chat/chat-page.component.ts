@@ -1,11 +1,12 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ChatService, ChatMessage, ChatRoom } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
+import { CentrifugoService } from '../../services/centrifugo.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { AiConversationService } from './ai-conversation.service';
+import { AiConversationService, Scenario } from './ai-conversation.service';
 
 interface AiChatMessage {
   id: string;
@@ -39,7 +40,7 @@ interface AiChatMessage {
               [class.bg-blue-500/10]="selectedRoom()?.id === room.id"
             >
               <div class="flex items-center gap-3">
-                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="" />
+                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt=""  loading="lazy" />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate">{{ room.title }}</p>
                   <p class="text-sm text-text-muted truncate">{{ room.subtitle }}</p>
@@ -61,64 +62,99 @@ interface AiChatMessage {
             <!-- AI header -->
             <div class="p-4 border-b border-surface-100">
               <div class="flex items-center gap-3">
-                <span class="text-xl" aria-hidden="true">🤖</span>
-                <h3 class="font-semibold">{{ 'aiPartner.title' | t }}</h3>
+                @if (aiSelectedScenario(); as sc) {
+                  <span class="text-xl" aria-hidden="true">{{ sc.icon }}</span>
+                  <h3 class="font-semibold">{{ sc.name }}</h3>
+                } @else {
+                  <span class="text-xl" aria-hidden="true">🤖</span>
+                  <h3 class="font-semibold">{{ 'aiPartner.title' | t }}</h3>
+                }
                 <button (click)="closeAiPartner()" class="ms-auto text-sm text-text-muted hover:underline">
                   {{ 'aiPartner.exit' | t }}
                 </button>
               </div>
             </div>
 
-            <!-- AI messages -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-4">
-              @for (msg of aiMessages(); track msg.id) {
-                <div class="flex gap-2" [class.flex-row-reverse]="msg.role === 'user'">
-                  <img
-                    [src]="msg.role === 'ai' ? '/assets/ai-partner.svg' : '/assets/default-avatar.svg'"
-                    class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
-                    alt=""
-                  />
-                  <div
-                    class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed"
-                    [class.bg-blue-600/20]="msg.role === 'user'"
-                    [class.bg-surface-200/30]="msg.role !== 'user'"
+            @if (!aiSelectedScenario()) {
+              <!-- Scenario Selection -->
+              <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                <h4 class="text-sm font-medium text-text-muted mb-2">{{ 'aiConversation.chooseScenario' | t }}</h4>
+                <p class="text-xs text-text-muted mb-4">{{ 'aiConversation.chooseScenarioDesc' | t }}</p>
+                @if (aiScenariosLoading()) {
+                  <p class="text-sm text-text-muted animate-pulse">{{ 'common.loading' | t }}</p>
+                } @else {
+                  @for (scenario of aiScenarios(); track scenario.id) {
+                    <button
+                      type="button"
+                      (click)="selectAiScenario(scenario)"
+                      class="flex items-center gap-3 w-full text-start bg-surface-200/30 hover:bg-surface-300/50 active:bg-surface-400/50 text-white px-4 py-3 rounded-xl transition-colors"
+                    >
+                      <span class="text-xl" aria-hidden="true">{{ scenario.icon }}</span>
+                      <span class="text-sm">{{ scenario.name }}</span>
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    (click)="selectAiScenario(null)"
+                    class="flex items-center gap-3 w-full text-start bg-surface-200/30 hover:bg-surface-300/50 active:bg-surface-400/50 text-white px-4 py-3 rounded-xl transition-colors"
                   >
-                    <p>{{ msg.text }}</p>
-                    <p class="text-[10px] text-text-muted mt-1 text-end">
-                      {{ msg.created_at | date:'shortTime' }}
-                    </p>
-                  </div>
-                </div>
-              }
-              @if (aiLoading()) {
-                <div class="flex items-center gap-2 text-sm text-text-muted">
-                  <span class="animate-pulse">{{ 'aiPartner.typing' | t }}</span>
-                </div>
-              }
-              @if (aiError()) {
-                <p class="text-sm text-red-500">{{ aiError() | t }}</p>
-              }
-            </div>
-
-            <!-- AI input -->
-            <div class="p-4 border-t border-surface-100">
-              <div class="flex gap-2">
-                <input
-                  [ngModel]="aiInput()"
-                  (ngModelChange)="aiInput.set($event)"
-                  (keyup.enter)="sendAiMessage()"
-                  [placeholder]="'aiPartner.inputPlaceholder' | t"
-                  class="flex-1 ps-3 pe-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  (click)="sendAiMessage()"
-                  [disabled]="aiLoading() || !aiInput().trim()"
-                  class="ps-3 pe-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {{ 'aiPartner.send' | t }}
-                </button>
+                    <span class="text-xl" aria-hidden="true">💬</span>
+                    <span class="text-sm">{{ 'aiPartner.freeConversation' | t }}</span>
+                  </button>
+                }
               </div>
-            </div>
+            } @else {
+              <!-- AI messages -->
+              <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                @for (msg of aiMessages(); track msg.id) {
+                  <div class="flex gap-2" [class.flex-row-reverse]="msg.role === 'user'">
+                    <img
+                      [src]="msg.role === 'ai' ? '/assets/ai-partner.svg' : '/assets/default-avatar.svg'"
+                      class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
+                      alt=""
+                     loading="lazy" />
+                    <div
+                      class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed"
+                      [class.bg-blue-600/20]="msg.role === 'user'"
+                      [class.bg-surface-200/30]="msg.role !== 'user'"
+                    >
+                      <p>{{ msg.text }}</p>
+                      <p class="text-[10px] text-text-muted mt-1 text-end">
+                        {{ msg.created_at | date:'shortTime' }}
+                      </p>
+                    </div>
+                  </div>
+                }
+                @if (aiLoading()) {
+                  <div class="flex items-center gap-2 text-sm text-text-muted">
+                    <span class="animate-pulse">{{ 'aiPartner.typing' | t }}</span>
+                  </div>
+                }
+                @if (aiError()) {
+                  <p class="text-sm text-red-500">{{ aiError() | t }}</p>
+                }
+              </div>
+
+              <!-- AI input -->
+              <div class="p-4 border-t border-surface-100">
+                <div class="flex gap-2">
+                  <input
+                    [ngModel]="aiInput()"
+                    (ngModelChange)="aiInput.set($event)"
+                    (keyup.enter)="sendAiMessage()"
+                    [placeholder]="'aiPartner.inputPlaceholder' | t"
+                    class="flex-1 ps-3 pe-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    (click)="sendAiMessage()"
+                    [disabled]="aiLoading() || !aiInput().trim()"
+                    class="ps-3 pe-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {{ 'aiPartner.send' | t }}
+                  </button>
+                </div>
+              </div>
+            }
           </div>
         } @else {
           @if (selectedRoom(); as room) {
@@ -126,7 +162,7 @@ interface AiChatMessage {
             <!-- Header -->
             <div class="p-4 border-b border-surface-100 ">
               <div class="flex items-center gap-3">
-                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt="" />
+                <img [src]="room.avatar" class="w-10 h-10 rounded-full object-cover" alt=""  loading="lazy" />
                 <div>
                   <h3 class="font-semibold">{{ room.title }}</h3>
                   <p class="text-sm text-text-muted">{{ room.subtitle }}</p>
@@ -152,7 +188,7 @@ interface AiChatMessage {
                     [src]="msg.sender?.avatar_url ?? '/assets/default-avatar.svg'"
                     class="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
                     alt=""
-                  />
+                   loading="lazy" />
                   <div
                     class="max-w-[75%] rounded-xl px-3 py-2 text-sm leading-relaxed "
                     [class.bg-blue-600/20]="msg.sender_id === currentUserId()"
@@ -191,7 +227,7 @@ interface AiChatMessage {
 
                     <!-- media -->
                     @if (msg.media_url && !msg.is_view_once) {
-                      <img [src]="msg.media_url" class="mt-1 rounded-lg max-h-60 object-contain" alt="" />
+                      <img [src]="msg.media_url" class="mt-1 rounded-lg max-h-60 object-contain" alt=""  loading="lazy" />
                     }
                     @if (msg.is_view_once && !msg.viewed_at) {
                       <button
@@ -221,9 +257,32 @@ interface AiChatMessage {
                       }
                     </div>
 
-                    <!-- timestamp -->
-                    <p class="text-[10px] text-text-muted mt-1 text-end">
+                    <!-- timestamp + read receipts -->
+                    <p class="text-[10px] text-text-muted mt-1 text-end flex items-center justify-end gap-0.5">
                       {{ msg.created_at | date:'shortTime' }}
+                      @if (msg.sender_id === currentUserId()) {
+                        <span class="inline-flex items-center">
+                          @if (msg.delivery_status === 'read') {
+                            <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg class="w-3 h-3 -ms-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          } @else if (msg.delivery_status === 'delivered') {
+                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg class="w-3 h-3 -ms-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          } @else if (msg.delivery_status === 'sent') {
+                            <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          }
+                        </span>
+                      }
                     </p>
                   </div>
                 </div>
@@ -345,12 +404,15 @@ export class ChatPageComponent implements OnInit {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private aiConversationService = inject(AiConversationService);
+  private centrifugoService = inject(CentrifugoService);
   private i18n = inject(I18nService);
+  private destroyRef = inject(DestroyRef);
 
   rooms = signal<ChatRoom[]>([]);
   selectedRoom = signal<ChatRoom | null>(null);
   messages = signal<ChatMessage[]>([]);
   newMessageText = signal('');
+  private subscribedRoomId: string | null = null;
 
   // correction state
   correctionTargetMessage = signal<ChatMessage | null>(null);
@@ -364,6 +426,9 @@ export class ChatPageComponent implements OnInit {
 
   // AI conversation partner state
   aiMode = signal(false);
+  aiScenarios = signal<Scenario[]>([]);
+  aiScenariosLoading = signal(false);
+  aiSelectedScenario = signal<Scenario | null>(null);
   aiMessages = signal<AiChatMessage[]>([]);
   aiInput = signal('');
   aiLoading = signal(false);
@@ -378,16 +443,94 @@ export class ChatPageComponent implements OnInit {
     } catch (error) {
       console.error('Failed to load rooms', error);
     }
+
+    this.destroyRef.onDestroy(() => {
+      if (this.subscribedRoomId) {
+        this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      }
+    });
   }
 
   async selectRoom(room: ChatRoom) {
+    // Unsubscribe previous room
+    if (this.subscribedRoomId && this.subscribedRoomId !== room.id) {
+      this.centrifugoService.unsubscribe(`chat:${this.subscribedRoomId}`);
+      this.subscribedRoomId = null;
+    }
+
     this.selectedRoom.set(room);
     this.correctionTargetMessage.set(null);
     try {
       const messages = await this.chatService.getMessages(room.id);
       this.messages.set(messages);
+
+      // Subscribe to real-time updates for this room (status updates, new messages, deletions)
+      if (this.subscribedRoomId !== room.id) {
+        this.subscribedRoomId = room.id;
+        this.centrifugoService.subscribe(`chat:${room.id}`, (data: unknown) => {
+          this.handleCentrifugoEvent(data as Record<string, unknown>);
+        });
+      }
+
+      // Auto-mark messages from others as delivered and then read
+      const currentUserId = this.authService.currentUser()?.id;
+      if (currentUserId) {
+        const messagesFromOthers = messages.filter(
+          (m) => m.sender_id !== currentUserId && m.delivery_status !== 'delivered' && m.delivery_status !== 'read',
+        );
+        for (const msg of messagesFromOthers) {
+          void this.chatService.markMessageStatus(msg.id, 'delivered');
+          void this.chatService.markMessageStatus(msg.id, 'read');
+        }
+      }
     } catch (error) {
       console.error('Failed to load messages', error);
+    }
+  }
+
+  private handleCentrifugoEvent(data: Record<string, unknown>): void {
+    // Handle status update events
+    if (data['status_update']) {
+      const update = data['status_update'] as Record<string, unknown>;
+      const messageId = update['message_id'] as string;
+      const deliveryStatus = update['delivery_status'] as string;
+      if (messageId && deliveryStatus) {
+        this.messages.update((msgs) =>
+          msgs.map((m) =>
+            m.id === messageId
+              ? { ...m, delivery_status: deliveryStatus as ChatMessage['delivery_status'] }
+              : m,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Handle incoming new messages
+    if (data['message']) {
+      const msg = data['message'] as ChatMessage;
+      if (msg && msg.id && msg.room_id) {
+        this.messages.update((msgs) => {
+          // Avoid duplicates
+          if (msgs.some((m) => m.id === msg.id)) return msgs;
+          return [...msgs, msg];
+        });
+      }
+      return;
+    }
+
+    // Handle message deletion events
+    if (data['type'] === 'message_deleted') {
+      const deletedId = data['message_id'] as string;
+      const deletedFor = data['deleted_for'] as string;
+      if (deletedId) {
+        this.messages.update((msgs) => {
+          if (deletedFor === 'everyone') {
+            return msgs.filter((m) => m.id !== deletedId);
+          }
+          return msgs.filter((m) => m.id !== deletedId);
+        });
+      }
     }
   }
 
@@ -537,25 +680,47 @@ export class ChatPageComponent implements OnInit {
     this.aiMode.set(true);
     this.selectedRoom.set(null);
     this.aiError.set('');
-    if (this.aiMessages().length === 0) {
-      this.aiMessages.set([
-        {
-          id: 'ai-greeting',
-          role: 'ai',
-          text: this.i18n.translate('aiPartner.greeting'),
-          created_at: new Date(),
-        },
-      ]);
+    this.aiSelectedScenario.set(null);
+    if (this.aiScenarios().length === 0 && !this.aiScenariosLoading()) {
+      this.loadAiScenarios();
     }
   }
 
   closeAiPartner(): void {
     this.aiMode.set(false);
+    this.aiSelectedScenario.set(null);
+    this.aiMessages.set([]);
+  }
+
+  private async loadAiScenarios(): Promise<void> {
+    this.aiScenariosLoading.set(true);
+    try {
+      const scenarios = await this.aiConversationService.getScenarios();
+      this.aiScenarios.set(scenarios);
+    } catch {
+      // Silently fail; the scenario picker will stay empty
+    } finally {
+      this.aiScenariosLoading.set(false);
+    }
+  }
+
+  selectAiScenario(scenario: Scenario | null): void {
+    this.aiSelectedScenario.set(scenario);
+    this.aiMessages.set([]);
+    this.aiError.set('');
   }
 
   async sendAiMessage(): Promise<void> {
     const text = this.aiInput().trim();
     if (!text || this.aiLoading()) return;
+
+    // Build conversation history BEFORE adding the user message to avoid duplication
+    const conversationHistory = this.aiMessages()
+      .slice(-10)
+      .map((msg) => ({
+        role: msg.role === 'user' ? ('user' as const) : ('assistant' as const),
+        content: msg.text,
+      }));
 
     const userMsg: AiChatMessage = {
       id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -569,7 +734,12 @@ export class ChatPageComponent implements OnInit {
     this.aiError.set('');
 
     try {
-      const response = await this.aiConversationService.generateReply(text);
+      const scenarioId = this.aiSelectedScenario()?.id;
+      const response = await this.aiConversationService.sendMessage(
+        text,
+        scenarioId,
+        conversationHistory,
+      );
       const aiMsg: AiChatMessage = {
         id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         role: 'ai',
@@ -577,8 +747,7 @@ export class ChatPageComponent implements OnInit {
         created_at: new Date(),
       };
       this.aiMessages.update((msgs) => [...msgs, aiMsg]);
-    } catch (error) {
-      console.warn('AI partner request failed', error);
+    } catch {
       this.aiError.set('aiPartner.error');
     } finally {
       this.aiLoading.set(false);
