@@ -96,6 +96,17 @@
       }
     },
     {
+<<<<<<< HEAD
+      "name": "api-escrow",
+      "urls": [
+        "/api/escrow/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 30,
+        "maxAge": "15s",
+        "timeout": "5s"
+=======
       "name": "admin-api",
       "urls": [
         "/api/admin/**"
@@ -105,6 +116,7 @@
         "maxSize": 200,
         "maxAge": "5m",
         "timeout": "10s"
+>>>>>>> origin/main
       }
     },
     {
