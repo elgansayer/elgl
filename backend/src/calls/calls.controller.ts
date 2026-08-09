@@ -6,23 +6,20 @@ import {
   Body,
   Param,
   Request,
-<<<<<<< HEAD
-  UseGuards,
-=======
   UseInterceptors,
->>>>>>> origin/main
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CallsService } from './calls.service';
 import { CreateGroupCallDto } from './dto/create-group-call.dto';
 import { InitiateCallDto } from './dto/initiate-call.dto';
 import { SwitchCallDto } from './dto/switch-call.dto';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   CacheControlInterceptor,
   CACHE_EDGE_SHORT,
@@ -39,19 +36,23 @@ interface RequestWithUser {
 
 @ApiTags('Video Classrooms')
 @Controller('calls')
-@UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class CallsController {
-  constructor(private readonly callsService: CallsService) {}
+  constructor(
+    private readonly callsService: CallsService,
+    @InjectPinoLogger(CallsController.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   @Post('initiate')
-<<<<<<< HEAD
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Initiate a 1-on-1 call',
+    summary: 'Initiate a 1:1 video or audio call',
     description:
-      'Creates a new LiveKit room for a direct 1-on-1 call (video or audio). ' +
-      'Returns LiveKit tokens for both caller and callee. If the callee is busy in another ' +
-      'call, the call will be placed in a waiting queue.',
+      'Initiates a new call between the caller and the specified callee. ' +
+      'Creates a LiveKit room with a max of 2 participants, generates an E2EE key, ' +
+      'and returns access tokens for both participants. If the callee is already in ' +
+      'an active call, the call is placed in the waiting queue.',
   })
   @ApiResponse({
     status: 201,
@@ -59,22 +60,52 @@ export class CallsController {
     schema: {
       type: 'object',
       properties: {
-        room_name: { type: 'string', example: 'call_abc123' },
-        caller_token: { type: 'string', example: 'eyJ...' },
-        callee_token: { type: 'string', example: 'eyJ...' },
-        e2ee_key: { type: 'string', example: 'base64key...' },
-        is_video: { type: 'boolean', example: true },
-        call_id: { type: 'string', example: 'uuid' },
-        waiting: { type: 'boolean', example: false },
-        encryption: { type: 'string', example: 'e2ee' },
+        room_name: {
+          type: 'string',
+          description: 'LiveKit room name',
+          example: 'call_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        },
+        caller_token: {
+          type: 'string',
+          description: 'LiveKit access token for the caller',
+          example: 'eyJhbGciOi...',
+        },
+        callee_token: {
+          type: 'string',
+          description: 'LiveKit access token for the callee',
+          example: 'eyJhbGciOi...',
+        },
+        e2ee_key: {
+          type: 'string',
+          description: 'Base64-encoded E2EE key for end-to-end encryption',
+          example: 'dGhpcyBpcyBhIDMyLWJ5dGUgZW5jcnlwdGlvbiBrZXk=',
+        },
+        is_video: {
+          type: 'boolean',
+          description: 'Whether this is a video call',
+          example: true,
+        },
+        call_id: {
+          type: 'string',
+          description: 'Unique call identifier',
+          example: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321',
+        },
+        waiting: {
+          type: 'boolean',
+          description:
+            'Whether the callee is busy and the call has been queued',
+          example: false,
+        },
+        encryption: {
+          type: 'string',
+          description: 'Encryption type used',
+          example: 'e2ee',
+        },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid request body.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
->>>>>>> origin/main
+  @ApiResponse({ status: 400, description: 'Bad request - invalid callee ID.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async initiateCall(
     @Request() req: RequestWithUser,
     @Body() dto: InitiateCallDto,
@@ -88,12 +119,13 @@ export class CallsController {
   }
 
   @Post('group')
-<<<<<<< HEAD
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Create a group video call',
     description:
-      'Creates a new LiveKit room for a group conversation with multiple participants. ' +
-      'Supports up to 50 participants with end-to-end encryption.',
+      'Creates a new group video call with the specified participants. ' +
+      'The caller is automatically added to the participant list if not already included. ' +
+      'Sets up a LiveKit room with the configured participant limit and E2EE encryption.',
   })
   @ApiResponse({
     status: 201,
@@ -101,21 +133,50 @@ export class CallsController {
     schema: {
       type: 'object',
       properties: {
-        room_name: { type: 'string', example: 'group_abc123' },
-        tokens: { type: 'array', items: { type: 'string' }, example: ['eyJ...', 'eyJ...'] },
-        e2ee_key: { type: 'string', example: 'base64key...' },
-        is_video: { type: 'boolean', example: true },
-        call_id: { type: 'string', example: 'uuid' },
-        participant_limit: { type: 'number', example: 10 },
-        encryption: { type: 'string', example: 'e2ee' },
+        room_name: {
+          type: 'string',
+          description: 'LiveKit room name',
+          example: 'group_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        },
+        tokens: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'LiveKit access tokens for all participants',
+          example: ['eyJhbG...', 'eyJhbG...'],
+        },
+        e2ee_key: {
+          type: 'string',
+          description: 'Base64-encoded E2EE key',
+          example: 'dGhpcyBpcyBhIDMyLWJ5dGUgZW5jcnlwdGlvbiBrZXk=',
+        },
+        is_video: {
+          type: 'boolean',
+          description: 'Whether this is a video call',
+          example: true,
+        },
+        call_id: {
+          type: 'string',
+          description: 'Unique call identifier',
+          example: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321',
+        },
+        participant_limit: {
+          type: 'number',
+          description: 'Maximum participant count',
+          example: 10,
+        },
+        encryption: {
+          type: 'string',
+          description: 'Encryption type used',
+          example: 'e2ee',
+        },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Participant limit exceeded or invalid count.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
->>>>>>> origin/main
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - participant limit exceeded or invalid count.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async createGroupCall(
     @Request() req: RequestWithUser,
     @Body() dto: CreateGroupCallDto,
@@ -127,15 +188,19 @@ export class CallsController {
   }
 
   @Get('active')
-<<<<<<< HEAD
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
+  )
   @ApiOperation({
     summary: 'List active calls for the current user',
     description:
-      'Returns all active calls the current user is participating in, including held calls.',
+      'Returns all active calls for the authenticated user, including held calls. ' +
+      'Each call entry includes room name, hold status, E2EE key, video flag, and participant info. ' +
+      'Responses are cached at CDN edge for short duration.',
   })
   @ApiResponse({
     status: 200,
-    description: 'List of active calls.',
+    description: 'Array of active calls.',
     schema: {
       type: 'array',
       items: {
@@ -143,51 +208,52 @@ export class CallsController {
         properties: {
           room_name: { type: 'string', example: 'call_abc123' },
           is_held: { type: 'boolean', example: false },
-          e2ee_key: { type: 'string', nullable: true, example: 'base64key...' },
+          e2ee_key: { type: 'string', nullable: true, example: 'dGhpcyBp...' },
           is_video: { type: 'boolean', example: true },
-          participant_limit: { type: 'number', nullable: true, example: 10 },
+          participant_limit: { type: 'number', nullable: true, example: 2 },
           is_group: { type: 'boolean', example: false },
-          callee_token: { type: 'string', nullable: true, example: 'eyJ...' },
+          callee_token: { type: 'string', nullable: true, example: null },
         },
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
->>>>>>> origin/main
   getActiveCalls(@Request() req: RequestWithUser) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.getActiveCalls(userId);
   }
 
   @Get('active/:room_name')
-<<<<<<< HEAD
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
+  )
   @ApiOperation({
     summary: 'Get details of a specific active call',
-    description: 'Returns detailed information about a specific active call by room name.',
+    description:
+      'Returns details for a specific active call identified by room name. ' +
+      "Throws 400 if the call is not found in the user's active calls.",
+  })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name',
+    example: 'call_abc123',
   })
   @ApiResponse({
     status: 200,
-    description: 'Call details.',
+    description: 'Active call details.',
     schema: {
       type: 'object',
       properties: {
         room_name: { type: 'string', example: 'call_abc123' },
         is_held: { type: 'boolean', example: false },
-        e2ee_key: { type: 'string', nullable: true, example: 'base64key...' },
+        e2ee_key: { type: 'string', nullable: true, example: 'dGhpcyBp...' },
         is_video: { type: 'boolean', example: true },
-        participant_limit: { type: 'number', nullable: true, example: 10 },
+        participant_limit: { type: 'number', nullable: true, example: 2 },
         is_group: { type: 'boolean', example: false },
-        callee_token: { type: 'string', nullable: true, example: 'eyJ...' },
+        callee_token: { type: 'string', nullable: true, example: null },
       },
     },
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
->>>>>>> origin/main
   getActiveCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -197,66 +263,85 @@ export class CallsController {
   }
 
   @Get('waiting')
-<<<<<<< HEAD
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
+  )
   @ApiOperation({
-    summary: 'List waiting calls for the current user',
+    summary: 'List waiting (queued) calls for the current user',
     description:
-      'Returns calls where the current user is the callee and has not yet answered. ' +
-      'Users may have multiple waiting calls from different callers.',
+      'Returns all calls where the authenticated user is the callee and has not yet answered. ' +
+      'Each entry includes room name, callee token, E2EE key, and video flag.',
   })
   @ApiResponse({
     status: 200,
-    description: 'List of waiting calls.',
+    description: 'Array of waiting calls.',
     schema: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
           room_name: { type: 'string', example: 'call_abc123' },
-          callee_token: { type: 'string', example: 'eyJ...' },
-          e2ee_key: { type: 'string', example: 'base64key...' },
+          callee_token: { type: 'string', example: 'eyJhbGci...' },
+          e2ee_key: { type: 'string', example: 'dGhpcyBp...' },
           is_video: { type: 'boolean', example: true },
         },
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
->>>>>>> origin/main
   getWaitingCalls(@Request() req: RequestWithUser) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.getWaitingCalls(userId);
   }
 
   @Put('switch')
-<<<<<<< HEAD
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Switch between calls',
+    summary: 'Switch between calls (place current on hold, accept waiting)',
     description:
-      'Puts the current active call on hold and switches to a waiting call. ' +
-      'Returns the target call details and the held call room name.',
+      'Places the current active call on hold and accepts a waiting call. ' +
+      'Both calls must belong to the authenticated user. ' +
+      "Returns the target call details and the held call's room name.",
   })
   @ApiResponse({
     status: 200,
-    description: 'Switched successfully.',
+    description: 'Successfully switched calls.',
     schema: {
       type: 'object',
       properties: {
-        room_name: { type: 'string', example: 'call_xyz789' },
-        callee_token: { type: 'string', example: 'eyJ...' },
-        e2ee_key: { type: 'string', example: 'base64key...' },
-        is_video: { type: 'boolean', example: true },
-        held_call_room_name: { type: 'string', example: 'call_abc123' },
+        room_name: {
+          type: 'string',
+          description: 'Target room name (the waiting call being answered)',
+          example: 'call_waiting123',
+        },
+        callee_token: {
+          type: 'string',
+          description: 'Callee token for the target call',
+          example: 'eyJhbGci...',
+        },
+        e2ee_key: {
+          type: 'string',
+          description: 'E2EE key for the target call',
+          example: 'dGhpcyBp...',
+        },
+        is_video: {
+          type: 'boolean',
+          description: 'Whether the target call is video',
+          example: true,
+        },
+        held_call_room_name: {
+          type: 'string',
+          description: 'Room name of the call placed on hold',
+          example: 'call_current123',
+        },
         success: { type: 'boolean', example: true },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Call not found or cannot switch.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
->>>>>>> origin/main
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request - call not found, same call, or no waiting calls.',
+  })
   switchCall(@Request() req: RequestWithUser, @Body() dto: SwitchCallDto) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.switchCall(
@@ -267,15 +352,21 @@ export class CallsController {
   }
 
   @Put(':room_name/accept-waiting')
-<<<<<<< HEAD
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Accept a waiting call',
     description:
-      'Accepts a waiting call by room name. Any current active calls will be placed on hold.',
+      'Accepts a specific waiting call for the authenticated user. ' +
+      'Any other active calls are placed on hold before accepting the waiting call.',
+  })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name of the waiting call to accept',
+    example: 'call_waiting123',
   })
   @ApiResponse({
     status: 200,
-    description: 'Waiting call accepted.',
+    description: 'Waiting call accepted successfully.',
     schema: {
       type: 'object',
       properties: {
@@ -283,11 +374,10 @@ export class CallsController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'No waiting calls or call not found.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
->>>>>>> origin/main
+  @ApiResponse({
+    status: 400,
+    description: 'Waiting call not found or no waiting calls.',
+  })
   acceptWaitingCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -298,14 +388,21 @@ export class CallsController {
   }
 
   @Put(':room_name/hold')
-<<<<<<< HEAD
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Put a call on hold',
-    description: 'Places an active call on hold without disconnecting.',
+    summary: 'Place an active call on hold',
+    description:
+      'Places the specified active call on hold for the authenticated user. ' +
+      'The call remains active but is marked as held.',
+  })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name of the call to place on hold',
+    example: 'call_abc123',
   })
   @ApiResponse({
     status: 200,
-    description: 'Call placed on hold.',
+    description: 'Call placed on hold successfully.',
     schema: {
       type: 'object',
       properties: {
@@ -314,10 +411,6 @@ export class CallsController {
     },
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
->>>>>>> origin/main
   holdCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -328,14 +421,21 @@ export class CallsController {
   }
 
   @Put(':room_name/resume')
-<<<<<<< HEAD
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
     summary: 'Resume a held call',
-    description: 'Resumes a call that was previously placed on hold.',
+    description:
+      'Resumes a call that was previously placed on hold by the authenticated user. ' +
+      'Marks the call as no longer held.',
+  })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name of the held call to resume',
+    example: 'call_abc123',
   })
   @ApiResponse({
     status: 200,
-    description: 'Call resumed.',
+    description: 'Call resumed successfully.',
     schema: {
       type: 'object',
       properties: {
@@ -344,10 +444,6 @@ export class CallsController {
     },
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
->>>>>>> origin/main
   resumeCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -358,10 +454,17 @@ export class CallsController {
   }
 
   @Put(':room_name/leave')
-<<<<<<< HEAD
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Leave a call',
-    description: 'Leaves an active call, removing the user from the room.',
+    summary: 'Leave an active call',
+    description:
+      'Removes the authenticated user from the specified active call. ' +
+      "If this was the user's last active call, their entire call map is cleaned up.",
+  })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name of the call to leave',
+    example: 'call_abc123',
   })
   @ApiResponse({
     status: 200,
@@ -374,10 +477,6 @@ export class CallsController {
     },
   })
   @ApiResponse({ status: 400, description: 'Call not found.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
->>>>>>> origin/main
   leaveCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,

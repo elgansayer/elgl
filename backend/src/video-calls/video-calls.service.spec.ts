@@ -1,24 +1,90 @@
+import { LivekitService } from '../livekit/livekit.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { VideoCallsService } from './video-calls.service';
-import { StartVideoCallDto, ListActiveRoomsQueryDto } from './dto/video-call.dto';
+import { ConfigService } from '@nestjs/config';
+import { AccessToken } from 'livekit-server-sdk';
+import { VideoCallsDegradationService } from './video-calls-degradation.service';
+import { MetricsService } from '../metrics/metrics.service';
 
-jest.mock('livekit-server-sdk', () => ({
-  AccessToken: jest.fn().mockImplementation(() => ({
-    addGrant: jest.fn(),
-    toJwt: jest.fn().mockResolvedValue('mock_jwt_token'),
-  })),
-  RoomServiceClient: jest.fn().mockImplementation(() => ({
-    createRoom: jest.fn().mockResolvedValue(undefined),
-    deleteRoom: jest.fn().mockResolvedValue(undefined),
-  })),
+const mockCreateRoom = jest.fn();
+const mockAddGrant = jest.fn();
+const mockToJwt = jest.fn();
+
+jest.mock('livekit-server-sdk', () => {
+  return {
+    RoomServiceClient: jest.fn().mockImplementation(() => {
+      return {
+        createRoom: mockCreateRoom,
+      };
+    }),
+    AccessToken: jest.fn().mockImplementation(() => {
+      return {
+        addGrant: mockAddGrant,
+        toJwt: mockToJwt,
+      };
+    }),
+  };
+});
+
+let counter = 0;
+jest.mock('crypto', () => ({
+  randomUUID: () => `mock-uuid-${counter++}`,
 }));
 
 describe('VideoCallsService', () => {
   let service: VideoCallsService;
+  let degradationService: VideoCallsDegradationService;
+  let metrics: MetricsService;
+
+  const mockMetricsService = {
+    recordVideoClassroomCreated: jest.fn(),
+    recordVideoClassroomCreationFailed: jest.fn(),
+    recordVideoClassroomJoined: jest.fn(),
+    recordVideoClassroomJoinFailed: jest.fn(),
+    recordVideoClassroomTokenGenerationDuration: jest.fn(),
+  };
+
+  const mockDegradationService = {
+    executeWithBreaker: jest
+      .fn()
+      .mockImplementation(
+        async (
+          _service: string,
+          operation: () => Promise<unknown>,
+          _fallback: () => unknown,
+          marker: any,
+        ) => {
+          try {
+            return await operation();
+          } catch (error) {
+            marker.degraded = true;
+            marker.reason = `Service ${_service} failed: ${(error as Error).message}`;
+            marker.fallbackSource = 'standalone';
+            return _fallback();
+          }
+        },
+      ),
+    cacheToken: jest.fn(),
+    getCachedToken: jest.fn().mockReturnValue(null),
+    recordDegradationEvent: jest.fn().mockResolvedValue(undefined),
+    isAvailable: jest.fn().mockReturnValue(true),
+    recordSuccess: jest.fn(),
+    recordFailure: jest.fn(),
+  };
 
   beforeEach(async () => {
+    mockCreateRoom.mockClear().mockResolvedValue({});
+    mockAddGrant.mockClear();
+    mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
+    counter = 0;
+    mockDegradationService.executeWithBreaker.mockClear();
+    mockDegradationService.cacheToken.mockClear();
+    mockDegradationService.getCachedToken.mockClear().mockReturnValue(null);
+    mockDegradationService.recordDegradationEvent.mockClear();
+
+    // Reset metric mocks
+    Object.values(mockMetricsService).forEach((fn) => fn.mockClear());
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VideoCallsService,
@@ -26,144 +92,218 @@ describe('VideoCallsService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn((key: string) => {
-              const config: Record<string, string> = {
-                LIVEKIT_URL: 'http://localhost:7880',
-                LIVEKIT_API_KEY: 'test_api_key',
-                LIVEKIT_SECRET: 'test_secret',
-              };
-              return config[key] || null;
+              if (key === 'LIVEKIT_URL') return 'https://test.livekit.cloud';
+              if (key === 'LIVEKIT_API_KEY') return 'test-api-key';
+              if (key === 'LIVEKIT_SECRET') return 'test-secret';
+              return null;
             }),
           },
+        },
+        {
+          provide: VideoCallsDegradationService,
+          useValue: mockDegradationService,
+        },
+        {
+          provide: LivekitService,
+          useValue: { buildIceServers: jest.fn().mockReturnValue([]) },
+        },
+        {
+          provide: MetricsService,
+          useValue: mockMetricsService,
         },
       ],
     }).compile();
 
     service = module.get<VideoCallsService>(VideoCallsService);
+    degradationService = module.get<VideoCallsDegradationService>(
+      VideoCallsDegradationService,
+    );
+    metrics = module.get(MetricsService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
   describe('createRoom', () => {
-    it('should create a video room and return token', async () => {
-      const dto: StartVideoCallDto = {
-        is_video: true,
-        max_participants: 10,
-      };
-      const result = await service.createRoom('user1', dto);
-      expect(result).toHaveProperty('token', 'mock_jwt_token');
-      expect(result).toHaveProperty('room_name');
-      expect(result.room_name).toMatch(/^video_/);
-      expect(result.is_video).toBe(true);
+    it('should create a room on LiveKit and return a token and room name', async () => {
+      const result = await service.createRoom('user-123');
+
+      expect(mockCreateRoom).toHaveBeenCalledWith({
+        name: 'video_mock-uuid-0',
+        emptyTimeout: 30,
+        maxParticipants: 2,
+      });
+
+      expect(AccessToken).toHaveBeenCalledWith(
+        'test-api-key',
+        'test-secret',
+        expect.objectContaining({
+          identity: 'user-123',
+          ttl: '1h',
+        }),
+      );
+
+      expect(mockAddGrant).toHaveBeenCalledWith({
+        roomJoin: true,
+        room: 'video_mock-uuid-0',
+        canPublish: true,
+        canSubscribe: true,
+        canPublishData: true,
+      });
+
+      expect(mockToJwt).toHaveBeenCalled();
+
+      expect(result.token).toBe('mock-livekit-jwt');
+      expect(result.roomName).toBe('video_mock-uuid-0');
+      expect(result.degraded).toBeFalsy();
+
+      expect(metrics.recordVideoClassroomCreated).toHaveBeenCalled();
+      expect(
+        metrics.recordVideoClassroomTokenGenerationDuration,
+      ).toHaveBeenCalledWith('create', expect.any(Number));
     });
 
-    it('should default to video and 2 participants when no DTO provided', async () => {
-      const result = await service.createRoom('user1');
-      expect(result.is_video).toBe(true);
-      expect(result.room_name).toMatch(/^video_/);
+    it('should cache token after successful room creation', async () => {
+      await service.createRoom('user-123');
+
+      expect(mockDegradationService.cacheToken).toHaveBeenCalledWith(
+        'video_mock-uuid-0',
+        'user-123',
+        'mock-livekit-jwt',
+      );
+    });
+
+    it('should fallback when LiveKit createRoom fails', async () => {
+      mockCreateRoom.mockRejectedValueOnce(
+        new Error('LiveKit connection refused'),
+      );
+      // Reset the mock impl to let the real degradation flow work
+      mockDegradationService.executeWithBreaker.mockImplementationOnce(
+        async (
+          _service: string,
+          _operation: () => Promise<unknown>,
+          fallback: () => unknown,
+          marker: any,
+        ) => {
+          marker.degraded = true;
+          marker.reason = 'Service livekit failed: LiveKit connection refused';
+          marker.fallbackSource = 'standalone';
+          try {
+            await _operation();
+          } catch (error) {
+            expect(error).toBeInstanceOf(Error);
+          }
+          return fallback();
+        },
+      );
+
+      const result = await service.createRoom('user-456');
+
+      expect(result.token).toBe('mock-livekit-jwt');
+      expect(result.roomName).toBe('video_mock-uuid-0');
+      expect(result.degraded).toBe(true);
+      expect(result.degradationReason).toContain('LiveKit connection refused');
+      expect(metrics.recordVideoClassroomCreationFailed).toHaveBeenCalledWith(
+        'Error',
+      );
+    });
+
+    it('should track token generation failures', async () => {
+      mockToJwt.mockRejectedValueOnce(new Error('JWT signing failed'));
+      // allow operation to fail
+      mockDegradationService.executeWithBreaker.mockImplementationOnce(
+        async (_service: string, operation: () => Promise<unknown>) => {
+          return await operation();
+        },
+      );
+
+      await expect(service.createRoom('user-789')).rejects.toThrow(
+        'JWT signing failed',
+      );
+
+      expect(metrics.recordVideoClassroomCreationFailed).toHaveBeenCalledWith(
+        'Error',
+      );
     });
   });
 
   describe('joinRoom', () => {
     it('should generate a token for an existing room', async () => {
-      const dto: StartVideoCallDto = {
-        is_video: false,
-        max_participants: 5,
-      };
-      const created = await service.createRoom('user1', dto);
-      const result = await service.joinRoom('user2', created.room_name);
-      expect(result).toHaveProperty('token', 'mock_jwt_token');
-      expect(result.room_name).toBe(created.room_name);
-      expect(result.is_video).toBe(false);
-    });
+      const result = await service.joinRoom('user-456', 'video-abc');
 
-    it('should throw NotFoundException for non-existent room', async () => {
-      await expect(
-        service.joinRoom('user1', 'nonexistent_room'),
-      ).rejects.toThrow('Room not found');
-    });
-  });
+      expect(AccessToken).toHaveBeenCalledWith(
+        'test-api-key',
+        'test-secret',
+        expect.objectContaining({
+          identity: 'user-456',
+          ttl: '1h',
+        }),
+      );
 
-  describe('endRoom', () => {
-    it('should end a room created by the same user', async () => {
-      const created = await service.createRoom('user1');
-      const result = await service.endRoom('user1', created.room_name);
-      expect(result.success).toBe(true);
-      expect(result.room_name).toBe(created.room_name);
-    });
-
-    it('should throw ForbiddenException if non-creator ends room', async () => {
-      const created = await service.createRoom('user1');
-      await expect(
-        service.endRoom('user2', created.room_name),
-      ).rejects.toThrow('Only the room creator can end the room.');
-    });
-
-    it('should throw NotFoundException for non-existent room', async () => {
-      await expect(
-        service.endRoom('user1', 'nonexistent_room'),
-      ).rejects.toThrow('Room not found');
-    });
-  });
-
-  describe('listActiveRooms', () => {
-    it('should list all active rooms', async () => {
-      await service.createRoom('user1');
-      await service.createRoom('user2', {
-        is_video: true,
-        max_participants: 20,
+      expect(mockAddGrant).toHaveBeenCalledWith({
+        roomJoin: true,
+        room: 'video-abc',
+        canPublish: true,
+        canSubscribe: true,
+        canPublishData: true,
       });
 
-      const query: ListActiveRoomsQueryDto = {};
-      const rooms = await service.listActiveRooms(query);
-      expect(rooms.length).toBe(2);
-      expect(rooms[0]).toHaveProperty('room_name');
-      expect(rooms[0]).toHaveProperty('creator_id');
-      expect(rooms[0]).toHaveProperty('participant_count');
+      expect(mockToJwt).toHaveBeenCalled();
+
+      expect(result.token).toBe('mock-livekit-jwt');
+      expect(result.roomName).toBe('video-abc');
+      expect(result.degraded).toBeFalsy();
+
+      expect(metrics.recordVideoClassroomJoined).toHaveBeenCalled();
+      expect(
+        metrics.recordVideoClassroomTokenGenerationDuration,
+      ).toHaveBeenCalledWith('join', expect.any(Number));
     });
 
-    it('should filter by type classroom', async () => {
-      await service.createRoom('user1');
-      await service.createRoom('user2', {
-        is_video: true,
-        max_participants: 20,
-      });
+    it('should not call createRoom when joining', async () => {
+      await service.joinRoom('user-1', 'existing-room');
 
-      const query: ListActiveRoomsQueryDto = { type: 'classroom' };
-      const rooms = await service.listActiveRooms(query);
-      expect(rooms.length).toBe(1);
+      expect(mockCreateRoom).not.toHaveBeenCalled();
+      expect(mockAddGrant).toHaveBeenCalledWith(
+        expect.objectContaining({ room: 'existing-room' }),
+      );
     });
 
-    it('should filter by type direct', async () => {
-      await service.createRoom('user1');
-      await service.createRoom('user2', {
-        is_video: true,
-        max_participants: 20,
-      });
+    it('should use cached token as fallback when operation fails', async () => {
+      mockDegradationService.getCachedToken.mockReturnValueOnce('cached-token');
+      mockDegradationService.executeWithBreaker.mockImplementationOnce(
+        async (
+          _service: string,
+          operation: () => Promise<unknown>,
+          fallback: () => unknown,
+          marker: any,
+        ) => {
+          marker.degraded = true;
+          marker.reason = 'Service livekit failed: timeout';
+          marker.fallbackSource = 'cache';
+          try {
+            await operation();
+          } catch (error) {
+            expect(error).toBeInstanceOf(Error);
+          }
+          return fallback();
+        },
+      );
+      mockToJwt.mockRejectedValueOnce(new Error('timeout'));
 
-      const query: ListActiveRoomsQueryDto = { type: 'direct' };
-      const rooms = await service.listActiveRooms(query);
-      expect(rooms.length).toBe(1);
-    });
-  });
+      const result = await service.joinRoom('user-999', 'some-room');
 
-  describe('getActiveRoom', () => {
-    it('should return room details with participants', async () => {
-      const created = await service.createRoom('user1', {
-        max_participants: 5,
-      });
-      await service.joinRoom('user2', created.room_name);
-      const room = await service.getActiveRoom('user1', created.room_name);
-      expect(room.room_name).toBe(created.room_name);
-      expect(room.participant_count).toBe(2);
-      expect(room.participants.length).toBe(2);
-    });
-
-    it('should throw NotFoundException for non-existent room', async () => {
-      await expect(
-        service.getActiveRoom('user1', 'nonexistent_room'),
-      ).rejects.toThrow('Room not found');
+      expect(result.token).toBe('cached-token');
+      expect(result.roomName).toBe('some-room');
+      expect(result.degraded).toBe(true);
+      expect(metrics.recordVideoClassroomJoinFailed).toHaveBeenCalledWith(
+        'Error',
+      );
     });
   });
 });

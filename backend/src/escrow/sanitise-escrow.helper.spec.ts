@@ -59,15 +59,20 @@ describe('sanitiseEscrowData', () => {
   });
 
   it('should sanitise strings in arrays', () => {
-    expect(sanitiseEscrowData(['<b>test</b>', 'safe'])).toEqual(['test', 'safe']);
+    expect(sanitiseEscrowData(['<b>test</b>', 'safe'])).toEqual([
+      'test',
+      'safe',
+    ]);
   });
 
   it('should sanitise strings in plain objects', () => {
-    expect(sanitiseEscrowData({
-      id: 'escrow-1',
-      reason: '<script>alert("xss")</script>',
-      status: 'held',
-    })).toEqual({
+    expect(
+      sanitiseEscrowData({
+        id: 'escrow-1',
+        reason: '<script>alert("xss")</script>',
+        status: 'held',
+      }),
+    ).toEqual({
       id: 'escrow-1',
       reason: '',
       status: 'held',
@@ -75,9 +80,11 @@ describe('sanitiseEscrowData', () => {
   });
 
   it('should recurse into nested objects', () => {
-    expect(sanitiseEscrowData({
-      metadata: { note: '<a href="javascript:alert(1)">click</a>' },
-    })).toEqual({
+    expect(
+      sanitiseEscrowData({
+        metadata: { note: '<a href="javascript:alert(1)">click</a>' },
+      }),
+    ).toEqual({
       metadata: { note: 'click' },
     });
   });

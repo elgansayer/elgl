@@ -1,36 +1,29 @@
-<<<<<<< HEAD
 import {
   Controller,
   Post,
-  Get,
   Body,
-  Query,
-  Param,
+  Get,
   UseGuards,
+  UseInterceptors,
   Req,
   HttpCode,
-  HttpStatus,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-=======
-import { Controller, Post, Body, UseGuards, UseInterceptors, Req } from '@nestjs/common';
->>>>>>> origin/main
 import { VideoCallsService } from './video-calls.service';
+import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import {
-<<<<<<< HEAD
-  StartVideoCallDto,
-  JoinVideoCallDto,
-  EndVideoCallDto,
-  ListActiveRoomsQueryDto,
-} from './dto/video-call.dto';
-=======
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
   CacheControlInterceptor,
   CACHE_NO_STORE,
 } from '../common/cache.interceptor';
->>>>>>> origin/main
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -41,17 +34,20 @@ interface AuthenticatedRequest extends Request {
 @UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class VideoCallsController {
-  constructor(private readonly videoCallsService: VideoCallsService) {}
+  constructor(
+    private readonly videoCallsService: VideoCallsService,
+    private readonly degradationService: VideoCallsDegradationService,
+  ) {}
 
   @Post('start')
-<<<<<<< HEAD
-  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
-    summary: 'Start a video classroom or direct call',
+    summary: 'Start a new video call room',
     description:
-      'Creates a new LiveKit room for a video classroom (group) or direct 1-on-1 call. ' +
-      'Returns a LiveKit access token and room name. For direct calls, specify the callee_id. ' +
-      'For open classrooms, omit callee_id and set max_participants to the desired capacity (up to 50).',
+      'Creates a new LiveKit video call room for the authenticated user. ' +
+      'Returns a LiveKit access token and the generated room name. ' +
+      'The room is configured with a 30-second empty timeout and a maximum of 2 participants. ' +
+      'When LiveKit is degraded, returns a standalone token with a degraded flag.',
   })
   @ApiResponse({
     status: 201,
@@ -59,44 +55,31 @@ export class VideoCallsController {
     schema: {
       type: 'object',
       properties: {
-        token: { type: 'string', example: 'eyJ...' },
-        room_name: { type: 'string', example: 'video_abc123' },
-        is_video: { type: 'boolean', example: true },
+        token: {
+          type: 'string',
+          description: 'LiveKit access token for the caller',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+        roomName: {
+          type: 'string',
+          description: 'Generated LiveKit room name',
+          example: 'video_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        },
+        degraded: {
+          type: 'boolean',
+          description:
+            'Whether the response was served from a degraded fallback',
+          example: false,
+        },
+        degradationReason: {
+          type: 'string',
+          description: 'Human-readable reason for degradation, if degraded',
+          example: 'Service livekit failed: Connection refused',
+        },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid request body or participant limit exceeded.' })
-  @ApiResponse({ status: 401, description: 'Unauthorised - missing or invalid bearer token.' })
-  async startCall(@Req() req: AuthenticatedRequest, @Body() dto: StartVideoCallDto) {
-    const userId = req.user!.id;
-    return this.videoCallsService.createRoom(userId, dto);
-  }
-
-  @Post('join')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Join an existing video classroom',
-    description:
-      'Generates a LiveKit access token for joining an existing room. ' +
-      'The room must exist and the user must be a participant or the room must have capacity.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Join token generated successfully.',
-    schema: {
-      type: 'object',
-      properties: {
-        token: { type: 'string', example: 'eyJ...' },
-        room_name: { type: 'string', example: 'video_abc123' },
-        is_video: { type: 'boolean', example: true },
-      },
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-  @ApiResponse({ status: 404, description: 'Room not found.' })
-  async joinCall(
-=======
-  @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async startCall(@Req() req: AuthenticatedRequest) {
     const userId = req.user!.id;
     return this.videoCallsService.createRoom(userId);
@@ -104,124 +87,105 @@ export class VideoCallsController {
 
   @Post('accept')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
+  @ApiOperation({
+    summary: 'Accept and join an existing video call room',
+    description:
+      'Generates a LiveKit access token for the authenticated user to join ' +
+      'an existing video call room identified by its room name. ' +
+      'When LiveKit is degraded, falls back to cached or standalone tokens.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['roomName'],
+      properties: {
+        roomName: {
+          type: 'string',
+          description: 'The LiveKit room name to join',
+          example: 'video_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Token generated successfully for joining the room.',
+    schema: {
+      type: 'object',
+      properties: {
+        token: {
+          type: 'string',
+          description: 'LiveKit access token for the participant',
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+        roomName: {
+          type: 'string',
+          description: 'The LiveKit room name',
+          example: 'video_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        },
+        degraded: {
+          type: 'boolean',
+          description:
+            'Whether the response was served from a degraded fallback',
+          example: false,
+        },
+        degradationReason: {
+          type: 'string',
+          description: 'Human-readable reason for degradation, if degraded',
+          example: 'Service livekit failed: timeout',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   acceptCall(
->>>>>>> origin/main
     @Req() req: AuthenticatedRequest,
-    @Body() dto: JoinVideoCallDto,
+    @Body('roomName') roomName: string,
   ) {
     const userId = req.user!.id;
-<<<<<<< HEAD
-<<<<<<< HEAD
-    return this.videoCallsService.joinRoom(userId, dto.room_name);
-  }
-
-  @Post('end')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'End a video classroom',
-    description:
-      'Ends an active video classroom or call. Only the room creator can end the room. ' +
-      'All participants are disconnected from the LiveKit room.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Room ended successfully.',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        room_name: { type: 'string', example: 'video_abc123' },
-      },
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-  @ApiResponse({ status: 403, description: 'Only the room creator can end the room.' })
-  @ApiResponse({ status: 404, description: 'Room not found.' })
-  async endCall(@Req() req: AuthenticatedRequest, @Body() dto: EndVideoCallDto) {
-    const userId = req.user!.id;
-    return this.videoCallsService.endRoom(userId, dto.room_name);
-  }
-
-  @Get('active')
-  @ApiOperation({
-    summary: 'List active video classrooms',
-    description:
-      'Returns all active video classrooms and direct calls, optionally filtered by type, topic, or language pair. ' +
-      'Used by the discovery surface to display joinable rooms.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of active video classrooms.',
-    schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          room_name: { type: 'string', example: 'video_abc123' },
-          creator_id: { type: 'string', example: 'uuid' },
-          is_video: { type: 'boolean', example: true },
-          participant_count: { type: 'number', example: 5 },
-          max_participants: { type: 'number', example: 20 },
-          topic: { type: 'string', nullable: true, example: 'english' },
-          language_pair: { type: 'string', nullable: true, example: 'en-es' },
-          created_at: { type: 'string', format: 'date-time', example: '2026-08-07T12:00:00Z' },
-        },
-      },
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-  async listActive(@Query() query: ListActiveRoomsQueryDto) {
-    return this.videoCallsService.listActiveRooms(query);
-  }
-
-  @Get('active/:roomName')
-  @ApiOperation({
-    summary: 'Get details of a specific active video classroom',
-    description:
-      'Returns detailed information about a specific active room, including current participant list.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Room details with participants.',
-    schema: {
-      type: 'object',
-      properties: {
-        room_name: { type: 'string', example: 'video_abc123' },
-        creator_id: { type: 'string', example: 'uuid' },
-        is_video: { type: 'boolean', example: true },
-        participant_count: { type: 'number', example: 5 },
-        max_participants: { type: 'number', example: 20 },
-        participants: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              user_id: { type: 'string', example: 'uuid' },
-              joined_at: { type: 'string', format: 'date-time', example: '2026-08-07T12:00:00Z' },
-            },
-          },
-        },
-        topic: { type: 'string', nullable: true, example: 'english' },
-        language_pair: { type: 'string', nullable: true, example: 'en-es' },
-      },
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorised.' })
-  @ApiResponse({ status: 404, description: 'Room not found.' })
-  getActiveRoom(
-    @Req() req: AuthenticatedRequest,
-    @Param('roomName') roomName: string,
-  ) {
-    const userId = req.user!.id;
-    return this.videoCallsService.getActiveRoom(userId, roomName);
-=======
-    const sanitisedRoomName = sanitiseVideoCallsData(roomName);
-    return sanitiseVideoCallsData(
-      this.videoCallsService.joinRoom(userId, sanitisedRoomName),
-    );
->>>>>>> origin/main
-=======
     return this.videoCallsService.joinRoom(userId, roomName);
->>>>>>> origin/main
+  }
+
+  @Get('health')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Check video classroom service health',
+    description:
+      'Returns the current health status of the LiveKit video classroom service ' +
+      'including circuit breaker states and recent degradation events.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Health status of the video classroom service.',
+  })
+  async health() {
+    const breakerStates = this.degradationService.getAllBreakerStates();
+    const breakers: Record<
+      string,
+      {
+        isOpen: boolean;
+        failureCount: number;
+        totalFailures: number;
+        totalSuccesses: number;
+      }
+    > = {};
+    for (const [name, state] of breakerStates) {
+      breakers[name] = {
+        isOpen: state.isOpen,
+        failureCount: state.failureCount,
+        totalFailures: state.totalFailures,
+        totalSuccesses: state.totalSuccesses,
+      };
+    }
+    const recentEvents =
+      await this.degradationService.getRecentDegradationEvents(10);
+
+    return {
+      status: Object.values(breakers).some((b) => b.isOpen)
+        ? 'degraded'
+        : 'healthy',
+      breakers,
+      recentDegradationEvents: recentEvents,
+    };
   }
 }
