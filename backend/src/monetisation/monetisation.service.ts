@@ -2,12 +2,12 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as crypto from 'crypto';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -41,11 +41,11 @@ export interface DeveloperDiagnosticLogRow {
 
 @Injectable()
 export class MonetisationService {
-  private readonly logger = new Logger(MonetisationService.name);
-
   private readonly stripe: Stripe;
 
   constructor(
+    @InjectPinoLogger(MonetisationService.name)
+    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => AppleNotificationService))
@@ -89,7 +89,7 @@ export class MonetisationService {
       throw new Error('Failed to update VIP status');
     }
 
-    this.logger.log(
+    this.logger.info(
       `VIP status updated for user ${userId}: isVip=${isVip}, tier=${vipTier}`,
     );
   }
@@ -221,7 +221,7 @@ export class MonetisationService {
   ): Promise<{ received: boolean; status: string }> {
     const event = this.verifyStripeSignature(rawBody, signature);
 
-    this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
+    this.logger.info(`Received verified Stripe Webhook event: ${event.type}`);
 
     // Helper to determine tier based on planId metadata (or fallback to interval)
     const tierForPlan = (planId?: string, interval?: string): string => {
@@ -271,7 +271,7 @@ export class MonetisationService {
   async handleAppleNotification(
     dto: AppleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log(
+    this.logger.info(
       `Processing Apple Notification: ${dto.notificationType}, ${dto.subtype}`,
     );
 
@@ -299,7 +299,7 @@ export class MonetisationService {
   async handleGoogleNotification(
     dto: GoogleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log(
+    this.logger.info(
       `Processing Google Notification: ${dto.productId}, ${dto.purchaseToken}`,
     );
 
@@ -482,8 +482,7 @@ export class MonetisationService {
     receiptData?: string,
   ): Promise<{ received: boolean; status: string }> {
     if (platform === 'stripe') {
-      const subscription =
-        await this.findActiveStripeSubscription(userId);
+      const subscription = await this.findActiveStripeSubscription(userId);
       if (subscription) {
         const tier =
           subscription.metadata?.tier ??
@@ -521,9 +520,16 @@ export class MonetisationService {
       let purchaseToken: string;
       let productId: string | undefined;
       try {
-        const parsed = JSON.parse(receiptData);
-        purchaseToken = parsed.purchaseToken;
-        productId = parsed.productId;
+        const parsed: Record<string, unknown> = JSON.parse(receiptData);
+        if (
+          typeof parsed.purchaseToken === 'string' &&
+          typeof parsed.productId === 'string'
+        ) {
+          purchaseToken = parsed.purchaseToken;
+          productId = parsed.productId;
+        } else {
+          throw new Error('Invalid receipt data format');
+        }
       } catch {
         // fallback: treat receiptData as raw purchase token
         purchaseToken = receiptData;
@@ -584,8 +590,34 @@ export class MonetisationService {
       }
 
       return { received: true, status: 'no_valid_subscription' };
+    } else {
+      // Stripe/web platform: look up active Stripe subscription and sync VIP status
+      const subscription = await this.findActiveStripeSubscription(userId);
+      if (!subscription) {
+        return { received: true, status: 'no_valid_subscription' };
+      }
+
+      // Determine VIP tier from the subscription metadata or price lookup
+      const item = subscription.items.data[0];
+      const priceId = item?.price?.id;
+      let tier: string | null = null;
+      if (priceId) {
+        tier = this.subscriptionPlansService.getTierByProductId(priceId);
+      }
+
+      if (tier) {
+        await this.updateVipStatusFromWebhook(userId, true, tier);
+        return { received: true, status: 'restored' };
+      }
+
+      // No matching tier but active subscription exists -- restore as consumer VIP
+      await this.updateVipStatusFromWebhook(
+        userId,
+        true,
+        'consumer_8_ukp_10_usd',
+      );
+      return { received: true, status: 'restored' };
     }
-    throw new BadRequestException('Invalid platform');
   }
 
   /**
@@ -623,7 +655,7 @@ export class MonetisationService {
       throw new Error(`Failed to deduct coins: ${updateError.message}`);
     }
 
-    this.logger.log(
+    this.logger.info(
       `Deducted ${amount} coins from user ${userId}, remaining ${newBalance}`,
     );
 
@@ -667,7 +699,7 @@ export class MonetisationService {
     if (updateError) {
       throw new Error(`Failed to add coins: ${updateError.message}`);
     }
-    this.logger.log(
+    this.logger.info(
       `Added ${amount} coins to user ${userId}, new balance ${newBalance}`,
     );
     return newBalance;
@@ -798,7 +830,7 @@ export class MonetisationService {
       cancel_at_period_end: true,
     });
 
-    this.logger.log(
+    this.logger.info(
       `Subscription ${userSubscription.id} set to cancel at period end for user ${userId}`,
     );
 
@@ -830,7 +862,7 @@ export class MonetisationService {
       cancel_at_period_end: false,
     });
 
-    this.logger.log(
+    this.logger.info(
       `Subscription ${userSubscription.id} resumed for user ${userId}`,
     );
 

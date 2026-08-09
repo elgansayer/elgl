@@ -19,55 +19,80 @@
             <button
               (click)="raiseHand()"
               class="rounded-app bg-amber-400 ps-4 pe-4 pt-2 pb-2 text-xs font-bold text-amber-950"
-            >
+             [attr.aria-label]="'audioRoom.raiseHandBtn' | t">
               {{ 'audioRoom.raiseHandBtn' | t }}
             </button>
           }
           <button
             (click)="showGiftModal.set(true)"
             class="rounded-app bg-purple-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white"
-          >
+           [attr.aria-label]="'audioRoom.giftHostBtn' | t">
             {{ 'audioRoom.giftHostBtn' | t }}
+          </button>
+          <button
+            (click)="showTipModal.set(true)"
+            class="rounded-app bg-amber-500 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-amber-950"
+          >
+            {{ 'audioRoom.tipHostBtn' | t }}
           </button>
           <button
             (click)="showSafetyModal.set(true)"
             class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-          >
+           [attr.aria-label]="'audioRoom.moderateBtn' | t">
             {{ 'audioRoom.moderateBtn' | t }}
           </button>
           @if (room.host_id === authService.currentUser()?.id) {
             <button
               (click)="openPollForm()"
               class="rounded-app bg-blue-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white"
-            >
+             [attr.aria-label]="'quickPoll.createBtn' | t">
               {{ 'quickPoll.createBtn' | t }}
             </button>
             <button
               (click)="archive()"
               class="rounded-app bg-red-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white"
-            >
+             [attr.aria-label]="'audioRoom.endArchiveBtn' | t">
               {{ 'audioRoom.endArchiveBtn' | t }}
             </button>
           }
-          <button (click)="leave()" class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs">
+          <button (click)="leave()" class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs" [attr.aria-label]="'audioRoom.leaveBtn' | t">
             {{ 'audioRoom.leaveBtn' | t }}
           </button>
           @if (authService.currentUser()?.is_vip) {
             <button
               (click)="showExclusivePicker.set(!showExclusivePicker())"
               class="rounded-app bg-gradient-to-r from-pink-500 to-purple-600 ps-3.5 pe-3.5 pt-2 pb-2 text-xs font-bold text-white"
-            >
+             [attr.aria-label]="'audioRoom.exclusiveEmojiBtn' | t">
               {{ 'audioRoom.exclusiveEmojiBtn' | t }}
             </button>
           }
+          <button
+            (click)="showNotesPanel.set(!showNotesPanel())"
+            class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs"
+            [attr.aria-label]="'audioRoom.notesBtn' | t"
+          >
+            {{ 'audioRoom.notesBtn' | t }}
+          </button>
         </div>
       </div>
+
+      @if (room.host_id) {
+        <app-soundboard
+          [roomId]="room.id"
+          [hostUserId]="room.host_id"
+        ></app-soundboard>
+      }
 
       <div class="flex flex-wrap gap-1.5">
         <span class="app-chip">{{ 'audioRoom.chipListening' | t }}</span>
         <span class="app-chip">{{ 'audioRoom.chipQueue' | t }}</span>
         <span class="app-chip">{{ 'audioRoom.chipSubtitles' | t }}</span>
       </div>
+
+      <app-soundboard
+        [roomId]="room.id"
+        [hostUserId]="room.host_id"
+      ></app-soundboard>
 
       @if (showExclusivePicker() && authService.currentUser()?.is_vip) {
         <div class="flex flex-wrap gap-2 p-2 bg-surface-200 rounded-card">
@@ -76,7 +101,7 @@
               (click)="selectExclusiveEmoji(emoji.emojiId)"
               class="flex flex-col items-center justify-center rounded-lg bg-purple-700/30 p-2 hover:bg-purple-700/50 transition-colors"
               title="{{ emoji.name }}"
-            >
+             [attr.aria-label]="emoji.name">
               <span class="text-sm text-text-primary">{{ emoji.name }}</span>
             </button>
           }
@@ -87,7 +112,9 @@
         <div class="lg:col-span-2 space-y-4">
           @if (room.is_video_stream) {
             <div class="relative">
-              <app-video-room></app-video-room>
+              <app-video-classroom-error-boundary>
+                <app-video-room></app-video-room>
+              </app-video-classroom-error-boundary>
               <app-live-chat-overlay [roomId]="room.id"></app-live-chat-overlay>
             </div>
           }
@@ -115,7 +142,7 @@
                   <!-- Circular avatar -->
                   <div class="relative mx-auto inline-block">
                     @if (participant.avatar_url) {
-                      <img
+                      <img loading="lazy"
                         [src]="participant.avatar_url"
                         [alt]="participant.display_name"
                         class="mx-auto h-14 w-14 rounded-full object-cover border-2"
@@ -185,14 +212,14 @@
                         <button
                           (click)="mute(participant.user_id)"
                           class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-amber-500/20"
-                        >
+                         [attr.aria-label]="'audioRoom.muteBtn' | t">
                           {{ 'audioRoom.muteBtn' | t }}
                         </button>
                       }
                       <button
                         (click)="demote(participant.user_id)"
                         class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-red-500/20"
-                      >
+                       [attr.aria-label]="'audioRoom.demoteBtn' | t">
                         {{ 'audioRoom.demoteBtn' | t }}
                       </button>
                     </div>
@@ -215,7 +242,7 @@
               <button
                 (click)="showApprovalModal.set(true)"
                 class="rounded-app bg-amber-500 ps-5 pe-5 pt-3 pb-3 text-sm font-bold text-amber-950 hover:bg-amber-400 transition-colors shadow-glow"
-              >
+               [attr.aria-label]="'audioRoom.raisedHandsTitle' | t">
                 {{ 'audioRoom.raisedHandsTitle' | t }}
                 <span
                   class="ms-2 inline-flex items-center justify-center rounded-full bg-amber-950/30 px-2 py-0.5 text-xs font-bold text-amber-950"
@@ -230,7 +257,7 @@
             <button
               (click)="viewPollResults(currentPollId()!)"
               class="mt-2 rounded-app bg-blue-600/20 text-blue-300 ps-3 pe-3 pt-2 pb-2 text-xs font-bold w-full"
-            >
+             [attr.aria-label]="'quickPoll.viewPollResultsBtn' | t">
               {{ 'quickPoll.viewPollResultsBtn' | t }}
             </button>
           }
@@ -274,8 +301,11 @@
           </section>
         </div>
 
-        <div>
+        <div class="flex flex-col gap-4">
           <app-room-chat></app-room-chat>
+          @if (showNotesPanel()) {
+            <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
+          }
         </div>
       </div>
     </section>
@@ -314,6 +344,14 @@
       ></app-virtual-gift-modal>
     }
 
+    @if (showTipModal()) {
+      <app-tip-host-modal
+        [roomId]="room.id"
+        [hostName]="room.host?.display_name || ('audioRoom.hostFallback' | t)"
+        (closed)="showTipModal.set(false)"
+      ></app-tip-host-modal>
+    }
+
     @if (showSafetyModal()) {
       <app-trust-safety-modal
         [targetId]="room.host_id"
@@ -341,7 +379,7 @@
         <button
           (click)="toggleViewMode()"
           class="app-button-secondary ps-3.5 pe-3.5 pt-2 pb-2 text-xs"
-        >
+         [attr.aria-label]="'audioRoom.viewFlatList' | t">
           @if (viewMode() === 'grouped') {
             {{ 'audioRoom.viewFlatList' | t }}
           } @else {
@@ -351,9 +389,17 @@
         <button
           (click)="showCreateModal.set(true)"
           class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-xs self-start"
-        >
+         [attr.aria-label]="'audioRoom.launchRoomBtn' | t">
           {{ 'audioRoom.launchRoomBtn' | t }}
         </button>
+        @if (authService.currentUser()?.is_vip) {
+          <button
+            (click)="showPrivatePartyModal.set(true)"
+            class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-xs self-start bg-gradient-to-r from-pink-500 to-purple-600"
+           [attr.aria-label]="'privateParty.launchBtn' | t">
+            {{ 'privateParty.launchBtn' | t }}
+          </button>
+        }
       </div>
     </section>
 
@@ -365,6 +411,44 @@
 
     @if (store.isLoading()) {
       <div class="app-empty-state text-text-secondary">{{ 'audioRoom.loading' | t }}</div>
+    }
+
+    <!-- Private Rooms Section -->
+    @if (!store.isLoading() && store.privateRooms().length > 0) {
+      <section class="space-y-3">
+        <h2 class="text-base font-bold text-pink-400 flex items-center gap-2">
+          <span aria-hidden="true">&#128274;</span>
+          {{ 'privateParty.yourPrivateRoomsHeading' | t }}
+        </h2>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          @for (room of store.privateRooms(); track room.id) {
+            <article class="app-card app-padded space-y-3 border-pink-500/30 border">
+              <div class="flex items-center justify-between">
+                <span class="app-chip bg-pink-500/20 text-pink-400">{{ 'privateParty.privateTag' | t }}</span>
+                <span class="app-chip text-primary">{{ room.language_pair }}</span>
+              </div>
+              <h3 class="text-base font-black text-text-primary">{{ room.title }}</h3>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="app-chip">{{ room.topic_tag }}</span>
+              </div>
+              <p class="text-xs text-text-secondary">
+                {{ 'audioRoom.hostLabel' | t }}:
+                <span class="font-semibold text-text-primary">{{
+                  room.host?.display_name || ('audioRoom.hostFallback' | t)
+                }}</span>
+              </p>
+              <div class="flex items-center justify-between border-t border-surface-100 pt-3">
+                <span class="app-muted">{{
+                  'audioRoom.listenersCount' | t: { count: room.listeners_count }
+                }}</span>
+                <button (click)="join(room)" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs" [attr.aria-label]="'audioRoom.joinRoomBtn' | t">
+                  {{ 'audioRoom.joinRoomBtn' | t }}
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
     }
 
     @if (!store.isLoading() && store.activeRooms().length === 0) {
@@ -385,7 +469,7 @@
             [class.bg-purple-500/20]="store.selectedLanguageGroup() === group.language_pair"
             [class.border-surface-100]="store.selectedLanguageGroup() !== group.language_pair"
             [class.bg-surface]="store.selectedLanguageGroup() !== group.language_pair"
-          >
+           [attr.aria-label]="group.language_pair + ' - ' + group.count + ' room(s)'">
             <span class="text-text-primary">{{ group.language_pair }}</span>
             <span
               class="ms-2 rounded-full px-2 py-0.5 text-[10px]"
@@ -434,7 +518,7 @@
             <span class="app-muted">{{
               'audioRoom.listenersCount' | t: { count: room.listeners_count }
             }}</span>
-            <button (click)="join(room)" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">
+            <button (click)="join(room)" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs" [attr.aria-label]="'audioRoom.joinRoomBtn' | t">
               {{ 'audioRoom.joinRoomBtn' | t }}
             </button>
           </div>
@@ -448,5 +532,12 @@
       (closed)="showCreateModal.set(false)"
       (created)="createRoom($event)"
     ></app-voiceroom-create-modal>
+  }
+
+  @if (showPrivatePartyModal()) {
+    <app-private-party-create-modal
+      (closed)="showPrivatePartyModal.set(false)"
+      (created)="createPrivateParty($event)"
+    ></app-private-party-create-modal>
   }
 </div>

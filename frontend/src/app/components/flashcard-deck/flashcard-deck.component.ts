@@ -1,21 +1,28 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ErrorHandler } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
+import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 
 type DeckView = 'list' | 'detail';
 
 const DECK_COLOURS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
 const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '📖', '🎓', '🌟', '💡', '🗣️', '📝', '🎵', '🏆'];
-const DRAG_THRESHOLD_PX = 60;
 
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
   template: `
+    <app-srs-error-boundary
+      [context]="errorContext()"
+      [showReportButton]="true"
+      (retry)="handleRetry()"
+    >
     <div class="mx-auto max-w-4xl space-y-6 pb-20">
       <!-- Header -->
       <section class="app-card app-padded space-y-4">
@@ -56,7 +63,7 @@ const DRAG_THRESHOLD_PX = 60;
             <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
               <h4 class="text-sm font-bold text-text-primary">{{ 'deck.createTitle' | t }}</h4>
               <div>
-                <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</label>
+                <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</span>
                 <input
                   [(ngModel)]="newDeckName"
                   [placeholder]="'deck.namePlaceholder' | t"
@@ -65,7 +72,7 @@ const DRAG_THRESHOLD_PX = 60;
                 />
               </div>
               <div>
-                <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</label>
+                <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</span>
                 <input
                   [(ngModel)]="newDeckDescription"
                   [placeholder]="'deck.descriptionPlaceholder' | t"
@@ -75,7 +82,7 @@ const DRAG_THRESHOLD_PX = 60;
               </div>
               <div class="flex flex-wrap gap-3">
                 <div class="min-w-[120px]">
-                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</label>
+                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</span>
                   <div class="flex flex-wrap gap-1.5">
                     @for (c of deckColourOptions; track c) {
                       <button
@@ -87,12 +94,12 @@ const DRAG_THRESHOLD_PX = 60;
                         [class.border-white]="newDeckColour() === c"
                         [class.border-transparent]="newDeckColour() !== c"
                         [attr.aria-label]="'deck.colourAriaLabel' | t: { colour: c }"
-                      ></button>
+                      ><span class="sr-only">{{ c }}</span></button>
                     }
                   </div>
                 </div>
                 <div class="min-w-[120px]">
-                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</label>
+                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</span>
                   <div class="flex flex-wrap gap-1.5">
                     @for (ic of deckIconOptions; track ic) {
                       <button
@@ -121,12 +128,12 @@ const DRAG_THRESHOLD_PX = 60;
 
           <!-- Deck Grid -->
           @if (isLoading()) {
-            <div class="py-12 text-center">
+            <div class="py-12 text-center" role="status" aria-busy="true">
               <p class="app-muted text-sm">{{ 'deck.loading' | t }}</p>
             </div>
           } @else if (decks().length === 0) {
-            <div class="app-empty-state py-12 text-center">
-              <p class="text-3xl mb-3">📚</p>
+            <div class="app-empty-state py-12 text-center" role="status">
+              <p class="text-3xl mb-3" aria-hidden="true">📚</p>
               <p class="font-bold text-text-primary">{{ 'deck.emptyTitle' | t }}</p>
               <p class="app-muted text-xs mt-1">{{ 'deck.emptyDesc' | t }}</p>
             </div>
@@ -197,6 +204,15 @@ const DRAG_THRESHOLD_PX = 60;
               >
                 {{ 'deck.editBtn' | t }}
               </button>
+              @if (deckCards().length > 0) {
+                <button
+                  type="button"
+                  (click)="startDeckReview(deck)"
+                  class="app-button-primary ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold"
+                >
+                  {{ 'deck.startReview' | t }}
+                </button>
+              }
             </div>
 
             <div class="app-card app-padded space-y-3" [style.border-color]="deck.colour + '40'">
@@ -222,16 +238,16 @@ const DRAG_THRESHOLD_PX = 60;
               <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
                 <h4 class="text-sm font-bold text-text-primary">{{ 'deck.editTitle' | t }}</h4>
                 <div>
-                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</label>
+                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</span>
                   <input [(ngModel)]="editDeckName" class="app-input w-full" maxlength="60" />
                 </div>
                 <div>
-                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</label>
+                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</span>
                   <input [(ngModel)]="editDeckDescription" class="app-input w-full" maxlength="120" />
                 </div>
                 <div class="flex flex-wrap gap-3">
                   <div class="min-w-[120px]">
-                    <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</label>
+                    <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</span>
                     <div class="flex flex-wrap gap-1.5">
                       @for (c of deckColourOptions; track c) {
                         <button
@@ -242,12 +258,13 @@ const DRAG_THRESHOLD_PX = 60;
                           [class.scale-125]="editDeckColour() === c"
                           [class.border-white]="editDeckColour() === c"
                           [class.border-transparent]="editDeckColour() !== c"
-                        ></button>
+                          [attr.aria-label]="'deck.colourAriaLabel' | t: { colour: c }"
+                        ><span class="sr-only">{{ c }}</span></button>
                       }
                     </div>
                   </div>
                   <div class="min-w-[120px]">
-                    <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</label>
+                    <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</span>
                     <div class="flex flex-wrap gap-1.5">
                       @for (ic of deckIconOptions; track ic) {
                         <button
@@ -257,6 +274,7 @@ const DRAG_THRESHOLD_PX = 60;
                           [class.scale-125]="editDeckIcon() === ic"
                           [class.border-white]="editDeckIcon() === ic"
                           [class.border-transparent]="editDeckIcon() !== ic"
+                          [attr.aria-label]="ic"
                         >{{ ic }}</button>
                       }
                     </div>
@@ -276,7 +294,7 @@ const DRAG_THRESHOLD_PX = 60;
               <div class="app-card app-padded space-y-3">
                 <h4 class="text-sm font-bold text-text-primary">{{ 'deck.addCardsTitle' | t }}</h4>
                 @if (availableFlashcards().length === 0) {
-                  <div class="app-empty-state py-4">
+                  <div class="app-empty-state py-4" role="status">
                     <p class="text-xs text-text-secondary">{{ 'deck.noCardsAvailable' | t }}</p>
                   </div>
                 } @else {
@@ -340,6 +358,7 @@ const DRAG_THRESHOLD_PX = 60;
         }
       }
     </div>
+    </app-srs-error-boundary>
   `,
   styles: [
     `
@@ -354,6 +373,9 @@ export class FlashcardDeckComponent {
   private deckService = inject(DeckService);
   private vocabStore = inject(VocabularyStore);
   private i18n = inject(I18nService);
+  private router = inject(Router);
+  private errorHandler = inject(ErrorHandler);
+  private sanitisation = inject(HtmlSanitisationService);
 
   // View state
   readonly activeView = signal<DeckView>('list');
@@ -387,6 +409,38 @@ export class FlashcardDeckComponent {
     return all.filter((fc) => !inDeck.has(fc.id));
   });
 
+  readonly errorContext = computed<SrsErrorContext>(() => ({
+    component: 'flashcard-deck',
+    operation: this.activeView(),
+    deckId: this.selectedDeck()?.id,
+  }));
+
+  /** Sanitises user-authored string fields of a deck against XSS via DOMPurify. */
+  private sanitiseDeck(d: Deck): Deck {
+    return {
+      ...d,
+      name: this.sanitisation.sanitiseText(d.name),
+      description: d.description ? this.sanitisation.sanitiseText(d.description) : undefined,
+    };
+  }
+
+  handleRetry(): void {
+    void this.loadDecks();
+  }
+
+  private reportDeckError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    const deckError = new Error(
+      `[SRS:flashcard-deck] ${operation} failed: ${message}`,
+    );
+    deckError.name = 'SrsDeckError';
+    if (err instanceof Error && err.stack) {
+      deckError.stack = err.stack;
+    }
+    const enriched = Object.assign(deckError, { srsOperation: operation });
+    this.errorHandler.handleError(enriched);
+  }
+
   constructor() {
     this.loadDecks();
   }
@@ -395,8 +449,9 @@ export class FlashcardDeckComponent {
     this.isLoading.set(true);
     try {
       const result = await this.deckService.getDecks();
-      this.decks.set(result);
-    } catch {
+      this.decks.set(result.map((d) => this.sanitiseDeck(d)));
+    } catch (e) {
+      this.reportDeckError('loadDecks', e);
       // ignore
     } finally {
       this.isLoading.set(false);
@@ -422,15 +477,18 @@ export class FlashcardDeckComponent {
     this.isCreating.set(true);
     try {
       const dto: CreateDeckDto = {
-        name,
-        description: this.newDeckDescription().trim() || undefined,
+        name: this.sanitisation.sanitiseText(name),
+        description: this.newDeckDescription().trim()
+          ? this.sanitisation.sanitiseText(this.newDeckDescription().trim())
+          : undefined,
         colour: this.newDeckColour(),
         icon: this.newDeckIcon(),
       };
       const deck = await this.deckService.createDeck(dto);
-      this.decks.update((list) => [deck, ...list]);
+      this.decks.update((list) => [this.sanitiseDeck(deck), ...list]);
       this.toggleCreateForm();
-    } catch {
+    } catch (e) {
+      this.reportDeckError('createDeck', e);
       // error silently
     } finally {
       this.isCreating.set(false);
@@ -472,7 +530,8 @@ export class FlashcardDeckComponent {
       this.selectedDeck.update((d) =>
         d ? { ...d, card_count: d.card_count + 1 } : null,
       );
-    } catch {
+    } catch (e) {
+      this.reportDeckError('addCardToDeck', e);
       // ignore
     }
   }
@@ -493,7 +552,8 @@ export class FlashcardDeckComponent {
       this.selectedDeck.update((d) =>
         d ? { ...d, card_count: Math.max(0, d.card_count - 1) } : null,
       );
-    } catch {
+    } catch (e) {
+      this.reportDeckError('removeCardFromDeck', e);
       // ignore
     }
   }
@@ -503,9 +563,16 @@ export class FlashcardDeckComponent {
     try {
       await this.deckService.deleteDeck(deckId);
       this.decks.update((list) => list.filter((d) => d.id !== deckId));
-    } catch {
+    } catch (e) {
+      this.reportDeckError('deleteDeck', e);
       // ignore
     }
+  }
+
+  startDeckReview(_deck: Deck): void {
+    // Set pending review cards in the vocab store and navigate to review page
+    this.vocabStore.pendingReviewCards.set([...this.deckCards()]);
+    void this.router.navigate(['/review']);
   }
 
   toggleEditForm(): void {
@@ -527,18 +594,22 @@ export class FlashcardDeckComponent {
     if (!deck) return;
     try {
       const updated = await this.deckService.updateDeck(deck.id, {
-        name: this.editDeckName().trim(),
-        description: this.editDeckDescription().trim() || undefined,
+        name: this.sanitisation.sanitiseText(this.editDeckName().trim()),
+        description: this.editDeckDescription().trim()
+          ? this.sanitisation.sanitiseText(this.editDeckDescription().trim())
+          : undefined,
         colour: this.editDeckColour(),
         icon: this.editDeckIcon(),
       });
 
       if (updated) {
-        this.selectedDeck.set(updated);
-        this.decks.update((list) => list.map((d) => (d.id === updated.id ? updated : d)));
+        const sanitised = this.sanitiseDeck(updated);
+        this.selectedDeck.set(sanitised);
+        this.decks.update((list) => list.map((d) => (d.id === sanitised.id ? sanitised : d)));
       }
       this.showEditForm.set(false);
-    } catch {
+    } catch (e) {
+      this.reportDeckError('saveDeckEdits', e);
       // ignore
     }
   }

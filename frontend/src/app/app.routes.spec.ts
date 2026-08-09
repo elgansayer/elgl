@@ -49,12 +49,9 @@ describe('App routes', () => {
     }
   });
 
-  it('should define component for routes with component property', () => {
+  it('should NOT use eager component loading - all feature routes should be lazy', () => {
     const directRoutes = routes.filter((r) => r.path && r.component);
-    expect(directRoutes.length).toBeGreaterThan(0);
-    for (const r of directRoutes) {
-      expect(r.component).toBeDefined();
-    }
+    expect(directRoutes.length).toBe(0);
   });
 
   it('should guard the admin route with adminGuard', () => {
@@ -79,11 +76,12 @@ describe('App routes', () => {
     }
   });
 
-  it('should include milestones component route', () => {
+  it('should lazy-load milestones component route', () => {
     const milestones = routes.find((r) => r.path === 'milestones');
     expect(milestones).toBeDefined();
     if (milestones) {
-      expect(milestones.component).toBeDefined();
+      expect(milestones.loadComponent).toBeDefined();
+      expect(typeof milestones.loadComponent).toBe('function');
     }
   });
 });
