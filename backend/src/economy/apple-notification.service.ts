@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EconomyService } from './economy.service';
 
@@ -18,9 +19,9 @@ interface AppleTransactionInfo {
  */
 @Injectable()
 export class AppleNotificationService {
-  private readonly logger = new Logger(AppleNotificationService.name);
-
   constructor(
+    @InjectPinoLogger(AppleNotificationService.name)
+    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly supabaseService: SupabaseService,
@@ -49,7 +50,7 @@ export class AppleNotificationService {
     const subtype = payload.subtype as string | undefined;
     const data = payload.data as Record<string, unknown> | undefined;
 
-    this.logger.log(
+    this.logger.info(
       `Apple notification: type=${notificationType}, subtype=${subtype}`,
     );
 
@@ -157,7 +158,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} subscribed to product ${productId} (transaction: ${transactionId})`,
     );
 
@@ -183,7 +184,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} auto-renew status changed to ${autoRenewStatus}`,
     );
 
@@ -204,7 +205,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} changed renewal preference to product ${newProductId}`,
     );
 
@@ -224,7 +225,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} failed to renew. Grace period expires: ${gracePeriodExpiresDate}`,
     );
 
@@ -243,7 +244,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} subscription expired (intent: ${expirationIntent})`,
     );
 
@@ -263,7 +264,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} received refund for transaction ${transactionId}`,
     );
 
@@ -281,7 +282,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} had their purchase revoked`);
+    this.logger.info(`User ${userId} had their purchase revoked`);
 
     // Revoke subscription benefits
     void this.revokeSubscriptionBenefits(userId);
@@ -298,7 +299,9 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} notified of price increase to ${newPrice}`);
+    this.logger.info(
+      `User ${userId} notified of price increase to ${newPrice}`,
+    );
 
     // Optionally notify the user about the price increase
     void this.notifyUserAboutPriceIncrease(userId, newPrice);
@@ -316,7 +319,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} refund request was declined`);
+    this.logger.info(`User ${userId} refund request was declined`);
   }
 
   /**
@@ -333,7 +336,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `Consumption request for user ${userId}, transaction ${transactionId}`,
     );
 
@@ -354,7 +357,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} received renewal extension of ${extensionLength} days`,
     );
 
@@ -405,7 +408,10 @@ export class AppleNotificationService {
 
     void supabase
       .from('subscriptions')
-      .update({ auto_renew: autoRenew, updated_at: new Date().toISOString() })
+      .update({
+        auto_renew: autoRenew,
+        updated_at: new Date().toISOString(),
+      })
       .eq('user_id', userId)
       .then(({ error }) => {
         if (error) {
@@ -446,7 +452,7 @@ export class AppleNotificationService {
     gracePeriodExpiresDate: string | undefined,
   ): void {
     // Placeholder: send push notification or in-app message
-    this.logger.log(
+    this.logger.debug(
       `Would notify user ${userId} about failed renewal, grace until ${gracePeriodExpiresDate}`,
     );
   }
@@ -485,7 +491,7 @@ export class AppleNotificationService {
             .update({ coins_balance: newBalance })
             .eq('id', userId)
             .then(() => {
-              this.logger.log(
+              this.logger.info(
                 `Revoked ${coinsToRevoke} coins from user ${userId} due to refund`,
               );
             });
@@ -521,7 +527,6 @@ export class AppleNotificationService {
       .update({
         is_vip: false,
         vip_tier: 'free',
-        updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
       .then(({ error }) => {
@@ -541,7 +546,7 @@ export class AppleNotificationService {
     newPrice: number | undefined,
   ): void {
     // Placeholder: send push notification or in-app message
-    this.logger.log(
+    this.logger.debug(
       `Would notify user ${userId} about price increase to ${newPrice}`,
     );
   }
@@ -551,7 +556,7 @@ export class AppleNotificationService {
    */
   private provideConsumptionData(userId: string, transactionId: string): void {
     // Placeholder: In production, send consumption data to Apple's API
-    this.logger.log(
+    this.logger.debug(
       `Would provide consumption data for user ${userId}, transaction ${transactionId}`,
     );
   }

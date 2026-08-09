@@ -1,14 +1,15 @@
 import {
   Injectable,
-  Logger,
   BadRequestException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service';
 import { MonetisationService } from './monetisation.service';
+import { SubscriptionPlansService } from './services/subscription-plans.service';
 
 interface AppleNotificationPayload {
   notificationType: string;
@@ -30,12 +31,14 @@ interface AppleTransactionInfo {
 
 @Injectable()
 export class AppleNotificationService {
-  private readonly logger = new Logger(AppleNotificationService.name);
   private readonly rootCAs: string[];
 
   constructor(
+    @InjectPinoLogger(AppleNotificationService.name)
+    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly supabaseService: SupabaseService,
+    private readonly subscriptionPlansService: SubscriptionPlansService,
     @Inject(forwardRef(() => MonetisationService))
     private readonly monetisationService: MonetisationService,
   ) {
@@ -46,9 +49,9 @@ export class AppleNotificationService {
   }
 
   async handleNotification(
-    payload: any,
+    payload: unknown,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log(`Received Apple App Store Server Notification`);
+    this.logger.info(`Received Apple App Store Server Notification`);
 
     const payloadRecord = payload as Record<string, unknown>;
     const signedPayload = payloadRecord?.signedPayload as string | undefined;
@@ -69,7 +72,7 @@ export class AppleNotificationService {
       } else if (this.isSubscriptionExpiredEvent(notificationType, subtype)) {
         await this.handleSubscriptionExpired(notificationType, subtype, data);
       } else {
-        this.logger.log(
+        this.logger.info(
           `Unhandled notification type: ${notificationType}/${subtype}`,
         );
       }
@@ -139,11 +142,10 @@ export class AppleNotificationService {
   private async handleSubscriptionActive(
     notificationType: string,
     subtype: string | undefined,
-    data: any,
+    data: AppleNotificationPayload['data'],
   ): Promise<void> {
     const transactionInfo = this.decodeTransactionInfo(
-      (data as Record<string, unknown>)?.signedTransactionInfo as
-        string | undefined,
+      data?.signedTransactionInfo,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription active event');
@@ -158,7 +160,7 @@ export class AppleNotificationService {
 
     const tier = this.mapProductIdToTier(transactionInfo.productId);
 
-    this.logger.log(
+    this.logger.info(
       `Activating subscription for user ${userId}, tier: ${tier}`,
     );
     await this.monetisationService.updateVipStatusFromWebhook(
@@ -174,11 +176,10 @@ export class AppleNotificationService {
   private async handleSubscriptionExpired(
     notificationType: string,
     subtype: string | undefined,
-    data: any,
+    data: AppleNotificationPayload['data'],
   ): Promise<void> {
     const transactionInfo = this.decodeTransactionInfo(
-      (data as Record<string, unknown>)?.signedTransactionInfo as
-        string | undefined,
+      data?.signedTransactionInfo,
     );
     if (!transactionInfo) {
       this.logger.warn('No transaction info in subscription expired event');
@@ -191,7 +192,7 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.log(`Deactivating subscription for user ${userId}`);
+    this.logger.info(`Deactivating subscription for user ${userId}`);
     await this.monetisationService.updateVipStatusFromWebhook(
       userId,
       false,
@@ -297,9 +298,9 @@ export class AppleNotificationService {
       verify.update(signedContent);
 
       return verify.verify(leafCert.publicKey, signature);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Signature verification error: ${(error as Error).message}`,
+        `Signature verification error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       return false;
     }
@@ -338,10 +339,10 @@ export class AppleNotificationService {
   }
 
   private mapProductIdToTier(productId: string): string {
-    if (productId.includes('developer') || productId.includes('Developer')) {
-      return 'developer_20_ukp_26_usd';
-    }
-    return 'consumer_8_ukp_10_usd';
+    return (
+      this.subscriptionPlansService.getTierByProductId(productId) ??
+      'consumer_8_ukp_10_usd'
+    );
   }
 
   private async storeAppleTransaction(

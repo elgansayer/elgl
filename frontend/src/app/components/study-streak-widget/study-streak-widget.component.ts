@@ -8,7 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [TranslatePipe],
   template: `
     <div
-      class="study-streak-widget bg-[#121212] rounded-xl ps-4 pe-4 pt-4 pb-4 flex items-center gap-3"
+      class="study-streak-widget rounded-sheet border border-surface-100 bg-surface-200 ps-4 pe-4 pt-4 pb-4 flex flex-wrap items-center gap-3"
     >
       <span class="text-2xl" aria-hidden="true">🔥</span>
       <div class="flex flex-col" aria-live="polite">
@@ -18,7 +18,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
         } @else if (streakError()) {
           @if (fallbackStreak() > 0) {
             <span class="text-2xl font-bold text-red-400"
-              >{{ fallbackStreak() }} {{ (fallbackStreak() === 1 ? 'studyStreak.day' : 'studyStreak.days') | t }}</span
+              >{{ fallbackStreak() }}
+              {{ (fallbackStreak() === 1 ? 'studyStreak.day' : 'studyStreak.days') | t }}</span
             >
           } @else {
             <span class="text-2xl font-bold text-red-400">{{ 'common.error' | t }}</span>
@@ -51,14 +52,18 @@ export class StudyStreakWidgetComponent {
 
   private streakResource = resource({
     params: () => ({ refresh: this.refreshTrigger() }),
-    loader: () =>
-      firstValueFrom(this.streakService.getStreak()).then(res => res.streak),
+    loader: () => firstValueFrom(this.streakService.getStreak()).then((res) => res.streak),
   });
 
   readonly streakLoading = computed(() => this.streakResource.isLoading());
   readonly streakError = computed(() => this.streakResource.error());
 
-  readonly streakValue = computed(() => this.streakResource.value() ?? 0);
+  readonly streakValue = computed(() => {
+    if (this.streakResource.error()) {
+      return 0;
+    }
+    return this.streakResource.value() ?? 0;
+  });
 
   /** Fallback for development and offline scenarios (Fake Data First) */
   readonly fallbackStreak = computed<number>(() => (isDevMode() ? 7 : 0));

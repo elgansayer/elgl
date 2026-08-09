@@ -11,6 +11,18 @@ import { SystemMessageService } from './services/system-message.service';
 import { ChatRoomRecord } from './interfaces/chat-message.interface';
 import { randomBytes } from 'crypto';
 
+export interface GroupMember {
+  user_id: string;
+  user: {
+    id: string;
+    display_name: string | null | undefined;
+    avatar_url: string | null | undefined;
+    native_language: string | null | undefined;
+    target_languages: string[] | null | undefined;
+    is_vip: boolean | null | undefined;
+  } | null;
+}
+
 @Injectable()
 export class GroupsService {
   constructor(
@@ -36,8 +48,8 @@ export class GroupsService {
     name: string,
     memberIds: string[],
   ): Promise<ChatRoomRecord> {
-    if (memberIds.length > 49) {
-      throw new Error('Group cannot exceed 50 members');
+    if (memberIds.length > 50) {
+      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
     }
     const supabase = this.supabaseService.getClient();
 
@@ -136,7 +148,7 @@ export class GroupsService {
     await this.systemMessageService.publishToRoom(roomId, 'memberRemoved', {});
   }
 
-  async getGroupMembers(roomId: string): Promise<any[]> {
+  async getGroupMembers(roomId: string): Promise<GroupMember[]> {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('chat_room_members')
@@ -146,14 +158,17 @@ export class GroupsService {
         user:users!chat_room_members_user_id_fkey (
           id,
           display_name,
-          avatar_url
+          avatar_url,
+          native_language,
+          target_languages,
+          is_vip
         )
       `,
       )
       .eq('room_id', roomId);
 
     if (error) throw new Error('Failed to fetch group members');
-    return data || [];
+    return data ?? [];
   }
 
   async generateInviteCode(userId: string, roomId: string): Promise<string> {
@@ -186,25 +201,58 @@ export class GroupsService {
     const supabase = this.supabaseService.getClient();
     const { data: room, error } = await supabase
       .from('chat_rooms')
-      .select('id, title')
+      .select('id, title, max_members')
       .eq('invite_code', code)
       .maybeSingle();
     if (error || !room) {
       throw new NotFoundException('Invalid or expired invite link');
     }
-    return { roomId: room.id, title: room.title };
+
+    const roomData = room as unknown as {
+      id: string;
+      title: string;
+      max_members: number;
+    };
+
+    // Check if the group is full
+    const { count: memberCount } = await supabase
+      .from('chat_room_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomData.id);
+
+    if (memberCount !== null && memberCount >= roomData.max_members) {
+      throw new ForbiddenException('Group is full');
+    }
+    return { roomId: roomData.id, title: roomData.title };
   }
 
   async joinByInviteCode(userId: string, code: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
     const { data: room, error: roomErr } = await supabase
       .from('chat_rooms')
-      .select('id, title')
+      .select('id, title, max_members')
       .eq('invite_code', code)
       .single();
-    if (roomErr || !room)
+    if (roomErr || !room) {
       throw new NotFoundException('Invalid or expired invite code');
-    const roomId = room.id;
+    }
+
+    const roomData = room as unknown as {
+      id: string;
+      title: string;
+      max_members: number;
+    };
+
+    // Check if the group is full
+    const { count: memberCount } = await supabase
+      .from('chat_room_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', roomData.id);
+
+    if (memberCount !== null && memberCount >= roomData.max_members) {
+      throw new ForbiddenException('Group is full');
+    }
+    const roomId = roomData.id;
 
     const { data: member } = await supabase
       .from('chat_room_members')
@@ -223,6 +271,49 @@ export class GroupsService {
     await this.systemMessageService.publishToRoom(roomId, 'memberAdded', {
       count: 1,
     });
+  }
+
+  async createAnnouncementGroup(
+    creatorId: string,
+    name: string,
+    memberIds: string[],
+  ): Promise<ChatRoomRecord> {
+    if (memberIds.length > 50) {
+      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
+    }
+    const supabase = this.supabaseService.getClient();
+
+    const response = await supabase
+      .from('chat_rooms')
+      .insert({
+        title: name,
+        is_announcement: true,
+        admin_id: creatorId,
+      })
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      throw new Error('Failed to create announcement group');
+    }
+
+    const room = response.data as ChatRoomRecord;
+
+    const allMembers = [...new Set([creatorId, ...memberIds])];
+    const membersData = allMembers.map((id) => ({
+      room_id: room.id,
+      user_id: id,
+    }));
+
+    const { error: membersError } = await supabase
+      .from('chat_room_members')
+      .insert(membersData);
+
+    if (membersError) {
+      throw new Error('Failed to add members to announcement group');
+    }
+
+    return room;
   }
 
   async sendAnnouncement(

@@ -32,7 +32,7 @@
       [currentCoverUrl]="profile()?.cover_photo_url || ''"
       (coverPhotoUploaded)="onCoverUploaded($event)"
     />
-    <section class="app-card app-padded">
+    <div class="app-card app-padded">
       <div
         class="flex flex-wrap items-center justify-between gap-4 border-b border-surface-100 pb-4"
       >
@@ -75,25 +75,35 @@
             <p class="app-muted">
               {{ 'profile.joinedPrefix' | t }} {{ profile()?.created_at | date: 'mediumDate' }}
             </p>
+            <div class="flex gap-3 mt-1 text-xs">
+              <a [routerLink]="['/profile', profile()?.id, 'followers']" class="hover:underline">
+                <span class="font-bold text-text-primary">{{ profile()?.followers_count ?? 0 }}</span>
+                <span class="app-muted ms-1">{{ 'profile.followersLabel' | t }}</span>
+              </a>
+              <a [routerLink]="['/profile', profile()?.id, 'following']" class="hover:underline">
+                <span class="font-bold text-text-primary">{{ profile()?.following_count ?? 0 }}</span>
+                <span class="app-muted ms-1">{{ 'profile.followingLabel' | t }}</span>
+              </a>
+            </div>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <button (click)="showVisitors.set(!showVisitors())" class="app-pill">
+          <button (click)="showVisitors.set(!showVisitors())" class="app-pill" [attr.aria-label]="'profile.visitorsHide' | t">
             {{ showVisitors() ? ('profile.visitorsHide' | t) : ('profile.visitorsLink' | t) }}
           </button>
-          @if (profile()?.audio_intro_url) {
-            <button
-              (click)="playAudioIntro(profile()?.audio_intro_url)"
-              class="app-button-secondary bg-blue-500/10 text-blue-400 ps-3 pe-3 pt-2 pb-2 text-xs"
-            >
-              {{ 'profile.audioIntroBtn' | t }}
-            </button>
-          }
-          <button (click)="toggleEdit()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs">
+          <button (click)="toggleEdit()" class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs" [attr.aria-label]="'profile.cancelBtn' | t">
             {{ isEditing() ? ('profile.cancelBtn' | t) : ('profile.editBtn' | t) }}
           </button>
         </div>
+      </div>
+
+      <!-- Audio Intro Recorder & Playback Card -->
+      <div class="mt-3">
+        <app-audio-intro-recorder
+          [existingAudioUrl]="profile()?.audio_intro_url ?? null"
+          (recordingComplete)="onAudioIntroSaved($event)"
+        />
       </div>
 
       @if (showVisitors()) {
@@ -105,12 +115,12 @@
           @if (visitorsError()) {
             <div class="text-xs text-red-400">{{ visitorsError() }}</div>
           }
-          @if (!visitorsLoading() && !visitorsError()) {
+          @if (!visitorsLoading() && !visitorsError() && visitors().length > 0) {
             <div class="flex flex-wrap gap-2">
               @for (visit of visitors(); track visit.id) {
                 <div class="flex items-center gap-2 rounded-full bg-surface-200 ps-2 pe-3 pt-1 pb-1 text-xs">
-                  @if (visit.visitor && visit.visitor.avatar_url && visit.visitor.id !== 'hidden-vip-only') {
-                    <img
+                  @if (visit.visitor?.avatar_url && visit.visitor?.id !== 'hidden-vip-only') {
+                    <img loading="lazy"
                       [src]="visit.visitor?.avatar_url"
                       alt="avatar"
                       class="h-6 w-6 rounded-full object-cover"
@@ -177,25 +187,58 @@
         </div>
       </div>
 
-      @if (profile()?.proficiency_level) {
+      @if (nationality) {
         <div
           class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
         >
-          {{ 'profile.proficiencyLabel' | t }}: {{ profile()?.proficiency_level }}
+          {{ 'profile.nationality' | t }}: {{ nationality }}
         </div>
       }
+      @if (region) {
+        <div
+          class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
+        >
+          {{ 'profile.region' | t }}: {{ region }}
+        </div>
+      }
+      @if (age) {
+        <div
+          class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
+        >
+          {{ 'profile.age' | t }}: {{ age }}
+        </div>
+      }
+      @if (gender) {
+        <div
+          class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
+        >
+          {{ 'profile.gender' | t }}: {{
+            gender === 'male'
+              ? ('profile.gender.male' | t)
+              : gender === 'female'
+              ? ('profile.gender.female' | t)
+              : ('profile.gender.other' | t)
+          }}
+        </div>
+      }
+      <div
+        class="mt-2 rounded-card border border-surface-100 bg-surface-300 ps-3 pe-3 pt-2 pb-2 text-center text-sm text-text-primary"
+      >
+        {{ 'profile.proficiencyLabel' | t }}: {{ profile()?.proficiency_level || ('common.unknown' | t) }}
+      </div>
 
       <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <a routerLink="/favourites" class="app-pill text-center">{{ 'profile.navFav' | t }}</a>
-        <a routerLink="/vocabulary" class="app-pill text-center">{{ 'profile.navVocab' | t }}</a>
-        <a routerLink="/audio-rooms" class="app-pill text-center">{{ 'profile.navRooms' | t }}</a>
-        <a routerLink="/developer" class="app-pill text-center">{{ 'profile.navDev' | t }}</a>
+        <a routerLink="/favourites" class="app-pill text-center" [attr.aria-label]="'profile.navFav' | t">{{ 'profile.navFav' | t }}</a>
+        <a routerLink="/vocabulary" class="app-pill text-center" [attr.aria-label]="'profile.navVocab' | t">{{ 'profile.navVocab' | t }}</a>
+        <a routerLink="/audio-rooms" class="app-pill text-center" [attr.aria-label]="'profile.navRooms' | t">{{ 'profile.navRooms' | t }}</a>
+        <a routerLink="/developer" class="app-pill text-center" [attr.aria-label]="'profile.navDev' | t">{{ 'profile.navDev' | t }}</a>
         @if (profile()?.is_admin) {
-          <a routerLink="/admin" class="app-pill text-center">{{ 'admin.navLink' | t }}</a>
+          <a routerLink="/admin" class="app-pill text-center" [attr.aria-label]="'admin.navLink' | t">{{ 'admin.navLink' | t }}</a>
         }
         <a
           routerLink="/settings"
           class="app-pill text-center col-span-2 sm:col-span-4 bg-surface-200 border-surface-300"
+          [attr.aria-label]="'profile.settingsLink' | t"
           >⚙️ {{ 'profile.settingsLink' | t }}</a
         >
       </div>
@@ -230,9 +273,9 @@
         </div>
       }
 
-      @if (!isEditing() && profile()) {
+      @if (!isEditing() && profile() !== null) {
         <div class="mt-4">
-          <app-achievements [userId]="profile()!.id" />
+          <app-achievements [userId]="profile()?.id ?? ''" />
         </div>
       }
 
@@ -308,17 +351,17 @@
         }
 
         <div class="mt-8">
-          <app-hobby-tags />
+          <app-hobby-tags [targetLanguage]="targetLanguages[0] || 'en'" />
         </div>
 
         <!-- Block / Report buttons -->
         <div class="mt-4 flex gap-2">
           @if (isBlocked()) {
-            <button (click)="unblockProfile()" class="app-button-secondary text-xs">{{ 'profile.unblockUser' | t }}</button>
+            <button (click)="unblockProfile()" class="app-button-secondary text-xs" [attr.aria-label]="'profile.unblockUser' | t">{{ 'profile.unblockUser' | t }}</button>
           } @else {
-            <button (click)="blockProfile()" class="app-button-secondary text-xs text-red-400">{{ 'profile.blockUser' | t }}</button>
+            <button (click)="blockProfile()" class="app-button-secondary text-xs text-red-400" [attr.aria-label]="'profile.blockUser' | t">{{ 'profile.blockUser' | t }}</button>
           }
-          <button (click)="reportUser()" class="app-button-secondary text-xs">{{ 'profile.reportUser' | t }}</button>
+          <button (click)="reportUser()" class="app-button-secondary text-xs" [attr.aria-label]="'profile.reportUser' | t">{{ 'profile.reportUser' | t }}</button>
         </div>
       }
 
@@ -330,18 +373,18 @@
             name="displayName"
             [placeholder]="'profile.displayNamePlaceholder' | t"
             class="app-input"
-          />
+           [attr.aria-label]="'text input'"/>
           <div class="relative">
             <label class="block mb-1 text-xs font-semibold uppercase text-text-secondary">{{ 'profile.avatarLabel' | t }}</label>
             <div class="flex items-center gap-3">
               <div class="h-16 w-16 rounded-full overflow-hidden border border-surface-100 bg-surface-300 flex-shrink-0">
                 @if (avatarPreviewUrl()) {
-                  <img [src]="avatarPreviewUrl()" class="h-full w-full object-cover" />
+                  <img loading="lazy" [src]="avatarPreviewUrl()" class="h-full w-full object-cover" />
                 } @else {
                   <span class="text-2xl font-bold text-text-secondary flex items-center justify-center w-full h-full">{{ displayName.charAt(0) || '?' }}</span>
                 }
               </div>
-              <button type="button" (click)="onAvatarClick()" class="app-button-secondary text-xs">{{ 'profile.changePhoto' | t }}</button>
+              <button type="button" (click)="onAvatarClick()" class="app-button-secondary text-xs" [attr.aria-label]="'profile.changePhoto' | t">{{ 'profile.changePhoto' | t }}</button>
             </div>
           </div>
 
@@ -409,13 +452,37 @@
 
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
+              'profile.customAvatarLabel' | t
+            }}</label>
+            <input
+              type="file"
+              accept="image/*"
+              (change)="onAvatarFileSelected($event)"
+              class="app-input"
+            />
+          </div>
+
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
+              'profile.aboutStatusLabel' | t
+            }}</label>
+            <textarea
+              [(ngModel)]="statusText"
+              name="aboutStatus"
+              rows="3"
+              [placeholder]="'profile.aboutStatusPlaceholder' | t"
+              class="app-textarea"
+             [attr.aria-label]="'aboutStatus'"></textarea>
+          </div>
+          <div class="mt-4">
+            <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'profile.proficiencyLabel' | t
             }}</label>
             <select
               [(ngModel)]="proficiencyLevel"
               name="proficiencyLevel"
               class="app-input"
-            >
+             [attr.aria-label]="'Select'">
               <option value="A1">A1</option>
               <option value="A2">A2</option>
               <option value="B1">B1</option>
@@ -439,7 +506,7 @@
                 [class.text-text-primary]="profileVisibility() !== 'everyone'"
                 [class.border-surface-300]="profileVisibility() !== 'everyone'"
                 (click)="onVisibilityChange('everyone')"
-              >
+               [attr.aria-label]="'profile.visibility.everyone' | t">
                 {{ 'profile.visibility.everyone' | t }}
               </button>
               <button
@@ -451,7 +518,7 @@
                 [class.text-text-primary]="profileVisibility() !== 'vips_only'"
                 [class.border-surface-300]="profileVisibility() !== 'vips_only'"
                 (click)="onVisibilityChange('vips_only')"
-              >
+               [attr.aria-label]="'profile.visibility.vipsOnly' | t">
                 {{ 'profile.visibility.vipsOnly' | t }}
               </button>
               <button
@@ -463,14 +530,14 @@
                 [class.text-text-primary]="profileVisibility() !== 'hidden'"
                 [class.border-surface-300]="profileVisibility() !== 'hidden'"
                 (click)="onVisibilityChange('hidden')"
-              >
+               [attr.aria-label]="'profile.visibility.hidden' | t">
                 {{ 'profile.visibility.hidden' | t }}
               </button>
             </div>
           </div>
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'privacy.lastSeen' | t }}</label>
-            <select [(ngModel)]="privacyLastSeen" name="privacyLastSeen" class="app-input">
+            <select [(ngModel)]="privacyLastSeen" name="privacyLastSeen" class="app-input" [attr.aria-label]="'Select'">
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
@@ -478,7 +545,7 @@
           </div>
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'privacy.profilePhoto' | t }}</label>
-            <select [(ngModel)]="privacyProfilePhoto" name="privacyProfilePhoto" class="app-input">
+            <select [(ngModel)]="privacyProfilePhoto" name="privacyProfilePhoto" class="app-input" [attr.aria-label]="'Select'">
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
@@ -486,7 +553,7 @@
           </div>
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'privacy.aboutInfo' | t }}</label>
-            <select [(ngModel)]="privacyAboutInfo" name="privacyAboutInfo" class="app-input">
+            <select [(ngModel)]="privacyAboutInfo" name="privacyAboutInfo" class="app-input" [attr.aria-label]="'Select'">
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
@@ -494,11 +561,36 @@
           </div>
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{ 'privacy.status' | t }}</label>
-            <select [(ngModel)]="privacyStatus" name="privacyStatus" class="app-input">
+            <select [(ngModel)]="privacyStatus" name="privacyStatus" class="app-input" [attr.aria-label]="'Select'">
               <option value="everyone">{{ 'privacy.everyone' | t }}</option>
               <option value="contacts">{{ 'privacy.contacts' | t }}</option>
               <option value="nobody">{{ 'privacy.nobody' | t }}</option>
             </select>
+          </div>
+
+          <div class="mt-4 rounded-card border border-surface-100 p-3">
+            <label class="flex items-center justify-between gap-3" [class.cursor-not-allowed]="!profile()?.is_vip">
+              <span class="flex flex-col">
+                <span class="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  {{ 'privacy.incognitoVisits' | t }}
+                  @if (!profile()?.is_vip) {
+                    <span class="app-chip text-[10px]">{{ 'profile.vipBadge' | t }}</span>
+                  }
+                </span>
+                <span id="incognito-visits-hint" class="mt-1 text-xs text-text-secondary">
+                  {{ (profile()?.is_vip ? 'privacy.incognitoVisitsHint' : 'privacy.incognitoVisitsVipRequired') | t }}
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                [checked]="incognitoVisits()"
+                (change)="onIncognitoVisitsChange($event)"
+                name="incognitoVisits"
+                [disabled]="!profile()?.is_vip"
+                aria-describedby="incognito-visits-hint"
+                class="h-5 w-5 shrink-0 rounded border-surface-300 text-primary focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </label>
           </div>
 
           <div class="mt-4">
@@ -510,7 +602,7 @@
               [placeholder]="'profile.statusPlaceholder' | t"
               maxlength="200"
               class="app-input"
-            />
+             [attr.aria-label]="'text input'"/>
           </div>
           <textarea
             [(ngModel)]="bioText"
@@ -518,7 +610,7 @@
             rows="4"
             [placeholder]="'profile.bioPlaceholder' | t"
             class="app-textarea"
-          ></textarea>
+           [attr.aria-label]="'bioText'"></textarea>
 
           <div class="mt-4 grid gap-2 sm:grid-cols-2">
             <div>
@@ -531,7 +623,7 @@
                 name="businessName"
                 [placeholder]="'profile.businessNamePlaceholder' | t"
                 class="app-input"
-              />
+               [attr.aria-label]="'text input'"/>
             </div>
             <div>
               <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
@@ -543,7 +635,7 @@
                 name="businessHours"
                 [placeholder]="'profile.businessHoursPlaceholder' | t"
                 class="app-input"
-              />
+               [attr.aria-label]="'text input'"/>
             </div>
             <div>
               <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
@@ -555,7 +647,7 @@
                 name="websiteUrl"
                 [placeholder]="'profile.websitePlaceholder' | t"
                 class="app-input"
-              />
+               [attr.aria-label]="'websiteUrl'"/>
             </div>
           </div>
 
@@ -574,26 +666,26 @@
                     name="catalog-name-{{ idx }}"
                     [placeholder]="'profile.catalogNamePlaceholder' | t"
                     class="app-input"
-                  />
+                   [attr.aria-label]="'text input'"/>
                   <input
                     type="text"
                     [(ngModel)]="catalog[idx].description"
                     name="catalog-desc-{{ idx }}"
                     [placeholder]="'profile.catalogDescPlaceholder' | t"
                     class="app-input"
-                  />
+                   [attr.aria-label]="'text input'"/>
                   <input
                     type="text"
                     [(ngModel)]="catalog[idx].price"
                     name="catalog-price-{{ idx }}"
                     [placeholder]="'profile.catalogPricePlaceholder' | t"
                     class="app-input"
-                  />
+                   [attr.aria-label]="'text input'"/>
                   <select
                     [(ngModel)]="catalog[idx].currency"
                     name="catalog-currency-{{ idx }}"
                     class="app-input"
-                  >
+                   [attr.aria-label]="'Select'">
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
                     <option value="GBP">GBP</option>
@@ -607,12 +699,12 @@
                     name="catalog-image-{{ idx }}"
                     [placeholder]="'profile.catalogImagePlaceholder' | t"
                     class="app-input"
-                  />
+                   [attr.aria-label]="'catalog-image-{{ idx }}'"/>
                   <button
                     type="button"
                     (click)="removeCatalogItem(idx)"
                     class="app-button-secondary text-xs self-end"
-                  >
+                   [attr.aria-label]="'profile.removeCatalogItem' | t">
                     {{ 'profile.removeCatalogItem' | t }}
                   </button>
                 </div>
@@ -620,7 +712,7 @@
                 <p class="text-xs text-text-secondary">{{ 'profile.noCatalogItems' | t }}</p>
               }
             </div>
-            <button type="button" (click)="addCatalogItem()" class="mt-2 app-button-secondary text-xs">
+            <button type="button" (click)="addCatalogItem()" class="mt-2 app-button-secondary text-xs" [attr.aria-label]="'profile.addCatalogItem' | t">
               {{ 'profile.addCatalogItem' | t }}
             </button>
           </div>
@@ -630,23 +722,24 @@
               type="button"
               (click)="toggleEdit()"
               class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs"
-            >
+             [attr.aria-label]="'profile.cancelBtn' | t">
               {{ 'profile.cancelBtn' | t }}
             </button>
-            <button type="submit" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs">
+            <button type="submit" class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs" [attr.aria-label]="'profile.saveChangesBtn' | t">
               {{ 'profile.saveChangesBtn' | t }}
             </button>
           </div>
         </form>
       }
-    </section>
+    </div>
   }
-</div>
 
-@if (showConfetti()) {
-  <app-celebration-overlay
-    [milestone]="milestoneForConfetti()"
-    [visible]="showConfetti()"
-    (dismissed)="showConfetti.set(false)"
-  />
-}
+  @if (showConfetti()) {
+    <app-celebration-overlay
+      [milestone]="milestoneForConfetti()"
+      [visible]="showConfetti()"
+      (dismissed)="showConfetti.set(false)"
+    />
+  }
+
+</div>

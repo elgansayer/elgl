@@ -1,1 +1,0 @@
-Code review finding: Add unit tests for backend/src/chat/chat-llm-proxy.service (from commit 142cc009: Implement NestJS service to proxy chat messages to)

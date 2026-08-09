@@ -7,8 +7,12 @@ import { CreateDialogueDto } from './dto/create-dialogue.dto';
 export class CuratedContentService {
   constructor(private readonly supabase: SupabaseService) {}
 
+  private get client(): any {
+    return this.supabase.getClient() as any;
+  }
+
   async getArticles(language?: string, cefrLevel?: string) {
-    let query = this.supabase.getClient().from('curated_articles').select('*');
+    let query = this.client.from('curated_articles').select('*');
 
     if (language) {
       query = query.eq('language', language);
@@ -25,8 +29,7 @@ export class CuratedContentService {
   }
 
   async getArticleById(id: string) {
-    const { data, error } = await this.supabase
-      .getClient()
+    const { data, error } = await this.client
       .from('curated_articles')
       .select('*')
       .eq('id', id)
@@ -37,8 +40,7 @@ export class CuratedContentService {
   }
 
   async createArticle(dto: CreateArticleDto) {
-    const { data, error } = await this.supabase
-      .getClient()
+    const { data, error } = await this.client
       .from('curated_articles')
       .insert({
         title: dto.title,
@@ -60,7 +62,7 @@ export class CuratedContentService {
   }
 
   async getDialogues(language?: string, cefrLevel?: string) {
-    let query = this.supabase.getClient().from('curated_dialogues').select('*');
+    let query = this.client.from('curated_dialogues').select('*');
 
     if (language) {
       query = query.eq('language', language);
@@ -77,8 +79,7 @@ export class CuratedContentService {
   }
 
   async getDialogueById(id: string) {
-    const { data, error } = await this.supabase
-      .getClient()
+    const { data, error } = await this.client
       .from('curated_dialogues')
       .select('*')
       .eq('id', id)
@@ -89,8 +90,7 @@ export class CuratedContentService {
   }
 
   async createDialogue(dto: CreateDialogueDto) {
-    const { data, error } = await this.supabase
-      .getClient()
+    const { data, error } = await this.client
       .from('curated_dialogues')
       .insert({
         title: dto.title,

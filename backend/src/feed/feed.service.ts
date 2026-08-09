@@ -5,7 +5,7 @@ import { SafetyService } from '../safety/safety.service';
 // Define Moment interface locally to avoid import issues
 export interface Moment {
   id: string;
-  author_id: string;
+  author_id: string | null | undefined;
   content_text?: string | null;
   media_urls?: string[];
   voice_note_url?: string | null;
@@ -16,11 +16,29 @@ export interface Moment {
   created_at: string;
   author?: {
     id: string;
-    display_name: string;
+    display_name: string | null | undefined;
     avatar_url?: string | null;
     native_languages?: string[];
     target_languages?: string[];
   } | null;
+}
+
+interface MomentRow {
+  id: string;
+  author_id: string;
+  content_text: string | null;
+  media_urls: string[];
+  voice_note_url: string | null;
+  detected_language: string | null;
+  created_at: string;
+}
+
+interface AuthorRow {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  native_languages?: string[];
+  target_languages?: string[];
 }
 
 @Injectable()
@@ -39,12 +57,21 @@ export class FeedService {
     const supabase = this.supabaseService.getClient();
 
     // When serious_learner_mode is active, return empty feed immediately
-    const { data: profileData } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from('users')
       .select('serious_learner_mode')
       .eq('id', currentUserId)
       .single();
-    if (profileData && (profileData as any).serious_learner_mode === true) {
+
+    if (profileError) {
+      this.logger.error(`Failed to fetch profile: ${profileError.message}`);
+      return [];
+    }
+
+    const seriousLearnerMode = (
+      profileData as { serious_learner_mode?: boolean } | null
+    )?.serious_learner_mode;
+    if (seriousLearnerMode === true) {
       return [];
     }
 
@@ -55,28 +82,41 @@ export class FeedService {
     let query = supabase
       .from('moments')
       .select(
-        `
-        *,
-        author:users!moments_author_id_fkey (
-          id,
-          display_name,
-          avatar_url,
-          native_languages,
-          target_languages
-        )
-      `,
+        'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
       )
       .order('created_at', { ascending: false })
       .limit(50);
 
     // Exclude blocked users' moments (both directions)
     if (blockedIds.length > 0) {
-      query = query.not('author_id', 'in', `(${blockedIds.join(',')})`);
+      query = query.not('author_id', 'in', blockedIds);
     }
 
-    // Apply filter logic
-    if (filter === 'classmates') {
-      // Get current user's target languages
+    if (filter === 'following') {
+      // Get users the current user follows
+      const { data: followingRows, error: followError } = await supabase
+        .from('user_follows')
+        .select('following_id')
+        .eq('follower_id', currentUserId);
+
+      if (followError) {
+        this.logger.error(
+          `Failed to fetch follow list: ${followError.message}`,
+        );
+        return [];
+      }
+
+      const followedIds = (followingRows ?? [])
+        .map((row) => row.following_id)
+        .filter((id): id is string => !!id);
+
+      if (followedIds.length === 0) {
+        return [];
+      }
+
+      query = query.in('author_id', followedIds);
+    } else if (filter === 'classmates') {
+      // Get current user's language preferences
       const { data: currentUser, error: userError } = await supabase
         .from('users')
         .select('target_languages, native_languages')
@@ -90,66 +130,102 @@ export class FeedService {
         return [];
       }
 
-      // Show moments from users who share target languages or native language
-      const targetLangs: string[] =
-        (
-          currentUser as {
-            target_languages?: string[];
-            native_languages?: string[];
-          }
-        ).target_languages || [];
-      const nativeLang: string | undefined = (
-        currentUser as {
-          target_languages?: string[];
-          native_languages?: string;
-        }
-      ).native_languages;
+      const userInfo = currentUser as {
+        target_languages?: string[];
+        native_languages?: string;
+      };
 
-      // Build OR conditions for language matching
+      const targetLangs = userInfo.target_languages ?? [];
+      const nativeLang = userInfo.native_languages;
+
+      // Build OR conditions for language matching on the users table
       const conditions: string[] = [];
       if (targetLangs.length > 0) {
-        conditions.push(
-          `author.native_languages.in.(${targetLangs.map((l: string) => `"${l}"`).join(',')})`,
-        );
+        const quoted = targetLangs.map((l) => `"${l}"`).join(',');
+        conditions.push(`native_languages.in.(${quoted})`);
       }
       if (nativeLang) {
-        conditions.push(`author.target_languages.cs.{${nativeLang}}`);
+        conditions.push(`target_languages.cs.{${nativeLang}}`);
       }
 
-      if (conditions.length > 0) {
-        query = query.or(conditions.join(','));
-      }
-    } else if (filter === 'following') {
-      // Get users the current user follows
-      const { data: following, error: followError } = await supabase
-        .from('follows')
-        .select('followed_id')
-        .eq('follower_id', currentUserId);
-
-      if (followError) {
-        this.logger.error(`Failed to fetch following: ${followError.message}`);
+      if (conditions.length === 0) {
         return [];
       }
 
-      if (following && following.length > 0) {
-        const followedIds: string[] = (
-          following as { followed_id: string }[]
-        ).map((f: { followed_id: string }) => f.followed_id);
-        query = query.in('author_id', followedIds);
-      } else {
-        // No one followed, return empty
+      const { data: matchedAuthors, error: matchError } = await supabase
+        .from('users')
+        .select('id')
+        .or(conditions.join(','));
+
+      if (matchError) {
+        this.logger.error(`Failed to fetch classmates: ${matchError.message}`);
         return [];
       }
+
+      const matchedIds = (matchedAuthors ?? [])
+        .map((row) => row.id)
+        .filter((id): id is string => !!id);
+      if (matchedIds.length === 0) {
+        return [];
+      }
+
+      query = query.in('author_id', matchedIds);
     }
 
-    const { data: feedData, error: feedError } = await query;
+    const { data: momentRows, error: momentError } =
+      await query.returns<MomentRow[]>();
 
-    if (feedError || !feedData) {
-      this.logger.error(`Failed to fetch feed: ${feedError?.message}`);
+    if (momentError || !momentRows) {
+      this.logger.error(`Failed to fetch moments: ${momentError?.message}`);
       return [];
     }
 
-    return feedData;
+    const authorIds = Array.from(
+      new Set(momentRows.map((m) => m.author_id)),
+    ).filter((id): id is string => !!id);
+
+    const authorMap = new Map<string, Moment['author']>();
+
+    if (authorIds.length > 0) {
+      const { data: authorRows, error: authorError } = await supabase
+        .from('users')
+        .select(
+          'id, display_name, avatar_url, native_languages, target_languages',
+        )
+        .in('id', authorIds)
+        .returns<AuthorRow[]>();
+
+      if (authorError) {
+        this.logger.error(`Failed to fetch authors: ${authorError.message}`);
+        return [];
+      }
+
+      for (const author of authorRows ?? []) {
+        authorMap.set(author.id, {
+          id: author.id,
+          display_name: author.display_name,
+          avatar_url: author.avatar_url ?? null,
+          native_languages: author.native_languages ?? [],
+          target_languages: author.target_languages ?? [],
+        });
+      }
+    }
+
+    return momentRows.map((momentRow) => {
+      return {
+        id: momentRow.id,
+        author_id: momentRow.author_id,
+        content_text: momentRow.content_text ?? null,
+        media_urls: momentRow.media_urls ?? [],
+        voice_note_url: momentRow.voice_note_url ?? null,
+        detected_language: momentRow.detected_language ?? null,
+        is_pinned: false,
+        likes_count: 0,
+        comments_count: 0,
+        created_at: momentRow.created_at,
+        author: authorMap.get(momentRow.author_id) ?? null,
+      };
+    });
   }
 
   async getMomentById(
@@ -162,35 +238,57 @@ export class FeedService {
     const blockedUserIds =
       await this.safetyService.getBlockedUserIds(currentUserId);
 
-    const momentResponse = await supabase
+    const { data: momentRow, error: momentError } = await supabase
       .from('moments')
       .select(
-        `
-        *,
-        author:users!moments_author_id_fkey (
-          id,
-          display_name,
-          avatar_url,
-          native_languages,
-          target_languages
-        )
-      `,
+        'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
       )
       .eq('id', momentId)
       .single();
 
-    if (momentResponse.error || !momentResponse.data) {
+    if (momentError || !momentRow) {
       return null;
     }
 
-    const moment = momentResponse.data as Moment;
+    const typed = momentRow;
 
-    // If author is blocked, return null
-    if (blockedUserIds.includes(moment.author_id)) {
+    if (blockedUserIds.includes(typed.author_id ?? '')) {
       return null;
     }
 
-    return moment;
+    const { data: authorRow, error: authorError } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_languages, target_languages',
+      )
+      .eq('id', typed.author_id ?? '')
+      .single();
+
+    let author: Moment['author'] = null;
+    if (!authorError && authorRow) {
+      const a = authorRow;
+      author = {
+        id: a.id,
+        display_name: a.display_name,
+        avatar_url: a.avatar_url ?? null,
+        native_languages: a.native_languages ?? [],
+        target_languages: a.target_languages ?? [],
+      };
+    }
+
+    return {
+      id: typed.id,
+      author_id: typed.author_id,
+      content_text: typed.content_text ?? null,
+      media_urls: typed.media_urls ?? [],
+      voice_note_url: typed.voice_note_url ?? null,
+      detected_language: typed.detected_language ?? null,
+      is_pinned: false,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: typed.created_at,
+      author,
+    };
   }
 
   async createMoment(
@@ -204,7 +302,7 @@ export class FeedService {
   ): Promise<Moment> {
     const supabase = this.supabaseService.getClient();
 
-    const insertResponse = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from('moments')
       .insert({
         author_id: authorId,
@@ -214,26 +312,49 @@ export class FeedService {
         detected_language: content.detected_language || null,
       })
       .select(
-        `
-        *,
-        author:users!moments_author_id_fkey (
-          id,
-          display_name,
-          avatar_url,
-          native_languages,
-          target_languages
-        )
-      `,
+        'id, author_id, content_text, media_urls, voice_note_url, detected_language, created_at',
       )
       .single();
 
-    if (insertResponse.error || !insertResponse.data) {
-      throw new Error(
-        `Failed to create moment: ${insertResponse.error?.message}`,
-      );
+    if (insertError || !inserted) {
+      throw new Error(`Failed to create moment: ${insertError?.message}`);
     }
 
-    return insertResponse.data as Moment;
+    const typed = inserted;
+
+    const { data: authorRow, error: authorError } = await supabase
+      .from('users')
+      .select(
+        'id, display_name, avatar_url, native_languages, target_languages',
+      )
+      .eq('id', typed.author_id ?? '')
+      .single();
+
+    let author: Moment['author'] = null;
+    if (!authorError && authorRow) {
+      const a = authorRow;
+      author = {
+        id: a.id,
+        display_name: a.display_name,
+        avatar_url: a.avatar_url ?? null,
+        native_languages: a.native_languages ?? [],
+        target_languages: a.target_languages ?? [],
+      };
+    }
+
+    return {
+      id: typed.id,
+      author_id: typed.author_id,
+      content_text: typed.content_text ?? null,
+      media_urls: typed.media_urls ?? [],
+      voice_note_url: typed.voice_note_url ?? null,
+      detected_language: typed.detected_language ?? null,
+      is_pinned: false,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: typed.created_at,
+      author,
+    };
   }
 
   async deleteMoment(momentId: string, userId: string): Promise<void> {
@@ -251,7 +372,7 @@ export class FeedService {
     }
 
     const momentData = momentResponse.data as unknown as {
-      author_id: string;
+      author_id: string | null | undefined;
     } | null;
 
     if (!momentData || momentData.author_id !== userId) {

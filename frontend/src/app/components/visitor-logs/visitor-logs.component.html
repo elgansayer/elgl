@@ -1,72 +1,103 @@
-<div class="app-screen">
-  <section class="app-card app-padded">
-    <h1 class="app-section-title">Who viewed me</h1>
-    <p class="app-muted">Recent profile visitors and language matches.</p>
-    <div class="mt-3 flex flex-wrap items-center gap-2">
-      <span class="app-chip text-[11px]"> Visible: {{ visibleVisitorsCount() }} </span>
-      <span class="app-chip text-[11px]"> Blurred: {{ blurredVisitorsCount() }} </span>
+<div class="visitor-logs-screen">
+  <section class="visitor-header">
+    <h1 class="visitor-title">{{ 'visitors.title' | t }}</h1>
+    <p class="visitor-subtitle">{{ 'visitors.subtitle' | t }}</p>
+    <div class="visitor-controls">
+      <span class="visitor-chip visible-chip">
+        {{ 'visitors.visibleCount' | t: { count: visibleVisitorsCount() } }}
+      </span>
+      <span class="visitor-chip blurred-chip">
+        {{ 'visitors.blurredCount' | t: { count: blurredVisitorsCount() } }}
+      </span>
       <button
+        type="button"
+        class="visitor-toggle-btn"
         (click)="toggleHideBlurred()"
-        class="app-button-secondary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px]"
-      >
-        {{ hideBlurred() ? 'Show all' : 'Hide blurred' }}
+       [attr.aria-label]="'visitors.showAllBtn' | t">
+        @if (hideBlurred()) {
+          {{ 'visitors.showAllBtn' | t }}
+        } @else {
+          {{ 'visitors.hideBlurredBtn' | t }}
+        }
       </button>
     </div>
   </section>
 
   @if (profile() && !profile()?.is_vip) {
-    <section
-      class="rounded-sheet border border-amber-500/30 bg-amber-500/10 ps-4 pe-4 pt-4 pb-4 shadow-card"
-    >
-      <p class="text-sm font-bold text-amber-400">Unlock full visitor identities with VIP</p>
-      <p class="mt-1 text-xs text-amber-400">Visitor details are blurred on the free tier.</p>
-      <p class="mt-2 text-sm font-black text-amber-400">8 UKP / $10 USD per month</p>
+    <section class="vip-banner">
+      <div class="vip-banner-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+      <div class="vip-banner-content">
+        <p class="vip-banner-title">{{ 'visitors.vipBannerTitle' | t }}</p>
+        <p class="vip-banner-desc">{{ 'visitors.vipBannerDesc' | t }}</p>
+        <p class="vip-banner-price">{{ 'visitors.vipPrice' | t }}</p>
+      </div>
+      <a class="vip-banner-cta" routerLink="/vip" [attr.aria-label]="'vip.seePlans' | t">
+        {{ 'vip.seePlans' | t }}
+      </a>
     </section>
   }
 
   @if (isLoading()) {
-    <div class="app-empty-state text-text-secondary">Loading visitors...</div>
+    <div class="visitor-empty-state">
+      <div class="visitor-spinner" aria-hidden="true"></div>
+      <p>{{ 'visitors.loading' | t }}</p>
+    </div>
   }
 
   @if (!isLoading() && filteredVisitors().length === 0) {
-    <div class="app-empty-state">No visitors yet.</div>
+    <div class="visitor-empty-state">
+      <p>{{ 'visitors.empty' | t }}</p>
+    </div>
   }
 
-  @for (log of filteredVisitors(); track log.id) {
-    <article [class]="'app-card app-padded ' + (log.is_blurred ? 'opacity-90' : '')">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <img
-            [src]="log.visitor.avatar_url || 'https://via.placeholder.com/100'"
-            alt="visitor avatar"
-            [class]="
-              'h-12 w-12 rounded-full border border-surface-100 object-cover ' +
-              (log.is_blurred ? 'blur-md' : '')
-            "
-          />
-          <div [class]="log.is_blurred ? 'blur-sm' : ''">
-            <div class="ms-3 min-w-0">
-              <p class="text-sm font-bold text-text-primary truncate">
-                {{ log.visitor.display_name || ('common.languagePartner' | t) }}
-              </p>
-            </div>
-            <p class="text-[11px] text-text-secondary">
-              <span class="uppercase">{{ log.visitor.native_languages }}</span>
-              <span class="ps-1 pe-1">→</span>
-              <span class="uppercase">{{ log.visitor.target_languages.join(', ') }}</span>
+  <div class="visitor-list">
+    @for (log of filteredVisitors(); track log.id) {
+      <article
+        class="visitor-card"
+        [class.visitor-card--blurred]="log.is_blurred"
+      >
+        <div class="visitor-card-inner">
+          <div class="visitor-avatar-wrapper">
+            <img
+              [src]="log.visitor.avatar_url || 'https://via.placeholder.com/100'"
+              [alt]="'visitors.partnerFallback' | t"
+              class="visitor-avatar"
+              [class.visitor-avatar--blurred]="log.is_blurred"
+              loading="lazy"
+            />
+          </div>
+          <div class="visitor-details" [class.visitor-details--blurred]="log.is_blurred">
+            <p class="visitor-name">
+              {{ log.visitor.display_name || ('visitors.partnerFallback' | t) }}
+            </p>
+            <p class="visitor-languages">
+              <span class="visitor-lang-native">{{ log.visitor.native_languages }}</span>
+              <span class="visitor-lang-arrow" aria-hidden="true">&rarr;</span>
+              <span class="visitor-lang-target">{{ log.visitor.target_languages.join(', ') }}</span>
             </p>
           </div>
+          <div class="visitor-meta">
+            <p class="visitor-time">{{ log.created_at | date: 'short' }}</p>
+            @if (log.is_blurred) {
+              <span class="visitor-badge visitor-badge--blurred">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                {{ 'visitors.vipOnly' | t }}
+              </span>
+            }
+            @if (!log.is_blurred) {
+              <span class="visitor-badge visitor-badge--visible">
+                {{ 'visitors.visibleStatus' | t }}
+              </span>
+            }
+          </div>
         </div>
-        <div class="text-end">
-          <p class="text-[11px] text-text-muted">{{ log.created_at | date: 'short' }}</p>
-          @if (log.is_blurred) {
-            <p class="mt-1 text-[11px] font-bold text-amber-700">VIP only</p>
-          }
-          @if (!log.is_blurred) {
-            <p class="mt-1 text-[11px] font-bold text-primary">Visible</p>
-          }
-        </div>
-      </div>
-    </article>
-  }
+      </article>
+    }
+  </div>
 </div>

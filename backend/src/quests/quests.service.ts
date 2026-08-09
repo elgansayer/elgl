@@ -2,6 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 
+export interface Quest {
+  id: string;
+  user_id: string;
+  quest_type: string;
+  quest_key: string;
+  progress: number;
+  target: number;
+  reward_coins: number;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 @Injectable()
 export class QuestsService {
   constructor(
@@ -9,49 +22,55 @@ export class QuestsService {
     private readonly usersService: UsersService,
   ) {}
 
-  async getDailyQuests(userId: string): Promise<any[]> {
+  async getDailyQuests(userId: string): Promise<Quest[]> {
     const supabase = this.supabaseService.getClient();
 
-    // return existing active quests or create default ones
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_quests')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
     if (data && data.length > 0) {
       return this.evaluateReset(userId, data);
     }
 
     await this.ensureDefaults(userId);
-    const { data: newData } = await supabase
+    const { data: newData, error: newError } = await supabase
       .from('user_quests')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
-    return (newData ?? []).map((q: any) => ({
+
+    if (newError) {
+      throw newError;
+    }
+
+    return (newData ?? []).map((q: Quest) => ({
       ...q,
       progress: q.progress ?? 0,
     }));
   }
 
-  private async evaluateReset(userId: string, quests: any[]): Promise<any[]> {
+  private async evaluateReset(
+    userId: string,
+    quests: Quest[],
+  ): Promise<Quest[]> {
     const now = new Date();
     const supabase = this.supabaseService.getClient();
 
     for (const q of quests) {
       const lastReset = new Date(q.updated_at);
       const diffHours = (now.getTime() - lastReset.getTime()) / 3600000;
-      if (q.quest_type === 'daily' && diffHours >= 24) {
-        await supabase
-          .from('user_quests')
-          .update({
-            progress: 0,
-            completed: false,
-            updated_at: now.toISOString(),
-          })
-          .eq('id', q.id)
-          .eq('user_id', userId);
-      } else if (q.quest_type === 'weekly' && diffHours >= 168) {
+      const shouldReset =
+        (q.quest_type === 'daily' && diffHours >= 24) ||
+        (q.quest_type === 'weekly' && diffHours >= 168);
+
+      if (shouldReset) {
         await supabase
           .from('user_quests')
           .update({
@@ -69,11 +88,20 @@ export class QuestsService {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
-    return (data ?? []).map((q: any) => ({ ...q, progress: q.progress ?? 0 }));
+
+    return (data ?? []).map((q: Quest) => ({
+      ...q,
+      progress: q.progress ?? 0,
+    }));
   }
 
   private async ensureDefaults(userId: string): Promise<void> {
-    const defaultQuests = [
+    const defaultQuests: Array<{
+      quest_type: string;
+      quest_key: string;
+      target: number;
+      reward_coins: number;
+    }> = [
       {
         quest_type: 'daily',
         quest_key: 'correct_moments',
@@ -103,6 +131,7 @@ export class QuestsService {
         .eq('quest_type', q.quest_type)
         .eq('quest_key', q.quest_key)
         .maybeSingle();
+
       if (!data) {
         await supabase.from('user_quests').insert({
           user_id: userId,
@@ -130,12 +159,17 @@ export class QuestsService {
       .eq('user_id', userId)
       .eq('quest_key', questKey)
       .neq('completed', true);
+
     if (!data || data.length === 0) return;
 
     for (const quest of data) {
       const newProgress = (quest.progress ?? 0) + amount;
       const completed = newProgress >= quest.target;
-      const updatePayload: any = {
+      const updatePayload: {
+        progress: number;
+        completed: boolean;
+        updated_at: string;
+      } = {
         progress: completed ? quest.target : newProgress,
         completed,
         updated_at: new Date().toISOString(),

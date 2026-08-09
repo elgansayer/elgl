@@ -1,13 +1,14 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { map, firstValueFrom } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { GroupsService } from '../../services/groups.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-join-group',
-  standalone: true,
   imports: [TranslatePipe, RouterLink],
   templateUrl: './join-group.component.html',
 })
@@ -15,6 +16,7 @@ export class JoinGroupComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly groupsService = inject(GroupsService);
+  private readonly http = inject(HttpClient);
 
   private readonly codeFromPath = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('code') ?? '')),
@@ -41,7 +43,10 @@ export class JoinGroupComponent {
     this.joinPending.set(true);
     this.joinFailed.set(false);
     try {
-      await this.groupsService.joinByInviteCode(code);
+      const apiUrl = environment.apiUrl;
+      await firstValueFrom(
+        this.http.post<{ success: boolean }>(`${apiUrl}/groups/join-by-code`, { code }),
+      );
       await this.router.navigate(['/chat', roomId]);
     } catch {
       this.joinFailed.set(true);

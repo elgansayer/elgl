@@ -14,6 +14,8 @@ import type { Request } from 'express';
 import { User } from '@supabase/supabase-js';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { RequireVip } from './decorators/require-vip.decorator';
+import { VipGuard } from './guards/vip.guard';
 import {
   CreateDiagnosticLogDto,
   AppleReceiptValidationDto,
@@ -21,6 +23,8 @@ import {
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
+import { AppleNotificationDto } from './dto/apple-notification.dto';
+import { GoogleNotificationDto } from './dto/google-notification.dto';
 
 @Controller('monetisation')
 export class MonetisationController {
@@ -51,44 +55,43 @@ export class MonetisationController {
 
   @Post('webhooks/apple')
   @HttpCode(200)
-  async handleAppleWebhook(@Body() payload: any) {
-    return await this.monetisationService.handleAppleWebhook(payload);
+  async handleAppleWebhook(@Body() dto: AppleNotificationDto) {
+    return await this.monetisationService.handleAppleNotification(dto);
   }
 
   @Post('webhooks/google')
   @HttpCode(200)
-  async handleGoogleWebhook(
-    @Body() payload: any,
-    @Headers('authorization') authorization?: string,
-  ) {
-    return await this.monetisationService.handleGoogleWebhook(
-      payload,
-      authorization,
-    );
+  async handleGoogleWebhook(@Body() dto: GoogleNotificationDto) {
+    return await this.monetisationService.handleGoogleNotification(dto);
   }
 
   @Post('generate-api-key')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
   async generateApiKey(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.generateApiKey(user.id);
   }
 
   @Get('analytics')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
   async getAnalytics(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.getDeveloperAnalytics(user.id);
   }
 
   @Get('diagnostics/logs')
-  @UseGuards(SupabaseAuthGuard)
-  async getDiagnosticLogs() {
-    return await this.monetisationService.getDiagnosticLogs();
+  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
+  async getDiagnosticLogs(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.getDiagnosticLogs(user.id);
   }
 
   @Post('diagnostics/logs')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, VipGuard)
+  @RequireVip('developer')
   async createDiagnosticLog(
     @CurrentUser() user: User | null,
     @Body() dto: CreateDiagnosticLogDto,
@@ -132,12 +135,15 @@ export class MonetisationController {
     @Body() dto: { platform?: string; receipt_data?: string },
   ) {
     if (!user) return null;
-    if (!dto.platform || !['ios', 'android'].includes(dto.platform)) {
-      throw new BadRequestException('Platform must be "ios" or "android"');
+    const platform = dto.platform || 'stripe';
+    if (!['ios', 'android', 'stripe'].includes(platform)) {
+      throw new BadRequestException(
+        'Platform must be "ios", "android", or "stripe"',
+      );
     }
     return await this.monetisationService.restorePurchases(
       user.id,
-      dto.platform as 'ios' | 'android',
+      platform as 'ios' | 'android' | 'stripe',
       dto.receipt_data,
     );
   }
@@ -167,5 +173,35 @@ export class MonetisationController {
   async cancelSubscription(@CurrentUser() user: User | null) {
     if (!user) return null;
     return await this.monetisationService.cancelSubscription(user.id);
+  }
+
+  /**
+   * Resume a subscription previously scheduled to cancel at period end.
+   */
+  @Post('subscription/resume')
+  @UseGuards(SupabaseAuthGuard)
+  async resumeSubscription(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.resumeSubscription(user.id);
+  }
+
+  /**
+   * List billing history (invoices) for the authenticated user.
+   */
+  @Get('subscription/invoices')
+  @UseGuards(SupabaseAuthGuard)
+  async getInvoices(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.listInvoices(user.id);
+  }
+
+  /**
+   * Create a Stripe Billing Portal session for managing payment methods.
+   */
+  @Post('subscription/billing-portal')
+  @UseGuards(SupabaseAuthGuard)
+  async createBillingPortalSession(@CurrentUser() user: User | null) {
+    if (!user) return null;
+    return await this.monetisationService.createBillingPortalSession(user.id);
   }
 }

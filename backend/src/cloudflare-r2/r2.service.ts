@@ -50,4 +50,28 @@ export class R2Service {
     const publicUrl = `${this.publicUrlBase}/${key}`;
     return { uploadUrl, publicUrl };
   }
+
+  /**
+   * Downloads the content at `sourceUrl` and uploads it to R2 under `key`,
+   * returning the public URL of the uploaded object.
+   */
+  async uploadFromUrl(key: string, sourceUrl: string): Promise<string> {
+    const response = await fetch(sourceUrl);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download source for R2 upload: ${response.status} ${response.statusText}`,
+      );
+    }
+    const contentType =
+      response.headers.get('content-type') ?? 'application/octet-stream';
+    const arrayBuffer = await response.arrayBuffer();
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: Buffer.from(arrayBuffer),
+      ContentType: contentType,
+    });
+    await this.client.send(command);
+    return `${this.publicUrlBase}/${key}`;
+  }
 }

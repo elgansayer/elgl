@@ -1,1 +1,0 @@
-Lock down `POST /monetisation/upgrade` so VIP status can only change via verified payment webhooks.

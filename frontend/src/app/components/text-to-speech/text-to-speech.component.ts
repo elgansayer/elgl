@@ -1,48 +1,49 @@
-import { showToast } from '../../services/toast.service';
-import { Component, input, signal } from '@angular/core';
+import { Component, inject, input, computed, DestroyRef } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { TextToSpeechService } from '../../services/text-to-speech.service';
+
+let nextInstanceId = 0;
 
 @Component({
   selector: 'app-text-to-speech',
-  imports: [],
+  imports: [TranslatePipe],
   template: `
     <button
-      (click)="speak($event)"
-      [disabled]="isPlaying()"
-      [class]="
-        'inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ' +
-        (isPlaying()
-          ? 'bg-primary text-white animate-pulse'
-          : 'bg-surface-100 hover:bg-surface-100 text-text-primary')
-      "
-      [title]="'Listen to native pronunciation of this text (' + language + ')'"
+      type="button"
+      (click)="toggleSpeech()"
+      class="inline-flex items-center gap-1 ps-2.5 pe-2.5 py-1 rounded-xl text-xs font-bold transition-all"
+      [class.bg-primary]="isSpeaking()"
+      [class.text-white]="isSpeaking()"
+      [class.animate-pulse]="isSpeaking()"
+      [class.bg-surface-100]="!isSpeaking()"
+      [class.text-text-primary]="!isSpeaking()"
+      [attr.aria-label]="isSpeaking() ? ('moments.stopReading' | t) : ('moments.readAloud' | t)"
+      [attr.aria-pressed]="isSpeaking()"
     >
-      <span>{{ isPlaying() ? '🔊 Speaking...' : '🔊 Listen' }}</span>
+      <span aria-hidden="true">{{ isSpeaking() ? '⏹️' : '🔊' }}</span>
+      <span>{{ isSpeaking() ? ('moments.stopReading' | t) : ('moments.readAloud' | t) }}</span>
     </button>
   `,
 })
 export class TextToSpeechComponent {
-  text = input.required<string>();
-  language = input('en');
+  readonly text = input.required<string>();
+  readonly language = input<string>('en-GB');
 
-  readonly isPlaying = signal<boolean>(false);
+  private readonly tts = inject(TextToSpeechService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly instanceId = `text-to-speech-${nextInstanceId++}`;
 
-  speak(event: Event): void {
-    event.stopPropagation();
-    if (!this.text().trim()) return;
+  readonly isSpeaking = computed(() => this.tts.isSpeaking(this.instanceId));
 
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // Stop prior speeches
-      const utterance = new SpeechSynthesisUtterance(this.text());
-      utterance.lang = this.language();
-      utterance.rate = 0.9; // Slightly slower for language learners
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.isSpeaking()) {
+        this.tts.stop();
+      }
+    });
+  }
 
-      utterance.onstart = () => this.isPlaying.set(true);
-      utterance.onend = () => this.isPlaying.set(false);
-      utterance.onerror = () => this.isPlaying.set(false);
-
-      window.speechSynthesis.speak(utterance);
-    } else {
-      showToast('Text-to-speech is not supported in this browser environment.');
-    }
+  toggleSpeech(): void {
+    this.tts.toggle(this.instanceId, this.text(), this.language());
   }
 }

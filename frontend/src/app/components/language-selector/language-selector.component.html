@@ -1,93 +1,56 @@
-<div class="relative inline-block">
-  <!-- Trigger Button -->
+<div class="relative">
   <button
     type="button"
-    (click)="toggleModal()"
-    class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-100 text-text-primary font-bold text-sm hover:bg-surface-100 :bg-surface-100 transition-all border border-surface-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-    aria-haspopup="dialog"
+    (click)="toggle()"
     [attr.aria-expanded]="isOpen()"
-    aria-label="Select App Language"
-  >
-    <span class="text-base">🌐</span>
-    <span class="uppercase tracking-wider">{{ i18n.currentLang() }}</span>
-    <span class="text-xs text-text-secondary">▼</span>
+    aria-haspopup="listbox"
+    class="w-full flex items-center justify-between gap-2 bg-surface-200 border border-surface-300 rounded-xl px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-300 cursor-pointer"
+   [attr.aria-label]="'settings.changeLanguage' | t">
+    <span class="flex items-center gap-2">
+      <span class="text-lg leading-none">{{ currentLanguage().flag }}</span>
+      <span>{{ currentLanguage().name }}</span>
+    </span>
+    <span class="text-xs text-text-secondary uppercase tracking-wide">{{ 'settings.changeLanguage' | t }}</span>
+    <span class="text-xs text-text-secondary">{{ isOpen() ? '▲' : '▼' }}</span>
   </button>
 
-  <!-- Modal Overlay -->
   @if (isOpen()) {
     <div
-      class="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="lang-modal-title"
+      class="absolute start-0 z-30 mt-2 w-full overflow-hidden rounded-2xl border border-surface-200 bg-surface-100 shadow-xl"
+      role="listbox"
     >
-      <div
-        class="bg-surface-200 rounded-3xl shadow-2xl border border-surface-100 max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden"
-      >
-        <!-- Modal Header -->
-        <div
-          class="flex items-center justify-between px-6 py-4 border-b border-surface-100 bg-surface-300 /80"
-        >
-          <div class="flex items-center gap-3">
-            <span class="text-2xl">🌍</span>
-            <div>
-              <h3 id="lang-modal-title" class="text-lg font-black text-text-primary">
-                {{ 'lang.selectTitle' | t }}
-              </h3>
-              <p class="text-xs text-text-secondary font-medium">
-                {{ 'lang.label' | t }}:
-                <strong class="text-primary uppercase">{{ i18n.currentLang() }}</strong>
-              </p>
-            </div>
-          </div>
-          <button aria-label="Close modal"
-            type="button"
-            (click)="closeModal()"
-            class="text-text-muted hover:text-text-secondary :text-slate-200 p-2 rounded-xl hover:bg-surface-100 :bg-surface-200 transition-colors"
-            aria-label="Close dialog"
-          >
-            ✕
-          </button>
-        </div>
-
-        <!-- Modal Body -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
-          <!-- Quick Select Language Grid -->
-          <div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              @for (lang of i18n.availableLanguages; track lang.code) {
-                <button
-                  type="button"
-                  (click)="selectLanguage(lang.code)"
-                  [class]="
-                    'flex items-center gap-2.5 p-3 rounded-2xl border text-start transition-all ' +
-                    (i18n.currentLang() === lang.code
-                      ? 'bg-primary/10 border-primary text-primary font-black shadow-sm'
-                      : 'bg-surface-300 /50 border-surface-100  text-text-primary  hover:bg-surface-100 :bg-surface-200')
-                  "
-                >
-                  <span class="text-2xl shrink-0">{{ lang.flag }}</span>
-                  <div class="min-w-0 flex-1">
-                    <div class="text-sm font-bold truncate">{{ lang.name }}</div>
-                    <div class="text-xs text-text-secondary truncate">{{ lang.nativeName }}</div>
-                  </div>
-                </button>
-              }
-            </div>
-          </div>
-        </div>
-
-        <!-- Modal Footer -->
-        <div class="px-6 py-3 bg-surface-300 /80 border-t border-surface-100 flex justify-end">
-          <button aria-label="Close modal"
-            type="button"
-            (click)="closeModal()"
-            class="px-5 py-2 rounded-xl bg-surface-100 text-text-primary font-bold text-sm hover:bg-surface-200 :bg-surface-100 transition-colors"
-          >
-            ✕
-          </button>
-        </div>
+      <div class="p-3 border-b border-surface-200">
+        <input
+          type="search"
+          [value]="searchQuery()"
+          (input)="onSearch($event)"
+          placeholder="{{ 'lang.searchPlaceholder' | t }}"
+          class="w-full bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30 placeholder-text-secondary"
+          aria-label="{{ 'lang.searchPlaceholder' | t }}"
+        />
       </div>
+      <ul class="max-h-72 overflow-y-auto py-1">
+        @for (lang of filteredLanguages(); track lang.code) {
+          <li>
+            <button
+              type="button"
+              (click)="selectLanguage(lang.code)"
+              class="w-full flex items-center justify-between gap-2 text-start px-4 py-2.5 text-sm hover:bg-surface-200 transition-colors cursor-pointer"
+             [attr.aria-label]="'common.selected' | t">
+              <span class="flex items-center gap-2">
+                <span class="text-base leading-none">{{ lang.flag }}</span>
+                <span>
+                  <span class="block font-medium text-text-primary">{{ lang.name }}</span>
+                  <span class="block text-xs text-text-secondary">{{ lang.nativeName }}</span>
+                </span>
+              </span>
+              @if (lang.code === currentLang()) {
+                <span class="text-xs font-semibold text-primary">{{ 'common.selected' | t }}</span>
+              }
+            </button>
+          </li>
+        }
+      </ul>
     </div>
   }
 </div>

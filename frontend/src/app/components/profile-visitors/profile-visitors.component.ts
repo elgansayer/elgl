@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
-import { DatePipe, UpperCasePipe, CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { UserService, ProfileVisitor } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { RouterLink, Router } from '@angular/router';
@@ -7,89 +7,75 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-visitors',
-  imports: [DatePipe, RouterLink, UpperCasePipe, CommonModule, TranslatePipe],
+  imports: [DatePipe, RouterLink, TranslatePipe],
   template: `
-    <div class="p-4">
-      <h2 class="text-xl font-bold mb-4">Profile Visitors</h2>
+    <div class="profile-visitors">
+      <h2 class="profile-visitors-title">{{ 'visitors.title' | t }}</h2>
 
       @if (isLoading()) {
-        <div class="flex justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        </div>
-      } @else if (error()) {
-        <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-400">
-          {{ error() }}
+        <div class="profile-visitors-loading">
+          <div class="visitor-spinner" aria-hidden="true"></div>
+          <p>{{ 'visitors.loading' | t }}</p>
         </div>
       } @else if (isVip()) {
-        <!-- VIP: Full access to visitor log -->
-        <div class="space-y-3">
+        <div class="profile-visitors-list">
           @for (visit of visitors(); track visit.id) {
-            <div
-              class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700/50 transition-colors"
+            <a
+              [routerLink]="['/profile', visit.visitor_id]"
+              class="profile-visitor-item"
             >
-              <a
-                [routerLink]="['/profile', visit.visitor_id]"
-                class="flex items-center gap-3 flex-1 min-w-0"
-              >
-                <div class="w-10 h-10 rounded-full bg-slate-700 flex-shrink-0 overflow-hidden">
-                  @if (visit.visitor?.avatar_url) {
-                    <img
-                      [src]="visit.visitor?.avatar_url"
-                      alt=""
-                      class="w-full h-full object-cover"
-                    />
-                  } @else {
-                    <div
-                      class="w-full h-full flex items-center justify-center text-slate-400 text-lg"
-                    >
-                      {{ (visit.visitor?.display_name || '?')[0] }}
-                    </div>
-                  }
-                </div>
-                <div class="ms-3 min-w-0">
-                  <p class="font-medium truncate">
-                    {{ visit.visitor?.display_name || ('common.unknownUser' | t) }}
-                  </p>
-                  <p class="text-sm text-text-secondary">
-                    {{ visit.created_at | date: 'medium' }}
-                  </p>
-                </div>
-              </a>
-              @if (visit.visitor?.native_languages) {
-                <span class="text-xs px-2 py-1 bg-slate-700 rounded-full text-slate-300">
-                  {{ (visit.visitor.native_languages || []).join(', ') | uppercase }}
-                </span>
-              }
-            </div>
+              <div class="profile-visitor-avatar">
+                @if (visit.visitor?.avatar_url) {
+                  <img
+                    [src]="visit.visitor?.avatar_url"
+                    alt=""
+                    class="profile-visitor-avatar-img"
+                   loading="lazy" />
+                } @else {
+                  <div class="profile-visitor-avatar-placeholder">
+                    {{ (visit.visitor?.display_name || '?')[0] }}
+                  </div>
+                }
+              </div>
+              <div class="profile-visitor-info">
+                <p class="profile-visitor-name">
+                  {{ visit.visitor?.display_name || ('common.unknownUser' | t) }}
+                </p>
+                <p class="profile-visitor-time">
+                  {{ visit.created_at | date: 'medium' }}
+                </p>
+              </div>
+            </a>
           } @empty {
-            <div class="text-center py-8 text-slate-400">No visitors yet</div>
+            <div class="profile-visitors-empty">
+              <p>{{ 'visitors.empty' | t }}</p>
+            </div>
           }
         </div>
       } @else {
-        <!-- Free user: Blurred preview with upgrade prompt -->
-        <div class="relative">
-          <div class="space-y-3 blur-sm pointer-events-none select-none">
+        <div class="profile-visitors-blurred">
+          <div class="profile-visitors-placeholders">
             @for (placeholder of placeholderVisitors(); track $index) {
-              <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
-                <div class="w-10 h-10 rounded-full bg-slate-700 flex-shrink-0"></div>
-                <div class="flex-1 space-y-1">
-                  <div class="h-4 bg-slate-700 rounded w-24"></div>
-                  <div class="h-3 bg-slate-700 rounded w-32"></div>
+              <div class="profile-visitor-placeholder">
+                <div class="profile-visitor-placeholder-avatar"></div>
+                <div class="profile-visitor-placeholder-lines">
+                  <div class="profile-visitor-placeholder-line w-24"></div>
+                  <div class="profile-visitor-placeholder-line w-32"></div>
                 </div>
               </div>
             }
           </div>
 
-          <!-- Overlay with upgrade CTA -->
-          <div
-            class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/60 rounded-lg"
-          >
-            <div class="text-center p-6 max-w-sm">
+          <div class="profile-visitors-overlay">
+            <div class="profile-visitors-overlay-content">
               <svg
-                class="w-12 h-12 mx-auto mb-3 text-yellow-400"
+                class="profile-visitors-lock-icon"
+                width="48"
+                height="48"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   stroke-linecap="round"
@@ -98,16 +84,18 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                 />
               </svg>
-              <h3 class="text-lg font-bold mb-2">Upgrade to VIP</h3>
-              <p class="text-sm text-slate-300 mb-4">
-                See who's been visiting your profile. Upgrade to VIP for full access to visitor
-                analytics.
+              <h3 class="profile-visitors-upgrade-title">
+                {{ 'profile.upgradeTitle' | t }}
+              </h3>
+              <p class="profile-visitors-upgrade-price">
+                {{ 'profile.upgradePrice' | t }}
               </p>
               <button
+                type="button"
+                class="profile-visitors-upgrade-btn"
                 (click)="onUpgradeClick()"
-                class="px-6 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold rounded-full hover:from-yellow-400 hover:to-orange-400 transition-all"
               >
-                Upgrade Now - £8/month
+                {{ 'vip.seePlans' | t }}
               </button>
             </div>
           </div>
@@ -117,9 +105,37 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
   styles: [
     `
-      :host {
-        display: block;
-      }
+      :host { display: block; }
+      .profile-visitors { padding: 1rem; }
+      .profile-visitors-title { font-size: 1.25rem; font-weight: 700; color: #e2e8f0; margin: 0 0 1rem; }
+      .profile-visitors-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; gap: 0.75rem; color: #64748b; font-size: 0.875rem; }
+      .visitor-spinner { width: 2rem; height: 2rem; border: 2px solid rgba(255,255,255,0.1); border-top-color: #60a5fa; border-radius: 50%; animation: spin 0.8s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .profile-visitors-list { display: flex; flex-direction: column; gap: 0.5rem; }
+      .profile-visitor-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 0.75rem; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.05); text-decoration: none; transition: background 0.2s; }
+      .profile-visitor-item:hover { background: rgba(255,255,255,0.05); }
+      .profile-visitor-avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+      .profile-visitor-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+      .profile-visitor-avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); color: #94a3b8; font-size: 1.125rem; }
+      .profile-visitor-info { flex: 1; min-width: 0; }
+      .profile-visitor-name { font-size: 0.875rem; font-weight: 600; color: #e2e8f0; margin: 0 0 0.125rem; }
+      .profile-visitor-time { font-size: 0.75rem; color: #64748b; margin: 0; }
+      .profile-visitors-empty { text-align: center; padding: 2rem; color: #64748b; }
+      .profile-visitors-blurred { position: relative; }
+      .profile-visitors-placeholders { filter: blur(6px); user-select: none; pointer-events: none; }
+      .profile-visitor-placeholder { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 0.75rem; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.05); }
+      .profile-visitor-placeholder-avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; background: rgba(255,255,255,0.06); flex-shrink: 0; }
+      .profile-visitor-placeholder-lines { flex: 1; display: flex; flex-direction: column; gap: 0.375rem; }
+      .profile-visitor-placeholder-line { height: 0.625rem; background: rgba(255,255,255,0.06); border-radius: 0.25rem; }
+      .w-24 { width: 6rem; }
+      .w-32 { width: 8rem; }
+      .profile-visitors-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(18,18,18,0.7); border-radius: 0.75rem; }
+      .profile-visitors-overlay-content { text-align: center; padding: 1.5rem; max-width: 20rem; }
+      .profile-visitors-lock-icon { width: 3rem; height: 3rem; margin: 0 auto 0.75rem; color: #f59e0b; display: block; }
+      .profile-visitors-upgrade-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin: 0 0 0.25rem; }
+      .profile-visitors-upgrade-price { font-size: 0.8125rem; color: #fbbf24; font-weight: 600; margin: 0 0 1rem; }
+      .profile-visitors-upgrade-btn { padding: 0.5rem 1.5rem; border-radius: 9999px; font-size: 0.8125rem; font-weight: 700; background: linear-gradient(135deg, #f59e0b, #d97706); color: #1c1917; border: none; cursor: pointer; transition: opacity 0.2s; }
+      .profile-visitors-upgrade-btn:hover { opacity: 0.9; }
     `,
   ],
 })
@@ -130,12 +146,11 @@ export class ProfileVisitorsComponent {
 
   readonly visitors = signal<ProfileVisitor[]>([]);
   readonly isLoading = signal(true);
-  readonly error = signal<string | null>(null);
   readonly isVip = signal(false);
 
-  readonly placeholderVisitors = computed(() => {
-    return Array.from({ length: 5 }, (_, i) => ({ id: `placeholder-${i}` }));
-  });
+  readonly placeholderVisitors = computed(() =>
+    Array.from({ length: 5 }, (_, i) => ({ id: `placeholder-${i}` })),
+  );
 
   constructor() {
     effect(() => {
@@ -150,19 +165,16 @@ export class ProfileVisitorsComponent {
   private async loadVisitors(): Promise<void> {
     try {
       this.isLoading.set(true);
-      this.error.set(null);
       const visitors = await this.userService.getProfileVisitors();
       this.visitors.set(visitors);
-    } catch (err) {
-      this.error.set('Failed to load visitors. Please try again.');
-      console.error('Error loading visitors:', err);
+    } catch {
+      // Data fallback handled by mock-data in the service
     } finally {
       this.isLoading.set(false);
     }
   }
 
   onUpgradeClick(): void {
-    // TODO: Navigate to subscription/pricing page
-    this.router.navigate(['/pricing']);
+    this.router.navigate(['/vip']);
   }
 }

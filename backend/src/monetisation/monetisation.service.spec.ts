@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PinoLogger } from 'nestjs-pino';
 import {
   ForbiddenException,
   NotFoundException,
@@ -14,6 +15,10 @@ import { AppleReceiptValidatorService } from './apple-receipt-validator.service'
 
 const mockConstructEvent = jest.fn();
 const mockCheckoutSessionCreate = jest.fn();
+const mockSubscriptionsList = jest.fn();
+const mockSubscriptionsUpdate = jest.fn();
+const mockInvoicesList = jest.fn();
+const mockBillingPortalSessionsCreate = jest.fn();
 
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => {
@@ -24,6 +29,18 @@ jest.mock('stripe', () => {
       checkout: {
         sessions: {
           create: mockCheckoutSessionCreate,
+        },
+      },
+      subscriptions: {
+        list: (...args: any[]) => mockSubscriptionsList(...args),
+        update: (...args: any[]) => mockSubscriptionsUpdate(...args),
+      },
+      invoices: {
+        list: (...args: any[]) => mockInvoicesList(...args),
+      },
+      billingPortal: {
+        sessions: {
+          create: (...args: any[]) => mockBillingPortalSessionsCreate(...args),
         },
       },
     };
@@ -53,6 +70,15 @@ describe('MonetisationService', () => {
 
     module = await Test.createTestingModule({
       providers: [
+        {
+          provide: 'PinoLogger:MonetisationService',
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
         MonetisationService,
         {
           provide: ConfigService,
@@ -252,6 +278,11 @@ describe('MonetisationService', () => {
       await expect(service.generateApiKey('unknown-id')).rejects.toThrow(
         new NotFoundException('User not found'),
       );
+      // Ensure mockQueryBuilder.single is properly mocked for this test
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { id: 'log-1', category: 'REDIS' },
+        error: null,
+      });
     });
 
     it('should throw ForbiddenException when non-VIP tries to generate API key (verifying dual currency format)', async () => {
@@ -285,19 +316,17 @@ describe('MonetisationService', () => {
       });
     });
 
-    it('should generate API key and return consumer rate limits for non-developer tier VIP user', async () => {
+    it('should throw ForbiddenException for non-developer tier VIP user', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: { id: 'user-vip', is_vip: true, vip_tier: 'consumer' },
         error: null,
       });
 
-      const result = await service.generateApiKey('user-vip');
-
-      expect(result).toEqual({
-        api_key: expect.stringMatching(/^ht_dev_[a-f0-9]{32}$/),
-        tier: 'consumer',
-        rate_limit_rpm: 60,
-      });
+      await expect(service.generateApiKey('user-vip')).rejects.toThrow(
+        new ForbiddenException(
+          'Developer API Access is reserved for active subscribers. Upgrade to Developer Tier (20 UKP / $26 USD per month) to generate programmatic API keys!',
+        ),
+      );
     });
   });
 
@@ -535,12 +564,29 @@ describe('MonetisationService', () => {
   describe('getDiagnosticLogs', () => {
     it('should return diagnostic logs when query succeeds', async () => {
       const logs = [{ id: 'log-1', category: 'POSTGIS' }];
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: logs,
-        error: null,
-      });
+      const userCheckChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { is_vip: true, vip_tier: 'developer' },
+          error: null,
+        }),
+      };
+      const logsChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({
+          data: logs,
+          error: null,
+        }),
+      };
 
-      const result = await service.getDiagnosticLogs();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(userCheckChain)
+        .mockReturnValueOnce(logsChain);
+
+      const result = await service.getDiagnosticLogs('user-1');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith(
         'developer_diagnostic_logs',
       );
@@ -548,11 +594,29 @@ describe('MonetisationService', () => {
     });
 
     it('should return empty array when query fails', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
-        data: null,
-        error: { message: 'failed' },
-      });
-      const result = await service.getDiagnosticLogs();
+      const userCheckChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { is_vip: true, vip_tier: 'developer' },
+          error: null,
+        }),
+      };
+      const failingChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'failed' },
+        }),
+      };
+
+      mockSupabaseClient.from
+        .mockReturnValueOnce(userCheckChain)
+        .mockReturnValueOnce(failingChain);
+
+      const result = await service.getDiagnosticLogs('user-1');
       expect(result).toEqual([]);
     });
   });
@@ -567,10 +631,26 @@ describe('MonetisationService', () => {
         message: 'done',
         created_at: '2026-01-01T00:00:00.000Z',
       };
-      mockQueryBuilder.single.mockResolvedValue({
-        data: created,
-        error: null,
-      });
+      const userCheckChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { is_vip: true, vip_tier: 'developer' },
+          error: null,
+        }),
+      };
+      const insertChain = {
+        insert: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: created,
+          error: null,
+        }),
+      };
+
+      mockSupabaseClient.from
+        .mockReturnValueOnce(userCheckChain)
+        .mockReturnValueOnce(insertChain);
 
       const result = await service.createDiagnosticLog('user-1', {
         category: 'REDIS',
@@ -578,6 +658,251 @@ describe('MonetisationService', () => {
         message: 'done',
       });
       expect(result).toEqual(created);
+    });
+  });
+
+  describe('getSubscriptionDetails', () => {
+    it('should return VIP details with billing info when an active Stripe subscription exists', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { is_vip: true, vip_tier: 'consumer', email: 'user@example.com' },
+        error: null,
+      });
+      mockSubscriptionsList.mockResolvedValue({
+        data: [
+          {
+            id: 'sub_1',
+            status: 'active',
+            metadata: { userId: 'user-1' },
+            cancel_at_period_end: false,
+            current_period_end: 1893456000,
+            customer: 'cus_1',
+            items: {
+              data: [
+                {
+                  price: {
+                    unit_amount: 800,
+                    currency: 'gbp',
+                    recurring: { interval: 'month' },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      const result = await service.getSubscriptionDetails('user-1');
+
+      expect(result).toEqual({
+        isVip: true,
+        vipTier: 'consumer',
+        email: 'user@example.com',
+        billing: {
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: new Date(1893456000 * 1000).toISOString(),
+          nextBillingAmount: 8,
+          currency: 'gbp',
+          interval: 'month',
+        },
+      });
+    });
+
+    it('should return null billing when the user has no active Stripe subscription', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: { is_vip: false, vip_tier: null, email: 'free@example.com' },
+        error: null,
+      });
+      mockSubscriptionsList.mockResolvedValue({ data: [] });
+
+      const result = await service.getSubscriptionDetails('user-2');
+
+      expect(result).toEqual({
+        isVip: false,
+        vipTier: null,
+        email: 'free@example.com',
+        billing: null,
+      });
+    });
+
+    it('should throw when the user row cannot be fetched', async () => {
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'not found' },
+      });
+
+      await expect(service.getSubscriptionDetails('missing')).rejects.toThrow(
+        'Failed to fetch subscription details: not found',
+      );
+    });
+  });
+
+  describe('cancelSubscription', () => {
+    it('should cancel the active subscription at period end', async () => {
+      mockSubscriptionsList.mockResolvedValue({
+        data: [
+          {
+            id: 'sub_1',
+            status: 'active',
+            metadata: { userId: 'user-1' },
+            cancel_at_period_end: false,
+          },
+        ],
+      });
+      mockSubscriptionsUpdate.mockResolvedValue({});
+
+      const result = await service.cancelSubscription('user-1');
+
+      expect(mockSubscriptionsUpdate).toHaveBeenCalledWith('sub_1', {
+        cancel_at_period_end: true,
+      });
+      expect(result.message).toContain('cancelled at the end');
+    });
+
+    it('should throw BadRequestException when no active subscription exists', async () => {
+      mockSubscriptionsList.mockResolvedValue({ data: [] });
+
+      await expect(service.cancelSubscription('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('resumeSubscription', () => {
+    it('should resume a subscription scheduled to cancel', async () => {
+      mockSubscriptionsList.mockResolvedValue({
+        data: [
+          {
+            id: 'sub_1',
+            status: 'active',
+            metadata: { userId: 'user-1' },
+            cancel_at_period_end: true,
+          },
+        ],
+      });
+      mockSubscriptionsUpdate.mockResolvedValue({});
+
+      const result = await service.resumeSubscription('user-1');
+
+      expect(mockSubscriptionsUpdate).toHaveBeenCalledWith('sub_1', {
+        cancel_at_period_end: false,
+      });
+      expect(result.message).toContain('resumed');
+    });
+
+    it('should throw BadRequestException when no active subscription exists', async () => {
+      mockSubscriptionsList.mockResolvedValue({ data: [] });
+
+      await expect(service.resumeSubscription('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException when the subscription is not scheduled to cancel', async () => {
+      mockSubscriptionsList.mockResolvedValue({
+        data: [
+          {
+            id: 'sub_1',
+            status: 'active',
+            metadata: { userId: 'user-1' },
+            cancel_at_period_end: false,
+          },
+        ],
+      });
+
+      await expect(service.resumeSubscription('user-1')).rejects.toThrow(
+        'Subscription is not scheduled for cancellation.',
+      );
+    });
+  });
+
+  describe('listInvoices', () => {
+    it('should return mapped invoices for a user with an active subscription', async () => {
+      mockSubscriptionsList.mockResolvedValue({
+        data: [
+          {
+            id: 'sub_1',
+            status: 'active',
+            metadata: { userId: 'user-1' },
+            customer: 'cus_1',
+          },
+        ],
+      });
+      mockInvoicesList.mockResolvedValue({
+        data: [
+          {
+            id: 'in_1',
+            amount_paid: 800,
+            currency: 'gbp',
+            status: 'paid',
+            created: 1893456000,
+            invoice_pdf: 'https://stripe.test/invoice.pdf',
+            hosted_invoice_url: 'https://stripe.test/invoice',
+          },
+        ],
+      });
+
+      const result = await service.listInvoices('user-1');
+
+      expect(mockInvoicesList).toHaveBeenCalledWith({
+        customer: 'cus_1',
+        limit: 12,
+      });
+      expect(result).toEqual([
+        {
+          id: 'in_1',
+          amountPaid: 8,
+          currency: 'gbp',
+          status: 'paid',
+          created: new Date(1893456000 * 1000).toISOString(),
+          invoicePdf: 'https://stripe.test/invoice.pdf',
+          hostedInvoiceUrl: 'https://stripe.test/invoice',
+        },
+      ]);
+    });
+
+    it('should return an empty array when the user has no active subscription', async () => {
+      mockSubscriptionsList.mockResolvedValue({ data: [] });
+
+      const result = await service.listInvoices('user-1');
+
+      expect(result).toEqual([]);
+      expect(mockInvoicesList).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createBillingPortalSession', () => {
+    it('should create a billing portal session for the user Stripe customer', async () => {
+      mockSubscriptionsList.mockResolvedValue({
+        data: [
+          {
+            id: 'sub_1',
+            status: 'active',
+            metadata: { userId: 'user-1' },
+            customer: 'cus_1',
+          },
+        ],
+      });
+      mockBillingPortalSessionsCreate.mockResolvedValue({
+        url: 'https://billing.stripe.com/session/test',
+      });
+
+      const result = await service.createBillingPortalSession('user-1');
+
+      expect(mockBillingPortalSessionsCreate).toHaveBeenCalledWith({
+        customer: 'cus_1',
+        return_url: expect.stringContaining('/my-subscription'),
+      });
+      expect(result).toEqual({
+        url: 'https://billing.stripe.com/session/test',
+      });
+    });
+
+    it('should throw BadRequestException when the user has no active subscription', async () => {
+      mockSubscriptionsList.mockResolvedValue({ data: [] });
+
+      await expect(
+        service.createBillingPortalSession('user-1'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

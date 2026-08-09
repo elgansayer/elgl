@@ -4,11 +4,15 @@ import { lastValueFrom } from 'rxjs';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
 import { FcmService } from './fcm.service';
+import { MOCK_CURRENT_USER } from './mock-data';
 
 export interface AppUser extends User {
   is_vip?: boolean;
   vip_tier?: string | null;
+  is_serious_learner?: boolean;
   developer_api_key?: string | null;
+  display_name?: string;
+  avatar_url?: string;
 }
 
 @Injectable({
@@ -30,6 +34,13 @@ export class AuthService {
 
   readonly biometricLockEnabled = signal<boolean>(this.loadBiometricLockPreference());
 
+  /** Latest earned badge status (VIP, serious learner) loaded from Supabase. */
+  readonly earnedBadges = signal<{
+    isVip: boolean;
+    vipTier: string;
+    isSeriousLearner: boolean;
+  } | null>(null);
+
   private loadBiometricLockPreference(): boolean {
     if (typeof localStorage === 'undefined') return false;
     return localStorage.getItem(this.LOCK_ENABLED_KEY) === 'true';
@@ -44,18 +55,36 @@ export class AuthService {
       data: { session },
     } = await this.supabase.auth.getSession();
     this.updateAuthState(session);
+    if (session) {
+      void this.refreshEarnedBadges(session.user.id);
+    }
     if (!session) {
-      import('./mock-data').then((m) => {
-        this.currentUser.set(m.MOCK_CURRENT_USER);
+      this.currentUser.set(MOCK_CURRENT_USER);
+      this.currentSession.set({
+        access_token: 'mock-jwt-token',
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+        token_type: 'bearer',
+        user: MOCK_CURRENT_USER,
       });
     }
     this.isLoading.set(false);
 
     this.supabase.auth.onAuthStateChange((_event, session) => {
       this.updateAuthState(session);
+      if (session) {
+        void this.refreshEarnedBadges(session.user.id);
+      } else {
+        this.earnedBadges.set(null);
+      }
       if (!session) {
-        import('./mock-data').then((m) => {
-          this.currentUser.set(m.MOCK_CURRENT_USER);
+        this.currentUser.set(MOCK_CURRENT_USER);
+        this.currentSession.set({
+          access_token: 'mock-jwt-token',
+          refresh_token: 'mock-refresh-token',
+          expires_in: 3600,
+          token_type: 'bearer',
+          user: MOCK_CURRENT_USER,
         });
       }
     });
@@ -87,16 +116,18 @@ export class AuthService {
       return true;
     }
     const credentialId = this.base64UrlToArrayBuffer(storedId);
-    const credential = await navigator.credentials.get({
-      publicKey: {
-        challenge: crypto.getRandomValues(new Uint8Array(32)),
-        rpId: window.location.hostname,
-        userVerification: 'required',
-        allowCredentials: [{ type: 'public-key', id: credentialId }],
-        timeout: 60_000,
-      },
-      mediation: 'optional',
-    }).catch(() => null);
+    const credential = await navigator.credentials
+      .get({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rpId: window.location.hostname,
+          userVerification: 'required',
+          allowCredentials: [{ type: 'public-key', id: credentialId }],
+          timeout: 60_000,
+        },
+        mediation: 'optional',
+      })
+      .catch(() => null);
 
     if (credential) {
       this.appLocked.set(false);
@@ -196,6 +227,25 @@ export class AuthService {
     await this.requestBiometric();
   }
 
+  private async refreshEarnedBadges(userId: string): Promise<void> {
+    try {
+      const badges = await this.supabaseService.getEarnedBadges(userId);
+      this.earnedBadges.set(badges);
+      const user = this.currentUser();
+      if (user) {
+        this.currentUser.set({
+          ...user,
+          is_vip: badges.isVip,
+          vip_tier: badges.vipTier,
+          is_serious_learner: badges.isSeriousLearner,
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load earned badges', error);
+      this.earnedBadges.set(null);
+    }
+  }
+
   async enableBiometricLock(): Promise<boolean> {
     if (!(await this.isBiometricSupported())) {
       return false;
@@ -217,7 +267,11 @@ export class AuthService {
 
   private toAppUser(user: User | null): AppUser | null {
     if (!user) return null;
-    return { ...user };
+    const appUser: AppUser = { ...user };
+    appUser.is_vip = appUser.is_vip ?? false;
+    appUser.vip_tier = appUser.vip_tier ?? 'free';
+    appUser.is_serious_learner = appUser.is_serious_learner ?? false;
+    return appUser;
   }
 
   private updateAuthState(session: Session | null): void {
@@ -275,6 +329,7 @@ export class AuthService {
 
     const { error } = await this.supabase.auth.signOut();
     if (!error) {
+      this.earnedBadges.set(null);
       this.updateAuthState(null);
     }
     return { error };
@@ -300,26 +355,31 @@ export class AuthService {
 
   async verifyTwoFactor(token: string): Promise<boolean> {
     const accessToken = this.currentSession()?.access_token;
-    const res = await lastValueFrom(
-      this.http.post<{ success: boolean }>(
-        `${this.apiUrl}/auth/two-factor/verify`,
-        { token },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
+    try {
+      const res = await lastValueFrom(
+        this.http.post<{ success: boolean }>(
+          `${this.apiUrl}/auth/two-factor/verify`,
+          { token },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
           },
-        },
-      ),
-    );
-    return res.success;
+        ),
+      );
+      return res.success;
+    } catch (error) {
+      console.error('2FA verification failed', error);
+      return false;
+    }
   }
 
-  async disableTwoFactor(token: string): Promise<boolean> {
+  async disableTwoFactor(): Promise<boolean> {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ success: boolean }>(
         `${this.apiUrl}/auth/two-factor/disable`,
-        { token },
+        {},
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -333,14 +393,11 @@ export class AuthService {
   async checkTwoFactorStatus(): Promise<boolean> {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
-      this.http.get<{ enabled: boolean }>(
-        `${this.apiUrl}/auth/two-factor/status`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+      this.http.get<{ enabled: boolean }>(`${this.apiUrl}/auth/two-factor/status`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
         },
-      ),
+      }),
     );
     return res.enabled;
   }
@@ -394,9 +451,7 @@ export class AuthService {
       await this.supabase.auth.signOut();
       return {
         user: null,
-        error: new AuthError(
-          'Invalid two‑factor authentication code. Please try again.',
-        ),
+        error: new AuthError('Invalid two‑factor authentication code. Please try again.'),
       };
     }
 
@@ -414,7 +469,7 @@ export class AuthService {
     const accessToken = this.currentSession()?.access_token;
     const res = await lastValueFrom(
       this.http.post<{ url: string }>(
-        `${this.apiUrl}/transfer/generate`,
+        `${this.apiUrl}/auth/transfer/generate`,
         {},
         {
           headers: {
@@ -432,10 +487,9 @@ export class AuthService {
    */
   async consumeDeviceLink(token: string): Promise<{ swapToken: string }> {
     return await lastValueFrom(
-      this.http.post<{ swapToken: string }>(
-        `${this.apiUrl}/transfer/consume`,
-        { token },
-      ),
+      this.http.post<{ swapToken: string }>(`${this.apiUrl}/auth/transfer/consume`, {
+        token: token,
+      }),
     );
   }
 
@@ -449,16 +503,12 @@ export class AuthService {
           access_token: string;
           refresh_token: string;
           user_id: string;
-        }>(
-          `${this.apiUrl}/transfer/swap`,
-          { swapToken },
-        ),
+        }>(`${this.apiUrl}/auth/transfer/swap`, { swapToken }),
       );
-      const { data: sessionData, error: setError } =
-        await this.supabase.auth.setSession({
-          access_token: result.access_token,
-          refresh_token: result.refresh_token,
-        });
+      const { data: sessionData, error: setError } = await this.supabase.auth.setSession({
+        access_token: result.access_token,
+        refresh_token: result.refresh_token,
+      });
       if (setError) {
         return false;
       }
@@ -469,6 +519,34 @@ export class AuthService {
     } catch {
       return false;
     }
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    await lastValueFrom(this.http.post(`${this.apiUrl}/auth/request-password-reset`, { email }));
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    await lastValueFrom(
+      this.http.post(`${this.apiUrl}/auth/reset-password`, {
+        token: token,
+        newPassword: newPassword,
+      }),
+    );
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const accessToken = this.getAccessToken();
+    await lastValueFrom(
+      this.http.post(
+        `${this.apiUrl}/auth/change-password`,
+        { currentPassword, newPassword },
+        {
+          headers: new HttpHeaders({
+            Authorization: `Bearer ${accessToken ?? ''}`,
+          }),
+        },
+      ),
+    );
   }
 
   private http = inject(HttpClient);

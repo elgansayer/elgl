@@ -15,6 +15,13 @@ export class PronunciationService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/pronunciation/feedback`;
 
+  submitVoiceFeedback(audioBlob: Blob, feedbackText: string): Observable<{ success: boolean }> {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'feedback.webm');
+    formData.append('feedbackText', feedbackText);
+    return this.http.post<{ success: boolean }>(`${this.apiUrl}/voice-feedback`, formData);
+  }
+
   analyse(
     audioBlob: Blob,
     referenceText?: string,

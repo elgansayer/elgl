@@ -2,12 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { UnauthorizedException } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { of } from 'rxjs';
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { MonetisationService } from './monetisation.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SubscriptionPlansService } from './services/subscription-plans.service';
 
 const AUDIENCE = 'https://api.hellotalk.app/monetisation/webhooks/google';
 const SERVICE_ACCOUNT_EMAIL =
@@ -65,6 +67,7 @@ describe('GooglePlayNotificationService', () => {
   let mockQueryBuilder: any;
   let monetisationService: { updateVipStatusFromWebhook: jest.Mock };
   let httpService: { get: jest.Mock };
+  let subscriptionPlansService: { getTierByProductId: jest.Mock };
 
   beforeEach(async () => {
     mockQueryBuilder = {
@@ -80,9 +83,21 @@ describe('GooglePlayNotificationService', () => {
       updateVipStatusFromWebhook: jest.fn().mockResolvedValue(undefined),
     };
     httpService = { get: jest.fn() };
+    subscriptionPlansService = {
+      getTierByProductId: jest.fn((productId: string) => productId),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: 'PinoLogger:GooglePlayNotificationService',
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
         GooglePlayNotificationService,
         {
           provide: ConfigService,
@@ -94,6 +109,8 @@ describe('GooglePlayNotificationService', () => {
               if (key === 'GOOGLE_PUBSUB_AUDIENCE') return AUDIENCE;
               if (key === 'GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL')
                 return SERVICE_ACCOUNT_EMAIL;
+              if (key === 'GOOGLE_JWKS_URI')
+                return 'https://www.googleapis.com/oauth2/v3/certs';
               return undefined;
             }),
           },
@@ -106,6 +123,10 @@ describe('GooglePlayNotificationService', () => {
           },
         },
         { provide: MonetisationService, useValue: monetisationService },
+        {
+          provide: SubscriptionPlansService,
+          useValue: subscriptionPlansService,
+        },
       ],
     }).compile();
 
@@ -267,6 +288,15 @@ describe('GooglePlayNotificationService', () => {
       };
       const module: TestingModule = await Test.createTestingModule({
         providers: [
+          {
+            provide: 'PinoLogger:GooglePlayNotificationService',
+            useValue: {
+              info: jest.fn(),
+              warn: jest.fn(),
+              error: jest.fn(),
+              debug: jest.fn(),
+            },
+          },
           GooglePlayNotificationService,
           { provide: ConfigService, useValue: configService },
           { provide: HttpService, useValue: httpService },
@@ -275,6 +305,10 @@ describe('GooglePlayNotificationService', () => {
             useValue: {
               getClient: jest.fn().mockReturnValue(mockSupabaseClient),
             },
+          },
+          {
+            provide: SubscriptionPlansService,
+            useValue: subscriptionPlansService,
           },
           { provide: MonetisationService, useValue: monetisationService },
         ],

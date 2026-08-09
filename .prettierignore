@@ -23,3 +23,7 @@ out/
 # Angular
 *.ngsummary.json
 *.ngsummary
+
+# Generated and cache directories
+.angular/
+coverage/

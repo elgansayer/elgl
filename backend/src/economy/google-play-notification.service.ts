@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EconomyService } from './economy.service';
 
@@ -10,9 +11,9 @@ import { EconomyService } from './economy.service';
  */
 @Injectable()
 export class GooglePlayNotificationService {
-  private readonly logger = new Logger(GooglePlayNotificationService.name);
-
   constructor(
+    @InjectPinoLogger(GooglePlayNotificationService.name)
+    private readonly logger: PinoLogger,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly supabaseService: SupabaseService,
@@ -53,7 +54,7 @@ export class GooglePlayNotificationService {
       const purchaseToken = subscriptionNotification.purchaseToken as string;
       const subscriptionId = subscriptionNotification.subscriptionId as string;
 
-      this.logger.log(
+      this.logger.info(
         `Google Play notification: type=${notificationType}, subscriptionId=${subscriptionId}`,
       );
 
@@ -123,9 +124,16 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} subscription recovered: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} subscription recovered: ${subscriptionId}`,
+    );
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'active',
+      purchaseToken,
+    );
   }
 
   /**
@@ -140,9 +148,14 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} subscription renewed: ${subscriptionId}`);
+    this.logger.info(`User ${userId} subscription renewed: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'active',
+      purchaseToken,
+    );
   }
 
   /**
@@ -157,9 +170,14 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} subscription canceled: ${subscriptionId}`);
+    this.logger.info(`User ${userId} subscription canceled: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'canceled');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'canceled',
+      purchaseToken,
+    );
   }
 
   /**
@@ -174,9 +192,16 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} purchased subscription: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} purchased subscription: ${subscriptionId}`,
+    );
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'active',
+      purchaseToken,
+    );
   }
 
   /**
@@ -191,9 +216,14 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} subscription on hold: ${subscriptionId}`);
+    this.logger.info(`User ${userId} subscription on hold: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'on_hold');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'on_hold',
+      purchaseToken,
+    );
   }
 
   /**
@@ -208,11 +238,16 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} subscription in grace period: ${subscriptionId}`,
     );
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'grace_period');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'grace_period',
+      purchaseToken,
+    );
   }
 
   /**
@@ -227,9 +262,16 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} subscription restarted: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} subscription restarted: ${subscriptionId}`,
+    );
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'active');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'active',
+      purchaseToken,
+    );
   }
 
   /**
@@ -244,7 +286,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `User ${userId} confirmed price change for subscription: ${subscriptionId}`,
     );
 
@@ -264,7 +306,7 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} subscription deferred: ${subscriptionId}`);
+    this.logger.info(`User ${userId} subscription deferred: ${subscriptionId}`);
 
     // Update the deferred date in the database    this.updateSubscriptionDeferredDate(userId, subscriptionId);
   }
@@ -281,9 +323,14 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} subscription revoked: ${subscriptionId}`);
+    this.logger.info(`User ${userId} subscription revoked: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'revoked');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'revoked',
+      purchaseToken,
+    );
     this.revokeSubscriptionBenefits(userId);
   }
 
@@ -299,9 +346,14 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.log(`User ${userId} subscription expired: ${subscriptionId}`);
+    this.logger.info(`User ${userId} subscription expired: ${subscriptionId}`);
 
-    this.updateSubscriptionStatus(userId, subscriptionId, 'expired');
+    this.updateSubscriptionStatus(
+      userId,
+      subscriptionId,
+      'expired',
+      purchaseToken,
+    );
     this.revokeSubscriptionBenefits(userId);
   }
 
@@ -316,7 +368,7 @@ export class GooglePlayNotificationService {
     const { data } = await supabase
       .from('subscriptions')
       .select('user_id')
-      .eq('purchase_token', purchaseToken)
+      .eq('transaction_id', purchaseToken)
       .single();
 
     const row = data as { user_id?: string } | null;
@@ -330,6 +382,7 @@ export class GooglePlayNotificationService {
     userId: string,
     subscriptionId: string,
     status: string,
+    transactionId?: string,
   ): void {
     const supabase = this.supabaseService.getClient();
 
@@ -340,6 +393,7 @@ export class GooglePlayNotificationService {
           user_id: userId,
           product_id: subscriptionId,
           status,
+          transaction_id: transactionId ?? null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },
@@ -361,7 +415,7 @@ export class GooglePlayNotificationService {
     subscriptionId: string,
   ): void {
     // Placeholder: In production, fetch the new price from Google Play API
-    this.logger.log(
+    this.logger.debug(
       `Would update price for user ${userId}, subscription ${subscriptionId}`,
     );
   }
@@ -374,7 +428,7 @@ export class GooglePlayNotificationService {
     subscriptionId: string,
   ): void {
     // Placeholder: In production, update the deferred date in the database
-    this.logger.log(
+    this.logger.debug(
       `Would update deferred date for user ${userId}, subscription ${subscriptionId}`,
     );
   }
@@ -390,7 +444,7 @@ export class GooglePlayNotificationService {
       .update({
         is_vip: false,
         vip_tier: 'free',
-        updated_at: new Date().toISOString(),
+        status_visibility: 'free',
       })
       .eq('id', userId)
       .then(({ error }) => {

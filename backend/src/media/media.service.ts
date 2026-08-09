@@ -94,9 +94,13 @@ export class MediaService implements OnModuleInit {
     file: Express.Multer.File,
   ): Promise<{ url: string }> {
     const tempDir = os.tmpdir();
+    const safeExt = path
+      .extname(file.originalname)
+      .replace(/[^a-zA-Z0-9.]/g, '');
+    const randomName = crypto.randomBytes(8).toString('hex');
     const inputPath = path.join(
       tempDir,
-      `${Date.now()}-input-${file.originalname}`,
+      `${Date.now()}-input-${randomName}${safeExt}`,
     );
     const outputPath = path.join(tempDir, `${Date.now()}-output.ogg`);
 
@@ -309,5 +313,39 @@ export class MediaService implements OnModuleInit {
     }
 
     return { avatarUrl };
+  }
+  async markMediaAsViewed(
+    userId: string,
+    mediaId: string,
+  ): Promise<{ success: boolean }> {
+    const supabase = this.supabaseService.getClient();
+
+    // Check if the media exists and belongs to the user
+    const { data: media, error: fetchError } = await supabase
+      .from('media')
+      .select('id, view_once, viewed')
+      .eq('id', mediaId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !media) {
+      throw new BadRequestException('Media not found or access denied');
+    }
+
+    if (!media.view_once || media.viewed) {
+      throw new BadRequestException('Media is not view-once or already viewed');
+    }
+
+    // Mark the media as viewed
+    const { error: updateError } = await supabase
+      .from('media')
+      .update({ viewed: true })
+      .eq('id', mediaId);
+
+    if (updateError) {
+      throw new Error('Failed to mark media as viewed');
+    }
+
+    return { success: true };
   }
 }

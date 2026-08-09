@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ScheduleModule } from '@nestjs/schedule';
 import { UsersController } from './users.controller';
 import { DeviceLinkController } from './device-link.controller';
 import { UsersService } from './users.service';
+import { DataExportWorker } from './data-export.worker';
 import { MediaModule } from '../media/media.module';
 import { AccountDeletionCron } from './cron/account-deletion.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
@@ -15,7 +15,6 @@ import { TwoFactorModule } from '../two-factor/two-factor.module';
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
     SupabaseModule,
     NotificationsModule,
     MediaModule,
@@ -25,12 +24,13 @@ import { TwoFactorModule } from '../two-factor/two-factor.module';
   controllers: [UsersController, DeviceLinkController],
   providers: [
     UsersService,
+    DataExportWorker,
     AccountDeletionCron,
     {
       provide: APP_INTERCEPTOR,
       useClass: LastActiveInterceptor,
     },
   ],
-  exports: [UsersService],
+  exports: [UsersService, DataExportWorker],
 })
 export class UsersModule {}

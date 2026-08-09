@@ -1,1 +1,0 @@
-Code review finding: Replace 2 'as' type assertion(s) with proper type narrowing in recent commit (from commit 2cb793c8: Integrate Firebase Cloud Messaging (FCM) in Angula)

@@ -69,7 +69,7 @@ export class SpamDetectionService {
 
     // Prevent unbounded growth: only keep last 1000 entries
     if (this.cache.size > 1000) {
-      const firstKey = this.cache.keys().next().value;
+      const firstKey = Array.from(this.cache.keys())[0];
       if (firstKey) this.cache.delete(firstKey);
     }
 

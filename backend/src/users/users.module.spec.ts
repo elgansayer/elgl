@@ -2,6 +2,7 @@ import { UsersModule } from './users.module';
 import { UsersController } from './users.controller';
 import { DeviceLinkController } from './device-link.controller';
 import { UsersService } from './users.service';
+import { DataExportWorker } from './data-export.worker';
 import { AccountDeletionCron } from './cron/account-deletion.cron';
 import { LastActiveInterceptor } from './interceptors/last-active.interceptor';
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -50,11 +51,12 @@ describe('UsersModule', () => {
     expect(controllersMetadata).toContain(DeviceLinkController);
   });
 
-  it('should register UsersService and AccountDeletionCron in its providers metadata', () => {
+  it('should register UsersService, DataExportWorker and AccountDeletionCron in its providers metadata', () => {
     const providersMetadata =
       (Reflect.getMetadata('providers', UsersModule) as unknown[]) ?? [];
 
     expect(providersMetadata).toContain(UsersService);
+    expect(providersMetadata).toContain(DataExportWorker);
     expect(providersMetadata).toContain(AccountDeletionCron);
   });
 

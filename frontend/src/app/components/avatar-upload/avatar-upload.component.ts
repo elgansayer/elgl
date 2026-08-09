@@ -4,20 +4,17 @@ import {
   signal,
   output,
 } from '@angular/core';
-import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { MediaService } from '../../services/media.service';
+import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-avatar-upload',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './avatar-upload.component.html',
   styleUrls: ['./avatar-upload.component.scss'],
 })
 export class AvatarUploadComponent {
-  private readonly i18n = inject(I18nService);
-  private readonly mediaService = inject(MediaService);
+  private readonly supabaseService = inject(SupabaseService);
 
   readonly avatarUrl = output<string>();
 
@@ -29,10 +26,10 @@ export class AvatarUploadComponent {
   readonly cropY = signal(0);
   readonly cropSize = signal(0);
 
-  private readonly displayWidth = signal(0);
-  private readonly displayHeight = signal(0);
-  private readonly naturalWidth = signal(0);
-  private readonly naturalHeight = signal(0);
+  readonly displayWidth = signal(0);
+  readonly displayHeight = signal(0);
+  readonly naturalWidth = signal(0);
+  readonly naturalHeight = signal(0);
 
   private startX = 0;
   private startY = 0;
@@ -65,7 +62,7 @@ export class AvatarUploadComponent {
     this.previewUrl.set(blobUrl);
   }
 
-  // Called when the <img> inside the template has finished loading
+  // Called when the <img loading="lazy"> inside the template has finished loading
   onImageLoad(event: Event): void {
     const img = event.target;
     if (!(img instanceof HTMLImageElement)) return;
@@ -91,7 +88,7 @@ export class AvatarUploadComponent {
     this.startX = event.clientX - rect.left;
     this.startY = event.clientY - rect.top;
     this.isDragging = true;
-    event.preventDefault();
+    event.preventDefault?.();
   }
 
   onImageMouseMove(event: MouseEvent): void {
@@ -121,8 +118,8 @@ export class AvatarUploadComponent {
       y = this.startY - size;
     }
 
-    const maxW = this.displayWidth();
-    const maxH = this.displayHeight();
+    const maxW = rect.width;
+    const maxH = rect.height;
     // Clamp to image bounds
     x = Math.max(0, Math.min(x, maxW - size));
     y = Math.max(0, Math.min(y, maxH - size));
@@ -131,13 +128,13 @@ export class AvatarUploadComponent {
     this.cropY.set(y);
     this.cropSize.set(size);
 
-    event.preventDefault();
+    event.preventDefault?.();
   }
 
   onImageMouseUp(event: MouseEvent): void {
     if (this.isDragging) {
       this.isDragging = false;
-      event.preventDefault();
+      event.preventDefault?.();
     }
   }
 
@@ -184,11 +181,13 @@ export class AvatarUploadComponent {
         type: 'image/png',
       });
 
-      // 5. Upload via media service
-      const result = await this.mediaService.uploadAvatar(croppedFile);
+      // 5. Upload via Supabase service
+      const url = await this.supabaseService.uploadAvatar(croppedFile);
 
       // 6. Emit the resulting URL
-      this.avatarUrl.emit(result.avatarUrl);
+      if (url) {
+        this.avatarUrl.emit(url);
+      }
     } catch (err) {
       console.error('Avatar upload failed:', err);
     } finally {

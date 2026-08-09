@@ -1,9 +1,9 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component } from '@angular/core';
+import { TranslatePipe } from '../../../services/translate.pipe';
 
 @Component({
-  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-toast',
-  imports: [],
+  imports: [TranslatePipe],
   templateUrl: './toast.html',
   styleUrl: './toast.scss',
 })

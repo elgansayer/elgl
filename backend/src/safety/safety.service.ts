@@ -1,6 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
 
@@ -41,7 +48,11 @@ export const SAFETY_CATEGORIES = [
 export class SafetyService {
   private readonly logger = new Logger(SafetyService.name);
 
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
+    private readonly cacheInvalidationService: SafetyCacheInvalidationService,
+  ) {}
 
   getCategories() {
     return SAFETY_CATEGORIES;
@@ -55,7 +66,7 @@ export class SafetyService {
 
     // Prevent self-reporting
     if (reporterId === dto.reported_id) {
-      throw new Error('Cannot report yourself');
+      throw new BadRequestException('Cannot report yourself');
     }
 
     // Verify reported user exists
@@ -97,9 +108,15 @@ export class SafetyService {
       throw new Error('Failed to submit report: no data returned');
     }
 
+    this.metricsService.recordTsReportSubmitted(dto.reason_category);
+
     this.logger.log(
       `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
     );
+
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserCaches(dto.reported_id);
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
 
     return { id: data.id };
   }
@@ -110,6 +127,21 @@ export class SafetyService {
   ): Promise<{ success: boolean; blocked_id: string }> {
     const supabase = this.supabaseService.getClient();
 
+    if (blockerId === dto.blocked_id) {
+      throw new BadRequestException('You cannot block yourself');
+    }
+
+    // Verify the target user exists
+    const { data: targetUser, error: targetError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', dto.blocked_id)
+      .maybeSingle();
+
+    if (targetError || !targetUser) {
+      throw new NotFoundException('User to block not found');
+    }
+
     // Check if already blocked
     const { data: existing } = await supabase
       .from('blocks')
@@ -119,7 +151,7 @@ export class SafetyService {
       .maybeSingle();
 
     if (existing) {
-      throw new Error('User is already blocked');
+      throw new BadRequestException('User is already blocked');
     }
 
     const { error } = await supabase.from('blocks').insert({
@@ -131,7 +163,17 @@ export class SafetyService {
       throw new Error(`Failed to block user: ${error.message}`);
     }
 
+    this.metricsService.recordTsBlockCreated();
+
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
+
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserPairCaches(
+      blockerId,
+      dto.blocked_id,
+    );
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+
     return { success: true, blocked_id: dto.blocked_id };
   }
 
@@ -150,7 +192,17 @@ export class SafetyService {
       throw new Error(`Failed to unblock user: ${error.message}`);
     }
 
+    this.metricsService.recordTsBlockRemoved();
+
     this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
+
+    // Invalidate Redis caches affected by trust-graph mutation
+    void this.cacheInvalidationService.invalidateUserPairCaches(
+      blockerId,
+      blockedId,
+    );
+    void this.cacheInvalidationService.invalidateTrustAndSafetyCaches();
+
     return { success: true };
   }
 

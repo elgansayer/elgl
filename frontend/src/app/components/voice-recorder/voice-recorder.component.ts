@@ -1,10 +1,9 @@
 import { showToast } from '../../services/toast.service';
-import { Component, output, signal, inject } from '@angular/core';
+import { Component, output, signal, inject, OnDestroy } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 
-import { UserService } from '../../services/user.service';
-import { AudioCompressionService } from '../../services/audio-compression.service';
+import { MediaService } from '../../services/media.service';
 
 @Component({
   selector: 'app-voice-recorder',
@@ -12,9 +11,8 @@ import { AudioCompressionService } from '../../services/audio-compression.servic
   templateUrl: './voice-recorder.component.html',
   styleUrls: ['./voice-recorder.component.scss'],
 })
-export class VoiceRecorderComponent {
-  private userService = inject(UserService);
-  private audioCompressionService = inject(AudioCompressionService);
+export class VoiceRecorderComponent implements OnDestroy {
+  private mediaService = inject(MediaService);
 
   audioUploaded = output<string>();
   cancelled = output<void>();
@@ -28,10 +26,12 @@ export class VoiceRecorderComponent {
   private audioChunks: Blob[] = [];
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private recordedBlob: Blob | null = null;
+  private audioStream: MediaStream | null = null;
 
   async startRecording(): Promise<void> {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioStream = stream;
       this.audioChunks = [];
       this.mediaRecorder = new MediaRecorder(stream);
 
@@ -45,6 +45,7 @@ export class VoiceRecorderComponent {
         this.recordedBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
         this.audioPreviewUrl.set(URL.createObjectURL(this.recordedBlob));
         stream.getTracks().forEach((track) => track.stop());
+        this.audioStream = null;
       };
 
       this.mediaRecorder.start();
@@ -73,29 +74,11 @@ export class VoiceRecorderComponent {
     this.isUploading.set(true);
 
     try {
-      // Compress the audio blob before uploading
-      const compressedBlob = await this.audioCompressionService.compressAudio(this.recordedBlob);
-
-      const filename = `voice_${Date.now()}.wav`;
-      const presigned = await this.userService.getPresignedUploadUrl(
-        filename,
-        'audio/wav',
-        'chat-voice',
-      );
-
-      if (presigned.uploadUrl && presigned.uploadUrl !== 'http://mock-upload-url') {
-        await fetch(presigned.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'audio/wav' },
-          body: compressedBlob,
-        });
-      }
-
-      this.audioUploaded.emit(presigned.mediaUrl);
+      const result = await this.mediaService.uploadVoiceNote(this.recordedBlob, 'ogg');
+      this.audioUploaded.emit(result.url);
     } catch (e) {
       console.error('Failed to upload voice note:', e);
-      // Fallback: emit preview URL or mock object
-      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/wav');
+      this.audioUploaded.emit(this.audioPreviewUrl() || 'http://mock-voice-url/ogg');
     } finally {
       this.isUploading.set(false);
     }
@@ -113,5 +96,17 @@ export class VoiceRecorderComponent {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  ngOnDestroy(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+    this.audioStream?.getTracks().forEach((track) => track.stop());
+    this.audioStream = null;
+    if (this.audioPreviewUrl()) {
+      URL.revokeObjectURL(this.audioPreviewUrl()!);
+    }
   }
 }

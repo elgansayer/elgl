@@ -11,6 +11,19 @@ import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventsQueryDto } from './dto/events-query.dto';
 
+export interface EventWithHost {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  date_time: string;
+  location: string | null;
+  language_pair: string | null;
+  max_participants: number | null;
+  host_id: string;
+  host?: { display_name: string | null; avatar_url: string | null };
+}
+
 @Injectable()
 export class EventsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EventsService.name);
@@ -71,27 +84,45 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       if (!events || events.length === 0) return;
 
-      for (const event of events) {
-        // Fetch attending users for this event
-        const { data: rsvps, error: rsvpError } = await supabase
-          .from('event_rsvps')
-          .select('user_id')
-          .eq('event_id', event.id)
-          .eq('status', 'attending');
+      const typedEvents: Array<{
+        id: string;
+        title: string;
+        host_id: string;
+        language_pair: string | null;
+      }> = events ?? [];
 
-        if (rsvpError) {
-          this.logger.warn(
-            `Could not fetch RSVPs for event ${event.id}`,
-            rsvpError,
-          );
-          continue;
-        }
+      if (typedEvents.length === 0) return;
 
-        if (!rsvps) continue;
+      const eventIds = typedEvents.map((e) => e.id);
 
-        for (const rsvp of rsvps) {
-          await this.sendReminder(event.id, event.title, rsvp.user_id);
-        }
+      const { data: allRsvps, error: rsvpError } = await supabase
+        .from('event_rsvps')
+        .select('event_id, user_id')
+        .in('event_id', eventIds)
+        .eq('status', 'attending');
+
+      if (rsvpError) {
+        this.logger.warn(
+          'Could not fetch RSVPs for upcoming events',
+          rsvpError,
+        );
+        return;
+      }
+
+      if (!allRsvps) return;
+
+      const rsvpsByEventId = new Map<string, string[]>();
+      for (const rsvp of allRsvps) {
+        const users = rsvpsByEventId.get(rsvp.event_id) ?? [];
+        users.push(rsvp.user_id);
+        rsvpsByEventId.set(rsvp.event_id, users);
+      }
+
+      for (const event of typedEvents) {
+        const userIds = rsvpsByEventId.get(event.id);
+        if (!userIds || userIds.length === 0) continue;
+
+        await this.sendRemindersBatch(event.id, event.title, userIds);
       }
     } catch (err) {
       this.logger.error('Unexpected error in checkReminders', err);
@@ -99,50 +130,64 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Placeholder method that logs a reminder message and, in the future,
-   * will send an actual push notification via Firebase or a similar service.
+   * Sends an actual push notification via Firebase or a similar service to a batch of users.
    */
-  private async sendReminder(
+  private async sendRemindersBatch(
     eventId: string,
     eventTitle: string,
-    userId: string,
+    userIds: string[],
   ): Promise<void> {
+    if (userIds.length === 0) return;
+
     const supabase = this.supabaseService.getClient();
 
-    // Deduplicate: check if we already sent a reminder for this (event, user)
+    // Deduplicate: check if we already sent a reminder for this event to these users
     const { data: existing, error: fetchErr } = await supabase
       .from('event_reminders_sent')
-      .select('id')
+      .select('user_id')
       .eq('event_id', eventId)
-      .eq('user_id', userId)
-      .maybeSingle();
+      .in('user_id', userIds);
 
     if (fetchErr) {
-      this.logger.warn('Could not check existing reminder', fetchErr);
+      this.logger.warn('Could not check existing reminders', fetchErr);
       return;
     }
-    if (existing) {
-      // Already notified
+
+    const existingUserIds = new Set(existing?.map((r) => r.user_id) ?? []);
+    const usersToNotify = userIds.filter((id) => !existingUserIds.has(id));
+
+    if (usersToNotify.length === 0) {
+      // All users already notified
       return;
     }
 
     // Send push notification using the existing NotificationsService
     const title = `Event Reminder: ${eventTitle}`;
     const body = `Your event "${eventTitle}" starts in 15 minutes.`;
-    await this.notificationsService.sendPushNotification(userId, {
-      type: 'event_reminder',
-      title,
-      body,
-      category: 'groups',
-    });
+
+    await Promise.allSettled(
+      usersToNotify.map((userId) =>
+        this.notificationsService.sendPushNotification(userId, {
+          type: 'event_reminder',
+          title,
+          body,
+          category: 'groups',
+        }),
+      ),
+    );
 
     // Record that we sent the reminder to avoid duplicates
+    const recordsToInsert = usersToNotify.map((userId) => ({
+      event_id: eventId,
+      user_id: userId,
+    }));
+
     const { error: insertErr } = await supabase
       .from('event_reminders_sent')
-      .insert({ event_id: eventId, user_id: userId });
+      .insert<{ event_id: string; user_id: string }>(recordsToInsert);
 
     if (insertErr) {
-      this.logger.warn('Failed to record sent reminder', insertErr);
+      this.logger.warn('Failed to record sent reminders', insertErr);
     }
   }
 
@@ -150,7 +195,16 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     const supabase = this.supabaseService.getClient();
     const { data, error } = await supabase
       .from('events')
-      .insert({
+      .insert<{
+        title: string;
+        description: string | null;
+        category: string | null;
+        date_time: string;
+        location: string | null;
+        language_pair: string | null;
+        max_participants: number | null;
+        host_id: string;
+      }>({
         title: dto.title,
         description: dto.description ?? null,
         category: dto.category ?? null,
@@ -178,9 +232,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
     let q = supabase
       .from('events')
-      .select('*, host:host_id(display_name, avatar_url)')
-      .order('date_time', { ascending: true })
-      .range(offset, offset + limit - 1);
+      .select('*, host:host_id(display_name, avatar_url)');
 
     if (query.status === 'past') {
       q = q.lt('date_time', new Date().toISOString());
@@ -198,16 +250,23 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     if (query.from_date) {
       q = q.gte('date_time', query.from_date);
     }
+    if (query.proficiency) {
+      q = q.eq('proficiency', query.proficiency);
+    }
     if (query.to_date) {
       q = q.lte('date_time', query.to_date);
     }
+
+    q = q
+      .order('date_time', { ascending: true })
+      .range(offset, offset + limit - 1);
 
     const { data, error } = await q;
     if (error) {
       this.logger.error('Failed to list events', error);
       throw error;
     }
-    return (data ?? []).map((ev: any) => ({
+    return ((data ?? []) as EventWithHost[]).map((ev: EventWithHost) => ({
       ...ev,
       host_name: ev.host?.display_name ?? null,
       host_avatar_url: ev.host?.avatar_url ?? null,
@@ -217,7 +276,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   async getUserEvents(
     userId: string,
     status?: 'upcoming' | 'past',
-  ): Promise<any[]> {
+  ): Promise<EventWithHost[]> {
     const supabase = this.supabaseService.getClient();
     const { data: rsvps, error: rsvpErr } = await supabase
       .from('event_rsvps')
@@ -229,7 +288,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
     }
     if (!rsvps || rsvps.length === 0) return [];
 
-    const eventIds = rsvps.map((r: any) => r.event_id);
+    const eventIds = rsvps.map((r: { event_id: string }) => r.event_id);
     let q = supabase
       .from('events')
       .select('*, host:host_id(display_name, avatar_url)')
@@ -248,7 +307,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to fetch user events', error);
       throw error;
     }
-    return (data ?? []).map((ev: any) => ({
+    return ((data ?? []) as EventWithHost[]).map((ev: EventWithHost) => ({
       ...ev,
       host_name: ev.host?.display_name ?? null,
       host_avatar_url: ev.host?.avatar_url ?? null,
@@ -285,10 +344,11 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn('Failed to fetch interested count', iErr);
     }
 
+    const eventRow = data as unknown as EventWithHost;
     return {
-      ...data,
-      host_name: data.host?.display_name ?? null,
-      host_avatar_url: data.host?.avatar_url ?? null,
+      ...eventRow,
+      host_name: eventRow.host?.display_name ?? null,
+      host_avatar_url: eventRow.host?.avatar_url ?? null,
       attendees_count: attendingCount ?? 0,
       interested_count: interestedCount ?? 0,
     };
@@ -370,6 +430,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
       const { data: events, error } = await supabase
         .from('events')
         .select('id, title, host_id, language_pair, category')
+        .eq('is_cancelled', false)
         .not('language_pair', 'is', null)
         .gte('date_time', new Date(now - tolerance).toISOString())
         .lte('date_time', new Date(now + tolerance).toISOString());
@@ -381,24 +442,38 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       if (!events || events.length === 0) return;
 
-      for (const event of events) {
+      const typedEvents = (events ?? []) as unknown as Array<{
+        id: string;
+        title: string;
+        host_id: string;
+        language_pair: string;
+        category: string | null;
+      }>;
+
+      const roomNames = typedEvents.map(
+        (event) => `language_party-${event.id}`,
+      );
+
+      const { data: existingRooms, error: roomsCheckErr } = await supabase
+        .from('audio_rooms')
+        .select('room_name')
+        .in('room_name', roomNames);
+
+      if (roomsCheckErr) {
+        this.logger.warn('Could not check existing rooms', roomsCheckErr);
+        return;
+      }
+
+      const existingRoomNames = new Set(
+        existingRooms?.map((r) => r.room_name) ?? [],
+      );
+
+      const eventsToCreateRoomsFor = typedEvents.filter(
+        (event) => !existingRoomNames.has(`language_party-${event.id}`),
+      );
+
+      for (const event of eventsToCreateRoomsFor) {
         const roomName = `language_party-${event.id}`;
-
-        // Check if a room already exists for this event
-        const { data: existingRoom, error: roomCheckErr } = await supabase
-          .from('audio_rooms')
-          .select('id')
-          .eq('room_name', roomName)
-          .maybeSingle();
-
-        if (roomCheckErr) {
-          this.logger.warn('Could not check existing room', roomCheckErr);
-          continue;
-        }
-        if (existingRoom) {
-          // Already created
-          continue;
-        }
 
         // Create the LiveKit audio room via the dedicated service
         const room = await this.audioRoomsService.createRoom(
@@ -408,16 +483,16 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
             target_language:
               event.language_pair.split('-')[1] ?? event.language_pair,
             language_pair: event.language_pair,
-            topic_tag: event.category ?? null,
+            topic_tag: event.category ?? event.language_pair,
             is_video_stream: false,
           },
           roomName,
         );
 
-        // Mark the room as a Language Party
+        // Mark the room as a Language Party and link it to the event
         await supabase
           .from('audio_rooms')
-          .update({ party_type: 'language_party' })
+          .update({ party_type: 'language_party', event_id: event.id })
           .eq('id', room.id);
 
         this.logger.log(

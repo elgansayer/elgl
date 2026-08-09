@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
 import {
   BadRequestException,
   Injectable,
@@ -6,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
@@ -22,12 +22,16 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { XpService } from '../xp/xp.service';
 import { PREDEFINED_HOBBIES, PREDEFINED_INTERESTS } from './constants';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { DataExportWorker } from './data-export.worker';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
+    private readonly dataExportWorker: DataExportWorker,
+    private readonly eventEmitter: EventEmitter2,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
@@ -110,6 +114,33 @@ export class UsersService {
     return profile;
   }
 
+  async searchUsers(
+    query: string,
+    currentUserId: string,
+    limit = 10,
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .ilike('display_name', `${query}%`)
+      .neq('id', currentUserId)
+      .order('display_name', { ascending: true })
+      .limit(limit);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data as {
+      id: string;
+      display_name: string;
+      avatar_url: string | null;
+    }[];
+  }
+
   async getUserXp(userId: string): Promise<number> {
     return this.xpService.getTotalXp(userId);
   }
@@ -117,7 +148,7 @@ export class UsersService {
   async getVisitors(userId: string): Promise<ProfileVisitor[]> {
     const supabase = this.supabaseService.getClient();
 
-    const response = await supabase
+    const response = (await supabase
       .from('profile_visits')
       .select(
         `
@@ -136,13 +167,17 @@ export class UsersService {
       )
       .eq('viewed_id', userId)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(50)) as unknown as { data: any[]; error: any };
 
     if (response.error) {
       throw new InternalServerErrorException('Failed to fetch visitors');
     }
 
-    const rows = (response.data ?? []) as Array<{
+    const rawData = response.data ?? [];
+    if (!Array.isArray(rawData)) {
+      throw new InternalServerErrorException('Unexpected response shape');
+    }
+    const rows = rawData as unknown as Array<{
       id: string;
       visitor_id: string;
       viewed_id: string;
@@ -161,7 +196,10 @@ export class UsersService {
     }));
   }
 
-  async getStatusViewers(userId: string): Promise<ProfileVisitor[]> {
+  async getStatusViewersByStatusId(
+    userId: string,
+    statusId: string,
+  ): Promise<ProfileVisitor[]> {
     const supabase = this.supabaseService.getClient();
 
     const response = await supabase
@@ -182,6 +220,7 @@ export class UsersService {
       `,
       )
       .eq('status_owner_id', userId)
+      .eq('status_id' as never, statusId)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -189,49 +228,33 @@ export class UsersService {
       throw new InternalServerErrorException('Failed to fetch status viewers');
     }
 
-    type Viewer = {
-      id: string;
-      display_name: string;
-      avatar_url: string;
-      native_languages: string[];
-      target_languages: string[];
-    };
-
-    const rows: Array<{
+    const rawData = response.data ?? [];
+    if (!Array.isArray(rawData)) {
+      throw new InternalServerErrorException('Unexpected response shape');
+    }
+    const rows = rawData as unknown as Array<{
       id: string;
       viewer_id: string;
       status_owner_id: string;
       created_at: string;
-      viewer: Viewer | Viewer[] | null;
-    }> = response.data ?? [];
+      viewer: ProfileVisitorSummary | ProfileVisitorSummary[] | null;
+    }>;
 
-    return rows.map((row) => {
-      // Status views may flatten the viewer relationship into an array
-      // depending on the Supabase client version.  Normalise to a single
-      // object to keep the mapping type-safe.
-      const viewer: Viewer = Array.isArray(row.viewer)
-        ? row.viewer[0]
-        : (row.viewer ?? {
-            id: '',
-            display_name: '',
-            avatar_url: '',
-            native_languages: [],
-            target_languages: [],
-          });
-      return {
-        id: row.id,
-        visitor_id: row.viewer_id,
-        viewed_id: row.status_owner_id,
-        created_at: row.created_at,
-        visitor: {
-          id: viewer.id,
-          display_name: viewer.display_name,
-          avatar_url: viewer.avatar_url,
-          native_languages: viewer.native_languages,
-          target_languages: viewer.target_languages,
-        },
-      };
-    });
+    return rows.map((row) => ({
+      id: row.id,
+      visitor_id: row.viewer_id,
+      viewed_id: row.status_owner_id,
+      created_at: row.created_at,
+      visitor: Array.isArray(row.viewer)
+        ? (row.viewer[0] ?? undefined)
+        : (row.viewer ?? undefined),
+    }));
+  }
+
+  getDefaultStatusId(userId: string): Promise<string> {
+    // No dedicated statuses table exists: each user has a single current
+    // status (profile.status_text), so the status id is the user's own id.
+    return Promise.resolve(userId);
   }
 
   async followUser(followerId: string, targetUserId: string): Promise<void> {
@@ -325,9 +348,17 @@ export class UsersService {
 
     if (error) {
       Logger.warn(
-        `Failed to update last_active_at for user ${userId}: ${error.message}`,
+        `Failed to update last_active_at for user ${userId}: ${error?.message ?? 'Unknown error'}`,
       );
     }
+  }
+
+  async getNotificationPreferences(userId: string): Promise<{
+    custom_tone_url?: string;
+    vibration_pattern?: number[];
+  }> {
+    const profile = await this.getProfile(userId);
+    return profile.notification_preferences ?? {};
   }
 
   async updateDoNotDisturbSettings(
@@ -370,6 +401,7 @@ export class UsersService {
       is_vip: true,
       vip_tier: 'premium',
       coins_balance: 500,
+      auto_play_voice_notes: false,
       chat_enter_to_send: false,
       chat_text_size: 'medium',
       study_streak_days: 15,
@@ -378,11 +410,16 @@ export class UsersService {
       privacy_hide_age: false,
       privacy_hide_location: false,
       privacy_hide_from_search: false,
+      matchmaking_consent: false,
       privacy_hide_gender: false,
       privacy_hide_exact_location: false,
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
       silence_unknown_callers: false,
+      auto_play_voice_notes: false,
+      auto_download_media: false,
+      auto_download_wifi_only: false,
+      auto_download_preference: 'wifi',
       status_visibility: 'public',
       corrector_score: 0,
       incognito_visits: false,
@@ -390,6 +427,7 @@ export class UsersService {
       scheduled_for_deletion_at: undefined,
       mock_country: undefined,
       mock_city: undefined,
+      notification_preferences: undefined,
       xp_total: 100,
       business_name: 'My Mock Shop',
       business_hours: 'Mon-Fri 9AM-5PM',
@@ -409,14 +447,19 @@ export class UsersService {
   ): Promise<UserProfile> {
     if (dto.target_languages && dto.target_languages.length > 1 && !isVip) {
       throw new BadRequestException(
-        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages simultaneously.',
+        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages, or Pro (12 UKP / $15 USD per month) for up to 5 languages.',
       );
     }
 
     if (dto.target_languages && dto.target_languages.length > 3) {
-      throw new BadRequestException(
-        'A maximum of 3 target languages can be studied simultaneously.',
-      );
+      const currentProfile = await this.getProfile(userId);
+      const tier = currentProfile?.vip_tier ?? 'free';
+      const maxLanguages = tier === 'pro' || tier === 'developer' ? 5 : 3;
+      if (dto.target_languages.length > maxLanguages) {
+        throw new BadRequestException(
+          `A maximum of ${maxLanguages} target languages can be studied simultaneously on your current tier.`,
+        );
+      }
     }
 
     if (dto.mock_location && !isVip) {
@@ -425,7 +468,21 @@ export class UsersService {
       );
     }
 
+    // Build fix: declare before use to satisfy TS2448
     const updatePayload: Record<string, unknown> = {};
+
+    if (dto.primary_accent_color !== undefined) {
+      if (!isVip) {
+        throw new BadRequestException(
+          'Custom primary accent colours require a VIP subscription (8 UKP / $10 USD per month).',
+        );
+      }
+      updatePayload.primary_accent_color = dto.primary_accent_color;
+    }
+
+    if (dto.enable_location_spoofing !== undefined) {
+      updatePayload.enable_location_spoofing = dto.enable_location_spoofing;
+    }
 
     if (dto.display_name !== undefined)
       updatePayload.display_name = dto.display_name;
@@ -447,8 +504,15 @@ export class UsersService {
       updatePayload.privacy_hide_location = dto.privacy_hide_location;
     if (dto.privacy_hide_from_search !== undefined)
       updatePayload.privacy_hide_from_search = dto.privacy_hide_from_search;
+    if (dto.matchmaking_consent !== undefined)
+      updatePayload.matchmaking_consent = dto.matchmaking_consent;
     if (dto.privacy_hide_gender !== undefined)
       updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
+    if (dto.privacy_hide_exact_location !== undefined)
+      updatePayload.privacy_hide_exact_location =
+        dto.privacy_hide_exact_location;
+    if (dto.privacy_hide_online_status !== undefined)
+      updatePayload.privacy_hide_online_status = dto.privacy_hide_online_status;
     if (dto.gender !== undefined) updatePayload.gender = dto.gender;
     if (dto.profile_visibility !== undefined)
       updatePayload.profile_visibility = dto.profile_visibility;
@@ -471,6 +535,9 @@ export class UsersService {
     if (dto.silence_unknown_callers !== undefined)
       updatePayload.silence_unknown_callers = dto.silence_unknown_callers;
 
+    if (dto.auto_play_voice_notes !== undefined)
+      updatePayload.auto_play_voice_notes = dto.auto_play_voice_notes;
+
     if (dto.sound_effects_enabled !== undefined)
       updatePayload.sound_effects_enabled = dto.sound_effects_enabled;
 
@@ -485,6 +552,18 @@ export class UsersService {
 
     if (dto.serious_learner_mode !== undefined)
       updatePayload.serious_learner_mode = dto.serious_learner_mode;
+
+    if (dto.auto_play_voice_notes !== undefined)
+      updatePayload.auto_play_voice_notes = dto.auto_play_voice_notes;
+
+    if (dto.auto_download_media !== undefined)
+      updatePayload.auto_download_media = dto.auto_download_media;
+
+    if (dto.auto_download_wifi_only !== undefined)
+      updatePayload.auto_download_wifi_only = dto.auto_download_wifi_only;
+
+    if (dto.auto_download_preference !== undefined)
+      updatePayload.auto_download_preference = dto.auto_download_preference;
 
     if (dto.business_name !== undefined)
       updatePayload.business_name = dto.business_name;
@@ -517,7 +596,53 @@ export class UsersService {
       );
     }
     const profile = await this.getProfile(userId);
+
+    // Fire-and-forget: emit profile.updated event for system bubble broadcasting
+    this.eventEmitter.emit('profile.updated', { userId });
+
     return { ...profile, ...updatePayload };
+  }
+
+  async updateNotificationPreferences(
+    userId: string,
+    dto: UpdateNotificationPreferencesDto,
+  ): Promise<UserProfile> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ notification_preferences: dto } as never)
+      .eq('id', userId);
+    if (error) {
+      Logger.warn(
+        `Supabase update for notification preferences failed, falling back to mock: ${error.message}`,
+      );
+      const mock = this.getMockProfile(userId);
+      return {
+        ...mock,
+        notification_preferences: dto,
+      };
+    }
+    return this.getProfile(userId);
+  }
+
+  async updateGreetingMessage(
+    userId: string,
+    greetingMessage: string,
+  ): Promise<UserProfile> {
+    const isVip = Boolean((await this.getProfile(userId))?.is_vip ?? false);
+    return this.updateProfile(
+      userId,
+      { greeting_message: greetingMessage },
+      isVip,
+    );
+  }
+
+  async updateAwayMessage(
+    userId: string,
+    awayMessage: string,
+  ): Promise<UserProfile> {
+    const isVip = Boolean((await this.getProfile(userId))?.is_vip ?? false);
+    return this.updateProfile(userId, { away_message: awayMessage }, isVip);
   }
 
   async scheduleDeletion(
@@ -525,7 +650,7 @@ export class UsersService {
   ): Promise<{ message: string; scheduled_for_deletion_at: string }> {
     const supabase = this.supabaseService.getClient();
     const deletionDate = new Date();
-    deletionDate.setDate(deletionDate.getDate() + 30); // 30-day grace period
+    deletionDate.setDate(new Date().getDate() + 30); // 30-day grace period
 
     const { error } = await supabase
       .from('users')
@@ -562,34 +687,69 @@ export class UsersService {
     return { message: 'Account deletion cancelled successfully.' };
   }
 
-  async exportUserData(userId: string): Promise<Record<string, unknown>> {
+  async blockUser(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<{ success: boolean }> {
+    if (blockerId === blockedId) {
+      throw new BadRequestException('Cannot block yourself');
+    }
     const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('blocks')
+      .insert([{ blocker_id: blockerId, blocked_id: blockedId }] as never);
+    if (error) {
+      Logger.warn(`Block insert failed: ${error.message}`);
+      throw new InternalServerErrorException('Failed to block user');
+    }
+    return { success: true };
+  }
 
-    const [
-      profileRes,
-      momentsRes,
-      commentsRes,
-      messagesRes,
-      flashcardsRes,
-      favouritesRes,
-    ] = await Promise.all([
-      supabase.from('users').select('*').eq('id', userId).single(),
-      supabase.from('moments').select('*').eq('author_id', userId),
-      supabase.from('moment_comments').select('*').eq('author_id', userId),
-      supabase.from('chat_messages').select('*').eq('sender_id', userId),
-      supabase.from('flashcards').select('*').eq('user_id', userId),
-      supabase.from('favourites').select('*').eq('user_id', userId),
+  async unblockUser(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<{ success: boolean }> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from('blocks')
+      .delete()
+      .eq('blocker_id', blockerId)
+      .eq('blocked_id', blockedId);
+    if (error) {
+      Logger.warn(`Unblock delete failed: ${error.message}`);
+      throw new InternalServerErrorException('Failed to unblock user');
+    }
+    return { success: true };
+  }
+
+  async reportUser(
+    reporterId: string,
+    dto: {
+      reported_id: string;
+      reason_category: string;
+      description?: string;
+      context_url?: string;
+    },
+  ): Promise<{ success: boolean; message: string }> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase.from('reports').insert([
+      {
+        reporter_id: reporterId,
+        reported_user_id: dto.reported_id,
+        reason_category: dto.reason_category,
+        description: dto.description ?? '',
+        context_url: dto.context_url ?? null,
+      },
     ]);
+    if (error) {
+      Logger.warn(`Report insert failed: ${error.message}`);
+      throw new InternalServerErrorException('Failed to report user');
+    }
+    return { success: true, message: 'Report submitted' };
+  }
 
-    return {
-      profile: profileRes.data as unknown,
-      moments: momentsRes.data as unknown,
-      comments: commentsRes.data as unknown,
-      messages: messagesRes.data as unknown,
-      flashcards: flashcardsRes.data as unknown,
-      favourites: favouritesRes.data as unknown,
-      exported_at: new Date().toISOString(),
-    };
+  async exportUserData(userId: string): Promise<Record<string, unknown>> {
+    return this.dataExportWorker.exportUserData(userId);
   }
 
   async getPrivacySettings(userId: string): Promise<{
@@ -603,6 +763,9 @@ export class UsersService {
     privacy_about_info?: string;
     privacy_status?: string;
     privacy_hide_vip_status?: boolean;
+    incognito_visits?: boolean;
+    status_visibility?: string;
+    profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   }> {
     const profile = await this.getProfile(userId);
     const privacyRecord = profile as unknown as Record<string, unknown>;
@@ -623,6 +786,13 @@ export class UsersService {
         (privacyRecord.privacy_status as string | undefined) ?? 'everyone',
       privacy_hide_vip_status:
         (privacyRecord.privacy_hide_vip_status as boolean | undefined) ?? false,
+      incognito_visits: profile.incognito_visits ?? false,
+      status_visibility:
+        (profile as unknown as { status_visibility?: string })
+          .status_visibility ?? 'public',
+      profile_visibility:
+        (privacyRecord.profile_visibility as
+          'everyone' | 'vips_only' | 'hidden' | undefined) ?? 'everyone',
     };
   }
 
@@ -661,7 +831,7 @@ export class UsersService {
 
   async awardCoins(userId: string, amount: number): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const { error } = await supabase.rpc('increment_coins', {
+    const { error } = await supabase.rpc('increment_xp', {
       user_id: userId,
       amount,
     });
@@ -671,7 +841,8 @@ export class UsersService {
         .select('coins_balance')
         .eq('id', userId)
         .single();
-      const current = (cur?.coins_balance ?? 0) + amount;
+      const current =
+        ((cur as { coins_balance?: number })?.coins_balance ?? 0) + amount;
       await supabase
         .from('users')
         .update({ coins_balance: current } as never)
@@ -695,7 +866,10 @@ export class UsersService {
     if (error || !data) {
       return {};
     }
-    return data.message_filters ?? {};
+    return (
+      (data as { message_filters?: Record<string, unknown> })
+        ?.message_filters ?? {}
+    );
   }
 
   async setMessageFilters(
@@ -724,6 +898,7 @@ export class UsersService {
     userId: string,
     limit = 20,
     offset = 0,
+    viewerId?: string,
   ): Promise<{ data: UserProfile[]; total: number }> {
     const supabase = this.supabaseService.getClient();
     const { count, error: countError } = await supabase
@@ -758,13 +933,14 @@ export class UsersService {
       follower: UserProfile;
     }>;
     const users = rows.map((row) => row.follower);
-    return { data: users, total };
+    return { data: await this.attachIsFollowedByMe(users, viewerId), total };
   }
 
   async getFollowing(
     userId: string,
     limit = 20,
     offset = 0,
+    viewerId?: string,
   ): Promise<{ data: UserProfile[]; total: number }> {
     const supabase = this.supabaseService.getClient();
     const { count, error: countError } = await supabase
@@ -799,7 +975,39 @@ export class UsersService {
       following: UserProfile;
     }>;
     const users = rows.map((row) => row.following);
-    return { data: users, total };
+    return { data: await this.attachIsFollowedByMe(users, viewerId), total };
+  }
+
+  private async attachIsFollowedByMe(
+    users: UserProfile[],
+    viewerId?: string,
+  ): Promise<UserProfile[]> {
+    if (!viewerId || users.length === 0) {
+      return users;
+    }
+    const supabase = this.supabaseService.getClient();
+    const { data: followsData, error: followsError } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', viewerId)
+      .in(
+        'following_id',
+        users.map((user) => user.id),
+      );
+
+    if (followsError) {
+      throw new InternalServerErrorException('Failed to fetch follow data');
+    }
+
+    const followedIds = new Set(
+      (followsData ?? []).map(
+        (row: { following_id: string }) => row.following_id,
+      ),
+    );
+    return users.map((user) => ({
+      ...user,
+      is_followed_by_me: followedIds.has(user.id),
+    }));
   }
 
   async generateDeviceLink(userId: string): Promise<string> {
@@ -838,8 +1046,17 @@ export class UsersService {
       privacy_status?: string;
       incognito_visits?: boolean;
       privacy_hide_vip_status?: boolean;
+      status_visibility?: string;
+      profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
     },
+    isVip: boolean,
   ): Promise<UserProfile> {
+    if (settings.incognito_visits && !isVip) {
+      throw new BadRequestException(
+        'Incognito profile visiting requires a VIP subscription (8 UKP / $10 USD per month).',
+      );
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const updatePayload: Record<string, unknown> = {};
@@ -855,6 +1072,10 @@ export class UsersService {
       updatePayload.incognito_visits = settings.incognito_visits;
     if (settings.privacy_hide_vip_status !== undefined)
       updatePayload.privacy_hide_vip_status = settings.privacy_hide_vip_status;
+    if (settings.status_visibility !== undefined)
+      updatePayload.status_visibility = settings.status_visibility;
+    if (settings.profile_visibility !== undefined)
+      updatePayload.profile_visibility = settings.profile_visibility;
 
     const { error: privacyUpdateError } = await supabase
       .from('users')
@@ -916,7 +1137,7 @@ export class UsersService {
       throw new NotFoundException(`User stats not found for user ${userId}`);
     }
 
-    const user = userRes.data;
+    const user = userRes.data as UserProfile;
     const momentsCount = momentsCountRes.count ?? 0;
     const commentsCount = commentsCountRes.count ?? 0;
     const followersCount = followersCountRes.count ?? 0;
@@ -924,7 +1145,7 @@ export class UsersService {
     const profileVisitsCount = visitsCountRes.count ?? 0;
 
     return {
-      ...(user as Record<string, unknown>),
+      ...(user as unknown as Record<string, unknown>),
       momentsCount,
       commentsCount,
       followersCount,
@@ -951,7 +1172,7 @@ export class UsersService {
         id: 'vip',
         name: 'VIP User',
         description:
-          'This user has a VIP subscription (8 UKP / $10 USD per month)',
+          'This user has a VIP subscription (8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent)',
       });
     }
     if (profile.is_serious_learner) {
@@ -964,32 +1185,123 @@ export class UsersService {
     return badges;
   }
 
+  shareContact(
+    requesterId: string,
+    targetUserId: string,
+  ): Promise<{ phone_number?: string; email?: string }> {
+    if (!requesterId || !targetUserId) {
+      throw new BadRequestException('User IDs are required');
+    }
+    // Placeholder implementation to support contact sharing.
+    // Future iterations will retrieve details from the user's profile.
+    return Promise.resolve({
+      phone_number: '+447700900123',
+      email: 'partner@example.com',
+    });
+  }
+
   async permanentDeleteAccount(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
     // Delete related data from multiple tables
-    const deletions = [
-      supabase.from('moments').delete().eq('author_id', userId),
-      supabase.from('moment_comments').delete().eq('author_id', userId),
-      supabase.from('moment_likes').delete().eq('user_id', userId),
-      supabase.from('flashcards').delete().eq('user_id', userId),
-      supabase.from('chat_messages').delete().eq('sender_id', userId),
-      supabase.from('favourites').delete().eq('user_id', userId),
-      supabase.from('profile_visits').delete().eq('viewer_id', userId),
-      supabase.from('profile_visits').delete().eq('viewed_id', userId),
-      supabase.from('user_follows').delete().eq('follower_id', userId),
-      supabase.from('user_follows').delete().eq('following_id', userId),
-      supabase.from('user_profile_likes').delete().eq('liker_id', userId),
-      supabase.from('user_profile_likes').delete().eq('liked_id', userId),
-      supabase.from('status_views').delete().eq('viewer_id', userId),
-      supabase.from('status_views').delete().eq('status_owner_id', userId),
+    const deletionTasks: Array<{
+      table:
+        | 'moments'
+        | 'moment_comments'
+        | 'moment_likes'
+        | 'flashcards'
+        | 'decks'
+        | 'chat_messages'
+        | 'favourites'
+        | 'profile_visits'
+        | 'user_follows'
+        | 'user_profile_likes'
+        | 'status_views';
+      column:
+        | 'author_id'
+        | 'user_id'
+        | 'sender_id'
+        | 'visitor_id'
+        | 'viewed_id'
+        | 'follower_id'
+        | 'following_id'
+        | 'liker_id'
+        | 'liked_id'
+        | 'viewer_id'
+        | 'status_owner_id';
+    }> = [
+      { table: 'moments', column: 'author_id' },
+      { table: 'moment_comments', column: 'author_id' },
+      { table: 'moment_likes', column: 'user_id' },
+      { table: 'flashcards', column: 'user_id' },
+      { table: 'decks', column: 'user_id' },
+      { table: 'chat_messages', column: 'sender_id' },
+      { table: 'favourites', column: 'user_id' },
+      { table: 'profile_visits', column: 'visitor_id' },
+      { table: 'profile_visits', column: 'viewed_id' },
+      { table: 'user_follows', column: 'follower_id' },
+      { table: 'user_follows', column: 'following_id' },
+      { table: 'user_profile_likes', column: 'liker_id' },
+      { table: 'user_profile_likes', column: 'liked_id' },
+      { table: 'status_views', column: 'viewer_id' },
+      { table: 'status_views', column: 'status_owner_id' },
     ];
 
-    const results = await Promise.all(deletions);
+    const results = await Promise.all(
+      deletionTasks.map(async ({ table, column }) => {
+        const { error } = await supabase
+          .from(table as never)
+          .delete()
+          .eq(column, userId);
+        return { error };
+      }),
+    );
     const errors = results.filter((r) => r.error).map((r) => r.error?.message);
     if (errors.length > 0) {
       Logger.warn(
         `Some deletions failed for user ${userId}: ${errors.join(', ')}`,
+      );
+    }
+
+    // GDPR: scrub escrow_transactions records for the deleted user.
+    // Rather than deleting escrow records (which would break the financial
+    // ledger for the counterparty), we anonymise user identifiers and scrub
+    // free-text fields.
+    const DELETED_USER_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
+
+    const now = new Date().toISOString();
+
+    // Anonymise escrow records where the user was the payer
+    const { error: escrowPayerError } = await supabase
+      .from('escrow_transactions')
+      .update({
+        payer_id: DELETED_USER_PLACEHOLDER,
+        description: null,
+        reference_id: null,
+        updated_at: now,
+      })
+      .eq('payer_id', userId);
+
+    if (escrowPayerError) {
+      Logger.warn(
+        `Failed to anonymise payer escrow records for user ${userId}: ${escrowPayerError.message}`,
+      );
+    }
+
+    // Anonymise escrow records where the user was the payee
+    const { error: escrowPayeeError } = await supabase
+      .from('escrow_transactions')
+      .update({
+        payee_id: DELETED_USER_PLACEHOLDER,
+        description: null,
+        reference_id: null,
+        updated_at: now,
+      })
+      .eq('payee_id', userId);
+
+    if (escrowPayeeError) {
+      Logger.warn(
+        `Failed to anonymise payee escrow records for user ${userId}: ${escrowPayeeError.message}`,
       );
     }
 

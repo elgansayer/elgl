@@ -26,10 +26,16 @@ describe('AchievementsService', () => {
   let service: AchievementsService;
   let builders: Record<string, any>;
   let mockSupabaseClient: any;
+  let warnSpy: jest.SpyInstance;
+  let errorSpy: jest.SpyInstance;
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    warnSpy = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    errorSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
 
     builders = {};
     mockSupabaseClient = {
@@ -59,6 +65,36 @@ describe('AchievementsService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('onModuleInit', () => {
+    it('seeds every milestone achievement via upsert', async () => {
+      builders['achievements'] = makeBuilder({ error: null });
+
+      await service.onModuleInit();
+
+      expect(builders['achievements'].upsert).toHaveBeenCalledTimes(5);
+      expect(builders['achievements'].upsert).toHaveBeenCalledWith(
+        {
+          code: 'first_message',
+          name: 'First Message',
+          description: 'Send your first message in a chat.',
+        },
+        { onConflict: 'code' },
+      );
+    });
+
+    it('logs a warning when seeding a milestone fails', async () => {
+      builders['achievements'] = makeBuilder({
+        error: { message: 'upsert failed' },
+      });
+
+      await service.onModuleInit();
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to upsert achievement'),
+      );
+    });
+  });
+
   describe('awardAchievement', () => {
     it('inserts a user_achievements row when the achievement code exists', async () => {
       builders['achievements'] = makeBuilder({
@@ -82,6 +118,22 @@ describe('AchievementsService', () => {
       await service.awardAchievement('user-1', 'nonexistent');
 
       expect(builders['user_achievements'].upsert).not.toHaveBeenCalled();
+    });
+
+    it('logs an error when the upsert into user_achievements fails', async () => {
+      builders['achievements'] = makeBuilder({
+        data: { id: 'ach-1' },
+        error: null,
+      });
+      builders['user_achievements'] = makeBuilder({
+        error: { message: 'insert failed' },
+      });
+
+      await service.awardAchievement('user-1', 'first_message');
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to award achievement'),
+      );
     });
   });
 
@@ -108,6 +160,21 @@ describe('AchievementsService', () => {
         service.hasAchievement('user-1', 'nonexistent'),
       ).resolves.toBe(false);
     });
+
+    it('returns false when no matching user_achievements row exists', async () => {
+      builders['achievements'] = makeBuilder({
+        data: { id: 'ach-1' },
+        error: null,
+      });
+      builders['user_achievements'] = makeBuilder({
+        data: null,
+        error: null,
+      });
+
+      await expect(
+        service.hasAchievement('user-1', 'first_message'),
+      ).resolves.toBe(false);
+    });
   });
 
   describe('listAchievements', () => {
@@ -123,6 +190,45 @@ describe('AchievementsService', () => {
       builders['achievements'] = makeBuilder({ data: rows, error: null });
 
       await expect(service.listAchievements()).resolves.toEqual(rows);
+    });
+
+    it('returns an empty array when supabase returns no data', async () => {
+      builders['achievements'] = makeBuilder({ data: null, error: null });
+
+      await expect(service.listAchievements()).resolves.toEqual([]);
+    });
+  });
+
+  describe('getUserAchievements', () => {
+    it('returns the earned achievement rows for a user', async () => {
+      const rows = [
+        {
+          achievements: {
+            id: 'a1',
+            code: 'first_message',
+            name: 'First Message',
+            description: 'desc',
+          },
+        },
+      ];
+      builders['user_achievements'] = makeBuilder({ data: rows, error: null });
+
+      await expect(service.getUserAchievements('user-1')).resolves.toEqual(
+        rows,
+      );
+      expect(builders['user_achievements'].eq).toHaveBeenCalledWith(
+        'user_id',
+        'user-1',
+      );
+    });
+
+    it('returns an empty array when supabase returns no data', async () => {
+      builders['user_achievements'] = makeBuilder({
+        data: null,
+        error: null,
+      });
+
+      await expect(service.getUserAchievements('user-1')).resolves.toEqual([]);
     });
   });
 
@@ -170,6 +276,44 @@ describe('AchievementsService', () => {
         },
       ]);
     });
+
+    it('returns an empty array when there are no achievement definitions', async () => {
+      builders['achievements'] = makeBuilder({ data: null, error: null });
+
+      await expect(service.getFullAchievements('user-1')).resolves.toEqual([]);
+    });
+
+    it('reports streak-based progress and unearned status separately', async () => {
+      builders['achievements'] = makeBuilder({
+        data: [
+          {
+            code: '7_day_streak',
+            name: '7-Day Streak',
+            description: 'Keep a 7-day study streak.',
+          },
+        ],
+        error: null,
+      });
+      builders['user_achievements'] = makeBuilder({ data: [], error: null });
+      builders['chat_messages'] = makeBuilder({ count: 0, error: null });
+      builders['users'] = makeBuilder({
+        data: { study_streak_days: 3 },
+        error: null,
+      });
+
+      const result = await service.getFullAchievements('user-1');
+
+      expect(result).toEqual([
+        {
+          code: '7_day_streak',
+          name: '7-Day Streak',
+          description: 'Keep a 7-day study streak.',
+          current: 3,
+          required: 7,
+          earned: false,
+        },
+      ]);
+    });
   });
 
   describe('evaluateAchievements', () => {
@@ -180,7 +324,7 @@ describe('AchievementsService', () => {
         error: null,
       });
 
-      jest.spyOn(service, 'hasAchievement').mockResolvedValue(false);
+      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
       const awardSpy = jest
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -201,7 +345,68 @@ describe('AchievementsService', () => {
         error: null,
       });
 
-      jest.spyOn(service, 'hasAchievement').mockResolvedValue(true);
+      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([
+        {
+          id: '1',
+          user_id: 'user-1',
+          achievement_id: 'a',
+          earned_at: 'now',
+          achievements: {
+            id: 'a',
+            code: 'first_message',
+            name: '',
+            description: '',
+          },
+        },
+        {
+          id: '2',
+          user_id: 'user-1',
+          achievement_id: 'b',
+          earned_at: 'now',
+          achievements: {
+            id: 'b',
+            code: '100_messages',
+            name: '',
+            description: '',
+          },
+        },
+        {
+          id: '3',
+          user_id: 'user-1',
+          achievement_id: 'c',
+          earned_at: 'now',
+          achievements: {
+            id: 'c',
+            code: '500_messages',
+            name: '',
+            description: '',
+          },
+        },
+        {
+          id: '4',
+          user_id: 'user-1',
+          achievement_id: 'd',
+          earned_at: 'now',
+          achievements: {
+            id: 'd',
+            code: '7_day_streak',
+            name: '',
+            description: '',
+          },
+        },
+        {
+          id: '5',
+          user_id: 'user-1',
+          achievement_id: 'e',
+          earned_at: 'now',
+          achievements: {
+            id: 'e',
+            code: '30_day_streak',
+            name: '',
+            description: '',
+          },
+        },
+      ]);
       const awardSpy = jest
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);
@@ -209,6 +414,92 @@ describe('AchievementsService', () => {
       await service.evaluateAchievements('user-1');
 
       expect(awardSpy).not.toHaveBeenCalled();
+    });
+
+    it('awards the 500-message and 30-day-streak milestones once thresholds are exceeded', async () => {
+      builders['chat_messages'] = makeBuilder({ count: 500, error: null });
+      builders['users'] = makeBuilder({
+        data: { study_streak_days: 30 },
+        error: null,
+      });
+
+      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
+      const awardSpy = jest
+        .spyOn(service, 'awardAchievement')
+        .mockResolvedValue(undefined);
+
+      await service.evaluateAchievements('user-1');
+
+      expect(awardSpy).toHaveBeenCalledWith('user-1', 'first_message');
+      expect(awardSpy).toHaveBeenCalledWith('user-1', '100_messages');
+      expect(awardSpy).toHaveBeenCalledWith('user-1', '500_messages');
+      expect(awardSpy).toHaveBeenCalledWith('user-1', '7_day_streak');
+      expect(awardSpy).toHaveBeenCalledWith('user-1', '30_day_streak');
+    });
+
+    it('treats a message count lookup failure as zero messages', async () => {
+      builders['chat_messages'] = makeBuilder({
+        count: null,
+        error: { message: 'db error' },
+      });
+      builders['users'] = makeBuilder({
+        data: { study_streak_days: 0 },
+        error: null,
+      });
+
+      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
+      const awardSpy = jest
+        .spyOn(service, 'awardAchievement')
+        .mockResolvedValue(undefined);
+
+      await service.evaluateAchievements('user-1');
+
+      expect(awardSpy).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to get message count'),
+      );
+    });
+
+    it('treats a streak lookup failure as a zero-day streak', async () => {
+      builders['chat_messages'] = makeBuilder({ count: 0, error: null });
+      builders['users'] = makeBuilder({
+        data: null,
+        error: { message: 'db error' },
+      });
+
+      jest.spyOn(service, 'getUserAchievements').mockResolvedValue([]);
+      const awardSpy = jest
+        .spyOn(service, 'awardAchievement')
+        .mockResolvedValue(undefined);
+
+      await service.evaluateAchievements('user-1');
+
+      expect(awardSpy).not.toHaveBeenCalledWith('user-1', '7_day_streak');
+      expect(awardSpy).not.toHaveBeenCalledWith('user-1', '30_day_streak');
+    });
+  });
+
+  describe('handleEvaluationEvent', () => {
+    it('delegates to evaluateAchievements with the event payload user id', async () => {
+      const evaluateSpy = jest
+        .spyOn(service, 'evaluateAchievements')
+        .mockResolvedValue(undefined);
+
+      await service.handleEvaluationEvent({ userId: 'user-1' });
+
+      expect(evaluateSpy).toHaveBeenCalledWith('user-1');
+    });
+  });
+
+  describe('handleMessageSent', () => {
+    it('delegates to evaluateAchievements with the event payload user id', async () => {
+      const evaluateSpy = jest
+        .spyOn(service, 'evaluateAchievements')
+        .mockResolvedValue(undefined);
+
+      await service.handleMessageSent({ userId: 'user-1' });
+
+      expect(evaluateSpy).toHaveBeenCalledWith('user-1');
     });
   });
 });

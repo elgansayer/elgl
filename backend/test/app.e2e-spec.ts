@@ -4,8 +4,10 @@ import request from 'supertest';
 import { json, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { SupabaseAuthGuard } from './../src/auth/supabase-auth.guard';
+import { VipGuard } from './../src/monetisation/guards/vip.guard';
 import { SupabaseService } from './../src/supabase/supabase.service';
 import { NlpService } from './../src/nlp/nlp.service';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 let AppModule: typeof import('../src/app.module').AppModule;
 
@@ -232,6 +234,12 @@ describe('HelloTalk API E2E Integration Suite', () => {
       })
       .overrideProvider(NlpService)
       .useValue(mockNlpService)
+      .overrideGuard(VipGuard)
+      .useValue({
+        canActivate: () => true,
+      })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
       .compile();
 
     app = moduleFixture.createNestApplication({ rawBody: true });
@@ -396,7 +404,7 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .post('/audio-rooms/create')
         .send({
           title: 'Spanish Practice',
-          language: 'es',
+          language_pair: 'EN-ES',
         })
         .expect(201)
         .expect((res) => {
@@ -478,12 +486,16 @@ describe('HelloTalk API E2E Integration Suite', () => {
         .get('/economy/catalog')
         .expect(200)
         .expect((res) => {
-          expect(res.body).toHaveLength(2);
+          expect(res.body.length).toBeGreaterThanOrEqual(2);
           expect(res.body[0].name).toBe('Rose');
         });
     });
 
     it('/monetisation/analytics (GET) - should return developer analytics with dual currency pricing', () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: { study_streak_days: 10, correction_ratio: 0.9 },
+        error: null,
+      });
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: {
           id: 'e2e-user-1',

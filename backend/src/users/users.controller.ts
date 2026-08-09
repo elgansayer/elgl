@@ -19,6 +19,10 @@ import { TwoFactorGuard } from '../two-factor/two-factor.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { UpdateGreetingMessageDto } from './dto/update-greeting-message.dto';
+import { UpdateAwayMessageDto } from './dto/update-away-message.dto';
+import { UpdateStatusVisibilityDto } from './dto/update-status-visibility.dto';
 import { DoNotDisturbDto } from './dto/do-not-disturb.dto';
 import {
   UserProfile,
@@ -46,6 +50,16 @@ export class UsersController {
   }
 
   @UseGuards(TwoFactorGuard)
+  @Delete('me/permanent')
+  async permanentlyDeleteMyAccount(
+    @CurrentUser() user: User | null,
+  ): Promise<{ message: string }> {
+    if (!user) throw new UnauthorizedException();
+    await this.usersService.permanentDeleteAccount(user.id);
+    return { message: 'Account permanently deleted.' };
+  }
+
+  @UseGuards(TwoFactorGuard)
   @Post('me/restore')
   async restoreMyAccount(
     @CurrentUser() user: User | null,
@@ -60,6 +74,17 @@ export class UsersController {
   ): Promise<Record<string, unknown>> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.exportUserData(user.id);
+  }
+
+  @Get('me/notification-preferences')
+  async getMyNotificationPreferences(
+    @CurrentUser() user: User | null,
+  ): Promise<{
+    custom_tone_url?: string;
+    vibration_pattern?: number[];
+  } | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.getNotificationPreferences(user.id);
   }
 
   @Get('me')
@@ -94,7 +119,7 @@ export class UsersController {
   ): Promise<{ level: string }> {
     if (!user) throw new UnauthorizedException();
     if (typeof score !== 'number' || score < 0 || score > 100) {
-      throw new BadRequestException('Score must be a number between 0 and 100');
+      throw new BadRequestException();
     }
     const level = await this.usersService.proficiencyAssessment(user.id, score);
     return { level };
@@ -112,6 +137,27 @@ export class UsersController {
       dto,
       Boolean((await this.usersService.getProfile(user.id))?.is_vip ?? false),
     );
+  }
+
+  @Patch('me/greeting')
+  async updateGreetingMessage(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateGreetingMessageDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateGreetingMessage(
+      user.id,
+      dto.greetingMessage,
+    );
+  }
+
+  @Patch('me/away')
+  async updateAwayMessage(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateAwayMessageDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateAwayMessage(user.id, dto.awayMessage);
   }
 
   @Post('me/cover-photo/presigned-url')
@@ -148,9 +194,7 @@ export class UsersController {
     if (!user) throw new UnauthorizedException();
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(dto.contentType)) {
-      throw new BadRequestException(
-        'Only JPEG, PNG, and WebP images are allowed',
-      );
+      throw new BadRequestException();
     }
     return this.mediaService.generatePresignedUrl(user.id, {
       filename: dto.filename,
@@ -169,6 +213,20 @@ export class UsersController {
     return this.usersService.getVisitors(user.id);
   }
 
+  @Get('status/:statusId/viewers')
+  async getStatusViewers(
+    @CurrentUser() user: User | null,
+    @Param('statusId') statusId: string,
+  ): Promise<ProfileVisitor[]> {
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return await this.usersService.getStatusViewersByStatusId(
+      user.id,
+      statusId,
+    );
+  }
+
   @Get('me/status-viewers')
   async getMyStatusViewers(
     @CurrentUser() user: User | null,
@@ -176,7 +234,13 @@ export class UsersController {
     if (!user) {
       throw new UnauthorizedException();
     }
-    return this.usersService.getStatusViewers(user.id);
+    const userId = String(user.id);
+    const defaultStatusId: string =
+      await this.usersService.getDefaultStatusId(userId);
+    return await this.usersService.getStatusViewersByStatusId(
+      userId,
+      defaultStatusId,
+    );
   }
 
   @Get('hobbies')
@@ -189,6 +253,19 @@ export class UsersController {
     return this.usersService.getAvailableInterests();
   }
 
+  @Get('search')
+  async searchUsers(
+    @Query('q') query: string,
+    @CurrentUser() user: User | null,
+    @Query('limit') limit: number | undefined,
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
+    if (!user) throw new UnauthorizedException();
+    if (!query || query.trim().length === 0) return [];
+    return this.usersService.searchUsers(query.trim(), user.id, limit ?? 10);
+  }
+
   @Get('me/badges')
   async getMyBadges(
     @CurrentUser() user: User | null,
@@ -198,8 +275,36 @@ export class UsersController {
   }
 
   @Get(':id')
-  async getUserProfile(@Param('id') id: string): Promise<UserProfile> {
-    return this.usersService.getProfile(id);
+  async getUserProfile(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: User | null,
+  ): Promise<UserProfile> {
+    const profile = await this.usersService.getProfile(id);
+
+    // Enforce profile visibility
+    if (id !== (currentUser?.id ?? '')) {
+      const profileRecord = profile as unknown as Record<string, unknown>;
+      const visibility =
+        (profileRecord.profile_visibility as string) ?? 'everyone';
+      if (visibility === 'hidden') {
+        throw new UnauthorizedException('This profile is not visible');
+      }
+      if (visibility === 'vips_only') {
+        const isRequestingVip = Boolean(
+          currentUser
+            ? ((await this.usersService.getProfile(currentUser.id))?.is_vip ??
+                false)
+            : false,
+        );
+        if (!isRequestingVip) {
+          throw new UnauthorizedException(
+            'This profile is visible to VIP members only',
+          );
+        }
+      }
+    }
+
+    return profile;
   }
 
   @Get(':id/stats')
@@ -210,19 +315,91 @@ export class UsersController {
   @Get(':id/followers')
   async getFollowers(
     @Param('id') id: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query('limit') limit: number | undefined,
+    @Query('offset') offset: number | undefined,
+    @CurrentUser() user: User | null,
   ): Promise<{ data: UserProfile[]; total: number }> {
-    return this.usersService.getFollowers(id, limit ?? 20, offset ?? 0);
+    return this.usersService.getFollowers(
+      id,
+      limit ?? 20,
+      offset ?? 0,
+      user?.id,
+    );
   }
 
   @Get(':id/following')
   async getFollowing(
     @Param('id') id: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query('limit') limit: number | undefined,
+    @Query('offset') offset: number | undefined,
+    @CurrentUser() user: User | null,
   ): Promise<{ data: UserProfile[]; total: number }> {
-    return this.usersService.getFollowing(id, limit ?? 20, offset ?? 0);
+    return this.usersService.getFollowing(
+      id,
+      limit ?? 20,
+      offset ?? 0,
+      user?.id,
+    );
+  }
+
+  @Post(':id/follow')
+  async followUser(
+    @Param('id') id: string,
+    @CurrentUser() user: User | null,
+  ): Promise<void> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.followUser(user.id, id);
+  }
+
+  @Delete(':id/follow')
+  async unfollowUser(
+    @Param('id') id: string,
+    @CurrentUser() user: User | null,
+  ): Promise<void> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.unfollowUser(user.id, id);
+  }
+
+  @Post('block/:id')
+  async blockUser(
+    @CurrentUser() user: User | null,
+    @Param('id') targetId: string,
+  ): Promise<{ success: boolean }> {
+    if (!user) throw new UnauthorizedException();
+    if (user.id === targetId)
+      throw new BadRequestException('Cannot block yourself');
+    return this.usersService.blockUser(user.id, targetId);
+  }
+
+  @Delete('block/:id')
+  async unblockUser(
+    @CurrentUser() user: User | null,
+    @Param('id') targetId: string,
+  ): Promise<{ success: boolean }> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.unblockUser(user.id, targetId);
+  }
+
+  @Post('report')
+  async reportUser(
+    @CurrentUser() user: User | null,
+    @Body()
+    dto: {
+      reported_id: string;
+      reason_category: string;
+      description?: string;
+      context_url?: string;
+    },
+  ): Promise<{ success: boolean; message: string }> {
+    if (!user) throw new UnauthorizedException();
+    if (!dto.reported_id || !dto.reason_category)
+      throw new BadRequestException();
+    return this.usersService.reportUser(user.id, {
+      reported_id: String(dto.reported_id),
+      reason_category: String(dto.reason_category),
+      description: dto.description ? String(dto.description) : undefined,
+      context_url: dto.context_url ? String(dto.context_url) : undefined,
+    });
   }
 
   @Get('me/privacy-settings')
@@ -235,6 +412,8 @@ export class UsersController {
     privacy_profile_photo?: string;
     privacy_about_info?: string;
     privacy_status?: string;
+    incognito_visits?: boolean;
+    profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getPrivacySettings(user.id);
@@ -272,7 +451,10 @@ export class UsersController {
     @Body() dto: PrivacySettingsDto,
   ): Promise<UserProfile | null> {
     if (!user) throw new UnauthorizedException();
-    return this.usersService.updatePrivacySettings(user.id, dto);
+    const isVip = Boolean(
+      (await this.usersService.getProfile(user.id))?.is_vip ?? false,
+    );
+    return this.usersService.updatePrivacySettings(user.id, dto, isVip);
   }
 
   @Get('me/business')
@@ -302,5 +484,41 @@ export class UsersController {
   ): Promise<UserProfile | null> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.updateDoNotDisturbSettings(user.id, dto);
+  }
+
+  @Patch('me/status-visibility')
+  async updateStatusVisibility(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateStatusVisibilityDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    const isVip = Boolean(
+      (await this.usersService.getProfile(user.id))?.is_vip ?? false,
+    );
+    return this.usersService.updatePrivacySettings(
+      user.id,
+      { status_visibility: dto.status_visibility },
+      isVip,
+    );
+  }
+
+  @Post('me/contact-sharing')
+  async shareContact(
+    @CurrentUser() user: User | null,
+    @Body('target_user_id') targetUserId: string,
+  ): Promise<{ phone_number?: string; email?: string }> {
+    if (!user) throw new UnauthorizedException();
+    if (!targetUserId)
+      throw new BadRequestException('Target user ID is required');
+    return this.usersService.shareContact(user.id, targetUserId);
+  }
+
+  @Patch('me/notification-preferences')
+  async updateNotificationPreferences(
+    @CurrentUser() user: User | null,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ): Promise<UserProfile | null> {
+    if (!user) throw new UnauthorizedException();
+    return this.usersService.updateNotificationPreferences(user.id, dto);
   }
 }

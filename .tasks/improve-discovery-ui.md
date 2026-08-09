@@ -1,3 +1,12 @@
-* Priority: "High Impact"
-* Description: Transition the discovery feed to a Bumble/Hinge style card-based swiping layout to improve the discovery experience, visual hierarchy, and intuitive gesture hints. The current list format is dense and less engaging for mobile users.
-* Technical Implementation: Refactor `discovery.component.html` using `@angular/cdk/drag-drop` to enable swiping gestures on partner profiles. Change the current vertical list into stacked cards utilizing absolute positioning within a fixed-height container. Utilize Tailwind CSS for card styling (e.g., `rounded-2xl shadow-xl overflow-hidden`) and integrate Angular Animations (`@trigger`) or CSS transitions (`transform: translateX() rotate()`) linked to drag events to provide visual feedback during the swipe. In `discovery.component.ts`, calculate the drag distance to trigger 'like' (right swipe) or 'pass' (left swipe) actions when a threshold is met. Ensure all interactive elements within the card have a minimum touch target size of 48x48px for mobile responsiveness.
+Priority: High Impact
+
+Description:
+The current Discovery UI (`discovery.component.html`) utilizes a dense, vertical list with a `divide-y` approach. This feels more like reading a directory than an engaging social discovery experience. To improve user engagement and modernise the interaction model (inspired by Bumble and Hinge), the discovery experience should pivot to a card-based swipeable interface. This layout will increase the visual hierarchy of profile pictures, give more breathing room to user bios and language fluency tags, and provide intuitive gesture hints for matching or skipping profiles.
+
+Technical Implementation:
+- **Angular Integration:** Utilise the `@angular/cdk/drag-drop` module to implement a stack of swipeable profile cards in `discovery.component.ts`. Use `cdkDrag` on individual cards and hook into the `(cdkDragEnded)` event to detect left/right swipe thresholds for "pass" or "wave/connect" actions.
+- **Component Refactoring:** Update the main article elements to occupy a larger footprint (e.g., `h-[70vh] w-full max-w-sm`), featuring a prominent cover image and overlaying textual details at the bottom using Tailwind gradients (`bg-gradient-to-t from-black/80 to-transparent`) for text readability.
+- **Micro-interactions:** Add CSS transition animations in SCSS for the entering and leaving cards. Bind Angular signals to track swipe direction and apply dynamic Tailwind classes (e.g., a green tint and "LIKE" stamp for right swiping, red tint and "NOPE" stamp for left swiping).
+- **Loading State:** Provide an engaging empty state illustration with a loading skeleton (e.g., `animate-pulse` profile card shapes) when fetching new partners, instead of just the "discovery.searching" text block.
+
+- **Accessibility & Error Handling:** Ensure swipe interactions are fully keyboard accessible (e.g., listening to left/right arrow keys when a card is focused) and include clear ARIA labels for matching/skipping actions. Implement robust error handling if the nearby users API request fails, offering a clear "Retry" button.

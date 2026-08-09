@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+// Audit: all foreign key columns below have covering indexes.
 export class CreateQuickPolls20260730000001 implements MigrationInterface {
   name = 'CreateQuickPolls20260730000001';
 
@@ -23,6 +24,11 @@ export class CreateQuickPolls20260730000001 implements MigrationInterface {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE(poll_id, user_id)
       );
+
+      CREATE INDEX IF NOT EXISTS idx_quick_polls_room_id ON quick_polls (room_id);
+      CREATE INDEX IF NOT EXISTS idx_quick_polls_host_id ON quick_polls (host_id);
+      CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_id ON poll_votes (poll_id);
+      CREATE INDEX IF NOT EXISTS idx_poll_votes_user_id ON poll_votes (user_id);
     `);
   }
 

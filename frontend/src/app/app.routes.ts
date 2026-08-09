@@ -1,18 +1,34 @@
 import { Routes } from '@angular/router';
-import { DiscoveryComponent } from './components/discovery/discovery.component';
 import { adminGuard } from './guards/admin.guard';
-import { MilestoneComponent } from './components/milestone/milestone.component';
-import { StudyBuddyComponent } from './components/study-buddy/study-buddy.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
+  {
+    path: 'lock',
+    loadComponent: () =>
+      import('./components/device-lock/device-lock.component').then((m) => m.DeviceLockComponent),
+    title: 'App Lock - HelloTalk',
+  },
   {
     path: 'home',
     loadComponent: () =>
       import('./pages/home/home.component').then((m) => m.HomeComponent),
     title: 'Home - HelloTalk',
   },
-  { path: 'discovery', component: DiscoveryComponent },
+  {
+    path: 'business-profile',
+    loadComponent: () =>
+      import('./components/business-profile/business-profile.component').then(
+        (m) => m.BusinessProfileComponent,
+      ),
+    title: 'Business Profile - HelloTalk',
+  },
+  {
+    path: 'discovery',
+    loadComponent: () =>
+      import('./components/discovery/discovery.component').then((m) => m.DiscoveryComponent),
+    title: 'Discovery - HelloTalk',
+  },
   {
     path: 'proficiency',
     loadComponent: () =>
@@ -46,7 +62,15 @@ export const routes: Routes = [
   {
     path: 'audio-rooms',
     loadComponent: () =>
-      import('./components/audio-room/audio-room.component').then((m) => m.AudioRoomComponent),
+      import('./audio-rooms/audio-room.component').then((m) => m.AudioRoomComponent),
+  },
+  {
+    path: 'classrooms',
+    loadComponent: () =>
+      import('./components/classrooms-marketplace/classrooms-marketplace').then(
+        (m) => m.ClassroomsMarketplace,
+      ),
+    title: 'Video Classrooms - HelloTalk',
   },
   {
     path: 'chat',
@@ -65,6 +89,14 @@ export const routes: Routes = [
         (m) => m.GroupsDiscoveryComponent,
       ),
     title: 'Groups Discovery - HelloTalk',
+  },
+  {
+    path: 'groups/create',
+    loadComponent: () =>
+      import('./components/create-group/create-group.component').then(
+        (m) => m.CreateGroupComponent,
+      ),
+    title: 'Create Group - HelloTalk',
   },
   {
     path: 'communities',
@@ -92,6 +124,22 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'decks',
+    loadComponent: () =>
+      import('./components/flashcard-deck/flashcard-deck.component').then(
+        (m) => m.FlashcardDeckComponent,
+      ),
+    title: 'Flashcard Decks - HelloTalk',
+  },
+  {
+    path: 'review',
+    loadComponent: () =>
+      import('./components/flashcard-review/flashcard-review.component').then(
+        (m) => m.FlashcardReviewComponent,
+      ),
+    title: 'Flashcard Review - HelloTalk',
+  },
+  {
     path: 'profile',
     loadComponent: () =>
       import('./components/profile/profile.component').then((m) => m.ProfileComponent),
@@ -100,6 +148,20 @@ export const routes: Routes = [
     path: 'profile/:userId',
     loadComponent: () =>
       import('./components/user-detail/user-detail.component').then((m) => m.UserDetailComponent),
+  },
+  {
+    path: 'profile/:userId/followers',
+    loadComponent: () =>
+      import('./components/follow-list/follow-list.component').then((m) => m.FollowListComponent),
+    data: { mode: 'followers' },
+    title: 'Followers - HelloTalk',
+  },
+  {
+    path: 'profile/:userId/following',
+    loadComponent: () =>
+      import('./components/follow-list/follow-list.component').then((m) => m.FollowListComponent),
+    data: { mode: 'following' },
+    title: 'Following - HelloTalk',
   },
   {
     path: 'visitors',
@@ -119,6 +181,68 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: () =>
       import('./components/settings/settings.component').then((m) => m.SettingsComponent),
+  },
+  {
+    path: 'settings/account',
+    loadComponent: () =>
+      import('./pages/settings/account/account.component').then((m) => m.AccountSettingsComponent),
+    title: 'Account Settings - HelloTalk',
+  },
+  {
+    path: 'settings/notification',
+    loadComponent: () =>
+      import('./pages/settings/notification-settings/notification-settings.component').then(
+        (m) => m.NotificationSettingsComponent,
+      ),
+    title: 'Notification Settings - HelloTalk',
+  },
+  {
+    path: 'settings/notification-customization',
+    loadComponent: () =>
+      import('./components/notification-customization/notification-customization.component').then(
+        (m) => m.NotificationCustomizationComponent,
+      ),
+    title: 'Notification Customisation - HelloTalk',
+  },
+  {
+    path: 'settings/message-filters',
+    loadComponent: () =>
+      import(
+        './pages/settings/message-filter-settings/message-filter-settings.component'
+      ).then((m) => m.MessageFilterSettingsComponent),
+    title: 'Message Filters - HelloTalk',
+  },
+  {
+    path: 'settings/appearance',
+    loadComponent: () =>
+      import('./pages/settings/appearance-settings/appearance-settings.component').then(
+        (m) => m.AppearanceSettingsComponent,
+      ),
+    title: 'Appearance - HelloTalk',
+  },
+  {
+    path: 'settings/privacy',
+    loadComponent: () =>
+      import('./pages/settings/privacy-settings/privacy-settings.component').then(
+        (m) => m.PrivacySettingsComponent,
+      ),
+    title: 'Privacy Settings - HelloTalk',
+  },
+  {
+    path: 'settings/backup-restore',
+    loadComponent: () =>
+      import('./pages/settings/backup-restore.component').then(
+        (m) => m.BackupRestoreComponent,
+      ),
+    title: 'Chat Backup & Restore - HelloTalk',
+  },
+  {
+    path: 'settings/linked-accounts',
+    loadComponent: () =>
+      import('./pages/settings/linked-accounts/linked-accounts.component').then(
+        (m) => m.LinkedAccountsComponent,
+      ),
+    title: 'Linked Accounts - HelloTalk',
   },
   {
     path: 'developer',
@@ -244,6 +368,12 @@ export const routes: Routes = [
     title: 'Onboarding - HelloTalk',
   },
   {
+    path: 'diagnostic-quiz',
+    loadComponent: () =>
+      import('./components/diagnostic-quiz/diagnostic-quiz.component').then((m) => m.DiagnosticQuizComponent),
+    title: 'Language Level Diagnostic - HelloTalk',
+  },
+  {
     path: 'forgot-password',
     loadComponent: () =>
       import('./components/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
@@ -272,6 +402,14 @@ export const routes: Routes = [
     title: 'Block Management - HelloTalk',
   },
   {
+    path: 'message-filters',
+    loadComponent: () =>
+      import('./pages/message-filter-settings/message-filter-settings.component').then(
+        (m) => m.MessageFilterSettingsComponent,
+      ),
+    title: 'Message Filter Settings - HelloTalk',
+  },
+  {
     path: 'chat-settings',
     loadComponent: () =>
       import('./pages/chat-settings/chat-settings.component').then(
@@ -292,6 +430,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./components/shop/shop.component').then((m) => m.ShopComponent),
     title: 'Shop - HelloTalk',
+  },
+  {
+    path: 'sticker-store',
+    loadComponent: () =>
+      import('./components/sticker-store/sticker-store.component').then(
+        (m) => m.StickerStoreComponent,
+      ),
+    title: 'Sticker Store - HelloTalk',
   },
   {
     path: 'cart',
@@ -380,21 +526,54 @@ export const routes: Routes = [
   {
     path: 'admin/moderation',
     loadComponent: () =>
-      import('./components/moderation/moderation-panel.component').then(
-        (m) => m.ModerationPanelComponent,
+      import('./moderation/moderation-queue.component').then(
+        (m) => m.ModerationQueueComponent,
       ),
     canActivate: [adminGuard],
     title: 'Moderation - HelloTalk',
   },
   {
+    path: 'admin/blocks',
+    loadComponent: () =>
+      import('./pages/admin/blocks/admin-blocks.component').then(
+        (m) => m.AdminBlocksComponent,
+      ),
+    canActivate: [adminGuard],
+    title: 'Block Management - HelloTalk',
+  },
+  {
+    path: 'admin/users',
+    loadComponent: () =>
+      import('./pages/admin/admin-users.component').then((m) => m.AdminUsersComponent),
+    canActivate: [adminGuard],
+    title: 'Admin Users - HelloTalk',
+  },
+  {
+    path: 'admin/blocks',
+    loadComponent: () =>
+      import('./pages/admin/admin-blocks.component').then((m) => m.AdminBlocksComponent),
+    canActivate: [adminGuard],
+    title: 'Block Management - HelloTalk',
+  },
+  {
     path: 'milestones',
-    component: MilestoneComponent,
+    loadComponent: () =>
+      import('./components/milestone/milestone.component').then((m) => m.MilestoneComponent),
     title: 'Milestones - HelloTalk',
   },
   {
     path: 'study-buddy',
-    component: StudyBuddyComponent,
+    loadComponent: () =>
+      import('./components/study-buddy/study-buddy.component').then((m) => m.StudyBuddyComponent),
     title: 'Study Buddy Matching - HelloTalk',
+  },
+  {
+    path: 'read',
+    loadComponent: () =>
+      import('./components/reading-engine/reading-engine.component').then(
+        (m) => m.ReadingEngineComponent,
+      ),
+    title: 'LingQ Reading Engine - HelloTalk',
   },
   {
     path: 'resource-library',
@@ -421,6 +600,20 @@ export const routes: Routes = [
     title: 'My Subscription - HelloTalk',
   },
   {
+    path: 'escrow',
+    loadComponent: () =>
+      import('./pages/escrow/escrow.component').then((m) => m.EscrowComponent),
+    title: 'Escrow Payments - HelloTalk',
+  },
+  {
+    path: 'escrow/:id',
+    loadComponent: () =>
+      import('./pages/escrow-detail/escrow-detail.component').then(
+        (m) => m.EscrowDetailComponent,
+      ),
+    title: 'Escrow Details - HelloTalk',
+  },
+  {
     path: 'account/deletion',
     loadComponent: () =>
       import('./components/account-deletion/account-deletion.component').then(
@@ -435,6 +628,12 @@ export const routes: Routes = [
         (m) => m.VersionCheckComponent,
       ),
     title: 'App Version - HelloTalk',
+  },
+  {
+    path: 'language-islands',
+    loadComponent: () =>
+      import('./pages/language-islands/language-islands.component').then((m) => m.LanguageIslandsComponent),
+    title: 'Language Islands - HelloTalk',
   },
   {
     path: 'language-parties',
@@ -465,5 +664,29 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/join-group/join-group.component').then((m) => m.JoinGroupComponent),
     title: 'Join Group - HelloTalk',
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./components/reset-password/reset-password.component').then(
+        (m) => m.ResetPasswordComponent,
+      ),
+    title: 'Reset Password - HelloTalk',
+  },
+  {
+    path: 'change-password',
+    loadComponent: () =>
+      import('./components/change-password/change-password.component').then(
+        (m) => m.ChangePasswordComponent,
+      ),
+    title: 'Change Password - HelloTalk',
+  },
+  {
+    path: 'coin-economy',
+    loadComponent: () =>
+      import('./components/coin-economy-dashboard/coin-economy-dashboard.component').then(
+        (m) => m.CoinEconomyDashboardComponent,
+      ),
+    title: 'Virtual Coin Economy - HelloTalk',
   },
 ];

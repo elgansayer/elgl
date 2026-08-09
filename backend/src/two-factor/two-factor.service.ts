@@ -46,7 +46,11 @@ export class TwoFactorService {
       .eq('id', userId)
       .single();
 
-    const secret = data?.totp_secret ?? data?.two_factor_secret;
+    const row = data as {
+      totp_secret: string | null;
+      two_factor_secret: string | null;
+    } | null;
+    const secret = row?.totp_secret ?? row?.two_factor_secret;
     if (error || !secret) {
       throw new UnauthorizedException(
         'Two‑factor authentication is not enabled',
@@ -82,11 +86,16 @@ export class TwoFactorService {
     const { data, error } = await this.supabaseService
       .getClient()
       .from('users')
-      .select('totp_secret, two_factor_secret')
+      .select('*')
       .eq('id', userId)
       .single();
 
     if (error) return false;
-    return !!(data?.totp_secret || data?.two_factor_secret);
+
+    const secretRecord = data as {
+      totp_secret?: string;
+      two_factor_secret?: string;
+    } | null;
+    return !!(secretRecord?.totp_secret || secretRecord?.two_factor_secret);
   }
 }

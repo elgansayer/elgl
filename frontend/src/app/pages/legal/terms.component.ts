@@ -1,26 +1,25 @@
-import { Component } from '@angular/core';
-import { DatePipe } from '@angular/common';
-import { DocumentViewerComponent } from '../../components/document-viewer/document-viewer.component';
+import { Component, inject, resource } from '@angular/core';
+import { LegalDocumentViewerComponent } from '../../components/legal-document-viewer/legal-document-viewer.component';
+import { LegalService } from '../../services/legal.service';
 
 @Component({
   selector: 'app-terms',
-  imports: [DocumentViewerComponent, DatePipe],
+  imports: [LegalDocumentViewerComponent],
   template: `
-    <app-document-viewer title="Terms of Service">
-      <p class="mb-4">Last updated: {{ currentDate | date }}</p>
-      <h2 class="text-xl font-semibold mt-6 mb-2 text-white">1. Acceptance of Terms</h2>
-      <p class="mb-4">
-        By accessing and using this application, you accept and agree to be bound by the terms and
-        provision of this agreement.
-      </p>
-      <h2 class="text-xl font-semibold mt-6 mb-2 text-white">2. User Conduct</h2>
-      <p class="mb-4">
-        You agree to use the service for lawful purposes only and in a way that does not infringe
-        the rights of, restrict or inhibit anyone else's use and enjoyment of the service.
-      </p>
-    </app-document-viewer>
+    @let doc = termsResource.value();
+    @if (doc) {
+      <app-legal-document-viewer
+        [title]="doc.title"
+        [lastUpdated]="doc.lastUpdated"
+        [sections]="doc.sections"
+      ></app-legal-document-viewer>
+    }
   `,
 })
 export class TermsComponent {
-  currentDate = new Date();
+  private readonly legalService = inject(LegalService);
+
+  readonly termsResource = resource({
+    loader: () => this.legalService.fetchTermsOfService(),
+  });
 }

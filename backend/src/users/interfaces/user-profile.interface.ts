@@ -4,6 +4,10 @@ export interface UserProfile {
   native_languages: string[];
   target_languages: string[];
   /**
+   * Queryable language pairs for matching users.
+   */
+  language_pairs?: { native: string; target: string }[];
+  /**
    * Default language code for automatic translation (ISO 639-1).
    */
   default_translation_language?: string;
@@ -33,14 +37,16 @@ export interface UserProfile {
   privacy_hide_age: boolean;
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;
+  matchmaking_consent: boolean;
   privacy_hide_gender: boolean;
   privacy_hide_exact_location: boolean;
+  location_privacy?: 'exact' | 'region';
   privacy_hide_online_status: boolean;
   privacy_hide_vip_status: boolean;
-  privacy_last_seen?: string;
-  privacy_profile_photo?: string;
-  privacy_about_info?: string;
-  privacy_status?: string;
+  privacy_last_seen?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_profile_photo?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_about_info?: 'everyone' | 'vips_only' | 'hidden';
+  privacy_status?: 'everyone' | 'vips_only' | 'hidden';
   incognito_visits?: boolean;
   do_not_disturb?: boolean;
   quiet_hours_start?: string;
@@ -59,6 +65,7 @@ export interface UserProfile {
   available_time_end?: string;
   is_admin?: boolean;
   created_at: string;
+  joined_at?: string; // Optional field for spotlighting recently joined users
   last_active_at?: string;
   distance_metres?: number;
   scheduled_for_deletion_at?: string;
@@ -68,9 +75,13 @@ export interface UserProfile {
   website_url?: string;
   catalog?: BusinessCatalogItem[];
   status_text?: string;
+  auto_play_voice_notes?: boolean;
   chat_enter_to_send?: boolean;
   chat_text_size?: 'small' | 'medium' | 'large';
+  auto_play_voice_notes?: boolean;
+  auto_download_media?: boolean;
   auto_download_wifi_only?: boolean;
+  auto_download_preference?: 'wifi' | 'cellular';
   silence_unknown_callers?: boolean;
   corrector_score?: number;
   xp_total?: number;
@@ -78,6 +89,13 @@ export interface UserProfile {
   away_message?: string;
   followers_count?: number;
   following_count?: number;
+  ai_usage_count?: number; // Tracks AI usage for non-VIP users
+  max_target_languages?: number; // Maximum target languages for non-VIP users
+  location_spoofing_enabled?: boolean; // Indicates if location spoofing is enabled
+  incognito_profile_views?: boolean; // Indicates if incognito profile views are enabled
+  custom_avatar_url?: string; // Custom profile picture URL
+  about_status?: string; // Custom About status
+  notification_preferences?: NotificationPreferences;
 }
 
 export interface BusinessCatalogItem {
@@ -87,6 +105,11 @@ export interface BusinessCatalogItem {
   price?: string;
   currency?: string;
   image_url?: string;
+}
+
+export interface NotificationPreferences {
+  custom_tone_url?: string;
+  vibration_pattern?: number[];
 }
 
 export interface ProfileVisitorSummary {

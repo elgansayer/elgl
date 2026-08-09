@@ -27,8 +27,8 @@ export class CreateMomentDto {
   target_language!: string;
 
   @IsOptional()
-  @IsEnum(['moment', 'question'])
-  post_type?: 'moment' | 'question';
+  @IsEnum(['moment', 'question', 'language_question'])
+  post_type?: 'moment' | 'question' | 'language_question';
 
   @IsOptional()
   @IsString()
@@ -47,6 +47,14 @@ export class CreateMomentDto {
   @IsOptional()
   @IsString()
   voice_note_url?: string;
+
+  @IsOptional()
+  @IsEnum(['vip', 'non-vip'])
+  user_type?: 'vip' | 'non-vip'; // Enforce AI usage limits for non-VIP users
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mentions?: string[];
 }
 
 export class CreateCommentDto {

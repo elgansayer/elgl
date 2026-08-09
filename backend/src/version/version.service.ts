@@ -5,15 +5,20 @@ interface GithubRelease {
   html_url?: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 function isGithubRelease(value: unknown): value is GithubRelease {
-  if (typeof value !== 'object' || value === null) {
+  if (!isRecord(value)) {
     return false;
   }
-  const tagNameValid =
-    !('tag_name' in value) || typeof value.tag_name === 'string';
-  const htmlUrlValid =
-    !('html_url' in value) || typeof value.html_url === 'string';
-  return tagNameValid && htmlUrlValid;
+  const tagName = value['tag_name'];
+  const htmlUrl = value['html_url'];
+  return (
+    (tagName === undefined || typeof tagName === 'string') &&
+    (htmlUrl === undefined || typeof htmlUrl === 'string')
+  );
 }
 
 @Injectable()
@@ -22,10 +27,13 @@ export class VersionService implements OnModuleInit {
   private readonly currentVersion: string;
   private latestVersion: string;
   private updateUrl?: string;
+  private readonly minimumSupportedVersion: string;
 
   constructor() {
     this.currentVersion = process.env.npm_package_version || '0.0.0';
     this.latestVersion = this.currentVersion;
+    this.minimumSupportedVersion =
+      process.env.MINIMUM_SUPPORTED_APP_VERSION || '1.0.0';
   }
 
   async onModuleInit(): Promise<void> {
@@ -33,7 +41,7 @@ export class VersionService implements OnModuleInit {
   }
 
   private async refreshLatestVersion(): Promise<void> {
-    const repo = process.env.GITHUB_REPO || '';
+    const repo = process.env.GITHUB_REPO;
     if (!repo) {
       this.logger.warn(
         'GITHUB_REPO not set; version check will use current version',
@@ -42,13 +50,21 @@ export class VersionService implements OnModuleInit {
       return;
     }
     try {
-      const res = await fetch(
-        `https://api.github.com/repos/${repo}/releases/latest`,
-        {
-          method: 'GET',
-          headers: { Accept: 'application/vnd.github.v3+json' },
-        },
-      );
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+      let res: Response;
+      try {
+        res = await fetch(
+          `https://api.github.com/repos/${repo}/releases/latest`,
+          {
+            method: 'GET',
+            headers: { Accept: 'application/vnd.github.v3+json' },
+            signal: controller.signal,
+          },
+        );
+      } finally {
+        clearTimeout(timeout);
+      }
       if (!res.ok) {
         this.logger.warn(`GitHub API responded with ${res.status}`);
         this.latestVersion = this.currentVersion;
@@ -74,16 +90,32 @@ export class VersionService implements OnModuleInit {
       }
       this.logger.log(`Latest version fetched: ${this.latestVersion}`);
     } catch (err) {
-      this.logger.error('Failed to fetch latest version from GitHub', err);
+      const message =
+        err instanceof Error ? err.stack || err.message : String(err);
+      this.logger.error('Failed to fetch latest version from GitHub', {
+        error: message,
+      });
       this.latestVersion = this.currentVersion;
     }
   }
 
-  getVersion(): { current: string; latest: string; updateUrl?: string } {
+  getVersion(): {
+    current: string;
+    latest: string;
+    updateUrl?: string;
+    minimumSupported: string;
+  } {
     return {
       current: this.currentVersion,
       latest: this.latestVersion,
       updateUrl: this.updateUrl,
+      minimumSupported: this.minimumSupportedVersion,
+    };
+  }
+
+  getMinimumSupportedVersion(): { minimumSupported: string } {
+    return {
+      minimumSupported: this.minimumSupportedVersion,
     };
   }
 }

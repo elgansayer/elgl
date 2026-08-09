@@ -1,7 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, signal, computed, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { JoyrideDirective } from 'ngx-joyride';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 interface CatalogItem {
@@ -15,23 +19,32 @@ interface CatalogItem {
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [JoyrideDirective, TranslatePipe, RouterLink],
   template: `
-    <div class="p-4">
+    <div class="max-w-6xl mx-auto p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
       <p class="mb-6 text-sm opacity-70">{{ 'shop.subtitle' | t }}</p>
-      <div class="grid grid-cols-2 gap-4">
+      <span joyrideStep="economyTour@shopLink" [text]="'tour.shopLinkDesc' | t" stepPosition="bottom">
+        <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
+      </span>
+      @if (message()) {
+        <p class="mb-4 text-sm text-indigo-300" aria-live="polite">{{ message() }}</p>
+      }
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" role="list">
         @for (item of items(); track item.id) {
-          <div class="rounded-xl bg-surface p-3 shadow">
-            <div class="h-20 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl">
+          <div class="rounded-xl bg-surface p-3 shadow flex flex-col" role="listitem">
+            <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl" aria-hidden="true">
               {{ item.imageUrl ? '' : '🎁' }}
             </div>
-            <h2 class="font-semibold">{{ item.name }}</h2>
-            <p class="text-xs opacity-60">{{ item.description }}</p>
-            <p class="mt-1 font-semibold text-indigo-400">{{ item.price }} {{ 'common.coins' | t }}</p>
+            <h2 class="font-semibold text-sm sm:text-base truncate">{{ item.name }}</h2>
+            <p class="text-xs opacity-60 line-clamp-2">{{ item.description }}</p>
+            <p class="mt-auto pt-1 font-semibold text-indigo-400 text-sm sm:text-base" [attr.aria-label]="('shop.priceAria' | t: { price: item.price, name: item.name })">
+              {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
+            </p>
             <button
-              class="mt-2 w-full rounded-full bg-indigo-600 py-1 text-sm font-medium hover:bg-indigo-500"
-              (click)="addToCart(item.id)">
+              class="mt-2 w-full rounded-full bg-indigo-600 py-1.5 text-xs sm:text-sm font-medium hover:bg-indigo-500 transition-colors"
+              (click)="addToCart(item.id)"
+              [attr.aria-label]="('shop.addToCartAria' | t: { name: item.name })">
               {{ 'cart.add' | t }}
             </button>
           </div>
@@ -40,28 +53,55 @@ interface CatalogItem {
     </div>
   `,
 })
-export class ShopComponent implements OnInit {
+export class ShopComponent {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
-  items = signal<CatalogItem[]>([]);
+  private i18n = inject(I18nService);
 
-  ngOnInit() {
-    const token = this.authService.getAccessToken();
-    this.http.get<CatalogItem[]>(`${environment.apiUrl}/shopping/catalog`, {
-      headers: { Authorization: `Bearer ${token ?? ''}` },
-    }).subscribe({
-      next: (data) => this.items.set(data),
-      error: () => this.items.set([]),
-    });
-  }
+  private reload = signal(0);
+  message = signal<string>('');
+
+  private catalogResource = resource<CatalogItem[], number>({
+    loader: async () => {
+      const token = this.authService.getAccessToken();
+      const response = await firstValueFrom(
+        this.http.get<CatalogItem[]>(
+          `${environment.apiUrl}/shopping/catalog`,
+          { headers: { Authorization: `Bearer ${token ?? ''}` } },
+        ),
+      );
+      if (!Array.isArray(response)) {
+        throw new Error('Invalid catalog response');
+      }
+      return response.map((item) => ({
+        id: String(item.id),
+        name: String(item.name),
+        description: String(item.description),
+        price: Number(item.price),
+        imageUrl: item.imageUrl ? String(item.imageUrl) : undefined,
+      }));
+    },
+  });
+
+  items = computed(() => this.catalogResource.value() ?? []);
 
   async addToCart(itemId: string) {
     const token = this.authService.getAccessToken();
-    this.http.post(`${environment.apiUrl}/cart/add`, { itemId }, {
-      headers: { Authorization: `Bearer ${token ?? ''}` },
-    }).subscribe({
-      next: () => alert('Added to cart!'),
-      error: () => alert('Failed to add.'),
-    });
+    try {
+      const response = await firstValueFrom(
+        this.http.post<{ success: boolean }>(
+          `${environment.apiUrl}/shopping/cart`,
+          { itemId },
+          { headers: { Authorization: `Bearer ${token ?? ''}` } },
+        ),
+      );
+      if (!response.success) {
+        throw new Error('Failed to add item to cart');
+      }
+      this.message.set(this.i18n.translate('cart.addSuccess'));
+      this.reload.update((v) => v + 1);
+    } catch {
+      this.message.set(this.i18n.translate('cart.addError', { itemId }));
+    }
   }
 }

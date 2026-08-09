@@ -23,6 +23,9 @@ describe('VideoCallComponent - screen sharing', () => {
     mockLivekitService = {
       getToken: vi.fn().mockResolvedValue('fake-token'),
       getLiveKitUrl: vi.fn().mockReturnValue('wss://example.test'),
+      toggleScreenShare: vi.fn().mockImplementation(async (enabled: boolean, room) => {
+        await room.localParticipant.setScreenShareEnabled(enabled);
+      }),
     } as unknown as Mocked<LivekitService>;
 
     await TestBed.configureTestingModule({
@@ -51,6 +54,64 @@ describe('VideoCallComponent - screen sharing', () => {
     (component as unknown as { room: MockRoom | null }).room = mockRoom;
   });
 
+  it('enters picture-in-picture mode when togglePip is called and PiP is available', async () => {
+    const videoElement = document.createElement('video');
+    // jsdom does not implement the Picture-in-Picture API, so the stub methods
+    // must be assigned directly rather than spied on via vi.spyOn.
+    videoElement.requestPictureInPicture = vi.fn().mockResolvedValue({} as PictureInPictureWindow);
+    (component.remoteVideoRef as unknown as () => { nativeElement: HTMLVideoElement }) = () => ({
+      nativeElement: videoElement,
+    });
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      configurable: true,
+      get: () => true,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      get: () => null,
+    });
+
+    await component.togglePip();
+
+    expect(videoElement.requestPictureInPicture).toHaveBeenCalled();
+    expect(component.isInPip()).toBe(true);
+  });
+
+  it('exits picture-in-picture mode when togglePip is called and already in PiP', async () => {
+    const videoElement = document.createElement('video');
+    document.exitPictureInPicture = vi.fn().mockResolvedValue(undefined);
+    (component.remoteVideoRef as unknown as () => { nativeElement: HTMLVideoElement }) = () => ({
+      nativeElement: videoElement,
+    });
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      configurable: true,
+      get: () => true,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      get: () => videoElement,
+    });
+
+    await component.togglePip();
+
+    expect(document.exitPictureInPicture).toHaveBeenCalled();
+    expect(component.isInPip()).toBe(false);
+  });
+
+  it('does nothing if PiP is not available', async () => {
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      configurable: true,
+      get: () => false,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      configurable: true,
+      get: () => null,
+    });
+
+    await component.togglePip();
+    expect(component.isInPip()).toBe(false);
+  });
+
   it('starts screen sharing via LiveKit setScreenShareEnabled when not currently sharing', async () => {
     await component.toggleScreenShare();
 
@@ -68,7 +129,13 @@ describe('VideoCallComponent - screen sharing', () => {
   it('does nothing when not connected to a room', async () => {
     (component as unknown as { room: MockRoom | null }).room = null;
 
-    await expect(component.toggleScreenShare()).resolves.toBeUndefined();
+    let error: unknown;
+    try {
+      await component.toggleScreenShare();
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeUndefined();
   });
 
   it('swallows errors from a cancelled share picker without throwing', async () => {
@@ -76,7 +143,7 @@ describe('VideoCallComponent - screen sharing', () => {
       new Error('Permission denied'),
     );
 
-    await expect(component.toggleScreenShare()).resolves.toBeUndefined();
+    await component.toggleScreenShare();
   });
 
   it('flags isScreenSharing when the local screen-share track publishes', () => {

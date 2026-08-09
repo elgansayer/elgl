@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { NotificationDto } from './dto/notification.dto';
 
 type FirebaseAdmin = any;
 
@@ -84,7 +84,7 @@ export class NotificationsService {
           do_not_disturb: preferences.do_not_disturb ?? false,
         },
         updated_at: new Date().toISOString(),
-      },
+      } as Record<string, unknown>,
       { onConflict: 'user_id' },
     );
     if (error) {
@@ -254,6 +254,7 @@ export class NotificationsService {
       | 'reply_comment'
       | 'profile_visit'
       | 'mention_comment'
+      | 'mention_chat'
       | 'system',
     entityId?: string,
     message?: string,
@@ -280,6 +281,7 @@ export class NotificationsService {
         reply_comment: 'New Reply',
         profile_visit: 'Profile Visited',
         mention_comment: 'Mentioned in Comment',
+        mention_chat: 'Mentioned in Chat',
         system: 'System Alert',
       };
       const bodyMap: Record<string, string> = {
@@ -290,6 +292,7 @@ export class NotificationsService {
         reply_comment: message || 'Someone replied to your comment',
         profile_visit: 'Someone viewed your profile',
         mention_comment: message || 'Someone mentioned you in a comment',
+        mention_chat: message || 'Someone mentioned you in a chat',
         system: message || 'You have a new system alert',
       };
 
@@ -306,6 +309,9 @@ export class NotificationsService {
         case 'reply_comment':
         case 'mention_comment':
           pushCategory = 'groups';
+          break;
+        case 'mention_chat':
+          pushCategory = 'direct_messages';
           break;
         default:
           // system / other – always send
@@ -327,7 +333,7 @@ export class NotificationsService {
   async getNotifications(
     recipientId: string,
     filterType?: string,
-  ): Promise<any[]> {
+  ): Promise<NotificationDto[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase
       .from('notifications')
@@ -374,7 +380,7 @@ export class NotificationsService {
     if (error || !data || data.length === 0) {
       return this.getMockNotifications(recipientId, filterType);
     }
-    return data;
+    return data as NotificationDto[];
   }
 
   async getUnreadCount(recipientId: string): Promise<{ unreadCount: number }> {

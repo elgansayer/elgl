@@ -34,13 +34,27 @@ export class EventsController {
   async list(@Req() req: AuthenticatedRequest, @Query() query: EventsQueryDto) {
     if (!req.user) throw new UnauthorizedException();
     const userId = req.user.id;
-    return this.eventsService.listEvents(userId, query);
+    return this.eventsService.listEvents(userId, {
+      ...query,
+      proficiency: query.proficiency,
+    });
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Get('categories')
   getCategories() {
     return this.eventsService.getCategories();
+  }
+
+  @UseGuards(SupabaseAuthGuard)
+  @Get('my')
+  async getMyEvents(
+    @Req() req: AuthenticatedRequest,
+    @Query('status') status?: string,
+  ) {
+    if (!req.user) throw new UnauthorizedException();
+    const userId = req.user.id;
+    return this.eventsService.getUserEvents(userId, status as any);
   }
 
   @UseGuards(SupabaseAuthGuard)
@@ -81,16 +95,5 @@ export class EventsController {
     if (!req.user) throw new UnauthorizedException();
     const userId = req.user.id;
     return this.eventsService.removeRsvp(userId, eventId);
-  }
-
-  @UseGuards(SupabaseAuthGuard)
-  @Get('my')
-  async getMyEvents(
-    @Req() req: AuthenticatedRequest,
-    @Query('status') status?: string,
-  ) {
-    if (!req.user) throw new UnauthorizedException();
-    const userId = req.user.id;
-    return this.eventsService.getUserEvents(userId, status as any);
   }
 }

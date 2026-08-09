@@ -17,6 +17,7 @@ import { SystemMessageService } from './services/system-message.service';
 import { SpamDetectionService } from '../spam-detection/spam-detection.service';
 import { ChatLlmService } from './chat-llm.service';
 import { XpService } from '../xp/xp.service';
+import { UsersService } from '../users/users.service';
 
 jest.mock('./centrifugo.service', () => ({
   CentrifugoService: jest.fn(),
@@ -26,6 +27,7 @@ describe('ChatService', () => {
   let service: ChatService;
   let centrifugoService: any;
   let chatLlmService: any;
+  let eventEmitter: any;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
 
@@ -43,7 +45,8 @@ describe('ChatService', () => {
       upsert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      single: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockReturnThis(),
       // Make the builder thenable so that `await supabase.from(...)` calls resolve
       then: jest.fn((resolve) => resolve({ data: [] })),
     };
@@ -64,9 +67,7 @@ describe('ChatService', () => {
         {
           provide: CentrifugoService,
           useValue: {
-            generateConnectionToken: jest
-              .fn()
-              .mockReturnValue({ token: 'mock-token' }),
+            signJwt: jest.fn().mockResolvedValue('mock-token'),
             publish: jest.fn().mockResolvedValue(true),
           },
         },
@@ -111,12 +112,20 @@ describe('ChatService', () => {
             awardXpForActivity: jest.fn(),
           },
         },
+        {
+          provide: UsersService,
+          useValue: {
+            getMessageFilters: jest.fn().mockResolvedValue({}),
+            getProfile: jest.fn().mockResolvedValue(null),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<ChatService>(ChatService);
     centrifugoService = module.get<CentrifugoService>(CentrifugoService) as any;
     chatLlmService = module.get<ChatLlmService>(ChatLlmService) as any;
+    eventEmitter = module.get<EventEmitter2>(EventEmitter2) as any;
   });
 
   afterEach(() => {
@@ -127,13 +136,14 @@ describe('ChatService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('generateConnectionToken', () => {
-    it('should generate connection token via CentrifugoService', () => {
-      const result = service.generateConnectionToken('user-1');
-      expect(centrifugoService.generateConnectionToken).toHaveBeenCalledWith(
-        'user-1',
-      );
-      expect(result).toEqual({ token: 'mock-token' });
+  describe('generateCentrifugoToken', () => {
+    it('should generate token via CentrifugoService', async () => {
+      const result = await service.generateConnectionToken('user-1');
+      expect(centrifugoService.signJwt).toHaveBeenCalledWith({
+        sub: 'user-1',
+        exp: expect.any(Number),
+      });
+      expect(result).toBe('mock-token');
     });
   });
 
@@ -239,6 +249,428 @@ describe('ChatService', () => {
         'The past tense of "go" is "went".',
       );
     }, 15000);
+
+    it('should emit a chat.mention event for each mentioned participant', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hey @Alice check this out, cc @Bob',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve({ data: [] }))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { user_id: 'alice-id', user: { display_name: 'Alice' } },
+              { user_id: 'bob-id', user: { display_name: 'Bob' } },
+              { user_id: 'sender-1', user: { display_name: 'SenderName' } },
+            ],
+          }),
+        );
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'chat.mention',
+        expect.objectContaining({
+          actorId: 'sender-1',
+          mentionedUserId: 'alice-id',
+          roomId: 'room-1',
+        }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'chat.mention',
+        expect.objectContaining({
+          actorId: 'sender-1',
+          mentionedUserId: 'bob-id',
+          roomId: 'room-1',
+        }),
+      );
+    }, 15000);
+
+    it('should not emit a mention event when the sender mentions themselves', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Note to @SenderName',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve({ data: [] }))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({
+            data: [
+              { user_id: 'sender-1', user: { display_name: 'SenderName' } },
+            ],
+          }),
+        );
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+        'chat.mention',
+        expect.anything(),
+      );
+    }, 15000);
+
+    it('should not emit mention events when the message has no @mentions', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Just a normal message',
+      };
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: dto.text_content,
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedMessage,
+        error: null,
+      });
+
+      await service.sendMessage('sender-1', dto);
+
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+        'chat.mention',
+        expect.anything(),
+      );
+    }, 15000);
+
+    it('should reject initial message when sender native language not in receiver allowed_native_languages', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      const originalFrom = mockSupabaseClient.from;
+      let usersCallCount = 0;
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
+                error: null,
+              }),
+            };
+          }
+          if (table === 'chat_messages') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 0, error: null }),
+              ),
+            };
+          }
+          if (table === 'users') {
+            usersCallCount++;
+            if (usersCallCount === 1) {
+              return {
+                select: jest.fn().mockReturnThis(),
+                eq: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({
+                  data: {
+                    message_filters: {
+                      allowed_native_languages: ['ja'],
+                    },
+                  },
+                  error: null,
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { native_languages: ['en'], age: 25, gender: 'male' },
+                error: null,
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their native language filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should reject initial message when sender age is below receiver age_min', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
+                error: null,
+              }),
+            };
+          }
+          if (table === 'chat_messages') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 0, error: null }),
+              ),
+            };
+          }
+          if (table === 'users') {
+            usersCallCount++;
+            if (usersCallCount === 1) {
+              return {
+                select: jest.fn().mockReturnThis(),
+                eq: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({
+                  data: {
+                    message_filters: { age_min: 30 },
+                  },
+                  error: null,
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { native_languages: ['en'], age: 25, gender: 'male' },
+                error: null,
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their age filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should reject initial message when sender age is above receiver age_max', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
+                error: null,
+              }),
+            };
+          }
+          if (table === 'chat_messages') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 0, error: null }),
+              ),
+            };
+          }
+          if (table === 'users') {
+            usersCallCount++;
+            if (usersCallCount === 1) {
+              return {
+                select: jest.fn().mockReturnThis(),
+                eq: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({
+                  data: {
+                    message_filters: { age_max: 40 },
+                  },
+                  error: null,
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { native_languages: ['en'], age: 55, gender: 'male' },
+                error: null,
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their age filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should reject initial message when sender gender not in receiver allowed_genders', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hi!',
+      };
+
+      let usersCallCount = 0;
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
+                error: null,
+              }),
+            };
+          }
+          if (table === 'chat_messages') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 0, error: null }),
+              ),
+            };
+          }
+          if (table === 'users') {
+            usersCallCount++;
+            if (usersCallCount === 1) {
+              return {
+                select: jest.fn().mockReturnThis(),
+                eq: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({
+                  data: {
+                    message_filters: { allowed_genders: ['female'] },
+                  },
+                  error: null,
+                }),
+              };
+            }
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { native_languages: ['en'], age: 25, gender: 'male' },
+                error: null,
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
+
+      await expect(service.sendMessage('sender-1', dto)).rejects.toThrow(
+        'You cannot send the first message to this user due to their gender filter settings.',
+      );
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
+
+    it('should allow subsequent messages even when sender would not pass filters', async () => {
+      const dto: any = {
+        room_id: 'room-1',
+        message_type: 'text',
+        text_content: 'Hello again!',
+      };
+
+      const savedMessage = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        sender_id: 'sender-1',
+        message_type: 'text',
+        text_content: 'Hello again!',
+      };
+
+      const originalFrom = mockSupabaseClient.from;
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'chat_room_members') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              neq: jest.fn().mockResolvedValue({
+                data: [{ user_id: 'receiver-1' }],
+                error: null,
+              }),
+            };
+          }
+          if (table === 'chat_messages') {
+            // First call to chat_messages is count query - return count > 0
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              then: jest.fn((resolve: any) =>
+                resolve({ count: 5, error: null }),
+              ),
+              single: jest.fn().mockResolvedValue({
+                data: savedMessage,
+                error: null,
+              }),
+              insert: jest.fn().mockReturnThis(),
+            };
+          }
+          return mockQueryBuilder;
+        });
+
+      // Should NOT throw - subsequent messages bypass filters
+      const result = await service.sendMessage('sender-1', dto);
+      expect(result).toBeDefined();
+
+      mockSupabaseClient.from = originalFrom;
+    }, 15000);
   });
 
   describe('getRooms', () => {
@@ -258,7 +690,7 @@ describe('ChatService', () => {
       );
     });
 
-    it('should annotate rooms the user has locked with is_locked: true', async () => {
+    it('should hide rooms the user has locked from the list', async () => {
       const rooms = [{ id: 'global-exchange' }, { id: 'english-spanish' }];
       mockQueryBuilder.order
         .mockReturnValueOnce(mockQueryBuilder)
@@ -272,10 +704,24 @@ describe('ChatService', () => {
 
       const result = await service.getRooms('user-1');
 
-      expect(result).toEqual([
-        { id: 'global-exchange', is_locked: false },
-        { id: 'english-spanish', is_locked: true },
-      ]);
+      expect(result).toEqual([{ id: 'global-exchange', is_locked: false }]);
+    });
+
+    it('should keep all rooms when retrieving locked chats fails', async () => {
+      const rooms = [{ id: 'global-exchange' }, { id: 'english-spanish' }];
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: rooms, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: { message: 'Locked query failed' } }),
+        );
+
+      const result = await service.getRooms('user-1');
+
+      expect(result).toEqual(
+        rooms.map((room) => ({ ...room, is_locked: false })),
+      );
     });
 
     it('should return fallback mock rooms when rooms query fails', async () => {
@@ -453,6 +899,17 @@ describe('ChatService', () => {
     });
   });
 
+  describe('deleteFavourite', () => {
+    it('should delete a favourite by id and user', async () => {
+      await service.deleteFavourite('user-1', 'fav-1');
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('favourites');
+      expect(mockQueryBuilder.delete).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'fav-1');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
+    });
+  });
+
   describe('lockChat', () => {
     it('should mark the room as locked for the given user', async () => {
       mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
@@ -527,6 +984,19 @@ describe('ChatService', () => {
       expect(result).toEqual(['room-1', 'room-2']);
     });
 
+    it('should return an empty array when there are no locked rooms', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({
+          data: [],
+          error: null,
+        }),
+      );
+
+      const result = await service.getLockedChats('user-1');
+
+      expect(result).toEqual([]);
+    });
+
     it('should throw when the query fails', async () => {
       mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
         resolve({ data: null, error: { message: 'Query failed' } }),
@@ -534,6 +1004,226 @@ describe('ChatService', () => {
 
       await expect(service.getLockedChats('user-1')).rejects.toThrow(
         'Failed to get locked chats: Query failed',
+      );
+    });
+  });
+
+  describe('updateMessageStatus', () => {
+    it('should update delivery_status from sent to delivered', async () => {
+      const message = {
+        id: 'msg-1',
+        room_id: 'room-1',
+        delivery_status: 'sent',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
+
+      await service.updateMessageStatus('user-1', 'msg-1', 'delivered');
+
+      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
+        1,
+        'chat_messages',
+      );
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        delivery_status: 'delivered',
+      });
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('id', 'msg-1');
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'chat:room-1',
+        expect.objectContaining({
+          status_update: expect.objectContaining({
+            message_id: 'msg-1',
+            delivery_status: 'delivered',
+          }),
+        }),
+      );
+    });
+
+    it('should update delivery_status from delivered to read', async () => {
+      const message = {
+        id: 'msg-2',
+        room_id: 'room-2',
+        delivery_status: 'delivered',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
+
+      await service.updateMessageStatus('user-1', 'msg-2', 'read');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        delivery_status: 'read',
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith(
+        'chat:room-2',
+        expect.objectContaining({
+          status_update: expect.objectContaining({
+            message_id: 'msg-2',
+            delivery_status: 'read',
+          }),
+        }),
+      );
+    });
+
+    it('should not downgrade status from read to delivered', async () => {
+      const message = {
+        id: 'msg-3',
+        room_id: 'room-3',
+        delivery_status: 'read',
+      };
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: message, error: null }),
+      );
+
+      await service.updateMessageStatus('user-1', 'msg-3', 'delivered');
+
+      // The method should return early without calling update
+      expect(mockQueryBuilder.update).not.toHaveBeenCalled();
+      expect(centrifugoService.publish).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when message does not exist', async () => {
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: null }),
+      );
+
+      await expect(
+        service.updateMessageStatus('user-1', 'msg-nonexistent', 'delivered'),
+      ).rejects.toThrow('Message not found');
+    });
+
+    it('should throw ForbiddenException when user is not a room member', async () => {
+      const message = {
+        id: 'msg-4',
+        room_id: 'room-4',
+        delivery_status: 'sent',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: null }),
+        );
+
+      await expect(
+        service.updateMessageStatus('user-1', 'msg-4', 'delivered'),
+      ).rejects.toThrow('Not a member of this room');
+    });
+
+    it('should throw Error when update fails', async () => {
+      const message = {
+        id: 'msg-5',
+        room_id: 'room-5',
+        delivery_status: 'sent',
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ error: { message: 'DB error' } }),
+        );
+
+      await expect(
+        service.updateMessageStatus('user-1', 'msg-5', 'read'),
+      ).rejects.toThrow('Failed to update message status: DB error');
+    });
+
+    it('should treat missing delivery_status as sent', async () => {
+      const message = {
+        id: 'msg-6',
+        room_id: 'room-6',
+        delivery_status: null as string | null,
+      };
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: message, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: { user_id: 'user-1' }, error: null }),
+        )
+        .mockImplementationOnce((resolve: any) => resolve({ error: null }));
+
+      await service.updateMessageStatus('user-1', 'msg-6', 'delivered');
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        delivery_status: 'delivered',
+      });
+    });
+  });
+
+  describe('exportChatHistory', () => {
+    it('should return the list of messages for a room when the user is a member', async () => {
+      const roomId = 'room-export-1';
+      const memberRows = { data: [{ user_id: 'user-1' }], error: null };
+      const messages = [
+        { id: 'msg-1', room_id: roomId, text_content: 'Hello' },
+        { id: 'msg-2', room_id: roomId, text_content: 'World' },
+      ];
+
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) => resolve(memberRows))
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: messages, error: null }),
+        );
+
+      const result = await service.exportChatHistory('user-1', roomId);
+
+      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
+        1,
+        'chat_room_members',
+      );
+      expect(mockSupabaseClient.from).toHaveBeenNthCalledWith(
+        2,
+        'chat_messages',
+      );
+      expect(mockQueryBuilder.select).toHaveBeenCalled();
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('room_id', roomId);
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
+        ascending: true,
+      });
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(1000);
+      expect(result).toEqual(messages);
+    });
+
+    it('should throw ForbiddenException when the user is not a member', async () => {
+      const roomId = 'private-room';
+      mockQueryBuilder.then.mockImplementationOnce((resolve: any) =>
+        resolve({ data: null, error: null }),
+      );
+
+      await expect(service.exportChatHistory('user-1', roomId)).rejects.toThrow(
+        'You are not a member of this room',
+      );
+    });
+
+    it('should throw an Error when fetching messages fails', async () => {
+      const roomId = 'room-error';
+      mockQueryBuilder.then
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: [{ user_id: 'user-1' }], error: null }),
+        )
+        .mockImplementationOnce((resolve: any) =>
+          resolve({ data: null, error: { message: 'DB failed' } }),
+        );
+
+      await expect(service.exportChatHistory('user-1', roomId)).rejects.toThrow(
+        'Failed to fetch messages: DB failed',
       );
     });
   });

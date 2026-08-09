@@ -45,7 +45,7 @@ export class ProfileVisitsService {
     if (isVipVisitor) {
       const { data: user, error: userError } = await supabase
         .from('users')
-        .select('privacy_hide_from_search')
+        .select('incognito_visits')
         .eq('id', visitorId)
         .single();
 
@@ -54,7 +54,7 @@ export class ProfileVisitsService {
         throw new Error(`Failed to load visitor privacy settings: ${msg}`);
       }
 
-      if (user.privacy_hide_from_search) {
+      if (user.incognito_visits) {
         return { incognito: true, ignored: true };
       }
     }
@@ -79,7 +79,7 @@ export class ProfileVisitsService {
       new ProfileViewEvent(visitorId, viewedId),
     );
 
-    return response.data as Record<string, unknown>;
+    return response.data;
   }
 
   async getVisitors(
@@ -135,5 +135,38 @@ export class ProfileVisitsService {
       is_blurred: false,
       visitor: visit.visitor,
     }));
+  }
+
+  async getVisitCount(userId: string): Promise<number> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('profile_visits')
+      .select('count(*) as visit_count')
+      .eq('viewed_id', userId)
+      .single();
+
+    if (response.error) {
+      throw new Error(`Failed to fetch visit count: ${response.error.message}`);
+    }
+
+    const data = response.data as unknown as { visit_count: number } | null;
+    return data?.visit_count ?? 0;
+  }
+
+  async deleteVisit(visitId: string): Promise<Record<string, unknown>> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('profile_visits')
+      .delete()
+      .eq('id', visitId)
+      .select()
+      .single();
+
+    if (response.error || !response.data) {
+      const msg = response.error?.message ?? 'Unknown error';
+      throw new Error(`Failed to delete visit: ${msg}`);
+    }
+
+    return response.data;
   }
 }

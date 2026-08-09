@@ -18,12 +18,15 @@ export interface UserProfile {
   primary_accent_color?: string;
   interests?: string[];
   hobbies?: string[];
+  mbti_personality_type?: string; // MBTI personality type (e.g. INFP, INFJ) as seen in original HelloTalk
   is_vip: boolean;
   vip_tier: string;
   coins_balance: number;
   study_streak_days: number;
   correction_ratio: number;
   is_serious_learner: boolean;
+  is_partner_of_week?: boolean;
+  shared_interests?: string[];
   privacy_hide_age: boolean;
   privacy_hide_location: boolean;
   privacy_hide_from_search: boolean;
@@ -44,6 +47,7 @@ export interface UserProfile {
   auto_play_voice_notes?: boolean;
   auto_download_media?: boolean;
   auto_download_wifi_only?: boolean;
+  auto_download_preference?: 'wifi' | 'cellular';
   sound_effects_enabled?: boolean;
   vibration_enabled?: boolean;
   chat_enter_to_send?: boolean;
@@ -62,7 +66,11 @@ export interface UserProfile {
   last_active_at?: string;
   is_followed_by_me?: boolean;
   is_liked_by_me?: boolean;
+  followers_count?: number;
+  following_count?: number;
   corrector_score?: number;
+  custom_avatar_url?: string; // Custom profile picture URL
+  about_status?: string; // Custom About status
   privacy_last_seen?: string;
   privacy_profile_photo?: string;
   privacy_about_info?: string;
@@ -144,16 +152,25 @@ export class UserService {
     };
   }
 
+  async enableLocationSpoofing(enable: boolean): Promise<UserProfile> {
+    return this.updateMyProfile({ enable_location_spoofing: enable });
+  }
+
   async getMyProfile(): Promise<UserProfile | null> {
-    void of;
     const fallbackProfile: UserProfile = {
       ...MOCK_USER_PROFILE,
       status_text: 'Learning new languages!',
       chat_enter_to_send: false,
       chat_text_size: 'medium',
       auto_download_wifi_only: false,
+      auto_download_preference: 'wifi',
       last_active_at: new Date().toISOString(),
     };
+
+    if (!this.authService.getAccessToken()) {
+      return fallbackProfile;
+    }
+
     return firstValueFrom(
       this.http
         .get<UserProfile>(`${this.baseUrl}/me`, { headers: this.getHeaders() })
@@ -188,6 +205,36 @@ export class UserService {
     );
   }
 
+  async getFollowers(
+    userId: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<{ data: UserProfile[]; total: number }> {
+    return firstValueFrom(
+      this.http
+        .get<{ data: UserProfile[]; total: number }>(`${this.baseUrl}/${userId}/followers`, {
+          headers: this.getHeaders(),
+          params: { limit: String(limit), offset: String(offset) },
+        })
+        .pipe(catchError(() => of({ data: [], total: 0 }))),
+    );
+  }
+
+  async getFollowing(
+    userId: string,
+    limit = 20,
+    offset = 0,
+  ): Promise<{ data: UserProfile[]; total: number }> {
+    return firstValueFrom(
+      this.http
+        .get<{ data: UserProfile[]; total: number }>(`${this.baseUrl}/${userId}/following`, {
+          headers: this.getHeaders(),
+          params: { limit: String(limit), offset: String(offset) },
+        })
+        .pipe(catchError(() => of({ data: [], total: 0 }))),
+    );
+  }
+
   async likeProfile(userId: string): Promise<void> {
     return firstValueFrom(
       this.http
@@ -196,11 +243,37 @@ export class UserService {
     );
   }
 
+  async updateCustomAvatar(file: File): Promise<string> {
+    const { uploadUrl, mediaUrl } = await this.getPresignedAvatarUrl(file.name, file.type);
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload custom avatar');
+    }
+
+    await this.updateMyProfile({ custom_avatar_url: mediaUrl });
+    return mediaUrl;
+  }
+
+  async updateAboutStatus(aboutStatus: string): Promise<UserProfile> {
+    return this.updateMyProfile({ about_status: aboutStatus });
+  }
+
   async updateMyProfile(
     update: Partial<UserProfile> & {
       location?: { latitude: number; longitude: number };
       mock_location?: { latitude: number; longitude: number };
+      enable_location_spoofing?: boolean;
       serious_learner_mode?: boolean;
+      sound_effects_enabled?: boolean;
+      vibration_enabled?: boolean;
+      custom_avatar_url?: string;
+      about_status?: string;
     },
   ): Promise<UserProfile> {
     return firstValueFrom(
@@ -208,7 +281,13 @@ export class UserService {
         .patch<UserProfile>(`${this.baseUrl}/me`, update, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
-            const updated: UserProfile = { ...MOCK_USER_PROFILE, status_text:'Learning new languages!', ...update, auto_download_wifi_only: update.auto_download_wifi_only ?? false, last_active_at: new Date().toISOString() };
+            const updated: UserProfile = {
+              ...MOCK_USER_PROFILE,
+              status_text: 'Learning new languages!',
+              ...update,
+              auto_download_wifi_only: update.auto_download_wifi_only ?? false,
+              last_active_at: new Date().toISOString(),
+            };
             return of(updated);
           }),
         ),
@@ -347,11 +426,13 @@ export class UserService {
 
   async rateCorrector(ratedUserId: string, score: number): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(
-        `${environment.apiUrl}/corrector-score/rate`,
-        { rated_user_id: ratedUserId, score },
-        { headers: this.getHeaders() },
-      ).pipe(catchError(() => of(undefined))),
+      this.http
+        .post<void>(
+          `${environment.apiUrl}/corrector-score/rate`,
+          { rated_user_id: ratedUserId, score },
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of(undefined))),
     );
   }
 
@@ -446,36 +527,77 @@ export class UserService {
   }
 
   async getStudyStreak(): Promise<number> {
+    const token = this.authService.getAccessToken();
+    if (!token) return 0;
+
     const stats = await firstValueFrom(
-      this.http.get<Partial<UserProfile>>(`${this.baseUrl}/me/stats`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of<Partial<UserProfile>>({})))
+      this.http
+        .get<Partial<UserProfile>>(`${this.baseUrl}/me/stats`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of<Partial<UserProfile>>({}))),
     );
     return stats?.study_streak_days ?? 0;
   }
 
   async getAvailableHobbies(): Promise<string[]> {
     return firstValueFrom(
-      this.http.get<string[]>(`${this.baseUrl}/hobbies`, { headers: this.getHeaders() })
-        .pipe(catchError(() => {
+      this.http.get<string[]>(`${this.baseUrl}/hobbies`, { headers: this.getHeaders() }).pipe(
+        catchError(() => {
           // fallback to mock
-          return of(['reading', 'travelling', 'gaming', 'cooking', 'sports', 'music', 'photography']);
-        })),
+          return of([
+            'reading',
+            'travelling',
+            'gaming',
+            'cooking',
+            'sports',
+            'music',
+            'photography',
+          ]);
+        }),
+      ),
     );
   }
 
   async getAvailableInterests(): Promise<string[]> {
     return firstValueFrom(
-      this.http.get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
-        .pipe(catchError(() => {
-          // fallback to mock
-          return of(['technology', 'fashion', 'food', 'travel', 'art', 'science', 'history', 'fitness']);
-        })),
+      this.http
+        .get<string[]>(`${this.baseUrl}/interests`, { headers: this.getHeaders() })
+        .pipe(catchError(() => of([]))),
+    );
+  }
+
+  async searchUsers(
+    query: string,
+    limit = 5,
+  ): Promise<{ id: string; display_name: string; avatar_url: string | null }[]> {
+    if (!query.trim()) return [];
+    return firstValueFrom(
+      this.http
+        .get<{ id: string; display_name: string; avatar_url: string | null }[]>(
+          `${this.baseUrl}/search`,
+          { headers: this.getHeaders(), params: { q: query, limit: String(limit) } },
+        )
+        .pipe(catchError(() => of([]))),
+    );
+  }
+
+  async queryUsersByLanguagePairs(
+    languagePairs: { native: string; target: string }[],
+  ): Promise<UserProfile[]> {
+    return firstValueFrom(
+      this.http
+        .post<UserProfile[]>(
+          `${this.baseUrl}/query-language-pairs`,
+          { languagePairs },
+          { headers: this.getHeaders() },
+        )
+        .pipe(catchError(() => of([]))),
     );
   }
 
   async getMyBadges(): Promise<Badge[]> {
     return firstValueFrom(
-      this.http.get<Badge[]>(`${this.baseUrl}/me/badges`, { headers: this.getHeaders() })
+      this.http
+        .get<Badge[]>(`${this.baseUrl}/me/badges`, { headers: this.getHeaders() })
         .pipe(catchError(() => of([]))),
     );
   }
@@ -505,13 +627,16 @@ export class UserService {
           corrections_count: number;
           moments_count: number;
         }>(`${this.baseUrl}/stats/me`, { headers: this.getHeaders() })
-        .pipe(catchError(() => of({ translations_count: 0, corrections_count: 0, moments_count: 0 }))),
+        .pipe(
+          catchError(() => of({ translations_count: 0, corrections_count: 0, moments_count: 0 })),
+        ),
     );
   }
 
   async getMyXpTotal(): Promise<number> {
     const result = await firstValueFrom(
-      this.http.get<{ totalXp: number }>(`${this.baseUrl}/me/xp`, { headers: this.getHeaders() })
+      this.http
+        .get<{ totalXp: number }>(`${this.baseUrl}/me/xp`, { headers: this.getHeaders() })
         .pipe(catchError(() => of({ totalXp: 0 }))),
     );
     return result.totalXp;
@@ -558,42 +683,88 @@ export class UserService {
     catalog?: BusinessCatalogItem[];
   }): Promise<UserProfile> {
     return firstValueFrom(
-      this.http.patch<UserProfile>(
-        `${this.baseUrl}/me/business`,
-        business,
-        { headers: this.getHeaders() },
-      ),
+      this.http.patch<UserProfile>(`${this.baseUrl}/me/business`, business, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 
   async blockUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${environment.apiUrl}/trust-safety/block`, { blocked_id: userId }, { headers: this.getHeaders() })
+      this.http
+        .post<void>(`${this.baseUrl}/block/${userId}`, {}, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
     );
   }
 
   async unblockUser(userId: string): Promise<void> {
     return firstValueFrom(
-      this.http.delete<void>(`${environment.apiUrl}/trust-safety/block/${userId}`, { headers: this.getHeaders() })
+      this.http
+        .delete<void>(`${this.baseUrl}/block/${userId}`, { headers: this.getHeaders() })
         .pipe(catchError(() => of(undefined))),
     );
   }
 
-  async reportUser(reportedUserId: string, reasonCategory: string, description?: string, contextUrl?: string): Promise<void> {
+  async reportUser(
+    reportedUserId: string,
+    reasonCategory: string,
+    description?: string,
+    contextUrl?: string,
+  ): Promise<void> {
     return firstValueFrom(
-      this.http.post<void>(`${environment.apiUrl}/trust-safety/report`, { reported_id: reportedUserId, reason_category: reasonCategory, description, context_url: contextUrl }, { headers: this.getHeaders() })
+      this.http
+        .post<void>(
+          `${this.baseUrl}/report`,
+          {
+            reported_id: reportedUserId,
+            reason_category: reasonCategory,
+            description,
+            context_url: contextUrl,
+          },
+          { headers: this.getHeaders() },
+        )
         .pipe(catchError(() => of(undefined))),
+    );
+  }
+
+  async subscribeToFcmTopic(topic: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http
+        .post<{ success: boolean }>(
+          `${this.baseUrl}/fcm/subscribe`,
+          { topic },
+          { headers: this.getHeaders() },
+        )
+        .pipe(
+          catchError(() => {
+            throw new Error('Failed to subscribe to topic');
+          }),
+        ),
+    );
+  }
+
+  async unsubscribeFromFcmTopic(topic: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http
+        .post<{ success: boolean }>(
+          `${this.baseUrl}/fcm/unsubscribe`,
+          { topic },
+          { headers: this.getHeaders() },
+        )
+        .pipe(
+          catchError(() => {
+            throw new Error('Failed to unsubscribe from topic');
+          }),
+        ),
     );
   }
 
   async deleteMyAccount(): Promise<{ message: string; scheduled_for_deletion_at: string }> {
     return firstValueFrom(
       this.http
-        .delete<{ message: string; scheduled_for_deletion_at: string }>(
-          `${this.baseUrl}/me`,
-          { headers: this.getHeaders() },
-        )
+        .delete<{ message: string; scheduled_for_deletion_at: string }>(`${this.baseUrl}/me`, {
+          headers: this.getHeaders(),
+        })
         .pipe(catchError(() => of({ message: '', scheduled_for_deletion_at: '' }))),
     );
   }
@@ -601,11 +772,7 @@ export class UserService {
   async restoreMyAccount(): Promise<{ message: string }> {
     return firstValueFrom(
       this.http
-        .post<{ message: string }>(
-          `${this.baseUrl}/me/restore`,
-          {},
-          { headers: this.getHeaders() },
-        )
+        .post<{ message: string }>(`${this.baseUrl}/me/restore`, {}, { headers: this.getHeaders() })
         .pipe(catchError(() => of({ message: '' }))),
     );
   }
@@ -649,9 +816,11 @@ export class UserService {
     quiet_hours_end?: string;
   }): Promise<UserProfile> {
     return firstValueFrom(
-      this.http.patch<UserProfile>(`${this.baseUrl}/me/dnd`, settings, {
-        headers: this.getHeaders(),
-      }).pipe(catchError(() => of(MOCK_USER_PROFILE))),
+      this.http
+        .patch<UserProfile>(`${this.baseUrl}/me/dnd`, settings, {
+          headers: this.getHeaders(),
+        })
+        .pipe(catchError(() => of(MOCK_USER_PROFILE))),
     );
   }
 

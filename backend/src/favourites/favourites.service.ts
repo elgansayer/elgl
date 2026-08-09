@@ -8,7 +8,13 @@ export class FavouritesService {
   async addFavourite(
     userId: string,
     dto: { message_id: string; note_text?: string },
-  ): Promise<Record<string, unknown>> {
+  ): Promise<{
+    id: string;
+    user_id: string;
+    item_type: string;
+    item_payload: Record<string, unknown>;
+    notes: string | null;
+  }> {
     const supabase = this.supabaseService.getClient();
 
     // Fetch the message to store as payload
@@ -28,9 +34,9 @@ export class FavouritesService {
       .from('favourites')
       .insert({
         user_id: userId,
-        item_type: 'message',
+        item_type: 'message' as const,
         item_payload: message,
-        notes: dto.note_text || null,
+        notes: dto.note_text ?? null,
       })
       .select()
       .single();

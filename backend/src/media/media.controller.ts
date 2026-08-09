@@ -69,4 +69,14 @@ export class MediaController {
     }
     return this.mediaService.uploadAndSetAvatarImage(req.user.id, file);
   }
+  @Post('view-once/mark-viewed')
+  async markMediaAsViewed(
+    @Req() req: { user: { id: string } },
+    @Body('mediaId') mediaId: string,
+  ): Promise<{ success: boolean }> {
+    if (!mediaId) {
+      throw new BadRequestException('Media ID is required');
+    }
+    return this.mediaService.markMediaAsViewed(req.user.id, mediaId);
+  }
 }

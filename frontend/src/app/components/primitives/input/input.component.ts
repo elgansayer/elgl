@@ -1,19 +1,21 @@
-import { Component, input, output, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import { TranslatePipe } from '../../../services/translate.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-input',
+  imports: [TranslatePipe],
   template: `
     @if (label()) {
       <label [for]="inputId()" class="block font-bold text-xs text-text-primary mb-1">
-        {{ label() }}
+        {{ label() | t }}
       </label>
     }
     <input
       [id]="inputId()"
       [type]="type()"
       [value]="value()"
-      [placeholder]="placeholder()"
+      [placeholder]="placeholder() | t"
       [disabled]="disabled()"
       [readOnly]="readonly()"
       [class]="inputClasses()"

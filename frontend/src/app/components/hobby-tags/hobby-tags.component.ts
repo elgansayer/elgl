@@ -1,6 +1,6 @@
-import { Component, computed, signal, inject, resource } from '@angular/core';
-import { TitleCasePipe } from '@angular/common';
+import { Component, computed, signal, inject, resource, input } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
 import {
   HobbyTagsService,
@@ -13,11 +13,11 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
 @Component({
   selector: 'app-hobby-tags',
-  imports: [FormsModule, AppCardComponent, AppPillComponent, TranslatePipe, TitleCasePipe],
+  imports: [FormsModule, AppCardComponent, AppPillComponent, TranslatePipe],
   template: `
     <div class="space-y-6">
       <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold text-text-primary">Hobbies & Interests</h2>
+        <h2 class="text-xl font-bold text-text-primary">{{ 'hobby.title' | t }}</h2>
         <button
           (click)="showAddPanel.set(!showAddPanel())"
           class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition-colors"
@@ -30,10 +30,12 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
         <app-card variant="elevated" customClass="p-4">
           <div class="space-y-4">
             <div class="relative">
+              <label for="hobby-search" class="sr-only">{{ 'hobby.searchLabel' | t }}</label>
               <input
+                id="hobby-search"
                 type="text"
                 [(ngModel)]="searchQuery"
-                placeholder="Search hobbies..."
+                [placeholder]="'hobby.searchPlaceholder' | t"
                 class="w-full px-4 py-2 bg-surface-800 border border-slate-600 rounded-lg text-text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -43,22 +45,23 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 @if (!isTagAdded(tag.id)) {
                   <button
                     (click)="addTag(tag.id)"
+                    [attr.aria-label]="i18n.translate('hobby.addTagLabel', { name: tag.name })"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-200 hover:bg-indigo-600 text-slate-200 rounded-full text-sm transition-colors"
                   >
-                    <span>{{ tag.icon }}</span>
+                    <span aria-hidden="true">{{ tag.icon }}</span>
                     <span>{{ tag.name }}</span>
-                    <span class="text-xs text-text-muted">+</span>
+                    <span class="text-xs text-text-muted" aria-hidden="true">+</span>
                   </button>
                 }
               } @empty {
                 <div class="w-full flex flex-col items-center gap-3 py-4">
-                  <p class="text-text-muted text-sm">No hobbies found</p>
+                  <p class="text-text-muted text-sm">{{ 'hobby.noResults' | t }}</p>
                   @if (searchQuery().trim()) {
                     <button
                       (click)="createGlobalTag(searchQuery().trim())"
                       class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
                     >
-                      Create "{{ searchQuery().trim() }}"
+                      {{ i18n.translate('hobby.createTag', { name: searchQuery().trim() }) }}
                     </button>
                   }
                 </div>
@@ -77,22 +80,26 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
               [customClass]="'pe-8 cursor-pointer hover:ring-2 hover:ring-indigo-400'"
             >
               <span class="flex items-center gap-1.5">
-                <span>{{ userTag.hobby_tag?.icon }}</span>
+                <span aria-hidden="true">{{ userTag.hobby_tag?.icon }}</span>
                 <span>{{ userTag.hobby_tag?.name }}</span>
-                <span class="text-xs opacity-60">{{ userTag.proficiency_level }}</span>
+                <span class="text-xs opacity-60">{{
+                  getProficiencyLabel(userTag.proficiency_level)
+                }}</span>
               </span>
             </app-pill>
             <button
               (click)="removeTag(userTag.hobby_tag_id)"
               class="absolute end-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all text-xs"
-              title="Remove hobby"
+              [attr.aria-label]="
+                i18n.translate('hobby.removeTagLabel', { name: userTag.hobby_tag?.name ?? '' })
+              "
             >
-              ✕
+              <span aria-hidden="true">✕</span>
             </button>
           </div>
         } @empty {
           <p class="text-text-muted text-sm italic">
-            No hobbies added yet. Click "Add Hobby" to get started!
+            {{ 'hobby.noHobbiesYet' | t }}
           </p>
         }
       </div>
@@ -100,12 +107,17 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
       @if (selectedTagForProficiency()) {
         <app-card variant="outlined" customClass="p-4">
           <h3 class="text-sm font-semibold text-slate-300 mb-3">
-            Proficiency Level for {{ getTagName(selectedTagForProficiency()!) }}
+            {{
+              i18n.translate('hobby.proficiencyFor', {
+                name: getTagName(selectedTagForProficiency()!),
+              })
+            }}
           </h3>
           <div class="flex gap-2">
-            @for (level of proficiencyLevels; track level) {
+            @for (level of proficiencyLevels; track level; let idx = $index) {
               <button
                 (click)="updateProficiency(selectedTagForProficiency()!, level)"
+                [attr.aria-pressed]="getCurrentProficiency(selectedTagForProficiency()!) === level"
                 class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                 [class.bg-indigo-600]="
                   getCurrentProficiency(selectedTagForProficiency()!) === level
@@ -118,7 +130,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                   getCurrentProficiency(selectedTagForProficiency()!) !== level
                 "
               >
-                {{ level | titlecase }}
+                {{ getProficiencyLabel(idx) }}
               </button>
             }
           </div>
@@ -127,7 +139,9 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
       @if (userVocabulary().length > 0) {
         <div class="mt-6">
-          <h3 class="text-lg font-semibold text-slate-200 mb-3">Vocabulary from Your Hobbies</h3>
+          <h3 class="text-lg font-semibold text-slate-200 mb-3">
+            {{ 'hobby.vocabularyTitle' | t }}
+          </h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             @for (word of userVocabulary(); track word.id) {
               <app-card variant="outlined" customClass="p-3">
@@ -142,7 +156,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 }
                 @if (word.hobby_tag) {
                   <div class="flex items-center gap-1 mt-2 text-xs text-text-secondary">
-                    <span>{{ word.hobby_tag.icon }}</span>
+                    <span aria-hidden="true">{{ word.hobby_tag.icon }}</span>
                     <span>{{ word.hobby_tag.name }}</span>
                   </div>
                 }
@@ -155,6 +169,8 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
   `,
 })
 export class HobbyTagsComponent {
+  readonly targetLanguage = input('en');
+
   readonly showAddPanel = signal(false);
   readonly searchQuery = signal('');
   readonly selectedTagForProficiency = signal<string | null>(null);
@@ -173,13 +189,15 @@ export class HobbyTagsComponent {
   });
 
   public hobbyTagsService = inject(HobbyTagsService);
+  public readonly i18n = inject(I18nService);
 
   private dataLoader = resource({
-    loader: async () => {
+    params: () => ({ lang: this.targetLanguage() }),
+    loader: async ({ params }) => {
       const [allTags, userTags, vocab] = await Promise.all([
         this.hobbyTagsService.getAllTags(),
         this.hobbyTagsService.getMyTags(),
-        this.hobbyTagsService.getVocabulary('en'),
+        this.hobbyTagsService.getVocabulary(params.lang),
       ]);
       this.allTags.set(allTags);
       this.userTags.set(userTags);
@@ -226,6 +244,16 @@ export class HobbyTagsComponent {
     const tag = this.userTags().find((t) => t.hobby_tag_id === tagId);
     const lvl = tag?.proficiency_level || 0;
     return this.proficiencyLevels[lvl] || 'beginner';
+  }
+
+  getProficiencyLabel(level: number): string {
+    const keys = [
+      'hobby.proficiencyBeginner',
+      'hobby.proficiencyIntermediate',
+      'hobby.proficiencyAdvanced',
+      'hobby.proficiencyNative',
+    ];
+    return this.i18n.translate(keys[level] || keys[0]);
   }
 
   getProficiencyColour(level: number): 'success' | 'warning' | 'info' | 'primary' | 'neutral' {

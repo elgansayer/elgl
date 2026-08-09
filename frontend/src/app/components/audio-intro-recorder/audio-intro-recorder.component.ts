@@ -1,17 +1,20 @@
-import { Component, output, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, output, signal, inject, OnDestroy, input } from '@angular/core';
+import { interval, Subscription } from 'rxjs';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-audio-intro-recorder',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [TranslatePipe],
   templateUrl: './audio-intro-recorder.component.html',
   styleUrls: ['./audio-intro-recorder.component.scss'],
 })
-export class AudioIntroRecorderComponent {
+export class AudioIntroRecorderComponent implements OnDestroy {
   private userService = inject(UserService);
+
+  // Inputs
+  existingAudioUrl = input<string | null>(null);
 
   // Outputs
   recordingComplete = output<string>();
@@ -24,13 +27,23 @@ export class AudioIntroRecorderComponent {
   recordingUrl = signal<string>('');
   duration = signal(0);
   maxDuration = 30; // seconds
+  recordError = signal<string | null>(null);
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
-  private timer: ReturnType<typeof setInterval> | null = null;
+  private audioStream: MediaStream | null = null;
+  private timerSub: Subscription | null = null;
+
+  formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
 
   async startRecording(): Promise<void> {
+    this.recordError.set(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioStream = stream;
       this.mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus',
       });
@@ -40,53 +53,66 @@ export class AudioIntroRecorderComponent {
       };
       this.mediaRecorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
+        this.audioStream = null;
         const blob = new Blob(this.chunks, { type: 'audio/webm;codecs=opus' });
         this.recordingBlob.set(blob);
         this.hasRecording.set(true);
         this.recordingUrl.set(URL.createObjectURL(blob));
         this.isRecording.set(false);
         this.recordingComplete.emit(this.recordingUrl());
+        this.cleanupTimer();
       };
       this.mediaRecorder.start();
       this.isRecording.set(true);
-      this.timer = setInterval(() => {
-        this.duration.update((d) => d + 1);
-        if (this.duration() >= this.maxDuration) {
-          this.stopRecording();
-        }
-      }, 1000);
-    } catch (err) {
-      console.error('Failed to start recording', err);
+      this.startTimer();
+    } catch {
+      this.recordError.set('Failed to start recording');
     }
+  }
+
+  private startTimer(): void {
+    this.timerSub = interval(1000).subscribe(() => {
+      this.duration.update((d) => d + 1);
+      if (this.duration() >= this.maxDuration) {
+        this.stopRecording();
+      }
+    });
+  }
+
+  private cleanupTimer(): void {
+    this.timerSub?.unsubscribe();
+    this.timerSub = null;
   }
 
   stopRecording(): void {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
     }
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
+    this.cleanupTimer();
   }
 
   async uploadRecording(): Promise<void> {
     const blob = this.recordingBlob();
     if (!blob) return;
-    const file = new File([blob], 'intro.webm', { type: blob.type });
-    const { uploadUrl, mediaUrl } = await this.userService.getPresignedUploadUrl(
-      file.name,
-      blob.type,
-      'audio-intro',
-    );
-    const resp = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: blob,
-      headers: { 'Content-Type': blob.type },
-    });
-    if (!resp.ok) throw new Error('Upload failed');
-    await this.userService.updateMyProfile({ audio_intro_url: mediaUrl });
-    this.recordingComplete.emit(mediaUrl);
+    this.recordError.set(null);
+    try {
+      const file = new File([blob], 'intro.webm', { type: blob.type });
+      const { uploadUrl, mediaUrl } = await this.userService.getPresignedUploadUrl(
+        file.name,
+        blob.type,
+        'audio-intro',
+      );
+      const resp = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: { 'Content-Type': blob.type },
+      });
+      if (!resp.ok) throw new Error('Upload failed');
+      await this.userService.updateMyProfile({ audio_intro_url: mediaUrl });
+      this.recordingComplete.emit(mediaUrl);
+    } catch {
+      this.recordError.set('Upload failed');
+    }
   }
 
   playPreview(): void {
@@ -96,5 +122,14 @@ export class AudioIntroRecorderComponent {
       this.isPlaying.set(true);
       audio.onended = () => this.isPlaying.set(false);
     });
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupTimer();
+    this.audioStream?.getTracks().forEach((t) => t.stop());
+    this.audioStream = null;
+    if (this.recordingUrl()) {
+      URL.revokeObjectURL(this.recordingUrl());
+    }
   }
 }

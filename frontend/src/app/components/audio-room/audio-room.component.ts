@@ -1,5 +1,5 @@
 import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
@@ -18,6 +18,18 @@ import {
   VoiceroomCreateModalComponent,
   VoiceroomCreatePayload,
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
+import {
+  PrivatePartyCreateModalComponent,
+  PrivatePartyCreatePayload,
+} from '../private-party-create-modal/private-party-create-modal.component';
+import { QuickPollFormComponent } from './quick-poll-form.component';
+import { QuickPollDisplayComponent } from './quick-poll-display.component';
+import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
+import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
+import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
+import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
+import { SoundboardComponent } from '../soundboard/soundboard.component';
+import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 
 @Component({
   selector: 'app-audio-room',
@@ -25,10 +37,19 @@ import {
     TranslatePipe,
     RoomChatComponent,
     VideoRoomComponent,
+    VideoClassroomErrorBoundaryComponent,
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
+    PrivatePartyCreateModalComponent,
+    ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
+    QuickPollFormComponent,
+    QuickPollDisplayComponent,
+    LiveChatOverlayComponent,
+    TipHostModalComponent,
+    VoiceroomNotesComponent,
+    SoundboardComponent,
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
@@ -40,11 +61,19 @@ export class AudioRoomComponent implements OnInit {
   private readonly confirmService = inject(ConfirmService);
 
   readonly showCreateModal = signal<boolean>(false);
+  readonly showPrivatePartyModal = signal<boolean>(false);
   readonly showGiftModal = signal<boolean>(false);
+  readonly showTipModal = signal<boolean>(false);
   readonly showSafetyModal = signal<boolean>(false);
+  readonly showApprovalModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
+
+  readonly audiencePlaceholderAvatars = computed(() => {
+    const count = this.store.audienceCount();
+    return Array.from({ length: Math.min(count, 8) }, (_, i) => i + 1);
+  });
   readonly pollResults = signal<{
     question: string;
     options: string[];
@@ -56,9 +85,29 @@ export class AudioRoomComponent implements OnInit {
 
   readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
   readonly showExclusivePicker = signal<boolean>(false);
+  readonly showNotesPanel = signal<boolean>(false);
+
+  /** Toggle between flat list view and language-grouped view */
+  readonly viewMode = signal<'flat' | 'grouped'>('grouped');
+
+  /** Rooms currently displayed (either all, or filtered by selected language group) */
+  readonly displayedRooms = computed(() => {
+    const selected = this.store.selectedLanguageGroup();
+    if (selected) {
+      const group = this.store
+        .roomsByLanguage()
+        .find((g) => g.language_pair === selected);
+      return group?.rooms ?? [];
+    }
+    return this.store.activeRooms();
+  });
 
   async ngOnInit(): Promise<void> {
-    await this.store.loadActiveRooms();
+    await Promise.all([
+      this.store.loadActiveRooms(),
+      this.store.loadRoomsByLanguage(),
+      this.store.loadPrivateRooms(),
+    ]);
     try {
       const result = await firstValueFrom(
         this.httpClient.get<{emojiId:string;name:string;animationUrl:string}[]>('/audio-rooms/exclusive-emojis')
@@ -67,6 +116,19 @@ export class AudioRoomComponent implements OnInit {
     } catch {
       // non-critical, picker will be empty
     }
+  }
+
+  selectLanguageGroup(pair: string): void {
+    if (this.store.selectedLanguageGroup() === pair) {
+      this.store.selectedLanguageGroup.set(null);
+    } else {
+      this.store.selectedLanguageGroup.set(pair);
+    }
+  }
+
+  toggleViewMode(): void {
+    this.viewMode.update((m) => (m === 'flat' ? 'grouped' : 'flat'));
+    this.store.selectedLanguageGroup.set(null);
   }
 
   selectExclusiveEmoji(emojiId: string): void {
@@ -90,6 +152,23 @@ export class AudioRoomComponent implements OnInit {
     }
   }
 
+  async createPrivateParty(payload: PrivatePartyCreatePayload): Promise<void> {
+    try {
+      const room = await this.store.createPrivateParty({
+        title: payload.title,
+        languagePair: payload.languagePair,
+        topicTag: payload.topicTag,
+        isVideoStream: payload.isVideoStream,
+        invitedUserIds: payload.invitedUserIds,
+      });
+      this.showPrivatePartyModal.set(false);
+      await this.store.joinRoom(room);
+    } catch (e) {
+      console.error('Error creating private party:', e);
+      showToast(this.i18n.translate('privateParty.createError'));
+    }
+  }
+
   async join(room: AudioRoomRecord): Promise<void> {
     await this.store.joinRoom(room);
   }
@@ -104,6 +183,11 @@ export class AudioRoomComponent implements OnInit {
 
   async approve(targetUserId: string): Promise<void> {
     await this.store.approveSpeaker(targetUserId);
+  }
+
+  async handleApproveSpeaker(targetUserId: string): Promise<void> {
+    await this.approve(targetUserId);
+    this.showApprovalModal.set(false);
   }
 
   async demote(targetUserId: string): Promise<void> {

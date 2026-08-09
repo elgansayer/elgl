@@ -85,7 +85,10 @@ export class CommunitiesService {
     if (community.owner_id !== requesterId) {
       throw new ForbiddenException('Only the owner can update this community');
     }
-    const updates: Record<string, unknown> = {};
+    const updates: Partial<Pick<CommunityRecord, 'name' | 'description'>> = {
+      name: dto.name,
+      description: dto.description,
+    };
     if (dto.name !== undefined) {
       updates.name = dto.name;
     }

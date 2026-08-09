@@ -31,6 +31,22 @@ export class GroupsService {
     return firstValueFrom(this.http.post<ChatGroup>(this.apiUrl, body));
   }
 
+  restrictSendMessages(groupId: string, canSendMessages: boolean): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`${this.apiUrl}/${groupId}/restrict-send-messages`, {
+        canSendMessages,
+      }),
+    );
+  }
+
+  restrictEditInfo(groupId: string, canEditInfo: boolean): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`${this.apiUrl}/${groupId}/restrict-edit-info`, {
+        canEditInfo,
+      }),
+    );
+  }
+
   renameGroup(groupId: string, name: string): Promise<ChatGroup> {
     return firstValueFrom(this.http.put<ChatGroup>(`${this.apiUrl}/${groupId}/rename`, { name }));
   }
@@ -77,6 +93,12 @@ export class GroupsService {
     );
   }
 
+  joinGroupByCode(code: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/join-by-code`, { code }),
+    );
+  }
+
   sendAnnouncement(groupId: string, message: string): Promise<{ success: boolean }> {
     return firstValueFrom(
       this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/announcement`, { message }),
@@ -89,9 +111,20 @@ export class GroupsService {
     );
   }
 
-  joinByInviteCode(code: string): Promise<{ success: boolean }> {
+  createAnnouncementGroup(name: string, memberIds: string[]): Promise<ChatGroup> {
     return firstValueFrom(
-      this.http.post<{ success: boolean }>(`${this.apiUrl}/join-by-code`, { code }),
+      this.http.post<ChatGroup>(`${this.apiUrl}/announcement-group`, {
+        name,
+        memberIds,
+      }),
+    );
+  }
+
+  broadcastMessage(groupId: string, message: string): Promise<{ success: boolean }> {
+    return firstValueFrom(
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/broadcast`, {
+        message,
+      }),
     );
   }
 }

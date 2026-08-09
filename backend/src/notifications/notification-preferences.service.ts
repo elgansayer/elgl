@@ -45,17 +45,17 @@ export class NotificationPreferencesService {
     NotificationPreferences,
     'userId' | 'updatedAt'
   > = {
-    new_message: { push: true, email: false, in_app: true },
-    call_invite: { push: true, email: false, in_app: true },
-    moment_like: { push: true, email: false, in_app: true },
-    moment_comment: { push: true, email: false, in_app: true },
-    correction: { push: true, email: false, in_app: true },
-    gift: { push: true, email: false, in_app: true },
-    profile_view: { push: false, email: false, in_app: true },
-    study_reminder: { push: true, email: true, in_app: true },
-    friend_request: { push: true, email: false, in_app: true },
-    audio_room_invite: { push: true, email: false, in_app: true },
-    new_follower: { push: true, email: false, in_app: true },
+    new_message: { push: true, email: false, in_app: true, badges: true },
+    call_invite: { push: true, email: false, in_app: true, badges: true },
+    moment_like: { push: true, email: false, in_app: true, badges: true },
+    moment_comment: { push: true, email: false, in_app: true, badges: true },
+    correction: { push: true, email: false, in_app: true, badges: true },
+    gift: { push: true, email: false, in_app: true, badges: true },
+    profile_view: { push: false, email: false, in_app: true, badges: true },
+    study_reminder: { push: true, email: true, in_app: true, badges: true },
+    friend_request: { push: true, email: false, in_app: true, badges: true },
+    audio_room_invite: { push: true, email: false, in_app: true, badges: true },
+    new_follower: { push: true, email: false, in_app: true, badges: true },
     quiet_hours_start: undefined,
     quiet_hours_end: undefined,
     do_not_disturb: false,
@@ -73,7 +73,7 @@ export class NotificationPreferencesService {
       .eq('user_id', userId)
       .single();
 
-    const data = response.data as DbNotificationPreferences | null;
+    const data = response.data;
     const error = response.error;
 
     if (error && error.code !== 'PGRST116') {
@@ -100,11 +100,11 @@ export class NotificationPreferencesService {
 
     const upsertResponse = await supabase
       .from('notification_preferences')
-      .upsert(dbPayload, { onConflict: 'user_id' })
+      .upsert([dbPayload], { onConflict: 'user_id' })
       .select()
       .single();
 
-    const dbData = upsertResponse.data as DbNotificationPreferences | null;
+    const dbData = upsertResponse.data;
     const dbError = upsertResponse.error;
 
     if (dbError) {
@@ -121,11 +121,11 @@ export class NotificationPreferencesService {
 
     const upsertResponse = await supabase
       .from('notification_preferences')
-      .upsert(dbPayload, { onConflict: 'user_id' })
+      .upsert([dbPayload], { onConflict: 'user_id' })
       .select()
       .single();
 
-    const dbData = upsertResponse.data as DbNotificationPreferences | null;
+    const dbData = upsertResponse.data;
     const dbError = upsertResponse.error;
 
     if (dbError) {
@@ -215,6 +215,7 @@ export class NotificationPreferencesService {
           push: dtoCategory.push ?? existingCategory?.push ?? true,
           email: dtoCategory.email ?? existingCategory?.email ?? false,
           in_app: dtoCategory.in_app ?? existingCategory?.in_app ?? true,
+          badges: dtoCategory.badges ?? existingCategory?.badges ?? true,
         };
       }
     }

@@ -1,17 +1,169 @@
 import { TestBed } from '@angular/core/testing';
+import { describe, expect, it, vi } from 'vitest';
 import { I18nService } from './i18n.service';
+import { AuthService } from './auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('I18nService', () => {
   let service: I18nService;
+  let mockAuthService: Partial<AuthService>;
 
   beforeEach(() => {
     localStorage.clear();
+
+    mockAuthService = {
+      getAccessToken: vi.fn().mockReturnValue('mock-token'),
+    };
+
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: mockAuthService },
+      ],
     });
     service = TestBed.inject(I18nService);
+  });
+
+  describe('setLanguage', () => {
+    it('should set the language and update document directionality', async () => {
+      await service.setLanguage('ar');
+      expect(service.currentLang()).toBe('ar');
+      if (typeof document !== 'undefined') {
+        expect(document.documentElement.lang).toBe('ar');
+        expect(document.documentElement.dir).toBe('rtl');
+      }
+    });
+
+    it('should cache the language in localStorage', async () => {
+      await service.setLanguage('fr');
+      expect(localStorage.getItem('hellotalk_locale')).toBe('fr');
+    });
+
+    it('should load translations from localStorage cache if available', async () => {
+      const cachedTranslations = { 'test.key': 'Cached Translation' };
+      localStorage.setItem('hellotalk_dict_fr', JSON.stringify(cachedTranslations));
+      await service.setLanguage('fr');
+      expect(service.translate('test.key')).toBe('Cached Translation');
+    });
+
+    it('should fallback to base dictionary if translation key is missing', async () => {
+      await service.setLanguage('fr');
+      expect(service.translate('app.title')).toBe('HelloTalk');
+    });
+
+    it('should not change the language when given an empty or whitespace-only string', async () => {
+      const initial = service.currentLang();
+      await service.setLanguage('   ');
+      expect(service.currentLang()).toBe(initial);
+    });
+
+    it('should trim surrounding whitespace from the language code', async () => {
+      await service.setLanguage('  fr  ');
+      expect(service.currentLang()).toBe('fr');
+    });
+
+    it('should retain base dictionary translations for keys missing from a partial cached dictionary', async () => {
+      const partialCache = { 'test.key': 'Only this key cached' };
+      localStorage.setItem('hellotalk_dict_de', JSON.stringify(partialCache));
+      await service.setLanguage('de');
+      expect(service.translate('test.key')).toBe('Only this key cached');
+      expect(service.translate('app.title')).toBe('HelloTalk');
+    });
+
+    it('should initialise the language from a previously saved localStorage value on construction', () => {
+      localStorage.setItem('hellotalk_locale', 'de');
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideHttpClient(), provideHttpClientTesting()],
+      });
+      const freshService = TestBed.inject(I18nService);
+      expect(freshService.currentLang()).toBe('de');
+    });
+
+    it('should call the backend API for translations if not cached', async () => {
+      vi.spyOn(window, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ translations: { 'test.key': 'API Translation' } }),
+      } as Response);
+      await service.setLanguage('de');
+      expect(service.translate('test.key')).toBe('API Translation');
+    });
+
+    it('should handle API errors gracefully and fallback to base dictionary', async () => {
+      vi.spyOn(window, 'fetch').mockRejectedValue(new Error('API Error'));
+      await service.setLanguage('de');
+      expect(service.translate('app.title')).toBe('HelloTalk');
+    });
+  });
+
+  describe('translate', () => {
+    it('should return the translation for a given key', () => {
+      const translation = service.translate('app.title');
+      expect(translation).toBe('HelloTalk');
+    });
+
+    it('should interpolate parameters in the translation string', () => {
+      const translation = service.translate('common.coinsBalance', { coins: 100 });
+      expect(translation).toBe('100 Coins');
+    });
+
+    it('should return the key itself if no translation is found', () => {
+      const translation = service.translate('non.existent.key');
+      expect(translation).toBe('non.existent.key');
+    });
+
+    it('should interpolate multiple parameters in a single translation string', () => {
+      const translation = service.translate('gift.broadcastDesc', {
+        sender: 'Alice',
+        receiver: 'Bob',
+        giftName: 'Rose',
+        cost: 50,
+      });
+      expect(translation).toBe('🎉 Alice gifted Bob a Rose! (🪙 50 Coins)');
+    });
+
+    it('should ignore params that do not appear as placeholders in the translation string', () => {
+      const translation = service.translate('app.title', { unused: 'value' });
+      expect(translation).toBe('HelloTalk');
+    });
+  });
+
+  describe('availableLanguages', () => {
+    it('should mark ar, fa, he, and ur as RTL languages and no others', () => {
+      const rtlCodes = service.availableLanguages
+        .filter((lang) => lang.isRtl)
+        .map((lang) => lang.code)
+        .sort();
+      expect(rtlCodes).toEqual(['ar', 'fa', 'he', 'ur']);
+    });
+
+    it('should include British English as a non-RTL entry', () => {
+      const enGB = service.availableLanguages.find((lang) => lang.code === 'en-GB');
+      expect(enGB).toBeTruthy();
+      expect(enGB?.isRtl).toBe(false);
+    });
+
+    it('should have unique language codes', () => {
+      const codes = service.availableLanguages.map((lang) => lang.code);
+      expect(new Set(codes).size).toBe(codes.length);
+    });
+  });
+
+  describe('Gender filter dropdown translations', () => {
+    it('should expose the gender filter label and options', () => {
+      expect(service.translate('discovery.genderLabel')).toBe('Gender');
+      expect(service.translate('discovery.genderAny')).toBe('Any gender');
+      expect(service.translate('discovery.genderMale')).toBe('Male');
+      expect(service.translate('discovery.genderFemale')).toBe('Female');
+    });
+
+    it('should expose the VIP-required message for gender filtering', () => {
+      expect(service.translate('discovery.genderVipRequired')).toBe(
+        'VIP required to filter by gender',
+      );
+    });
   });
 
   it('should be created with default British English language', () => {
