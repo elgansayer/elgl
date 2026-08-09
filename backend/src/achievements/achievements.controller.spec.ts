@@ -42,9 +42,7 @@ describe('AchievementsController', () => {
 
   describe('listAchievements', () => {
     it('returns the full list of achievement definitions', async () => {
-      const rows = [
-        { id: 'a1', code: 'first', name: 'First', description: 'desc' },
-      ];
+      const rows = [{ id: 'a1', code: 'first', name: 'First', description: 'desc' }];
       service.listAchievements.mockResolvedValue(rows);
 
       await expect(controller.listAchievements()).resolves.toEqual(rows);
@@ -88,9 +86,7 @@ describe('AchievementsController', () => {
 
     it('throws UnauthorizedException when req.user is missing', async () => {
       const req = {};
-      await expect(
-        controller.evaluateForCurrentUser(req as any),
-      ).rejects.toThrow();
+      await expect(controller.evaluateForCurrentUser(req as any)).rejects.toThrow();
     });
   });
 

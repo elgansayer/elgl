@@ -54,9 +54,7 @@ describe('AccountDeletionCron', () => {
     it('should log when no accounts are pending', async () => {
       mockReturns.mockResolvedValue({ data: [], error: null });
       const logSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
-          log: (msg: string) => void;
-        },
+        (cron as Record<string, unknown>).logger as { log: (msg: string) => void },
         'log',
       );
 
@@ -72,9 +70,7 @@ describe('AccountDeletionCron', () => {
       const fetchError = { message: 'DB error' };
       mockReturns.mockResolvedValue({ data: null, error: fetchError });
       const errorSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
-          error: (msg: string) => void;
-        },
+        (cron as Record<string, unknown>).logger as { error: (msg: string) => void },
         'error',
       );
 
@@ -88,24 +84,16 @@ describe('AccountDeletionCron', () => {
         data: [{ id: 'user-1' }, { id: 'user-2' }],
         error: null,
       });
-      (usersService.permanentDeleteAccount as jest.Mock).mockResolvedValue(
-        undefined,
-      );
+      (usersService.permanentDeleteAccount as jest.Mock).mockResolvedValue(undefined);
       const logSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
-          log: (msg: string) => void;
-        },
+        (cron as Record<string, unknown>).logger as { log: (msg: string) => void },
         'log',
       );
 
       await cron.handleAccountDeletions();
 
-      expect(usersService.permanentDeleteAccount).toHaveBeenCalledWith(
-        'user-1',
-      );
-      expect(usersService.permanentDeleteAccount).toHaveBeenCalledWith(
-        'user-2',
-      );
+      expect(usersService.permanentDeleteAccount).toHaveBeenCalledWith('user-1');
+      expect(usersService.permanentDeleteAccount).toHaveBeenCalledWith('user-2');
       expect(usersService.permanentDeleteAccount).toHaveBeenCalledTimes(2);
       expect(logSpy).toHaveBeenCalledWith('Successfully deleted user user-1');
       expect(logSpy).toHaveBeenCalledWith('Successfully deleted user user-2');
@@ -120,9 +108,7 @@ describe('AccountDeletionCron', () => {
         new Error('Deletion failed'),
       );
       const errorSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
-          error: (msg: string) => void;
-        },
+        (cron as Record<string, unknown>).logger as { error: (msg: string) => void },
         'error',
       );
 
@@ -136,9 +122,7 @@ describe('AccountDeletionCron', () => {
         throw new Error('Unexpected error');
       });
       const errorSpy = jest.spyOn(
-        (cron as Record<string, unknown>).logger as {
-          error: (msg: string) => void;
-        },
+        (cron as Record<string, unknown>).logger as { error: (msg: string) => void },
         'error',
       );
 

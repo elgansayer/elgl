@@ -1174,6 +1174,50 @@ describe('Virtual Coin Economy - UI Rendering', () => {
     cy.contains(/Sticker Store/i).should('exist');
   });
 
+  it('should use RTL logical CSS properties (ps-, pe-) on the sticker store page', () => {
+    cy.visit('/sticker-store');
+    cy.wait('@getStickerPacks');
+
+    // Verify no banned physical-direction classes in rendered DOM
+    cy.document().then((doc) => {
+      const html = doc.documentElement.outerHTML.replace(/<!--[\s\S]*?-->/g, '');
+      expect(html).not.to.match(/\bpl-\d/, 'No pl-* class present');
+      expect(html).not.to.match(/\bpr-\d/, 'No pr-* class present');
+      expect(html).not.to.match(/\bml-\d/, 'No ml-* class present');
+      expect(html).not.to.match(/\bmr-\d/, 'No mr-* class present');
+      expect(html).not.to.match(/\bborder-l\b/, 'No border-l class present');
+      expect(html).not.to.match(/\bborder-r\b/, 'No border-r class present');
+    });
+  });
+
+  it('should use RTL logical CSS properties (ps-, pe-) on the coins success page', () => {
+    cy.visit('/coins/success?session_id=cs_test_abc123');
+
+    cy.document().then((doc) => {
+      const html = doc.documentElement.outerHTML.replace(/<!--[\s\S]*?-->/g, '');
+      expect(html).not.to.match(/\bpl-\d/, 'No pl-* class present');
+      expect(html).not.to.match(/\bpr-\d/, 'No pr-* class present');
+      expect(html).not.to.match(/\bml-\d/, 'No ml-* class present');
+      expect(html).not.to.match(/\bmr-\d/, 'No mr-* class present');
+      expect(html).not.to.match(/\bborder-l\b/, 'No border-l class present');
+      expect(html).not.to.match(/\bborder-r\b/, 'No border-r class present');
+    });
+  });
+
+  it('should use RTL logical CSS properties (ps-, pe-) on the coins cancel page', () => {
+    cy.visit('/coins/cancel');
+
+    cy.document().then((doc) => {
+      const html = doc.documentElement.outerHTML.replace(/<!--[\s\S]*?-->/g, '');
+      expect(html).not.to.match(/\bpl-\d/, 'No pl-* class present');
+      expect(html).not.to.match(/\bpr-\d/, 'No pr-* class present');
+      expect(html).not.to.match(/\bml-\d/, 'No ml-* class present');
+      expect(html).not.to.match(/\bmr-\d/, 'No mr-* class present');
+      expect(html).not.to.match(/\bborder-l\b/, 'No border-l class present');
+      expect(html).not.to.match(/\bborder-r\b/, 'No border-r class present');
+    });
+  });
+
   it('should render the quests page with progress bars', () => {
     cy.visit('/quests');
     cy.wait('@getQuests');

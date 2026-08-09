@@ -1,5 +1,5 @@
-import { Component, computed, inject, resource, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
@@ -43,6 +43,10 @@ export class AdminPortalComponent {
   readonly loginHistoryLoadingId = signal<string | null>(null);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
+
+  loadUsers(): void {
+    this.usersResource.reload();
+  }
 
   onSearchInput(value: string): void {
     this.searchTerm.set(value);

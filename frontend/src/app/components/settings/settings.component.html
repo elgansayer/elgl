@@ -67,7 +67,20 @@
         <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
           {{ 'settings.chatSection' | t }}
         </h2>
-        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
+        <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
+          <a
+            routerLink="/chat-settings"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+            [attr.aria-label]="'chat_settings.title' | t"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">💬</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'chat_settings.title' | t
+              }}</span>
+            </div>
+            <span class="text-text-secondary">→</span>
+          </a>
           <a
             routerLink="/settings/message-filters"
             class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
@@ -154,7 +167,8 @@
             }}</span>
             <input
               type="checkbox"
-              [(ngModel)]="autoPlayVoiceNotes"
+              [ngModel]="autoPlayVoiceNotes()"
+              (ngModelChange)="autoPlayVoiceNotes.set($event)"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
             />
           </label>
@@ -532,6 +546,18 @@
               <span class="text-xl">🔒</span>
               <span class="text-sm font-medium text-text-primary">{{
                 'settings.privacyPolicy' | t
+              }}</span>
+            </div>
+            <span class="text-text-secondary">→</span>
+          </a>
+          <a
+            routerLink="/help-about"
+            class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-xl">ℹ️</span>
+              <span class="text-sm font-medium text-text-primary">{{
+                'helpAbout.title' | t
               }}</span>
             </div>
             <span class="text-text-secondary">→</span>

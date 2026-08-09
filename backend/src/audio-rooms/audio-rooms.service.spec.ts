@@ -12,6 +12,7 @@ import { CentrifugoService } from '../chat/centrifugo.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
@@ -110,7 +111,10 @@ describe('AudioRoomsService', () => {
         {
           provide: NlpService,
           useValue: {
-            generateSessionSummary: jest.fn(),
+            generateSessionSummary: jest.fn().mockResolvedValue({
+              summary: 'Key topics covered:\nTest summary sentence.',
+              vocabulary: ['test', 'summary', 'vocabulary'],
+            }),
           },
         },
         {
@@ -128,6 +132,12 @@ describe('AudioRoomsService', () => {
                 vocabulary: ['greetings', 'holiday', 'culture'],
               }),
             ),
+          },
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: {
+            purgeByCacheTags: jest.fn().mockResolvedValue(true),
           },
         },
       ],
@@ -413,7 +423,7 @@ describe('AudioRoomsService', () => {
 
   describe('listActiveRooms', () => {
     it('should return empty array when no active rooms found', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: [],
         error: null,
       });
@@ -431,7 +441,7 @@ describe('AudioRoomsService', () => {
         { id: 'host-1', display_name: 'Host One', avatar_url: 'one.png' },
       ];
 
-      mockQueryBuilder.limit.mockResolvedValueOnce({
+      mockQueryBuilder.range.mockResolvedValueOnce({
         data: activeRooms,
         error: null,
       });
@@ -458,7 +468,7 @@ describe('AudioRoomsService', () => {
 
   describe('listActiveRoomsByLanguage', () => {
     it('should return empty array when no active rooms', async () => {
-      mockQueryBuilder.limit.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: [],
         error: null,
       });
@@ -494,7 +504,7 @@ describe('AudioRoomsService', () => {
         { id: 'host-3', display_name: 'Host Three', avatar_url: 'three.png' },
       ];
 
-      mockQueryBuilder.limit.mockResolvedValueOnce({
+      mockQueryBuilder.range.mockResolvedValueOnce({
         data: activeRooms,
         error: null,
       });
@@ -712,6 +722,171 @@ describe('AudioRoomsService', () => {
     });
   });
 
+  describe('muteSpeaker', () => {
+    it('should throw ForbiddenException if user is not host', async () => {
+      const roomRow: any = { id: 'room-1', host_id: 'host-1' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.muteSpeaker('other-user', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('Only the host can mute a speaker.'),
+      );
+    });
+
+    it('should throw ForbiddenException when attempting to mute the host', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.muteSpeaker('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'host-1',
+        }),
+      ).rejects.toThrow(new ForbiddenException('The host cannot be muted.'));
+    });
+
+    it('should publish force_mute event via Centrifugo', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1', 'user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.muteSpeaker('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'force_mute',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+      expect(result.id).toBe('room-1');
+    });
+  });
+
+  describe('kickSpeaker', () => {
+    it('should throw ForbiddenException if user is not host', async () => {
+      const roomRow: any = { id: 'room-1', host_id: 'host-1' };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.kickSpeaker('other-user', {
+          room_id: 'room-1',
+          target_user_id: 'user-2',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('Only the host can kick a speaker off stage.'),
+      );
+    });
+
+    it('should throw ForbiddenException when attempting to kick the host', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      await expect(
+        service.kickSpeaker('host-1', {
+          room_id: 'room-1',
+          target_user_id: 'host-1',
+        }),
+      ).rejects.toThrow(
+        new ForbiddenException('The host cannot kick themselves.'),
+      );
+    });
+
+    it('should remove from speakers, clear co-host if applicable, and publish force_kick event', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        co_host_id: 'user-2',
+        speakers: ['host-1', 'user-2'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.kickSpeaker('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        speakers: ['host-1'],
+        co_host_id: null,
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'force_kick',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'co_host_removed',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+      expect(result.id).toBe('room-1');
+    });
+
+    it('should remove speaker without co-host events when target is not co-host', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        speakers: ['host-1', 'user-2', 'user-3'],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      const result = await service.kickSpeaker('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-2',
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        speakers: ['host-1', 'user-3'],
+        co_host_id: undefined,
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+        type: 'force_kick',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+      expect(centrifugoService.publish).toHaveBeenCalledTimes(1);
+      expect(result.id).toBe('room-1');
+    });
+  });
+
   describe('inviteCoHost', () => {
     it('should throw ForbiddenException if user is not host', async () => {
       const roomRow: any = { id: 'room-1', host_id: 'host-1' };
@@ -770,8 +945,9 @@ describe('AudioRoomsService', () => {
         raised_hands: [],
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_invited',
+        type: 'co_host_changed',
         target_user_id: 'user-2',
+        previous_co_host_id: null,
         room_id: 'room-1',
       });
       expect(result.id).toBe('room-1');
@@ -801,13 +977,9 @@ describe('AudioRoomsService', () => {
         raised_hands: [],
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_removed',
-        target_user_id: 'user-2',
-        room_id: 'room-1',
-      });
-      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_invited',
+        type: 'co_host_changed',
         target_user_id: 'user-3',
+        previous_co_host_id: 'user-2',
         room_id: 'room-1',
       });
       expect(result.id).toBe('room-1');

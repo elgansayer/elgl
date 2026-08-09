@@ -10,11 +10,10 @@
   display: none;
 }
 
-/* Responsive partner card on desktop grid */
-@media (min-width: 1024px) {
-  .discovery-grid article {
-    min-height: 120px;
-  }
+/* Mobile touch optimisations for partner cards */
+article[role='listitem'] {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 /* Responsive header: reduce padding-top on larger screens since desktop-sidebar takes nav space */

@@ -20,7 +20,7 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
           [src]="url"
           class="w-full h-auto"
           alt="{{ 'coverPhoto.previewAlt' | t }}"
-         loading="lazy" />
+        />
       }
       @if (!previewUrl()) {
         <label
