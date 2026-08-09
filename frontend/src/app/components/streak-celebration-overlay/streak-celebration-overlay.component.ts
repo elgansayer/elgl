@@ -25,7 +25,6 @@ const CONFETTI_COLOURS = [
 
 @Component({
   selector: 'app-streak-celebration-overlay',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     @if (visible()) {
