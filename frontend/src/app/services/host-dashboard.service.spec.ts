@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom } from 'rxjs';
+
 import { HostDashboardService } from './host-dashboard.service';
 import type { HostDashboardStats } from './host-dashboard.service';
 
@@ -33,7 +33,7 @@ describe('HostDashboardService', () => {
         .mockReturnValueOnce(0.25);
       dateNowSpy.mockReturnValue(1_000_000);
 
-      const stats: HostDashboardStats = await firstValueFrom(service.getDashboardStats('room-id'));
+      const stats: HostDashboardStats = await service.getDashboardStats('room-id');
 
       expect(stats).toEqual({
         viewerCount: 5,

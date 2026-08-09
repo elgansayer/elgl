@@ -1,163 +1,89 @@
-import { Component, input, output, inject, signal } from '@angular/core';
-import { showToast } from '../../services/toast.service';
+import { Component, input, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AudioRoomsStore } from '../../services/audio-rooms.store';
-import { I18nService } from '../../services/i18n.service';
-
-export interface RaisedHandRequest {
-  userId: string;
-  displayName: string;
-  avatarUrl: string | null;
-}
 
 @Component({
   selector: 'app-approve-speaker-modal',
+  standalone: true,
   imports: [TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+    >
       <div
-        class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
+        class="w-full max-w-md bg-[#121212] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       >
-        <div class="flex items-center justify-between border-b border-surface-100 pb-3">
-          <div>
-            <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
-              <span>{{ 'approveSpeakerModal.title' | t }}</span>
-            </h3>
-            <p class="text-xs text-text-secondary mt-1">
-              {{ 'approveSpeakerModal.subtitle' | t: { count: requests().length } }}
-            </p>
-          </div>
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+          <h2 class="text-xl font-bold text-slate-100">{{ 'approveSpeaker.modalTitle' | t }}</h2>
           <button
             (click)="closed.emit()"
-            class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            class="text-slate-400 hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-slate-800"
             aria-label="Close"
           >
             ✕
           </button>
         </div>
 
-        @if (requests().length === 0) {
-          <div class="app-empty-state py-8">
-            <p class="text-sm text-text-secondary">
-              {{ 'approveSpeakerModal.emptyState' | t }}
+        <!-- Body -->
+        <div class="p-6 flex flex-col gap-4">
+          @if (raisedHands().length === 0) {
+            <div class="text-center py-8 opacity-70">
+              <p class="text-slate-400 text-sm">{{ 'approveSpeaker.emptyRequests' | t }}</p>
+            </div>
+          } @else {
+            <p class="text-sm text-slate-400">
+              {{ 'approveSpeaker.subtitle' | t: { count: raisedHands().length } }}
             </p>
-          </div>
-        } @else {
-          <div class="space-y-3 max-h-80 overflow-y-auto">
-            @for (req of requests(); track req.userId) {
+            @for (requestId of raisedHands(); track requestId) {
               <div
-                class="flex items-center justify-between rounded-2xl border border-amber-500/30 bg-surface-300 p-4 gap-3"
-                [class.opacity-50]="processedIds().has(req.userId)"
+                class="flex items-center justify-between rounded-xl border border-amber-500/30 bg-slate-800/50 p-4"
               >
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                  @if (req.avatarUrl) {
-                    <img
-                      [src]="req.avatarUrl"
-                      [alt]="req.displayName"
-                      class="w-10 h-10 rounded-full object-cover border-2 border-amber-400 flex-shrink-0"
-                    />
-                  } @else {
-                    <div
-                      class="w-10 h-10 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-sm font-bold text-amber-300 flex-shrink-0"
-                    >
-                      {{ req.displayName.slice(0, 1).toUpperCase() }}
-                    </div>
-                  }
-                  <div class="min-w-0">
-                    <p class="text-sm font-semibold text-text-primary truncate">
-                      {{ req.displayName }}
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl">✋</span>
+                  <div>
+                    <p class="font-semibold text-slate-100 text-sm">
+                      {{ 'approveSpeaker.learnerLabel' | t: { id: requestId.slice(0, 8) } }}
                     </p>
-                    <p class="text-[10px] text-text-secondary">
-                      {{ 'approveSpeakerModal.wantsStage' | t }}
+                    <p class="text-xs text-slate-400">
+                      {{ 'approveSpeaker.learnerDesc' | t }}
                     </p>
                   </div>
                 </div>
-                <div class="flex gap-1.5 flex-shrink-0">
+                <div class="flex gap-2">
                   <button
-                    (click)="dismissRequest(req.userId)"
-                    [disabled]="processedIds().has(req.userId)"
-                    class="rounded-app bg-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-text-secondary hover:bg-red-500/20 transition-colors disabled:opacity-40"
+                    (click)="approved.emit(requestId)"
+                    class="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition-colors"
                   >
-                    {{ 'approveSpeakerModal.dismissBtn' | t }}
+                    {{ 'approveSpeaker.approveAction' | t }}
                   </button>
                   <button
-                    (click)="approveRequest(req.userId)"
-                    [disabled]="processedIds().has(req.userId)"
-                    class="rounded-app bg-emerald-600 ps-3.5 pe-3.5 pt-1.5 pb-1.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors disabled:opacity-40"
+                    (click)="declined.emit(requestId)"
+                    class="rounded-lg bg-slate-700 hover:bg-slate-600 px-4 py-2 text-sm font-bold text-slate-300 transition-colors"
                   >
-                    {{ 'approveSpeakerModal.approveBtn' | t }}
+                    {{ 'approveSpeaker.declineAction' | t }}
                   </button>
                 </div>
               </div>
             }
-          </div>
-        }
+          }
+        </div>
 
-        @if (requests().length > 0) {
-          <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
-            <button
-              (click)="closed.emit()"
-              class="px-5 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs"
-            >
-              {{ 'approveSpeakerModal.doneBtn' | t }}
-            </button>
-          </div>
-        }
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-900/50">
+          <button
+            (click)="closed.emit()"
+            class="px-5 py-2.5 rounded-xl font-bold text-slate-300 hover:bg-slate-800 transition-colors"
+          >
+            {{ 'approveSpeaker.doneBtn' | t }}
+          </button>
+        </div>
       </div>
     </div>
   `,
-  styles: [
-    `
-      .animate-fadeIn {
-        animation: fadeIn 0.2s ease-out forwards;
-      }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: scale(0.95);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-    `,
-  ],
 })
 export class ApproveSpeakerModalComponent {
-  requests = input.required<RaisedHandRequest[]>();
-  closed = output<void>();
-
-  private readonly store = inject(AudioRoomsStore);
-  private readonly i18n = inject(I18nService);
-
-  readonly processedIds = signal<Set<string>>(new Set());
-
-  async approveRequest(userId: string): Promise<void> {
-    this.processedIds.update((s) => {
-      const next = new Set(s);
-      next.add(userId);
-      return next;
-    });
-    try {
-      await this.store.approveSpeaker(userId);
-      showToast(this.i18n.translate('audioRoom.speakerApprovedToast'));
-    } catch {
-      this.processedIds.update((s) => {
-        const next = new Set(s);
-        next.delete(userId);
-        return next;
-      });
-      showToast(this.i18n.translate('common.error'));
-    }
-  }
-
-  dismissRequest(userId: string): void {
-    this.processedIds.update((s) => {
-      const next = new Set(s);
-      next.add(userId);
-      return next;
-    });
-    void this.store.dismissRaisedHand(userId);
-  }
+  readonly raisedHands = input<string[]>([], { alias: 'raisedHands' });
+  readonly approved = output<string>();
+  readonly declined = output<string>();
+  readonly closed = output<void>();
 }

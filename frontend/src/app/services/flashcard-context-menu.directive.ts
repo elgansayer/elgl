@@ -1,9 +1,8 @@
-import { Directive, inject, input, ElementRef } from '@angular/core';
+import { Directive, inject, input, ElementRef, ErrorHandler } from '@angular/core';
 import { FlashcardService } from './flashcard.service';
 
 @Directive({
   selector: '[appFlashcardContextMenu]',
-  standalone: true,
   host: {
     '(contextmenu)': 'onContextMenu($event)',
     '(touchstart)': 'onTouchStart($event)',
@@ -15,6 +14,7 @@ export class FlashcardContextMenuDirective {
 
   private flashcardService = inject(FlashcardService);
   private elRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private errorHandler = inject(ErrorHandler);
 
   private overlay: HTMLElement | null = null;
 
@@ -51,13 +51,13 @@ export class FlashcardContextMenuDirective {
     div.addEventListener('click', async () => {
       try {
         await this.flashcardService.createFlashcard({
-          word,
-          sourceLanguage: lang,
-          contextSentence: context,
+          word_token: word,
+          original_context: context,
+          translation: word,
         });
         // Notify user with a toast if implemented
       } catch (err) {
-        console.error('Failed to create flashcard', err);
+        this.reportError('createFlashcard', err);
         // Show error toast
       }
       this.removeOverlay();
@@ -88,5 +88,14 @@ export class FlashcardContextMenuDirective {
       this.overlay.parentNode.removeChild(this.overlay);
     }
     this.overlay = null;
+  }
+
+  private reportError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    const ctxError = new Error(`[SRS:FlashcardContextMenu] ${operation} failed: ${message}`);
+    if (err instanceof Error && err.stack) {
+      ctxError.stack = err.stack;
+    }
+    this.errorHandler.handleError(ctxError);
   }
 }

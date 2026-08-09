@@ -9,6 +9,8 @@
     --app-motion-base: 180ms;
     --app-motion-slow: 260ms;
     --app-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --color-primary-rgb: 79, 70, 229;
+    --color-primary: #4f46e5;
   }
 
   html {
@@ -25,6 +27,76 @@
   html[dir='rtl'] {
     text-align: start;
   }
+
+  /* Global keyboard focus-visible ring for all interactive elements */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-surface-500;
+  }
+
+  /* Remove focus ring for mouse clicks, keeping it for keyboard only */
+  :focus:not(:focus-visible) {
+    @apply outline-none ring-0 ring-offset-0;
+  }
+}
+
+
+
+/* Skeleton stagger animation for list items */
+@keyframes skeleton-stagger-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.skeleton-stagger {
+  animation: skeleton-stagger-in 0.4s ease-out both;
+}
+
+/* Skeleton shimmer animation */
+@keyframes skeleton-shimmer {
+  0% { opacity: 0.6; background-position: -200% 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--surface-200, #2a2a2a) 25%, var(--surface-100, #3a3a3a) 50%, var(--surface-200, #2a2a2a) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  will-change: opacity, background-position;
+}
+
+
+/* Empty state fade-in and icon pulse */
+@keyframes empty-state-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.empty-state-fade-in {
+  animation: empty-state-fade-in 0.35s ease-out;
+}
+@keyframes empty-state-icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+.empty-state-icon {
+  animation: empty-state-icon-pulse 3s ease-in-out infinite;
+}
+
+
+/* Content state transition animation */
+@keyframes content-state-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.content-state-enter {
+  animation: content-state-enter 0.25s ease-out;
+}
+/* Partner grid enter animation */
+@keyframes partner-card-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.partner-card-enter {
+  animation: partner-card-enter 0.3s ease-out both;
 }
 
 /* UI Primitives */
@@ -34,7 +106,7 @@
   }
 
   .app-screen {
-    @apply mx-auto max-w-2xl space-y-4;
+    @apply ms-auto me-auto max-w-2xl space-y-4;
   }
 
   .app-padded {
@@ -96,14 +168,30 @@
   }
 
   .word-token-new {
-    @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded px-0.5 transition-colors cursor-pointer;
+    @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
   }
 
   .word-token-learning {
-    @apply bg-vip/20 text-vip-light hover:bg-vip/40 border-b border-vip rounded px-0.5 transition-colors cursor-pointer;
+    @apply bg-vip/20 text-vip-light hover:bg-vip/40 border-b border-vip rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
   }
 
   .word-token-known {
-    @apply text-text-primary hover:bg-surface-100 rounded px-0.5 transition-colors cursor-pointer;
+    @apply text-text-primary hover:bg-surface-100 rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
+  }
+
+  /* Fade-in animation for modals and overlays */
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 }

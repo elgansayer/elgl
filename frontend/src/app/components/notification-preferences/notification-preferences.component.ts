@@ -11,7 +11,6 @@ import {
 
 @Component({
   selector: 'app-notification-preferences',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="surface p-4 rounded-lg max-w-2xl mx-auto">
@@ -92,7 +91,7 @@ export class NotificationPreferencesComponent {
   private service = inject(NotificationPreferencesService);
   private i18n = inject(I18nService);
 
-  readonly channels: NotificationChannel[] = ['push', 'email', 'in_app'];
+  readonly channels: NotificationChannel[] = ['push', 'badge'];
 
   private prefs = signal<NotificationPreferences | null>(null);
   readonly loading = signal(true);
