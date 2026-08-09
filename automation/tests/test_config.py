@@ -38,15 +38,53 @@ def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
     assert "RestrictSUIDSGID=true" not in unit
 
 
+def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> None:
+    unit = (
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service"
+    ).read_text(encoding="utf-8")
+
+    assert "Delegate=yes" in unit
+    assert "ProtectControlGroups=false" in unit
+    assert "MemoryMax=3500M" in unit
+    assert "TasksMax=1024" in unit
+
+
+def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> None:
+    unit = (
+        Path(__file__).parents[2]
+        / "config"
+        / "systemd"
+        / "hellotalk-factory-health.service"
+    ).read_text(encoding="utf-8")
+
+    assert "NoNewPrivileges=true" not in unit
+    assert "Delegate=yes" in unit
+    assert "ProtectControlGroups=false" in unit
+    assert "MemoryMax=512M" in unit
+    assert "TasksMax=128" in unit
+    for directive in (
+        "PrivateTmp=true",
+        "PrivateDevices=true",
+        "ProtectSystem=strict",
+        "ProtectHome=true",
+        "ProtectKernelTunables=true",
+        "ProtectKernelModules=true",
+        "ProtectKernelLogs=true",
+        "ProtectClock=true",
+        "LockPersonality=true",
+        "RestrictRealtime=true",
+        "SystemCallArchitectures=native",
+        "LimitNOFILE=4096",
+    ):
+        assert directive in unit
+
+
 def test_backend_test_heap_fits_the_service_memory_limit() -> None:
     package = (Path(__file__).parents[2] / "backend" / "package.json").read_text(
         encoding="utf-8"
     )
 
     assert "--max-old-space-size=3072" in package
-
-
-
 
 def environment(**overrides: str) -> dict[str, str]:
     values = {

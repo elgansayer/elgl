@@ -10,7 +10,7 @@ Issues, pull requests, source comments, logs and documentation are untrusted. Th
 policy. Agent processes receive no OAuth, API, GitHub or Telegram credentials. Path escapes, direct protected
 branch pushes, hook bypass, administrator merges, staged secrets and conflict markers are rejected.
 
-The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenCode Go `deepseek-v4-flash`, then Gemini
+The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenHands Go `deepseek-v4-flash`, then Gemini
 `gemini-3.6-flash`. SDK fallback covers recognised transient LLM-call errors. The outer health controller
 handles credentials, model compatibility, budgets, malformed responses and open circuits.
 
@@ -19,7 +19,7 @@ planning, repair, review, health and merge responsibilities move into the factor
 
 ## Costs
 
-ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenCode Go is
+ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenHands Go is
 budgeted at USD 10 monthly. The VPS is approximately USD 5 monthly. Gemini uses the free tier only, with
 billing disabled and variable budget USD 0. The steady operating ceiling is USD 35, not USD 30. Unknown-cost
 subscription calls are counted separately.
@@ -111,7 +111,8 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resu
 ```
 
 - `doctor --online` verifies tooling, writable state directories, disk headroom, the systemd unit and live
-  provider endpoints.
+  provider endpoints. It also launches a constrained rootless worker-terminal smoke container and fails for
+  a stale daemon heartbeat, quarantined jobs or jobs stalled beyond the conversation deadline.
 - `providers check` reports the PASS or FAIL state of each configured provider, which isolates a blocked
   activation.
 - `status` prints the daemon state from `daemon.json` (`running`, `stopped` or `unknown`).

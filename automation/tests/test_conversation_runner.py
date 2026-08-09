@@ -1,29 +1,45 @@
+import time
+from dataclasses import dataclass
 from pathlib import Path
+
+import pytest
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.models import Task
 
 
 class Conversation:
-    def __init__(self) -> None:
-        self.closed = False
+    def __init__(self, workspace: Path, stuck: bool) -> None:
+        self.workspace = workspace
+        self.stuck = stuck
 
     def send_message(self, message: str) -> None:
         assert message == "prompt"
 
     def run(self) -> None:
-        return None
+        if self.stuck:
+            time.sleep(60)
 
     def pause(self) -> None:
-        return None
+        (self.workspace / "paused").write_text("yes", encoding="utf-8")
 
     def close(self) -> None:
-        self.closed = True
+        (self.workspace / "closed").write_text("yes", encoding="utf-8")
 
 
-def test_one_bounded_conversation_is_closed(tmp_path: Path) -> None:
-    config = FactoryConfig.from_environment(
+@dataclass(frozen=True)
+class Factory:
+    stuck: bool = False
+
+    def __call__(self, workspace: Path, turns: int) -> Conversation:
+        assert turns == 100
+        return Conversation(workspace, self.stuck)
+
+
+def config() -> FactoryConfig:
+    return FactoryConfig.from_environment(
         {
             "OPENCODE_GO_API_KEY": "key",
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
@@ -31,8 +47,24 @@ def test_one_bounded_conversation_is_closed(tmp_path: Path) -> None:
             "GEMINI_ENABLED": "false",
         }
     )
-    conversation = Conversation()
-    runner = ConversationRunner(config, lambda workspace, turns: conversation)
+
+
+def test_one_bounded_conversation_is_closed(tmp_path: Path) -> None:
+    runner = ConversationRunner(config(), Factory())
+
     result = runner.run(Task("one", "Task", "body", "test", 1), tmp_path, "prompt")
+
     assert result.completed
-    assert conversation.closed
+    assert (tmp_path / "closed").is_file()
+
+
+def test_stuck_conversation_is_cancelled_at_the_wall_clock_deadline(tmp_path: Path) -> None:
+    runner = ConversationRunner(
+        config(), Factory(stuck=True), timeout_seconds=0.2, cancellation_grace_seconds=1
+    )
+    started = time.monotonic()
+
+    with pytest.raises(FactoryError, match="maximum task duration"):
+        runner.run(Task("two", "Task", "body", "test", 1), tmp_path, "prompt")
+
+    assert time.monotonic() - started < 5

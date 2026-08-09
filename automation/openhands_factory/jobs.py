@@ -52,8 +52,9 @@ class JobStore:
             self.save(jobs)
 
     def reconcile(self, tasks: list[Task]) -> dict[str, Job]:
-        jobs = self.load()
-        for task in tasks:
-            jobs.setdefault(task.identifier, Job(task=task))
-        self.save(jobs)
-        return jobs
+        with self._process_lock:
+            jobs = self.load()
+            for task in tasks:
+                jobs.setdefault(task.identifier, Job(task=task))
+            self.save(jobs)
+            return jobs
