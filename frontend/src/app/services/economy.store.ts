@@ -1,12 +1,15 @@
 import { showToast } from './toast.service';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { CentrifugeService } from './centrifuge.service';
 import { I18nService } from './i18n.service';
+import { SafetyService } from './safety.service';
 import { GiftAnimationService, GiftAnimationType } from './gift-animation.service';
+import { OfflineEconomyService } from './offline-economy.service';
+import { NetworkStatusService } from './network-status.service';
 
 export interface VirtualGift {
   id: string;
@@ -44,6 +47,20 @@ export interface StickerPack {
   name: string;
   cost_coins: number;
   owned?: boolean;
+  is_animated?: boolean;
+  sticker_urls?: string[];
+  animation_url?: string;
+}
+
+export interface TransactionRecord {
+  id: string;
+  type: 'earn' | 'spend' | 'gift_sent' | 'gift_received' | 'purchase' | 'daily_checkin';
+  amount: number;
+  description: string;
+  related_user_name?: string;
+  related_user_avatar?: string;
+  gift_icon?: string;
+  created_at: string;
 }
 
 export interface DiagnosticLog {
@@ -70,7 +87,10 @@ export class EconomyStore {
   private authService = inject(AuthService);
   private centrifugeService = inject(CentrifugeService);
   private i18n = inject(I18nService);
+  private safetyService = inject(SafetyService);
   private giftAnimationService = inject(GiftAnimationService);
+  private offlineEconomy = inject(OfflineEconomyService);
+  private networkStatus = inject(NetworkStatusService);
   private baseUrl = `${environment.apiUrl}/economy`;
   private monetisationUrl = `${environment.apiUrl}/monetisation`;
   private safetyUrl = `${environment.apiUrl}/safety`;
@@ -83,7 +103,15 @@ export class EconomyStore {
   readonly activeGiftAnimation = signal<ActiveGiftOverlay | null>(null);
   readonly blockedUserIds = signal<Set<string>>(new Set());
   readonly diagnosticLogs = signal<DiagnosticLog[]>([]);
+  readonly recentTransactions = signal<TransactionRecord[]>([]);
   readonly isLoading = signal<boolean>(false);
+  readonly hasLoadedOnce = signal<boolean>(false);
+  readonly isOnline = this.networkStatus.isOnline;
+
+  /** Whether the coin economy is operating in degraded mode (some features limited). */
+  readonly isDegraded = signal<boolean>(false);
+  /** List of currently degraded feature identifiers reported by the backend. */
+  readonly degradedFeatures = signal<string[]>([]);
 
   private getHeaders() {
     const token = this.authService.getAccessToken();
@@ -96,30 +124,95 @@ export class EconomyStore {
     this.isLoading.set(true);
     try {
       if (!this.authService.currentUser() || !this.authService.getAccessToken()) {
+        this.isLoading.set(false);
+        this.hasLoadedOnce.set(true);
+        if (!this.isOnline()) {
+          await this.hydrateFromOfflineCache();
+        }
         return;
       }
-      const [cat, bal, blocked] = await Promise.all([
-        firstValueFrom(
-          this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
-        ),
-        firstValueFrom(
-          this.http.get<{ coins_balance: number }>(`${this.baseUrl}/balance`, {
-            headers: this.getHeaders(),
-          }),
-        ),
-        firstValueFrom(
-          this.http.get<string[]>(`${this.safetyUrl}/blocked-ids`, { headers: this.getHeaders() }),
-        ),
-      ]);
 
-      this.catalog.set(cat);
-      this.coinsBalance.set(bal.coins_balance);
-      this.blockedUserIds.set(new Set(blocked));
+      // Load each independently so one failure does not block the others
+      const loadCatalog = firstValueFrom(
+        this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
+      ).then((cat) => {
+        this.catalog.set(cat);
+        this.offlineEconomy.cacheCatalog(cat);
+      }).catch((e) => {
+        console.error('Error loading catalog:', e);
+      });
+
+      const loadBalance = firstValueFrom(
+        this.http.get<{ coins_balance: number }>(`${this.baseUrl}/balance`, {
+          headers: this.getHeaders(),
+        }),
+      ).then((bal) => {
+        this.coinsBalance.set(bal.coins_balance);
+        this.offlineEconomy.cacheBalance(bal.coins_balance);
+      }).catch((e) => {
+        console.error('Error loading balance:', e);
+      });
+
+      const loadBlocked = firstValueFrom(
+        this.http.get<string[]>(`${this.safetyUrl}/blocked-ids`, { headers: this.getHeaders() }),
+      ).then((blocked) => this.blockedUserIds.set(new Set(blocked))).catch((e) => {
+        console.error('Error loading blocked users:', e);
+      });
+
+      const loadTransactions = this.loadTransactionHistory().catch((e) => {
+        console.error('Error loading transactions:', e);
+      });
+
+      const loadPacks = this.loadStickerPacks().catch((e) => {
+        console.error('Error loading sticker packs:', e);
+      });
+
+      await Promise.allSettled([loadCatalog, loadBalance, loadBlocked, loadTransactions, loadPacks]);
     } catch (e) {
       console.error('Error loading economy/safety data:', e);
+      await this.hydrateFromOfflineCache();
     } finally {
       this.isLoading.set(false);
+      this.hasLoadedOnce.set(true);
     }
+  }
+
+  private async hydrateFromOfflineCache(): Promise<void> {
+    try {
+      const [cachedState, cachedCatalog] = await Promise.all([
+        this.offlineEconomy.getCachedBalance(),
+        this.offlineEconomy.getCachedCatalog(),
+      ]);
+      if (cachedState) {
+        this.coinsBalance.set(cachedState.coinsBalance);
+      }
+      if (cachedCatalog && cachedCatalog.length > 0) {
+        this.catalog.set(cachedCatalog);
+      }
+    } catch {
+      // Offline cache hydration is best-effort
+    }
+  }
+
+
+  private getDefaultCatalog(): VirtualGift[] {
+    return [
+      { id: 'gift_rose', name: 'Rose', icon: '🌹', cost_coins: 10, animation_type: 'float' },
+      { id: 'gift_heart', name: 'Heart', icon: '❤️', cost_coins: 20, animation_type: 'hearts' },
+      { id: 'gift_confetti', name: 'Confetti Burst', icon: '🎉', cost_coins: 30, animation_type: 'confetti' },
+      { id: 'gift_sparkle', name: 'Sparkle', icon: '✨', cost_coins: 50, animation_type: 'sparkle' },
+      { id: 'gift_crown', name: 'Crown', icon: '👑', cost_coins: 100, animation_type: 'premium' },
+      { id: 'gift_diamond', name: 'Diamond', icon: '💎', cost_coins: 200, animation_type: 'premium' },
+    ];
+  }
+
+  private getDefaultCoinPackages(): CoinPackage[] {
+    return [
+      { id: 'coins_small', name: 'Small Coin Pack', coins: 100, price_ukp: 4, price_usd: 4.99 },
+      { id: 'coins_medium', name: 'Medium Coin Pack', coins: 500, price_ukp: 16, price_usd: 19.99 },
+      { id: 'coins_large', name: 'Large Coin Pack', coins: 1200, price_ukp: 32, price_usd: 39.99 },
+      { id: 'coins_mega', name: 'Mega Coin Pack', coins: 3000, price_ukp: 64, price_usd: 79.99 },
+    ];
   }
 
   async claimDailyCheckIn(): Promise<{
@@ -127,6 +220,7 @@ export class EconomyStore {
     coins_rewarded: number;
     new_balance: number;
   } | null> {
+    if (!this.isOnline()) return null;
     try {
       const res = await firstValueFrom(
         this.http.post<{ claimed: boolean; coins_rewarded: number; new_balance: number }>(
@@ -137,6 +231,7 @@ export class EconomyStore {
       );
       if (res.claimed) {
         this.coinsBalance.set(res.new_balance);
+        this.offlineEconomy.cacheBalance(res.new_balance);
       }
       return res;
     } catch (e) {
@@ -153,8 +248,37 @@ export class EconomyStore {
         }),
       );
       this.coinPackages.set(packages);
+      this.offlineEconomy.cacheCoinPackages(packages);
     } catch (e) {
       console.error('Load coin packages error:', e);
+      if (!this.isOnline()) {
+        const cached = await this.offlineEconomy.getCachedCoinPackages();
+        if (cached && cached.length > 0) {
+          this.coinPackages.set(cached);
+        }
+      }
+    }
+  }
+
+  /**
+   * Checks the economy health endpoint and updates degradation state.
+   * Called periodically or on-demand to detect when backend dependencies
+   * (Redis, Supabase, Stripe, Centrifugo) are degraded/unavailable.
+   */
+  async checkEconomyHealth(): Promise<void> {
+    try {
+      const health = await firstValueFrom(
+        this.http.get<{
+          overall: 'healthy' | 'degraded' | 'unavailable';
+          degradedFeatures: string[];
+        }>(`${this.baseUrl}/health`),
+      );
+      this.isDegraded.set(health.overall !== 'healthy');
+      this.degradedFeatures.set(health.degradedFeatures ?? []);
+    } catch {
+      // If the health endpoint itself is unreachable, we are in degraded mode
+      this.isDegraded.set(true);
+      this.degradedFeatures.set(['health-endpoint-unreachable']);
     }
   }
 
@@ -166,6 +290,10 @@ export class EconomyStore {
    * verification.
    */
   async buyCoins(packageId: string): Promise<void> {
+    if (!this.isOnline()) {
+      showToast(this.i18n.translate('economy.offlinePurchaseUnavailable'));
+      return;
+    }
     try {
       const res = await firstValueFrom(
         this.http.post<{ sessionUrl: string; sessionId: string }>(
@@ -194,6 +322,7 @@ export class EconomyStore {
         ),
       );
       this.coinsBalance.set(res.newBalance);
+      this.offlineEconomy.cacheBalance(res.newBalance);
       showToast(
         this.i18n.translate('economy.purchaseSuccessToast', {
           coins: res.coins,
@@ -209,6 +338,15 @@ export class EconomyStore {
   }
 
   async sendGift(receiverId: string, giftId: string, roomId?: string): Promise<boolean> {
+    if (!this.isOnline()) {
+      await this.offlineEconomy.enqueuePendingAction('send_gift', {
+        receiver_id: receiverId,
+        gift_id: giftId,
+        room_id: roomId,
+      });
+      showToast(this.i18n.translate('economy.offlineGiftQueued'));
+      return true;
+    }
     try {
       const res = await firstValueFrom(
         this.http.post<{ success: boolean; coins_remaining: number; gift: VirtualGift }>(
@@ -218,6 +356,7 @@ export class EconomyStore {
         ),
       );
       this.coinsBalance.set(res.coins_remaining);
+      this.offlineEconomy.cacheBalance(res.coins_remaining);
       return true;
     } catch (e: unknown) {
       console.error('Send gift error:', e);
@@ -233,6 +372,10 @@ export class EconomyStore {
    * redirects the browser there; it must never set `is_vip` client-side.
    */
   async upgradeVip(tier: 'consumer' | 'developer'): Promise<void> {
+    if (!this.isOnline()) {
+      showToast(this.i18n.translate('economy.offlinePurchaseUnavailable'));
+      return;
+    }
     const planId = tier === 'developer' ? 'developer_20_ukp_26_usd' : 'consumer_8_ukp_10_usd';
     try {
       const res = await firstValueFrom(
@@ -285,10 +428,15 @@ export class EconomyStore {
     message: string;
   }): Promise<void> {
     try {
+      // Cap message size to prevent unbounded memory from long diagnostic strings.
+      const safePayload = {
+        ...payload,
+        message: payload.message.slice(0, 500),
+      };
       const created = await firstValueFrom(
         this.http.post<DiagnosticLogApiRecord>(
           `${this.monetisationUrl}/diagnostics/logs`,
-          payload,
+          safePayload,
           {
             headers: this.getHeaders(),
           },
@@ -328,13 +476,11 @@ export class EconomyStore {
 
   async reportUser(reportedId: string, reason: string, details?: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.post(
-          `${this.safetyUrl}/report`,
-          { reported_id: reportedId, reason, details },
-          { headers: this.getHeaders() },
-        ),
-      );
+      await this.safetyService.reportUser({
+        reported_id: reportedId,
+        reason_category: reason,
+        description: details,
+      });
       showToast(
         '🛡️ Thank you. Your report has been submitted to our Trust & Safety moderation team for review within 24 hours.',
       );
@@ -346,13 +492,7 @@ export class EconomyStore {
 
   async blockUser(blockedId: string): Promise<void> {
     try {
-      await firstValueFrom(
-        this.http.post(
-          `${this.safetyUrl}/block`,
-          { blocked_id: blockedId },
-          { headers: this.getHeaders() },
-        ),
-      );
+      await this.safetyService.blockUserAsync(blockedId);
       const set = new Set(this.blockedUserIds());
       set.add(blockedId);
       this.blockedUserIds.set(set);
@@ -380,7 +520,13 @@ export class EconomyStore {
     });
   }
 
-  private readonly validAnimationTypes = new Set<string>(['float', 'confetti', 'premium', 'sparkle', 'hearts']);
+  private readonly validAnimationTypes = new Set<string>([
+    'float',
+    'confetti',
+    'premium',
+    'sparkle',
+    'hearts',
+  ]);
   private sanitiseAnimationType(raw: string): GiftAnimationType {
     if (this.isAnimationType(raw)) return raw;
     return 'float';
@@ -412,6 +558,19 @@ export class EconomyStore {
     });
   }
 
+  async loadTransactionHistory(): Promise<void> {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ transactions: TransactionRecord[] }>(`${this.baseUrl}/transactions`, {
+          headers: this.getHeaders(),
+        }),
+      );
+      this.recentTransactions.set(res.transactions ?? []);
+    } catch (e) {
+      console.error('Load transaction history error:', e);
+    }
+  }
+
   async loadStickerPacks(): Promise<void> {
     try {
       const res = await firstValueFrom(
@@ -423,18 +582,32 @@ export class EconomyStore {
       );
       this.coinsBalance.set(res.user_coins);
       const ownedSet = new Set(res.owned_pack_ids);
-      this.stickerPacks.set(
-        res.packs.map((pack) => ({
-          ...pack,
-          owned: ownedSet.has(pack.id),
-        })),
-      );
+      const processed = res.packs.map((pack) => ({
+        ...pack,
+        owned: ownedSet.has(pack.id),
+      }));
+      this.stickerPacks.set(processed);
+      this.offlineEconomy.cacheStickerPacks(processed);
+      this.offlineEconomy.cacheBalance(res.user_coins);
     } catch (e) {
       console.error('Load sticker packs error:', e);
+      if (!this.isOnline()) {
+        const cached = await this.offlineEconomy.getCachedStickerPacks();
+        if (cached && cached.length > 0) {
+          this.stickerPacks.set(cached);
+        }
+      }
     }
   }
 
   async unlockStickerPack(packId: string): Promise<boolean> {
+    if (!this.isOnline()) {
+      await this.offlineEconomy.enqueuePendingAction('unlock_sticker', {
+        pack_id: packId,
+      });
+      showToast(this.i18n.translate('economy.offlineGiftQueued'));
+      return false;
+    }
     try {
       const res = await firstValueFrom(
         this.http.post<{
@@ -449,10 +622,9 @@ export class EconomyStore {
       );
       if (res.success) {
         this.coinsBalance.set(res.coins_remaining);
+        this.offlineEconomy.cacheBalance(res.coins_remaining);
         this.stickerPacks.update((packs) =>
-          packs.map((p) =>
-            p.id === packId ? { ...p, owned: true } : p,
-          ),
+          packs.map((p) => (p.id === packId ? { ...p, owned: true } : p)),
         );
         showToast(
           this.i18n.translate('sticker.purchaseSuccess', {
@@ -468,6 +640,23 @@ export class EconomyStore {
       return false;
     }
   }
+
+  readonly unlockedStickerUrls = computed(() => {
+    return this.stickerPacks()
+      .filter((pack) => pack.owned && pack.sticker_urls && pack.sticker_urls.length > 0)
+      .flatMap((pack) =>
+        (pack.sticker_urls ?? []).map((url) => ({
+          id: `${pack.id}_${url.split('/').pop() ?? url}`,
+          url,
+          pack_name: pack.name,
+          is_animated: pack.is_animated ?? (url.endsWith('.webm') || url.endsWith('.json')),
+        })),
+      );
+  });
+
+  readonly unlockedStickerPacks = computed(() => {
+    return this.stickerPacks().filter((pack) => pack.owned);
+  });
 
   private mapDiagnosticLog(log: DiagnosticLogApiRecord): DiagnosticLog {
     return {

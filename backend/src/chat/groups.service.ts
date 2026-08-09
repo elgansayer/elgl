@@ -17,6 +17,9 @@ export interface GroupMember {
     id: string;
     display_name: string | null | undefined;
     avatar_url: string | null | undefined;
+    native_language: string | null | undefined;
+    target_languages: string[] | null | undefined;
+    is_vip: boolean | null | undefined;
   } | null;
 }
 
@@ -45,8 +48,8 @@ export class GroupsService {
     name: string,
     memberIds: string[],
   ): Promise<ChatRoomRecord> {
-    if (memberIds.length > 49) {
-      throw new Error('Group cannot exceed 50 members');
+    if (memberIds.length > 50) {
+      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
     }
     const supabase = this.supabaseService.getClient();
 
@@ -155,7 +158,10 @@ export class GroupsService {
         user:users!chat_room_members_user_id_fkey (
           id,
           display_name,
-          avatar_url
+          avatar_url,
+          native_language,
+          target_languages,
+          is_vip
         )
       `,
       )
@@ -272,8 +278,8 @@ export class GroupsService {
     name: string,
     memberIds: string[],
   ): Promise<ChatRoomRecord> {
-    if (memberIds.length > 49) {
-      throw new Error('Group cannot exceed 50 members');
+    if (memberIds.length > 50) {
+      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
     }
     const supabase = this.supabaseService.getClient();
 

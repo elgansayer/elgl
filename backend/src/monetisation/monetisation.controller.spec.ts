@@ -27,6 +27,7 @@ describe('MonetisationController', () => {
             getDiagnosticLogs: jest.fn(),
             createDiagnosticLog: jest.fn(),
             createCheckoutSession: jest.fn(),
+            restorePurchases: jest.fn(),
             getSubscriptionDetails: jest.fn(),
             cancelSubscription: jest.fn(),
             resumeSubscription: jest.fn(),
@@ -453,6 +454,116 @@ describe('MonetisationController', () => {
       expect(
         monetisationService.createBillingPortalSession,
       ).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('restorePurchases', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.restorePurchases(null, {
+        platform: 'ios',
+      });
+      expect(result).toBeNull();
+      expect(monetisationService.restorePurchases).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException for invalid platform', async () => {
+      await expect(
+        controller.restorePurchases({ id: 'user-1' } as any, {
+          platform: 'windows',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should default to stripe when platform is empty', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        { platform: '' },
+      );
+
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'stripe',
+        undefined,
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should default to stripe when platform is not provided', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        {},
+      );
+
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'stripe',
+        undefined,
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should accept ios platform', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        { platform: 'ios', receipt_data: 'test-receipt' },
+      );
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'ios',
+        'test-receipt',
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should accept android platform', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        { platform: 'android', receipt_data: 'test-token' },
+      );
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'android',
+        'test-token',
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should accept stripe platform', async () => {
+      const response = { received: true, status: 'restored' };
+      (monetisationService.restorePurchases as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.restorePurchases(
+        { id: 'user-1' } as any,
+        { platform: 'stripe' },
+      );
+      expect(monetisationService.restorePurchases).toHaveBeenCalledWith(
+        'user-1',
+        'stripe',
+        undefined,
+      );
       expect(result).toEqual(response);
     });
   });

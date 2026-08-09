@@ -1,9 +1,12 @@
 import { Component, inject, signal, resource } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 
 import { AppCardComponent } from '../../components/primitives/card/card.component';
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
 import { AppPillComponent } from '../../components/primitives/pill/pill.component';
 import { AppGradientButtonComponent } from '../../components/primitives/gradient-button/gradient-button.component';
+import { RestorePurchasesButtonComponent } from '../../components/restore-purchases-button/restore-purchases-button.component';
 import { MonetisationService } from '../../services/monetisation.service';
 import {
   SubscriptionPlansService,
@@ -14,18 +17,21 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 @Component({
   selector: 'app-subscription-page',
   imports: [
+    TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,
+    
     AppPillComponent,
     AppGradientButtonComponent,
+    RestorePurchasesButtonComponent,
   ],
   template: `
     <div class="min-h-screen bg-surface-600 py-12 px-4">
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-12">
-          <h1 class="text-4xl font-extrabold text-text-primary mb-3">Choose Your Plan</h1>
+          <h1 class="text-4xl font-extrabold text-text-primary mb-3">{{ 'subscription.page.title' | t }}</h1>
           <p class="text-lg text-text-secondary max-w-2xl mx-auto">
-            Unlock premium features to accelerate your language learning journey.
+            {{ 'subscription.page.subtitle' | t }}
           </p>
         </div>
 
@@ -43,9 +49,9 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
             customClass="max-w-md mx-auto border-red-500/30 bg-red-500/10"
           >
             <div class="text-center py-4">
-              <p class="text-red-400 font-semibold mb-2">Failed to load plans</p>
+              <p class="text-red-400 font-semibold mb-2">{{ 'subscription.page.loadError' | t }}</p>
               <p class="text-text-secondary text-sm mb-4">{{ errorMessage() }}</p>
-              <app-button-primary (clicked)="loadPlans()" size="sm"> Try Again </app-button-primary>
+              <app-button-primary (clicked)="loadPlans()" size="sm">{{ 'subscription.page.retry' | t }}</app-button-primary>
             </div>
           </app-card>
         }
@@ -59,7 +65,7 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
               >
                 @if (plan.is_popular) {
                   <div class="absolute -top-3 inset-x-0 flex justify-center">
-                    <app-pill label="Most Popular" colour="primary" size="sm" />
+                    <app-pill [label]="'subscription.page.mostPopular' | t" colour="primary" size="sm" />
                   </div>
                 }
 
@@ -98,15 +104,22 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
                         <span
                           class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"
                         ></span>
-                        Redirecting...
+                        {{ 'subscription.page.redirecting' | t }}
                       </span>
                     } @else {
-                      {{ plan.interval === 'month' ? 'Subscribe Monthly' : 'Subscribe Yearly' }}
+                      {{ plan.interval === 'month' ? ('subscription.page.subscribeMonthly' | t) : ('subscription.page.subscribeYearly' | t) }}
                     }
                   </app-gradient-button>
                 </div>
               </app-card>
             }
+          </div>
+
+          <div class="mt-8 text-center">
+            <p class="text-xs text-text-secondary mb-2">
+              {{ 'restore_purchases_description' | t }}
+            </p>
+            <app-restore-purchases-button />
           </div>
         }
       </div>
@@ -116,6 +129,7 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 export class SubscriptionPageComponent {
   private readonly monetisationService = inject(MonetisationService);
   private readonly subscriptionPlansService = inject(SubscriptionPlansService);
+  private readonly i18n = inject(I18nService);
 
   readonly plans = signal<SubscriptionPlan[]>([]);
   readonly isLoading = signal(true);
@@ -134,7 +148,7 @@ export class SubscriptionPageComponent {
         this.plans.set(plans);
         return plans;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unable to load subscription plans.';
+        const message = err instanceof Error ? err.message : this.i18n.translate('subscription.page.loadError');
         this.errorMessage.set(message);
         return EMPTY_PLANS;
       } finally {
@@ -159,7 +173,7 @@ export class SubscriptionPageComponent {
     } catch (err) {
       this.subscribingPlanId.set(null);
       const message =
-        err instanceof Error ? err.message : 'Failed to start checkout. Please try again.';
+        err instanceof Error ? err.message : this.i18n.translate('subscription.page.checkoutError');
       this.errorMessage.set(message);
     }
   }

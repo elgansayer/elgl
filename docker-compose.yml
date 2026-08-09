@@ -85,6 +85,8 @@ services:
     ports:
       - '7880:7880'
       - '7881:7881'
+      - '3478:3478/udp'
+      - '5349:5349'
       - '50000-60000:50000-60000/udp'
     volumes:
       - ./config/livekit:/livekit

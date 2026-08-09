@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { validationSchema } from './config/validation.schema';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { SharedLoggerModule } from './common/logger/logger.module';
+import { RetryModule } from './common/retry/retry.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LocationModule } from './location/location.module';
@@ -21,6 +23,7 @@ import { MomentsModule } from './moments/moments.module';
 import { AudioRoomsModule } from './audio-rooms/audio-rooms.module';
 import { MonetisationModule } from './monetisation/monetisation.module';
 import { EconomyModule } from './economy/economy.module';
+import { EscrowModule } from './escrow/escrow.module';
 import { SafetyModule } from './safety/safety.module';
 import { HobbyTagsModule } from './hobby-tags/hobby-tags.module';
 import { InterestsModule } from './interests/interests.module';
@@ -28,6 +31,7 @@ import { FavouritesModule } from './favourites/favourites.module';
 import { VideoCallsModule } from './video-calls/video-calls.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { StreakModule } from './streak/streak.module';
+import { BlocksModule } from './blocks/blocks.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
@@ -55,7 +59,6 @@ import { MilestonesModule } from './milestones/milestones.module';
 import { StudyBuddiesModule } from './study-buddies/study-buddies.module';
 import { AudioIntroModule } from './audio-intro/audio-intro.module';
 import { StatsModule } from './stats/stats.module';
-import { ScheduledDeletionModule } from './scheduled-deletion/scheduled-deletion.module';
 import { EventsModule } from './events/events.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { LinkPreviewModule } from './link-preview/link-preview.module';
@@ -67,10 +70,14 @@ import { LanguageIslandsModule } from './language-islands/language-islands.modul
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { EmailModule } from './email/email.module';
 import { PasswordResetModule } from './password-reset/password-reset.module';
+import { LinkedAccountsModule } from './linked-accounts/linked-accounts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { PronunciationScoringService } from './pronunciation-scoring/pronunciation-scoring.service';
 import { AnkiiIntegrationService } from './ankii-integration/ankii-integration.service';
 import { AssessmentsModule } from './assessments/assessments.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { ReadingEngineModule } from './reading-engine/reading-engine.module';
+import { CloudflareModule } from './cloudflare/cloudflare.module';
+import { LivekitModule } from './livekit/livekit.module';
 
 @Module({
   imports: [
@@ -96,6 +103,9 @@ import { AssessmentsModule } from './assessments/assessments.module';
       verboseMemoryLeak: false,
       ignoreErrors: false,
     }),
+    SharedLoggerModule,
+    RetryModule,
+    LivekitModule,
     SupabaseModule,
     LocationModule,
     AuthModule,
@@ -111,6 +121,7 @@ import { AssessmentsModule } from './assessments/assessments.module';
     AudioRoomsModule,
     MonetisationModule,
     EconomyModule,
+    EscrowModule,
     SafetyModule,
     HobbyTagsModule,
     InterestsModule,
@@ -118,6 +129,7 @@ import { AssessmentsModule } from './assessments/assessments.module';
     VideoCallsModule,
     LeaderboardModule,
     StreakModule,
+    BlocksModule,
     NotificationsModule,
     CallsModule,
     QuizModule,
@@ -143,7 +155,6 @@ import { AssessmentsModule } from './assessments/assessments.module';
     StudyBuddiesModule,
     AudioIntroModule,
     StatsModule,
-    ScheduledDeletionModule,
     EventsModule,
     LessonsModule,
     LinkPreviewModule,
@@ -156,8 +167,12 @@ import { AssessmentsModule } from './assessments/assessments.module';
     LanguageIslandsModule,
     EmailModule,
     PasswordResetModule,
-	    AssessmentsModule,
-	    AnalyticsModule,
+    LinkedAccountsModule,
+    AssessmentsModule,
+    AnalyticsModule,
+    MetricsModule,
+    ReadingEngineModule,
+    CloudflareModule,
   ],
   controllers: [AppController],
   providers: [
@@ -167,7 +182,6 @@ import { AssessmentsModule } from './assessments/assessments.module';
 
       useClass: ThrottlerGuard,
     },
-    PronunciationScoringService,
     AnkiiIntegrationService,
   ],
 })

@@ -4,24 +4,26 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { OnboardingService } from '../../services/onboarding.service';
 import { I18nService } from '../../services/i18n.service';
+import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.component';
 
 @Component({
   selector: 'app-onboarding-wizard',
-  standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, DiagnosticQuizComponent],
   template: `
     <div class="onboarding-wizard surface text-on-surface ps-4 pe-4 pt-6 pb-6">
       <h1 class="text-xl font-bold">{{ 'onboarding.title' | t }}</h1>
       <p class="text-sm opacity-80">{{ 'onboarding.subtitle' | t }}</p>
 
       <!-- step progress indicators -->
-      <div class="mt-4 flex gap-2">
+      <div class="mt-4 flex flex-wrap gap-2">
         @for (step of onboardingService.steps; track $index) {
           <div
             class="flex items-center gap-2 p-2 rounded"
             [class.bg-accent/20]="onboardingService.currentStep() === $index"
           >
-            <span class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-variant text-sm">
+            <span
+              class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-variant text-sm"
+            >
               {{ $index + 1 }}
             </span>
             <span>{{ step.label | t }}</span>
@@ -29,10 +31,12 @@ import { I18nService } from '../../services/i18n.service';
         }
       </div>
 
-      <!-- step content -->
+      <!-- step 0: native language -->
       @if (onboardingService.currentStep() === 0) {
         <div class="mt-4">
-          <label class="block text-sm mb-1" for="native-lang">{{ 'onboarding.step1.label' | t }}</label>
+          <label class="block text-sm mb-1" for="native-lang">{{
+            'onboarding.step1.label' | t
+          }}</label>
           <select
             id="native-lang"
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
@@ -47,6 +51,7 @@ import { I18nService } from '../../services/i18n.service';
         </div>
       }
 
+      <!-- step 1: target languages -->
       @if (onboardingService.currentStep() === 1) {
         <div class="mt-4">
           <span class="block text-sm mb-1">{{ 'onboarding.step2.label' | t }}</span>
@@ -65,15 +70,28 @@ import { I18nService } from '../../services/i18n.service';
         </div>
       }
 
+      <!-- step 2: diagnostic quiz -->
       @if (onboardingService.currentStep() === 2) {
         <div class="mt-4">
-          <label class="block text-sm mb-1" for="display-name">{{ 'onboarding.step3.label' | t }}</label>
+          <app-diagnostic-quiz
+            [targetLanguage]="firstTargetLanguage()"
+            (quizCompleted)="onQuizComplete($event)"
+          />
+        </div>
+      }
+
+      <!-- step 3: display name -->
+      @if (onboardingService.currentStep() === 3) {
+        <div class="mt-4">
+          <label class="block text-sm mb-1" for="display-name">{{
+            'onboarding.step4.label' | t
+          }}</label>
           <input
             id="display-name"
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
             [value]="onboardingService.displayName()"
             (input)="onDisplayNameInput($event)"
-            placeholder="{{ 'onboarding.step3.placeholder' | t }}"
+            placeholder="{{ 'onboarding.step4.placeholder' | t }}"
           />
         </div>
       }
@@ -110,8 +128,14 @@ export class OnboardingWizardComponent {
   readonly onboardingService = inject(OnboardingService);
   readonly i18n = inject(I18nService);
 
-  /** Local computed to decide navigation – delegating to service. */
-  readonly canGoNext = computed(() => this.onboardingService.canGoNext());
+  /** First selected target language code, used for the diagnostic quiz. */
+  readonly firstTargetLanguage = computed(() => {
+    const targets = this.onboardingService.targetLanguages();
+    if (targets.size > 0) {
+      return [...targets][0];
+    }
+    return 'en';
+  });
 
   onNativeLanguageChange(event: Event): void {
     if (!(event.target instanceof HTMLSelectElement)) {
@@ -127,10 +151,19 @@ export class OnboardingWizardComponent {
     this.onboardingService.setDisplayName(event.target.value);
   }
 
+  onQuizComplete(result: { score: number; suggestedLevel: string; maxScore: number }): void {
+    this.onboardingService.setQuizResult({
+      score: result.score,
+      suggestedCefr: result.suggestedLevel,
+      percentage: result.maxScore > 0 ? Math.round((result.score / result.maxScore) * 100) : 0,
+      skillBreakdown: {},
+    });
+  }
+
   handleNext(): void {
     this.onboardingService.nextStep();
     if (this.onboardingService.isOnboardingComplete()) {
-      this.router.navigate(['/']);
+      this.router.navigate(['/diagnostic-quiz']);
     }
   }
 }

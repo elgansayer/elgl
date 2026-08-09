@@ -2,6 +2,7 @@ export interface CategoryPreference {
   push: boolean;
   email: boolean;
   in_app: boolean;
+  badges: boolean;
 }
 
 export interface NotificationPreferences {
