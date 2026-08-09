@@ -74,9 +74,15 @@ class FactoryDaemon:
                     job = future.result()
                     if job is not None:
                         LOGGER.info("Advanced task %s to %s", task_id, job.state.value)
-                if not self.paused() and not active:
+                if not self.paused() and len(active) < self.config.max_parallel_jobs:
                     jobs = self.pipeline.refresh()
-                    for job in select_batch(jobs, self.config.max_parallel_jobs):
+                    available_candidates = [
+                        job for job in select_batch(jobs, len(jobs))
+                        if job.task.identifier not in active.values()
+                    ]
+                    for job in available_candidates:
+                        if len(active) >= self.config.max_parallel_jobs:
+                            break
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
