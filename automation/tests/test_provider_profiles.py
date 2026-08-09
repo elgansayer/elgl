@@ -51,6 +51,33 @@ def test_provider_priority_order() -> None:
     ]
 
 
+def test_configured_three_provider_order_and_models() -> None:
+    factory_config = FactoryConfig.from_environment(
+        {
+            "OPENHANDS_OPENAI_MODEL": "gpt-5.6-sol",
+            "OPENCODE_GO_API_KEY": "not-a-real-key",
+            "OPENCODE_GO_MODEL": "deepseek-v4-flash",
+            "GITHUB_TOKEN": "not-a-real-token",
+            "GEMINI_ENABLED": "true",
+            "GEMINI_API_KEY": "not-a-real-key",
+            "GEMINI_MODEL": "gemini-3.6-flash",
+        }
+    )
+
+    profiles = ordered_profiles(factory_config)
+
+    assert [profile.name for profile in profiles] == [
+        ProviderName.OPENAI_SUBSCRIPTION,
+        ProviderName.OPENCODE_GO,
+        ProviderName.GEMINI,
+    ]
+    assert [profile.model for profile in profiles] == [
+        "gpt-5.6-sol",
+        "openai/deepseek-v4-flash",
+        "gemini/gemini-3.6-flash",
+    ]
+
+
 def test_openai_credentials_must_exist_and_be_non_empty(tmp_path: Path) -> None:
     credentials = tmp_path / ".openhands" / "auth" / "openai_oauth.json"
     credentials.parent.mkdir(parents=True)

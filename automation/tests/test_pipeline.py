@@ -4,6 +4,7 @@ import pytest
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationResult
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import PullRequestStatus
 from openhands_factory.models import JobState, Task
@@ -54,6 +55,11 @@ class GitHub:
 class Conversations:
     def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
         return ConversationResult(task.identifier, 1, True)
+
+
+class FailingConversations:
+    def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
+        raise FactoryError("Conversation exceeded the maximum task duration")
 
 
 def config(tmp_path: Path) -> FactoryConfig:
@@ -110,6 +116,47 @@ def test_refresh_releases_closed_issue_before_pull_request(
     assert refreshed["42"].state is JobState.DONE
     assert refreshed["42"].last_error == "Issue closed before pull request creation"
     assert removed == [worktree]
+
+
+def test_refresh_does_not_remove_a_closed_issue_while_its_worker_is_active(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save({"42": job})
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    removed: list[Path] = []
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path: removed.append(path)
+    )
+    github.tasks = []
+
+    refreshed = pipeline.refresh({"42"})
+
+    assert refreshed["42"].state is JobState.IMPLEMENTING
+    assert removed == []
+
+
+def test_refresh_releases_a_closed_quarantined_issue(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    job.state = JobState.QUARANTINED
+    pipeline.jobs.save({"42": job})
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path: None)
+    github.tasks = []
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["42"].state is JobState.DONE
+    assert refreshed["42"].last_error == "Issue closed before pull request creation"
 
 
 def test_complete_pipeline_reaches_done_only_after_merge(
@@ -207,3 +254,27 @@ def test_run_job_advances_only_the_selected_durable_job(
     assert advanced is not None
     assert restored["43"].state is JobState.IMPLEMENTING
     assert restored["42"].state is JobState.DISCOVERED
+
+
+def test_conversation_timeout_retries_durably_then_quarantines(tmp_path: Path) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=github,  # type: ignore[arg-type]
+        conversations=FailingConversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save({"42": job})
+
+    first = pipeline.run_job("42")
+    second = pipeline.run_job("42")
+    third = pipeline.run_job("42")
+
+    assert first is not None and first.attempts == 1
+    assert second is not None and second.attempts == 2
+    assert third is not None and third.state is JobState.QUARANTINED
+    restored = pipeline.jobs.load()["42"]
+    assert restored.attempts == 3
+    assert restored.state is JobState.QUARANTINED
+    assert (42, ("factory-quarantined", "needs-human")) in github.labels

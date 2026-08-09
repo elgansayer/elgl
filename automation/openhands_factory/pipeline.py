@@ -25,6 +25,7 @@ PRE_PULL_REQUEST_STATES = {
     JobState.IMPLEMENTING,
     JobState.VERIFYING,
     JobState.PR_DRAFT,
+    JobState.QUARANTINED,
 }
 
 
@@ -50,7 +51,7 @@ class FactoryPipeline:
         self.labels_ready = False
         self.verification_slots = verification_slots
 
-    def refresh(self) -> dict[str, Job]:
+    def refresh(self, protected_task_ids: set[str] | None = None) -> dict[str, Job]:
         if not self.labels_ready:
             self.github.ensure_factory_labels()
             self.labels_ready = True
@@ -58,8 +59,13 @@ class FactoryPipeline:
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
         active_task_ids = {task.identifier for task in tasks}
+        protected = protected_task_ids or set()
         for task_id, job in jobs.items():
-            if task_id in active_task_ids or job.state not in PRE_PULL_REQUEST_STATES:
+            if (
+                task_id in active_task_ids
+                or task_id in protected
+                or job.state not in PRE_PULL_REQUEST_STATES
+            ):
                 continue
             worktree = self.config.worktree_dir / f"issue-{task_id}"
             if worktree.exists():
@@ -68,8 +74,8 @@ class FactoryPipeline:
             self.tasks.release(task_id)
             job.state = JobState.DONE
             job.last_error = "Issue closed before pull request creation"
-        self.jobs.save(jobs)
-        return jobs
+            self.jobs.save_job(job)
+        return self.jobs.load()
 
     def run_once(self) -> Job | None:
         jobs = self.refresh()

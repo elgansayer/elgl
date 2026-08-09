@@ -10,9 +10,11 @@ EnvironmentFile=/etc/hellotalk-factory/factory.env
 Environment=HOME=/var/lib/hellotalk-factory/home
 ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory doctor
 UMask=0077
-NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
+Delegate=yes
+ProtectControlGroups=false
 ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory
-
+TasksMax=128
+MemoryMax=512M

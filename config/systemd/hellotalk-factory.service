@@ -25,7 +25,10 @@ ProtectHome=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectKernelLogs=true
-ProtectControlGroups=true
+# Rootless Podman receives only this service's delegated cgroup subtree. This is
+# required for the per-worker CPU, memory and process limits below the parent cap.
+Delegate=yes
+ProtectControlGroups=false
 ProtectClock=true
 LockPersonality=true
 RestrictRealtime=true

@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from openhands_factory.jobs import JobStore
@@ -28,3 +29,18 @@ def test_reconcile_adds_new_tasks_without_dropping_old_jobs(tmp_path: Path) -> N
     jobs = store.reconcile([second])
 
     assert set(jobs) == {"1", "2"}
+
+
+def test_parallel_job_updates_do_not_lose_sibling_state(tmp_path: Path) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    tasks = [Task(str(identifier), "Task", "", "github-issue", 0) for identifier in range(6)]
+    jobs = store.reconcile(tasks)
+    for item in jobs.values():
+        item.state = JobState.IMPLEMENTING
+
+    with ThreadPoolExecutor(max_workers=6) as workers:
+        list(workers.map(store.save_job, jobs.values()))
+
+    restored = store.load()
+    assert set(restored) == {task.identifier for task in tasks}
+    assert all(item.state is JobState.IMPLEMENTING for item in restored.values())

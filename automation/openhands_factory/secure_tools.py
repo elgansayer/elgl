@@ -20,6 +20,44 @@ if TYPE_CHECKING:
     from openhands.sdk.conversation.state import ConversationState
 
 
+def podman_run_arguments(
+    workspace: Path,
+    repository: Path,
+    image: str,
+    command: str,
+    *,
+    workspace_access: str = "rw",
+    pids_limit: int = 512,
+    memory_limit: str = "3g",
+    cpu_limit: str = "2",
+) -> list[str]:
+    """Build the common constrained worker-container command line."""
+    arguments = [
+        "run",
+        "--rm",
+        "--network=none",
+        f"--pids-limit={pids_limit}",
+        f"--memory={memory_limit}",
+        f"--cpus={cpu_limit}",
+        "--security-opt=no-new-privileges",
+        "--cap-drop=all",
+        "--userns=keep-id",
+        "--volume",
+        f"{workspace}:/workspace:{workspace_access},Z",
+    ]
+    for relative in (
+        "node_modules",
+        "frontend/node_modules",
+        "backend/node_modules",
+        "e2e/node_modules",
+    ):
+        dependency_path = repository / relative
+        if dependency_path.is_dir():
+            arguments.extend(("--volume", f"{dependency_path}:/workspace/{relative}:ro,Z"))
+    arguments.extend(("--workdir=/workspace", image, "/bin/bash", "-lc", command))
+    return arguments
+
+
 class ContainedFileEditorExecutor(ToolExecutor[FileEditorAction, FileEditorObservation]):
     """Reject reads and writes which resolve outside the task worktree."""
 
@@ -72,28 +110,13 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
         timeout = min(action.timeout or 300, 1800)
         arguments = [
             str(self.podman_path),
-            "run",
-            "--rm",
-            "--network=none",
-            "--pids-limit=512",
-            "--memory=3g",
-            "--cpus=2",
-            "--security-opt=no-new-privileges",
-            "--cap-drop=all",
-            "--userns=keep-id",
-            "--volume",
-            f"{self.workspace}:/workspace:rw,Z",
+            *podman_run_arguments(
+                self.workspace,
+                self.repository,
+                self.image,
+                action.command,
+            ),
         ]
-        for relative in (
-            "node_modules",
-            "frontend/node_modules",
-            "backend/node_modules",
-            "e2e/node_modules",
-        ):
-            dependency_path = self.repository / relative
-            if dependency_path.is_dir():
-                arguments.extend(("--volume", f"{dependency_path}:/workspace/{relative}:ro,Z"))
-        arguments.extend(("--workdir=/workspace", self.image, "/bin/bash", "-lc", action.command))
         environment = {
             "HOME": os.environ.get("HOME", "/var/empty"),
             "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
