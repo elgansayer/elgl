@@ -54,7 +54,7 @@
         >
           <div class="flex items-center gap-3">
             @if (user.avatar_url) {
-              <img loading="lazy"
+              <img
                 [src]="user.avatar_url"
                 [alt]="user.display_name ?? ''"
                 class="w-10 h-10 rounded-full object-cover"

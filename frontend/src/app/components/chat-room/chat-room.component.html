@@ -43,20 +43,14 @@
       >
         <span class="text-sm leading-none">{{ isLocked() ? '🔒' : '🔓' }}</span>
       </button>
-      <input
-        type="text"
-        [(ngModel)]="searchQuery"
-        (keyup.enter)="onSearch()"
-        [placeholder]="'chatRoom.searchPlaceholder' | t"
-        class="app-input w-28 sm:w-44 text-xs pt-2 pb-2"
-        [attr.aria-label]="'text input'"
-      />
       <button
-        (click)="onSearch()"
-        class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
+        type="button"
+        (click)="showSearchPanel.update(v => !v)"
+        class="app-button-secondary p-2 text-xs"
         [attr.aria-label]="'chatRoom.searchBtn' | t"
+        [attr.title]="'chatRoom.searchBtn' | t"
       >
-        {{ 'chatRoom.searchBtn' | t }}
+        <span class="text-sm leading-none">🔍</span>
       </button>
     </div>
   </div>
@@ -75,6 +69,12 @@
       </button>
     </div>
   } @else {
+    <!-- Search Panel -->
+    @if (showSearchPanel()) {
+      <div class="mt-2.5">
+        <app-chat-search [roomId]="roomId" (messageSelect)="onSearchResultSelect($event)"></app-chat-search>
+      </div>
+    }
     @if (showAdminPanel()) {
       <div
         class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
@@ -172,9 +172,11 @@
             (transliterate)="transliterateMessage(msg)"
             (speak)="speakMessage(msg)"
             (correct)="startCorrection(msg)"
+            (requestCorrection)="requestCorrection(msg)"
           >
             <div
               [id]="'msg-' + msg.id"
+              [attr.data-message-id]="msg.id"
               data-testid="chat-message"
               [class]="
                 'chat-message flex gap-2 ' + (isOwnMessage(msg) ? 'justify-end' : 'justify-start')
@@ -196,9 +198,94 @@
                   [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
                   aria-hidden="true"
                 ></span>
-                <p class="mb-1 text-[11px] opacity-70">
-                  {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
-                  {{ msg.created_at | date: 'shortTime' }}
+                <p class="mb-1 text-[11px] opacity-70 flex items-center gap-1">
+                  <span>
+                    {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
+                    {{ msg.created_at | date: 'shortTime' }}
+                  </span>
+                  @if (isOwnMessage(msg) && (msg.delivery_status || msg.is_read)) {
+                    <span class="inline-flex items-center flex-shrink-0">
+                      @if (
+                        msg.delivery_status === 'sent' || (!msg.delivery_status && msg.is_read)
+                      ) {
+                        <!-- Single check: sent (gray) -->
+                        <svg
+                          class="w-3.5 h-3.5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-label="Sent"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                      @if (msg.delivery_status === 'delivered') {
+                        <!-- Double check: delivered (gray) -->
+                        <svg
+                          class="w-3.5 h-3.5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-label="Delivered"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <svg
+                          class="w-3.5 h-3.5 -ms-2 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                      @if (msg.delivery_status === 'read') {
+                        <!-- Double check: read (blue) -->
+                        <svg
+                          class="w-3.5 h-3.5 text-blue-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-label="Read"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <svg
+                          class="w-3.5 h-3.5 -ms-2 text-blue-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                    </span>
+                  }
                 </p>
                 @if (msg.reply_to_id) {
                   <button
@@ -253,6 +340,12 @@
                     [corrected]="msg.correction_payload?.corrected ?? ''"
                     [explanation]="msg.correction_payload?.explanation ?? ''"
                   ></app-visual-diff>
+                }
+                @if (msg.message_type === 'correction_request' && msg.correction_request_payload) {
+                  <div>
+                    <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
+                    <p class="text-xs text-yellow-400">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
+                  </div>
                 }
                 @if (msg.message_type === 'doodle' && msg.media_url) {
                   <img

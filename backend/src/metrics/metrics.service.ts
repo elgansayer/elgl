@@ -1,4 +1,7 @@
 import { Injectable } from '@nestjs/common';
+<<<<<<< HEAD
+import { collectDefaultMetrics, Registry, Counter, Histogram, Gauge } from 'prom-client';
+=======
 import {
   collectDefaultMetrics,
   Registry,
@@ -6,10 +9,20 @@ import {
   Histogram,
   Gauge,
 } from 'prom-client';
+>>>>>>> origin/main
 
 @Injectable()
 export class MetricsService {
   private readonly register: Registry;
+<<<<<<< HEAD
+  readonly httpRequestDuration: Histogram<string>;
+  readonly httpRequestsTotal: Counter<string>;
+  readonly websocketConnections: Gauge<string>;
+
+  constructor() {
+    this.register = new Registry();
+    collectDefaultMetrics({ register: this.register, prefix: 'hellotalk_' });
+=======
   private httpRequestDuration: Histogram<string>;
   private httpRequestsTotal: Counter<string>;
   private activeConnections: Gauge<string>;
@@ -26,7 +39,7 @@ export class MetricsService {
   readonly srsDecksTotal: Gauge<string>;
   readonly srsDecksCreated: Counter<string>;
 
-// Trust & Safety metrics
+  // Trust & Safety metrics
   readonly tsReportsSubmitted: Counter<string>;
   readonly tsBlocksCreated: Counter<string>;
   readonly tsBlocksRemoved: Counter<string>;
@@ -84,6 +97,28 @@ export class MetricsService {
   readonly matchmakingDailyCacheMisses: Counter<string>;
   readonly matchmakingTierSuccessRate: Gauge<string>;
 
+  // Admin Moderation Dashboard metrics
+  readonly adminBanActions: Counter<string>;
+  readonly adminWarnActions: Counter<string>;
+  readonly adminVipToggles: Counter<string>;
+  readonly adminBlockRemovals: Counter<string>;
+  readonly adminReportResolutions: Counter<string>;
+  readonly adminApiErrors: Counter<string>;
+  readonly adminApiLatency: Histogram<string>;
+  readonly adminPendingReports: Gauge<string>;
+  readonly adminActiveBlocks: Gauge<string>;
+  readonly adminLoginHistoryRequests: Counter<string>;
+
+  // Video Classrooms metrics
+  readonly videoClassroomsCreated: Counter<string>;
+  readonly videoClassroomsJoined: Counter<string>;
+  readonly videoClassroomsActiveRooms: Gauge<string>;
+  readonly videoClassroomsFailedCreations: Counter<string>;
+  readonly videoClassroomsFailedJoins: Counter<string>;
+  readonly videoClassroomsRoomDuration: Histogram<string>;
+  readonly videoClassroomsTokenGenerationDuration: Histogram<string>;
+  readonly videoClassroomsParticipantMax: Gauge<string>;
+
   constructor() {
     this.register = new Registry();
 
@@ -91,13 +126,18 @@ export class MetricsService {
       register: this.register,
       prefix: 'hellotalk_',
     });
+>>>>>>> origin/main
 
     this.httpRequestDuration = new Histogram({
       name: 'hellotalk_http_request_duration_seconds',
       help: 'Duration of HTTP requests in seconds',
       labelNames: ['method', 'route', 'status_code'],
       registers: [this.register],
+<<<<<<< HEAD
+      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
+=======
       buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 5, 10],
+>>>>>>> origin/main
     });
 
     this.httpRequestsTotal = new Counter({
@@ -107,9 +147,15 @@ export class MetricsService {
       registers: [this.register],
     });
 
+<<<<<<< HEAD
+    this.websocketConnections = new Gauge({
+      name: 'hellotalk_websocket_connections',
+      help: 'Number of active WebSocket connections',
+=======
     this.activeConnections = new Gauge({
       name: 'hellotalk_active_connections',
       help: 'Number of active connections',
+>>>>>>> origin/main
       registers: [this.register],
     });
 
@@ -180,7 +226,7 @@ export class MetricsService {
       registers: [this.register],
     });
 
-// --- Trust & Safety Metrics ---
+    // --- Trust & Safety Metrics ---
 
     this.tsReportsSubmitted = new Counter({
       name: 'hellotalk_ts_reports_submitted_total',
@@ -517,8 +563,142 @@ export class MetricsService {
       help: 'Rolling success rate of tier-1 (interest-based) matchmaking, 0-1',
       registers: [this.register],
     });
+
+    // --- Admin Moderation Dashboard Metrics ---
+
+    this.adminBanActions = new Counter({
+      name: 'hellotalk_admin_ban_actions_total',
+      help: 'Total number of admin ban actions performed',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminWarnActions = new Counter({
+      name: 'hellotalk_admin_warn_actions_total',
+      help: 'Total number of admin warning actions performed',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminVipToggles = new Counter({
+      name: 'hellotalk_admin_vip_toggles_total',
+      help: 'Total number of VIP status toggles by admins',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminBlockRemovals = new Counter({
+      name: 'hellotalk_admin_block_removals_total',
+      help: 'Total number of block removals by admins',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    this.adminReportResolutions = new Counter({
+      name: 'hellotalk_admin_report_resolutions_total',
+      help: 'Total number of report resolutions (approve/reject)',
+      labelNames: ['action', 'result'],
+      registers: [this.register],
+    });
+
+    this.adminApiErrors = new Counter({
+      name: 'hellotalk_admin_api_errors_total',
+      help: 'Total number of admin API errors',
+      labelNames: ['endpoint', 'error_type'],
+      registers: [this.register],
+    });
+
+    this.adminApiLatency = new Histogram({
+      name: 'hellotalk_admin_api_latency_seconds',
+      help: 'Latency of admin API operations',
+      labelNames: ['endpoint', 'action'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+    });
+
+    this.adminPendingReports = new Gauge({
+      name: 'hellotalk_admin_pending_reports',
+      help: 'Number of reports pending admin review',
+      registers: [this.register],
+    });
+
+    this.adminActiveBlocks = new Gauge({
+      name: 'hellotalk_admin_active_blocks',
+      help: 'Total number of active block relationships across the platform',
+      registers: [this.register],
+    });
+
+    this.adminLoginHistoryRequests = new Counter({
+      name: 'hellotalk_admin_login_history_requests_total',
+      help: 'Total number of admin login history lookup requests',
+      labelNames: ['result'],
+      registers: [this.register],
+    });
+
+    // --- Video Classrooms Metrics ---
+
+    this.videoClassroomsCreated = new Counter({
+      name: 'hellotalk_video_classrooms_created_total',
+      help: 'Total number of video classroom rooms created',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.videoClassroomsJoined = new Counter({
+      name: 'hellotalk_video_classrooms_joined_total',
+      help: 'Total number of video classroom room joins',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.videoClassroomsActiveRooms = new Gauge({
+      name: 'hellotalk_video_classrooms_active_rooms',
+      help: 'Estimated number of currently active video classrooms',
+      registers: [this.register],
+    });
+
+    this.videoClassroomsFailedCreations = new Counter({
+      name: 'hellotalk_video_classrooms_failed_creations_total',
+      help: 'Total number of failed video classroom room creation attempts',
+      labelNames: ['error_type'],
+      registers: [this.register],
+    });
+
+    this.videoClassroomsFailedJoins = new Counter({
+      name: 'hellotalk_video_classrooms_failed_joins_total',
+      help: 'Total number of failed video classroom room join attempts',
+      labelNames: ['error_type'],
+      registers: [this.register],
+    });
+
+    this.videoClassroomsRoomDuration = new Histogram({
+      name: 'hellotalk_video_classrooms_room_duration_seconds',
+      help: 'Duration of video classroom rooms from creation to last participant leaving',
+      labelNames: ['participant_count'],
+      registers: [this.register],
+      buckets: [10, 60, 300, 600, 1800, 3600, 7200, 14400],
+    });
+
+    this.videoClassroomsTokenGenerationDuration = new Histogram({
+      name: 'hellotalk_video_classrooms_token_generation_duration_seconds',
+      help: 'Time taken to generate LiveKit access tokens',
+      labelNames: ['operation'],
+      registers: [this.register],
+      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+    });
+
+    this.videoClassroomsParticipantMax = new Gauge({
+      name: 'hellotalk_video_classrooms_participant_max',
+      help: 'Maximum number of participants observed in a classroom during the current interval',
+      labelNames: ['room_name'],
+      registers: [this.register],
+    });
   }
 
+<<<<<<< HEAD
+  getContentType(): string {
+    return 'text/plain; version=0.0.4; charset=utf-8';
+=======
   recordHttpRequest(
     method: string,
     route: string,
@@ -587,7 +767,7 @@ export class MetricsService {
     this.srsDecksCreated.inc();
   }
 
-// --- Trust & Safety metric helpers ---
+  // --- Trust & Safety metric helpers ---
 
   recordTsReportSubmitted(reasonCategory: string = 'unknown'): void {
     this.tsReportsSubmitted.inc({ reason_category: reasonCategory });
@@ -629,19 +809,31 @@ export class MetricsService {
     this.readingEngineSessions.inc({ language });
   }
 
-  recordReadingEngineWordsParsed(count: number, language: string = 'unknown'): void {
+  recordReadingEngineWordsParsed(
+    count: number,
+    language: string = 'unknown',
+  ): void {
     this.readingEngineWordsParsed.inc({ language }, count);
   }
 
-  recordReadingEngineTokenisationDuration(language: string, durationSeconds: number): void {
-    this.readingEngineTokenisationDuration.observe({ language }, durationSeconds);
+  recordReadingEngineTokenisationDuration(
+    language: string,
+    durationSeconds: number,
+  ): void {
+    this.readingEngineTokenisationDuration.observe(
+      { language },
+      durationSeconds,
+    );
   }
 
   recordReadingEngineAiRequest(endpoint: string, status: string): void {
     this.readingEngineAiRequests.inc({ endpoint, status });
   }
 
-  recordReadingEngineAiRequestDuration(endpoint: string, durationSeconds: number): void {
+  recordReadingEngineAiRequestDuration(
+    endpoint: string,
+    durationSeconds: number,
+  ): void {
     this.readingEngineAiRequestDuration.observe({ endpoint }, durationSeconds);
   }
 
@@ -659,7 +851,10 @@ export class MetricsService {
     });
   }
 
-  recordReadingEngineSessionDuration(language: string, durationSeconds: number): void {
+  recordReadingEngineSessionDuration(
+    language: string,
+    durationSeconds: number,
+  ): void {
     this.readingEngineSessionDuration.observe({ language }, durationSeconds);
   }
 
@@ -714,7 +909,11 @@ export class MetricsService {
     this.coinDailyClaimTotal.inc({ claimed: String(claimed) });
   }
 
-  recordGiftSent(giftId: string, animationType: string, coinValue: number): void {
+  recordGiftSent(
+    giftId: string,
+    animationType: string,
+    coinValue: number,
+  ): void {
     this.coinGiftTotal.inc({ gift_id: giftId, animation_type: animationType });
     this.coinGiftValue.inc({ gift_id: giftId }, coinValue);
   }
@@ -724,7 +923,10 @@ export class MetricsService {
     this.coinStickerRevenueTotal.inc({ pack_id: packId }, coinCost);
   }
 
-  observeCoinTransactionLatency(operation: string, durationSeconds: number): void {
+  observeCoinTransactionLatency(
+    operation: string,
+    durationSeconds: number,
+  ): void {
     this.coinTransactionLatency.observe({ operation }, durationSeconds);
   }
 
@@ -745,10 +947,7 @@ export class MetricsService {
     this.matchmakingRecommendationsPerRequest.observe({ tier }, count);
   }
 
-  recordMatchmakingFallbackTierUsed(
-    fromTier: string,
-    toTier: string,
-  ): void {
+  recordMatchmakingFallbackTierUsed(fromTier: string, toTier: string): void {
     this.matchmakingFallbackTierUsed.inc({
       from_tier: fromTier,
       to_tier: toTier,
@@ -813,8 +1012,106 @@ export class MetricsService {
     this.escrowStaleHeldCount.set(count);
   }
 
+  // --- Admin Moderation Dashboard metric helpers ---
+
+  recordAdminBanAction(result: 'success' | 'failure'): void {
+    this.adminBanActions.inc({ result });
+  }
+
+  recordAdminWarnAction(result: 'success' | 'failure'): void {
+    this.adminWarnActions.inc({ result });
+  }
+
+  recordAdminVipToggle(result: 'success' | 'failure'): void {
+    this.adminVipToggles.inc({ result });
+  }
+
+  recordAdminBlockRemoval(result: 'success' | 'failure'): void {
+    this.adminBlockRemovals.inc({ result });
+  }
+
+  recordAdminReportResolution(
+    action: 'approve' | 'reject',
+    result: 'success' | 'failure',
+  ): void {
+    this.adminReportResolutions.inc({ action, result });
+  }
+
+  recordAdminApiError(endpoint: string, errorType: string): void {
+    this.adminApiErrors.inc({ endpoint, error_type: errorType });
+  }
+
+  observeAdminApiLatency(
+    endpoint: string,
+    action: string,
+    durationSeconds: number,
+  ): void {
+    this.adminApiLatency.observe({ endpoint, action }, durationSeconds);
+  }
+
+  setAdminPendingReports(count: number): void {
+    this.adminPendingReports.set(count);
+  }
+
+  setAdminActiveBlocks(count: number): void {
+    this.adminActiveBlocks.set(count);
+  }
+
+  recordAdminLoginHistoryRequest(result: 'success' | 'failure'): void {
+    this.adminLoginHistoryRequests.inc({ result });
+  }
+
+  // --- Video Classrooms metric helpers ---
+
+  recordVideoClassroomCreated(): void {
+    this.videoClassroomsCreated.inc({ status: 'success' });
+  }
+
+  recordVideoClassroomCreationFailed(errorType: string = 'unknown'): void {
+    this.videoClassroomsCreated.inc({ status: 'failed' });
+    this.videoClassroomsFailedCreations.inc({ error_type: errorType });
+  }
+
+  recordVideoClassroomJoined(): void {
+    this.videoClassroomsJoined.inc({ status: 'success' });
+  }
+
+  recordVideoClassroomJoinFailed(errorType: string = 'unknown'): void {
+    this.videoClassroomsJoined.inc({ status: 'failed' });
+    this.videoClassroomsFailedJoins.inc({ error_type: errorType });
+  }
+
+  setVideoClassroomsActiveRooms(count: number): void {
+    this.videoClassroomsActiveRooms.set(count);
+  }
+
+  recordVideoClassroomTokenGenerationDuration(
+    operation: 'create' | 'join',
+    durationSeconds: number,
+  ): void {
+    this.videoClassroomsTokenGenerationDuration.observe(
+      { operation },
+      durationSeconds,
+    );
+  }
+
+  recordVideoClassroomRoomDuration(
+    durationSeconds: number,
+    participantCount: number = 0,
+  ): void {
+    this.videoClassroomsRoomDuration.observe(
+      { participant_count: String(participantCount) },
+      durationSeconds,
+    );
+  }
+
+  setVideoClassroomParticipantMax(roomName: string, count: number): void {
+    this.videoClassroomsParticipantMax.set({ room_name: roomName }, count);
+  }
+
   getRegister(): Registry {
     return this.register;
+>>>>>>> origin/main
   }
 
   async getMetrics(): Promise<string> {

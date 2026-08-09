@@ -1,7 +1,6 @@
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { DatePipe, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EscrowService, EscrowTransaction } from '../../services/escrow.service';
 import { EscrowOnboardingService } from '../../services/escrow-onboarding.service';
@@ -19,7 +18,6 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
   imports: [
     RouterLink,
     DatePipe,
-    JoyrideModule,
     TranslatePipe,
     AppCardComponent,
     AppEmptyStateComponent,
@@ -31,10 +29,6 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
     <div class="app-screen app-padded pb-10">
       <header
         class="flex items-center gap-3 pt-2"
-        joyrideStep="escrowStepTitle"
-        [title]="'escrow.onboarding.stepTitleTitle' | t"
-        [text]="'escrow.onboarding.stepTitleText' | t"
-        stepPosition="bottom"
       >
         <button
           type="button"
@@ -63,10 +57,6 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
       <nav
         class="flex gap-2 overflow-x-auto py-3"
         aria-label="{{ 'escrow.filterLabel' | t }}"
-        joyrideStep="escrowStepFilters"
-        [title]="'escrow.onboarding.stepFiltersTitle' | t"
-        [text]="'escrow.onboarding.stepFiltersText' | t"
-        stepPosition="bottom"
       >
         @for (f of statusFilters; track f) {
           <button
@@ -78,6 +68,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
             [class.text-text-secondary]="selectedStatus() !== f"
             [class.hover:bg-surface-50]="selectedStatus() !== f"
             (click)="onFilterChange(f)"
+            [attr.aria-pressed]="selectedStatus() === f"
           >
             {{ ('escrow.status.' + f) | t }}
             @if (f === 'all') {
@@ -145,10 +136,6 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
       @if (!loading() && !error() && filteredEscrows().length > 0) {
         <div
           class="space-y-3"
-          joyrideStep="escrowStepTransactions"
-          [title]="'escrow.onboarding.stepTransactionsTitle' | t"
-          [text]="'escrow.onboarding.stepTransactionsText' | t"
-          stepPosition="top"
         >
           @for (escrow of filteredEscrows(); track escrow.id) {
             <a
@@ -240,7 +227,7 @@ export class EscrowComponent {
     return this.countsByStatus()[status] ?? 0;
   }
 
-  protected statusColour(status: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  protected statusColour(status: string): 'success' | 'warning' | 'danger' | 'neutral' | 'info' {
     switch (status) {
       case 'released':
         return 'success';
@@ -259,7 +246,7 @@ export class EscrowComponent {
     this.escrowOnboarding.startTour();
   }
 
-  protected onFilterChange(status: StatusFilter): void {
+  onFilterChange(status: StatusFilter): void {
     this.selectedStatus.set(status);
   }
 
