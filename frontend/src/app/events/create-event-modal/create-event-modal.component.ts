@@ -6,7 +6,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-create-event-modal',
-  standalone: true,
   imports: [ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
