@@ -139,7 +139,7 @@ export class SupabaseService {
     }
   }
 
-  getClient(): SupabaseClient {
+  getClient(): SupabaseClient<Database> {
     return this.supabase;
   }
 
@@ -221,8 +221,21 @@ export class SupabaseService {
     const db = await this.getOfflineDB();
     const allContent = await db.getAll('savedContent');
     for (const content of allContent) {
-      if (content?.data?.timestamp && new Date(content.data.timestamp) < thresholdDate) {
-        await db.delete('savedContent', content.id);
+      if (
+        typeof content === 'object' &&
+        content !== null &&
+        'id' in content &&
+        'data' in content &&
+        typeof content.id === 'string' &&
+        typeof content.data === 'object' &&
+        content.data !== null &&
+        'timestamp' in content.data &&
+        typeof content.data.timestamp === 'string'
+      ) {
+        const timestamp = new Date(content.data.timestamp);
+        if (timestamp < thresholdDate) {
+          await db.delete('savedContent', content.id);
+        }
       }
     }
   }

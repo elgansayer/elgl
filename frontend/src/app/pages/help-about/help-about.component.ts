@@ -1,5 +1,6 @@
 import { Component, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { APP_VERSION, BUILD_NUMBER } from '../../version.constants';
 
 @Component({
   selector: 'app-help-about',
@@ -10,11 +11,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <section class="space-y-3 mb-8">
         <div class="flex justify-between text-sm">
           <span>{{ 'helpAbout.appVersion' | t }}</span>
-          <span class="font-mono">1.2.3</span>
+          <span class="font-mono">{{ appVersion }}</span>
         </div>
         <div class="flex justify-between text-sm">
           <span>{{ 'helpAbout.buildNumber' | t }}</span>
-          <span class="font-mono">42</span>
+          <span class="font-mono">{{ buildNumber }}</span>
         </div>
       </section>
 
@@ -31,6 +32,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class HelpAboutComponent {
+  readonly appVersion = APP_VERSION;
+  readonly buildNumber = BUILD_NUMBER;
+
   licences = computed(() => [
     { name: 'Angular', licence: 'MIT' },
     { name: 'NestJS', licence: 'MIT' },

@@ -1,7 +1,7 @@
 # Hourly Commit & Build Verification
 
 ## Objective
-Enforce the "A failing build must never reach main" constitution rule.
+Enforce the constitution rules.
 
 ## Instructions
 1. Run the complete `verification-gate` skill process.

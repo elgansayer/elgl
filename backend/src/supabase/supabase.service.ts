@@ -1,9 +1,9 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
 
-type UsersRow = {
+export type UsersRow = {
   id: string;
   study_streak_days: number | null;
   correction_ratio: number | null;
@@ -24,12 +24,19 @@ type UsersRow = {
   away_message?: string | null;
   coins_balance?: number | null;
   is_vip?: boolean | null;
+  is_admin?: boolean | null;
   vip_tier?: string | null;
   updated_at?: string | null;
   target_languages?: string[] | null;
   native_languages?: string[] | null;
+  /** @deprecated superseded by native_languages (see migration 013); retained for legacy callers */
+  native_language?: string | null;
   privacy_hide_from_search?: boolean | null;
+  matchmaking_consent?: boolean | null;
   incognito_visits?: boolean | null;
+  age?: number | null;
+  is_deleted?: boolean | null;
+  deleted_at?: string | null;
   display_name?: string | null;
   avatar_url?: string | null;
   bio_text?: string | null;
@@ -49,6 +56,7 @@ type UsersRow = {
   privacy_profile_photo?: string | null;
   privacy_about_info?: string | null;
   privacy_status?: string | null;
+  auto_play_voice_notes?: boolean | null;
   sound_effects_enabled?: boolean | null;
   vibration_enabled?: boolean | null;
   chat_enter_to_send?: boolean | null;
@@ -63,11 +71,323 @@ type UsersRow = {
   enable_location_spoofing?: boolean | null;
   audio_intro_url?: string | null;
   cover_photo_url?: string | null;
+  cover_url?: string | null;
   serious_learner_mode?: boolean | null;
   notification_preferences?: Record<string, unknown> | null;
+  language_levels?: Record<string, string> | null;
+  chat_preferences?: Record<string, unknown> | null;
+  developer_api_key?: string | null;
+  deletion_requested_at?: string | null;
+  deletion_grace_days?: number | null;
+  is_deletion_pending?: boolean | null;
 };
 
-type GroupsRow = {
+export type AudioRoomsRow = {
+  id: string;
+  room_name: string;
+  title: string;
+  party_type?: string | null;
+  event_id?: string | null;
+  target_language: string;
+  language_pair: string;
+  topic_tag: string;
+  level?: string | null;
+  host_id: string;
+  co_host_id?: string | null;
+  is_video_stream: boolean;
+  is_active: boolean;
+  speakers: string[];
+  raised_hands: string[];
+  listeners_count: number;
+  participants_count?: number | null;
+  recording_url?: string | null;
+  egress_id?: string | null;
+  is_private?: boolean | null;
+  invited_user_ids?: string[] | null;
+  biometric_lock?: boolean | null;
+  created_at: string;
+};
+
+type AudioRoomCaptionRow = {
+  id: string;
+  room_id: string;
+  speaker_id: string;
+  speaker_name?: string | null;
+  text_content: string;
+  created_at: string;
+};
+
+type AudioRoomNoteRow = {
+  id: string;
+  room_id: string;
+  author_id: string;
+  author_name: string;
+  content: string;
+  vocabulary?: string | null;
+  created_at: string;
+};
+
+type AudioRoomTranscriptRow = {
+  id: string;
+  room_id: string;
+  recording_url: string | null;
+  transcript_text: string | null;
+  session_summary: string | null;
+  vocabulary_list: string[] | null;
+  created_at: string;
+};
+
+type AudioRoomTipRow = {
+  id: string;
+  room_id: string;
+  sender_user_id: string;
+  receiver_user_id: string;
+  amount_coins: number;
+  created_at?: string;
+};
+
+type CallLogRow = {
+  id: string;
+  caller_id: string;
+  caller_name: string;
+  receiver_id: string;
+  receiver_name: string;
+  call_type: 'incoming' | 'outgoing' | 'missed';
+  room_name: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  created_at: string;
+};
+
+type QuickPollRow = {
+  id: string;
+  room_id: string;
+  host_id: string;
+  question: string;
+  options: string[];
+  is_active: boolean;
+  created_at?: string;
+};
+
+type PollVoteRow = {
+  id: string;
+  poll_id: string;
+  user_id: string;
+  option_index: number;
+  created_at?: string;
+};
+
+type MediaRow = {
+  id: string;
+  user_id: string;
+  view_once: boolean;
+  viewed: boolean;
+};
+
+type PasswordResetTokenRow = {
+  id: string;
+  user_id: string;
+  token: string;
+  expires_at: string;
+  used: boolean;
+  created_at?: string;
+};
+
+type ArchiveRequestRow = {
+  id: string;
+  user_id: string;
+  requested_at: string;
+  archive_url: string;
+  receipt_id?: string | null;
+  app_store?: string | null;
+};
+
+type SubscriptionEventRow = {
+  id: string;
+  user_id?: string | null;
+  event_type: string;
+  product_id?: string | null;
+  original_transaction_id?: string | null;
+  notification_type?: string | null;
+  notification_subtype?: string | null;
+  payload?: Record<string, unknown> | null;
+  created_at?: string;
+};
+
+type UserInterestRow = {
+  id: string;
+  user_id: string;
+  tag: string;
+  created_at?: string | null;
+};
+
+type InterestVocabularyRow = {
+  id: string;
+  interest_tag: string;
+  language: string;
+  vocab_word: string;
+  translation?: string | null;
+  srs_level?: number | null;
+  created_at?: string | null;
+};
+
+export type CommunityRow = {
+  id: string;
+  name: string;
+  description?: string | null;
+  owner_id: string;
+  created_at: string;
+};
+
+type AchievementRow = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  icon_url?: string | null;
+  created_at?: string;
+};
+
+type UserAchievementRow = {
+  id: string;
+  user_id: string;
+  achievement_id: string;
+  unlocked_at?: string;
+};
+
+type HobbyTagRow = {
+  id: string;
+  name: string;
+  category: string;
+  icon?: string;
+  target_vocabulary?: unknown[] | null;
+  created_at?: string;
+};
+
+type UserHobbyTagRow = {
+  id: string;
+  user_id: string;
+  hobby_tag_id: string;
+  proficiency_level?: number;
+  created_at?: string;
+};
+
+type MilestoneRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string | null;
+  completed?: boolean;
+  completed_at?: string | null;
+  created_at?: string;
+};
+
+type StudyBuddyRequestRow = {
+  id: string;
+  requester_id: string;
+  partner_id: string;
+  message?: string | null;
+  status?: 'pending' | 'accepted' | 'declined';
+  created_at?: string;
+  updated_at?: string;
+};
+
+type NotificationRow = {
+  id: string;
+  recipient_id: string;
+  actor_id: string;
+  type: string;
+  entity_id?: string | null;
+  message?: string | null;
+  is_read?: boolean;
+  created_at?: string;
+};
+
+type UserPushTokenRow = {
+  id: string;
+  user_id: string;
+  fcm_token: string;
+  platform?: string;
+  created_at?: string | null;
+};
+
+type ResourceLibraryRow = {
+  id: string;
+  title: string;
+  description?: string | null;
+  url: string;
+  category?: string | null;
+  created_by: string;
+  type?: string | null;
+  content?: string | null;
+  topic?: string | null;
+  difficulty?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ReadingResourceRow = {
+  id: string;
+  title: string;
+  content: string;
+  language: string;
+  difficulty?: string | null;
+  topic?: string | null;
+  source_url?: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReadingProgressRow = {
+  user_id: string;
+  words_read: number;
+  articles_completed: number;
+  total_reading_time_seconds: number;
+  fluency_percentage: number;
+  last_read_at?: string | null;
+  updated_at: string;
+};
+
+export type LessonRow = {
+  id: string;
+  title: string;
+  description?: string | null;
+  content_json?: Record<string, unknown> | null;
+  language_code: string;
+  difficulty_level?: number | null;
+  cover_image_url?: string | null;
+  audio_url?: string | null;
+  created_at?: string;
+  updated_at?: string | null;
+};
+
+type LinkedAccountRow = {
+  id: string;
+  user_id: string;
+  provider: string;
+  name?: string | null;
+  active?: boolean;
+  created_at?: string;
+};
+
+type CulturalTagRow = {
+  id: string;
+  moment_id: string;
+  tag_name: string;
+  created_at?: string;
+};
+
+type CorrectorRatingRow = {
+  id: string;
+  rater_id: string;
+  rated_user_id: string;
+  score: number;
+  created_at?: string;
+};
+
+export type GroupsRow = {
   id: string;
   name: string;
   owner_id: string;
@@ -147,6 +467,15 @@ type StatusViewRow = {
   created_at: string;
 };
 
+type LocationShareRow = {
+  id: string;
+  sharer_user_id: string;
+  viewer_user_id: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 type VirtualGiftRow = {
   id: string;
   name: string;
@@ -162,6 +491,9 @@ type StickerPackRow = {
   cost_coins: number;
   icon_url?: string | null;
   description?: string | null;
+  is_animated?: boolean | null;
+  sticker_urls?: string[] | null;
+  animation_url?: string | null;
 };
 
 type GiftTransactionRow = {
@@ -171,6 +503,16 @@ type GiftTransactionRow = {
   gift_id: string;
   room_id?: string | null;
   coins_spent: number;
+  created_at?: string;
+};
+
+type CoinTransactionRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  amount: number;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
   created_at?: string;
 };
 
@@ -184,7 +526,8 @@ type MomentRow = {
   id: string;
   author_id?: string | null;
   user_id?: string | null;
-  content?: string | null;
+  text_content?: string | null;
+  /** @deprecated legacy alias for text_content used by some older call sites */
   content_text?: string | null;
   media_urls?: string[] | null;
   media_type?: string | null;
@@ -210,7 +553,7 @@ type MomentCommentRow = {
   user_id: string;
   author_id?: string;
   moment_id: string;
-  content: string;
+  text_content: string | null;
   correction_payload?: {
     original: string;
     corrected: string;
@@ -257,8 +600,17 @@ type TranslationRow = {
 type FlashcardRow = {
   id: string;
   user_id: string;
-  front: string;
-  back: string;
+  word_token: string;
+  original_context?: string | null;
+  translation: string;
+  definition?: string | null;
+  pronunciation_url?: string | null;
+  srs_level: number;
+  easiness_factor: number;
+  repetition_count: number;
+  repetitions: number;
+  interval_days: number;
+  next_review_at: string;
   created_at: string;
 };
 
@@ -279,12 +631,41 @@ type LoginHistoryRow = {
   created_at: string;
 };
 
-type ChatMessageRow = {
+export type ChatMessageRow = {
   id: string;
+  room_id: string;
   sender_id: string;
-  receiver_id: string;
-  content: string;
+  message_type: string;
+  text_content?: string | null;
+  media_url?: string | null;
+  channel_id?: string | null;
+  correction_payload?: {
+    original: string;
+    corrected: string;
+    explanation?: string;
+  } | null;
+  correction_request_payload?: {
+    original_text: string;
+    target_language?: string;
+  } | null;
+  status_reply_payload?: {
+    status_update_id: string;
+    status_text: string;
+  } | null;
+  reply_to_id?: string | null;
+  is_view_once?: boolean;
+  viewed_at?: string | null;
+  is_read: boolean;
   created_at: string;
+  is_deleted_for_sender?: boolean;
+  is_deleted_for_everyone?: boolean;
+  is_edited?: boolean;
+  edited_at?: string | null;
+  is_starred?: boolean;
+  is_forwarded?: boolean;
+  delivery_status?: 'sent' | 'delivered' | 'read';
+  expires_at?: string | null;
+  deleted_for_user_ids?: string[] | null;
 };
 
 type BlockRow = {
@@ -325,6 +706,8 @@ export interface Database {
           language_pair: string | null;
           max_participants: number | null;
           host_id: string;
+          is_cancelled?: boolean;
+          proficiency?: string | null;
         };
         Insert: Partial<{
           id?: string;
@@ -336,6 +719,8 @@ export interface Database {
           language_pair?: string | null;
           max_participants?: number | null;
           host_id: string;
+          is_cancelled?: boolean;
+          proficiency?: string | null;
         }>;
         Update: Partial<{
           id?: string;
@@ -347,6 +732,8 @@ export interface Database {
           language_pair?: string | null;
           max_participants?: number | null;
           host_id?: string;
+          is_cancelled?: boolean;
+          proficiency?: string | null;
         }>;
         Relationships: [];
       };
@@ -390,27 +777,51 @@ export interface Database {
         Relationships: [];
       };
       audio_rooms: {
-        Row: {
-          id: string;
-          room_name: string;
-          title: string | null;
-          host_id: string;
-          party_type: string | null;
-        };
-        Insert: Partial<{
-          id?: string;
-          room_name: string;
-          title?: string | null;
-          host_id: string;
-          party_type?: string | null;
-        }>;
-        Update: Partial<{
-          id?: string;
-          room_name?: string;
-          title?: string | null;
-          host_id?: string;
-          party_type?: string | null;
-        }>;
+        Row: AudioRoomsRow;
+        Insert: Partial<AudioRoomsRow>;
+        Update: Partial<AudioRoomsRow>;
+        Relationships: [];
+      };
+      audio_room_captions: {
+        Row: AudioRoomCaptionRow;
+        Insert: Partial<AudioRoomCaptionRow>;
+        Update: Partial<AudioRoomCaptionRow>;
+        Relationships: [];
+      };
+      audio_room_notes: {
+        Row: AudioRoomNoteRow;
+        Insert: Partial<AudioRoomNoteRow>;
+        Update: Partial<AudioRoomNoteRow>;
+        Relationships: [];
+      };
+      audio_room_transcripts: {
+        Row: AudioRoomTranscriptRow;
+        Insert: Partial<AudioRoomTranscriptRow>;
+        Update: Partial<AudioRoomTranscriptRow>;
+        Relationships: [];
+      };
+      audio_room_tips: {
+        Row: AudioRoomTipRow;
+        Insert: Partial<AudioRoomTipRow>;
+        Update: Partial<AudioRoomTipRow>;
+        Relationships: [];
+      };
+      call_logs: {
+        Row: CallLogRow;
+        Insert: Partial<CallLogRow>;
+        Update: Partial<CallLogRow>;
+        Relationships: [];
+      };
+      quick_polls: {
+        Row: QuickPollRow;
+        Insert: Partial<QuickPollRow>;
+        Update: Partial<QuickPollRow>;
+        Relationships: [];
+      };
+      poll_votes: {
+        Row: PollVoteRow;
+        Insert: Partial<PollVoteRow>;
+        Update: Partial<PollVoteRow>;
         Relationships: [];
       };
       groups: {
@@ -441,6 +852,177 @@ export interface Database {
         Row: InterestsRow;
         Insert: Partial<InterestsRow>;
         Update: Partial<InterestsRow>;
+        Relationships: [];
+      };
+      communities: {
+        Row: CommunityRow;
+        Insert: Partial<CommunityRow>;
+        Update: Partial<CommunityRow>;
+        Relationships: [];
+      };
+      achievements: {
+        Row: AchievementRow;
+        Insert: Partial<AchievementRow>;
+        Update: Partial<AchievementRow>;
+        Relationships: [];
+      };
+      user_achievements: {
+        Row: UserAchievementRow;
+        Insert: Partial<UserAchievementRow>;
+        Update: Partial<UserAchievementRow>;
+        Relationships: [
+          {
+            foreignKeyName: 'user_achievements_achievement_id_fkey';
+            columns: ['achievement_id'];
+            isOneToOne: false;
+            referencedRelation: 'achievements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      hobby_tags: {
+        Row: HobbyTagRow;
+        Insert: Partial<HobbyTagRow>;
+        Update: Partial<HobbyTagRow>;
+        Relationships: [];
+      };
+      user_hobby_tags: {
+        Row: UserHobbyTagRow;
+        Insert: Partial<UserHobbyTagRow>;
+        Update: Partial<UserHobbyTagRow>;
+        Relationships: [
+          {
+            foreignKeyName: 'user_hobby_tags_hobby_tag_id_fkey';
+            columns: ['hobby_tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'hobby_tags';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      milestones: {
+        Row: MilestoneRow;
+        Insert: Partial<MilestoneRow>;
+        Update: Partial<MilestoneRow>;
+        Relationships: [];
+      };
+      study_buddy_requests: {
+        Row: StudyBuddyRequestRow;
+        Insert: Partial<StudyBuddyRequestRow>;
+        Update: Partial<StudyBuddyRequestRow>;
+        Relationships: [
+          {
+            foreignKeyName: 'study_buddy_requests_requester_id_fkey';
+            columns: ['requester_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'study_buddy_requests_partner_id_fkey';
+            columns: ['partner_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      notifications: {
+        Row: NotificationRow;
+        Insert: Partial<NotificationRow>;
+        Update: Partial<NotificationRow>;
+        Relationships: [
+          {
+            foreignKeyName: 'notifications_actor_id_fkey';
+            columns: ['actor_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      user_push_tokens: {
+        Row: UserPushTokenRow;
+        Insert: Partial<UserPushTokenRow>;
+        Update: Partial<UserPushTokenRow>;
+        Relationships: [];
+      };
+      resource_library: {
+        Row: ResourceLibraryRow;
+        Insert: Partial<ResourceLibraryRow>;
+        Update: Partial<ResourceLibraryRow>;
+        Relationships: [];
+      };
+      reading_resources: {
+        Row: ReadingResourceRow;
+        Insert: Partial<ReadingResourceRow>;
+        Update: Partial<ReadingResourceRow>;
+        Relationships: [];
+      };
+      reading_progress: {
+        Row: ReadingProgressRow;
+        Insert: Partial<ReadingProgressRow>;
+        Update: Partial<ReadingProgressRow>;
+        Relationships: [];
+      };
+      lessons: {
+        Row: LessonRow;
+        Insert: Partial<LessonRow>;
+        Update: Partial<LessonRow>;
+        Relationships: [];
+      };
+      linked_accounts: {
+        Row: LinkedAccountRow;
+        Insert: Partial<LinkedAccountRow>;
+        Update: Partial<LinkedAccountRow>;
+        Relationships: [];
+      };
+      cultural_tags: {
+        Row: CulturalTagRow;
+        Insert: Partial<CulturalTagRow>;
+        Update: Partial<CulturalTagRow>;
+        Relationships: [];
+      };
+      corrector_ratings: {
+        Row: CorrectorRatingRow;
+        Insert: Partial<CorrectorRatingRow>;
+        Update: Partial<CorrectorRatingRow>;
+        Relationships: [];
+      };
+      media: {
+        Row: MediaRow;
+        Insert: Partial<MediaRow>;
+        Update: Partial<MediaRow>;
+        Relationships: [];
+      };
+      password_reset_tokens: {
+        Row: PasswordResetTokenRow;
+        Insert: Partial<PasswordResetTokenRow>;
+        Update: Partial<PasswordResetTokenRow>;
+        Relationships: [];
+      };
+      archive_requests: {
+        Row: ArchiveRequestRow;
+        Insert: Partial<ArchiveRequestRow>;
+        Update: Partial<ArchiveRequestRow>;
+        Relationships: [];
+      };
+      subscription_events: {
+        Row: SubscriptionEventRow;
+        Insert: Partial<SubscriptionEventRow>;
+        Update: Partial<SubscriptionEventRow>;
+        Relationships: [];
+      };
+      user_interests: {
+        Row: UserInterestRow;
+        Insert: Partial<UserInterestRow>;
+        Update: Partial<UserInterestRow>;
+        Relationships: [];
+      };
+      interest_vocabulary: {
+        Row: InterestVocabularyRow;
+        Insert: Partial<InterestVocabularyRow>;
+        Update: Partial<InterestVocabularyRow>;
         Relationships: [];
       };
       xp_events: {
@@ -564,46 +1146,160 @@ export interface Database {
         Row: ChatMessageRow;
         Insert: Partial<ChatMessageRow>;
         Update: Partial<ChatMessageRow>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'chat_messages_sender_id_fkey';
+            columns: ['sender_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       notification_preferences: {
         Row: {
           user_id: string;
-          new_message: { push: boolean; email: boolean; in_app: boolean };
-          call_invite: { push: boolean; email: boolean; in_app: boolean };
-          moment_like: { push: boolean; email: boolean; in_app: boolean };
-          moment_comment: { push: boolean; email: boolean; in_app: boolean };
-          correction: { push: boolean; email: boolean; in_app: boolean };
-          gift: { push: boolean; email: boolean; in_app: boolean };
-          profile_view: { push: boolean; email: boolean; in_app: boolean };
-          study_reminder: { push: boolean; email: boolean; in_app: boolean };
-          friend_request: { push: boolean; email: boolean; in_app: boolean };
-          audio_room_invite: { push: boolean; email: boolean; in_app: boolean };
-          new_follower: { push: boolean; email: boolean; in_app: boolean };
+          new_message: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          call_invite: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_like: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_comment: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          correction: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          gift: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          profile_view: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          study_reminder: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          friend_request: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          audio_room_invite: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          new_follower: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           quiet_hours_start: string | null;
           quiet_hours_end: string | null;
           do_not_disturb: boolean;
           custom_tone_url: string | null;
           vibration_pattern: string | null;
           updated_at: string;
+          preferences?: Record<string, unknown> | null;
         };
         Insert: Partial<{
           user_id: string;
-          new_message?: { push: boolean; email: boolean; in_app: boolean };
-          call_invite?: { push: boolean; email: boolean; in_app: boolean };
-          moment_like?: { push: boolean; email: boolean; in_app: boolean };
-          moment_comment?: { push: boolean; email: boolean; in_app: boolean };
-          correction?: { push: boolean; email: boolean; in_app: boolean };
-          gift?: { push: boolean; email: boolean; in_app: boolean };
-          profile_view?: { push: boolean; email: boolean; in_app: boolean };
-          study_reminder?: { push: boolean; email: boolean; in_app: boolean };
-          friend_request?: { push: boolean; email: boolean; in_app: boolean };
+          new_message?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          call_invite?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_like?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_comment?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          correction?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          gift?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          profile_view?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          study_reminder?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          friend_request?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           audio_room_invite?: {
             push: boolean;
             email: boolean;
             in_app: boolean;
           };
-          new_follower?: { push: boolean; email: boolean; in_app: boolean };
+          new_follower?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           quiet_hours_start?: string | null;
           quiet_hours_end?: string | null;
           do_not_disturb?: boolean;
@@ -613,21 +1309,71 @@ export interface Database {
         }>;
         Update: Partial<{
           user_id?: string;
-          new_message?: { push: boolean; email: boolean; in_app: boolean };
-          call_invite?: { push: boolean; email: boolean; in_app: boolean };
-          moment_like?: { push: boolean; email: boolean; in_app: boolean };
-          moment_comment?: { push: boolean; email: boolean; in_app: boolean };
-          correction?: { push: boolean; email: boolean; in_app: boolean };
-          gift?: { push: boolean; email: boolean; in_app: boolean };
-          profile_view?: { push: boolean; email: boolean; in_app: boolean };
-          study_reminder?: { push: boolean; email: boolean; in_app: boolean };
-          friend_request?: { push: boolean; email: boolean; in_app: boolean };
+          new_message?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          call_invite?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_like?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          moment_comment?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          correction?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          gift?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          profile_view?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          study_reminder?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
+          friend_request?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           audio_room_invite?: {
             push: boolean;
             email: boolean;
             in_app: boolean;
           };
-          new_follower?: { push: boolean; email: boolean; in_app: boolean };
+          new_follower?: {
+            push: boolean;
+            email: boolean;
+            in_app: boolean;
+            badges: boolean;
+          };
           quiet_hours_start?: string | null;
           quiet_hours_end?: string | null;
           do_not_disturb?: boolean;
@@ -641,6 +1387,8 @@ export interface Database {
         Row: {
           id: string;
           title: string | null;
+          subtitle?: string | null;
+          avatar?: string | null;
           is_online: boolean | null;
           is_pinned: boolean | null;
           is_locked?: boolean | null;
@@ -649,10 +1397,14 @@ export interface Database {
           invite_code?: string | null;
           is_announcement?: boolean | null;
           max_members?: number;
+          wallpaper_url?: string | null;
+          labels?: string[] | null;
         };
         Insert: Partial<{
           id?: string;
           title?: string | null;
+          subtitle?: string | null;
+          avatar?: string | null;
           is_online?: boolean | null;
           is_pinned?: boolean | null;
           is_locked?: boolean | null;
@@ -661,10 +1413,14 @@ export interface Database {
           invite_code?: string | null;
           is_announcement?: boolean | null;
           max_members?: number;
+          wallpaper_url?: string | null;
+          labels?: string[] | null;
         }>;
         Update: Partial<{
           id?: string;
           title?: string | null;
+          subtitle?: string | null;
+          avatar?: string | null;
           is_online?: boolean | null;
           is_pinned?: boolean | null;
           is_locked?: boolean | null;
@@ -673,6 +1429,8 @@ export interface Database {
           invite_code?: string | null;
           is_announcement?: boolean | null;
           max_members?: number;
+          wallpaper_url?: string | null;
+          labels?: string[] | null;
         }>;
         Relationships: [];
       };
@@ -695,7 +1453,15 @@ export interface Database {
           is_locked?: boolean;
           created_at?: string;
         }>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'chat_room_members_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       developer_metrics: {
         Row: {
@@ -787,6 +1553,12 @@ export interface Database {
         Update: Partial<GiftTransactionRow>;
         Relationships: [];
       };
+      coin_transactions: {
+        Row: CoinTransactionRow;
+        Insert: Partial<CoinTransactionRow>;
+        Update: Partial<CoinTransactionRow>;
+        Relationships: [];
+      };
       user_sticker_packs: {
         Row: UserStickerPackRow;
         Insert: Partial<UserStickerPackRow>;
@@ -868,6 +1640,66 @@ export interface Database {
           transaction_id?: string;
           status?: string;
           created_at?: string;
+        }>;
+        Relationships: [];
+      };
+      escrow_transactions: {
+        Row: {
+          id: string;
+          payer_id: string;
+          payee_id: string;
+          amount_coins: number;
+          status:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
+          description: string | null;
+          reference_id: string | null;
+          created_at: string;
+          updated_at: string;
+          released_at: string | null;
+          refunded_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          payer_id: string;
+          payee_id: string;
+          amount_coins: number;
+          status?:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
+          description?: string | null;
+          reference_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+          refunded_at?: string | null;
+        }>;
+        Update: Partial<{
+          id?: string;
+          payer_id?: string;
+          payee_id?: string;
+          amount_coins?: number;
+          status?:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
+          description?: string | null;
+          reference_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+          refunded_at?: string | null;
         }>;
         Relationships: [];
       };
@@ -1058,6 +1890,267 @@ export interface Database {
         }>;
         Relationships: [];
       };
+      language_islands: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          language_pair: string;
+          host_id: string;
+          max_members: number | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          name: string;
+          description?: string | null;
+          language_pair: string;
+          host_id: string;
+          max_members?: number | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          name?: string;
+          description?: string | null;
+          language_pair?: string;
+          host_id?: string;
+          max_members?: number | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Relationships: [];
+      };
+      language_island_members: {
+        Row: {
+          island_id: string;
+          user_id: string;
+          role: 'host' | 'member';
+          joined_at: string;
+        };
+        Insert: Partial<{
+          island_id: string;
+          user_id: string;
+          role: 'host' | 'member';
+          joined_at?: string;
+        }>;
+        Update: Partial<{
+          island_id?: string;
+          user_id?: string;
+          role?: 'host' | 'member';
+          joined_at?: string;
+        }>;
+        Relationships: [
+          {
+            foreignKeyName: 'language_island_members_island_id_fkey';
+            columns: ['island_id'];
+            isOneToOne: false;
+            referencedRelation: 'language_islands';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'language_island_members_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      location_shares: {
+        Row: LocationShareRow;
+        Insert: Partial<LocationShareRow>;
+        Update: Partial<LocationShareRow>;
+        Relationships: [];
+      };
+      decks: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          colour: string;
+          icon: string;
+          card_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          colour?: string;
+          icon?: string;
+          card_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string | null;
+          colour?: string;
+          icon?: string;
+          card_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        }>;
+        Relationships: [];
+      };
+      deck_flashcards: {
+        Row: {
+          id: string;
+          deck_id: string;
+          flashcard_id: string;
+          added_at: string;
+        };
+        Insert: Partial<{
+          id?: string;
+          deck_id: string;
+          flashcard_id: string;
+          added_at?: string;
+        }>;
+        Update: Partial<{
+          id?: string;
+          deck_id?: string;
+          flashcard_id?: string;
+          added_at?: string;
+        }>;
+        Relationships: [];
+      };
+      escrow_payments: {
+        Row: {
+          id: string;
+          sender_id: string;
+          recipient_id: string;
+          amount: number;
+          currency: string;
+          status: string;
+          stripe_payment_intent_id: string | null;
+          description: string | null;
+          metadata: string | null;
+          created_at: string;
+          updated_at: string;
+          released_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          sender_id: string;
+          recipient_id: string;
+          amount: number;
+          currency: string;
+          status?: string;
+          stripe_payment_intent_id?: string | null;
+          description?: string | null;
+          metadata?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          released_at?: string | null;
+        }>;
+        Update: Partial<{
+          sender_id?: string;
+          recipient_id?: string;
+          amount?: number;
+          currency?: string;
+          status?: string;
+          stripe_payment_intent_id?: string | null;
+          description?: string | null;
+          metadata?: string | null;
+          updated_at?: string;
+          released_at?: string | null;
+        }>;
+        Relationships: [];
+      };
+      escrow_crash_reports: {
+        Row: {
+          id: string;
+          operation: string;
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at?: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          operation: string;
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+          created_at?: string;
+        }>;
+        Update: Partial<{
+          operation?: string;
+          escrow_id?: string | null;
+          user_id?: string | null;
+          error_type?: string;
+          error_message?: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Relationships: [];
+      };
+      matchmaking_crash_reports: {
+        Row: {
+          id: string;
+          operation: string;
+          user_id: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace: string | null;
+          context: Record<string, unknown> | null;
+          circuit_breaker_open: boolean;
+          degraded_tier: string | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          operation: string;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          circuit_breaker_open?: boolean;
+          degraded_tier?: string | null;
+          created_at?: string;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Update: Partial<{
+          operation?: string;
+          user_id?: string | null;
+          error_type?: string;
+          error_message?: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          circuit_breaker_open?: boolean;
+          degraded_tier?: string | null;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -1065,6 +2158,38 @@ export interface Database {
         Args: { user_id: string; amount: number };
         Returns: void;
       };
+      search_nearby_users: {
+        Args: {
+          search_lat: number;
+          search_lon: number;
+          radius_m: number;
+          exclude_user_id: string | null;
+          filter_native_arr: string[] | null;
+          filter_target: string | null;
+          serious_only: boolean;
+          filter_level: string | null;
+          filter_gender: string | null;
+          filter_age_min: number | null;
+          filter_age_max: number | null;
+          filter_audio_intro: boolean;
+        };
+        Returns: unknown[];
+      };
+      upsert_reading_progress: {
+        Args: {
+          p_user_id: string;
+          p_resource_id: string;
+          p_words_read: number;
+          p_duration_seconds: number;
+        };
+        Returns: void;
+      };
+    };
+    location_shares: {
+      Row: LocationShareRow;
+      Insert: Partial<LocationShareRow>;
+      Update: Partial<LocationShareRow>;
+      Relationships: [];
     };
   };
 }
@@ -1072,6 +2197,7 @@ export interface Database {
 @Injectable()
 export class SupabaseService implements OnModuleDestroy {
   private readonly client: SupabaseClient<Database>;
+  private readonly logger = new Logger(SupabaseService.name);
   private readonly redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {
@@ -1093,7 +2219,9 @@ export class SupabaseService implements OnModuleDestroy {
       lazyConnect: true,
     });
     this.redisClient.on('error', (err) => {
-      console.error('Redis connection error in SupabaseService:', err.message);
+      this.logger.error(
+        `Redis connection error in SupabaseService: ${err.message}`,
+      );
     });
   }
 
@@ -1167,7 +2295,8 @@ export class SupabaseService implements OnModuleDestroy {
         );
         return;
       }
-      const current = (data.xp_total ?? 0) + points;
+      const row = data;
+      const current = (row.xp_total ?? 0) + points;
       await supabase
         .from('users')
         .update({ xp_total: current })

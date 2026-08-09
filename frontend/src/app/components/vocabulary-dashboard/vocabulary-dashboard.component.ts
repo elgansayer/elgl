@@ -1,93 +1,237 @@
-import { showToast } from '../../services/toast.service';
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, input, signal, viewChild, inject, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { I18nService } from '../../services/i18n.service';
+import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
 import {
-  VocabularyStore,
-  PronunciationScoreResult,
-  GrammarCheckResult,
-} from '../../services/vocabulary.store';
-import { TokenisedTextComponent } from '../tokenised-text/tokenised-text.component';
+  SrsErrorBoundaryComponent,
+  SrsErrorContext,
+} from '../srs-error-boundary/srs-error-boundary.component';
+
+type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
-  imports: [CommonModule, FormsModule, TokenisedTextComponent, TranslatePipe],
-  templateUrl: './vocabulary-dashboard.component.html',
-  styleUrls: ['./vocabulary-dashboard.component.scss'],
+  imports: [TranslatePipe, SrsErrorBoundaryComponent],
+  template: `
+    <app-srs-error-boundary
+      [context]="errorContext()"
+      [showReportButton]="true"
+      (retry)="handleRetry()"
+    >
+      <div class="mx-auto w-full max-w-md ps-6 pe-6 sm:max-w-lg">
+        <h2 class="text-2xl font-bold text-slate-100">{{ 'vocabulary.title' | t }}</h2>
+        <p class="mt-1 text-sm text-slate-400">{{ 'vocabulary.subtitle' | t }}</p>
+
+        <div class="mt-8 flex items-center justify-between">
+          <span class="text-sm text-slate-300">{{
+            'vocabulary.cardCounter' | t: { current: currentIndex() + 1, total: cardCount() }
+          }}</span>
+          <button type="button" (click)="restart()" class="btn-secondary text-sm">{{
+            'vocabulary.restart' | t
+          }}</button>
+        </div>
+
+        @if (isComplete()) {
+          <div class="mt-12 rounded-2xl border border-slate-700 bg-surface-800 p-8 text-center">
+            <p class="text-lg font-medium text-slate-100">📚 {{ 'vocabulary.noDue' | t }}</p>
+            <button type="button" (click)="restart()" class="mt-4 btn-secondary">{{
+              'vocabulary.restart' | t
+            }}</button>
+          </div>
+        } @else {
+          @if (currentCard(); as card) {
+            <div class="mt-4">
+              <div
+                class="flashcard"
+                [class.is-flipped]="isFlipped()"
+                (click)="flipCard()"
+                (keyup.enter)="flipCard()"
+                (keyup.space)="flipCard()"
+                role="button"
+                tabindex="0"
+                [attr.aria-pressed]="isFlipped()"
+              >
+                <div class="flashcard-inner">
+                  <div class="flashcard-face flashcard-front">
+                    <span class="block text-lg font-semibold text-slate-100">{{ card.term }}</span>
+                    <span class="mt-4 block text-sm text-slate-400">{{ 'vocabulary.tapToFlip' | t }}</span>
+                  </div>
+                  <div class="flashcard-face flashcard-back">
+                    <p class="text-base text-slate-100">{{ card.definition }}</p>
+                    @if (card.example; as example) {
+                      <p class="mt-3 text-sm italic text-slate-400">“{{ example }}”</p>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-6 flex items-center justify-center gap-3">
+                <button type="button" (click)="grade('again')" class="btn-grade btn-grade-again">{{
+                  'vocabulary.againBtn' | t
+                }}</button>
+                <button type="button" (click)="grade('good')" class="btn-grade btn-grade-good">{{
+                  'vocabulary.goodBtn' | t
+                }}</button>
+                <button type="button" (click)="grade('known')" class="btn-grade btn-grade-known">{{
+                  'vocabulary.knownBtn' | t
+                }}</button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </app-srs-error-boundary>
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+        padding-block: 2rem;
+      }
+
+      .flashcard {
+        perspective: 1000px;
+        cursor: pointer;
+      }
+
+      .flashcard-inner {
+        position: relative;
+        width: 100%;
+        height: 14rem;
+        transform-style: preserve-3d;
+        transition: transform 0.6s;
+      }
+
+      .flashcard.is-flipped .flashcard-inner {
+        transform: rotateY(180deg);
+      }
+
+      .flashcard-face {
+        position: absolute;
+        inset: 0;
+        backface-visibility: hidden;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        background-color: #1e1e2e;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .flashcard-back {
+        transform: rotateY(180deg);
+        background-color: #2a2a3a;
+      }
+
+      .btn-grade {
+        min-width: 5rem;
+        padding-block: 0.5rem;
+        padding-inline: 1rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        transition: background-color 0.15s;
+      }
+
+      .btn-grade-again {
+        background-color: #f43f5e;
+        color: white;
+      }
+
+      .btn-grade-good {
+        background-color: #f59e0b;
+        color: black;
+      }
+
+      .btn-grade-known {
+        background-color: #10b981;
+        color: white;
+      }
+
+      .btn-secondary {
+        padding-block: 0.375rem;
+        padding-inline: 0.75rem;
+        border-radius: 9999px;
+        background-color: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #cbd5e1;
+      }
+    `,
+  ],
 })
-export class VocabularyDashboardComponent implements OnInit {
-  readonly vocabStore = inject(VocabularyStore);
-  private readonly i18n = inject(I18nService);
+export class VocabularyDashboardComponent {
+  private errorHandler = inject(ErrorHandler);
 
-  readonly activeTab = signal<'review' | 'all' | 'ai-practice'>('review');
-  readonly currentReviewIndex = signal<number>(0);
-  readonly isCardFlipped = signal<boolean>(false);
+  readonly deckInput = input<VocabCard[]>([]);
 
-  // AI Practice fields
-  practiceText = '';
-  practiceAudioUrl = '';
-  readonly grammarResult = signal<GrammarCheckResult | null>(null);
-  readonly pronunciationResult = signal<PronunciationScoreResult | null>(null);
-  readonly isAiLoading = signal<boolean>(false);
+  private readonly mockDeck: readonly VocabCard[] = VOCABULARY_MOCK_DECK;
 
-  async ngOnInit(): Promise<void> {
-    this.practiceText = this.i18n.translate('vocab.defaultPracticeText');
-    await this.vocabStore.loadAllFlashcards();
-    await this.vocabStore.loadDueReviews();
+  readonly deck = computed<readonly VocabCard[]>(() =>
+    this.deckInput().length > 0 ? this.deckInput() : this.mockDeck,
+  );
+
+  readonly currentIndex = signal(0);
+  readonly isFlipped = signal(false);
+  readonly grades = signal<Record<ReviewGrade, number>>({ again: 0, good: 0, known: 0 });
+
+  readonly cardCount = computed(() => this.deck().length);
+  readonly currentCard = computed(() => this.deck()[this.currentIndex()] ?? null);
+  readonly isComplete = computed(
+    () => this.cardCount() === 0 || this.currentIndex() >= this.cardCount(),
+  );
+
+  readonly errorContext = computed<SrsErrorContext>(() => ({
+    component: 'vocabulary-dashboard',
+    operation: 'review',
+    cardCount: this.cardCount(),
+    currentIndex: this.currentIndex(),
+    srsLevel: this.currentCard()?.level ?? 0,
+  }));
+
+  readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
+
+  handleRetry(): void {
+    this.restart();
   }
 
   flipCard(): void {
-    this.isCardFlipped.set(!this.isCardFlipped());
-  }
-
-  async gradeReview(newLevel: number): Promise<void> {
-    const due = this.vocabStore.dueReviews();
-    const currentCard = due[this.currentReviewIndex()];
-    if (!currentCard) return;
-
     try {
-      await this.vocabStore.updateSrsLevel(currentCard.id, newLevel);
-      this.isCardFlipped.set(false);
-      if (this.currentReviewIndex() < due.length - 1) {
-        this.currentReviewIndex.update((i) => i + 1);
-      } else {
-        await this.vocabStore.loadDueReviews();
-        this.currentReviewIndex.set(0);
+      if (this.currentCard()) {
+        this.isFlipped.update((flipped) => !flipped);
       }
-    } catch (e) {
-      console.error('Failed to grade review card:', e);
+    } catch (err) {
+      this.handleComponentError(err, 'flipCard');
     }
   }
 
-  async runGrammarCheck(): Promise<void> {
-    if (!this.practiceText.trim()) return;
-    this.isAiLoading.set(true);
+  grade(grade: ReviewGrade): void {
     try {
-      const res = await this.vocabStore.checkGrammar(this.practiceText.trim());
-      this.grammarResult.set(res);
-    } catch (e) {
-      console.error('Grammar check error:', e);
-      showToast(this.i18n.translate('vocab.grammarErrorAlert'));
-    } finally {
-      this.isAiLoading.set(false);
+      if (this.isComplete()) return;
+      this.grades.update((g) => ({ ...g, [grade]: g[grade] + 1 }));
+      this.isFlipped.set(false);
+      if (this.currentIndex() < this.cardCount() - 1) {
+        this.currentIndex.update((i) => i + 1);
+      } else {
+        this.currentIndex.set(this.cardCount());
+      }
+    } catch (err) {
+      this.handleComponentError(err, 'grade');
     }
   }
 
-  async runPronunciationScore(): Promise<void> {
-    if (!this.practiceText.trim()) return;
-    this.isAiLoading.set(true);
-    try {
-      // Mock or recorded audio URL
-      const audioUrl = this.practiceAudioUrl || 'https://mock-audio/recording.webm';
-      const res = await this.vocabStore.scorePronunciation(audioUrl, this.practiceText.trim());
-      this.pronunciationResult.set(res);
-    } catch (e) {
-      console.error('Pronunciation score error:', e);
-      showToast(this.i18n.translate('vocab.pronunciationErrorAlert'));
-    } finally {
-      this.isAiLoading.set(false);
-    }
+  restart(): void {
+    this.currentIndex.set(0);
+    this.isFlipped.set(false);
+    this.grades.set({ again: 0, good: 0, known: 0 });
+  }
+
+  private handleComponentError(err: unknown, operation: string): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    this.errorBoundary()?.captureError(error, undefined, {
+      operation,
+      cardIndex: this.currentIndex(),
+      cardCount: this.cardCount(),
+    });
   }
 }

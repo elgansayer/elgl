@@ -120,6 +120,44 @@ export class CentrifugoService {
     this.unsubscribe(`room_${roomId}`);
   }
 
+  subscribeLiveLocation(
+    userId: string,
+    callback: (data: {
+      latitude: number;
+      longitude: number;
+      sharer_user_id: string;
+      updated_at: string;
+    }) => void,
+  ): void {
+    this.subscribe(`location_live_${userId}`, (data: unknown) => {
+      if (this.isLiveLocationPayload(data)) {
+        callback(data);
+      }
+    });
+  }
+
+  unsubscribeLiveLocation(userId: string): void {
+    this.unsubscribe(`location_live_${userId}`);
+  }
+
+  private isLiveLocationPayload(
+    data: unknown,
+  ): data is {
+    latitude: number;
+    longitude: number;
+    sharer_user_id: string;
+    updated_at: string;
+  } {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'latitude' in data &&
+      'longitude' in data &&
+      'sharer_user_id' in data &&
+      'updated_at' in data
+    );
+  }
+
   private isRoomMessage(data: unknown): data is RoomLiveMessage {
     return typeof data === 'object' && data !== null;
   }

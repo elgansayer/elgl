@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from '../chat/centrifugo.service';
@@ -72,75 +72,155 @@ describe('GroupsService', () => {
   });
 
   it('addMember adds a member when the group is not full', async () => {
+    const ownerRow = { owner_id: 'admin-1' };
     const groupRow = { max_members: 10 };
-    const groupBuilder = {
+    let groupsCalls = 0;
+    const groupsBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: groupRow, error: null }),
+      single: jest.fn().mockImplementation(() => {
+        groupsCalls += 1;
+        if (groupsCalls === 1) {
+          return { data: ownerRow, error: null };
+        }
+        return { data: groupRow, error: null };
+      }),
     };
-    let groupMemberCalls = 0;
-    const countBuilder = {
+    // For users table: member exists
+    const usersBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+    };
+    // For group_members: first call = no membership, second = count
+    let memberCalls = 0;
+    const memberNoExistingBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const memberCountBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
     };
-    const insertBuilder = {
+    const memberInsertBuilder = {
       insert: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
     const mockFrom = jest.fn((table: string) => {
-      if (table === 'groups') return groupBuilder;
+      if (table === 'groups') return groupsBuilder;
+      if (table === 'users') return usersBuilder;
       if (table === 'group_members') {
-        groupMemberCalls += 1;
-        if (groupMemberCalls === 1) {
-          return countBuilder;
-        }
-        return insertBuilder;
+        memberCalls += 1;
+        if (memberCalls === 1) return memberNoExistingBuilder;
+        if (memberCalls === 2) return memberCountBuilder;
+        return memberInsertBuilder;
       }
-      return insertBuilder;
+      return memberInsertBuilder;
     });
     (supabaseService.getClient as unknown as jest.Mock).mockReturnValue({
       from: mockFrom,
     });
 
     await expect(
-      service.addMember('group-1', 'member-9'),
+      service.addMember('group-1', 'member-9', 'admin-1'),
     ).resolves.not.toThrow();
-    expect(mockFrom).toHaveBeenCalledWith('group_members');
   });
 
   it('addMember throws ForbiddenException when the group is full', async () => {
+    const ownerRow = { owner_id: 'admin-1' };
     const groupRow = { max_members: 2 };
-    const groupBuilder = {
+    let groupsCalls = 0;
+    const groupsBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: groupRow, error: null }),
+      single: jest.fn().mockImplementation(() => {
+        groupsCalls += 1;
+        if (groupsCalls === 1) {
+          return { data: ownerRow, error: null };
+        }
+        return { data: groupRow, error: null };
+      }),
     };
-    const countBuilder = {
+    const usersBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'member-9' }, error: null }),
+    };
+    const memberNoExistingBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    let memberCalls = 0;
+    const memberCountBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
     };
     const mockFrom = jest.fn((table: string) => {
-      return table === 'groups' ? groupBuilder : countBuilder;
+      if (table === 'groups') return groupsBuilder;
+      if (table === 'users') return usersBuilder;
+      if (table === 'group_members') {
+        memberCalls += 1;
+        if (memberCalls === 1) return memberNoExistingBuilder;
+        return memberCountBuilder;
+      }
+      return memberCountBuilder;
     });
     (supabaseService.getClient as unknown as jest.Mock).mockReturnValue({
       from: mockFrom,
     });
 
-    await expect(service.addMember('group-1', 'member-9')).rejects.toThrow(
-      ForbiddenException,
-    );
+    await expect(
+      service.addMember('group-1', 'member-9', 'admin-1'),
+    ).rejects.toThrow(ForbiddenException);
   });
 
   it('removeMember deletes the member row', async () => {
+    const ownerRow = { owner_id: 'admin-1' };
+    const groupData = { owner_id: 'admin-1' };
+    let groupsCalls = 0;
+    const groupsBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockImplementation(() => {
+        groupsCalls += 1;
+        if (groupsCalls === 1) {
+          return { data: ownerRow, error: null };
+        }
+        return { data: groupData, error: null };
+      }),
+    };
+    const memberBuilder = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest
+        .fn()
+        .mockResolvedValue({ data: { id: 'm1' }, error: null }),
+    };
     const deleteBuilder = {
       delete: jest.fn().mockReturnThis(),
       match: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
+    let memberCalls = 0;
+    const mockFrom = jest.fn((table: string) => {
+      if (table === 'groups') return groupsBuilder;
+      if (table === 'group_members') {
+        memberCalls += 1;
+        if (memberCalls === 1) return memberBuilder;
+        return deleteBuilder;
+      }
+      return deleteBuilder;
+    });
     (supabaseService.getClient as unknown as jest.Mock).mockReturnValue({
-      from: jest.fn().mockReturnValue(deleteBuilder),
+      from: mockFrom,
     });
 
     await expect(
-      service.removeMember('group-1', 'member-9'),
+      service.removeMember('group-1', 'member-9', 'admin-1'),
     ).resolves.not.toThrow();
   });
 

@@ -46,7 +46,11 @@ export class TwoFactorService {
       .eq('id', userId)
       .single();
 
-    const secret = data?.totp_secret ?? data?.two_factor_secret;
+    const row = data as {
+      totp_secret: string | null;
+      two_factor_secret: string | null;
+    } | null;
+    const secret = row?.totp_secret ?? row?.two_factor_secret;
     if (error || !secret) {
       throw new UnauthorizedException(
         'Two‑factor authentication is not enabled',

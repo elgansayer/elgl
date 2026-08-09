@@ -1,6 +1,8 @@
-import { Component, input, output, inject, signal, effect } from '@angular/core';
+import { Component, input, output, inject, computed } from '@angular/core';
 
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { I18nService } from '../../services/i18n.service';
+import { TransliterationService } from '../../services/transliteration.service';
 
 export interface TokenSegment {
   segment: string;
@@ -8,32 +10,59 @@ export interface TokenSegment {
   index: number;
 }
 
+interface ParsedTokens {
+  tokens: TokenSegment[];
+  transliteration: string;
+}
+
 @Component({
   selector: 'app-tokenised-text',
   imports: [],
-  templateUrl: './tokenised-text.component.html',
-  styleUrls: ['./tokenised-text.component.scss'],
+  template: `
+    <div class="inline leading-relaxed select-text font-medium text-base">
+      @for (token of tokens(); track token.index) {
+        <span
+          (click)="onTokenClick(token)"
+          (keydown.enter)="onTokenClick(token)"
+          (keydown.space)="onTokenClick(token); $event.preventDefault()"
+          [attr.tabindex]="token.isWordLike ? 0 : null"
+          [attr.role]="token.isWordLike ? 'button' : null"
+          [class]="
+            'transition-colours rounded px-0.5 ' +
+            (token.isWordLike ? vocabStore.getWordStatus(token.segment).colourClass : '')
+          "
+        >
+          {{ token.segment }}
+        </span>
+      }
+      @if (transliteration()) {
+        <div class="transliteration mt-1 text-xs leading-snug text-slate-500" dir="ltr">
+          {{ transliteration() }}
+        </div>
+      }
+    </div>
+  `,
+  styles: `
+    .transliteration {
+      margin-block-start: 0.25rem;
+      font-size: 0.75rem;
+      line-height: 1.25rem;
+      color: #64748b;
+    }
+  `,
 })
 export class TokenisedTextComponent {
   readonly vocabStore = inject(VocabularyStore);
+  readonly i18n = inject(I18nService);
+  readonly transliterationService = inject(TransliterationService);
 
-  text = input.required<string>();
+  text = input<string>('');
   language = input('en');
   wordClicked = output<{ token: string; context: string }>();
 
-  readonly tokens = signal<TokenSegment[]>([]);
-
-  constructor() {
-    effect(() => {
-      this.text();
-      this.language();
-      this.parseText();
-    });
-  }
-
-  private parseText(): void {
+  private readonly parsed = computed<ParsedTokens>(() => {
     if (typeof Intl === 'undefined' || !Intl.Segmenter) {
-      throw new Error('Intl.Segmenter is not available in this environment.');
+      throw new Error(this.i18n.translate('errors.intlSegmenterUnavailable'));
     }
 
     const segments: TokenSegment[] = [];
@@ -48,8 +77,14 @@ export class TokenisedTextComponent {
       });
     }
 
-    this.tokens.set(segments);
-  }
+    return {
+      tokens: segments,
+      transliteration: this.transliterationService.transliterate(this.text(), this.language()),
+    };
+  });
+
+  readonly tokens = computed(() => this.parsed().tokens);
+  readonly transliteration = computed(() => this.parsed().transliteration);
 
   onTokenClick(token: TokenSegment): void {
     if (!token.isWordLike) return;

@@ -1,5 +1,8 @@
-import { Component, inject, input, signal, DestroyRef } from '@angular/core';
+import { Component, inject, input, computed, DestroyRef } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { TextToSpeechService } from '../../services/text-to-speech.service';
+
+let nextInstanceId = 0;
 
 @Component({
   selector: 'app-text-to-speech',
@@ -26,46 +29,21 @@ export class TextToSpeechComponent {
   readonly text = input.required<string>();
   readonly language = input<string>('en-GB');
 
-  readonly isSpeaking = signal<boolean>(false);
-
-  private utterance: SpeechSynthesisUtterance | null = null;
+  private readonly tts = inject(TextToSpeechService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly instanceId = `text-to-speech-${nextInstanceId++}`;
+
+  readonly isSpeaking = computed(() => this.tts.isSpeaking(this.instanceId));
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.stopSpeaking());
+    this.destroyRef.onDestroy(() => {
+      if (this.isSpeaking()) {
+        this.tts.stop();
+      }
+    });
   }
 
   toggleSpeech(): void {
-    if (this.isSpeaking()) {
-      this.stopSpeaking();
-    } else {
-      this.startSpeaking();
-    }
-  }
-
-  private startSpeaking(): void {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      return;
-    }
-    const text = this.text();
-    if (!text.trim()) return;
-
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = this.language();
-    utterance.rate = 0.9;
-    utterance.onstart = () => this.isSpeaking.set(true);
-    utterance.onend = () => this.isSpeaking.set(false);
-    utterance.onerror = () => this.isSpeaking.set(false);
-    window.speechSynthesis.speak(utterance);
-    this.utterance = utterance;
-  }
-
-  private stopSpeaking(): void {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    this.isSpeaking.set(false);
-    this.utterance = null;
+    this.tts.toggle(this.instanceId, this.text(), this.language());
   }
 }

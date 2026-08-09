@@ -62,7 +62,7 @@ export class AvatarUploadComponent {
     this.previewUrl.set(blobUrl);
   }
 
-  // Called when the <img> inside the template has finished loading
+  // Called when the <img loading="lazy"> inside the template has finished loading
   onImageLoad(event: Event): void {
     const img = event.target;
     if (!(img instanceof HTMLImageElement)) return;

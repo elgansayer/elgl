@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PinoLogger } from 'nestjs-pino';
 import {
   ForbiddenException,
   NotFoundException,
@@ -69,6 +70,15 @@ describe('MonetisationService', () => {
 
     module = await Test.createTestingModule({
       providers: [
+        {
+          provide: 'PinoLogger:MonetisationService',
+          useValue: {
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
         MonetisationService,
         {
           provide: ConfigService,
@@ -306,19 +316,17 @@ describe('MonetisationService', () => {
       });
     });
 
-    it('should generate API key and return consumer rate limits for non-developer tier VIP user', async () => {
+    it('should throw ForbiddenException for non-developer tier VIP user', async () => {
       mockQueryBuilder.single.mockResolvedValue({
         data: { id: 'user-vip', is_vip: true, vip_tier: 'consumer' },
         error: null,
       });
 
-      const result = await service.generateApiKey('user-vip');
-
-      expect(result).toEqual({
-        api_key: expect.stringMatching(/^ht_dev_[a-f0-9]{32}$/),
-        tier: 'consumer',
-        rate_limit_rpm: 60,
-      });
+      await expect(service.generateApiKey('user-vip')).rejects.toThrow(
+        new ForbiddenException(
+          'Developer API Access is reserved for active subscribers. Upgrade to Developer Tier (20 UKP / $26 USD per month) to generate programmatic API keys!',
+        ),
+      );
     });
   });
 
@@ -556,17 +564,29 @@ describe('MonetisationService', () => {
   describe('getDiagnosticLogs', () => {
     it('should return diagnostic logs when query succeeds', async () => {
       const logs = [{ id: 'log-1', category: 'POSTGIS' }];
-      const chain = {
+      const userCheckChain = {
         select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { is_vip: true, vip_tier: 'developer' },
+          error: null,
+        }),
+      };
+      const logsChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         limit: jest.fn().mockResolvedValue({
           data: logs,
           error: null,
         }),
       };
-      mockSupabaseClient.from.mockReturnValueOnce(chain);
 
-      const result = await service.getDiagnosticLogs();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(userCheckChain)
+        .mockReturnValueOnce(logsChain);
+
+      const result = await service.getDiagnosticLogs('user-1');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith(
         'developer_diagnostic_logs',
       );
@@ -574,17 +594,29 @@ describe('MonetisationService', () => {
     });
 
     it('should return empty array when query fails', async () => {
-      const chain = {
+      const userCheckChain = {
         select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { is_vip: true, vip_tier: 'developer' },
+          error: null,
+        }),
+      };
+      const failingChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         limit: jest.fn().mockResolvedValue({
           data: null,
           error: { message: 'failed' },
         }),
       };
-      mockSupabaseClient.from.mockReturnValueOnce(chain);
 
-      const result = await service.getDiagnosticLogs();
+      mockSupabaseClient.from
+        .mockReturnValueOnce(userCheckChain)
+        .mockReturnValueOnce(failingChain);
+
+      const result = await service.getDiagnosticLogs('user-1');
       expect(result).toEqual([]);
     });
   });
@@ -599,10 +631,26 @@ describe('MonetisationService', () => {
         message: 'done',
         created_at: '2026-01-01T00:00:00.000Z',
       };
-      mockQueryBuilder.single.mockResolvedValue({
-        data: created,
-        error: null,
-      });
+      const userCheckChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: { is_vip: true, vip_tier: 'developer' },
+          error: null,
+        }),
+      };
+      const insertChain = {
+        insert: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({
+          data: created,
+          error: null,
+        }),
+      };
+
+      mockSupabaseClient.from
+        .mockReturnValueOnce(userCheckChain)
+        .mockReturnValueOnce(insertChain);
 
       const result = await service.createDiagnosticLog('user-1', {
         category: 'REDIS',

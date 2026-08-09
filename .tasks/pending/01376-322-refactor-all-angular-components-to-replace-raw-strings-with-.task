@@ -1,1 +1,0 @@
-Refactor all Angular components to replace raw strings with `{{ KEY | translate }}` pipes.

@@ -4,13 +4,10 @@ import {
   Body,
   Headers,
   Req,
-  UseGuards,
   BadRequestException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { StripeService } from '../services/stripe.service';
-import { SupabaseAuthGuard } from '../../auth/guards/supabase-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { IsString, IsIn, IsNotEmpty } from 'class-validator';
 
 export class CreateCheckoutSessionDto {
@@ -46,13 +43,13 @@ export class StripeController {
 
     switch (event.type) {
       case 'customer.subscription.created':
-        this.stripeService.handleSubscriptionCreated(event);
+        await this.stripeService.handleSubscriptionCreated(event);
         break;
       case 'customer.subscription.updated':
-        this.stripeService.handleSubscriptionUpdated(event);
+        await this.stripeService.handleSubscriptionUpdated(event);
         break;
       case 'customer.subscription.deleted':
-        this.stripeService.handleSubscriptionDeleted(event);
+        await this.stripeService.handleSubscriptionDeleted(event);
         break;
       case 'invoice.payment_succeeded':
         await this.stripeService.handleInvoicePaymentSucceeded(event);

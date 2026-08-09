@@ -35,15 +35,17 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
+    files: ['**/*.spec.ts', '**/*.e2e-spec.ts', '**/*.cy.ts'],
     rules: {
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      'no-console': 'off',
     },
   },
   {
     files: ['**/*.ts'],
-    ignores: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
+    ignores: ['**/*.spec.ts', '**/*.e2e-spec.ts', '**/*.cy.ts'],
     rules: {
       'no-restricted-syntax': [
         'warn',

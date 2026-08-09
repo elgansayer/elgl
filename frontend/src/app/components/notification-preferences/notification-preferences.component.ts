@@ -3,10 +3,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import {
   NotificationPreferencesService,
-  NotificationPreferences,
-  CategoryPreference,
-  NotificationCategory,
-  NotificationChannel,
+  type NotificationPreferences,
+  type PreferenceChannel,
+  type NotificationCategory,
+  type NotificationChannel,
 } from '../../services/notification-preferences.service';
 
 @Component({
@@ -50,29 +50,6 @@ import {
             />
             <span>{{ 'notification_preferences.do_not_disturb' | t }}</span>
           </label>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs mb-1" for="quiet-hours-start">{{ 'notification_preferences.quiet_hours_start' | t }}</label>
-              <input
-                id="quiet-hours-start"
-                type="time"
-                [value]="quietStart()"
-                (input)="updateQuietStart($event)"
-                class="input w-full"
-              />
-            </div>
-            <div>
-              <label class="block text-xs mb-1" for="quiet-hours-end">{{ 'notification_preferences.quiet_hours_end' | t }}</label>
-              <input
-                id="quiet-hours-end"
-                type="time"
-                [value]="quietEnd()"
-                (input)="updateQuietEnd($event)"
-                class="input w-full"
-              />
-            </div>
-          </div>
         </div>
 
         <div class="mt-6 flex gap-3">
@@ -91,29 +68,20 @@ export class NotificationPreferencesComponent {
   private service = inject(NotificationPreferencesService);
   private i18n = inject(I18nService);
 
-  readonly channels: NotificationChannel[] = ['push', 'email', 'in_app'];
+  readonly channels: NotificationChannel[] = ['push', 'badge'];
 
   private prefs = signal<NotificationPreferences | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
 
   readonly categories = signal<NotificationCategory[]>([
-    'new_message',
-    'call_invite',
-    'moment_like',
-    'moment_comment',
-    'correction',
-    'gift',
-    'profile_view',
-    'study_reminder',
-    'friend_request',
-    'audio_room_invite',
-    'new_follower',
+    'direct_messages',
+    'groups',
+    'likes',
+    'voice_rooms',
   ]);
 
   readonly doNotDisturb = signal(false);
-  readonly quietStart = signal('');
-  readonly quietEnd = signal('');
 
   private readonly prefsResource = resource({
     loader: async () => {
@@ -123,8 +91,6 @@ export class NotificationPreferencesComponent {
         const prefs = await this.service.getPreferences();
         this.prefs.set(prefs);
         this.doNotDisturb.set(prefs.do_not_disturb);
-        this.quietStart.set(prefs.quiet_hours_start ?? '');
-        this.quietEnd.set(prefs.quiet_hours_end ?? '');
       } catch {
         this.error.set(this.i18n.translate('common.error_generic'));
       } finally {
@@ -138,24 +104,10 @@ export class NotificationPreferencesComponent {
     this.prefsResource.reload();
   }
 
-  private categoryPref(cat: NotificationCategory): CategoryPreference | undefined {
+  private categoryPref(cat: NotificationCategory): PreferenceChannel | undefined {
     const p = this.prefs();
     if (!p) return undefined;
-    // explicit switch to avoid any / type assertion
-    switch (cat) {
-      case 'new_message': return p.new_message;
-      case 'call_invite': return p.call_invite;
-      case 'moment_like': return p.moment_like;
-      case 'moment_comment': return p.moment_comment;
-      case 'correction': return p.correction;
-      case 'gift': return p.gift;
-      case 'profile_view': return p.profile_view;
-      case 'study_reminder': return p.study_reminder;
-      case 'friend_request': return p.friend_request;
-      case 'audio_room_invite': return p.audio_room_invite;
-      case 'new_follower': return p.new_follower;
-      default: return undefined;
-    }
+    return p[cat];
   }
 
   channelEnabled(cat: NotificationCategory, ch: NotificationChannel): boolean {
@@ -176,11 +128,11 @@ export class NotificationPreferencesComponent {
     const cp = this.categoryPref(cat);
     if (!cp) return;
     const newVal = !cp[ch];
-    this.service.toggleCategoryChannel(cat, ch, newVal, this.prefs()!).then((updated) => {
+    const currentPrefs = this.prefs();
+    if (!currentPrefs) return;
+    this.service.toggleCategoryChannel(cat, ch, newVal, currentPrefs).then((updated) => {
       this.prefs.set(updated);
       this.doNotDisturb.set(updated.do_not_disturb);
-      this.quietStart.set(updated.quiet_hours_start ?? '');
-      this.quietEnd.set(updated.quiet_hours_end ?? '');
     }).catch(() => {
       this.error.set(this.i18n.translate('common.error_generic'));
     });
@@ -190,36 +142,18 @@ export class NotificationPreferencesComponent {
     const p = this.prefs();
     if (!p) return;
     const newVal = !p.do_not_disturb;
-    this.service.toggleDoNotDisturb(newVal, this.quietStart(), this.quietEnd()).then((updated) => {
+    this.service.updatePreferences({ do_not_disturb: newVal }).then((updated) => {
       this.prefs.set(updated);
       this.doNotDisturb.set(updated.do_not_disturb);
-      this.quietStart.set(updated.quiet_hours_start ?? '');
-      this.quietEnd.set(updated.quiet_hours_end ?? '');
     }).catch(() => {
       this.error.set(this.i18n.translate('common.error_generic'));
     });
-  }
-
-  updateQuietStart(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLInputElement) {
-      this.quietStart.set(target.value);
-    }
-  }
-
-  updateQuietEnd(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLInputElement) {
-      this.quietEnd.set(target.value);
-    }
   }
 
   reset(): void {
     this.service.resetToDefaults().then((updated) => {
       this.prefs.set(updated);
       this.doNotDisturb.set(updated.do_not_disturb);
-      this.quietStart.set(updated.quiet_hours_start ?? '');
-      this.quietEnd.set(updated.quiet_hours_end ?? '');
     }).catch(() => {
       this.error.set(this.i18n.translate('common.error_generic'));
     });
@@ -231,8 +165,6 @@ export class NotificationPreferencesComponent {
     this.service.updatePreferences(p).then((updated) => {
       this.prefs.set(updated);
       this.doNotDisturb.set(updated.do_not_disturb);
-      this.quietStart.set(updated.quiet_hours_start ?? '');
-      this.quietEnd.set(updated.quiet_hours_end ?? '');
     }).catch(() => {
       this.error.set(this.i18n.translate('common.error_generic'));
     });

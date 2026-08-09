@@ -9,6 +9,10 @@ export interface AvatarUploadResponse {
   avatarUrl: string;
 }
 
+export interface VoiceNoteUploadResponse {
+  url: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -29,6 +33,20 @@ export class MediaService {
     );
   }
 
+  async uploadVoiceNote(
+    blob: Blob,
+    format: 'ogg' | 'm4a' = 'ogg',
+  ): Promise<VoiceNoteUploadResponse> {
+    const formData = new FormData();
+    const filename = `voice_${Date.now()}.webm`;
+    formData.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }));
+    formData.append('format', format);
+
+    return firstValueFrom(
+      this.http.post<VoiceNoteUploadResponse>(`${this.baseUrl}/voice-note`, formData),
+    );
+  }
+
   async markMediaAsViewed(mediaId: string): Promise<void> {
     if (!mediaId) {
       throw new Error('Media ID is required');
@@ -40,8 +58,6 @@ export class MediaService {
   }
 
   async clearMediaCache(): Promise<void> {
-    // TODO: Implement actual cache clearing once SupabaseService exposes a clear method
-    // Placeholder implementation for cache clearing
-    return Promise.resolve();
+    await this.supabaseService.clearOfflineCache();
   }
 }

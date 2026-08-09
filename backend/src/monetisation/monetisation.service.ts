@@ -2,12 +2,12 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as crypto from 'crypto';
 import Stripe from 'stripe';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -18,6 +18,8 @@ import {
 import { AppleNotificationService } from './apple-notification.service';
 import { GooglePlayNotificationService } from './google-play-notification.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { AppleNotificationDto } from './dto/apple-notification.dto';
+import { GoogleNotificationDto } from './dto/google-notification.dto';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
 
 export interface UserVipRow {
@@ -39,11 +41,11 @@ export interface DeveloperDiagnosticLogRow {
 
 @Injectable()
 export class MonetisationService {
-  private readonly logger = new Logger(MonetisationService.name);
-
   private readonly stripe: Stripe;
 
   constructor(
+    @InjectPinoLogger(MonetisationService.name)
+    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => AppleNotificationService))
@@ -87,7 +89,7 @@ export class MonetisationService {
       throw new Error('Failed to update VIP status');
     }
 
-    this.logger.log(
+    this.logger.info(
       `VIP status updated for user ${userId}: isVip=${isVip}, tier=${vipTier}`,
     );
   }
@@ -219,7 +221,7 @@ export class MonetisationService {
   ): Promise<{ received: boolean; status: string }> {
     const event = this.verifyStripeSignature(rawBody, signature);
 
-    this.logger.log(`Received verified Stripe Webhook event: ${event.type}`);
+    this.logger.info(`Received verified Stripe Webhook event: ${event.type}`);
 
     // Helper to determine tier based on planId metadata (or fallback to interval)
     const tierForPlan = (planId?: string, interval?: string): string => {
@@ -269,7 +271,7 @@ export class MonetisationService {
   async handleAppleNotification(
     dto: AppleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log(
+    this.logger.info(
       `Processing Apple Notification: ${dto.notificationType}, ${dto.subtype}`,
     );
 
@@ -297,7 +299,7 @@ export class MonetisationService {
   async handleGoogleNotification(
     dto: GoogleNotificationDto,
   ): Promise<{ received: boolean; status: string }> {
-    this.logger.log(
+    this.logger.info(
       `Processing Google Notification: ${dto.productId}, ${dto.purchaseToken}`,
     );
 
@@ -335,7 +337,7 @@ export class MonetisationService {
       user.is_vip && (user.vip_tier ?? '').startsWith('developer');
     if (!isDeveloperTier) {
       throw new ForbiddenException(
-        'Developer API Access is reserved for active Developer Tier subscribers (20 UKP / $26 USD per month).',
+        'Developer API Access is reserved for active subscribers. Upgrade to Developer Tier (20 UKP / $26 USD per month) to generate programmatic API keys!',
       );
     }
 
@@ -370,29 +372,31 @@ export class MonetisationService {
 
     const isDeveloperTier =
       user.is_vip && (user.vip_tier ?? '').startsWith('developer');
-    if (!isDeveloperTier) {
-      throw new ForbiddenException(
-        'Developer Analytics are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
-      );
-    }
 
-    const metricResponse = await supabase
-      .from('developer_metrics')
-      .select('user_id, total_api_calls_today, avg_latency_ms')
-      .eq('user_id', userId)
-      .single();
-    const metric = metricResponse.data as unknown as {
-      total_api_calls_today?: number;
-      avg_latency_ms?: number;
-    } | null;
+    let total_api_calls_today = 0;
+    let avg_latency_ms = 0;
+
+    if (isDeveloperTier) {
+      const metricResponse = await supabase
+        .from('developer_metrics')
+        .select('user_id, total_api_calls_today, avg_latency_ms')
+        .eq('user_id', userId)
+        .single();
+      const metric = metricResponse.data as unknown as {
+        total_api_calls_today?: number;
+        avg_latency_ms?: number;
+      } | null;
+      total_api_calls_today = metric?.total_api_calls_today ?? 0;
+      avg_latency_ms = metric?.avg_latency_ms ?? 0;
+    }
 
     return {
       api_key: user.developer_api_key || null,
       tier: user.vip_tier || (user.is_vip ? 'consumer' : 'free'),
-      total_api_calls_today: metric?.total_api_calls_today ?? 0,
-      avg_latency_ms: metric?.avg_latency_ms ?? 0,
+      total_api_calls_today,
+      avg_latency_ms,
       pricing_info:
-        'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month or 6 UKP / $8 USD annual equivalent',
+        'Developer Tier: 20 UKP / $26 USD per month | Consumer VIP: 8 UKP / $10 USD per month',
     };
   }
 
@@ -405,14 +409,14 @@ export class MonetisationService {
       .select('is_vip, vip_tier')
       .eq('id', userId)
       .single();
-    if (
-      !userCheck ||
-      !userCheck.is_vip ||
-      !(userCheck.vip_tier && userCheck.vip_tier.startsWith('developer'))
-    ) {
-      throw new ForbiddenException(
-        'Diagnostic logs are only available to active Developer Tier subscribers (20 UKP / $26 USD per month).',
-      );
+
+    const isDeveloper =
+      !!userCheck &&
+      userCheck.is_vip === true &&
+      (userCheck.vip_tier ?? '').startsWith('developer');
+
+    if (!isDeveloper) {
+      return [];
     }
 
     const response = await supabase
@@ -469,15 +473,27 @@ export class MonetisationService {
   }
 
   /**
-   * Restore previous purchases (Apple App Store / Google Play).
+   * Restore previous purchases (Apple App Store / Google Play / Stripe).
    * Validates receipt and updates VIP status accordingly.
    */
   async restorePurchases(
     userId: string,
-    platform: 'ios' | 'android',
+    platform: 'ios' | 'android' | 'stripe',
     receiptData?: string,
   ): Promise<{ received: boolean; status: string }> {
-    if (platform === 'ios') {
+    if (platform === 'stripe') {
+      const subscription = await this.findActiveStripeSubscription(userId);
+      if (subscription) {
+        const tier =
+          subscription.metadata?.tier ??
+          this.inferTierFromPriceId(subscription.items?.data?.[0]?.price?.id);
+        if (tier) {
+          await this.updateVipStatusFromWebhook(userId, true, tier);
+          return { received: true, status: 'restored' };
+        }
+      }
+      return { received: true, status: 'no_valid_subscription' };
+    } else if (platform === 'ios') {
       if (!receiptData) {
         throw new BadRequestException('Receipt data is required for iOS');
       }
@@ -504,9 +520,16 @@ export class MonetisationService {
       let purchaseToken: string;
       let productId: string | undefined;
       try {
-        const parsed = JSON.parse(receiptData);
-        purchaseToken = parsed.purchaseToken;
-        productId = parsed.productId;
+        const parsed: Record<string, unknown> = JSON.parse(receiptData);
+        if (
+          typeof parsed.purchaseToken === 'string' &&
+          typeof parsed.productId === 'string'
+        ) {
+          purchaseToken = parsed.purchaseToken;
+          productId = parsed.productId;
+        } else {
+          throw new Error('Invalid receipt data format');
+        }
       } catch {
         // fallback: treat receiptData as raw purchase token
         purchaseToken = receiptData;
@@ -567,8 +590,34 @@ export class MonetisationService {
       }
 
       return { received: true, status: 'no_valid_subscription' };
+    } else {
+      // Stripe/web platform: look up active Stripe subscription and sync VIP status
+      const subscription = await this.findActiveStripeSubscription(userId);
+      if (!subscription) {
+        return { received: true, status: 'no_valid_subscription' };
+      }
+
+      // Determine VIP tier from the subscription metadata or price lookup
+      const item = subscription.items.data[0];
+      const priceId = item?.price?.id;
+      let tier: string | null = null;
+      if (priceId) {
+        tier = this.subscriptionPlansService.getTierByProductId(priceId);
+      }
+
+      if (tier) {
+        await this.updateVipStatusFromWebhook(userId, true, tier);
+        return { received: true, status: 'restored' };
+      }
+
+      // No matching tier but active subscription exists -- restore as consumer VIP
+      await this.updateVipStatusFromWebhook(
+        userId,
+        true,
+        'consumer_8_ukp_10_usd',
+      );
+      return { received: true, status: 'restored' };
     }
-    throw new BadRequestException('Invalid platform');
   }
 
   /**
@@ -606,7 +655,7 @@ export class MonetisationService {
       throw new Error(`Failed to deduct coins: ${updateError.message}`);
     }
 
-    this.logger.log(
+    this.logger.info(
       `Deducted ${amount} coins from user ${userId}, remaining ${newBalance}`,
     );
 
@@ -650,7 +699,7 @@ export class MonetisationService {
     if (updateError) {
       throw new Error(`Failed to add coins: ${updateError.message}`);
     }
-    this.logger.log(
+    this.logger.info(
       `Added ${amount} coins to user ${userId}, new balance ${newBalance}`,
     );
     return newBalance;
@@ -670,9 +719,44 @@ export class MonetisationService {
     });
     return (
       subscriptions.data.find(
-        (sub) => sub.metadata?.userId === userId && sub.status === 'active',
+        (sub) =>
+          sub.metadata?.userId === userId &&
+          (sub.status === 'active' || sub.status === 'trialing'),
       ) ?? null
     );
+  }
+
+  /**
+   * Infer VIP tier from a Stripe price ID by matching against configured price IDs.
+   */
+  private inferTierFromPriceId(priceId?: string): string | null {
+    if (!priceId) return null;
+    const monthlyPriceId = this.configService.get<string>(
+      'STRIPE_MONTHLY_PRICE_ID',
+    );
+    const yearlyPriceId = this.configService.get<string>(
+      'STRIPE_YEARLY_PRICE_ID',
+    );
+    const proMonthlyPriceId = this.configService.get<string>(
+      'STRIPE_PRO_MONTHLY_PRICE_ID',
+    );
+    const proYearlyPriceId = this.configService.get<string>(
+      'STRIPE_PRO_YEARLY_PRICE_ID',
+    );
+    const devMonthlyPriceId = this.configService.get<string>(
+      'STRIPE_DEVELOPER_MONTHLY_PRICE_ID',
+    );
+    const devYearlyPriceId = this.configService.get<string>(
+      'STRIPE_DEVELOPER_YEARLY_PRICE_ID',
+    );
+
+    if (priceId === monthlyPriceId || priceId === yearlyPriceId)
+      return 'consumer_8_ukp_10_usd';
+    if (priceId === proMonthlyPriceId || priceId === proYearlyPriceId)
+      return 'pro_12_ukp_15_usd';
+    if (priceId === devMonthlyPriceId || priceId === devYearlyPriceId)
+      return 'developer_20_ukp_26_usd';
+    return null;
   }
 
   /**
@@ -746,7 +830,7 @@ export class MonetisationService {
       cancel_at_period_end: true,
     });
 
-    this.logger.log(
+    this.logger.info(
       `Subscription ${userSubscription.id} set to cancel at period end for user ${userId}`,
     );
 
@@ -778,7 +862,7 @@ export class MonetisationService {
       cancel_at_period_end: false,
     });
 
-    this.logger.log(
+    this.logger.info(
       `Subscription ${userSubscription.id} resumed for user ${userId}`,
     );
 

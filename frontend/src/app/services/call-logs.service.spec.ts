@@ -74,6 +74,6 @@ describe('CallLogsService', () => {
     } catch {
       threw = true;
     }
-    expect(threw).toBeTrue();
+    expect(threw).toBe(true);
   });
 });

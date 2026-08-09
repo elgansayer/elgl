@@ -234,9 +234,12 @@ export class UsersController {
     if (!user) {
       throw new UnauthorizedException();
     }
+    const userId = String(user.id);
+    const defaultStatusId: string =
+      await this.usersService.getDefaultStatusId(userId);
     return await this.usersService.getStatusViewersByStatusId(
-      user.id,
-      'default-status-id', // Replace with actual logic to fetch the statusId if needed
+      userId,
+      defaultStatusId,
     );
   }
 
@@ -250,6 +253,19 @@ export class UsersController {
     return this.usersService.getAvailableInterests();
   }
 
+  @Get('search')
+  async searchUsers(
+    @Query('q') query: string,
+    @CurrentUser() user: User | null,
+    @Query('limit') limit: number | undefined,
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
+    if (!user) throw new UnauthorizedException();
+    if (!query || query.trim().length === 0) return [];
+    return this.usersService.searchUsers(query.trim(), user.id, limit ?? 10);
+  }
+
   @Get('me/badges')
   async getMyBadges(
     @CurrentUser() user: User | null,
@@ -259,8 +275,36 @@ export class UsersController {
   }
 
   @Get(':id')
-  async getUserProfile(@Param('id') id: string): Promise<UserProfile> {
-    return this.usersService.getProfile(id);
+  async getUserProfile(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: User | null,
+  ): Promise<UserProfile> {
+    const profile = await this.usersService.getProfile(id);
+
+    // Enforce profile visibility
+    if (id !== (currentUser?.id ?? '')) {
+      const profileRecord = profile as unknown as Record<string, unknown>;
+      const visibility =
+        (profileRecord.profile_visibility as string) ?? 'everyone';
+      if (visibility === 'hidden') {
+        throw new UnauthorizedException('This profile is not visible');
+      }
+      if (visibility === 'vips_only') {
+        const isRequestingVip = Boolean(
+          currentUser
+            ? ((await this.usersService.getProfile(currentUser.id))?.is_vip ??
+                false)
+            : false,
+        );
+        if (!isRequestingVip) {
+          throw new UnauthorizedException(
+            'This profile is visible to VIP members only',
+          );
+        }
+      }
+    }
+
+    return profile;
   }
 
   @Get(':id/stats')
@@ -350,7 +394,12 @@ export class UsersController {
     if (!user) throw new UnauthorizedException();
     if (!dto.reported_id || !dto.reason_category)
       throw new BadRequestException();
-    return this.usersService.reportUser(user.id, dto);
+    return this.usersService.reportUser(user.id, {
+      reported_id: String(dto.reported_id),
+      reason_category: String(dto.reason_category),
+      description: dto.description ? String(dto.description) : undefined,
+      context_url: dto.context_url ? String(dto.context_url) : undefined,
+    });
   }
 
   @Get('me/privacy-settings')
@@ -364,6 +413,7 @@ export class UsersController {
     privacy_about_info?: string;
     privacy_status?: string;
     incognito_visits?: boolean;
+    profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   }> {
     if (!user) throw new UnauthorizedException();
     return this.usersService.getPrivacySettings(user.id);
@@ -450,6 +500,17 @@ export class UsersController {
       { status_visibility: dto.status_visibility },
       isVip,
     );
+  }
+
+  @Post('me/contact-sharing')
+  async shareContact(
+    @CurrentUser() user: User | null,
+    @Body('target_user_id') targetUserId: string,
+  ): Promise<{ phone_number?: string; email?: string }> {
+    if (!user) throw new UnauthorizedException();
+    if (!targetUserId)
+      throw new BadRequestException('Target user ID is required');
+    return this.usersService.shareContact(user.id, targetUserId);
   }
 
   @Patch('me/notification-preferences')

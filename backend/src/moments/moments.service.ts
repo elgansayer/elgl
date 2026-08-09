@@ -301,145 +301,7 @@ export class MomentsService {
 
   async getFeed(
     userId: string,
-    filter: 'All' | 'Classmates' | 'Following',
-    targetLang?: string,
-  ): Promise<MomentRecord[]> {
-    const supabase = this.supabaseService.getClient();
-    const redis = this.supabaseService.getRedisClient();
-
-    // 1) Get blocked+blocker user IDs (bidirectional)
-    const blockedIds = await this.safetyService.getBlockedAndBlockerIds(userId);
-
-    // 2) Get current user's native language for targeted visibility routing
-    const profile = await this.usersService.getProfile(userId);
-    const userNativeLang =
-      profile?.native_languages?.[0]?.toLowerCase() ?? null;
-
-    let moments: MomentRecord[] = [];
-
-    if (filter === 'Following') {
-      const queueKey = `timeline_queue:${userId}`;
-      const momentIds = await redis.lrange(queueKey, 0, 49);
-      if (momentIds.length > 0) {
-        const { data } = await supabase
-          .from('moments')
-          .select('*')
-          .in('id', momentIds)
-          .order('created_at', { ascending: false });
-        if (data) moments = data;
-      } else {
-        // Fallback: get followed users from DB
-        const { data: follows } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', userId);
-        const followRows = (follows ?? []) as UserFollowRow[];
-        const ids = followRows.map((f) => f.following_id);
-        ids.push(userId);
-        const { data } = await supabase
-          .from('moments')
-          .select('*')
-          .in('user_id', ids)
-          .order('created_at', { ascending: false })
-          .limit(50);
-        if (data) moments = data;
-      }
-    } else if (filter === 'Classmates') {
-      const lang = targetLang || 'en';
-      const { data } = await supabase
-        .from('moments')
-        .select('*')
-        .eq('target_language', lang)
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (data) moments = data;
-    } else {
-      // All
-      const { data } = await supabase
-        .from('moments')
-        .select('*')
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (data) moments = data;
-    }
-
-    // Exclude ephemeral stories (they should only be visible via the stories endpoint)
-    moments = moments.filter((m) => !m.is_ephemeral);
-    // Exclude post types that are not regular moments (questions/language questions)
-    moments = moments.filter((m) => !m.post_type || m.post_type === 'moment');
-
-    // Apply targeted visibility for non-Classmates filters: only show moments
-    // whose target_language matches the current user's native language.
-    if (filter !== 'Classmates' && userNativeLang) {
-      moments = moments.filter(
-        (m) =>
-          !m.target_language ||
-          m.target_language.toLowerCase() === userNativeLang,
-      );
-    }
-
-    // Filter out blocked users
-    if (blockedIds.length > 0) {
-      moments = moments.filter((m) => !blockedIds.includes(m.user_id));
-    }
-
-    return moments;
-  }
-
-  async createLanguageQuestion(
-    userId: string,
-    dto: CreateLanguageQuestionDto,
-  ): Promise<MomentRecord> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = (await supabase
-      .from('moments')
-      .insert({
-        user_id: userId,
-        text_content: dto.text_content ?? null,
-        media_urls: [],
-        media_type: 'none',
-        target_language: dto.target_language,
-        post_type: 'language_question',
-        question_text: dto.question_text,
-        question_options: dto.question_options,
-        correct_answer: dto.correct_answer,
-      })
-      .select()
-      .single()) as unknown as {
-      data: MomentRecord | null;
-      error?: { message?: string } | null;
-    };
-
-    if (error || !data) {
-      throw new Error(
-        `Failed to create language question: ${error?.message ?? 'Unknown error'}`,
-      );
-    }
-    const moment = data as MomentRecord & { post_type?: string };
-    moment.post_type = 'language_question';
-    moment.media_type = 'none';
-    moment.is_pinned = false;
-    moment.likes_count = 0;
-    moment.comments_count = 0;
-    moment.correct_answers_count = 0;
-    moment.total_answers_count = 0;
-    void this.xpService.awardXpForActivity(userId, 'create_moment');
-    void this.questsService.incrementProgress(userId, 'post_moment', 1);
-    const profile = await this.usersService.getProfile(userId);
-    moment.author = {
-      id: profile?.id ?? userId,
-      display_name: profile?.display_name ?? 'Serious Learner',
-      avatar_url: profile?.avatar_url ?? null,
-    };
-    moment.is_liked_by_me = false;
-    return moment;
-  }
-
-  async getFeed(
-    userId: string,
-    filter: 'All' | 'Classmates' | 'Following',
+    filter: 'All' | 'Classmates' | 'Following' | 'For You',
     targetLang?: string,
   ): Promise<MomentRecord[]> {
     const supabase = this.supabaseService.getClient();
@@ -463,7 +325,7 @@ export class MomentsService {
           .select('*')
           .in('id', momentIds)
           .order('created_at', { ascending: false });
-        if (data) moments = data;
+        if (data) moments = data as unknown as MomentRecord[];
       } else {
         // Fallback: get followed users from DB
         const { data: follows } = await supabase
@@ -479,7 +341,7 @@ export class MomentsService {
           .in('user_id', ids)
           .order('created_at', { ascending: false })
           .limit(50);
-        if (data) moments = data;
+        if (data) moments = data as unknown as MomentRecord[];
       }
     } else if (filter === 'Classmates') {
       const lang = targetLang || 'en';
@@ -490,7 +352,25 @@ export class MomentsService {
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
-      if (data) moments = data;
+      if (data) moments = data as unknown as MomentRecord[];
+    } else if (filter === 'For You') {
+      const { data } = await supabase
+        .from('moments')
+        .select('*')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (data) {
+        moments = (data as unknown as MomentRecord[])
+          .sort((a, b) => {
+            const scoreA =
+              (a.likes_count || 0) * 2 + (a.comments_count || 0) * 3;
+            const scoreB =
+              (b.likes_count || 0) * 2 + (b.comments_count || 0) * 3;
+            return scoreB - scoreA;
+          })
+          .slice(0, 50);
+      }
     } else {
       // All
       const { data } = await supabase
@@ -499,7 +379,7 @@ export class MomentsService {
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
-      if (data) moments = data;
+      if (data) moments = data as unknown as MomentRecord[];
     }
 
     // Exclude ephemeral stories (they should only be visible via the stories endpoint)
@@ -635,7 +515,7 @@ export class MomentsService {
       throw new Error(`Failed to fetch questions: ${error.message}`);
     }
 
-    let moments: MomentRecord[] = data ?? [];
+    let moments: MomentRecord[] = (data ?? []) as unknown as MomentRecord[];
 
     if (blockedIds.length > 0) {
       moments = moments.filter((m) => !blockedIds.includes(m.user_id));
@@ -758,8 +638,8 @@ export class MomentsService {
           user_id: u.id,
           text_content: `Just sharing my language learning update for today!`,
           media_urls: [],
-          media_type: 'text',
-          target_language: undefined,
+          media_type: 'none',
+          target_language: 'en',
           likes_count: 0,
           comments_count: 0,
           is_pinned: false,
@@ -1134,7 +1014,7 @@ export class MomentsService {
 
     // Parse @mentions and emit notifications
     if (dto.text_content) {
-      const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+      const mentionRegex = /@([\wÀ-ɏ؀-ۿ]+)/g;
       const matches = [...dto.text_content.matchAll(mentionRegex)];
       const mentionedNames = matches.map((m) => m[1]);
 
@@ -1146,24 +1026,23 @@ export class MomentsService {
         const mentionedUsers = data as UserProfileRow[] | null;
 
         if (mentionedUsers) {
-          for (const mentionedUser of mentionedUsers) {
-            // Don't notify if they are the author (already notified above) or the commenter themselves
-            if (
-              mentionedUser.id !== userId &&
-              mentionedUser.id !== momentAuthorId
-            ) {
-              this.eventEmitter.emit(
-                'moment.mention',
-                new MomentCommentEvent(
-                  momentId,
-                  userId,
-                  mentionedUser.id,
-                  preview,
-                  dto.parent_comment_id,
-                  dto.reply_to_user_id,
-                ),
-              );
-            }
+          const mentionedUserIds = mentionedUsers
+            .filter((u) => u.id !== userId && u.id !== momentAuthorId)
+            .map((u) => u.id);
+
+          if (mentionedUserIds.length > 0) {
+            this.eventEmitter.emit(
+              'moment.mention',
+              new MomentCommentEvent(
+                momentId,
+                userId,
+                momentAuthorId ?? '',
+                preview,
+                dto.parent_comment_id,
+                dto.reply_to_user_id,
+                mentionedUserIds,
+              ),
+            );
           }
         }
       }

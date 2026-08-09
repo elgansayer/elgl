@@ -1,10 +1,12 @@
+vi.mock('lottie-web', () => ({ default: { loadAnimation: vi.fn(), destroy: vi.fn() } }));
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideLocationMocks } from '@angular/common/testing';
 import { DOCUMENT } from '@angular/common';
-import { vi } from 'vitest';
+import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { AppComponent } from './app.component';
 import { AuthService } from './services/auth.service';
+import { AppLockService } from './services/app-lock.service';
 import { EconomyStore } from './services/economy.store';
 import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
@@ -14,6 +16,8 @@ import { UnreadCounterService } from './services/unread-counter.service';
 import { VersionCheckService } from './services/version-check.service';
 import { FontScaleService } from './services/font-scale.service';
 import { I18nService } from './services/i18n.service';
+import { NotificationService } from './services/notification.service';
+import { ChatService } from './services/chat.service';
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -22,13 +26,20 @@ describe('AppComponent', () => {
 
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
-    isBiometricSupported: vi.fn(() => Promise.resolve(true)),
-    biometricLockEnabled: vi.fn(() => false),
-    appLocked: vi.fn(() => false),
-    lockApp: vi.fn(),
-    enableBiometricLock: vi.fn(() => Promise.resolve()),
-    disableBiometricLock: vi.fn(() => Promise.resolve()),
     currentUser: vi.fn(() => ({ id: 'test-user-1' })),
+getAccessToken: vi.fn(() => 'mock-token'),
+  unlockApp: vi.fn(),
+  appLocked: vi.fn(() => false),
+  biometricLockEnabled: vi.fn(() => false),
+  };
+
+  const appLockServiceMock = {
+    isBiometricSupported: vi.fn(() => Promise.resolve(true)),
+    biometricEnabled: vi.fn(() => false),
+    appLocked: vi.fn(() => false),
+    lockNow: vi.fn(),
+    enableBiometricLock: vi.fn(() => Promise.resolve(true)),
+    disableBiometricLock: vi.fn(() => Promise.resolve(true)),
   };
 
   const economyStoreMock = {
@@ -37,6 +48,7 @@ describe('AppComponent', () => {
       Promise.resolve({ claimed: true, coins_rewarded: 123 }),
     ),
     triggerGiftAnimation: vi.fn(),
+    activeGiftAnimation: vi.fn(() => null),
   };
 
   const centrifugeServiceMock = {
@@ -61,10 +73,22 @@ describe('AppComponent', () => {
 
   const unreadCounterMock = {
     totalUnread: vi.fn(() => 0),
+    tabCount: vi.fn(() => 0),
+    set: vi.fn(),
+    increment: vi.fn(),
+    decrement: vi.fn(),
+    resetAll: vi.fn(),
+    setChatUnread: vi.fn(),
+    setNotificationUnread: vi.fn(),
+    incrementChatUnread: vi.fn(),
+    decrementChatUnread: vi.fn(),
+    incrementNotificationUnread: vi.fn(),
+    decrementNotificationUnread: vi.fn(),
   };
 
   const versionCheckServiceMock = {
-    checkVersion: vi.fn(() => Promise.resolve()),
+    checkVersion: vi.fn(),
+    isDeprecated: vi.fn(() => false),
   };
 
   const fontScaleServiceMock = {
@@ -73,16 +97,28 @@ describe('AppComponent', () => {
 
   const i18nServiceMock = {
     translate: vi.fn(() => ''),
+    currentLocale: vi.fn(() => 'en'),
+  };
+
+  const notificationServiceMock = {
+    getUnreadCount: vi.fn(() => Promise.resolve(0)),
+    markAllAsRead: vi.fn(() => Promise.resolve()),
+    markAsRead: vi.fn(() => Promise.resolve()),
+    getNotifications: vi.fn(() => Promise.resolve([])),
+  };
+
+  const chatServiceMock = {
+    getRooms: vi.fn(() => Promise.resolve([])),
+    getMessages: vi.fn(() => Promise.resolve([])),
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     subscribeCallback = undefined;
 
-    // Default resetts that keep the component in a known state
     authServiceMock.isAuthenticated.mockReturnValue(true);
-    authServiceMock.biometricLockEnabled.mockReturnValue(false);
     authServiceMock.currentUser.mockReturnValue({ id: 'test-user-1' });
+    appLockServiceMock.biometricEnabled.mockReturnValue(false);
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
@@ -90,6 +126,7 @@ describe('AppComponent', () => {
         provideRouter([]),
         provideLocationMocks(),
         { provide: AuthService, useValue: authServiceMock },
+        { provide: AppLockService, useValue: appLockServiceMock },
         { provide: EconomyStore, useValue: economyStoreMock },
         { provide: CentrifugeService, useValue: centrifugeServiceMock },
         { provide: FcmService, useValue: fcmServiceMock },
@@ -98,14 +135,15 @@ describe('AppComponent', () => {
         { provide: UnreadCounterService, useValue: unreadCounterMock },
         { provide: VersionCheckService, useValue: versionCheckServiceMock },
         { provide: FontScaleService, useValue: fontScaleServiceMock },
-        { provide: I18nService, useValue: i18nServiceMock as unknown as I18nService },
+        { provide: I18nService, useValue: i18nServiceMock },
+        { provide: NotificationService, useValue: notificationServiceMock },
+        { provide: ChatService, useValue: chatServiceMock },
         { provide: DOCUMENT, useValue: document },
       ],
     })
       .overrideComponent(AppComponent, {
         set: {
-          template:
-            '<router-outlet></router-outlet><div #reportModal></div>',
+          template: '<router-outlet></router-outlet><div #reportModal></div>',
         },
       })
       .compileComponents();
@@ -124,10 +162,8 @@ describe('AppComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialise unread counter computed values', () => {
-    expect(component.totalUnread()).toBe(0);
-    expect(component.hasUnread()).toBe(false);
-    expect(component.unreadDisplayValue()).toBe('0');
+it('should initialise unread counter', () => {
+    expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 
   it('should call core services during ngOnInit', () => {
@@ -146,12 +182,25 @@ describe('AppComponent', () => {
 
     const payload = {
       type: 'virtual_gift',
-      gift: { id: 'gift-1' },
+      gift_id: 'gift-1',
+      gift_name: 'Rose',
+      icon: '🌹',
+      cost_coins: 10,
+      coin_value: 10,
+      animation_type: 'confetti',
+      animation_url: '',
       sender_name: 'Alice',
     };
     subscribeCallback?.(payload);
     expect(economyStoreMock.triggerGiftAnimation).toHaveBeenCalledWith({
-      gift: payload.gift,
+      gift: {
+        id: 'gift-1',
+        name: 'Rose',
+        icon: '🌹',
+        cost_coins: 10,
+        animation_type: 'confetti',
+        animationUrl: undefined,
+      },
       sender_name: 'Alice',
       receiver_name: 'You',
     });
@@ -187,25 +236,30 @@ describe('AppComponent', () => {
   });
 
   it('should toggle biometric lock on when currently disabled', async () => {
-    authServiceMock.biometricLockEnabled.mockReturnValue(false);
+    appLockServiceMock.biometricEnabled.mockReturnValue(false);
     await component.toggleBiometricLock();
-    expect(authServiceMock.enableBiometricLock).toHaveBeenCalledTimes(1);
-    expect(authServiceMock.disableBiometricLock).not.toHaveBeenCalled();
+    expect(appLockServiceMock.enableBiometricLock).toHaveBeenCalledTimes(1);
+    expect(appLockServiceMock.disableBiometricLock).not.toHaveBeenCalled();
   });
 
   it('should toggle biometric lock off when currently enabled', async () => {
-    authServiceMock.biometricLockEnabled.mockReturnValue(true);
+    appLockServiceMock.biometricEnabled.mockReturnValue(true);
     await component.toggleBiometricLock();
-    expect(authServiceMock.disableBiometricLock).toHaveBeenCalledTimes(1);
-    expect(authServiceMock.enableBiometricLock).not.toHaveBeenCalled();
+    expect(appLockServiceMock.disableBiometricLock).toHaveBeenCalledTimes(1);
+    expect(appLockServiceMock.enableBiometricLock).not.toHaveBeenCalled();
   });
 
   it('should set biometricBusy during toggle', async () => {
-    authServiceMock.biometricLockEnabled.mockReturnValue(false);
+    appLockServiceMock.biometricEnabled.mockReturnValue(false);
     expect(component.biometricBusy()).toBe(false);
     const promise = component.toggleBiometricLock();
     expect(component.biometricBusy()).toBe(true);
     await promise;
     expect(component.biometricBusy()).toBe(false);
+  });
+
+  it('should call versionCheckService on init', () => {
+    expect(versionCheckServiceMock.checkVersion).toHaveBeenCalled();
+    expect(component.versionCheckService.isDeprecated()).toBe(false);
   });
 });

@@ -5,7 +5,6 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  IsArray,
 } from 'class-validator';
 
 export class CreateMomentDto {

@@ -45,7 +45,7 @@ import { resource } from '@angular/core';
         @if (!users.isLoading()) {
           <div class="flex flex-col items-center py-12 text-text-secondary">
             <span class="i-ph-microphone-slash text-4xl mb-2"></span>
-            <p>{{ 'NO_AUDIO_INTROS' | t }}</p>
+            <p>{{ 'discovery.audioIntroFeed.noAudioIntros' | t }}</p>
           </div>
         }
       }

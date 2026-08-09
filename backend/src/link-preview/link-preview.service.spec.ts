@@ -1,3 +1,54 @@
+// Mock jsdom and dompurify at module level to avoid parsing ESM dependencies
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation((_html: string) => ({
+    window: {
+      document: {
+        createElement: jest.fn(),
+        createDocumentFragment: jest.fn(),
+      },
+      Node: {
+        ELEMENT_NODE: 1,
+        TEXT_NODE: 3,
+        DOCUMENT_FRAGMENT_NODE: 11,
+      },
+      NodeFilter: {
+        SHOW_ELEMENT: 1,
+        SHOW_TEXT: 4,
+      },
+    },
+  })),
+}));
+
+// Strict DOMPurify mock that strips ALL HTML tags (matching strict config)
+const mockSanitize = (dirty: string): string => {
+  if (typeof dirty !== 'string') return dirty;
+  // Remove script/style elements and their content entirely
+  let result = dirty
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
+  // Strip all remaining HTML tags
+  result = result.replace(/<[^>]*>/g, '');
+  // Decode common HTML entities
+  result = result
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'");
+  return result;
+};
+
+jest.mock('dompurify', () => {
+  return {
+    __esModule: true,
+    default: jest.fn(() => ({
+      sanitize: mockSanitize,
+      setConfig: jest.fn(),
+    })),
+  };
+});
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
@@ -48,6 +99,43 @@ describe('LinkPreviewService', () => {
       BadRequestException,
     );
     expect(httpService.get).not.toHaveBeenCalled();
+  });
+
+  it('rejects SSRF attempts via local IPs (localhost)', async () => {
+    httpService.get.mockReturnValue(
+      throwError(
+        () => new Error('SSRF blocked: Private IP 127.0.0.1 is not allowed.'),
+      ),
+    );
+
+    await expect(service.getPreview('http://localhost')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('rejects SSRF attempts via cloud metadata IPs', async () => {
+    httpService.get.mockReturnValue(
+      throwError(
+        () =>
+          new Error('SSRF blocked: Private IP 169.254.169.254 is not allowed.'),
+      ),
+    );
+
+    await expect(
+      service.getPreview('http://169.254.169.254/latest/meta-data/'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects SSRF attempts via private network IPs', async () => {
+    httpService.get.mockReturnValue(
+      throwError(
+        () => new Error('SSRF blocked: Private IP 192.168.1.1 is not allowed.'),
+      ),
+    );
+
+    await expect(
+      service.getPreview('http://192.168.1.1/admin'),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('rejects non-http(s) protocols', async () => {
@@ -134,6 +222,18 @@ describe('LinkPreviewService', () => {
     const result = await service.getPreview('https://example.com/');
 
     expect(result.title).toBe('Title');
+  });
+
+  it('sanitizes malicious HTML inputs safely', async () => {
+    mockHtmlResponse(`
+      <html><head>
+        <meta property="og:title" content="Hello &lt;b onmouseover=&quot;alert()&quot;&gt;World&lt;/b&gt;" />
+      </head></html>
+    `);
+
+    const result = await service.getPreview('https://example.com/');
+
+    expect(result.title).toBe('Hello World');
   });
 
   it('rejects non-HTML responses', async () => {

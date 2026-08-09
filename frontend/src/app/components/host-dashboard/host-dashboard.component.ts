@@ -1,7 +1,7 @@
 import { Component, input, computed, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { interval, switchMap, startWith } from 'rxjs';
+import { interval, from, switchMap, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HostDashboardService } from '../../services/host-dashboard.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -10,7 +10,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-host-dashboard',
   imports: [CommonModule, AppCardComponent, TranslatePipe],
   template: `
-    <app-card
+    <app-card role="region" [attr.aria-label]="'host_dashboard.cardLabel' | t"
       variant="elevated"
       padding="md"
       customClass="bg-slate-800 text-white flex flex-row items-center justify-between gap-4 border border-slate-700"
@@ -19,7 +19,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <div class="flex flex-col items-start">
         <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.viewer_count' | t }}</span>
         <div class="flex items-center gap-2">
-          <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+          <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true"></div>
           <span class="text-xl font-bold">{{ viewerCount() }}</span>
         </div>
       </div>
@@ -28,7 +28,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <div class="flex flex-col items-start border-s border-slate-700 ps-4">
         <span class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">{{ 'host_dashboard.coins_earned' | t }}</span>
         <div class="flex items-center gap-2">
-          <span class="text-yellow-400 text-xl">🪙</span>
+          <span class="text-yellow-400 text-xl" aria-hidden="true">{{ 'host_dashboard.coinIcon' | t }}</span>
           <span class="text-xl font-bold text-yellow-400">{{ earnedCoins() }}</span>
         </div>
       </div>
@@ -55,7 +55,7 @@ export class HostDashboardComponent {
   private readonly poll = toSignal(
     interval(10_000).pipe(
       startWith(0),
-      switchMap(() => this.service.getDashboardStats(this.roomId())),
+      switchMap(() => from(this.service.getDashboardStats(this.roomId()))),
     ),
     { initialValue: { viewerCount: 0, earnedCoins: 0, startTime: new Date() } },
   );

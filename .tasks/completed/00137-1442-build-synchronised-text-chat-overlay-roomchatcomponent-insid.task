@@ -1,1 +1,0 @@
-Build synchronised text chat overlay (`RoomChatComponent`) inside live rooms powered by Centrifugo (`room_{id}` channel).

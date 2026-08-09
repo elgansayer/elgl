@@ -4,7 +4,6 @@ import {
   IsArray,
   IsNumber,
   IsEnum,
-  IsArray,
 } from 'class-validator';
 
 export class CreateStoryDto {

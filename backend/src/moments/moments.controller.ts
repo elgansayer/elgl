@@ -45,7 +45,7 @@ export class MomentsController {
   @Get('feed')
   async getFeed(
     @CurrentUser() user: User | null,
-    @Query('filter') filter?: 'All' | 'Classmates' | 'Following',
+    @Query('filter') filter?: 'All' | 'Classmates' | 'Following' | 'For You',
     @Query('lang') lang?: string,
   ): Promise<MomentRecord[]> {
     if (!user) return [];
@@ -137,17 +137,6 @@ export class MomentsController {
     );
   }
 
-  @Get('feed')
-  async getFeed(
-    @CurrentUser() user: User | null,
-    @Query('filter') filter?: 'All' | 'Classmates' | 'Following',
-    @Query('lang') lang?: string,
-  ): Promise<MomentRecord[]> {
-    if (!user) return [];
-    const activeFilter = filter ?? 'All';
-    return await this.momentsService.getFeed(user.id, activeFilter, lang);
-  }
-
   @Get('questions')
   async getQuestions(
     @CurrentUser() user: User | null,
@@ -167,8 +156,11 @@ export class MomentsController {
   }
 
   @Get(':id/likes')
-  async getMomentLikes(@Param('id') id: string): Promise<MomentLikeUser[]> {
-    return await this.momentsService.getMomentLikes(id);
+  async getMomentLikes(
+    @CurrentUser() user: User | null,
+    @Param('id') id: string,
+  ): Promise<MomentLikeUser[]> {
+    return await this.momentsService.getMomentLikes(id, user?.id);
   }
 
   @Post(':id/comments')

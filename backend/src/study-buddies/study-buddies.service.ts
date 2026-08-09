@@ -31,10 +31,10 @@ interface BuddyRequestRow {
   id: string;
   requester_id: string;
   partner_id: string;
-  message: string | null;
-  status: BuddyRequestStatus;
-  created_at: string;
-  updated_at: string;
+  message?: string | null;
+  status?: BuddyRequestStatus | null;
+  created_at?: string;
+  updated_at?: string;
   requester?: BuddyRequesterSummary | BuddyRequesterSummary[] | null;
 }
 
@@ -45,18 +45,18 @@ export class StudyBuddiesService {
     private readonly usersService: UsersService,
   ) {}
 
-  private toBuddyRequest(row: BuddyRequestRow): BuddyRequest {
+  private toBuddyRequest(row: Partial<BuddyRequestRow>): BuddyRequest {
     const requester = Array.isArray(row.requester)
       ? row.requester[0]
       : (row.requester ?? undefined);
     return {
-      id: row.id,
-      requesterId: row.requester_id,
-      partnerId: row.partner_id,
-      message: row.message,
-      status: row.status,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      id: row.id ?? '',
+      requesterId: row.requester_id ?? '',
+      partnerId: row.partner_id ?? '',
+      message: row.message ?? null,
+      status: row.status ?? 'pending',
+      createdAt: row.created_at ?? '',
+      updatedAt: row.updated_at ?? '',
       requester,
     };
   }
@@ -76,7 +76,7 @@ export class StudyBuddiesService {
       data,
       error,
     }: {
-      data: BuddyRequestRow[] | null;
+      data: BuddyRequestRow | null;
       error: { message?: string } | null;
     } = await supabase
       .from('study_buddy_requests')
@@ -92,12 +92,13 @@ export class StudyBuddiesService {
       .select('*')
       .single();
 
-    if (error || !data) {
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || !row) {
       throw new Error(
         `Failed to create study buddy request: ${error?.message}`,
       );
     }
-    return this.toBuddyRequest(data);
+    return this.toBuddyRequest(row);
   }
 
   async getIncomingRequests(userId: string): Promise<BuddyRequest[]> {
@@ -152,10 +153,11 @@ export class StudyBuddiesService {
     if (error) {
       throw new Error(`Failed to update study buddy request: ${error.message}`);
     }
-    if (!data) {
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
       throw new NotFoundException('Study buddy request not found');
     }
-    return this.toBuddyRequest(data);
+    return this.toBuddyRequest(row);
   }
 
   async getPotentialBuddies(userId: string): Promise<UserProfile[]> {

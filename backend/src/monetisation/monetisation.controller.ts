@@ -23,6 +23,8 @@ import {
 } from './dto/monetisation.dto';
 import { MonetisationService } from './monetisation.service';
 import { AppleReceiptValidatorService } from './apple-receipt-validator.service';
+import { AppleNotificationDto } from './dto/apple-notification.dto';
+import { GoogleNotificationDto } from './dto/google-notification.dto';
 
 @Controller('monetisation')
 export class MonetisationController {
@@ -133,12 +135,15 @@ export class MonetisationController {
     @Body() dto: { platform?: string; receipt_data?: string },
   ) {
     if (!user) return null;
-    if (!dto.platform || !['ios', 'android'].includes(dto.platform)) {
-      throw new BadRequestException('Platform must be "ios" or "android"');
+    const platform = dto.platform || 'stripe';
+    if (!['ios', 'android', 'stripe'].includes(platform)) {
+      throw new BadRequestException(
+        'Platform must be "ios", "android", or "stripe"',
+      );
     }
     return await this.monetisationService.restorePurchases(
       user.id,
-      dto.platform as 'ios' | 'android',
+      platform as 'ios' | 'android' | 'stripe',
       dto.receipt_data,
     );
   }

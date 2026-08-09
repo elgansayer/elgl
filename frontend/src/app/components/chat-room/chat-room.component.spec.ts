@@ -7,6 +7,7 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
+import { TypingService } from '../../services/typing.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 
@@ -35,6 +36,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
     addFavourite: ReturnType<typeof vi.fn>;
     lockChat: ReturnType<typeof vi.fn>;
     unlockChat: ReturnType<typeof vi.fn>;
+    translateText: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof signal>;
@@ -52,6 +54,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
       addFavourite: vi.fn().mockResolvedValue(undefined),
       lockChat: vi.fn().mockResolvedValue(undefined),
       unlockChat: vi.fn().mockResolvedValue(undefined),
+      translateText: vi.fn(),
     };
 
     const mockCentrifugeService = {
@@ -85,6 +88,13 @@ describe('ChatRoomComponent (threaded replies)', () => {
       updateSrsLevel: vi.fn(),
     };
 
+    const mockTypingService = {
+      typingUsers: signal([]),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      sendTyping: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
       providers: [
@@ -93,6 +103,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: SafetyService, useValue: mockSafetyService },
         { provide: UserService, useValue: mockUserService },
+        { provide: TypingService, useValue: mockTypingService },
         { provide: VocabularyStore, useValue: mockVocabularyStore },
         I18nService,
       ],
@@ -246,6 +257,120 @@ describe('ChatRoomComponent (threaded replies)', () => {
       expect(mockChatService.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ text_content: 'Just a message' }),
       );
+    });
+  });
+
+  describe('in-line message context menu actions', () => {
+    it('transliterateMessage stores the transliteration returned by the NLP service', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'Bonjour' });
+      const mockVocabularyStore = TestBed.inject(VocabularyStore) as unknown as {
+        translateWordOrSentence: ReturnType<typeof vi.fn>;
+      };
+      mockVocabularyStore.translateWordOrSentence.mockResolvedValue({
+        original_text: 'Bonjour',
+        translated_text: 'Hello',
+        detected_language: 'fr',
+        transliteration: 'bon-zhoor',
+      });
+
+      await component.transliterateMessage(msg);
+
+      expect(mockVocabularyStore.translateWordOrSentence).toHaveBeenCalledWith('Bonjour', 'en');
+      expect(component.transliterations()['m1']).toBe('bon-zhoor');
+    });
+
+    it('transliterateMessage falls back to the translated text when no transliteration is returned', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'Bonjour' });
+      const mockVocabularyStore = TestBed.inject(VocabularyStore) as unknown as {
+        translateWordOrSentence: ReturnType<typeof vi.fn>;
+      };
+      mockVocabularyStore.translateWordOrSentence.mockResolvedValue({
+        original_text: 'Bonjour',
+        translated_text: 'Hello',
+        detected_language: 'fr',
+      });
+
+      await component.transliterateMessage(msg);
+
+      expect(component.transliterations()['m1']).toBe('Hello');
+    });
+
+    it('toggleTranslation fetches and shows the translation for a message', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'Bonjour' });
+      mockChatService.translateText.mockResolvedValue({ translated_text: 'Hello' });
+
+      await component.toggleTranslation(msg);
+
+      expect(mockChatService.translateText).toHaveBeenCalledWith('Bonjour', expect.any(String));
+      expect(component.translations()['m1']).toBe('Hello');
+      expect(component.showTranslation()['m1']).toBe(true);
+    });
+
+    it('toggleTranslation hides an already-visible translation without re-fetching', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'Bonjour' });
+      mockChatService.translateText.mockResolvedValue({ translated_text: 'Hello' });
+
+      await component.toggleTranslation(msg);
+      mockChatService.translateText.mockClear();
+      await component.toggleTranslation(msg);
+
+      expect(mockChatService.translateText).not.toHaveBeenCalled();
+      expect(component.showTranslation()['m1']).toBe(false);
+    });
+
+    it('speakMessage speaks the message text when speech synthesis is supported', () => {
+      const speak = vi.fn();
+      const cancel = vi.fn();
+      Object.defineProperty(window, 'speechSynthesis', {
+        configurable: true,
+        value: { speak, cancel },
+      });
+      (window as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance =
+        function (this: { text: string }, text: string) {
+          this.text = text;
+        };
+
+      component.speakMessage(makeMessage({ text_content: 'Hello there' }));
+
+      expect(cancel).toHaveBeenCalled();
+      expect(speak).toHaveBeenCalledTimes(1);
+      expect(speak.mock.calls[0][0]).toMatchObject({ text: 'Hello there' });
+    });
+
+    it('speakMessage does nothing for a message with no text content', () => {
+      const speak = vi.fn();
+      Object.defineProperty(window, 'speechSynthesis', {
+        configurable: true,
+        value: { speak, cancel: vi.fn() },
+      });
+
+      component.speakMessage(makeMessage({ text_content: '' }));
+
+      expect(speak).not.toHaveBeenCalled();
+    });
+
+    it('startCorrection pre-fills the correction form from the selected message', () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'I goed to school' });
+
+      component.startCorrection(msg);
+
+      expect(component.showCorrectionForm()).toBe(true);
+      expect(component.originalText).toBe('I goed to school');
+    });
+
+    it('requestCorrection sends a correction_request message', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'I goed to school' });
+      const sent = makeMessage({ id: 'm2', message_type: 'correction_request' });
+      mockChatService.sendMessage.mockResolvedValueOnce(sent);
+
+      await component.requestCorrection(msg);
+
+      expect(mockChatService.sendMessage).toHaveBeenCalledWith({
+        room_id: 'room-1',
+        message_type: 'correction_request',
+        correction_request_payload: { original_text: 'I goed to school' },
+        reply_to_id: 'm1',
+      });
     });
   });
 

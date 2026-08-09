@@ -9,6 +9,7 @@ export interface InterestVocabulary {
   vocabulary: { word: string; translation: string }[];
 }
 
+// i18n translation key used in template
 @Component({
   imports: [TranslatePipe],
   template: `
