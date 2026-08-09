@@ -52,6 +52,7 @@ describe('EconomyController', () => {
             sendGift: jest.fn(),
             getStickerPacks: jest.fn(),
             unlockStickerPack: jest.fn(),
+            getTransactionHistory: jest.fn(),
           },
         },
         {
@@ -215,6 +216,68 @@ describe('EconomyController', () => {
     });
   });
 
+<<<<<<< HEAD
+  describe('claimDailyCheckIn', () => {
+    it('should return a default object if user is not provided', async () => {
+      const result = await controller.claimDailyCheckIn(null);
+      expect(result).toEqual({
+        claimed: false,
+        coins_rewarded: 0,
+        new_balance: 0,
+      });
+      expect(economyService.claimDailyCheckIn).not.toHaveBeenCalled();
+    });
+
+    it('should call service claimDailyCheckIn when user is provided', async () => {
+      const response: any = {
+        claimed: true,
+        coins_rewarded: 5,
+        new_balance: 155,
+      };
+      (economyService.claimDailyCheckIn as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.claimDailyCheckIn({
+        id: 'user-1',
+      } as any);
+      expect(economyService.claimDailyCheckIn).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('createCheckoutSession', () => {
+    it('should return null if user is not provided', async () => {
+      const result = await controller.createCheckoutSession(null, {
+        package_id: 'pkg-1',
+      });
+      expect(result).toBeNull();
+      expect(economyService.createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it('should call service createCheckoutSession when user is provided', async () => {
+      const response: any = {
+        sessionUrl: 'https://checkout.stripe.com/...',
+        sessionId: 'cs_...',
+      };
+      (economyService.createCheckoutSession as jest.Mock).mockResolvedValue(
+        response,
+      );
+
+      const result = await controller.createCheckoutSession(
+        { id: 'user-1' } as any,
+        { package_id: 'coins_small' },
+      );
+      expect(economyService.createCheckoutSession).toHaveBeenCalledWith(
+        'user-1',
+        'coins_small',
+      );
+      expect(result).toEqual(response);
+    });
+  });
+
+=======
+>>>>>>> origin/main
   describe('purchaseCoins', () => {
     it('should return null if user is not provided', async () => {
       const result = await controller.purchaseCoins(null, {} as any);
@@ -286,6 +349,45 @@ describe('EconomyController', () => {
         dto,
       );
       expect(result).toEqual(response);
+    });
+  });
+
+  describe('getTransactions', () => {
+    it('should return empty transactions array when user is null', async () => {
+      const result = await controller.getTransactions(null);
+      expect(result).toEqual({ transactions: [] });
+    });
+
+    it('should return transactions from service when user is provided', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          user_id: 'user-1',
+          type: 'daily_checkin',
+          amount: 7,
+          description: 'Daily check-in reward',
+          metadata: null,
+          created_at: '2026-08-08T12:00:00.000Z',
+        },
+      ];
+      (economyService.getTransactionHistory as jest.Mock).mockResolvedValue(
+        mockTransactions,
+      );
+
+      const result = await controller.getTransactions({ id: 'user-1' } as any);
+      expect(economyService.getTransactionHistory).toHaveBeenCalledWith(
+        'user-1',
+      );
+      expect(result).toEqual({ transactions: mockTransactions });
+    });
+
+    it('should return empty transactions on service error', async () => {
+      (economyService.getTransactionHistory as jest.Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
+
+      const result = await controller.getTransactions({ id: 'user-1' } as any);
+      expect(result).toEqual({ transactions: [] });
     });
   });
 

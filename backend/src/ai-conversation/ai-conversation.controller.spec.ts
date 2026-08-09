@@ -1,14 +1,24 @@
+import { User } from '@supabase/supabase-js';
 import { AiConversationController } from './ai-conversation.controller';
 import { AiConversationService } from './ai-conversation.service';
 
+function mockUser(): User {
+  return { id: 'user-123' } as unknown as User;
+}
+
 describe('AiConversationController', () => {
   let controller: AiConversationController;
-  let service: { getScenarios: jest.Mock; generateReply: jest.Mock };
+  let service: {
+    getScenarios: jest.Mock;
+    generateReply: jest.Mock;
+    checkDailyAiRateLimit: jest.Mock;
+  };
 
   beforeEach(() => {
     service = {
       getScenarios: jest.fn(),
       generateReply: jest.fn(),
+      checkDailyAiRateLimit: jest.fn().mockResolvedValue(true),
     };
     controller = new AiConversationController(
       service as unknown as AiConversationService,
@@ -28,18 +38,45 @@ describe('AiConversationController', () => {
   });
 
   describe('handleMessage', () => {
+    it('should throw 401 when user is null', async () => {
+      await expect(
+        controller.handleMessage(null, { message: 'Hi' }),
+      ).rejects.toThrow('Unauthorized');
+    });
+
     it('should return a hint when message is empty', async () => {
-      const result = await controller.handleMessage({ message: '' });
+      const result = await controller.handleMessage(mockUser(), {
+        message: '',
+      });
 
       expect(result).toEqual({ reply: 'Please say something first!' });
       expect(service.generateReply).not.toHaveBeenCalled();
     });
 
     it('should return a hint when message is only whitespace', async () => {
-      const result = await controller.handleMessage({ message: '   ' });
+      const result = await controller.handleMessage(mockUser(), {
+        message: '   ',
+      });
 
       expect(result).toEqual({ reply: 'Please say something first!' });
       expect(service.generateReply).not.toHaveBeenCalled();
+    });
+
+    it('should check daily AI rate limit for the user', async () => {
+      service.checkDailyAiRateLimit.mockResolvedValue(true);
+      service.generateReply.mockResolvedValue('Hello!');
+
+      await controller.handleMessage(mockUser(), { message: 'Hi' });
+
+      expect(service.checkDailyAiRateLimit).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should throw 429 when daily AI rate limit exceeded', async () => {
+      service.checkDailyAiRateLimit.mockResolvedValue(false);
+
+      await expect(
+        controller.handleMessage(mockUser(), { message: 'Hi' }),
+      ).rejects.toThrow('Daily AI usage limit reached');
     });
 
     it('should call generateReply with message, scenarioId, and conversationHistory', async () => {
@@ -47,7 +84,7 @@ describe('AiConversationController', () => {
       service.generateReply.mockResolvedValue(reply);
       const history = [{ role: 'user' as const, content: 'Hello' }];
 
-      const result = await controller.handleMessage({
+      const result = await controller.handleMessage(mockUser(), {
         message: 'I would like a coffee please.',
         scenarioId: 'ordering-coffee',
         conversationHistory: history,
@@ -65,7 +102,9 @@ describe('AiConversationController', () => {
       const reply = 'Cultural tip.';
       service.generateReply.mockResolvedValue(reply);
 
-      const result = await controller.handleMessage({ message: 'help' });
+      const result = await controller.handleMessage(mockUser(), {
+        message: 'help',
+      });
 
       expect(service.generateReply).toHaveBeenCalledWith(
         'help',
