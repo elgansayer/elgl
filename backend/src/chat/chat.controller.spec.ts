@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { CentrifugoService } from './centrifugo.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ConversationStarterService } from './conversation-starter.service';
 import { TranslationService } from './translation.service';
@@ -17,6 +18,7 @@ import { LlmProxyDto } from './dto/llm-proxy.dto';
 describe('ChatController', () => {
   let controller: ChatController;
   let chatService: ChatService;
+  let centrifugoService: CentrifugoService;
   let conversationStarterService: ConversationStarterService;
   let translationService: TranslationService;
 
@@ -55,6 +57,15 @@ describe('ChatController', () => {
           },
         },
         {
+          provide: CentrifugoService,
+          useValue: {
+            checkConnectionRateLimit: jest.fn().mockResolvedValue(true),
+            generateConnectionToken: jest.fn(),
+            publish: jest.fn(),
+            signJwt: jest.fn(),
+          },
+        },
+        {
           provide: ConversationStarterService,
           useValue: {
             getSuggestions: jest.fn(),
@@ -76,6 +87,7 @@ describe('ChatController', () => {
 
     controller = module.get<ChatController>(ChatController);
     chatService = module.get<ChatService>(ChatService);
+    centrifugoService = module.get<CentrifugoService>(CentrifugoService);
     conversationStarterService = module.get<ConversationStarterService>(
       ConversationStarterService,
     );
@@ -95,23 +107,66 @@ describe('ChatController', () => {
   });
 
   describe('getConnectionToken', () => {
-    it('should return null if user is not provided', async () => {
-      const result = await controller.getConnectionToken(null);
-      expect(result).toBeNull();
-      expect(chatService.generateConnectionToken).not.toHaveBeenCalled();
+    const mockReq = () => ({ headers: {}, ip: '127.0.0.1' }) as unknown as any;
+
+    const mockRes = () => {
+      const res: Record<string, any> = {};
+      res.status = jest.fn().mockReturnValue(res);
+      res.json = jest.fn().mockReturnValue(res);
+      res.header = jest.fn().mockReturnValue(res);
+      return res as unknown as any;
+    };
+
+    it('should respond with 401 if user is not provided', async () => {
+      const res = mockRes();
+      await controller.getConnectionToken(null, mockReq(), res);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(null);
     });
 
-    it('should return connection token when user is provided', async () => {
-      const _mockToken = 'ws-token';
+    it('should return connection token when user is provided and rate limit allows', async () => {
+      (
+        centrifugoService.checkConnectionRateLimit as jest.Mock
+      ).mockResolvedValue({
+        allowed: true,
+        retryAfterMs: 0,
+      });
       (chatService.generateConnectionToken as jest.Mock).mockResolvedValue(
-        _mockToken,
+        'ws-token',
       );
 
-      const result = await controller.getConnectionToken(mockUser());
+      const res = mockRes();
+      await controller.getConnectionToken(mockUser(), mockReq(), res);
+      expect(centrifugoService.checkConnectionRateLimit).toHaveBeenCalledWith(
+        'user-1',
+        expect.any(String),
+      );
       expect(chatService.generateConnectionToken).toHaveBeenCalledWith(
         mockUser().id,
       );
-      expect(result).toEqual({ token: 'ws-token' });
+      expect(res.json).toHaveBeenCalledWith({ token: 'ws-token' });
+    });
+
+    it('should respond with 429 when rate limit is exceeded', async () => {
+      (
+        centrifugoService.checkConnectionRateLimit as jest.Mock
+      ).mockResolvedValue({
+        allowed: false,
+        retryAfterMs: 30000,
+      });
+
+      const res = mockRes();
+      await controller.getConnectionToken(mockUser(), mockReq(), res);
+      expect(res.status).toHaveBeenCalledWith(429);
+      expect(res.header).toHaveBeenCalledWith('Retry-After', '30');
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 429,
+          message: expect.stringContaining(
+            'Too many WebSocket connection attempts',
+          ),
+        }),
+      );
     });
   });
 
@@ -503,9 +558,15 @@ describe('ChatController', () => {
 
     it('should call chatService.updateMessageStatus when user is provided', async () => {
       const dto = { status: 'read' as const };
-      (chatService.updateMessageStatus as jest.Mock).mockResolvedValue(undefined);
+      (chatService.updateMessageStatus as jest.Mock).mockResolvedValue(
+        undefined,
+      );
 
-      const result = await controller.updateMessageStatus(mockUser(), 'msg-1', dto);
+      const result = await controller.updateMessageStatus(
+        mockUser(),
+        'msg-1',
+        dto,
+      );
       expect(chatService.updateMessageStatus).toHaveBeenCalledWith(
         'user-1',
         'msg-1',

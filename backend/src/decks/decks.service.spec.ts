@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DecksService } from './decks.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
+import { PinoLogger } from 'nestjs-pino';
+import { InjectPinoLogger } from 'nestjs-pino';
 
 describe('DecksService', () => {
   let service: DecksService;
@@ -23,6 +26,7 @@ describe('DecksService', () => {
       upsert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
       then: undefined as any,
@@ -36,9 +40,32 @@ describe('DecksService', () => {
       providers: [
         DecksService,
         {
+          provide: MetricsService,
+          useValue: {
+            recordSrsFlashcardCreated: jest.fn(),
+            recordSrsReviewCompleted: jest.fn(),
+            setSrsDueCards: jest.fn(),
+            setSrsAverageEasinessFactor: jest.fn(),
+            setSrsReviewSuccessRate: jest.fn(),
+            setSrsCardsPerLevel: jest.fn(),
+            setSrsCardsStuck: jest.fn(),
+            setSrsDecksTotal: jest.fn(),
+            recordSrsDeckCreated: jest.fn(),
+          },
+        },
+        {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+          },
+        },
+        {
+          provide: `PinoLogger:${DecksService.name}`,
+          useValue: {
+            error: jest.fn(),
+            warn: jest.fn(),
+            info: jest.fn(),
+            debug: jest.fn(),
           },
         },
       ],
@@ -59,16 +86,30 @@ describe('DecksService', () => {
     it('should create a deck successfully', async () => {
       const dto = { name: 'Spanish Verbs', colour: '#ff5500', icon: '🔥' };
       const savedDeck = {
-        id: 'deck-1', user_id: 'user-1', name: 'Spanish Verbs',
-        card_count: 0, colour: '#ff5500', icon: '🔥', created_at: '2026-01-01', updated_at: '2026-01-01',
+        id: 'deck-1',
+        user_id: 'user-1',
+        name: 'Spanish Verbs',
+        card_count: 0,
+        colour: '#ff5500',
+        icon: '🔥',
+        created_at: '2026-01-01',
+        updated_at: '2026-01-01',
       };
-      mockQueryBuilder.single.mockResolvedValue({ data: savedDeck, error: null });
+      mockQueryBuilder.single.mockResolvedValue({
+        data: savedDeck,
+        error: null,
+      });
 
       const result = await service.createDeck('user-1', dto);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('decks');
       expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Spanish Verbs', colour: '#ff5500', icon: '🔥', card_count: 0 }),
+        expect.objectContaining({
+          name: 'Spanish Verbs',
+          colour: '#ff5500',
+          icon: '🔥',
+          card_count: 0,
+        }),
       );
       expect(result).toEqual(savedDeck);
     });
@@ -88,14 +129,22 @@ describe('DecksService', () => {
     });
 
     it('should throw when creation fails', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Error' } });
-      await expect(service.createDeck('user-1', { name: 'X' })).rejects.toThrow('Failed to create deck');
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Error' },
+      });
+      await expect(service.createDeck('user-1', { name: 'X' })).rejects.toThrow(
+        'Failed to create deck',
+      );
     });
   });
 
   describe('getDecks', () => {
     it('should return user decks', async () => {
-      const decks = [{ id: 'd1', name: 'Deck 1' }, { id: 'd2', name: 'Deck 2' }];
+      const decks = [
+        { id: 'd1', name: 'Deck 1' },
+        { id: 'd2', name: 'Deck 2' },
+      ];
       mockQueryBuilder.order.mockResolvedValue({ data: decks, error: null });
 
       const result = await service.getDecks('user-1');
@@ -106,7 +155,10 @@ describe('DecksService', () => {
     });
 
     it('should return empty array on error', async () => {
-      mockQueryBuilder.order.mockResolvedValue({ data: null, error: { message: 'DB error' } });
+      mockQueryBuilder.order.mockResolvedValue({
+        data: null,
+        error: { message: 'DB error' },
+      });
       const result = await service.getDecks('user-1');
       expect(result).toEqual([]);
     });
@@ -121,7 +173,10 @@ describe('DecksService', () => {
     });
 
     it('should return null when not found', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Not found' } });
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      });
       const result = await service.getDeck('user-1', 'd1');
       expect(result).toBeNull();
     });
@@ -130,8 +185,15 @@ describe('DecksService', () => {
   describe('updateDeck', () => {
     it('should update deck fields', async () => {
       const dto = { name: 'Updated Name', description: 'New desc' };
-      const updatedDeck = { id: 'd1', name: 'Updated Name', description: 'New desc' };
-      mockQueryBuilder.single.mockResolvedValue({ data: updatedDeck, error: null });
+      const updatedDeck = {
+        id: 'd1',
+        name: 'Updated Name',
+        description: 'New desc',
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: updatedDeck,
+        error: null,
+      });
 
       const result = await service.updateDeck('user-1', 'd1', dto);
 
@@ -140,8 +202,13 @@ describe('DecksService', () => {
     });
 
     it('should throw on update failure', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Error' } });
-      await expect(service.updateDeck('user-1', 'd1', { name: 'X' })).rejects.toThrow('Failed to update deck');
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Error' },
+      });
+      await expect(
+        service.updateDeck('user-1', 'd1', { name: 'X' }),
+      ).rejects.toThrow('Failed to update deck');
     });
   });
 
@@ -157,16 +224,24 @@ describe('DecksService', () => {
 
     it('should throw on delete failure', async () => {
       mockQueryBuilder.delete.mockReturnValue(mockQueryBuilder);
-      makeThenable(mockQueryBuilder, { data: null, error: { message: 'Forbidden' } });
+      makeThenable(mockQueryBuilder, {
+        data: null,
+        error: { message: 'Forbidden' },
+      });
 
-      await expect(service.deleteDeck('user-1', 'd1')).rejects.toThrow('Failed to delete deck');
+      await expect(service.deleteDeck('user-1', 'd1')).rejects.toThrow(
+        'Failed to delete deck',
+      );
     });
   });
 
   describe('addFlashcardToDeck', () => {
     it('should throw when deck not found', async () => {
       // getDeck call: single() resolves with error
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Not found' } });
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      });
       // Need eq to return mockQueryBuilder for chaining
       mockQueryBuilder.eq.mockReturnValue(mockQueryBuilder);
       // select needs to return mockQueryBuilder for chaining
@@ -203,11 +278,16 @@ describe('DecksService', () => {
     });
 
     it('should throw when deck not found', async () => {
-      mockQueryBuilder.single.mockResolvedValue({ data: null, error: { message: 'Not found' } });
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      });
       mockQueryBuilder.eq.mockReturnValue(mockQueryBuilder);
       mockQueryBuilder.select.mockReturnValue(mockQueryBuilder);
 
-      await expect(service.getDeckFlashcards('user-1', 'bad-id')).rejects.toThrow('Deck not found');
+      await expect(
+        service.getDeckFlashcards('user-1', 'bad-id'),
+      ).rejects.toThrow('Deck not found');
     });
   });
 });

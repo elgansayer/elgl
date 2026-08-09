@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
@@ -30,6 +31,7 @@ export class UsersService {
     private readonly supabaseService: SupabaseService,
     private readonly xpService: XpService,
     private readonly dataExportWorker: DataExportWorker,
+    private readonly eventEmitter: EventEmitter2,
     @Optional() private readonly notificationsService?: NotificationsService,
     @Optional() private readonly correctorScoreService?: CorrectorScoreService,
   ) {}
@@ -110,6 +112,33 @@ export class UsersService {
     profile.xp_total = await this.xpService.getTotalXp(userId);
 
     return profile;
+  }
+
+  async searchUsers(
+    query: string,
+    currentUserId: string,
+    limit = 10,
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .ilike('display_name', `${query}%`)
+      .neq('id', currentUserId)
+      .order('display_name', { ascending: true })
+      .limit(limit);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data as {
+      id: string;
+      display_name: string;
+      avatar_url: string | null;
+    }[];
   }
 
   async getUserXp(userId: string): Promise<number> {
@@ -372,6 +401,7 @@ export class UsersService {
       is_vip: true,
       vip_tier: 'premium',
       coins_balance: 500,
+      auto_play_voice_notes: false,
       chat_enter_to_send: false,
       chat_text_size: 'medium',
       study_streak_days: 15,
@@ -380,11 +410,16 @@ export class UsersService {
       privacy_hide_age: false,
       privacy_hide_location: false,
       privacy_hide_from_search: false,
+      matchmaking_consent: false,
       privacy_hide_gender: false,
       privacy_hide_exact_location: false,
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
       silence_unknown_callers: false,
+      auto_play_voice_notes: false,
+      auto_download_media: false,
+      auto_download_wifi_only: false,
+      auto_download_preference: 'wifi',
       status_visibility: 'public',
       corrector_score: 0,
       incognito_visits: false,
@@ -412,14 +447,19 @@ export class UsersService {
   ): Promise<UserProfile> {
     if (dto.target_languages && dto.target_languages.length > 1 && !isVip) {
       throw new BadRequestException(
-        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages simultaneously.',
+        'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages, or Pro (12 UKP / $15 USD per month) for up to 5 languages.',
       );
     }
 
     if (dto.target_languages && dto.target_languages.length > 3) {
-      throw new BadRequestException(
-        'A maximum of 3 target languages can be studied simultaneously.',
-      );
+      const currentProfile = await this.getProfile(userId);
+      const tier = currentProfile?.vip_tier ?? 'free';
+      const maxLanguages = tier === 'pro' || tier === 'developer' ? 5 : 3;
+      if (dto.target_languages.length > maxLanguages) {
+        throw new BadRequestException(
+          `A maximum of ${maxLanguages} target languages can be studied simultaneously on your current tier.`,
+        );
+      }
     }
 
     if (dto.mock_location && !isVip) {
@@ -464,6 +504,8 @@ export class UsersService {
       updatePayload.privacy_hide_location = dto.privacy_hide_location;
     if (dto.privacy_hide_from_search !== undefined)
       updatePayload.privacy_hide_from_search = dto.privacy_hide_from_search;
+    if (dto.matchmaking_consent !== undefined)
+      updatePayload.matchmaking_consent = dto.matchmaking_consent;
     if (dto.privacy_hide_gender !== undefined)
       updatePayload.privacy_hide_gender = dto.privacy_hide_gender;
     if (dto.privacy_hide_exact_location !== undefined)
@@ -493,6 +535,9 @@ export class UsersService {
     if (dto.silence_unknown_callers !== undefined)
       updatePayload.silence_unknown_callers = dto.silence_unknown_callers;
 
+    if (dto.auto_play_voice_notes !== undefined)
+      updatePayload.auto_play_voice_notes = dto.auto_play_voice_notes;
+
     if (dto.sound_effects_enabled !== undefined)
       updatePayload.sound_effects_enabled = dto.sound_effects_enabled;
 
@@ -507,6 +552,18 @@ export class UsersService {
 
     if (dto.serious_learner_mode !== undefined)
       updatePayload.serious_learner_mode = dto.serious_learner_mode;
+
+    if (dto.auto_play_voice_notes !== undefined)
+      updatePayload.auto_play_voice_notes = dto.auto_play_voice_notes;
+
+    if (dto.auto_download_media !== undefined)
+      updatePayload.auto_download_media = dto.auto_download_media;
+
+    if (dto.auto_download_wifi_only !== undefined)
+      updatePayload.auto_download_wifi_only = dto.auto_download_wifi_only;
+
+    if (dto.auto_download_preference !== undefined)
+      updatePayload.auto_download_preference = dto.auto_download_preference;
 
     if (dto.business_name !== undefined)
       updatePayload.business_name = dto.business_name;
@@ -539,6 +596,10 @@ export class UsersService {
       );
     }
     const profile = await this.getProfile(userId);
+
+    // Fire-and-forget: emit profile.updated event for system bubble broadcasting
+    this.eventEmitter.emit('profile.updated', { userId });
+
     return { ...profile, ...updatePayload };
   }
 
@@ -704,6 +765,7 @@ export class UsersService {
     privacy_hide_vip_status?: boolean;
     incognito_visits?: boolean;
     status_visibility?: string;
+    profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
   }> {
     const profile = await this.getProfile(userId);
     const privacyRecord = profile as unknown as Record<string, unknown>;
@@ -728,6 +790,9 @@ export class UsersService {
       status_visibility:
         (profile as unknown as { status_visibility?: string })
           .status_visibility ?? 'public',
+      profile_visibility:
+        (privacyRecord.profile_visibility as
+          'everyone' | 'vips_only' | 'hidden' | undefined) ?? 'everyone',
     };
   }
 
@@ -982,6 +1047,7 @@ export class UsersService {
       incognito_visits?: boolean;
       privacy_hide_vip_status?: boolean;
       status_visibility?: string;
+      profile_visibility?: 'everyone' | 'vips_only' | 'hidden';
     },
     isVip: boolean,
   ): Promise<UserProfile> {
@@ -1008,6 +1074,8 @@ export class UsersService {
       updatePayload.privacy_hide_vip_status = settings.privacy_hide_vip_status;
     if (settings.status_visibility !== undefined)
       updatePayload.status_visibility = settings.status_visibility;
+    if (settings.profile_visibility !== undefined)
+      updatePayload.profile_visibility = settings.profile_visibility;
 
     const { error: privacyUpdateError } = await supabase
       .from('users')
@@ -1142,6 +1210,7 @@ export class UsersService {
         | 'moment_comments'
         | 'moment_likes'
         | 'flashcards'
+        | 'decks'
         | 'chat_messages'
         | 'favourites'
         | 'profile_visits'
@@ -1165,6 +1234,7 @@ export class UsersService {
       { table: 'moment_comments', column: 'author_id' },
       { table: 'moment_likes', column: 'user_id' },
       { table: 'flashcards', column: 'user_id' },
+      { table: 'decks', column: 'user_id' },
       { table: 'chat_messages', column: 'sender_id' },
       { table: 'favourites', column: 'user_id' },
       { table: 'profile_visits', column: 'visitor_id' },
@@ -1190,6 +1260,48 @@ export class UsersService {
     if (errors.length > 0) {
       Logger.warn(
         `Some deletions failed for user ${userId}: ${errors.join(', ')}`,
+      );
+    }
+
+    // GDPR: scrub escrow_transactions records for the deleted user.
+    // Rather than deleting escrow records (which would break the financial
+    // ledger for the counterparty), we anonymise user identifiers and scrub
+    // free-text fields.
+    const DELETED_USER_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
+
+    const now = new Date().toISOString();
+
+    // Anonymise escrow records where the user was the payer
+    const { error: escrowPayerError } = await supabase
+      .from('escrow_transactions')
+      .update({
+        payer_id: DELETED_USER_PLACEHOLDER,
+        description: null,
+        reference_id: null,
+        updated_at: now,
+      })
+      .eq('payer_id', userId);
+
+    if (escrowPayerError) {
+      Logger.warn(
+        `Failed to anonymise payer escrow records for user ${userId}: ${escrowPayerError.message}`,
+      );
+    }
+
+    // Anonymise escrow records where the user was the payee
+    const { error: escrowPayeeError } = await supabase
+      .from('escrow_transactions')
+      .update({
+        payee_id: DELETED_USER_PLACEHOLDER,
+        description: null,
+        reference_id: null,
+        updated_at: now,
+      })
+      .eq('payee_id', userId);
+
+    if (escrowPayeeError) {
+      Logger.warn(
+        `Failed to anonymise payee escrow records for user ${userId}: ${escrowPayeeError.message}`,
       );
     }
 

@@ -369,6 +369,21 @@ describe('ChatRoomComponent (threaded replies)', () => {
       expect(component.showCorrectionForm()).toBe(true);
       expect(component.originalText).toBe('I goed to school');
     });
+
+    it('requestCorrection sends a correction_request message', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'I goed to school' });
+      const sent = makeMessage({ id: 'm2', message_type: 'correction_request' });
+      mockChatService.sendMessage.mockResolvedValueOnce(sent);
+
+      await component.requestCorrection(msg);
+
+      expect(mockChatService.sendMessage).toHaveBeenCalledWith({
+        room_id: 'room-1',
+        message_type: 'correction_request',
+        correction_request_payload: { original_text: 'I goed to school' },
+        reply_to_id: 'm1',
+      });
+    });
   });
 
   describe('chat lock', () => {

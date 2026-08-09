@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, resource, effect } from '@angular/core';
+import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { EconomyStore, StickerPack } from '../../services/economy.store';
@@ -23,15 +23,15 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
       <p class="text-sm text-neutral-400 mt-1">{{ 'stickerStore.subtitle' | t }}</p>
     </div>
     <app-pill colour="warning" size="md">
-      <span class="flex items-center gap-1 font-semibold">
-        <span class="text-lg">&#x1FA99;</span> {{ userCoins() }}
-      </span>
-    </app-pill>
+        <span class="flex items-center gap-1 font-semibold">
+          <span class="text-lg">&#x1FA99;</span> {{ userCoins() }}
+        </span>
+      </app-pill>
   </div>
 
   <!-- Category filters -->
   <div class="px-4 pb-4 overflow-x-auto">
-    <div class="flex gap-2">
+    <div class="flex gap-2" role="group" [attr.aria-label]="'sticker.filterLabel' | t">
       @for (pill of categoryPills(); track pill.id) {
         <button
           type="button"
@@ -41,6 +41,7 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
           [class.bg-neutral-800]="selectedCategory() !== pill.id"
           [class.text-neutral-300]="selectedCategory() !== pill.id"
           (click)="selectedCategory.set(pill.id)"
+          [attr.aria-pressed]="selectedCategory() === pill.id"
         >
           {{ pill.label }}
         </button>
@@ -50,8 +51,8 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
   <!-- Loading -->
   @if (isLoading()) {
-    <div class="flex items-center justify-center py-20">
-      <div class="h-8 w-8 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent"></div>
+    <div class="flex items-center justify-center py-20" role="status" [attr.aria-label]="'common.loading' | t">
+      <div class="h-8 w-8 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent" aria-hidden="true"></div>
       <span class="ms-3 text-neutral-400">{{ 'common.loading' | t }}</span>
     </div>
   }
@@ -67,20 +68,21 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
 
   <!-- Packs grid -->
   @if (!isLoading() && filteredPacks().length > 0) {
-    <div class="px-4 pb-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div class="px-4 pb-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" role="list">
       @for (pack of filteredPacks(); track pack.id) {
         <app-card
           variant="elevated"
           padding="md"
           class="relative flex flex-col overflow-hidden transition-all duration-200"
           [class.opacity-60]="pack.owned"
+          role="listitem"
         >
           <!-- Pack illustration -->
           <div
             class="relative mb-3 flex h-28 items-center justify-center rounded-xl shadow-lg"
             [class]="'bg-gradient-to-br ' + getPackColour(pack.id)"
           >
-            <span class="text-5xl drop-shadow-lg">{{ getPackIllustration(pack.id) }}</span>
+            <span class="text-5xl drop-shadow-lg" aria-hidden="true">{{ getPackIllustration(pack.id) }}</span>
             @if (pack.owned) {
               <div
                 class="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50"
@@ -90,10 +92,20 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                 </span>
               </div>
             }
+            @if (pack.is_animated && !pack.owned) {
+              <div
+                class="absolute top-2 end-2 rounded-full bg-fuchsia-500 px-2 py-0.5 text-xs font-bold text-white shadow-lg"
+              >
+                {{ 'stickerStore.animatedBadge' | t }}
+              </div>
+            }
           </div>
 
           <!-- Pack details -->
           <h3 class="text-sm font-semibold text-white mb-1">{{ pack.name }}</h3>
+          @if (pack.is_animated) {
+            <p class="text-xs text-fuchsia-400 mb-1">{{ 'stickerStore.animatedDescription' | t }}</p>
+          }
 
           <!-- Purchase section -->
           <div class="mt-auto pt-2">
@@ -109,11 +121,12 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
                 class="flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 py-2 text-sm font-semibold text-white transition-all disabled:opacity-50"
                 [disabled]="userCoins() < pack.cost_coins || purchasingId() === pack.id"
                 (click)="purchasePack(pack)"
+                [attr.aria-label]="('stickerStore.purchaseAria' | t: { name: pack.name, cost: pack.cost_coins })"
               >
                 @if (purchasingId() === pack.id) {
-                  <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true"></div>
                 } @else {
-                  <span class="text-base">&#x1FA99;</span>
+                  <span class="text-base" aria-hidden="true">&#x1FA99;</span>
                   {{ pack.cost_coins }}
                 }
               </button>
