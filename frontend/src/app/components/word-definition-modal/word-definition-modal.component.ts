@@ -1,18 +1,8 @@
-import { showToast } from '../../services/toast.service';
-<<<<<<< HEAD
-import { Component, inject, signal, computed, input, output, effect, ErrorHandler } from '@angular/core';
-import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
+import { Component, inject, signal, computed, input, output, viewChild, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
-=======
-import { Component, OnInit, inject, signal, input, output, computed, viewChild, ErrorHandler } from '@angular/core';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
-import { TranslatePipe } from '../../services/translate.pipe';
-import {
-  SrsErrorBoundaryComponent,
-  SrsErrorContext,
-} from '../srs-error-boundary/srs-error-boundary.component';
->>>>>>> origin/main
+import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 
 @Component({
   selector: 'app-word-definition-modal',
@@ -58,7 +48,6 @@ import {
                   &#128266; {{ 'wordModal.playAudio' | t }}
                 </button>
               }
-              <!-- SRS level controls -->
               <div class="border-t border-surface-100 pt-4">
                 <p class="mb-2 text-xs font-bold text-text-primary">{{ 'wordModal.srsLabel' | t }}</p>
                 <div class="flex gap-2">
@@ -99,7 +88,7 @@ import {
     `,
   ],
 })
-export class WordDefinitionModalComponent implements OnInit {
+export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
   private readonly sanitisation = inject(HtmlSanitisationService);
   private errorHandler = inject(ErrorHandler);
@@ -116,16 +105,6 @@ export class WordDefinitionModalComponent implements OnInit {
   readonly isSaving = signal<boolean>(false);
   readonly existingCard = signal<Flashcard | null>(null);
 
-<<<<<<< HEAD
-  readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
-
-  constructor() {
-    // Auto-fetch definition when word token changes, replacing ngOnInit
-    effect(() => {
-      const token = this.wordToken();
-      const target = this.targetLanguage();
-      const status = this.vocabStore.getWordStatus(token);
-=======
   readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
 
   readonly errorContext = computed<SrsErrorContext>(() => ({
@@ -138,17 +117,10 @@ export class WordDefinitionModalComponent implements OnInit {
     },
   }));
 
-  async ngOnInit(): Promise<void> {
-    try {
-      const status = this.vocabStore.getWordStatus(this.wordToken());
->>>>>>> origin/main
-      if (status.flashcard) {
-        this.existingCard.set(status.flashcard);
-      }
-      await this.fetchDefinition();
-    } catch (err) {
-      this.handleError(err, 'init');
-    }
+  readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
+
+  constructor() {
+    this.fetchDefinition().catch(() => undefined);
   }
 
   handleRetry(): void {
@@ -158,9 +130,13 @@ export class WordDefinitionModalComponent implements OnInit {
   async fetchDefinition(): Promise<void> {
     this.isLoading.set(true);
     try {
-<<<<<<< HEAD
-      const res = await this.vocabStore.translateWordOrSentence(wordToken, targetLang);
-      // Sanitise all user-visible translation result fields
+      const token = this.wordToken();
+      const targetLang = this.targetLanguage();
+      const status = this.vocabStore.getWordStatus(token);
+      if (status.flashcard) {
+        this.existingCard.set(status.flashcard);
+      }
+      const res = await this.vocabStore.translateWordOrSentence(token, targetLang);
       this.translationResult.set({
         ...res,
         original_text: this.sanitisation.sanitiseText(res.original_text),
@@ -171,30 +147,14 @@ export class WordDefinitionModalComponent implements OnInit {
         pronunciation_url: res.pronunciation_url ? this.sanitisation.sanitiseUrl(res.pronunciation_url) : undefined,
       });
     } catch (e) {
-      this.reportError('fetchDefinition', e);
-      // Fallback display
-      this.translationResult.set({
-        original_text: this.sanitisation.sanitiseText(wordToken),
-        translated_text: `Translation of "${this.sanitisation.sanitiseText(wordToken)}"`,
-        detected_language: 'auto',
-        definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
-        transliteration: this.sanitisation.sanitiseText(wordToken),
-=======
-      const res = await this.vocabStore.translateWordOrSentence(
-        this.wordToken(),
-        this.targetLanguage(),
-      );
-      this.translationResult.set(res);
-    } catch (err) {
       this.translationResult.set({
         original_text: this.wordToken(),
         translated_text: `Translation of "${this.wordToken()}"`,
         detected_language: 'auto',
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
         transliteration: this.wordToken(),
->>>>>>> origin/main
       });
-      this.handleError(err, 'fetchDefinition');
+      this.handleError(e, 'fetchDefinition');
     } finally {
       this.isLoading.set(false);
     }
@@ -203,18 +163,13 @@ export class WordDefinitionModalComponent implements OnInit {
   playAudio(): void {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
-<<<<<<< HEAD
       const safeUrl = this.sanitisation.sanitiseUrl(url);
       if (safeUrl) {
         const audio = new Audio(safeUrl);
-        audio.play().catch((e) => this.reportError('playAudio', e));
+        audio.play().catch((err) => {
+          this.handleError(err, 'playAudio');
+        });
       }
-=======
-      const audio = new Audio(url);
-      audio.play().catch((err) => {
-        this.handleError(err, 'playAudio');
-      });
->>>>>>> origin/main
     }
   }
 
@@ -246,7 +201,6 @@ export class WordDefinitionModalComponent implements OnInit {
         }
       }
     } catch (err) {
-      showToast('Error updating SRS review schedule.');
       this.handleError(err, 'setLevel');
     } finally {
       this.isSaving.set(false);

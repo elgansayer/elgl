@@ -9,6 +9,8 @@ import { UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
 import { TypingService } from '../../services/typing.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { NetworkStatusService } from '../../services/network-status.service';
+import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { I18nService } from '../../services/i18n.service';
 
 function makeMessage(overrides: Partial<ChatMessage>): ChatMessage {
@@ -95,6 +97,14 @@ describe('ChatRoomComponent (threaded replies)', () => {
       sendTyping: vi.fn(),
     };
 
+    const mockNetworkStatusService = {
+      isOnline: signal(true),
+    };
+
+    const mockTextToSpeechService = {
+      speak: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
       providers: [
@@ -105,6 +115,8 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: TypingService, useValue: mockTypingService },
         { provide: VocabularyStore, useValue: mockVocabularyStore },
+        { provide: NetworkStatusService, useValue: mockNetworkStatusService },
+        { provide: TextToSpeechService, useValue: mockTextToSpeechService },
         I18nService,
       ],
     }).compileComponents();
@@ -356,6 +368,21 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
       expect(component.showCorrectionForm()).toBe(true);
       expect(component.originalText).toBe('I goed to school');
+    });
+
+    it('requestCorrection sends a correction_request message', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'I goed to school' });
+      const sent = makeMessage({ id: 'm2', message_type: 'correction_request' });
+      mockChatService.sendMessage.mockResolvedValueOnce(sent);
+
+      await component.requestCorrection(msg);
+
+      expect(mockChatService.sendMessage).toHaveBeenCalledWith({
+        room_id: 'room-1',
+        message_type: 'correction_request',
+        correction_request_payload: { original_text: 'I goed to school' },
+        reply_to_id: 'm1',
+      });
     });
   });
 

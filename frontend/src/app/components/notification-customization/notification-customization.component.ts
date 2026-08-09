@@ -4,7 +4,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-notification-customization',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './notification-customization.component.html',
 })

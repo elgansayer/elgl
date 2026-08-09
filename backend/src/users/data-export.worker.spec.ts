@@ -44,7 +44,9 @@ describe('DataExportWorker', () => {
       const mockComments = [{ id: 'comment-1', text: 'Nice moment' }];
       const mockMessages = [{ id: 'msg-1', text: 'Hello' }];
       const mockFlashcards = [{ id: 'card-1', front: 'Hola', back: 'Hello' }];
-      const mockDecks = [{ id: 'deck-1', name: 'Spanish Basics', user_id: 'user-1' }];
+      const mockDecks = [
+        { id: 'deck-1', name: 'Spanish Basics', user_id: 'user-1' },
+      ];
       const mockDeckFlashcards = [
         { id: 'df-1', deck_id: 'deck-1', flashcard_id: 'card-1' },
       ];
@@ -57,7 +59,9 @@ describe('DataExportWorker', () => {
           return {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({ data: mockProfile, error: null }),
+            single: jest
+              .fn()
+              .mockResolvedValue({ data: mockProfile, error: null }),
           };
         }
         if (table === 'decks') {
@@ -69,7 +73,9 @@ describe('DataExportWorker', () => {
         if (table === 'deck_flashcards') {
           return {
             select: jest.fn().mockReturnThis(),
-            in: jest.fn().mockResolvedValue({ data: mockDeckFlashcards, error: null }),
+            in: jest
+              .fn()
+              .mockResolvedValue({ data: mockDeckFlashcards, error: null }),
           };
         }
 

@@ -1,1 +1,0 @@
-Implement strict HTML sanitisation using `DOMPurify` on all user-submitted text.

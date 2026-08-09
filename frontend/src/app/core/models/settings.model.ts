@@ -29,7 +29,7 @@ export interface ProfileDiscoverySettings {
 }
 
 export interface SocialPrivacySettings {
-  profileVisibility: 'everyone' | 'vips_only' | 'hidden';
+  profileVisibility: 'Everyone' | 'VipsOnly' | 'Hidden';
   status: 'Online' | 'Idle' | 'Do Not Disturb' | 'Invisible';
   customStatus?: {
     emoji?: string;

@@ -1,8 +1,17 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateReadingResourceDto {
-  @ApiProperty({ description: 'Title of the reading resource', example: 'La Vie Parisienne' })
+  @ApiProperty({
+    description: 'Title of the reading resource',
+    example: 'La Vie Parisienne',
+  })
   @IsString()
   @IsNotEmpty()
   @MinLength(1)
@@ -22,7 +31,10 @@ export class CreateReadingResourceDto {
   @MaxLength(5)
   language!: string;
 
-  @ApiPropertyOptional({ description: 'Difficulty level', enum: ['beginner', 'intermediate', 'advanced'] })
+  @ApiPropertyOptional({
+    description: 'Difficulty level',
+    enum: ['beginner', 'intermediate', 'advanced'],
+  })
   @IsString()
   @IsOptional()
   difficulty?: string;
