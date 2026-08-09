@@ -28,7 +28,7 @@
           </p>
         }
       </div>
-      <button aria-label="Close" (click)="close()" class="text-white/80 hover:text-white font-bold text-xl sm:text-2xl flex-shrink-0 leading-none p-1 min-h-[40px] min-w-[40px] flex items-center justify-center">✕</button>
+      <button [attr.aria-label]="'common.close' | t" (click)="close()" class="text-white/80 hover:text-white font-bold text-xl sm:text-2xl flex-shrink-0 leading-none p-1 min-h-[40px] min-w-[40px] flex items-center justify-center">✕</button>
     </div>
 
     <!-- Scrollable body -->

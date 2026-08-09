@@ -2,6 +2,8 @@ import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { NetworkStatusService } from '../../services/network-status.service';
+import { OfflineReadingService } from '../../services/offline-reading.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
@@ -15,6 +17,17 @@ interface ReadingArticle {
   audioUrl?: string;
   wordCount: number;
 }
+
+interface ReadingHistoryEntry {
+  articleId: string;
+  title: string;
+  difficulty: string;
+  topic: string;
+  readAt: number;
+}
+
+const TAB_IDS = ['articles', 'vocabulary', 'history'] as const;
+type TabId = (typeof TAB_IDS)[number];
 
 @Component({
   selector: 'app-reading-engine',
@@ -34,34 +47,25 @@ interface ReadingArticle {
     </div>
 
     <nav class="flex gap-1 sm:gap-2 overflow-x-auto border-b border-surface-100 pb-2 -mx-1 px-1" role="tablist" [attr.aria-label]="'readingEngine.tabNavAriaLabel' | t">
-      <button type="button" role="tab"
-        [attr.aria-selected]="activeTab() === 'articles'"
-        (click)="activeTab.set('articles')"
-        [class.bg-primary]="activeTab() === 'articles'" [class.text-white]="activeTab() === 'articles'"
-        [class.bg-surface-300]="activeTab() !== 'articles'" [class.text-text-secondary]="activeTab() !== 'articles'"
-        class="rounded-app px-3 sm:px-4 py-2.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0">
-        {{ 'readingEngine.tab.articles' | t }}
-      </button>
-      <button type="button" role="tab"
-        [attr.aria-selected]="activeTab() === 'vocabulary'"
-        (click)="activeTab.set('vocabulary')"
-        [class.bg-primary]="activeTab() === 'vocabulary'" [class.text-white]="activeTab() === 'vocabulary'"
-        [class.bg-surface-300]="activeTab() !== 'vocabulary'" [class.text-text-secondary]="activeTab() !== 'vocabulary'"
-        class="rounded-app px-3 sm:px-4 py-2.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0">
-        {{ 'readingEngine.tab.vocabulary' | t }}
-      </button>
-      <button type="button" role="tab"
-        [attr.aria-selected]="activeTab() === 'history'"
-        (click)="activeTab.set('history')"
-        [class.bg-primary]="activeTab() === 'history'" [class.text-white]="activeTab() === 'history'"
-        [class.bg-surface-300]="activeTab() !== 'history'" [class.text-text-secondary]="activeTab() !== 'history'"
-        class="rounded-app px-3 sm:px-4 py-2.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0">
-        {{ 'readingEngine.tab.history' | t }}
-      </button>
+      @for (tabId of tabIds; track tabId) {
+        <button type="button" role="tab"
+          [id]="'reading-tab-' + tabId"
+          [attr.aria-selected]="activeTab() === tabId"
+          [attr.aria-controls]="'reading-panel-' + tabId"
+          [attr.tabindex]="activeTab() === tabId ? 0 : -1"
+          (click)="setTab(tabId)"
+          (keydown)="onTabKeydown($event, tabId)"
+          [class.bg-primary]="activeTab() === tabId" [class.text-white]="activeTab() === tabId"
+          [class.bg-surface-300]="activeTab() !== tabId" [class.text-text-secondary]="activeTab() !== tabId"
+          class="rounded-app px-3 sm:px-4 py-2.5 sm:py-2 text-[11px] sm:text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0 min-h-[44px] sm:min-h-0">
+          {{ 'readingEngine.tab.' + tabId | t }}
+        </button>
+      }
     </nav>
   </header>
 
   @if (activeTab() === 'articles') {
+    <section role="tabpanel" id="reading-panel-articles" [attr.aria-labelledby]="'reading-tab-articles'" [attr.aria-hidden]="activeTab() !== 'articles'">
     @if (selectedArticle(); as article) {
       <div class="space-y-4">
         <button type="button" (click)="backToList()"
@@ -144,6 +148,7 @@ interface ReadingArticle {
           <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             <span class="text-[10px] sm:text-[11px] font-bold text-text-muted flex-shrink-0">{{ 'readingEngine.filterDifficulty' | t }}</span>
             <button type="button" (click)="setFilter(null)"
+              [attr.aria-pressed]="!filterDifficulty()"
               [class.bg-primary]="!filterDifficulty()" [class.text-white]="!filterDifficulty()"
               [class.bg-surface-300]="filterDifficulty()"
               class="rounded-app px-2 sm:px-2.5 py-1.5 sm:py-1 text-[10px] sm:text-[11px] font-bold transition-colors flex-shrink-0 min-h-[36px] sm:min-h-0">
@@ -151,6 +156,7 @@ interface ReadingArticle {
             </button>
             @for (diff of ['beginner', 'intermediate', 'advanced']; track diff) {
               <button type="button" (click)="setFilter(diff)"
+                [attr.aria-pressed]="filterDifficulty() === diff"
                 [class.bg-primary]="filterDifficulty() === diff" [class.text-white]="filterDifficulty() === diff"
                 [class.bg-surface-300]="filterDifficulty() !== diff"
                 class="rounded-app px-2 sm:px-2.5 py-1.5 sm:py-1 text-[10px] sm:text-[11px] font-bold transition-colors flex-shrink-0 min-h-[36px] sm:min-h-0">
@@ -162,6 +168,7 @@ interface ReadingArticle {
           <div class="flex items-center gap-1 sm:gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             <span class="text-[10px] sm:text-[11px] font-bold text-text-muted flex-shrink-0">{{ 'readingEngine.filterTopic' | t }}</span>
             <button type="button" (click)="setTopicFilter(null)"
+              [attr.aria-pressed]="!filterTopic()"
               [class.bg-primary]="!filterTopic()" [class.text-white]="!filterTopic()"
               [class.bg-surface-300]="filterTopic()"
               class="rounded-app px-2 sm:px-2.5 py-1.5 sm:py-1 text-[10px] sm:text-[11px] font-bold transition-colors flex-shrink-0 min-h-[36px] sm:min-h-0">
@@ -169,6 +176,7 @@ interface ReadingArticle {
             </button>
             @for (topic of distinctTopics(); track topic) {
               <button type="button" (click)="setTopicFilter(topic)"
+                [attr.aria-pressed]="filterTopic() === topic"
                 [class.bg-primary]="filterTopic() === topic" [class.text-white]="filterTopic() === topic"
                 [class.bg-surface-300]="filterTopic() !== topic"
                 class="rounded-app px-2 sm:px-2.5 py-1.5 sm:py-1 text-[10px] sm:text-[11px] font-bold transition-colors flex-shrink-0 min-h-[36px] sm:min-h-0">
@@ -179,7 +187,8 @@ interface ReadingArticle {
 
           @if (filterDifficulty() || filterTopic()) {
             <button type="button" (click)="clearFilters()"
-              class="text-[10px] sm:text-[11px] font-bold text-primary hover:underline py-1.5 sm:py-0 flex-shrink-0 min-h-[36px] sm:min-h-0">
+              class="text-[10px] sm:text-[11px] font-bold text-primary hover:underline py-1.5 sm:py-0 flex-shrink-0 min-h-[36px] sm:min-h-0"
+              [attr.aria-label]="'readingEngine.clearFilters' | t">
               {{ 'readingEngine.clearFilters' | t }}
             </button>
           }
@@ -201,7 +210,7 @@ interface ReadingArticle {
       @if (!isLoading() && !hasError() && filteredArticles().length > 0) {
         <div class="space-y-3" role="list" [attr.aria-label]="'readingEngine.articleListAriaLabel' | t">
           @for (article of filteredArticles(); track article.id) {
-            <button type="button" role="listitem"
+            <button type="button"
               (click)="selectArticle(article.id)"
               class="app-card app-padded w-full text-start space-y-2 hover:bg-surface-300 transition-colors cursor-pointer border border-transparent hover:border-surface-100"
               [attr.aria-label]="'readingEngine.openArticleAriaLabel' | t: { title: article.title }">
@@ -230,10 +239,11 @@ interface ReadingArticle {
         </div>
       }
     }
+    </section>
   }
 
   @if (activeTab() === 'vocabulary') {
-    <section class="space-y-4">
+    <section class="space-y-4" role="tabpanel" id="reading-panel-vocabulary" [attr.aria-labelledby]="'reading-tab-vocabulary'" [attr.aria-hidden]="activeTab() !== 'vocabulary'">
       <div class="app-card app-padded space-y-3">
         <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.vocabularyTabTitle' | t }}</h3>
         <p class="app-muted">{{ 'readingEngine.vocabularyTabDescription' | t }}</p>
@@ -256,7 +266,7 @@ interface ReadingArticle {
   }
 
   @if (activeTab() === 'history') {
-    <section class="space-y-4">
+    <section class="space-y-4" role="tabpanel" id="reading-panel-history" [attr.aria-labelledby]="'reading-tab-history'" [attr.aria-hidden]="activeTab() !== 'history'">
       <div class="app-card app-padded space-y-3">
         <h3 class="text-base font-bold text-text-primary">{{ 'readingEngine.historyTabTitle' | t }}</h3>
         <p class="app-muted">{{ 'readingEngine.historyTabDescription' | t }}</p>
@@ -287,13 +297,18 @@ interface ReadingArticle {
 export class ReadingEngineComponent {
   private i18n = inject(I18nService);
   private vocabStore = inject(VocabularyStore);
+  private networkStatus = inject(NetworkStatusService);
+  private offlineReading = inject(OfflineReadingService);
 
-  readonly activeTab = signal<'articles' | 'vocabulary' | 'history'>('articles');
+  readonly tabIds = TAB_IDS;
+
+  readonly activeTab = signal<TabId>('articles');
   readonly selectedArticleId = signal<string | null>(null);
   readonly filterDifficulty = signal<string | null>(null);
   readonly filterTopic = signal<string | null>(null);
 
   readonly fetchError = signal<string | null>(null);
+  readonly readingHistory = signal<ReadingHistoryEntry[]>([]);
 
   readonly articlesResource = resource<ReadingArticle[], unknown>({
     loader: async () => this.fetchArticles(),
@@ -327,7 +342,37 @@ export class ReadingEngineComponent {
     () => !this.isLoading() && !this.hasError() && this.filteredArticles().length === 0,
   );
 
+  readonly isOffline = computed(() => !this.networkStatus.isOnline());
   readonly vocabularyCount = computed(() => this.vocabStore.allFlashcards().length);
+
+  setTab(tabId: TabId): void {
+    this.activeTab.set(tabId);
+  }
+
+  onTabKeydown(event: KeyboardEvent, currentTab: TabId): void {
+    const idx = this.tabIds.indexOf(currentTab);
+    /* istanbul ignore next: single-tab edge case */
+    if (this.tabIds.length <= 1) return;
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      const targetIdx = event.key === 'ArrowRight'
+        ? (idx + 1) % this.tabIds.length
+        : (idx - 1 + this.tabIds.length) % this.tabIds.length;
+      this.activeTab.set(this.tabIds[targetIdx]);
+      const targetBtn = document.getElementById('reading-tab-' + this.tabIds[targetIdx]);
+      targetBtn?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      this.activeTab.set(this.tabIds[0]);
+      document.getElementById('reading-tab-' + this.tabIds[0])?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      const last = this.tabIds[this.tabIds.length - 1];
+      this.activeTab.set(last);
+      document.getElementById('reading-tab-' + last)?.focus();
+    }
+  }
 
   selectArticle(id: string): void {
     this.selectedArticleId.set(id);
@@ -354,6 +399,27 @@ export class ReadingEngineComponent {
   retryLoad(): void {
     this.fetchError.set(null);
     this.articlesResource.reload();
+  }
+
+  async loadReadingHistory(): Promise<void> {
+    try {
+      const history = await this.offlineReading.getReadingHistory();
+      this.readingHistory.set(history as ReadingHistoryEntry[]);
+    } catch {
+      this.readingHistory.set([]);
+    }
+  }
+
+  formatReadDate(timestamp: number): string {
+    try {
+      return new Date(timestamp).toLocaleDateString(this.i18n.currentLang(), {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return new Date(timestamp).toLocaleDateString();
+    }
   }
 
   private async fetchArticles(): Promise<ReadingArticle[]> {

@@ -190,12 +190,19 @@ export class DiagnosticQuizComponent {
   answers = signal<Record<string, number>>({});
   isSubmitting = signal<boolean>(false);
 
+  private languageOverride = signal<string | undefined>(undefined);
+
   questionsResource = resource({
-    params: () => ({ language: this.targetLanguage() }),
+    params: () => ({ language: this.activeLanguage() }),
     loader: async ({ params }) => {
       return await this.quizService.getQuestions(params.language);
     },
     defaultValue: [],
+  });
+
+  readonly activeLanguage = computed(() => {
+    const override = this.languageOverride();
+    return override !== undefined ? override : this.targetLanguage();
   });
 
   readonly questions = computed(() => this.questionsResource.value());
@@ -232,7 +239,10 @@ export class DiagnosticQuizComponent {
 
   readonly totalQuestions = computed(() => this.questions().length);
 
-  reloadQuestions(): void {
+  reloadQuestions(language?: string): void {
+    if (language) {
+      this.languageOverride.set(language);
+    }
     this.currentIndex.set(0);
     this.answers.set({});
     this.questionsResource.reload();
@@ -261,16 +271,16 @@ export class DiagnosticQuizComponent {
     this.isSubmitting.set(true);
     const totalScore = Object.values(this.answers()).reduce((sum, pts) => sum + pts, 0);
     const totalQuestions = this.questions().length;
-    const maxScore = totalQuestions * 3;
+    const maxScore = totalQuestions * 4;
     const percentage = maxScore > 0 ? totalScore / maxScore : 0;
 
     let suggestedLevel = 'A1';
 
     if (percentage >= 0.9) suggestedLevel = 'C2';
     else if (percentage >= 0.8) suggestedLevel = 'C1';
-    else if (percentage >= 0.65) suggestedLevel = 'B2';
-    else if (percentage >= 0.5) suggestedLevel = 'B1';
-    else if (percentage >= 0.3) suggestedLevel = 'A2';
+    else if (percentage >= 0.6) suggestedLevel = 'B2';
+    else if (percentage >= 0.4) suggestedLevel = 'B1';
+    else if (percentage >= 0.2) suggestedLevel = 'A2';
 
     try {
       await this.quizService.submitResults({

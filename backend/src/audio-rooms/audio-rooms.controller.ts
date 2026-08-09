@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
@@ -66,6 +67,8 @@ import {
   CACHE_TAG_AUDIO_ROOMS,
   CACHE_TAG_AUDIO_ROOM_STAGE,
   CACHE_TAG_AUDIO_ROOM_POLLS,
+  CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+  CACHE_TAG_AUDIO_ROOM_NOTES,
 } from '../common/cache.interceptor';
 
 // Type representing the authenticated user fields used in the controller.
@@ -79,7 +82,11 @@ interface AuthUser {
 @UseGuards(SupabaseAuthGuard)
 @ApiBearerAuth()
 export class AudioRoomsController {
-  constructor(private readonly audioRoomsService: AudioRoomsService) {}
+  constructor(
+    private readonly audioRoomsService: AudioRoomsService,
+    @InjectPinoLogger(AudioRoomsController.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   @Post('create')
   @HttpCode(HttpStatus.CREATED)
@@ -550,6 +557,15 @@ export class AudioRoomsController {
     return await this.audioRoomsService.muteSpeaker(user.id, dto);
   }
 
+  @Post('kick-speaker')
+  async kickSpeaker(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord | null> {
+    if (!user) return null;
+    return await this.audioRoomsService.kickSpeaker(user.id, dto);
+  }
+
   @Post('demote-speaker')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
   @ApiOperation({
@@ -693,7 +709,9 @@ export class AudioRoomsController {
   }
 
   @Get(':roomId/notes')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_AUDIO_ROOM_NOTES]),
+  )
   @ApiOperation({
     summary: 'Get notes for an audio room',
     description: 'Returns all notes associated with a specific audio room.',
@@ -748,7 +766,11 @@ export class AudioRoomsController {
    */
   @Get(':id/transcript')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_MEDIUM))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_MEDIUM, [
+      CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+    ]),
+  )
   @ApiOperation({
     summary: 'Get the transcript for a completed audio room session',
     description:

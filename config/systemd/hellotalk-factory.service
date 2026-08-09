@@ -1,0 +1,43 @@
+[Unit]
+Description=HelloTalk OpenHands Autonomous Development Factory
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=900
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=hellotalk-factory
+Group=hellotalk-factory
+WorkingDirectory=/var/lib/hellotalk-factory/repository
+EnvironmentFile=/etc/hellotalk-factory/factory.env
+Environment=HOME=/var/lib/hellotalk-factory/home
+ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory daemon
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=120
+KillSignal=SIGTERM
+UMask=0077
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+# Rootless Podman receives only this service's delegated cgroup subtree. This is
+# required for the per-worker CPU, memory and process limits below the parent cap.
+Delegate=yes
+ProtectControlGroups=false
+ProtectClock=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory
+LimitNOFILE=4096
+LimitNPROC=1024
+TasksMax=1024
+MemoryMax=3500M
+
+[Install]
+WantedBy=multi-user.target
