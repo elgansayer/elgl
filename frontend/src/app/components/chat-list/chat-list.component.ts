@@ -10,6 +10,7 @@ import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service'
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { GroupsDiscoveryComponent } from '../groups-discovery/groups-discovery.component';
 
 interface ChatRoomPreview {
   id: string;
@@ -27,7 +28,7 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent, GroupsDiscoveryComponent],
   templateUrl: './chat-list.component.html',
 })
 export class ChatListComponent implements OnInit {
@@ -41,6 +42,9 @@ export class ChatListComponent implements OnInit {
   readonly selectedLabel = signal<string | null>(null);
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
+
+  /** Active tab: 'chats' | 'groups' */
+  readonly activeTab = signal<'chats' | 'groups'>('chats');
 
   // ---------- Locked chat state ----------
   readonly lockedRoomIds = signal<string[]>([]);

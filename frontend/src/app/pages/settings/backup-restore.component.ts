@@ -34,7 +34,6 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
 
 @Component({
   selector: 'app-backup-restore',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="min-h-screen bg-[#121212] text-white ps-4 pe-4 pt-6 pb-10">

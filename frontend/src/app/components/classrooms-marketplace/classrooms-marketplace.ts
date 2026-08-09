@@ -1,261 +1,150 @@
-import { Component, inject, computed, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
+import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
+import { AuthService } from '../../services/auth.service';
+import { VideoClassroomErrorHandlerService } from '../../services/video-classroom-error-handler.service';
+import { VideoClassroomOnboardingService } from '../../services/video-classroom-onboarding.service';
+import { OfflineVideoClassroomService } from '../../services/offline-video-classroom.service';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { NoNetworkBannerComponent } from '../primitives/no-network-banner/no-network-banner.component';
-import { OfflineClassroomService, ClassroomListing } from '../../services/offline-classroom.service';
-import { NetworkStatusService } from '../../services/network-status.service';
+import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
+import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
+import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
+import { withRetry } from '../../services/http-retry';
+import { firstValueFrom, interval } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [TranslatePipe, NoNetworkBannerComponent],
-  template: `
-    <app-no-network-banner></app-no-network-banner>
-
-    <div class="min-h-screen bg-slate-900 px-4 py-6">
-      <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold text-white">{{ 'classroom.marketplaceTitle' | t }}</h1>
-
-          @if (isOfflineMode()) {
-            <div class="flex items-center gap-2 bg-amber-500/20 text-amber-400 px-3 py-1.5 rounded-full text-xs font-semibold">
-              <span aria-hidden="true">&#9888;</span>
-              <span>{{ 'classroom.offlineIndicator' | t }}</span>
-            </div>
-          }
-        </div>
-
-        <!-- Last sync info -->
-        @if (showOfflineIndicator()) {
-          <div
-            class="mb-4 flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-2 text-sm text-blue-300"
-            role="status"
-            aria-live="polite"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{{ 'classroom.cachedDataMessage' | t: { time: lastSyncFormatted() } }}</span>
-            <span class="ms-auto text-xs text-blue-400/70">
-              {{ 'classroom.pendingActionsCount' | t: { count: pendingActionCount() } }}
-            </span>
-          </div>
-        }
-
-        <!-- Loading State -->
-        @if (loading()) {
-          <div class="flex flex-col items-center justify-center py-16 text-slate-400" role="status" aria-live="polite">
-            <div class="w-10 h-10 border-2 border-slate-600 border-t-blue-500 rounded-full animate-spin mb-4" aria-hidden="true"></div>
-            <p class="text-sm">{{ 'classroom.loading' | t }}</p>
-          </div>
-        }
-
-        <!-- Error State -->
-        @if (error()) {
-          <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center mb-6" role="alert">
-            <p class="text-red-400 text-sm mb-4">{{ error() }}</p>
-            <button
-              (click)="loadListings()"
-              class="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-4 py-2 rounded-full text-sm font-semibold transition-colors"
-            >
-              {{ 'classroom.retryBtn' | t }}
-            </button>
-          </div>
-        }
-
-        <!-- Empty State -->
-        @if (showEmptyState()) {
-          <div class="flex flex-col items-center justify-center py-16 text-slate-500" role="status">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            <p class="text-lg font-semibold mb-2">{{ 'classroom.emptyTitle' | t }}</p>
-            <p class="text-sm text-slate-600 mb-6">{{ 'classroom.emptyDescription' | t }}</p>
-            @if (!isOnline()) {
-              <p class="text-xs text-amber-500">{{ 'classroom.offlineEmptyHint' | t }}</p>
-            }
-          </div>
-        }
-
-        <!-- Classroom Listing Grid -->
-        @if (hasCachedListings() && !loading()) {
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            @for (listing of listings(); track listing.id) {
-              <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden hover:border-blue-500/50 transition-colors">
-                <!-- Thumbnail -->
-                @if (listing.thumbnail_url) {
-                  <div class="aspect-video bg-slate-700 overflow-hidden">
-                    <img
-                      [src]="listing.thumbnail_url"
-                      [alt]="'classroom.thumbnailAlt' | t: { title: listing.title }"
-                      class="w-full h-full object-cover"
-                    />
-                  </div>
-                } @else {
-                  <div class="aspect-video bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                }
-
-                <div class="p-4">
-                  <!-- Live Badge -->
-                  <div class="flex items-center gap-2 mb-2">
-                    @if (listing.is_live) {
-                      <span class="flex items-center gap-1 bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full text-xs font-bold">
-                        <span class="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" aria-hidden="true"></span>
-                        {{ 'classroom.liveBadge' | t }}
-                      </span>
-                    }
-                    <span class="text-xs text-slate-500">{{ listing.language }}</span>
-                    <span class="text-xs text-slate-500 uppercase">{{ listing.level }}</span>
-                  </div>
-
-                  <h3 class="text-white font-bold text-lg mb-1">{{ listing.title }}</h3>
-                  <p class="text-slate-400 text-sm line-clamp-2 mb-3">{{ listing.description }}</p>
-
-                  <!-- Host info & Participants -->
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                      <div class="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center text-xs text-white font-semibold">
-                        {{ listing.host_name.charAt(0).toUpperCase() }}
-                      </div>
-                      <span class="text-sm text-slate-300">{{ listing.host_name }}</span>
-                    </div>
-                    <div class="flex items-center gap-1 text-xs text-slate-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      <span>{{ listing.participant_count }}/{{ listing.max_participants }}</span>
-                    </div>
-                  </div>
-
-                  <!-- Tags -->
-                  @if (listing.tags.length > 0) {
-                    <div class="flex flex-wrap gap-1.5 mb-3">
-                      @for (tag of listing.tags; track tag) {
-                        <span class="bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full text-xs">{{ tag }}</span>
-                      }
-                    </div>
-                  }
-
-                  <!-- Join Button -->
-                  <button
-                    (click)="handleJoinClassroom(listing.id)"
-                    class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:text-slate-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-colors"
-                    [disabled]="!isOnline()"
-                    [attr.aria-label]="'classroom.joinAria' | t: { title: listing.title }"
-                  >
-                    @if (!isOnline()) {
-                      {{ 'classroom.joinOfflineBtn' | t }}
-                    } @else {
-                      {{ 'classroom.joinBtn' | t }}
-                    }
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  `,
-  styles: [`
-    :host {
-      display: block;
-    }
-    .line-clamp-2 {
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .animate-spin {
-      animation: spin 1s linear infinite;
-    }
-    @keyframes pulse {
-      50% { opacity: 0.5; }
-    }
-    .animate-pulse {
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-  `],
+  imports: [TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  templateUrl: './classrooms-marketplace.html',
+  styles: [''],
 })
 export class ClassroomsMarketplace implements OnInit {
-  private readonly offlineService = inject(OfflineClassroomService);
-  private readonly networkStatus = inject(NetworkStatusService);
+  private store = inject(AudioRoomsStore);
+  private authService = inject(AuthService);
+  private http = inject(HttpClient);
+  private errorHandler = inject(VideoClassroomErrorHandlerService);
+  private destroyRef = inject(DestroyRef);
+  private onboardingService = inject(VideoClassroomOnboardingService);
+  private offlineService = inject(OfflineVideoClassroomService);
+  private baseUrl = `${environment.apiUrl}/audio-rooms`;
 
-  readonly isOnline = this.networkStatus.isOnline;
-  readonly isOfflineMode = this.offlineService.isOfflineMode;
-  readonly pendingActionCount = this.offlineService.pendingActionCount;
-  readonly lastSyncTimestamp = this.offlineService.lastSyncTimestamp;
+  readonly rooms = signal<AudioRoomRecord[]>([]);
+  readonly isLoading = signal(true);
+  readonly selectedLanguage = signal<string | null>(null);
+  readonly errorMessage = signal<string>('');
 
-  readonly listings = signal<ClassroomListing[]>([]);
-  readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
-
-  readonly hasCachedListings = computed(() => {
-    return this.listings().length > 0;
+  readonly languagePairOptions = computed(() => {
+    const pairs = new Set<string>();
+    for (const room of this.rooms()) {
+      if (room.language_pair) {
+        pairs.add(room.language_pair);
+      }
+    }
+    return Array.from(pairs).sort();
   });
 
-  readonly showOfflineIndicator = computed(() => {
-    return !this.isOnline() && this.hasCachedListings();
+  readonly filteredRooms = computed(() => {
+    const lang = this.selectedLanguage();
+    const all = this.rooms();
+    if (!lang) return all;
+    return all.filter((r) => r.language_pair === lang);
   });
 
-  readonly showEmptyState = computed(() => {
-    return !this.loading() && !this.error() && !this.hasCachedListings();
+  readonly videoRooms = computed(() =>
+    this.filteredRooms().filter((r) => r.is_video_stream),
+  );
+
+  readonly isHosting = computed(() => {
+    const userId = this.authService.currentUser()?.id;
+    if (!userId) return false;
+    return this.rooms().some((r) => r.host_id === userId);
   });
 
-  readonly lastSyncFormatted = computed(() => {
-    const ts = this.lastSyncTimestamp();
-    if (!ts) return '';
-    const date = new Date(ts);
-    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  });
-
+  // LiveKit integration requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit(): void {
-    this.loadListings().catch(() => undefined);
+    this.loadRooms();
+    this.subscribeToUpdates();
   }
 
-  async loadListings(): Promise<void> {
-    this.loading.set(true);
-    this.error.set(null);
-
+  async loadRooms(): Promise<void> {
+    this.isLoading.set(true);
     try {
-      if (this.isOnline()) {
-        const cached = await this.offlineService.getCachedListings();
-        this.listings.set(cached);
+      const list = await withRetry(
+        () =>
+          firstValueFrom(
+            this.http.get<AudioRoomRecord[]>(
+              `${this.baseUrl}/list`,
+              { headers: this.getHeaders() },
+            ),
+          ),
+      );
+      const rooms = Array.isArray(list) ? list : [];
+      this.rooms.set(rooms);
+      // Cache successful fetch for offline use
+      void this.offlineService.cacheClassroomListing(rooms);
+    } catch (err: unknown) {
+      // Attempt to serve cached data when offline or on fetch failure
+      const cached = await this.offlineService.getCachedClassroomListing();
+      if (cached && cached.length > 0) {
+        this.rooms.set(cached);
       } else {
-        const cached = await this.offlineService.getCachedListings();
-        this.listings.set(cached);
-      }
-    } catch {
-      this.error.set('Failed to load classroom listings');
-      try {
-        const cached = await this.offlineService.getCachedListings();
-        this.listings.set(cached);
-      } catch {
-        // Silently handle
+        const error = err instanceof Error ? err : new Error(String(err));
+        this.errorMessage.set(error.message);
+        this.errorHandler.reportVideoClassroomCrash(error, {
+          action: 'loadClassrooms',
+        });
       }
     } finally {
-      this.loading.set(false);
+      this.isLoading.set(false);
     }
   }
 
-  async handleJoinClassroom(classroomId: string): Promise<void> {
-    if (!this.isOnline()) {
-      await this.offlineService.enqueueAction('join', classroomId);
-      return;
-    }
+  private subscribeToUpdates(): void {
+    // Watch active rooms from the store for real-time updates
+    interval(5000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const fresh = this.store.activeRooms();
+        if (fresh.length > 0) {
+          this.rooms.set(fresh);
+        }
+      });
   }
 
-  async handleLeaveClassroom(classroomId: string): Promise<void> {
-    if (!this.isOnline()) {
-      await this.offlineService.enqueueAction('leave', classroomId);
-      return;
-    }
+  selectLanguage(lang: string | null): void {
+    this.selectedLanguage.set(lang);
+  }
+
+  async createClassroom(title: string, languagePair: string, topicTag: string): Promise<void> {
+    await this.errorHandler.wrapClassroomCall(
+      'createClassroom',
+      async () => {
+        const created = await this.store.createRoom(title, languagePair, topicTag, true);
+        this.rooms.update((r) => [created, ...r]);
+      },
+      { roomName: title },
+    );
+  }
+
+  async joinRoom(room: AudioRoomRecord): Promise<void> {
+    await this.errorHandler.wrapClassroomCall(
+      'joinRoom',
+      async () => {
+        await this.store.joinRoom(room);
+      },
+      { roomId: room.id, roomName: room.room_name },
+    );
+  }
+
+  getHeaders(): Record<string, string> {
+    const token = this.authService.getAccessToken();
+    return { Authorization: `Bearer ${token ?? ''}` };
+  }
+
+  /** Start the video classroom onboarding tour using ngx-joyride. */
+  startOnboardingTour(): void {
+    this.onboardingService.startMarketplaceTour();
   }
 }

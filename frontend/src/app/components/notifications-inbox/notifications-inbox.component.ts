@@ -80,7 +80,8 @@ export class NotificationsInboxComponent {
     if (
       notif.type === 'like_moment' ||
       notif.type === 'comment_moment' ||
-      notif.type === 'reply_comment'
+      notif.type === 'reply_comment' ||
+      notif.type === 'mention_comment'
     ) {
       void this.router.navigate(['/moments']);
     } else if (notif.type === 'mention_chat') {
@@ -99,6 +100,7 @@ export class NotificationsInboxComponent {
         return '❤️';
       case 'comment_moment':
       case 'reply_comment':
+      case 'mention_comment':
         return '💬';
       case 'mention_chat':
         return '📣';
@@ -123,6 +125,8 @@ export class NotificationsInboxComponent {
         return 'notifications.commentedMoment';
       case 'reply_comment':
         return 'notifications.repliedComment';
+      case 'mention_comment':
+        return 'notifications.mentionedInComment';
       case 'mention_chat':
         return 'notifications.mentionedInChat';
       case 'follow':

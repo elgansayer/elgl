@@ -50,7 +50,6 @@ export const appConfig: ApplicationConfig = {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
     }),
-    importProvidersFrom(JoyrideModule.forRoot()),
     ...(TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -66,5 +65,6 @@ export const appConfig: ApplicationConfig = {
       useFactory: initialiseDeepLinks,
       multi: true,
     },
+    importProvidersFrom(JoyrideModule.forRoot()),
   ],
 };

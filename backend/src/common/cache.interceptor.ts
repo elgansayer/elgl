@@ -111,6 +111,23 @@ export const CACHE_NO_STORE = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Public very-short-lived (highly dynamic data shared across all users)
+// ---------------------------------------------------------------------------
+
+/**
+ * Live room listings, active stage info -- changes every few seconds.
+ *
+ * Browsers: 30s cache. CDN: 60s cache with 60s SWR.
+ * Used by: GET /audio-rooms/list, GET /audio-rooms/by-language,
+ *          GET /audio-rooms/:id, GET /audio-rooms/:id/stage
+ */
+export const CACHE_PUBLIC_VERY_SHORT = {
+  'Cache-Control':
+    'public, max-age=30, s-maxage=60, stale-while-revalidate=60, stale-if-error=300',
+  'CDN-Cache-Control': 'public, max-age=60, stale-while-revalidate=60',
+} as const;
+
+// ---------------------------------------------------------------------------
 // Cache-Tag constants for targeted Cloudflare edge invalidation
 // ---------------------------------------------------------------------------
 
@@ -118,6 +135,13 @@ export const CACHE_TAG_FLASHCARDS = 'flashcards';
 export const CACHE_TAG_DUE_REVIEWS = 'flashcards:due';
 export const CACHE_TAG_DECKS = 'decks';
 export const CACHE_TAG_SUGGESTIONS = 'flashcards:suggest';
+export const CACHE_TAG_AUDIO_ROOMS = 'audio-rooms';
+export const CACHE_TAG_AUDIO_ROOM_STAGE = 'audio-rooms:stage';
+export const CACHE_TAG_AUDIO_ROOM_POLLS = 'audio-rooms:polls';
+export const CACHE_TAG_AUDIO_ROOM_TRANSCRIPT = 'audio-rooms:transcript';
+export const CACHE_TAG_AUDIO_ROOM_NOTES = 'audio-rooms:notes';
+export const CACHE_TAG_CALLS = 'calls';
+export const CACHE_TAG_ESCROW = 'escrow';
 
 // ---------------------------------------------------------------------------
 // Legacy aliases (kept for backwards compatibility)

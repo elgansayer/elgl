@@ -3,6 +3,14 @@ import { NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
+import { MetricsService } from '../metrics/metrics.service';
+
+const mockPinoLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+};
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -62,6 +70,10 @@ describe('AdminService', () => {
       providers: [
         AdminService,
         {
+          provide: 'PinoLogger:AdminService',
+          useValue: mockPinoLogger,
+        },
+        {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
@@ -80,6 +92,24 @@ describe('AdminService', () => {
             error: jest.fn(),
             debug: jest.fn(),
             trace: jest.fn(),
+          },
+        },
+        {
+          provide: MetricsService,
+          useValue: {
+            recordAdminBanAction: jest.fn(),
+            recordAdminWarnAction: jest.fn(),
+            recordAdminVipToggle: jest.fn(),
+            recordAdminBlockRemoval: jest.fn(),
+            recordAdminReportResolution: jest.fn(),
+            recordAdminApiError: jest.fn(),
+            observeAdminApiLatency: jest.fn(),
+            setAdminPendingReports: jest.fn(),
+            setAdminActiveBlocks: jest.fn(),
+            recordAdminLoginHistoryRequest: jest.fn(),
+            recordTsReportSubmitted: jest.fn(),
+            setTsPendingReports: jest.fn(),
+            setTsActiveBlocksTotal: jest.fn(),
           },
         },
       ],
