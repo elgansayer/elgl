@@ -9,7 +9,6 @@ import { AppCardComponent } from '../components/primitives/card/card.component';
 
 @Component({
   selector: 'app-moderation-dashboard',
-  standalone: true,
   imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './moderation-dashboard.component.html',
 })

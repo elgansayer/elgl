@@ -3,6 +3,7 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import Redis from 'ioredis';
 import { SupabaseService, type UsersRow } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { ToggleVipDto } from './dto/toggle-vip.dto';
 import {
@@ -33,6 +34,7 @@ export class AdminService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly scrubbingService: DataScrubbingService,
+    private readonly metrics: MetricsService,
     @InjectPinoLogger(AdminService.name)
     private readonly logger: PinoLogger,
   ) {}
@@ -165,6 +167,7 @@ export class AdminService {
     userId: string,
     dto: ToggleVipDto,
   ): Promise<AdminUserSummary> {
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
     const updatePayload: Partial<UsersRow> = { is_vip: dto.is_vip };
     if (dto.vip_tier !== undefined) {
@@ -181,10 +184,19 @@ export class AdminService {
       .single();
 
     if (error || !data) {
+      this.metrics.recordAdminVipToggle('failure');
+      this.metrics.recordAdminApiError('users', 'database_error');
       throw new NotFoundException(
         `Unable to update VIP status for user ${userId}`,
       );
     }
+
+    this.metrics.recordAdminVipToggle('success');
+    this.metrics.observeAdminApiLatency(
+      'users',
+      'setVipStatus',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateUserListCaches();
     await this.invalidateLoginHistoryCache(userId);
@@ -201,6 +213,7 @@ export class AdminService {
       if (cached) {
         const parsed: unknown = JSON.parse(cached);
         if (Array.isArray(parsed)) {
+          this.metrics.recordAdminLoginHistoryRequest('success');
           return parsed as LoginHistoryEntry[];
         }
       }
@@ -220,6 +233,7 @@ export class AdminService {
       .limit(50);
 
     if (error) {
+      this.metrics.recordAdminLoginHistoryRequest('failure');
       this.logger.warn(
         error,
         `Failed to fetch login history for user ${userId}`,
@@ -227,6 +241,7 @@ export class AdminService {
       return [];
     }
 
+    this.metrics.recordAdminLoginHistoryRequest('success');
     const result = data ?? [];
 
     // GDPR: scrub IP addresses before returning to the admin dashboard
@@ -248,15 +263,25 @@ export class AdminService {
   }
 
   async banUser(targetUserId: string, adminUserId: string): Promise<void> {
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase.from('blocks').insert({
       blocker_id: adminUserId,
       blocked_id: targetUserId,
     });
     if (error) {
+      this.metrics.recordAdminBanAction('failure');
+      this.metrics.recordAdminApiError('ban', 'database_error');
       this.logger.error(error, `Failed to ban user ${targetUserId}`);
       throw new NotFoundException(`Unable to ban user ${targetUserId}`);
     }
+
+    this.metrics.recordAdminBanAction('success');
+    this.metrics.observeAdminApiLatency(
+      'ban',
+      'banUser',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateUserListCaches();
     await this.invalidateBlocksListCaches();
@@ -264,6 +289,7 @@ export class AdminService {
   }
 
   async warnUser(targetUserId: string, adminUserId: string): Promise<void> {
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase.from('reports').insert({
       reporter_id: adminUserId,
@@ -273,9 +299,18 @@ export class AdminService {
       status: 'open',
     });
     if (error) {
+      this.metrics.recordAdminWarnAction('failure');
+      this.metrics.recordAdminApiError('warn', 'database_error');
       this.logger.error(error, `Failed to warn user ${targetUserId}`);
       throw new NotFoundException(`Unable to warn user ${targetUserId}`);
     }
+
+    this.metrics.recordAdminWarnAction('success');
+    this.metrics.observeAdminApiLatency(
+      'warn',
+      'warnUser',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateUserListCaches();
     await this.invalidateReportsListCaches();
@@ -452,14 +487,24 @@ export class AdminService {
   }
 
   async removeBlock(blockId: string): Promise<{ success: boolean }> {
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
 
     const { error } = await supabase.from('blocks').delete().eq('id', blockId);
 
     if (error) {
+      this.metrics.recordAdminBlockRemoval('failure');
+      this.metrics.recordAdminApiError('blocks', 'database_error');
       this.logger.error(error, `Failed to remove block ${blockId}`);
       throw new NotFoundException(`Unable to remove block ${blockId}`);
     }
+
+    this.metrics.recordAdminBlockRemoval('success');
+    this.metrics.observeAdminApiLatency(
+      'blocks',
+      'removeBlock',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateBlocksListCaches();
 

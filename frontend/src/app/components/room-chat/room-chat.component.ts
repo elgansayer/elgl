@@ -1,12 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslatePipe } from '../../services/translate.pipe';
 import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
 @Component({
   selector: 'app-room-chat',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule],
   template: `
     <div
       class="bg-surface-200 rounded-3xl shadow-xl border border-surface-100 flex flex-col h-96 overflow-hidden"
@@ -15,7 +14,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
         class="bg-surface-300 px-4 py-3 border-b border-surface-100 flex items-center justify-between"
       >
         <span class="font-black text-xs text-text-primary flex items-center gap-1.5">
-          <span>{{ 'rooms.roomChat.title' | t }}</span>
+          <span>💬 Synchronised room chat and subtitles</span>
         </span>
         <button
           (click)="activeTab.set(activeTab() === 'chat' ? 'subtitles' : 'chat')"
@@ -26,11 +25,11 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
               : 'bg-surface-100 text-text-primary')
           "
         >
-          @if (activeTab() === 'subtitles') {
-            {{ 'rooms.roomChat.showChatBtn' | t }}
-          } @else {
-            {{ 'rooms.roomChat.showSubtitlesBtn' | t: { count: store.captions().length } }}
-          }
+          {{
+            activeTab() === 'subtitles'
+              ? '💬 Show chat'
+              : '🎙️ Show AI subtitles (' + store.captions().length + ')'
+          }}
         </button>
       </div>
 
@@ -38,7 +37,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
         @if (activeTab() === 'chat') {
           @if (store.roomMessages().length === 0) {
             <div class="text-center py-12 text-text-muted">
-              {{ 'rooms.roomChat.emptyChat' | t }}
+              No messages in this live room yet. Say hello to the stage speakers!
             </div>
           }
           @for (msg of store.roomMessages(); track msg.id) {
@@ -59,13 +58,14 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
         @if (activeTab() === 'subtitles') {
           @if (store.captions().length === 0) {
             <div class="text-center py-12 text-text-muted">
-              {{ 'rooms.roomChat.emptySubtitles' | t }}
+              No live subtitles yet. When speakers talk on stage or use speech-to-text, closed
+              captions broadcast here!
             </div>
           }
           @for (cap of store.captions(); track cap.id) {
             <div class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-200">
               <span class="font-bold text-[10px] text-purple-900 block mb-1"
-                >{{ 'rooms.roomChat.speakerCaptionPrefix' | t: { name: cap.speaker_name } }}</span
+                >🎙️ {{ cap.speaker_name }} (Live AI caption):</span
               >
               <p class="text-xs font-medium text-text-primary">
                 {{ cap.text_content }}
@@ -81,14 +81,14 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
             type="text"
             [(ngModel)]="inputText"
             (keyup.enter)="send()"
-            placeholder="{{ 'rooms.roomChat.inputPlaceholder' | t }}"
+            placeholder="Send a chat message to the room..."
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-primary"
           />
           <button
             (click)="send()"
             class="px-4 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-xs shadow"
           >
-            {{ 'rooms.roomChat.sendBtn' | t }}
+            Send
           </button>
         </div>
       }
@@ -99,20 +99,20 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
             type="text"
             [(ngModel)]="inputCaption"
             (keyup.enter)="sendSubtitle()"
-            placeholder="{{ 'rooms.roomChat.subtitlePlaceholder' | t }}"
+            placeholder="Simulate speech-to-text live subtitle broadcast..."
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-purple-600"
           />
           <button
             (click)="sendSubtitle()"
             class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow"
           >
-            {{ 'rooms.roomChat.broadcastBtn' | t }}
+            Broadcast caption
           </button>
           <button
             (click)="broadcastAICaption()"
             class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow"
           >
-            {{ 'rooms.roomChat.broadcastAiBtn' | t }}
+            Broadcast AI Caption
           </button>
         </div>
       }

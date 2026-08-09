@@ -1,7 +1,6 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { AdminService, AdminUserSummary, LoginHistoryEntry } from '../../services/admin.service';
 import { AppCardComponent } from '../primitives/card/card.component';
@@ -12,7 +11,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+imports: [TranslatePipe, DatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
@@ -45,12 +44,12 @@ export class AdminPortalComponent {
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
-  onSearchInput(value: string): void {
-    this.searchTerm.set(value);
+  loadUsers(): void {
+    this.usersResource.reload();
   }
 
-  retryLoad(): void {
-    this.usersResource.reload();
+  onSearchInput(value: string): void {
+    this.searchTerm.set(value);
   }
 
   runSearch(): void {

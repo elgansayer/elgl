@@ -9,7 +9,6 @@ import {
 
 @Component({
   selector: 'app-communities',
-  standalone: true,
   imports: [FormsModule, TranslatePipe],
   templateUrl: './communities.component.html',
 })

@@ -11,7 +11,8 @@ export class ReportUserDto {
   reportedUserId!: string;
 
   @ApiProperty({
-    description: 'Reason category for the report (e.g., "spam", "harassment", "inappropriate_content")',
+    description:
+      'Reason category for the report (e.g., "spam", "harassment", "inappropriate_content")',
     example: 'harassment',
   })
   @IsString()

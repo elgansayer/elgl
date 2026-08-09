@@ -1,11 +1,8 @@
-import { showToast } from '../../services/toast.service';
-import { Component, OnInit, inject, signal, input, output, computed, viewChild, ErrorHandler } from '@angular/core';
-import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
+import { Component, inject, signal, computed, input, output, viewChild, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import {
-  SrsErrorBoundaryComponent,
-  SrsErrorContext,
-} from '../srs-error-boundary/srs-error-boundary.component';
+import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
+import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
+import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
 
 @Component({
   selector: 'app-word-definition-modal',
@@ -51,7 +48,6 @@ import {
                   &#128266; {{ 'wordModal.playAudio' | t }}
                 </button>
               }
-              <!-- SRS level controls -->
               <div class="border-t border-surface-100 pt-4">
                 <p class="mb-2 text-xs font-bold text-text-primary">{{ 'wordModal.srsLabel' | t }}</p>
                 <div class="flex gap-2">
@@ -92,8 +88,9 @@ import {
     `,
   ],
 })
-export class WordDefinitionModalComponent implements OnInit {
+export class WordDefinitionModalComponent {
   readonly vocabStore = inject(VocabularyStore);
+  private readonly sanitisation = inject(HtmlSanitisationService);
   private errorHandler = inject(ErrorHandler);
 
   wordToken = input.required<string>();
@@ -120,16 +117,10 @@ export class WordDefinitionModalComponent implements OnInit {
     },
   }));
 
-  async ngOnInit(): Promise<void> {
-    try {
-      const status = this.vocabStore.getWordStatus(this.wordToken());
-      if (status.flashcard) {
-        this.existingCard.set(status.flashcard);
-      }
-      await this.fetchDefinition();
-    } catch (err) {
-      this.handleError(err, 'init');
-    }
+  readonly sanitisedWordToken = computed(() => this.sanitisation.sanitiseText(this.wordToken()));
+
+  constructor() {
+    this.fetchDefinition().catch(() => undefined);
   }
 
   handleRetry(): void {
@@ -139,12 +130,23 @@ export class WordDefinitionModalComponent implements OnInit {
   async fetchDefinition(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const res = await this.vocabStore.translateWordOrSentence(
-        this.wordToken(),
-        this.targetLanguage(),
-      );
-      this.translationResult.set(res);
-    } catch (err) {
+      const token = this.wordToken();
+      const targetLang = this.targetLanguage();
+      const status = this.vocabStore.getWordStatus(token);
+      if (status.flashcard) {
+        this.existingCard.set(status.flashcard);
+      }
+      const res = await this.vocabStore.translateWordOrSentence(token, targetLang);
+      this.translationResult.set({
+        ...res,
+        original_text: this.sanitisation.sanitiseText(res.original_text),
+        translated_text: this.sanitisation.sanitiseText(res.translated_text),
+        detected_language: this.sanitisation.sanitiseText(res.detected_language),
+        transliteration: res.transliteration ? this.sanitisation.sanitiseText(res.transliteration) : undefined,
+        definition: res.definition ? this.sanitisation.sanitiseText(res.definition) : undefined,
+        pronunciation_url: res.pronunciation_url ? this.sanitisation.sanitiseUrl(res.pronunciation_url) : undefined,
+      });
+    } catch (e) {
       this.translationResult.set({
         original_text: this.wordToken(),
         translated_text: `Translation of "${this.wordToken()}"`,
@@ -152,7 +154,7 @@ export class WordDefinitionModalComponent implements OnInit {
         definition: 'Click "Save to Learning" to track this word in your SRS flashcard deck.',
         transliteration: this.wordToken(),
       });
-      this.handleError(err, 'fetchDefinition');
+      this.handleError(e, 'fetchDefinition');
     } finally {
       this.isLoading.set(false);
     }
@@ -161,10 +163,13 @@ export class WordDefinitionModalComponent implements OnInit {
   playAudio(): void {
     const url = this.translationResult()?.pronunciation_url;
     if (url) {
-      const audio = new Audio(url);
-      audio.play().catch((err) => {
-        this.handleError(err, 'playAudio');
-      });
+      const safeUrl = this.sanitisation.sanitiseUrl(url);
+      if (safeUrl) {
+        const audio = new Audio(safeUrl);
+        audio.play().catch((err) => {
+          this.handleError(err, 'playAudio');
+        });
+      }
     }
   }
 
@@ -181,7 +186,7 @@ export class WordDefinitionModalComponent implements OnInit {
       } else {
         const created = await this.vocabStore.saveWord({
           word_token: this.wordToken(),
-          translation: this.translationResult()?.translated_text || `Word: ${this.wordToken()}`,
+          translation: this.translationResult()?.translated_text || `Word: ${this.sanitisation.sanitiseText(this.wordToken())}`,
           original_context: this.contextSentence(),
           definition: this.translationResult()?.definition,
           pronunciation_url: this.translationResult()?.pronunciation_url,
@@ -196,7 +201,6 @@ export class WordDefinitionModalComponent implements OnInit {
         }
       }
     } catch (err) {
-      showToast('Error updating SRS review schedule.');
       this.handleError(err, 'setLevel');
     } finally {
       this.isSaving.set(false);

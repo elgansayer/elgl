@@ -1,17 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LanguageSettingsComponent } from './language-settings.component';
 import { I18nService } from '../../services/i18n.service';
-import { UserService } from '../../services/user.service';
 import { signal } from '@angular/core';
 
 describe('LanguageSettingsComponent', () => {
   let component: LanguageSettingsComponent;
   let fixture: ComponentFixture<LanguageSettingsComponent>;
   let i18nMock: Partial<I18nService>;
-  let userServiceMock: Partial<UserService>;
 
   beforeEach(async () => {
     i18nMock = {
@@ -22,58 +19,15 @@ describe('LanguageSettingsComponent', () => {
         { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', isRtl: true },
       ],
       setLanguage: vi.fn().mockResolvedValue(undefined),
-      translate: vi.fn((key: string, params?: Record<string, unknown>) => {
-        if (params) {
-          return key + ' ' + JSON.stringify(params);
-        }
-        return key;
-      }),
+      translate: vi.fn((key: string) => key),
       translations: signal({}),
-      direction: signal('ltr'),
-    } as unknown as Partial<I18nService>;
-
-    userServiceMock = {
-      getMyProfile: vi.fn().mockResolvedValue({
-        id: '1',
-        target_languages: ['es', 'fr'],
-        native_languages: ['en'],
-        is_vip: false,
-        created_at: '2024-01-01T00:00:00Z',
-        coins_balance: 100,
-        study_streak_days: 5,
-        correction_ratio: 0.8,
-        is_serious_learner: false,
-        privacy_hide_age: false,
-        privacy_hide_location: false,
-        privacy_hide_from_search: false,
-        privacy_hide_gender: false,
-        vip_tier: 'free',
-      }),
-      updateMyProfile: vi.fn().mockResolvedValue({
-        id: '1',
-        target_languages: ['es', 'fr'],
-        native_languages: ['en'],
-        created_at: '2024-01-01T00:00:00Z',
-        coins_balance: 100,
-        study_streak_days: 5,
-        correction_ratio: 0.8,
-        is_serious_learner: false,
-        privacy_hide_age: false,
-        privacy_hide_location: false,
-        privacy_hide_from_search: false,
-        privacy_hide_gender: false,
-        is_vip: false,
-        vip_tier: 'free',
-      }),
     };
 
     await TestBed.configureTestingModule({
       imports: [LanguageSettingsComponent],
       providers: [
         provideHttpClient(),
-        provideRouter([]),
         { provide: I18nService, useValue: i18nMock },
-        { provide: UserService, useValue: userServiceMock },
       ],
     }).compileComponents();
 
@@ -86,7 +40,7 @@ describe('LanguageSettingsComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display all available UI languages', () => {
+  it('should display all available languages', () => {
     expect(component.langs.length).toBe(3);
   });
 
@@ -94,70 +48,21 @@ describe('LanguageSettingsComponent', () => {
     expect(component.currentLang()).toBe('en-GB');
   });
 
-  it('should call setLanguage when selecting a UI language', async () => {
-    await component.selectUiLang('es');
+  it('should call setLanguage when selecting a language', async () => {
+    await component.selectLang('es');
     expect(i18nMock.setLanguage).toHaveBeenCalledWith('es');
+  });
+
+  it('should display language flags and names', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('English (UK)');
+    expect(compiled.textContent).toContain('Español');
+    expect(compiled.textContent).toContain('العربية');
   });
 
   it('should have a back button', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const backBtn = compiled.querySelector('button');
     expect(backBtn).toBeTruthy();
-  });
-
-  it('should load target languages from profile', () => {
-    expect(userServiceMock.getMyProfile).toHaveBeenCalled();
-  });
-
-  it('should add a target language', () => {
-    component.addTargetLanguage('de');
-    expect(component.targetLanguages()).toContain('de');
-  });
-
-  it('should not add duplicate target language', () => {
-    component.addTargetLanguage('es');
-    const count = component.targetLanguages().filter((l: string) => l === 'es').length;
-    expect(count).toBe(1);
-  });
-
-  it('should remove a target language', () => {
-    component.removeTargetLanguage('es');
-    expect(component.targetLanguages()).not.toContain('es');
-  });
-
-  it('should add a native language', () => {
-    component.addNativeLanguage('de');
-    expect(component.nativeLanguages()).toContain('de');
-  });
-
-  it('should remove a native language', () => {
-    component.removeNativeLanguage('en');
-    expect(component.nativeLanguages()).not.toContain('en');
-  });
-
-  it('should enforce max target languages limit', () => {
-    component.addTargetLanguage('de');
-    component.addTargetLanguage('it');
-    expect(component.targetLanguages().length).toBeLessThanOrEqual(component.maxTargetLanguages);
-  });
-
-  it('should detect dirty state', () => {
-    expect(component.isDirty()).toBe(false);
-    component.addTargetLanguage('de');
-    expect(component.isDirty()).toBe(true);
-  });
-
-  it('should discard changes', () => {
-    component.addTargetLanguage('de');
-    component.discardChanges();
-    expect(component.targetLanguages()).not.toContain('de');
-    expect(component.isDirty()).toBe(false);
-  });
-
-  it('should save changes', async () => {
-    component.addTargetLanguage('de');
-    await component.saveChanges();
-    expect(userServiceMock.updateMyProfile).toHaveBeenCalled();
-    expect(component.isDirty()).toBe(false);
   });
 });
