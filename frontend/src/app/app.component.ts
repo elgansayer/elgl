@@ -40,8 +40,9 @@ import { AppLockService } from './services/app-lock.service';
 import { GiftAnimationOverlayComponent } from './components/gift-animation-overlay/gift-animation-overlay.component';
 import { NoNetworkBannerComponent } from './components/primitives/no-network-banner/no-network-banner.component';
 import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-sidebar.component';
-import { NetworkStatusService } from './services/network-status.service';
-import { showToast } from './services/toast.service';
+import { TourService } from './services/tour.service';
+import { NotificationService } from './services/notification.service';
+import { ChatService } from './services/chat.service';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -78,10 +79,11 @@ export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
 
   public startProductTour(): void {
-    // Placeholder method for the interactive product tour feature.
+    this.tourService.startEconomyTour();
   }
   authService = inject(AuthService);
   economyStore = inject(EconomyStore);
+  private tourService = inject(TourService);
   centrifugeService = inject(CentrifugeService);
   fcmService = inject(FcmService);
   private safetyService = inject(SafetyService);
@@ -95,7 +97,8 @@ export class AppComponent implements OnInit {
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
   private platformId = inject(PLATFORM_ID);
-  private readonly networkStatus = inject(NetworkStatusService);
+  private notificationService = inject(NotificationService);
+  private chatService = inject(ChatService);
 
   private routerOutlet = viewChild.required(RouterOutlet);
 
@@ -147,14 +150,6 @@ export class AppComponent implements OnInit {
       this.destroyRef.onDestroy(() =>
         doc.removeEventListener('visibilitychange', handleVisibility),
       );
-    });
-
-    // Sync offline economy actions when connectivity is restored
-    effect(() => {
-      const isOnline = this.networkStatus.isOnline();
-      if (isOnline && this.authService.isAuthenticated()) {
-        this.economyStore.syncPendingActions().catch(() => undefined);
-      }
     });
 
     // Font scale is applied globally by FontScaleService via effect()
@@ -263,9 +258,43 @@ export class AppComponent implements OnInit {
         }
       });
 
+      // Load initial unread counts from backend
+      await this.loadInitialUnreadCounts();
+
       // Request notification permission after user is authenticated
       await this.fcmService.requestPermission();
       await this.fcmService.persistFcmToken(user.id);
+    }
+  }
+
+  private async loadInitialUnreadCounts(): Promise<void> {
+    try {
+      const [notificationCount] = await Promise.all([
+        this.notificationService.getUnreadCount(),
+      ]);
+      this.unreadCounter.setNotificationUnread(notificationCount);
+    } catch {
+      // Silently ignore - real-time events will update counts
+    }
+
+    // Load chat unread counts from backend
+    try {
+      const rooms = await this.chatService.getRooms();
+      let totalChatUnread = 0;
+      for (const room of rooms) {
+        try {
+          const messages = await this.chatService.getMessages(room.id);
+          const currentUserId = this.authService.currentUser()?.id;
+          totalChatUnread += messages.filter(
+            (m) => !m.is_read && m.sender_id !== currentUserId,
+          ).length;
+        } catch {
+          // Skip rooms with errors
+        }
+      }
+      this.unreadCounter.setChatUnread(totalChatUnread);
+    } catch {
+      // Silently ignore - real-time events will update counts
     }
   }
 

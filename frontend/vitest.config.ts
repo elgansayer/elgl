@@ -5,5 +5,10 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['src/test.ts'],
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
 });

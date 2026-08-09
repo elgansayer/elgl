@@ -66,7 +66,9 @@ export class OfflineEconomyService {
         resolve();
       };
       request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+        const target = event.target;
+        if (!(target instanceof IDBOpenDBRequest) || !target.result) return;
+        const db = target.result;
         if (!db.objectStoreNames.contains(STORE_CATALOG)) {
           db.createObjectStore(STORE_CATALOG, { keyPath: 'id' });
         }
@@ -198,7 +200,7 @@ export class OfflineEconomyService {
 
   // --- Generic IDB helpers ---
 
-  private putInStore(storeName: string, value: Record<string, unknown>): Promise<void> {
+  private putInStore(storeName: string, value: object): Promise<void> {
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);

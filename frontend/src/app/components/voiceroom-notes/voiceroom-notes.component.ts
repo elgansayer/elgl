@@ -25,7 +25,6 @@ interface VoiceRoomNote {
 
 @Component({
   selector: 'app-voiceroom-notes',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './voiceroom-notes.component.html',
   styleUrls: ['./voiceroom-notes.component.css'],

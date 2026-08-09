@@ -22,6 +22,16 @@ describe('DailyLoginModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-, border-s, border-e)', () => {
+    const componentHtml = fixture.nativeElement.innerHTML;
+    expect(componentHtml).not.toMatch(/\bpl-\d/);
+    expect(componentHtml).not.toMatch(/\bpr-\d/);
+    expect(componentHtml).not.toMatch(/\bml-\d/);
+    expect(componentHtml).not.toMatch(/\bmr-\d/);
+    expect(componentHtml).not.toMatch(/\bborder-l\b/);
+    expect(componentHtml).not.toMatch(/\bborder-r\b/);
+  });
+
   it('should display zero coins in body by default', () => {
     const bodyEl = fixture.debugElement.query(By.css('.text-text-secondary'));
     expect(bodyEl).not.toBeNull();

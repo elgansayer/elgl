@@ -19,11 +19,22 @@ export interface MomentComment {
   parent_comment_id?: string;
   reply_to_user_id?: string;
   created_at: string;
+  upVotes?: number;
+  downVotes?: number;
+  userVote?: string | null;
   author?: {
     id: string;
     display_name?: string;
     avatar_url?: string | null;
   };
+}
+
+export interface VoteCorrectionResponse {
+  commentId: string;
+  vote: string;
+  upVotes: number;
+  downVotes: number;
+  userVote: string | null;
 }
 
 export interface MomentRecord {
@@ -45,7 +56,7 @@ export interface MomentRecord {
   is_liked_by_me?: boolean;
   comments?: MomentComment[];
 
-  // Translation-related state managed by moments-feed component
+  // Translation cache managed by moments-feed component
   isTranslating?: boolean;
 }
 
@@ -69,7 +80,10 @@ export class MomentsStore {
     };
   }
 
-  async loadFeed(filter?: 'All' | 'Classmates' | 'Following' | 'For You', lang?: string): Promise<void> {
+  async loadFeed(
+    filter?: 'All' | 'Classmates' | 'Following' | 'For You',
+    lang?: string,
+  ): Promise<void> {
     const targetFilter = filter ?? this.activeFilter();
     this.activeFilter.set(targetFilter);
     this.isLoading.set(true);
@@ -181,6 +195,32 @@ export class MomentsStore {
       }),
     );
     return created;
+  }
+
+  async voteOnCorrection(
+    momentId: string,
+    commentId: string,
+    vote: 'up' | 'down',
+  ): Promise<VoteCorrectionResponse> {
+    const res = await firstValueFrom(
+      this.http.post<VoteCorrectionResponse>(
+        `${this.baseUrl}/${momentId}/comments/${commentId}/vote`,
+        { vote },
+        { headers: this.getHeaders() },
+      ),
+    );
+    this.feed.update((list) =>
+      list.map((m) => {
+        if (m.id !== momentId) return m;
+        const comments = (m.comments ?? []).map((c) =>
+          c.id === commentId
+            ? { ...c, upVotes: res.upVotes, downVotes: res.downVotes, userVote: res.userVote }
+            : c,
+        );
+        return { ...m, comments };
+      }),
+    );
+    return res;
   }
 
   async togglePin(momentId: string): Promise<void> {
