@@ -200,6 +200,16 @@ function isStickerPackRow(value: unknown): value is StickerPackRow {
   );
 }
 
+export interface CoinTransactionRow {
+  id: string;
+  user_id: string;
+  type: string;
+  amount: number;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export interface GiftEventPayload {
   [key: string]: unknown;
   type: 'virtual_gift';
@@ -552,6 +562,21 @@ export class EconomyService {
     this.logger.debug(
       `User ${userId} claimed daily check-in reward of ${reward} coins.`,
     );
+
+    // Best-effort: record the transaction for history
+    try {
+      await supabase.from('coin_transactions').insert({
+        user_id: userId,
+        type: 'daily_checkin',
+        amount: reward,
+        description: `Daily check-in reward`,
+        metadata: { coins_before: coins_balance, coins_after: newBalance },
+      });
+    } catch (txErr: unknown) {
+      this.logger.warn(
+        `Failed to record daily check-in transaction: ${txErr instanceof Error ? txErr.message : 'unknown error'}`,
+      );
+    }
 
     this.invalidateUserEconomyCaches(userId);
 
@@ -1555,6 +1580,51 @@ export class EconomyService {
         owned_pack_ids: [],
         user_coins: 50,
       });
+    }
+  }
+
+  /**
+   * Returns the last 50 coin transactions for the authenticated user,
+   * ordered most-recent first. Falls back to an empty array when the
+   * coin_transactions table is unavailable.
+   */
+  async getTransactionHistory(userId: string): Promise<CoinTransactionRow[]> {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const response = await withExponentialBackoff(
+        () =>
+          supabase
+            .from('coin_transactions')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(50),
+        'getTransactionHistory',
+        { logger: this.logger },
+      );
+
+      if (response.error || !response.data) {
+        this.logger.warn(
+          `Failed to fetch transaction history for user ${userId}: ${response.error?.message ?? 'no data'}`,
+        );
+        return [];
+      }
+
+      return (response.data as CoinTransactionRow[]).filter(
+        (row: unknown): row is CoinTransactionRow =>
+          typeof row === 'object' &&
+          row !== null &&
+          'id' in row &&
+          'user_id' in row &&
+          'type' in row &&
+          'amount' in row &&
+          'created_at' in row,
+      );
+    } catch (dbError: unknown) {
+      this.logger.warn(
+        `Database unavailable for transaction history: ${dbError instanceof Error ? dbError.message : 'unknown error'}`,
+      );
+      return [];
     }
   }
 

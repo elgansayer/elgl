@@ -6,7 +6,6 @@ import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-change-password',
-  standalone: true,
   imports: [FormsModule, RouterLink, TranslatePipe],
   template: `
     <section class="min-h-screen flex items-center justify-center p-4 bg-[#121212]">

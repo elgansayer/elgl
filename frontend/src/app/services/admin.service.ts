@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, catchError, of } from 'rxjs';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom, catchError, of, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 
@@ -97,19 +97,18 @@ const MOCK_ADMIN_USERS: AdminUserSummary[] = [
   },
 ];
 
-// GDPR-compliant mock data: IP addresses are scrubbed (last octet zeroed)
 const MOCK_LOGIN_HISTORY: LoginHistoryEntry[] = [
   {
     id: 'login-1',
     user_id: 'partner-1',
-    ip_address: '203.0.113.0',
+    ip_address: '203.0.113.5',
     user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
     created_at: new Date(Date.now() - 3600000).toISOString(),
   },
   {
     id: 'login-2',
     user_id: 'partner-1',
-    ip_address: '203.0.113.0',
+    ip_address: '203.0.113.5',
     user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
     created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
   },
@@ -161,18 +160,21 @@ export class AdminService {
           params,
         })
         .pipe(
-          catchError(() =>
-            of({
-              users: search
-                ? MOCK_ADMIN_USERS.filter((u) =>
-                    (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
-                  )
-                : MOCK_ADMIN_USERS,
-              total: MOCK_ADMIN_USERS.length,
-              page,
-              pageSize,
-            }),
-          ),
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of({
+                users: search
+                  ? MOCK_ADMIN_USERS.filter((u) =>
+                      (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()),
+                    )
+                  : MOCK_ADMIN_USERS,
+                total: MOCK_ADMIN_USERS.length,
+                page,
+                pageSize,
+              });
+            }
+            return throwError(() => err);
+          }),
         ),
     );
   }
@@ -195,7 +197,14 @@ export class AdminService {
         .get<LoginHistoryEntry[]>(`${this.baseUrl}/users/${userId}/login-history`, {
           headers: this.getHeaders(),
         })
-        .pipe(catchError(() => of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId)))),
+        .pipe(
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of(MOCK_LOGIN_HISTORY.filter((h) => h.user_id === userId));
+            }
+            return throwError(() => err);
+          }),
+        ),
     );
   }
 
@@ -230,7 +239,14 @@ export class AdminService {
           headers: this.getHeaders(),
           params,
         })
-        .pipe(catchError(() => of({ blocks: [], total: 0, page, pageSize }))),
+        .pipe(
+          catchError((err: HttpErrorResponse) => {
+            if (err.status === 0) {
+              return of({ blocks: [], total: 0, page, pageSize });
+            }
+            return throwError(() => err);
+          }),
+        ),
     );
   }
 

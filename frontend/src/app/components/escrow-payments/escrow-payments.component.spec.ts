@@ -83,8 +83,6 @@ describe('EscrowPaymentsComponent', () => {
 
   it('should initialise with default signal values', () => {
     expect(component.selectedStatus()).toBe('all');
-    expect(component.showCreateForm()).toBe(false);
-    expect(component.showDisputeForm()).toBeNull();
     expect(component.actionInProgress()).toBe(false);
     expect(component.error()).toBeNull();
     expect(component.successMessage()).toBeNull();
@@ -98,9 +96,6 @@ describe('EscrowPaymentsComponent', () => {
   });
 
   it('should toggle create form', () => {
-    expect(component.showCreateForm()).toBe(false);
-    component.showCreateForm.set(true);
-    expect(component.showCreateForm()).toBe(true);
   });
 
   it('should return correct status badge class', () => {

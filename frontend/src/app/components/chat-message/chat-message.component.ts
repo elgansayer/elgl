@@ -10,12 +10,17 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
-import { GiftAnimationComponent } from '../gift-animation/gift-animation.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [CommonModule, LongPressContextMenuComponent, TranslatePipe, CulturalTipComponent, LinkPreviewCardComponent, GiftAnimationComponent],
+  imports: [
+    CommonModule,
+    LongPressContextMenuComponent,
+    TranslatePipe,
+    CulturalTipComponent,
+    LinkPreviewCardComponent,
+  ],
   template: `
     @if (!isBlocked()) {
       @if (isFirstMessage() && partnerLanguage(); as lang) {
@@ -54,6 +59,11 @@ import { environment } from '../../../environments/environment';
               [class.chat-bubble-tail--received]="!isOwnMessage()"
               aria-hidden="true"
             ></span>
+            @if (message().is_forwarded) {
+              <p class="text-xs mb-1 text-gray-400 italic font-medium">
+                {{ 'chatRoom.forwarded' | t }}
+              </p>
+            }
             @if (message().message_type === 'text') {
               <p class="text-sm">
                 @for (segment of textSegments(); track $index) {
@@ -97,7 +107,11 @@ import { environment } from '../../../environments/environment';
 
             @if (message().message_type === 'voice') {
               <div class="flex items-center gap-2">
-                <button aria-label="Play voice message" (click)="playVoice()" class="p-2 rounded-full hover:bg-black/10">
+                <button
+                  aria-label="Play voice message"
+                  (click)="playVoice()"
+                  class="p-2 rounded-full hover:bg-black/10"
+                >
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"
@@ -131,10 +145,6 @@ import { environment } from '../../../environments/environment';
               </div>
             }
 
-            @if (message().message_type === 'gift' && message().gift_payload) {
-              <app-gift-animation [giftPayload]="message().gift_payload!" />
-            }
-
             @if (message().message_type === 'doodle' && message().media_url) {
               <img
                 [src]="message().media_url"
@@ -148,28 +158,81 @@ import { environment } from '../../../environments/environment';
               {{ message().created_at | date: 'shortTime' }}
               @if (isOwnMessage() && (message().delivery_status || message().is_read)) {
                 <span class="inline-flex items-center">
-                  @if (message().delivery_status === 'sent' || (!message().delivery_status && message().is_read)) {
+                  @if (
+                    message().delivery_status === 'sent' ||
+                    (!message().delivery_status && message().is_read)
+                  ) {
                     <!-- Single check: sent -->
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   }
                   @if (message().delivery_status === 'delivered') {
                     <!-- Double check: delivered (gray) -->
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
-                    <svg class="w-3.5 h-3.5 -ms-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 -ms-2 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   }
                   @if (message().delivery_status === 'read') {
                     <!-- Double check: read (blue) -->
-                    <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 text-blue-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
-                    <svg class="w-3.5 h-3.5 -ms-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    <svg
+                      class="w-3.5 h-3.5 -ms-2 text-blue-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   }
                 </span>
@@ -263,7 +326,12 @@ export class ChatMessageComponent {
 
     effect(() => {
       const msg = this.message();
-      if (msg.message_type === 'voice' && msg.media_url && !this.voiceTranscribing() && !this.voiceTranscription()) {
+      if (
+        msg.message_type === 'voice' &&
+        msg.media_url &&
+        !this.voiceTranscribing() &&
+        !this.voiceTranscription()
+      ) {
         void this.fetchTranscription(msg.media_url);
       }
     });
