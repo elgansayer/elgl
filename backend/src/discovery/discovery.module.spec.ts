@@ -40,6 +40,7 @@ jest.mock('dompurify', () => ({
 import { DiscoveryModule } from './discovery.module';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
+import { DiscoveryCacheInvalidationService } from './discovery-cache-invalidation.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { AudioRoomsModule } from '../audio-rooms/audio-rooms.module';
 import { UsersModule } from '../users/users.module';
@@ -70,12 +71,13 @@ describe('DiscoveryModule', () => {
     expect(controllersMetadata).toContain(DiscoveryController);
   });
 
-  it('should register DiscoveryService and DiscoveryRateLimiterGuard in its providers metadata', () => {
+  it('should register DiscoveryService, DiscoveryRateLimiterGuard, and DiscoveryCacheInvalidationService in its providers metadata', () => {
     const providersMetadata =
       (Reflect.getMetadata('providers', DiscoveryModule) as unknown[]) ?? [];
 
     expect(providersMetadata).toContain(DiscoveryService);
     expect(providersMetadata).toContain(DiscoveryRateLimiterGuard);
+    expect(providersMetadata).toContain(DiscoveryCacheInvalidationService);
   });
 
   it('should export DiscoveryService', () => {

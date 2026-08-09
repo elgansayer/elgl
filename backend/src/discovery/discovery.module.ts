@@ -22,6 +22,7 @@ import { CorrectorScoreModule } from '../corrector-score/corrector-score.module'
     DiscoveryService,
     DiscoveryRateLimiterGuard,
     DiscoveryDegradationService,
+    DiscoveryCacheInvalidationService,
   ],
   exports: [DiscoveryService, DiscoveryDegradationService],
 })
