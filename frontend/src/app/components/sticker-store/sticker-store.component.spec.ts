@@ -98,6 +98,21 @@ describe('StickerStoreComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-, border-s, border-e)', () => {
+    const coinDisplay = fixture.nativeElement.querySelector('.bg-amber-500\\/10');
+    if (coinDisplay) {
+      const html = coinDisplay.outerHTML;
+      expect(html).not.toMatch(/\bpl-\d/);
+      expect(html).not.toMatch(/\bpr-\d/);
+      expect(html).not.toMatch(/\bml-\d/);
+      expect(html).not.toMatch(/\bmr-\d/);
+    }
+    // Verify no physical direction classes exist in the entire component
+    const componentHtml = fixture.nativeElement.innerHTML;
+    expect(componentHtml).not.toMatch(/\bborder-l\b/);
+    expect(componentHtml).not.toMatch(/\bborder-r\b/);
+  });
+
   it('should load sticker packs on init', async () => {
     fixture.detectChanges();
     await fixture.whenStable();

@@ -61,7 +61,7 @@ jobs:
 
       - name: Test (frontend)
         if: matrix.directory == 'frontend'
-        run: npx ng test --no-watch --browsers=ChromeHeadless
+        run: npm test -- --watch=false
         working-directory: ${{ matrix.directory }}
 
       - name: Test (backend)

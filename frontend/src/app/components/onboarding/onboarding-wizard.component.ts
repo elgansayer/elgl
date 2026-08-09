@@ -2,7 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { OnboardingService, QuizResultPayload } from '../../services/onboarding.service';
+import { OnboardingService } from '../../services/onboarding.service';
 import { I18nService } from '../../services/i18n.service';
 import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.component';
 
@@ -21,7 +21,9 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
             class="flex items-center gap-2 p-2 rounded"
             [class.bg-accent/20]="onboardingService.currentStep() === $index"
           >
-            <span class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-variant text-sm">
+            <span
+              class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-variant text-sm"
+            >
               {{ $index + 1 }}
             </span>
             <span>{{ step.label | t }}</span>
@@ -32,7 +34,9 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
       <!-- step 0: native language -->
       @if (onboardingService.currentStep() === 0) {
         <div class="mt-4">
-          <label class="block text-sm mb-1" for="native-lang">{{ 'onboarding.step1.label' | t }}</label>
+          <label class="block text-sm mb-1" for="native-lang">{{
+            'onboarding.step1.label' | t
+          }}</label>
           <select
             id="native-lang"
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
@@ -79,7 +83,9 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
       <!-- step 3: display name -->
       @if (onboardingService.currentStep() === 3) {
         <div class="mt-4">
-          <label class="block text-sm mb-1" for="display-name">{{ 'onboarding.step4.label' | t }}</label>
+          <label class="block text-sm mb-1" for="display-name">{{
+            'onboarding.step4.label' | t
+          }}</label>
           <input
             id="display-name"
             class="w-full bg-surface-variant text-on-surface p-2 rounded"
@@ -145,14 +151,19 @@ export class OnboardingWizardComponent {
     this.onboardingService.setDisplayName(event.target.value);
   }
 
-  onQuizComplete(result: QuizResultPayload): void {
-    this.onboardingService.setQuizResult(result);
+  onQuizComplete(result: { score: number; suggestedLevel: string; maxScore: number }): void {
+    this.onboardingService.setQuizResult({
+      score: result.score,
+      suggestedCefr: result.suggestedLevel,
+      percentage: result.maxScore > 0 ? Math.round((result.score / result.maxScore) * 100) : 0,
+      skillBreakdown: {},
+    });
   }
 
   handleNext(): void {
     this.onboardingService.nextStep();
     if (this.onboardingService.isOnboardingComplete()) {
-      this.router.navigate(['/']);
+      this.router.navigate(['/diagnostic-quiz']);
     }
   }
 }
