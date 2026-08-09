@@ -94,9 +94,13 @@ export class MediaService implements OnModuleInit {
     file: Express.Multer.File,
   ): Promise<{ url: string }> {
     const tempDir = os.tmpdir();
+    const safeExt = path
+      .extname(file.originalname)
+      .replace(/[^a-zA-Z0-9.]/g, '');
+    const randomName = crypto.randomBytes(8).toString('hex');
     const inputPath = path.join(
       tempDir,
-      `${Date.now()}-input-${file.originalname}`,
+      `${Date.now()}-input-${randomName}${safeExt}`,
     );
     const outputPath = path.join(tempDir, `${Date.now()}-output.ogg`);
 

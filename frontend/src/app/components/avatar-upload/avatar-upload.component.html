@@ -18,7 +18,7 @@
       (mouseup)="onImageMouseUp($event)"
       (mouseleave)="onImageMouseUp($event)"
     >
-      <img
+      <img loading="lazy"
         [src]="previewUrl()"
         class="w-full h-auto rounded cursor-crosshair"
         alt="{{ 'avatar.preview' | t }}"
@@ -38,13 +38,13 @@
         class="app-button-primary"
         [disabled]="uploading()"
         (click)="confirmCrop()"
-      >
+       [attr.aria-label]="'avatar.crop_and_upload' | t">
         {{ 'avatar.crop_and_upload' | t }}
       </button>
       <button
         class="app-button-secondary"
         (click)="previewUrl.set(null)"
-      >
+       [attr.aria-label]="'avatar.cancel' | t">
         {{ 'avatar.cancel' | t }}
       </button>
     </div>

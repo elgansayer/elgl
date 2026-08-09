@@ -46,7 +46,7 @@ export class AssessmentsService {
       return this.getFallbackQuestions();
     }
 
-    return data as unknown as AssessmentQuestion[];
+    return data;
   }
 
   private getFallbackQuestions(): AssessmentQuestion[] {

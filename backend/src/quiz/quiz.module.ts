@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { QuizController } from './quiz.controller';
 import { QuizService } from './quiz.service';
-import { AssessmentsModule } from '../assessments/assessments.module';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
-  imports: [AssessmentsModule],
+  imports: [SupabaseModule],
   controllers: [QuizController],
   providers: [QuizService],
 })

@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject, resource } from '@angular/core';
+import { Component, computed, signal, inject, resource, input } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
@@ -82,7 +82,9 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
               <span class="flex items-center gap-1.5">
                 <span aria-hidden="true">{{ userTag.hobby_tag?.icon }}</span>
                 <span>{{ userTag.hobby_tag?.name }}</span>
-                <span class="text-xs opacity-60">{{ getProficiencyLabel(userTag.proficiency_level) }}</span>
+                <span class="text-xs opacity-60">{{
+                  getProficiencyLabel(userTag.proficiency_level)
+                }}</span>
               </span>
             </app-pill>
             <button
@@ -105,7 +107,11 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
       @if (selectedTagForProficiency()) {
         <app-card variant="outlined" customClass="p-4">
           <h3 class="text-sm font-semibold text-slate-300 mb-3">
-            {{ i18n.translate('hobby.proficiencyFor', { name: getTagName(selectedTagForProficiency()!) }) }}
+            {{
+              i18n.translate('hobby.proficiencyFor', {
+                name: getTagName(selectedTagForProficiency()!),
+              })
+            }}
           </h3>
           <div class="flex gap-2">
             @for (level of proficiencyLevels; track level; let idx = $index) {
@@ -133,7 +139,9 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
       @if (userVocabulary().length > 0) {
         <div class="mt-6">
-          <h3 class="text-lg font-semibold text-slate-200 mb-3">{{ 'hobby.vocabularyTitle' | t }}</h3>
+          <h3 class="text-lg font-semibold text-slate-200 mb-3">
+            {{ 'hobby.vocabularyTitle' | t }}
+          </h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             @for (word of userVocabulary(); track word.id) {
               <app-card variant="outlined" customClass="p-3">
@@ -161,6 +169,8 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
   `,
 })
 export class HobbyTagsComponent {
+  readonly targetLanguage = input('en');
+
   readonly showAddPanel = signal(false);
   readonly searchQuery = signal('');
   readonly selectedTagForProficiency = signal<string | null>(null);
@@ -182,11 +192,12 @@ export class HobbyTagsComponent {
   public readonly i18n = inject(I18nService);
 
   private dataLoader = resource({
-    loader: async () => {
+    params: () => ({ lang: this.targetLanguage() }),
+    loader: async ({ params }) => {
       const [allTags, userTags, vocab] = await Promise.all([
         this.hobbyTagsService.getAllTags(),
         this.hobbyTagsService.getMyTags(),
-        this.hobbyTagsService.getVocabulary('en'),
+        this.hobbyTagsService.getVocabulary(params.lang),
       ]);
       this.allTags.set(allTags);
       this.userTags.set(userTags);

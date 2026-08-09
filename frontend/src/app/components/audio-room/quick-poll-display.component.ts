@@ -10,7 +10,6 @@ export interface PollViewData {
 
 @Component({
   selector: 'app-quick-poll-display',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="bg-surface p-4 rounded-xl shadow-lg">

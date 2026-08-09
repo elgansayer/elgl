@@ -62,10 +62,92 @@ describe('GlobalErrorHandler', () => {
     req.flush({ status: 'logged' });
   });
 
+  it('should include parsed stackFrames when a stack trace is available', () => {
+    const testError = new Error('Parsed');
+    Object.defineProperty(testError, 'stack', {
+      value: 'Error: Parsed\n    at foo (test.ts:42:10)\n    at bar (other.ts:5:3)',
+    });
+
+    handler.handleError(testError);
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const body = req.request.body as Record<string, unknown>;
+    const frames = body['stackFrames'] as Array<Record<string, unknown>>;
+    expect(frames).toHaveLength(2);
+    expect(frames[0]).toEqual(
+      expect.objectContaining({
+        functionName: 'foo',
+        fileName: 'test.ts',
+        lineNumber: 42,
+        columnNumber: 10,
+      }),
+    );
+    expect(frames[1]).toEqual(
+      expect.objectContaining({
+        functionName: 'bar',
+        fileName: 'other.ts',
+        lineNumber: 5,
+        columnNumber: 3,
+      }),
+    );
+    req.flush({ status: 'logged' });
+  });
+
+  it('should report string errors as UncaughtString', () => {
+    handler.handleError('Unhandled promise rejection');
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const body = req.request.body as Record<string, unknown>;
+    expect(body['message']).toBe('Unhandled promise rejection');
+    expect(body['name']).toBe('UncaughtString');
+    req.flush({ status: 'logged' });
+  });
+
   it('should rethrow HttpErrorResponse to preserve Angular default behaviour', () => {
     const httpError = new HttpErrorResponse({ status: 500, statusText: 'Server Error' });
 
     expect(() => handler.handleError(httpError)).toThrow();
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    req.flush({ status: 'logged' });
+  });
+
+  it('should report HttpErrorResponse details to analytics', () => {
+    const httpError = new HttpErrorResponse({
+      status: 404,
+      statusText: 'Not Found',
+      url: 'https://api.example.com/missing',
+    });
+
+    expect(() => handler.handleError(httpError)).toThrow();
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const body = req.request.body as Record<string, unknown>;
+    expect(body['name']).toBe('HttpError');
+    expect(body['message']).toContain('404');
+    expect(body['metadata']).toEqual({ status: 404, statusText: 'Not Found' });
+    req.flush({ status: 'logged' });
+  });
+
+  it('should report unknown objects as UnknownThrowable', () => {
+    const plainObj = { message: 'custom throw', code: 42 };
+
+    expect(() => handler.handleError(plainObj)).toThrow();
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const body = req.request.body as Record<string, unknown>;
+    expect(body['name']).toBe('UnknownThrowable');
+    expect(body['message']).toBe('custom throw');
+    expect(body['metadata']).toEqual(expect.objectContaining({ rawType: 'Object' }));
+    req.flush({ status: 'logged' });
+  });
+
+  it('should rethrow non-Error, non-HttpErrorResponse objects', () => {
+    const customErr = { message: 'Boom' };
+    expect(() => handler.handleError(customErr)).toThrow();
+
+    const req = httpTesting.expectOne('/api/analytics/client-error');
+    req.flush({ status: 'logged' });
   });
 
   it('should silently handle API failures without re-throwing', () => {
