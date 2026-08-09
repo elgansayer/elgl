@@ -89,6 +89,15 @@ prometheus_scrape:
       - hellotalk_coin_purchase_errors_total: counter
       - hellotalk_coin_fraud_attempts_total: counter
       - hellotalk_coin_transaction_latency_seconds: histogram
+      # Video Classrooms metrics (Datadog custom metrics, #2230)
+      - hellotalk_video_classrooms_created_total: counter
+      - hellotalk_video_classrooms_joined_total: counter
+      - hellotalk_video_classrooms_active_rooms: gauge
+      - hellotalk_video_classrooms_failed_creations_total: counter
+      - hellotalk_video_classrooms_failed_joins_total: counter
+      - hellotalk_video_classrooms_room_duration_seconds: histogram
+      - hellotalk_video_classrooms_token_generation_duration_seconds: histogram
+      - hellotalk_video_classrooms_participant_max: gauge
       # Node.js default metrics (prefixed with hellotalk_)
       - hellotalk_nodejs_heap_size_total_bytes: gauge
       - hellotalk_nodejs_heap_size_used_bytes: gauge

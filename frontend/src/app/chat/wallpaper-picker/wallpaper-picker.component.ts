@@ -10,7 +10,6 @@ interface WallpaperOption {
 
 @Component({
   selector: 'app-wallpaper-picker',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     @if (isOpen()) {

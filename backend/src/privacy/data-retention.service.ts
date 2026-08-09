@@ -76,6 +76,42 @@ export class DataRetentionService {
   }
 
   /**
+   * Purge reading progress records belonging to users who have been
+   * inactive for more than 730 days (2 years).
+   *
+   * Reading progress is behavioural data under GDPR and should not be
+   * retained indefinitely. A 2-year retention window balances the user's
+   * right to erasure (Article 17) with the legitimate interest of
+   * maintaining progress for returning learners.
+   *
+   * Runs once per day at 02:00 UTC.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async purgeInactiveReadingProgress(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 730);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('reading_progress')
+      .delete({ count: 'exact' })
+      .lt('last_read_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(
+        `Failed to purge inactive reading progress: ${error.message}`,
+      );
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} inactive reading progress records (last read before ${cutoff.toISOString()})`,
+      );
+    }
+  }
+
+  /**
    * Finalise deletion of user accounts past their 30-day grace period.
    * Runs once per day at 04:00 UTC.
    */
@@ -180,14 +216,8 @@ export class DataRetentionService {
     await supabase.from('notifications').delete().eq('recipient_id', userId);
 
     // LingQ Reading Engine: reading progress and authored resources
-    await supabase
-      .from('reading_progress')
-      .delete()
-      .eq('user_id', userId);
-    await supabase
-      .from('reading_resources')
-      .delete()
-      .eq('created_by', userId);
+    await supabase.from('reading_progress').delete().eq('user_id', userId);
+    await supabase.from('reading_resources').delete().eq('created_by', userId);
 
     // Invalidate reading-engine Redis caches for this user
     try {

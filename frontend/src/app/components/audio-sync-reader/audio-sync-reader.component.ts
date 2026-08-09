@@ -1,7 +1,7 @@
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { Component, effect, inject, input, output, signal, OnDestroy } from '@angular/core';
+import { Component, effect, inject, input, output, signal, computed, OnDestroy } from '@angular/core';
 
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';
@@ -36,6 +36,17 @@ export class AudioSyncReaderComponent implements OnDestroy {
   readonly activeTokenIndex = signal<number>(-1);
   readonly isPlaying = signal<boolean>(false);
   readonly selectedToken = signal<{ token: string; context: string } | null>(null);
+
+  readonly activeToken = computed<TokenSegmentSpan | null>(() => {
+    const idx = this.activeTokenIndex();
+    const allTokens = this.tokens();
+    if (idx < 0 || idx >= allTokens.length) return null;
+    return allTokens[idx];
+  });
+
+  readonly wordLikeTokenCount = computed<number>(() => {
+    return this.tokens().filter((t) => t.isWordLike).length;
+  });
 
   private audioElement: HTMLAudioElement | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
@@ -132,12 +143,10 @@ export class AudioSyncReaderComponent implements OnDestroy {
     };
 
     this.audioElement.onerror = () => {
-      console.error('Audio playback error during timeupdate synchronization.');
       this.stopPlayback();
     };
 
-    this.audioElement.play().catch((err) => {
-      console.error('Failed to start HTML5 audio:', err);
+    this.audioElement.play().catch(() => {
       this.stopPlayback();
     });
   }
@@ -190,6 +199,11 @@ export class AudioSyncReaderComponent implements OnDestroy {
 
     if (this.audioElement) {
       this.audioElement.pause();
+      this.audioElement.ontimeupdate = null;
+      this.audioElement.onended = null;
+      this.audioElement.onerror = null;
+      this.audioElement.src = '';
+      this.audioElement.load();
       this.audioElement = null;
     }
 

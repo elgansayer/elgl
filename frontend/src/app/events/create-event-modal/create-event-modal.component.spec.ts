@@ -49,16 +49,20 @@ describe('CreateEventModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should start with an empty form', () => {
+  it('should start with default form values', () => {
     expect(component.eventForm.value).toEqual({
       title: '',
       date_time: '',
-      platform_location: '',
+      language_pair: '',
+      category: 'audio_room',
+      location: '',
+      max_participants: null,
       description: '',
     });
   });
 
-  it('should not call createEvent when form is invalid', () => {
+  it('should not call createEvent when form is invalid (missing title)', () => {
+    component.eventForm.patchValue({ title: '', date_time: '' });
     component.onSubmit();
     expect(eventsServiceSpy.createEvent).not.toHaveBeenCalled();
   });
@@ -74,7 +78,10 @@ describe('CreateEventModalComponent', () => {
     component.eventForm.setValue({
       title: 'Test Event',
       date_time: '2026-08-01T10:00',
-      platform_location: 'Zoom',
+      language_pair: 'en-es',
+      category: 'audio_room',
+      location: 'Zoom',
+      max_participants: 10,
       description: 'Some description',
     });
 
@@ -83,12 +90,46 @@ describe('CreateEventModalComponent', () => {
     expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
       title: 'Test Event',
       date_time: '2026-08-01T10:00',
+      language_pair: 'en-es',
+      category: 'audio_room',
       location: 'Zoom',
+      max_participants: 10,
       description: 'Some description',
     });
     expect(createdSpy).toHaveBeenCalledTimes(1);
     expect(createdSpy).toHaveBeenCalledWith(mockEvent);
     expect(dismissSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should send undefined for empty optional fields', async () => {
+    const createdSpy = vi.fn();
+    const dismissSpy = vi.fn();
+    component.created.subscribe(createdSpy);
+    component.dismiss.subscribe(dismissSpy);
+
+    eventsServiceSpy.createEvent.mockReturnValue(of(mockEvent));
+
+    component.eventForm.setValue({
+      title: 'Test Event',
+      date_time: '2026-08-01T10:00',
+      language_pair: '',
+      category: 'audio_room',
+      location: '',
+      max_participants: null,
+      description: '',
+    });
+
+    await component.onSubmit();
+
+    expect(eventsServiceSpy.createEvent).toHaveBeenCalledWith({
+      title: 'Test Event',
+      date_time: '2026-08-01T10:00',
+      language_pair: undefined,
+      category: 'audio_room',
+      location: undefined,
+      max_participants: undefined,
+      description: undefined,
+    });
   });
 
   it('should not emit anything when creation fails', async () => {
@@ -105,7 +146,10 @@ describe('CreateEventModalComponent', () => {
     component.eventForm.setValue({
       title: 'Fail Event',
       date_time: '2026-08-02T11:00',
-      platform_location: 'Zoom',
+      language_pair: 'en-fr',
+      category: 'learning_seminar',
+      location: 'Zoom',
+      max_participants: 5,
       description: 'Will fail',
     });
 

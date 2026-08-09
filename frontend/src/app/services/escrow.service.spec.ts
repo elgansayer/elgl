@@ -48,7 +48,7 @@ describe('EscrowService', () => {
       enqueueOperation: vi.fn().mockResolvedValue(undefined),
       getPendingOperations: vi.fn().mockResolvedValue([]),
       removeOperation: vi.fn().mockResolvedValue(undefined),
-      pendingOperationCount: () => 0,
+      pendingOperationCount: vi.fn().mockReturnValue(0),
     };
 
     TestBed.configureTestingModule({

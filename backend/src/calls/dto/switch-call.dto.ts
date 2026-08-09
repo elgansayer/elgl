@@ -3,7 +3,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class SwitchCallDto {
   @ApiProperty({
-    description: 'The LiveKit room name of the current active call to place on hold',
+    description:
+      'The LiveKit room name of the current active call to place on hold',
     example: 'call_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   })
   @IsString()

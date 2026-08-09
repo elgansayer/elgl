@@ -55,6 +55,49 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
       });
     },
   ),
+  scrubEscrowTransactionForArchive: jest.fn(
+    (
+      record: Record<string, unknown> | null | undefined,
+    ): Record<string, unknown> | null | undefined => {
+      if (record == null) return record;
+      const scrubbed = { ...record };
+      scrubbed['payer_id'] = '00000000-0000-0000-0000-000000000000';
+      scrubbed['payee_id'] = '00000000-0000-0000-0000-000000000000';
+      if (typeof scrubbed['description'] === 'string') {
+        scrubbed['description'] = null;
+      }
+      if (typeof scrubbed['reference_id'] === 'string') {
+        scrubbed['reference_id'] = null;
+      }
+      return scrubbed;
+    },
+  ),
+  scrubEscrowTransactionsForArchive: jest.fn(
+    (
+      records: unknown[] | null | undefined,
+      userId: string,
+    ): Record<string, unknown>[] => {
+      if (records == null || !Array.isArray(records)) return [];
+      return records.map((record) => {
+        if (record !== null && typeof record === 'object') {
+          const r = record as Record<string, unknown>;
+          const scrubbed = { ...r };
+          scrubbed['payer_id'] =
+            r['payer_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['payee_id'] =
+            r['payee_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['description'] = null;
+          scrubbed['reference_id'] = null;
+          return scrubbed;
+        }
+        return record as Record<string, unknown>;
+      });
+    },
+  ),
 }));
 
 describe('PrivacyService', () => {

@@ -1389,7 +1389,10 @@ describe('MomentsService', () => {
       );
       expect(emitSpy).toHaveBeenCalledWith(
         'moment.mention',
-        expect.objectContaining({ momentAuthorId: 'bob-id' }),
+        expect.objectContaining({
+          momentAuthorId: 'author-1',
+          mentionedUserIds: ['bob-id'],
+        }),
       );
     });
 

@@ -57,6 +57,7 @@ export const appConfig: ApplicationConfig = {
       },
       defaultLanguage: 'en-GB',
     }).providers ?? []),
+    importProvidersFrom(JoyrideModule.forRoot()),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     {
       provide: APP_INITIALIZER,

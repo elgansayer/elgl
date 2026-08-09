@@ -1,12 +1,13 @@
+<<<<<<< HEAD
+<section role="region" aria-label="Classrooms marketplace">
+  <p>classrooms-marketplace works!</p>
+</section>
+=======
 <app-video-classroom-error-boundary>
   <div class="p-4 sm:p-6 space-y-6">
     <!-- Header -->
     <header
       class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      joyrideStep="videoClassroomStepMarketplace"
-      [title]="'videoClassroomTour.stepMarketplaceTitle' | t"
-      [text]="'videoClassroomTour.stepMarketplaceText' | t"
-      stepPosition="bottom"
     >
       <div class="flex items-center gap-3">
         <div>
@@ -25,7 +26,6 @@
           (click)="startOnboardingTour()"
           class="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm font-bold"
           [attr.aria-label]="'videoClassroomTour.helpBtn' | t"
-          [title]="'videoClassroomTour.helpBtn' | t"
         >
           ?
         </button>
@@ -37,10 +37,6 @@
       <nav
         aria-label="Language filters"
         class="flex flex-wrap gap-2"
-        joyrideStep="videoClassroomStepFilters"
-        [title]="'videoClassroomTour.stepFiltersTitle' | t"
-        [text]="'videoClassroomTour.stepFiltersText' | t"
-        stepPosition="bottom"
       >
         <button
           type="button"
@@ -75,10 +71,6 @@
     @if (isLoading()) {
       <div
         class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        joyrideStep="videoClassroomStepRoomCard"
-        [title]="'videoClassroomTour.stepRoomCardTitle' | t"
-        [text]="'videoClassroomTour.stepRoomCardText' | t"
-        stepPosition="top"
       >
         @for (i of [1, 2, 3, 4, 5, 6]; track i) {
           <div class="rounded-2xl bg-surface-200 border border-slate-700 overflow-hidden">
@@ -159,10 +151,6 @@
     @if (!isLoading() && !errorMessage() && videoRooms().length > 0) {
       <div
         class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        joyrideStep="videoClassroomStepRoomCard"
-        [title]="'videoClassroomTour.stepRoomCardTitle' | t"
-        [text]="'videoClassroomTour.stepRoomCardText' | t"
-        stepPosition="top"
       >
         @for (room of videoRooms(); track room.id) {
           <article
@@ -218,3 +206,4 @@
     }
   </div>
 </app-video-classroom-error-boundary>
+>>>>>>> origin/main
