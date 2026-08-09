@@ -274,6 +274,10 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsBoolean()
+  auto_play_voice_notes?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   sound_effects_enabled?: boolean;
 
   @IsOptional()
@@ -291,4 +295,23 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsBoolean()
   serious_learner_mode?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  auto_play_voice_notes?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  auto_download_media?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  auto_download_wifi_only?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(wifi|cellular)$/, {
+    message: 'auto_download_preference must be one of: wifi, cellular',
+  })
+  auto_download_preference?: 'wifi' | 'cellular';
 }

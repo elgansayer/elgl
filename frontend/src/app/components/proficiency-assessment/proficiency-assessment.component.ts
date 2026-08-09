@@ -4,7 +4,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 import { UserService } from '../../services/user.service';
 
 @Component({
-  standalone: true,
   selector: 'app-proficiency-assessment',
   imports: [FormsModule, TranslatePipe],
   template: `

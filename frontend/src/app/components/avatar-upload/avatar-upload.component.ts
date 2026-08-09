@@ -9,7 +9,6 @@ import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-avatar-upload',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './avatar-upload.component.html',
   styleUrls: ['./avatar-upload.component.scss'],
@@ -63,7 +62,7 @@ export class AvatarUploadComponent {
     this.previewUrl.set(blobUrl);
   }
 
-  // Called when the <img loading="lazy"> inside the template has finished loading
+  // Called when the <img> inside the template has finished loading
   onImageLoad(event: Event): void {
     const img = event.target;
     if (!(img instanceof HTMLImageElement)) return;
