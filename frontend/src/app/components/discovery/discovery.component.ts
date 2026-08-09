@@ -241,8 +241,9 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     if (this.searchAbortController) {
       this.searchAbortController.abort();
     }
-    this.searchAbortController = new AbortController();
-    const signal = this.searchAbortController.signal;
+    const controller = new AbortController();
+    this.searchAbortController = controller;
+    const signal = controller.signal;
 
     this.isLoading.set(true);
     this.searchError.set(null);
@@ -289,13 +290,17 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
 
       this.partners.set(mapped);
     } catch (e) {
-      // Don't log aborted request errors - they are expected
-      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+      // Do not report failures from an intentionally superseded request.
+      if (!signal.aborted) {
         console.error('Partner search failed:', e);
         this.searchError.set(this.i18n.translate('discovery.searchError'));
       }
     } finally {
-      this.isLoading.set(false);
+      // An older aborted request must not clear the loading state owned by its replacement.
+      if (this.searchAbortController === controller) {
+        this.searchAbortController = null;
+        this.isLoading.set(false);
+      }
     }
   }
 

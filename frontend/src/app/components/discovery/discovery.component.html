@@ -36,7 +36,7 @@
         [pills]="filterPills()"
         [selected]="selectedFilter()"
         [ariaLabel]="'discovery.filterAriaLabel' | t"
-        (select)="onFilterSelect($any($event))"
+        (pillPicked)="onFilterSelect($event)"
       >
       </app-scrollable-pills>
     </div>
