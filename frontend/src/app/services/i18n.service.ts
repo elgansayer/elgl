@@ -1046,12 +1046,17 @@ export class I18nService {
     'readingEngine.topic.culture': 'Culture',
     'readingEngine.topic.travel': 'Travel',
     'readingEngine.topic.technology': 'Technology',
-    'readingEngine.offlineBanner': 'You are offline. Showing cached content.',
+'readingEngine.offlineBanner': 'You are offline. Showing cached content.',
     'readingEngine.offlineCachedInfo': '{{count}} articles available offline',
     'readingEngine.vocabularyOfflineNote':
       'Vocabulary shown from local cache while offline. Some features may be limited.',
     'readingEngine.historyOfflineNote': 'History shown from locally stored reading activity.',
     'readingEngine.historyListAriaLabel': 'Reading history list',
+    'readingEngineErrorBoundary.title': 'Reading Engine Interrupted',
+    'readingEngineErrorBoundary.description': 'Something went wrong with the reading engine. Your reading progress has been preserved.',
+    'readingEngineErrorBoundary.retryBtn': 'Try Again',
+    'readingEngineErrorBoundary.reportBtn': 'Report Issue',
+    'readingEngineErrorBoundary.reportedMessage': 'Issue reported. Thank you for helping us improve!',
 
     'vocabDisplay.title': 'Vocabulary from your interests',
     'vocabDisplay.refresh': 'Refresh',
