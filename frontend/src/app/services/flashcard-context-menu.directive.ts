@@ -1,23 +1,22 @@
-import { Directive, inject, input, ElementRef, OnDestroy } from '@angular/core';
+import { Directive, inject, input, ElementRef, ErrorHandler } from '@angular/core';
 import { FlashcardService } from './flashcard.service';
 
 @Directive({
   selector: '[appFlashcardContextMenu]',
-  standalone: true,
   host: {
     '(contextmenu)': 'onContextMenu($event)',
     '(touchstart)': 'onTouchStart($event)',
   },
 })
-export class FlashcardContextMenuDirective implements OnDestroy {
+export class FlashcardContextMenuDirective {
   /** Source language of the selected text (could be read from a data attribute or input). */
   readonly sourceLanguage = input<string>('en');
 
   private flashcardService = inject(FlashcardService);
   private elRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private errorHandler = inject(ErrorHandler);
 
   private overlay: HTMLElement | null = null;
-  private clickOffHandler: ((e: MouseEvent) => void) | null = null;
 
   onContextMenu(event: MouseEvent): void {
     event.preventDefault();
@@ -42,10 +41,6 @@ export class FlashcardContextMenuDirective implements OnDestroy {
     /* long-press detection could be added later */
   }
 
-  ngOnDestroy(): void {
-    this.removeOverlay();
-  }
-
   private showOverlay(x: number, y: number, word: string, context: string, lang: string): void {
     const div = document.createElement('div');
     div.className = 'fixed bg-surface text-on-surface shadow-lg rounded-lg px-4 py-2 z-50 cursor-pointer hover:bg-surface-hover transition-colors';
@@ -60,8 +55,10 @@ export class FlashcardContextMenuDirective implements OnDestroy {
           sourceLanguage: lang,
           contextSentence: context,
         });
-      } catch {
-        // Failed to create flashcard - silently handled
+        // Notify user with a toast if implemented
+      } catch (err) {
+        this.reportError('createFlashcard', err);
+        // Show error toast
       }
       this.removeOverlay();
     });
@@ -69,37 +66,36 @@ export class FlashcardContextMenuDirective implements OnDestroy {
     this.overlay = div;
     document.body.appendChild(div);
 
-    // Clean up previous handler before adding a new one
-    if (this.clickOffHandler) {
-      document.removeEventListener('click', this.clickOffHandler);
-    }
-
-    this.clickOffHandler = (e: MouseEvent) => {
+    const closeHandler: EventListener = (e: Event) => {
       const target = e.target;
       if (!target || !(target instanceof Node)) {
         return;
       }
       if (!div.contains(target)) {
+        document.removeEventListener('click', closeHandler);
         this.removeOverlay();
       }
     };
 
-    // Delay attachment to avoid immediate close from the current contextmenu event
-    requestAnimationFrame(() => {
-      if (this.clickOffHandler) {
-        document.addEventListener('click', this.clickOffHandler);
-      }
-    });
+    // Delay to avoid immediate close from the context menu event itself
+    setTimeout(() => {
+      document.addEventListener('click', closeHandler);
+    }, 0);
   }
 
   private removeOverlay(): void {
-    if (this.clickOffHandler) {
-      document.removeEventListener('click', this.clickOffHandler);
-      this.clickOffHandler = null;
-    }
-    if (this.overlay?.parentNode) {
+    if (this.overlay && this.overlay.parentNode) {
       this.overlay.parentNode.removeChild(this.overlay);
     }
     this.overlay = null;
+  }
+
+  private reportError(operation: string, err: unknown): void {
+    const message = err instanceof Error ? err.message : String(err);
+    const ctxError = new Error(`[SRS:FlashcardContextMenu] ${operation} failed: ${message}`);
+    if (err instanceof Error && err.stack) {
+      ctxError.stack = err.stack;
+    }
+    this.errorHandler.handleError(ctxError);
   }
 }

@@ -4,7 +4,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-account-deletion',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './account-deletion.component.html',
   styleUrls: ['./account-deletion.component.scss'],

@@ -1,14 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { ApplicationRef } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
-import { Subject, of } from 'rxjs';
+import { Subject } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SwUpdateService } from './sw-update.service';
 
 describe('SwUpdateService', () => {
   let service: SwUpdateService;
-  let versionUpdatesSubject: Subject<{ type: string; latestVersion?: string }>;
-  let unrecoverableSubject: Subject<{ reason: string }>;
+  let versionUpdatesSubject: Subject<unknown>;
+  let unrecoverableSubject: Subject<unknown>;
   let mockSwUpdate: { isEnabled: boolean; versionUpdates: Subject<unknown>; unrecoverable: Subject<unknown>; checkForUpdate: ReturnType<typeof vi.fn>; activateUpdate: ReturnType<typeof vi.fn> };
   let mockAppRef: { isStable: ReturnType<typeof vi.fn> };
 
@@ -27,7 +27,7 @@ describe('SwUpdateService', () => {
     };
 
     mockAppRef = {
-      isStable: of(true),
+      isStable: vi.fn(),
     };
 
     TestBed.configureTestingModule({
@@ -50,10 +50,12 @@ describe('SwUpdateService', () => {
 
     service.initialise();
 
-    versionUpdatesSubject.next({
+    const event: VersionReadyEvent = {
       type: 'VERSION_READY',
-      latestVersion: '2.0.0',
-    } as VersionReadyEvent);
+      currentVersion: { hash: 'abc123' },
+      latestVersion: { hash: 'def456' },
+    };
+    versionUpdatesSubject.next(event);
 
     expect(service.updateAvailable()).toBe(true);
   });
