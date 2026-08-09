@@ -4,7 +4,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-earned-badges',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="flex flex-wrap gap-2">

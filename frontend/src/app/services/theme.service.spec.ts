@@ -8,14 +8,11 @@ describe('ThemeService', () => {
     TestBed.resetTestingModule();
 
     // Mock localStorage
-    Object.defineProperty(window, 'localStorage', {
-      value: {
+    vi.stubGlobal('localStorage', {
         getItem: vi.fn(),
         setItem: vi.fn(),
         removeItem: vi.fn(),
         clear: vi.fn(),
-      },
-      writable: true
     });
 
     // Mock matchMedia
@@ -41,6 +38,7 @@ describe('ThemeService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('should be created', () => {

@@ -67,6 +67,14 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  LIVEKIT_TURN_USERNAME?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
   LIVEKIT_RTC_STUN_SERVERS?: string;
 
   @IsString()

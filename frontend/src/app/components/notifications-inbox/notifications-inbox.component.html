@@ -46,7 +46,7 @@
           <!-- Avatar -->
           <div class="relative shrink-0 size-10 rounded-full overflow-hidden bg-white/10">
             @if (notif.actor?.avatar_url) {
-              <img loading="lazy"
+              <img
                 [src]="notif.actor!.avatar_url"
                 [alt]="notif.actor?.display_name ?? 'user'"
                 class="size-full object-cover"
