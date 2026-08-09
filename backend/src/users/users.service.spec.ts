@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { DataExportWorker } from './data-export.worker';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 
@@ -51,6 +53,24 @@ describe('UsersService', () => {
             getTotalXp: jest.fn().mockResolvedValue(0),
             awardXpForActivity: jest.fn(),
           },
+        },
+        {
+          provide: DataExportWorker,
+          useValue: {
+            exportUserData: jest.fn().mockResolvedValue({
+              profile: {},
+              moments: [],
+              comments: [],
+              messages: [],
+              flashcards: [],
+              favourites: [],
+              exported_at: new Date().toISOString(),
+            }),
+          },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn() },
         },
       ],
     }).compile();
@@ -185,19 +205,68 @@ describe('UsersService', () => {
 
       await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
         new BadRequestException(
-          'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages simultaneously.',
+          'Free tier allows a maximum of 1 target language. Upgrade to VIP (8 UKP / $10 USD per month) to study up to 3 languages, or Pro (12 UKP / $15 USD per month) for up to 5 languages.',
         ),
       );
     });
 
-    it('should throw BadRequestException when anyone tries to set more than 3 target languages', async () => {
+    it('should throw BadRequestException when VIP tries to set more than 3 target languages', async () => {
       const dto = { target_languages: ['EN', 'FR', 'ES', 'DE'] };
+
+      // mock getProfile to return VIP but not Pro tier
+      const mockSelectFn = jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: { id: 'user-1', vip_tier: 'consumer', is_vip: true },
+            error: null,
+          }),
+        }),
+      });
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'users') {
+            return { select: mockSelectFn };
+          }
+          return mockQueryBuilder;
+        });
 
       await expect(service.updateProfile('user-1', dto, true)).rejects.toThrow(
         new BadRequestException(
-          'A maximum of 3 target languages can be studied simultaneously.',
+          'A maximum of 3 target languages can be studied simultaneously on your current tier.',
         ),
       );
+    });
+
+    it('should allow Pro tier to set up to 5 target languages', async () => {
+      const dto = { target_languages: ['EN', 'FR', 'ES', 'DE', 'JA'] };
+
+      // mock getProfile to return Pro tier
+      const mockSelectFn = jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: { id: 'user-1', vip_tier: 'pro', is_vip: true },
+            error: null,
+          }),
+        }),
+      });
+
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'users') {
+            return {
+              select: mockSelectFn,
+              update: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({ error: null }),
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
+
+      const result = await service.updateProfile('user-1', dto, true);
+      expect(result).toBeDefined();
     });
 
     it('should throw BadRequestException when non-VIP tries to set mock location', async () => {

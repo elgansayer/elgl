@@ -1,12 +1,12 @@
 const fs = require('fs');
 
 const filesToFix = [
-  { path: '.agents/skills/angular-developer/references/pipes.md', replacements: [[/—/g, '-']] },
+  { path: '.agents/skills/angular-developer/references/pipes.md', replacements: [[/-/g, '-']] },
   {
     path: '.agents/skills/angular-developer/references/signal-forms.md',
-    replacements: [[/—/g, '-']],
+    replacements: [[/-/g, '-']],
   },
-  { path: '.agents/skills/angular-new-app/SKILL.md', replacements: [[/—/g, '-']] },
+  { path: '.agents/skills/angular-new-app/SKILL.md', replacements: [[/-/g, '-']] },
 ];
 
 filesToFix.forEach((f) => {
