@@ -1,11 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, input, computed } from '@angular/core';
 import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-discovery-skeleton-card',
   imports: [AppSkeletonLoaderComponent],
   template: `
-    <article class="flex items-center justify-between gap-3 p-4 bg-surface-500" aria-hidden="true">
+    <article
+      class="flex items-center justify-between gap-3 p-4 bg-surface-500 skeleton-stagger"
+      [style.animation-delay]="staggerDelay()"
+      aria-hidden="true"
+    >
       <div class="flex items-center gap-3 min-w-0 flex-1">
         <!-- Avatar skeleton -->
         <app-skeleton-loader
@@ -95,4 +99,10 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
     </article>
   `,
 })
-export class DiscoverySkeletonCardComponent {}
+export class DiscoverySkeletonCardComponent {
+  readonly index = input<number>(0);
+
+  readonly staggerDelay = computed(() => {
+    return `${Math.min(this.index() * 60, 300)}ms`;
+  });
+}

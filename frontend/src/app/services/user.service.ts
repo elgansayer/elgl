@@ -565,6 +565,21 @@ export class UserService {
     );
   }
 
+  async searchUsers(
+    query: string,
+    limit = 5,
+  ): Promise<{ id: string; display_name: string; avatar_url: string | null }[]> {
+    if (!query.trim()) return [];
+    return firstValueFrom(
+      this.http
+        .get<{ id: string; display_name: string; avatar_url: string | null }[]>(
+          `${this.baseUrl}/search`,
+          { headers: this.getHeaders(), params: { q: query, limit: String(limit) } },
+        )
+        .pipe(catchError(() => of([]))),
+    );
+  }
+
   async queryUsersByLanguagePairs(
     languagePairs: { native: string; target: string }[],
   ): Promise<UserProfile[]> {

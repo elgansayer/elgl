@@ -7,18 +7,24 @@ import {
 
 describe('EscrowCacheInterceptor', () => {
   describe('constants', () => {
-    it('ESCROW_CACHE_PRIVATE_SHORT should prevent CDN caching and require browser revalidation', () => {
+    it('ESCROW_CACHE_PRIVATE_SHORT should set private CDN cache with stale-while-revalidate', () => {
       expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain('private');
       expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain(
         'max-age=60',
       );
+      expect(ESCROW_CACHE_PRIVATE_SHORT['Cache-Control']).toContain(
+        'stale-while-revalidate=300',
+      );
+      // Verify no contradictory CDN directives
       expect(ESCROW_CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain(
         'private',
       );
-      // Should vary by auth to prevent cross-user cache leakage
-      expect(ESCROW_CACHE_PRIVATE_SHORT['Vary']).toBe(
-        'Authorization, Accept-Encoding',
+      expect(ESCROW_CACHE_PRIVATE_SHORT['CDN-Cache-Control']).toContain(
+        'max-age=120',
       );
+      // Should vary by auth to prevent cross-user cache leakage
+      expect(ESCROW_CACHE_PRIVATE_SHORT['Vary']).toContain('Authorization');
+      expect(ESCROW_CACHE_PRIVATE_SHORT['Vary']).toContain('Accept-Encoding');
     });
 
     it('ESCROW_CACHE_PRIVATE_NO_STORE should prevent all caching', () => {
@@ -42,7 +48,8 @@ describe('EscrowCacheInterceptor', () => {
       );
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const removeHeader = jest.fn();
+      const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];
@@ -64,7 +71,7 @@ describe('EscrowCacheInterceptor', () => {
       );
       expect(setHeader).toHaveBeenCalledWith(
         'Vary',
-        'Authorization, Accept-Encoding',
+        ESCROW_CACHE_PRIVATE_SHORT['Vary'],
       );
       expect(setHeader).toHaveBeenCalledWith(
         'Cache-Tag',
@@ -78,7 +85,8 @@ describe('EscrowCacheInterceptor', () => {
       );
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const removeHeader = jest.fn();
+      const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];
@@ -97,7 +105,10 @@ describe('EscrowCacheInterceptor', () => {
         'CDN-Cache-Control',
         ESCROW_CACHE_PRIVATE_NO_STORE['CDN-Cache-Control'],
       );
-      expect(setHeader).toHaveBeenCalledWith('Vary', 'Authorization');
+      expect(setHeader).toHaveBeenCalledWith(
+        'Vary',
+        ESCROW_CACHE_PRIVATE_NO_STORE['Vary'],
+      );
     });
 
     it('should override cache headers to private/no-store on error', async () => {
@@ -140,7 +151,8 @@ describe('EscrowCacheInterceptor', () => {
       );
 
       const setHeader = jest.fn();
-      const mockResponse = { setHeader };
+      const removeHeader = jest.fn();
+      const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
       } as unknown as Parameters<typeof interceptor.intercept>[0];

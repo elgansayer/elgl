@@ -1,5 +1,51 @@
 import { Module, Global } from '@nestjs/common';
-import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
+import {
+  getLoggerToken,
+  LoggerModule as PinoLoggerModule,
+  PinoLogger,
+} from 'nestjs-pino';
+
+const LOGGER_CONTEXTS = [
+  'AdminService',
+  'AppleNotificationController',
+  'AppleNotificationService',
+  'AppleReceiptValidatorService',
+  'CentrifugoService',
+  'CloudflareCacheService',
+  'CrashReportService',
+  'DecksService',
+  'DiscoveryCacheInvalidationService',
+  'DiscoveryRateLimiterGuard',
+  'DiscoveryService',
+  'EconomyExceptionFilter',
+  'EconomyRateLimiterGuard',
+  'EconomyService',
+  'EscrowMetricsAggregator',
+  'FlashcardsService',
+  'GooglePlayNotificationController',
+  'GooglePlayNotificationService',
+  'ModerationService',
+  'MonetisationService',
+  'NlpRateLimiterGuard',
+  'PronunciationService',
+  'RecommendationsMetricsAggregator',
+  'RecommendationsRateLimiterGuard',
+  'RecommendationsService',
+  'SrsMetricsAggregator',
+  'SrsRateLimiterGuard',
+  'StripeService',
+  'SuggestFlashcardsService',
+  'TranslationService',
+  'TrustSafetyMetricsAggregator',
+];
+
+const CONTEXT_LOGGER_TOKENS = LOGGER_CONTEXTS.map((context) =>
+  getLoggerToken(context),
+);
+const CONTEXT_LOGGER_PROVIDERS = LOGGER_CONTEXTS.map((context) => ({
+  provide: getLoggerToken(context),
+  useExisting: PinoLogger,
+}));
 
 @Global()
 @Module({
@@ -8,7 +54,7 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
       pinoHttp: {
         level: process.env.LOG_LEVEL ?? 'info',
         transport:
-          process.env.NODE_ENV !== 'production'
+          process.env.NODE_ENV === 'development'
             ? { target: 'pino-pretty', options: { colorize: true } }
             : undefined,
         formatters: {
@@ -35,6 +81,7 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
       },
     }),
   ],
-  exports: [PinoLoggerModule],
+  providers: CONTEXT_LOGGER_PROVIDERS,
+  exports: [PinoLoggerModule, ...CONTEXT_LOGGER_TOKENS],
 })
 export class SharedLoggerModule {}

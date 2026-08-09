@@ -259,6 +259,20 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
 
+    // 11) LingQ Reading Engine: reading progress
+    const { data: readingProgress } = await supabase
+      .from('reading_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    // 12) LingQ Reading Engine: resources authored by the user
+    const { data: readingResources } = await supabase
+      .from('reading_resources')
+      .select('*')
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false });
+
     return {
       export_generated_at: new Date().toISOString(),
       user_profile: userProfile ?? null,
@@ -276,6 +290,8 @@ export class PrivacyService {
       ),
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
+      reading_progress: readingProgress ?? null,
+      reading_resources: readingResources ?? [],
     };
   }
 }

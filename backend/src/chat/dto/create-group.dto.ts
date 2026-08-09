@@ -13,7 +13,7 @@ export class CreateGroupDto {
 
   @IsArray()
   @IsString({ each: true })
-  @ArrayMaxSize(50)
+  @ArrayMaxSize(49)
   memberIds!: string[];
   @IsOptional()
   @IsString()
