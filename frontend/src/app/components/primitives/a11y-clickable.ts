@@ -16,12 +16,12 @@ import { Directive } from '@angular/core';
   },
 })
 export class A11yClickableDirective {
-  onEnter(event: KeyboardEvent): void {
+  onEnter(event: Event): void {
     const target = event.target as HTMLElement;
     target.click();
   }
 
-  onSpace(event: KeyboardEvent): void {
+  onSpace(event: Event): void {
     event.preventDefault();
     const target = event.target as HTMLElement;
     target.click();

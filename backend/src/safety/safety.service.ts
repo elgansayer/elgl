@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { SafetyCacheInvalidationService } from './safety-cache-invalidation.service';
 import { BlockUserDto, ReportUserDto } from './dto/safety.dto';
 import { BlockedUserResponseDto } from './dto/blocked-user.dto';
@@ -49,6 +50,7 @@ export class SafetyService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
+    private readonly metricsService: MetricsService,
     private readonly cacheInvalidationService: SafetyCacheInvalidationService,
   ) {}
 
@@ -106,6 +108,8 @@ export class SafetyService {
       throw new Error('Failed to submit report: no data returned');
     }
 
+    this.metricsService.recordTsReportSubmitted(dto.reason_category);
+
     this.logger.log(
       `Report submitted: reporter=${reporterId}, reported=${dto.reported_id}, category=${dto.reason_category}`,
     );
@@ -159,6 +163,8 @@ export class SafetyService {
       throw new Error(`Failed to block user: ${error.message}`);
     }
 
+    this.metricsService.recordTsBlockCreated();
+
     this.logger.log(`User ${blockerId} blocked ${dto.blocked_id}`);
 
     // Invalidate Redis caches affected by trust-graph mutation
@@ -185,6 +191,8 @@ export class SafetyService {
     if (error) {
       throw new Error(`Failed to unblock user: ${error.message}`);
     }
+
+    this.metricsService.recordTsBlockRemoved();
 
     this.logger.log(`User ${blockerId} unblocked ${blockedId}`);
 

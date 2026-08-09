@@ -26,6 +26,7 @@ describe('DecksService', () => {
       upsert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
       then: undefined as any,

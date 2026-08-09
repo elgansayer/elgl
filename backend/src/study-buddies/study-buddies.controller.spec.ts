@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { StudyBuddiesController } from './study-buddies.controller';
 import { StudyBuddiesService } from './study-buddies.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { StudyBuddiesRateLimiterGuard } from './study-buddies-rate-limiter.guard';
 
 describe('StudyBuddiesController', () => {
   let controller: StudyBuddiesController;
@@ -32,6 +33,8 @@ describe('StudyBuddiesController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(StudyBuddiesRateLimiterGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 
