@@ -8,6 +8,7 @@ import { MatchmakingCrashReportService } from './matchmaking-crash-report.servic
 import { MatchmakingExceptionFilter } from './matchmaking-exception.filter';
 import { CircuitBreakerService } from '../escrow/circuit-breaker.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { RecommendationsRateLimiterGuard } from './recommendations-rate-limiter.guard';
 
 // Mock the sanitise helper to avoid ESM import issues with jsdom/dompurify
 jest.mock('./sanitise-recommendations.helper', () => ({
@@ -50,6 +51,8 @@ describe('RecommendationsController', () => {
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(RecommendationsRateLimiterGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 

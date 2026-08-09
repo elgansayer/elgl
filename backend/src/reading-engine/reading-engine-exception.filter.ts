@@ -4,81 +4,76 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ReadingEngineCrashReportService } from './reading-engine-crash-report.service';
+
+interface ReadingEngineErrorLog {
+  message: string;
+  name: string;
+  statusCode: number;
+  path: string;
+  method: string;
+  timestamp: string;
+  routePattern?: string;
+  resourceId?: string;
+}
 
 /**
- * Exception filter applied to all reading-engine endpoints.
- * Catches every exception, reports crashes through ReadingEngineCrashReportService,
- * and returns a structured JSON error response.
+ * Exception filter that intercepts unhandled exceptions in the reading-engine
+ * controller, normalises the response, and emits structured crash reports
+ * that can be ingested by Datadog / Prometheus.
  */
 @Catch()
 export class ReadingEngineExceptionFilter implements ExceptionFilter {
-  constructor(
-    private readonly crashReportService: ReadingEngineCrashReportService,
-  ) {}
+  private readonly logger = new Logger(ReadingEngineExceptionFilter.name);
 
-  async catch(exception: Error, host: ArgumentsHost): Promise<void> {
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-
-    const user = (request as Record<string, unknown>).user as
-      | { id: string }
-      | undefined;
 
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const httpExceptionResponse =
+    const message =
       exception instanceof HttpException
         ? exception.getResponse()
-        : undefined;
+        : exception instanceof Error
+          ? exception.message
+          : 'Internal server error';
 
-    const message =
-      typeof httpExceptionResponse === 'object' &&
-      httpExceptionResponse !== null &&
-      'message' in httpExceptionResponse
-        ? (httpExceptionResponse as Record<string, unknown>).message
-        : exception.message;
+    const extractedMessage =
+      typeof message === 'object' && message !== null
+        ? (message as Record<string, unknown>).message ?? JSON.stringify(message)
+        : String(message);
 
-    // Extract resource_id from request params or body
-    const body = request.body as Record<string, unknown> | undefined;
-    const params = request.params as Record<string, string> | undefined;
-    const resourceId =
-      (body?.resourceId as string) ||
-      (body?.resource_id as string) ||
-      params?.id ||
-      undefined;
+    const errorName =
+      exception instanceof Error ? exception.name : 'UnknownError';
 
-    // Report every non-4xx exception as a crash
-    if (status >= 500 || !(exception instanceof HttpException)) {
-      await this.crashReportService.reportCrash({
-        operation: `${request.method} ${request.path}`,
-        user_id: user?.id,
-        resource_id: resourceId,
-        error_type: exception.constructor.name,
-        error_message: exception.message,
-        stack_trace: exception.stack,
-        context: {
-          status_code: status,
-          request_body: body,
-          request_params: params,
-        },
-      });
-    }
+    const logPayload: ReadingEngineErrorLog = {
+      message: String(extractedMessage),
+      name: errorName,
+      statusCode: status,
+      path: request.url,
+      method: request.method,
+      timestamp: new Date().toISOString(),
+      resourceId: request.params?.id ?? undefined,
+    };
+
+    this.logger.error(
+      `[ReadingEngine] ${request.method} ${request.url} → ${status} (${errorName}): ${extractedMessage}`,
+      exception instanceof Error ? exception.stack : undefined,
+    );
 
     response.status(status).json({
       statusCode: status,
-      message: Array.isArray(message)
-        ? (message as string[]).join('; ')
-        : String(message),
-      timestamp: new Date().toISOString(),
+      error: errorName,
+      message: extractedMessage,
+      timestamp: logPayload.timestamp,
       path: request.url,
-      resource_id: resourceId,
     });
   }
 }

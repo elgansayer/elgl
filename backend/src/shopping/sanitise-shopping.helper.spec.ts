@@ -51,18 +51,16 @@ describe('sanitiseShoppingData', () => {
     expect(sanitiseShoppingData('<script>alert("xss")</script>')).toBe(
       'alert("xss")',
     );
-    expect(
-      sanitiseShoppingData('<a href="javascript:alert(1)">link</a>'),
-    ).toBe('link');
+    expect(sanitiseShoppingData('<a href="javascript:alert(1)">link</a>')).toBe(
+      'link',
+    );
   });
 
   it('should strip event handler attributes', () => {
     expect(sanitiseShoppingData('<div onclick="steal()">click</div>')).toBe(
       'click',
     );
-    expect(
-      sanitiseShoppingData('<img src=x onerror="alert(1)">'),
-    ).toBe('');
+    expect(sanitiseShoppingData('<img src=x onerror="alert(1)">')).toBe('');
   });
 
   it('should sanitise nested objects deeply', () => {
@@ -126,7 +124,7 @@ describe('sanitiseShoppingData', () => {
     const instance = new CustomClass();
     const result = sanitiseShoppingData(instance);
     expect(result).toBe(instance);
-    expect((result as CustomClass).a).toBe('<b>hello</b>');
+    expect(result.a).toBe('<b>hello</b>');
   });
 
   it('should handle checkout response with message', () => {

@@ -7,22 +7,30 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-virtual-gift-modal',
   imports: [TranslatePipe],
   template: `
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4">
+    <div
+      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="titleId"
+      [attr.aria-describedby]="subtitleId"
+      (keydown.escape)="closed.emit()"
+    >
       <div
         class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-lg w-full shadow-2xl border border-surface-100 space-y-4 sm:space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto"
       >
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 class="text-xl font-black text-text-primary flex items-center gap-2">
+            <h3 [id]="titleId" class="text-xl font-black text-text-primary flex items-center gap-2">
               <span>{{ 'giftModal.title' | t }}</span>
             </h3>
-            <p class="text-xs text-text-secondary">
+            <p [id]="subtitleId" class="text-xs text-text-secondary">
               {{ 'giftModal.subtitle' | t }}
             </p>
           </div>
           <button
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
+            [attr.aria-label]="'common.close' | t"
           >
             ✕
           </button>
@@ -32,12 +40,12 @@ import { TranslatePipe } from '../../services/translate.pipe';
           class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
         >
           <div class="flex items-center gap-2">
-            <span class="text-2xl">💰</span>
+            <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
               <span class="text-[10px] uppercase font-black text-amber-400 block">{{
                 'giftModal.balanceLabel' | t
               }}</span>
-              <span class="text-lg font-extrabold text-amber-950">{{
+              <span class="text-lg font-extrabold text-amber-950" aria-live="polite">{{
                 'giftModal.coinsValue' | t: { coins: effectiveBalance() }
               }}</span>
             </div>
@@ -62,7 +70,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   class="p-3.5 rounded-2xl border border-surface-100 bg-surface-300 flex items-center justify-between"
                 >
                   <div class="flex items-center gap-3">
-                    <span class="text-2xl">🪙</span>
+                    <span class="text-2xl" aria-hidden="true">🪙</span>
                     <div>
                       <span class="font-black text-sm text-text-primary">{{
                         'giftModal.package.' + pkg.id + '.title'
@@ -76,6 +84,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   <button
                     (click)="buyCoins(pkg.id)"
                     class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
+                    [attr.aria-label]="('giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name })"
                   >
                     {{ 'giftModal.priceLabel' | t: { ukp: pkg.price_ukp, usd: pkg.price_usd } }}
                   </button>
@@ -90,12 +99,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.selectPrompt' | t: { name: receiverName() }
             }}</span>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" role="radiogroup" [attr.aria-label]="'giftModal.giftListAria' | t">
               @for (gift of economyStore.catalog(); track gift.id) {
                 <button
                   type="button"
+                  role="radio"
                   (click)="selectGift(gift)"
                   [disabled]="gift.cost_coins > effectiveBalance()"
+                  [attr.aria-checked]="selectedGift()?.id === gift.id"
+                  [attr.aria-label]="('giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins })"
                   [class]="
                     'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
                     (selectedGift()?.id === gift.id
@@ -105,7 +117,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                         : 'border-surface-100 hover:border-primary/50 bg-surface-300 cursor-pointer')
                   "
                 >
-                  <span class="text-3xl block">{{ gift.icon }}</span>
+                  <span class="text-3xl block" aria-hidden="true">{{ gift.icon }}</span>
                   <span class="font-bold text-xs text-text-primary block truncate w-full">{{
                     gift.name
                   }}</span>
@@ -131,6 +143,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                 [disabled]="isSending()"
                 (click)="confirmSend()"
                 class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
+                [attr.aria-label]="('giftModal.sendAria' | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() })"
               >
                 {{
                   isSending()
@@ -151,6 +164,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
     </div>
   `,
+  styles: [`
+    :host {
+      display: block;
+    }
+  `],
 })
 export class VirtualGiftModalComponent {
   receiverId = input.required<string>();
@@ -164,6 +182,9 @@ export class VirtualGiftModalComponent {
   readonly showCoinPackages = signal(false);
   readonly isSending = signal(false);
   readonly deductedAmount = signal(0);
+
+  readonly titleId = 'virtual-gift-title-' + Math.random().toString(36).substring(2, 9);
+  readonly subtitleId = 'virtual-gift-subtitle-' + Math.random().toString(36).substring(2, 9);
 
   readonly effectiveBalance = computed(
     (): number => this.economyStore.coinsBalance() - this.deductedAmount(),
