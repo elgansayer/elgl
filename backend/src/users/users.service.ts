@@ -415,6 +415,10 @@ export class UsersService {
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
       silence_unknown_callers: false,
+      auto_play_voice_notes: false,
+      auto_download_media: false,
+      auto_download_wifi_only: false,
+      auto_download_preference: 'wifi',
       status_visibility: 'public',
       corrector_score: 0,
       incognito_visits: false,
@@ -544,6 +548,18 @@ export class UsersService {
 
     if (dto.serious_learner_mode !== undefined)
       updatePayload.serious_learner_mode = dto.serious_learner_mode;
+
+    if (dto.auto_play_voice_notes !== undefined)
+      updatePayload.auto_play_voice_notes = dto.auto_play_voice_notes;
+
+    if (dto.auto_download_media !== undefined)
+      updatePayload.auto_download_media = dto.auto_download_media;
+
+    if (dto.auto_download_wifi_only !== undefined)
+      updatePayload.auto_download_wifi_only = dto.auto_download_wifi_only;
+
+    if (dto.auto_download_preference !== undefined)
+      updatePayload.auto_download_preference = dto.auto_download_preference;
 
     if (dto.business_name !== undefined)
       updatePayload.business_name = dto.business_name;
