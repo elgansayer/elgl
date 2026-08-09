@@ -360,6 +360,23 @@
 
             <!-- Action Bar -->
             <div class="flex items-center gap-5 mt-4 text-text-secondary text-xs flex-wrap">
+<<<<<<< HEAD
+              <div class="flex items-center gap-1.5">
+                <button
+                  (click)="momentsStore.toggleLike(moment.id)"
+                  class="transition-colors"
+                  [class.text-red-500]="moment.is_liked_by_me"
+                  [attr.aria-label]="moment.is_liked_by_me ? ('moments.unlikeBtn' | t) : ('moments.likeBtn' | t)"
+                >
+                  <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
+                </button>
+                <button
+                  (click)="openLikedBy(moment)"
+                  class="font-bold hover:text-text-primary transition-colors"
+                  [attr.aria-label]="'moments.likedBy' | t"
+                >{{ moment.likes_count || 0 }}</button>
+              </div>
+=======
               <button
                 (click)="momentsStore.toggleLike(moment.id)"
                 class="flex items-center gap-1.5 transition-colors"
@@ -374,6 +391,7 @@
               >
                 <span>{{ moment.likes_count || 0 }}</span>
               </button>
+>>>>>>> origin/main
               <button
                 (click)="toggleComments(moment)"
                 class="flex items-center gap-1.5 hover:text-text-primary transition-colors"
@@ -579,9 +597,15 @@
   }
 
   <!-- Liked By Modal -->
+<<<<<<< HEAD
+  @if (activeLikedByMomentId()) {
+    <app-liked-by-modal
+      [momentId]="activeLikedByMomentId()!"
+=======
   @if (activeLikedByMomentId(); as likedMomentId) {
     <app-liked-by-modal
       [momentId]="likedMomentId"
+>>>>>>> origin/main
       (closeModal)="closeLikedBy()"
     ></app-liked-by-modal>
   }
