@@ -12,6 +12,7 @@ import { CentrifugoService } from '../chat/centrifugo.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { NlpService } from '../nlp/nlp.service';
 import { ChatLlmService } from '../chat/chat-llm.service';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
@@ -110,7 +111,10 @@ describe('AudioRoomsService', () => {
         {
           provide: NlpService,
           useValue: {
-            generateSessionSummary: jest.fn(),
+            generateSessionSummary: jest.fn().mockResolvedValue({
+              summary: 'Key topics covered:\nTest summary sentence.',
+              vocabulary: ['test', 'summary', 'vocabulary'],
+            }),
           },
         },
         {
@@ -128,6 +132,12 @@ describe('AudioRoomsService', () => {
                 vocabulary: ['greetings', 'holiday', 'culture'],
               }),
             ),
+          },
+        },
+        {
+          provide: CloudflareCacheService,
+          useValue: {
+            purgeByCacheTags: jest.fn().mockResolvedValue(true),
           },
         },
       ],
@@ -770,8 +780,9 @@ describe('AudioRoomsService', () => {
         raised_hands: [],
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_invited',
+        type: 'co_host_changed',
         target_user_id: 'user-2',
+        previous_co_host_id: null,
         room_id: 'room-1',
       });
       expect(result.id).toBe('room-1');
@@ -801,13 +812,9 @@ describe('AudioRoomsService', () => {
         raised_hands: [],
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_removed',
-        target_user_id: 'user-2',
-        room_id: 'room-1',
-      });
-      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
-        type: 'co_host_invited',
+        type: 'co_host_changed',
         target_user_id: 'user-3',
+        previous_co_host_id: 'user-2',
         room_id: 'room-1',
       });
       expect(result.id).toBe('room-1');

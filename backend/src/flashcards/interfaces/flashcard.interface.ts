@@ -12,4 +12,17 @@ export interface Flashcard {
   interval_days: number;
   next_review_at: string;
   created_at: string;
+  /** Indicates the flashcard data was computed locally in degraded mode (DB unavailable). */
+  degraded?: boolean;
+}
+
+export interface SrsHealthStatus {
+  healthy: boolean;
+  mode: 'full' | 'degraded';
+  degradedServices: string[];
+  lastSuccessfulSync: string | null;
+  cacheStats: {
+    cachedFlashcardCount: number;
+    pendingSyncCount: number;
+  };
 }

@@ -1,6 +1,11 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="null" class="app-button-icon" [attr.aria-label]="'common.back' | t" routerLink="/settings">
+    <button
+      (click)="(null)"
+      class="app-button-icon"
+      [attr.aria-label]="'common.back' | t"
+      routerLink="/settings"
+    >
       <span class="text-xl">←</span>
     </button>
     <h1 class="app-header-title">{{ 'settings.messageFilter.title' | t }}</h1>
@@ -17,7 +22,9 @@
         </div>
       }
       @if (saved()) {
-        <div class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
+        <div
+          class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400"
+        >
           {{ 'settings.messageFilter.saved' | t }}
         </div>
       }
@@ -46,7 +53,7 @@
             <input
               type="number"
               [value]="ageMin()"
-              (input)="ageMin.set($any($event.target).value ? Number($any($event.target).value) : null)"
+              (input)="ageMin.set(coerceNumber($any($event.target).value))"
               placeholder="0"
               min="0"
               max="150"
@@ -57,7 +64,7 @@
             <input
               type="number"
               [value]="ageMax()"
-              (input)="ageMax.set($any($event.target).value ? Number($any($event.target).value) : null)"
+              (input)="ageMax.set(coerceNumber($any($event.target).value))"
               placeholder="150"
               min="0"
               max="150"
