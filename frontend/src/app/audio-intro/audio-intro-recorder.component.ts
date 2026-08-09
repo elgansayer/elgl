@@ -15,7 +15,6 @@ import { AudioIntroService } from './audio-intro.service';
 
 @Component({
   selector: 'app-audio-intro-recorder',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './audio-intro-recorder.component.html',
   styleUrls: ['./audio-intro-recorder.component.scss'],

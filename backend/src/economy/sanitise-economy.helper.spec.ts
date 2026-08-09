@@ -56,18 +56,16 @@ describe('sanitiseEconomyData', () => {
     expect(sanitiseEconomyData('<script>alert("xss")</script>')).toBe(
       'alert("xss")',
     );
-    expect(
-      sanitiseEconomyData('<a href="javascript:alert(1)">link</a>'),
-    ).toBe('link');
+    expect(sanitiseEconomyData('<a href="javascript:alert(1)">link</a>')).toBe(
+      'link',
+    );
   });
 
   it('should strip event handler attributes', () => {
     expect(sanitiseEconomyData('<div onclick="steal()">click</div>')).toBe(
       'click',
     );
-    expect(
-      sanitiseEconomyData('<img src=x onerror="alert(1)">'),
-    ).toBe('');
+    expect(sanitiseEconomyData('<img src=x onerror="alert(1)">')).toBe('');
   });
 
   it('should sanitise nested objects deeply', () => {
@@ -116,7 +114,7 @@ describe('sanitiseEconomyData', () => {
     const instance = new CustomClass();
     const result = sanitiseEconomyData(instance);
     expect(result).toBe(instance);
-    expect((result as CustomClass).a).toBe('<b>hello</b>');
+    expect(result.a).toBe('<b>hello</b>');
   });
 
   it('should handle deeply nested arrays and objects', () => {

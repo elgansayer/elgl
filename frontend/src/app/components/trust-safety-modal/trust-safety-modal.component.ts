@@ -1,5 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
-import { CdkTrapFocus } from '@angular/cdk/a11y';
+import { Component, inject, input, output, signal, afterNextRender, ElementRef } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
@@ -9,33 +8,32 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
 
 @Component({
   selector: 'app-trust-safety-modal',
-  imports: [FormsModule, TranslatePipe, AppSkeletonLoaderComponent, CdkTrapFocus],
+  imports: [FormsModule, TranslatePipe, AppSkeletonLoaderComponent],
   template: `
     <div
       class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-      (click)="closed.emit()"
-      (keydown.escape)="closed.emit()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="trust-safety-title"
+      aria-describedby="trust-safety-description"
+      (keydown)="onKeydown($event)"
     >
       <div
         class="bg-surface-200 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-5 animate-fadeIn"
-        role="dialog"
-        aria-modal="true"
-        [attr.aria-labelledby]="titleId"
-        cdkTrapFocus
-        cdkTrapFocusAutoCapture
-        (click)="$event.stopPropagation()"
       >
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 [id]="titleId" class="text-xl font-black text-text-primary flex items-center gap-2">
+            <h3
+              id="trust-safety-title"
+              class="text-xl font-black text-text-primary flex items-center gap-2"
+            >
               <span>{{ 'safety.title' | t }}</span>
             </h3>
-            <p class="text-xs text-text-secondary">
+            <p id="trust-safety-description" class="text-xs text-text-secondary">
               {{ 'safety.subtitle' | t: { name: targetName() } }}
             </p>
           </div>
           <button
-            type="button"
             (click)="closed.emit()"
             class="text-text-muted hover:text-text-secondary text-lg font-bold"
             [attr.aria-label]="'safety.closeBtn' | t"
@@ -44,12 +42,15 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
           </button>
         </div>
 
-        <div class="flex rounded-2xl bg-surface-100 p-1 gap-1" role="tablist" [attr.aria-label]="'safety.title' | t">
+        <div class="flex rounded-2xl bg-surface-100 p-1 gap-1" role="tablist" [attr.aria-label]="'safety.tabListLabel' | t">
           <button
-            type="button"
-            (click)="mode = 'report'"
-            [attr.aria-selected]="mode === 'report'"
+            id="trust-safety-tab-report"
             role="tab"
+            [attr.aria-selected]="mode === 'report'"
+            [attr.aria-controls]="'trust-safety-panel-report'"
+            [attr.tabindex]="mode === 'report' ? 0 : -1"
+            (click)="switchTab('report')"
+            (keydown)="onTabKeydown($event, 'report')"
             [class]="
               'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
               (mode === 'report' ? 'bg-surface-200 text-primary shadow-sm' : 'text-text-secondary')
@@ -58,10 +59,13 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
             {{ 'safety.tabReport' | t }}
           </button>
           <button
-            type="button"
-            (click)="mode = 'block'"
-            [attr.aria-selected]="mode === 'block'"
+            id="trust-safety-tab-block"
             role="tab"
+            [attr.aria-selected]="mode === 'block'"
+            [attr.aria-controls]="'trust-safety-panel-block'"
+            [attr.tabindex]="mode === 'block' ? 0 : -1"
+            (click)="switchTab('block')"
+            (keydown)="onTabKeydown($event, 'block')"
             [class]="
               'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
               (mode === 'block' ? 'bg-red-600 text-white shadow-sm' : 'text-text-secondary')
@@ -72,33 +76,39 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
         </div>
 
         @if (mode === 'report') {
-          <div class="space-y-3 text-xs" role="tabpanel" [attr.aria-label]="'safety.tabReport' | t">
-            @if (categoriesLoading()) {
-              <div class="space-y-2" role="status" [attr.aria-label]="'common.loading' | t">
-                <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
-                <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
-              </div>
-            } @else {
-              <div>
-                <label for="report-reason-select" class="font-bold text-text-primary block mb-1 ps-1"
-                  >{{ 'safety.reasonLabel' | t }}</label
-                >
-                <select
-                  id="report-reason-select"
-                  [(ngModel)]="reportReason"
-                  class="w-full px-3 py-2 border rounded-xl bg-surface-300 font-medium"
-                  [attr.aria-describedby]="'report-reason-description'"
-                >
-                  @for (cat of reportCategories(); track cat.value) {
-                    <option [value]="cat.value">{{ cat.label }}</option>
-                  }
-                </select>
-              </div>
-            }
+          <div
+            id="trust-safety-panel-report"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="trust-safety-tab-report"
+            class="space-y-3 text-xs"
+          >
+          @if (categoriesLoading()) {
+            <div class="space-y-2" aria-busy="true" [attr.aria-label]="'safety.categoriesLoading' | t">
+              <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
+              <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
+            </div>
+          } @else {
             <div>
-              <label for="report-details-textarea" class="font-bold text-text-primary block mb-1 ps-1"
-                >{{ 'safety.detailsLabel' | t }}</label
+              <label for="report-reason-select" class="font-bold text-text-primary block mb-1 ps-1"
+                >{{ 'safety.reasonLabel' | t }}</label
               >
+              <select
+                id="report-reason-select"
+                [(ngModel)]="reportReason"
+                aria-required="true"
+                class="w-full px-3 py-2 border rounded-xl bg-surface-300 font-medium"
+              >
+                @for (cat of reportCategories(); track cat.value) {
+                  <option [value]="cat.value">{{ cat.label }}</option>
+                }
+              </select>
+            </div>
+          }
+          <div>
+            <label for="report-details-textarea" class="font-bold text-text-primary block mb-1 ps-1"
+              >{{ 'safety.detailsLabel' | t }}</label
+            >
               <textarea
                 id="report-details-textarea"
                 [(ngModel)]="reportDetails"
@@ -112,10 +122,12 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
 
         @if (mode === 'block') {
           <div
-            class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs"
+            id="trust-safety-panel-block"
             role="tabpanel"
-            [attr.aria-label]="'safety.tabBlock' | t"
+            tabindex="0"
+            aria-labelledby="trust-safety-tab-block"
           >
+            <div class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs" role="alert">
             <span class="font-bold text-red-900 block"
               >{{ 'safety.blockWarning' | t: { name: targetName() } }}</span
             >
@@ -125,11 +137,11 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
               <li>{{ 'safety.blockList3' | t }}</li>
             </ul>
           </div>
+          </div>
         }
 
         <div class="flex justify-end gap-3 pt-2 border-t border-surface-100">
           <button
-            type="button"
             (click)="closed.emit()"
             class="px-4 py-2 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs"
           >
@@ -137,18 +149,18 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
           </button>
           @if (mode === 'report') {
             <button
-              type="button"
               (click)="submitReport()"
               class="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold text-xs shadow"
+              [attr.aria-label]="'safety.submitReportAria' | t: { name: targetName() }"
             >
               {{ 'safety.submitReportBtn' | t }}
             </button>
           }
           @if (mode === 'block') {
             <button
-              type="button"
               (click)="confirmBlock()"
               class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-extrabold text-xs shadow"
+              [attr.aria-label]="'safety.confirmBlockAria' | t: { name: targetName() }"
             >
               {{ 'safety.confirmBlockBtn' | t }}
             </button>
@@ -159,13 +171,13 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
   `,
 })
 export class TrustSafetyModalComponent {
-  readonly titleId = 'trust-safety-modal-title';
   targetId = input.required<string>();
   targetName = input.required<string>();
   closed = output<void>();
 
   readonly store = inject(EconomyStore);
   private readonly safetyService = inject(SafetyService);
+  private readonly elementRef = inject(ElementRef);
   mode: 'report' | 'block' = 'report';
   reportReason = 'harassment';
   reportDetails = '';
@@ -181,6 +193,18 @@ export class TrustSafetyModalComponent {
 
   constructor() {
     this.loadCategories();
+
+    afterNextRender(() => {
+      this.focusInitialElement();
+    });
+  }
+
+  private focusInitialElement(): void {
+    const el = this.elementRef.nativeElement as HTMLElement;
+    const closeBtn = el.querySelector('button[aria-label]') as HTMLElement;
+    if (closeBtn) {
+      closeBtn.focus();
+    }
   }
 
   private async loadCategories(): Promise<void> {
@@ -194,6 +218,40 @@ export class TrustSafetyModalComponent {
       // Keep default categories
     } finally {
       this.categoriesLoading.set(false);
+    }
+  }
+
+  switchTab(tab: 'report' | 'block'): void {
+    this.mode = tab;
+  }
+
+  onTabKeydown(event: KeyboardEvent, currentTab: 'report' | 'block'): void {
+    const tabs: Array<'report' | 'block'> = ['report', 'block'];
+    const currentIndex = tabs.indexOf(currentTab);
+
+    let newIndex = currentIndex;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      newIndex = (currentIndex + 1) % tabs.length;
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      newIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    }
+
+    if (newIndex !== currentIndex) {
+      this.mode = tabs[newIndex];
+      const el = this.elementRef.nativeElement as HTMLElement;
+      const newTabBtn = el.querySelector('#trust-safety-tab-' + tabs[newIndex]) as HTMLElement;
+      if (newTabBtn) {
+        newTabBtn.focus();
+      }
+    }
+  }
+
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closed.emit();
     }
   }
 

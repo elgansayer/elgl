@@ -1,12 +1,13 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, resource, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AdminService } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, SanitiseHtmlPipe],
   template: `
 <<<<<<< HEAD
     <div class="p-4">
@@ -35,7 +36,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
       <ul role="list">
         @for (user of users(); track user.id) {
           <li>
-            <span>{{ user.display_name ?? user.id }}</span>
+            <span>{{ (user.display_name ?? user.id) | sanitiseHtml }}</span>
             <button
               type="button"
               [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
@@ -63,16 +64,16 @@ import { showToast, showErrorToast } from '../../services/toast.service';
     `,
   ],
 })
-export class AdminActionsComponent implements OnInit {
+export class AdminActionsComponent {
   private readonly adminService = inject(AdminService);
   private readonly i18n = inject(I18nService);
 
-  readonly users = signal<AdminUserSummary[]>([]);
+  private readonly usersResource = resource({
+    params: () => ({ page: 1, pageSize: 10, search: '' }),
+    loader: ({ params }) => this.adminService.listUsers(params.search, params.page, params.pageSize),
+  });
 
-  async ngOnInit() {
-    const result = await this.adminService.listUsers('', 1, 10);
-    this.users.set(result.users);
-  }
+  readonly users = computed(() => this.usersResource.value()?.users ?? []);
 
   async ban(userId: string) {
     try {

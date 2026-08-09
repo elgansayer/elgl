@@ -1,9 +1,13 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
+import { SafetyCacheInvalidationService } from '../safety/safety-cache-invalidation.service';
 import { ArchiveRequestDto } from './dto/archive-request.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
-import { scrubCoinPurchasesForArchive } from '../economy/sanitise-economy.helper';
+import {
+  scrubCoinPurchasesForArchive,
+  scrubEscrowTransactionsForArchive,
+} from '../economy/sanitise-economy.helper';
 
 @Injectable()
 export class PrivacyService {
@@ -12,6 +16,7 @@ export class PrivacyService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
+    private readonly safetyCacheService: SafetyCacheInvalidationService,
   ) {}
 
   async requestArchive(userId: string, dto: ArchiveRequestDto): Promise<void> {
@@ -70,12 +75,18 @@ export class PrivacyService {
     const deletionDate = new Date();
     deletionDate.setDate(deletionDate.getDate() + 30); // 30-day grace period
 
+    // GDPR: Immediately scrub location data and opt out of discovery
     const { error } = await supabase
       .from('users')
       .update({
         scheduled_for_deletion_at: deletionDate.toISOString(),
         deletion_requested_at: new Date().toISOString(),
         is_deletion_pending: true,
+        privacy_hide_from_search: true,
+        location: null,
+        mock_location: null,
+        mock_country: null,
+        mock_city: null,
       })
       .eq('id', userId);
 
@@ -86,8 +97,11 @@ export class PrivacyService {
       throw new BadRequestException('Failed to initiate account deletion');
     }
 
+    // Invalidate all Redis caches that may contain this user's data
+    await this.safetyCacheService.invalidateUserCaches(userId);
+
     this.logger.log(
-      `Deletion pending for user ${userId}, scheduled for ${deletionDate.toISOString()}`,
+      `Deletion pending for user ${userId}, scheduled for ${deletionDate.toISOString()}. Location data scrubbed, discovery caches invalidated.`,
     );
   }
 
@@ -120,11 +134,11 @@ export class PrivacyService {
   ): Promise<Record<string, unknown>> {
     const supabase = this.supabaseService.getClient();
 
-    // 1) Basic profile
+    // 1) Basic profile (includes location data for GDPR right to access)
     const { data: userProfile } = await supabase
       .from('users')
       .select(
-        'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, created_at',
+        'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, privacy_hide_from_search, privacy_hide_location, is_deletion_pending, created_at',
       )
       .eq('id', userId)
       .single();
@@ -190,6 +204,30 @@ export class PrivacyService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
+    // 7b) Escrow transactions (payer and payee)
+    const { data: escrowAsPayer } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payer_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data: escrowAsPayee } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('payee_id', userId)
+      .order('created_at', { ascending: false });
+
+    const escrowTransactions = [
+      ...(escrowAsPayer ?? []).map((e: Record<string, unknown>) => ({
+        ...e,
+        role: 'payer',
+      })),
+      ...(escrowAsPayee ?? []).map((e: Record<string, unknown>) => ({
+        ...e,
+        role: 'payee',
+      })),
+    ];
+
     // 8) Gift transactions (sent and received)
     const { data: sentGifts } = await supabase
       .from('gift_transactions')
@@ -214,12 +252,26 @@ export class PrivacyService {
       })),
     ];
 
-    // 9) Sticker pack ownership
+    // 10) Sticker pack ownership
     const { data: userStickerPacks } = await supabase
       .from('user_sticker_packs')
       .select('*')
       .eq('user_id', userId)
       .order('unlocked_at', { ascending: false });
+
+    // 11) LingQ Reading Engine: reading progress
+    const { data: readingProgress } = await supabase
+      .from('reading_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    // 12) LingQ Reading Engine: resources authored by the user
+    const { data: readingResources } = await supabase
+      .from('reading_resources')
+      .select('*')
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false });
 
     return {
       export_generated_at: new Date().toISOString(),
@@ -232,8 +284,14 @@ export class PrivacyService {
       deck_flashcards: userDeckFlashcards,
       favourites: userFavourites ?? [],
       coin_purchases: scrubCoinPurchasesForArchive(coinPurchases ?? []),
+      escrow_transactions: scrubEscrowTransactionsForArchive(
+        escrowTransactions,
+        userId,
+      ),
       gift_transactions: giftTransactions ?? [],
       user_sticker_packs: userStickerPacks ?? [],
+      reading_progress: readingProgress ?? null,
+      reading_resources: readingResources ?? [],
     };
   }
 }
