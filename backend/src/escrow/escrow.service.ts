@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { SupabaseService } from '../supabase/supabase.service';
+import { EscrowPayment } from './interfaces/escrow-payment.interface';
+import { CreateEscrowPaymentDto } from './dto/create-escrow-payment.dto';
+import { UpdateEscrowPaymentDto } from './dto/update-escrow-payment.dto';
+=======
 import {
   BadRequestException,
   ConflictException,
@@ -7,33 +14,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
-<<<<<<< HEAD
-import { MonetisationService } from '../monetisation/monetisation.service';
-import { RetryService } from '../common/retry/retry.service';
+import { CircuitBreakerService } from './circuit-breaker.service';
+import { MetricsService } from '../metrics/metrics.service';
 import {
   EscrowTransaction,
   EscrowStatus,
+<<<<<<< HEAD
   CreateEscrowResult,
   ReleaseEscrowResult,
   RefundEscrowResult,
-  ReconcileEscrowResult,
 } from './interfaces/escrow.interface';
 import { CreateEscrowDto } from './dto/escrow.dto';
-
-/** Maximum items per page to bound payload sizes (audit #2396). */
-const MAX_LIST_LIMIT = 50;
-/** Expiry cleanup interval in ms (6 hours). */
-const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
-/** Max records to process per expiry cleanup batch. */
-const CLEANUP_BATCH_SIZE = 100;
-/** Max retry attempts for coin operations during graceful degradation. */
-const COIN_OP_MAX_RETRIES = 3;
+>>>>>>> origin/main
 =======
-import { CircuitBreakerService } from './circuit-breaker.service';
-import {
-  EscrowTransaction,
-  EscrowStatus,
   EscrowHoldResult,
   EscrowReleaseResult,
 } from './interfaces/escrow-transaction.interface';
@@ -52,30 +47,40 @@ const RETRY_CONFIG = {
 const SERVICE_NAME = 'escrow';
 >>>>>>> origin/main
 
+/** Redis cache key prefixes for escrow read-through caching. */
+const ESCROW_DETAIL_PREFIX = 'escrow:detail:';
+const ESCROW_USER_LIST_PREFIX = 'escrow:user_list:';
+
+/** TTL (seconds) for escrow detail cache entries. */
+const ESCROW_DETAIL_TTL = 120;
+/** TTL (seconds) for escrow user list cache entries. */
+const ESCROW_USER_LIST_TTL = 60;
+
 @Injectable()
 export class EscrowService {
   private readonly logger = new Logger(EscrowService.name);
 
+<<<<<<< HEAD
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async createPayment(
+    payerId: string,
+    dto: CreateEscrowPaymentDto,
+  ): Promise<EscrowPayment> {
+    if (payerId === dto.payee_id) {
+      throw new BadRequestException('Payer and payee must be different users');
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('escrow_payments')
+=======
   constructor(
     private readonly supabaseService: SupabaseService,
-<<<<<<< HEAD
-    private readonly monetisationService: MonetisationService,
-    private readonly retryService: RetryService,
-  ) {
-    // Periodic cleanup of stale held escrows and degraded escrows
-    this.cleanupTimer = setInterval(() => {
-      this.cleanupExpiredEscrows().catch((err: unknown) => {
-        this.logger.error(
-          `Escrow expiry cleanup failed: ${(err as Error)?.message ?? 'unknown'}`,
-        );
-      });
-    }, CLEANUP_INTERVAL_MS);
-  }
-=======
     private readonly circuitBreaker: CircuitBreakerService,
+    private readonly crashReportService: CrashReportService,
     private readonly configService: ConfigService,
+    private readonly metricsService: MetricsService,
   ) {}
->>>>>>> origin/main
 
   /**
    * Computes exponential backoff delay.
@@ -92,16 +97,7 @@ export class EscrowService {
   }
 
   /**
-<<<<<<< HEAD
-   * Create an escrow transaction: lock the payer's coins until the payee
-   * fulfills their obligation or the escrow is refunded.
-   *
-   * Idempotency: if an idempotency_key is provided, duplicate submissions
-   * for the same payer+key will return the existing escrow instead of
-   * creating a duplicate.
-=======
    * Maps a raw database row to a safe EscrowTransactionResponse.
->>>>>>> origin/main
    */
   private toResponse(
     row: EscrowTransaction,
@@ -157,12 +153,18 @@ export class EscrowService {
       degradedMarker,
     );
 
+    const transactionId =
+      typeof result === 'object' && result !== null && 'id' in result
+        ? String(result.id)
+        : '';
+
+    if (!degradedMarker.degraded && transactionId) {
+      this.invalidateEscrowCaches(transactionId, payerId, dto.payee_id);
+    }
+
     return sanitiseEscrowData({
       success: true,
-      transaction_id:
-        typeof result === 'object' && result !== null && 'id' in result
-          ? String(result.id)
-          : '',
+      transaction_id: transactionId,
       degraded: degradedMarker.degraded,
       fallback_reason: degradedMarker.reason,
     });
@@ -192,41 +194,8 @@ export class EscrowService {
       );
     }
 
-<<<<<<< HEAD
-    const supabase = this.supabaseService.getClient();
-
-    // Idempotency check: if key provided, check for existing transaction
-    if (dto.idempotency_key) {
-      const { data: existing } = await supabase
-        .from('escrow_transactions')
-        .select(
-          'id, payer_id, payee_id, amount_coins, status, created_at, updated_at',
-        )
-        .eq('payer_id', payerId)
-        .eq('reference_id', `idem-${dto.idempotency_key}`)
-        .maybeSingle();
-
-      if (existing) {
-        this.logger.log(
-          `Idempotent escrow creation: returning existing escrow ${existing.id} for key ${dto.idempotency_key}`,
-        );
-
-        const balance = await this.monetisationService.getCoinsBalance(payerId);
-        return {
-          id: existing.id,
-          status: existing.status,
-          amount_coins: existing.amount_coins,
-          payer_balance: balance,
-        };
-      }
-    }
-
-    // Verify payee exists
-    const { data: payee, error: payeeError } = await supabase
-=======
     // Deduct coins from payer
     const { error: deductError } = await supabase
->>>>>>> origin/main
       .from('users')
       .update({ coins_balance: payerBalance - dto.amount_coins })
       .eq('id', payerId);
@@ -245,14 +214,10 @@ export class EscrowService {
       dto.amount_coins,
     );
 
-    // Build reference_id: use idempotency_key if provided, else client reference
-    const idemRef = dto.idempotency_key
-      ? `idem-${dto.idempotency_key}`
-      : (dto.reference_id ?? null);
-
     // Create the escrow record
     const { data: escrow, error: escrowError } = await supabase
       .from('escrow_transactions')
+>>>>>>> origin/main
 =======
     // Create escrow transaction
     const now = new Date().toISOString();
@@ -263,232 +228,231 @@ export class EscrowService {
         payer_id: payerId,
         payee_id: dto.payee_id,
         amount_coins: dto.amount_coins,
-        status: 'held' as EscrowStatus,
 <<<<<<< HEAD
-        description: dto.description ?? null,
-        reference_id: idemRef,
+        description: dto.description,
+        status: 'pending',
+        terms_locked: false,
+        payer_approved: false,
+        payee_approved: false,
       })
-      .select(
-        'id, payer_id, payee_id, amount_coins, status, description, reference_id, created_at, updated_at',
-      )
+      .select()
       .single();
 
-    if (escrowError || !escrow) {
-      // Refund coins if escrow record creation fails - with retry for resilience
-      this.logger.error(
-        `Failed to create escrow record: ${escrowError?.message}, refunding coins to payer ${payerId}`,
-      );
-      try {
-        await this.retryService.withRetry(
-          () => this.monetisationService.addCoins(payerId, dto.amount_coins),
-          { maxRetries: COIN_OP_MAX_RETRIES, baseDelayMs: 500 },
-        );
-      } catch (refundErr: unknown) {
-        this.logger.error(
-          `CRITICAL: Failed to refund coins after escrow insert failure for payer ${payerId}: ${(refundErr as Error)?.message ?? 'unknown'}`,
-        );
-      }
-      throw new BadRequestException('Failed to create escrow transaction.');
+    if (error) {
+      this.logger.error('Failed to create escrow payment', error);
+      throw new BadRequestException('Failed to create escrow payment');
     }
 
-    this.logger.log(
-      `Escrow created: ${escrow.id}, amount=${dto.amount_coins} coins, payer=${payerId}, payee=${dto.payee_id}`,
-    );
-
-    return {
-      id: escrow.id,
-      status: escrow.status,
-      amount_coins: escrow.amount_coins,
-      payer_balance: payerBalance,
-    };
+    this.logger.log(`Escrow payment created: ${data.id}`);
+    return data as EscrowPayment;
   }
 
-  /**
-   * Release escrowed coins to the payee. Only the payer can release.
-   *
-   * Graceful degradation: the escrow is first set to 'release_pending',
-   * then the coin transfer is attempted with retries. If the transfer
-   * ultimately fails, the escrow stays in 'release_pending' for
-   * reconciliation rather than silently losing coins.
-   */
-  async releaseEscrow(
-    userId: string,
-    escrowId: string,
-  ): Promise<ReleaseEscrowResult> {
-    const escrow = await this.findEscrowOrThrow(escrowId);
-
-    if (escrow.payer_id !== userId) {
-      throw new ForbiddenException(
-        'Only the payer can release escrowed funds.',
-      );
-    }
-
-    if (escrow.status === 'release_pending') {
-      return this.finaliseReleaseEscrow(escrow);
-    }
-
-    if (escrow.status !== 'held') {
-      throw new ConflictException(
-        `Escrow is not in 'held' status (current: ${escrow.status}).`,
-      );
-    }
-
-    return this.performReleaseWithDegradation(escrow);
-  }
-
-  /**
-   * Refund escrowed coins back to the payer. Only the payer can refund.
-   *
-   * Graceful degradation: the escrow is first set to 'refund_pending',
-   * then the coin return is attempted with retries. If the return
-   * ultimately fails, the escrow stays in 'refund_pending' for
-   * reconciliation rather than silently losing coins.
-   */
-  async refundEscrow(
-    userId: string,
-    escrowId: string,
-  ): Promise<RefundEscrowResult> {
-    const escrow = await this.findEscrowOrThrow(escrowId);
-
-    if (escrow.payer_id !== userId) {
-      throw new ForbiddenException('Only the payer can refund escrowed funds.');
-    }
-
-    if (escrow.status === 'refund_pending') {
-      return this.finaliseRefundEscrow(escrow);
-    }
-
-    if (escrow.status !== 'held') {
-      throw new ConflictException(
-        `Escrow is not in 'held' status (current: ${escrow.status}).`,
-      );
-    }
-
-    return this.performRefundWithDegradation(escrow);
-  }
-
-  /**
-   * Reconcile an escrow that is stuck in a degraded state (release_pending
-   * or refund_pending). Returns the escrow to a consistent terminal state
-   * by retrying the failed coin operation.
-   *
-   * Both payer and payee can trigger reconciliation.
-   */
-  async reconcileEscrow(
-    userId: string,
-    escrowId: string,
-  ): Promise<ReconcileEscrowResult> {
-    const escrow = await this.findEscrowOrThrow(escrowId);
-
-    if (escrow.payer_id !== userId && escrow.payee_id !== userId) {
-      throw new ForbiddenException(
-        'You are not a participant in this escrow transaction.',
-      );
-    }
-
-    if (escrow.status === 'release_pending') {
-      const result = await this.finaliseReleaseEscrow(escrow);
-      return {
-        id: result.id,
-        status: result.status,
-        amount_coins: result.amount_coins,
-        reconciliation: 'completed',
-      };
-    }
-
-    if (escrow.status === 'refund_pending') {
-      const result = await this.finaliseRefundEscrow(escrow);
-      return {
-        id: result.id,
-        status: result.status,
-        amount_coins: result.amount_coins,
-        reconciliation: 'completed',
-      };
-    }
-
-    return {
-      id: escrow.id,
-      status: escrow.status,
-      amount_coins: escrow.amount_coins,
-      reconciliation: 'already_consistent',
-    };
-  }
-
-  /**
-   * Get a single escrow transaction by ID. The caller must be
-   * either the payer or the payee.
-   */
-  async getEscrow(
-    userId: string,
-    escrowId: string,
-  ): Promise<EscrowTransaction> {
-    const escrow = await this.findEscrowOrThrow(escrowId);
-
-    if (escrow.payer_id !== userId && escrow.payee_id !== userId) {
-      throw new ForbiddenException(
-        'You are not a participant in this escrow transaction.',
-      );
-    }
-
-    return escrow;
-  }
-
-  /**
-   * List escrow transactions for the calling user as either payer or payee.
-   * Payload size control (#2396): hard-capped at MAX_LIST_LIMIT items per page.
-   */
-  async listEscrows(
-    userId: string,
-    limit: number = 20,
-    offset: number = 0,
-  ): Promise<{ escrows: EscrowTransaction[]; total: number }> {
-    const cappedLimit = Math.min(Math.max(limit, 1), MAX_LIST_LIMIT);
-    const supabase = this.supabaseService.getClient();
-
-    const { data, error, count } = await supabase
-      .from('escrow_transactions')
-      .select('*', { count: 'exact' })
+  async getPayment(paymentId: string, userId: string): Promise<EscrowPayment> {
+    const { data, error } = await this.supabase.client
+      .from('escrow_payments')
+      .select()
+      .eq('id', paymentId)
       .or(`payer_id.eq.${userId},payee_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + cappedLimit - 1);
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException('Escrow payment not found');
+    }
+
+    return data as EscrowPayment;
+  }
+
+  async getUserPayments(userId: string): Promise<EscrowPayment[]> {
+    const { data, error } = await this.supabase.client
+      .from('escrow_payments')
+      .select()
+      .or(`payer_id.eq.${userId},payee_id.eq.${userId}`)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      throw new BadRequestException('Failed to fetch escrow transactions.');
+      this.logger.error('Failed to fetch escrow payments', error);
+      return [];
     }
 
-    return {
-      escrows: data ?? [],
-      total: count ?? 0,
-    };
+    return (data ?? []) as EscrowPayment[];
   }
 
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
+  async fundPayment(paymentId: string, userId: string): Promise<EscrowPayment> {
+    const payment = await this.getPayment(paymentId, userId);
 
-  private async findEscrowOrThrow(
-    escrowId: string,
-  ): Promise<EscrowTransaction> {
-    const supabase = this.supabaseService.getClient();
+    if (payment.payer_id !== userId) {
+      throw new BadRequestException('Only the payer can fund this payment');
+    }
+    if (payment.status !== 'pending') {
+      throw new BadRequestException('Payment can only be funded when pending');
+    }
 
-    const { data, error } = await supabase
-      .from('escrow_transactions')
+    const { data, error } = await this.supabase.client
+      .from('escrow_payments')
+      .update({ status: 'funded', terms_locked: true, updated_at: new Date().toISOString() })
+      .eq('id', paymentId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Failed to fund escrow payment', error);
+      throw new BadRequestException('Failed to fund escrow payment');
+    }
+
+    this.logger.log(`Escrow payment funded: ${paymentId}`);
+    return data as EscrowPayment;
+  }
+
+  async approveDelivery(paymentId: string, userId: string): Promise<EscrowPayment> {
+    const payment = await this.getPayment(paymentId, userId);
+
+    if (payment.status !== 'funded') {
+      throw new BadRequestException('Payment must be funded to approve delivery');
+    }
+
+    if (payment.payer_id === userId) {
+      const { data, error } = await this.supabase.client
+        .from('escrow_payments')
+        .update({ payer_approved: true, updated_at: new Date().toISOString() })
+        .eq('id', paymentId)
+        .select()
+        .single();
+      if (error) throw new BadRequestException('Failed to approve delivery');
+      this.logger.log(`Payer approved delivery for escrow: ${paymentId}`);
+      return data as EscrowPayment;
+    }
+
+    if (payment.payee_id === userId) {
+      const { data, error } = await this.supabase.client
+        .from('escrow_payments')
+        .update({ payee_approved: true, status: 'delivered', updated_at: new Date().toISOString() })
+        .eq('id', paymentId)
+        .select()
+        .single();
+      if (error) throw new BadRequestException('Failed to approve delivery');
+      this.logger.log(`Payee marked delivered for escrow: ${paymentId}`);
+      return data as EscrowPayment;
+    }
+
+    throw new BadRequestException('You are not a party to this payment');
+  }
+
+  async completePayment(paymentId: string, userId: string): Promise<EscrowPayment> {
+    const payment = await this.getPayment(paymentId, userId);
+
+    if (payment.payer_id !== userId) {
+      throw new BadRequestException('Only the payer can complete this payment');
+    }
+    if (payment.status !== 'delivered') {
+      throw new BadRequestException('Payment must be delivered before completion');
+    }
+
+    const now = new Date().toISOString();
+    const { data, error } = await this.supabase.client
+      .from('escrow_payments')
+      .update({ status: 'completed', payer_approved: true, completed_at: now, updated_at: now })
+      .eq('id', paymentId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Failed to complete escrow payment', error);
+      throw new BadRequestException('Failed to complete escrow payment');
+    }
+
+    this.logger.log(`Escrow payment completed: ${paymentId}`);
+    return data as EscrowPayment;
+  }
+
+  async raiseDispute(
+    paymentId: string,
+    userId: string,
+    reason: string,
+  ): Promise<EscrowPayment> {
+    const payment = await this.getPayment(paymentId, userId);
+
+    if (!['funded', 'delivered'].includes(payment.status)) {
+      throw new BadRequestException('Can only dispute funded or delivered payments');
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('escrow_payments')
+      .update({
+        status: 'disputed',
+        dispute_reason: reason,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', paymentId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Failed to raise dispute', error);
+      throw new BadRequestException('Failed to raise dispute');
+    }
+
+    this.logger.log(`Escrow payment disputed: ${paymentId}`);
+    return data as EscrowPayment;
+  }
+
+  async cancelPayment(paymentId: string, userId: string): Promise<EscrowPayment> {
+    const payment = await this.getPayment(paymentId, userId);
+
+    if (!['pending', 'funded'].includes(payment.status)) {
+      throw new BadRequestException('Can only cancel pending or funded payments');
+    }
+    if (payment.payer_id !== userId && payment.payee_id !== userId) {
+      throw new BadRequestException('You are not a party to this payment');
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('escrow_payments')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', paymentId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Failed to cancel escrow payment', error);
+      throw new BadRequestException('Failed to cancel escrow payment');
+    }
+
+    this.logger.log(`Escrow payment cancelled: ${paymentId}`);
+    return data as EscrowPayment;
 =======
+        status: 'held' as EscrowStatus,
         reason: dto.reason,
         metadata: dto.metadata || {},
         held_at: now,
         retry_count: 0,
       } as never)
->>>>>>> origin/main
       .select('*')
       .single();
 
     if (txError || !txRow) {
-      // Refund the deducted coins on failure
-      await supabase
-        .from('users')
-        .update({ coins_balance: payerBalance })
-        .eq('id', payerId);
+      // Refund the deducted coins on failure -- critical rollback boundary
+      try {
+        await supabase
+          .from('users')
+          .update({ coins_balance: payerBalance })
+          .eq('id', payerId);
+      } catch (rollbackError) {
+        await this.crashReportService.reportCrash({
+          operation: 'holdCoins_rollback',
+          user_id: payerId,
+          error_type: 'RollbackFailure',
+          error_message: `Failed to rollback coin deduction after escrow creation failure: ${String(rollbackError)}`,
+          context: {
+            payer_id: payerId,
+            payee_id: dto.payee_id,
+            amount: dto.amount_coins,
+            original_balance: payerBalance,
+          },
+        });
+        throw new InternalServerErrorException(
+          'Critical error: coin deduction could not be rolled back. Please contact support.',
+        );
+      }
       this.logger.error(
         `Failed to create escrow transaction: ${txError?.message}`,
       );
@@ -501,189 +465,15 @@ export class EscrowService {
       `Escrow hold: ${dto.amount_coins} coins from ${payerId} to ${dto.payee_id} for "${dto.reason}"`,
     );
 
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowCreated(dto.amount_coins);
+
     return txRow;
   }
 
   /**
-<<<<<<< HEAD
-   * Phase 1 of release: atomically transition from 'held' to 'release_pending'.
-   * Then attempt the coin transfer. On success: finalise to 'released'.
-   * On failure: leave in 'release_pending' for reconciliation.
-   */
-  private async performReleaseWithDegradation(
-    escrow: EscrowTransaction,
-  ): Promise<ReleaseEscrowResult> {
-    const supabase = this.supabaseService.getClient();
-    const now = new Date().toISOString();
-
-    // Atomic transition to pending state
-    const { error: updateError } = await supabase
-      .from('escrow_transactions')
-      .update({
-        status: 'release_pending' as EscrowStatus,
-        released_at: now,
-        updated_at: now,
-      })
-      .eq('id', escrow.id)
-      .eq('status', 'held');
-
-    if (updateError) {
-      throw new BadRequestException(
-        'Failed to transition escrow to release pending state.',
-      );
-    }
-
-    escrow.status = 'release_pending';
-    return this.finaliseReleaseEscrow(escrow);
-  }
-
-  /**
-   * Finalise a release_pending escrow by executing (or retrying) the coin
-   * transfer to the payee. On success, updates to 'released'. On failure,
-   * leaves in 'release_pending' so reconciliation can continue later.
-   */
-  private async finaliseReleaseEscrow(
-    escrow: EscrowTransaction,
-  ): Promise<ReleaseEscrowResult> {
-    const supabase = this.supabaseService.getClient();
-    let payeeBalance: number;
-
-    try {
-      const { result } = await this.retryService.withRetry(
-        () =>
-          this.monetisationService.addCoins(
-            escrow.payee_id,
-            escrow.amount_coins,
-          ),
-        { maxRetries: COIN_OP_MAX_RETRIES, baseDelayMs: 500 },
-      );
-      payeeBalance = result;
-    } catch (err: unknown) {
-      this.logger.error(
-        `Failed to transfer coins for release_pending escrow ${escrow.id} after retries: ${(err as Error)?.message ?? 'unknown'}. Left in release_pending for reconciliation.`,
-      );
-      throw new BadRequestException(
-        `Coin transfer failed for escrow ${escrow.id}. The escrow is in 'release_pending' state and can be reconciled later.`,
-      );
-    }
-
-    // Mark as fully released
-    const now = new Date().toISOString();
-    await supabase
-      .from('escrow_transactions')
-      .update({
-        status: 'released',
-        updated_at: now,
-      })
-      .eq('id', escrow.id)
-      .eq('status', 'release_pending');
-
-    this.logger.log(
-      `Escrow ${escrow.id} released: ${escrow.amount_coins} coins to ${escrow.payee_id}`,
-    );
-
-    return {
-      id: escrow.id,
-      status: 'released',
-      amount_coins: escrow.amount_coins,
-      payee_balance: payeeBalance,
-    };
-  }
-
-  /**
-   * Phase 1 of refund: atomically transition from 'held' to 'refund_pending'.
-   * Then attempt the coin return. On success: finalise to 'refunded'.
-   * On failure: leave in 'refund_pending' for reconciliation.
-   */
-  private async performRefundWithDegradation(
-    escrow: EscrowTransaction,
-  ): Promise<RefundEscrowResult> {
-    const supabase = this.supabaseService.getClient();
-    const now = new Date().toISOString();
-
-    // Atomic transition to pending state
-    const { error: updateError } = await supabase
-      .from('escrow_transactions')
-      .update({
-        status: 'refund_pending' as EscrowStatus,
-        refunded_at: now,
-        updated_at: now,
-      })
-      .eq('id', escrow.id)
-      .eq('status', 'held');
-
-    if (updateError) {
-      throw new BadRequestException(
-        'Failed to transition escrow to refund pending state.',
-      );
-    }
-
-    escrow.status = 'refund_pending';
-    return this.finaliseRefundEscrow(escrow);
-  }
-
-  /**
-   * Finalise a refund_pending escrow by executing (or retrying) the coin
-   * return to the payer. On success, updates to 'refunded'. On failure,
-   * leaves in 'refund_pending' so reconciliation can continue later.
-   */
-  private async finaliseRefundEscrow(
-    escrow: EscrowTransaction,
-  ): Promise<RefundEscrowResult> {
-    const supabase = this.supabaseService.getClient();
-    let payerBalance: number;
-
-    try {
-      const { result } = await this.retryService.withRetry(
-        () =>
-          this.monetisationService.addCoins(
-            escrow.payer_id,
-            escrow.amount_coins,
-          ),
-        { maxRetries: COIN_OP_MAX_RETRIES, baseDelayMs: 500 },
-      );
-      payerBalance = result;
-    } catch (err: unknown) {
-      this.logger.error(
-        `Failed to return coins for refund_pending escrow ${escrow.id} after retries: ${(err as Error)?.message ?? 'unknown'}. Left in refund_pending for reconciliation.`,
-      );
-      throw new BadRequestException(
-        `Coin return failed for escrow ${escrow.id}. The escrow is in 'refund_pending' state and can be reconciled later.`,
-      );
-    }
-
-    // Mark as fully refunded
-    const now = new Date().toISOString();
-    await supabase
-      .from('escrow_transactions')
-      .update({
-        status: 'refunded',
-        updated_at: now,
-      })
-      .eq('id', escrow.id)
-      .eq('status', 'refund_pending');
-
-    this.logger.log(
-      `Escrow ${escrow.id} refunded: ${escrow.amount_coins} coins returned to ${escrow.payer_id}`,
-    );
-
-    return {
-      id: escrow.id,
-      status: 'refunded',
-      amount_coins: escrow.amount_coins,
-      payer_balance: payerBalance,
-    };
-  }
-
-  /**
-   * Periodically refund held escrows that have been dormant beyond a configurable
-   * threshold, AND retry reconciliation for degraded (release_pending / refund_pending)
-   * escrows to prevent stale escrows from accumulating indefinitely.
-   * Audit (#2396): batch-limited to avoid large in-memory result sets.
-=======
    * Degraded hold: When the database is unavailable, we log the intent
    * and queue for later processing via a Redis-based pending queue.
->>>>>>> origin/main
    */
   private async performDegradedHold(
     payerId: string,
@@ -708,6 +498,7 @@ export class EscrowService {
         'escrow_degraded_queue',
         JSON.stringify(degradedRecord),
       );
+      this.metricsService.recordEscrowDegradedOperation();
     } catch (redisError: unknown) {
       this.logger.error(
         `Failed to enqueue degraded escrow: ${redisError instanceof Error ? redisError.message : String(redisError)}`,
@@ -762,6 +553,14 @@ export class EscrowService {
       degradedMarker,
     );
 
+    if (!degradedMarker.degraded && result.payer_id && result.payee_id) {
+      this.invalidateEscrowCaches(
+        transactionId,
+        result.payer_id,
+        result.payee_id,
+      );
+    }
+
     return sanitiseEscrowData({
       success: true,
       transaction_id: result.id,
@@ -775,35 +574,17 @@ export class EscrowService {
     userId: string,
   ): Promise<EscrowTransaction> {
     const supabase = this.supabaseService.getClient();
-<<<<<<< HEAD
-    let totalRefunded = 0;
-    let totalReconciled = 0;
-
-    // Phase 1: auto-refund expired held escrows
-    while (true) {
-      const { data: expired, error } = await supabase
-        .from('escrow_transactions')
-        .select('id, payer_id, amount_coins')
-        .eq('status', 'held')
-        .lt('created_at', threshold)
-        .limit(CLEANUP_BATCH_SIZE);
-=======
 
     const { data: txRow, error: txError } = await supabase
       .from('escrow_transactions' as never)
       .select('*')
       .eq('id', transactionId)
       .single();
->>>>>>> origin/main
 
     if (txError || !txRow) {
       throw new NotFoundException('Escrow transaction not found');
     }
 
-<<<<<<< HEAD
-      for (const row of expired) {
-        const record = row;
-=======
     const tx = txRow as EscrowTransaction;
 
     if (tx.status !== 'held') {
@@ -863,6 +644,9 @@ export class EscrowService {
       `Escrow released: ${transactionId} - ${tx.amount_coins} coins to ${tx.payee_id}`,
     );
 
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowReleased(tx.amount_coins);
+
     return updated;
   }
 
@@ -889,7 +673,7 @@ export class EscrowService {
       payer_id: '',
       payee_id: '',
       amount_coins: 0,
-          status: 'held' as EscrowStatus,
+      status: 'held' as EscrowStatus,
       reason: 'Processing delayed - queued for retry',
       metadata: {},
       held_at: now,
@@ -999,12 +783,17 @@ export class EscrowService {
           `Escrow refunded: ${transactionId} - ${tx.amount_coins} coins to ${tx.payer_id}`,
         );
 
+        // Record metric for Datadog alerting (#2381)
+        this.metricsService.recordEscrowRefunded(
+          tx.amount_coins,
+          reason || 'manual',
+        );
+
         return updated;
       },
       async () => {
         this.logger.warn(`Degraded escrow refund queued for: ${transactionId}`);
         const redis = this.supabaseService.getRedisClient();
->>>>>>> origin/main
         try {
           await redis.lpush(
             'escrow_refund_queue',
@@ -1026,7 +815,7 @@ export class EscrowService {
           payer_id: '',
           payee_id: '',
           amount_coins: 0,
-          status: 'held' as EscrowStatus,
+          status: 'held',
           reason: 'Refund delayed - queued for retry',
           metadata: {},
           held_at: now,
@@ -1044,11 +833,13 @@ export class EscrowService {
       degradedMarker,
     );
 
-    return this.toResponse(
-      result as EscrowTransaction,
-      degradedMarker.degraded,
-      degradedMarker.reason,
-    );
+    const tx = result;
+
+    if (!degradedMarker.degraded && tx.payer_id && tx.payee_id) {
+      this.invalidateEscrowCaches(transactionId, tx.payer_id, tx.payee_id);
+    }
+
+    return this.toResponse(tx, degradedMarker.degraded, degradedMarker.reason);
   }
 
   /**
@@ -1104,54 +895,6 @@ export class EscrowService {
       }
     }
 
-<<<<<<< HEAD
-    // Phase 2: retry reconciliation for degraded escrows (release_pending / refund_pending)
-    // that have been stuck longer than 1 hour
-    const degradationThreshold = new Date(
-      Date.now() - 60 * 60 * 1000,
-    ).toISOString();
-
-    while (true) {
-      const { data: degraded, error } = await supabase
-        .from('escrow_transactions')
-        .select('id, payer_id, payee_id, amount_coins, status')
-        .in('status', ['release_pending', 'refund_pending'])
-        .lt('updated_at', degradationThreshold)
-        .limit(CLEANUP_BATCH_SIZE);
-
-      if (error || !degraded || degraded.length === 0) break;
-
-      for (const row of degraded) {
-        const record = row as {
-          id: string;
-          payer_id: string;
-          payee_id: string;
-          amount_coins: number;
-          status: string;
-        };
-        try {
-          if (record.status === 'release_pending') {
-            await this.finaliseReleaseEscrow(
-              record as unknown as EscrowTransaction,
-            );
-          } else {
-            await this.finaliseRefundEscrow(
-              record as unknown as EscrowTransaction,
-            );
-          }
-          totalReconciled++;
-        } catch (err: unknown) {
-          this.logger.warn(
-            `Cleanup: could not reconcile degraded escrow ${record.id}: ${(err as Error)?.message ?? 'unknown'}`,
-          );
-        }
-      }
-    }
-
-    if (totalRefunded > 0 || totalReconciled > 0) {
-      this.logger.log(
-        `Escrow cleanup: auto-refunded ${totalRefunded}, reconciled ${totalReconciled} degraded escrows`,
-=======
     const now = new Date().toISOString();
     const { data: updated, error: updateError } = await supabase
       .from('escrow_transactions' as never)
@@ -1172,16 +915,115 @@ export class EscrowService {
 
     this.logger.log(`Escrow cancelled: ${transactionId}`);
 
+    // Record metric for Datadog alerting (#2381)
+    this.metricsService.recordEscrowCancelled(tx.amount_coins);
+
+    this.invalidateEscrowCaches(transactionId, tx.payer_id, tx.payee_id);
+
+    return this.toResponse(updated);
+  }
+
+  /**
+   * File a dispute against an escrow transaction.
+   * Either party can dispute a held escrow. Updates status to 'disputed'
+   * and stores the dispute reason with optional evidence.
+   */
+  async disputeEscrow(
+    transactionId: string,
+    userId: string,
+    reason: string,
+    evidence?: string,
+  ): Promise<EscrowTransactionResponse> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: txRow, error: txError } = await supabase
+      .from('escrow_transactions' as never)
+      .select('*')
+      .eq('id', transactionId)
+      .single();
+
+    if (txError || !txRow) {
+      throw new NotFoundException('Escrow transaction not found');
+    }
+
+    const tx = txRow as EscrowTransaction;
+
+    if (tx.payer_id !== userId && tx.payee_id !== userId) {
+      throw new BadRequestException('Not authorised to dispute this escrow');
+    }
+
+    if (tx.status !== 'held') {
+      throw new ConflictException(
+        `Cannot dispute escrow in '${tx.status}' status. Only held escrows can be disputed.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await supabase
+      .from('escrow_transactions' as never)
+      .update({
+        status: 'disputed' as EscrowStatus,
+        reason: `${tx.reason ?? ''}\n[DISPUTE by ${userId}: ${reason}]`.trim(),
+        metadata: {
+          ...(tx.metadata ?? {}),
+          dispute_initiator: userId,
+          dispute_filed_at: now,
+          dispute_evidence: evidence ?? null,
+        },
+      } as never)
+      .eq('id', transactionId)
+      .select('*')
+      .single();
+
+    if (updateError || !updated) {
+      this.logger.error(
+        `Failed to update escrow ${transactionId} status to disputed: ${updateError?.message ?? 'invalid data returned'}`,
+      );
+      throw new InternalServerErrorException('Failed to file dispute');
+    }
+
+    this.logger.log(`Escrow disputed: ${transactionId} by user ${userId}`);
+
     return this.toResponse(updated);
   }
 
   /**
    * Retrieves an escrow transaction by ID.
+   *
+   * Read-through Redis caching: escrow details are cached for a short
+   * TTL to reduce database pressure during repeated reads (e.g., polling
+   * by mobile clients awaiting payment confirmation).
    */
   async getTransaction(
     transactionId: string,
     userId: string,
   ): Promise<EscrowTransactionResponse> {
+    const redis = this.supabaseService.getRedisClient();
+    const cacheKey = `${ESCROW_DETAIL_PREFIX}${transactionId}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as EscrowTransaction;
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'payer_id' in parsed &&
+          'payee_id' in parsed
+        ) {
+          if (parsed.payer_id !== userId && parsed.payee_id !== userId) {
+            throw new BadRequestException('Not authorised to view this escrow');
+          }
+          return this.toResponse(parsed);
+        }
+      } catch (err) {
+        if (err instanceof BadRequestException) throw err;
+        this.logger.warn(
+          `Invalid escrow detail cache entry for ${transactionId}, falling back to DB`,
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
 
     const { data: txRow, error: txError } = await supabase
@@ -1201,11 +1043,16 @@ export class EscrowService {
       throw new BadRequestException('Not authorised to view this escrow');
     }
 
+    void redis.set(cacheKey, JSON.stringify(tx), 'EX', ESCROW_DETAIL_TTL);
+
     return this.toResponse(tx);
   }
 
   /**
    * Lists escrow transactions for a user.
+   *
+   * Read-through Redis caching: the user's escrow list is cached with a short
+   * TTL so repeated polling reads (common in payment flows) avoid DB round-trips.
    */
   async listTransactions(
     userId: string,
@@ -1213,6 +1060,24 @@ export class EscrowService {
     limit = 20,
     offset = 0,
   ): Promise<EscrowTransactionResponse[]> {
+    const redis = this.supabaseService.getRedisClient();
+    const statusSuffix = status ? `:s${status}` : '';
+    const cacheKey = `${ESCROW_USER_LIST_PREFIX}${userId}:l${limit}:o${offset}${statusSuffix}`;
+
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed as EscrowTransactionResponse[];
+        }
+      } catch {
+        this.logger.warn(
+          `Invalid escrow list cache entry for user ${userId}, falling back to DB`,
+        );
+      }
+    }
+
     const supabase = this.supabaseService.getClient();
 
     let query = supabase
@@ -1235,7 +1100,66 @@ export class EscrowService {
       return [];
     }
 
-    return (data as EscrowTransaction[]).map((tx) => this.toResponse(tx));
+    const result = (data as EscrowTransaction[]).map((tx) =>
+      this.toResponse(tx),
+    );
+
+    void redis.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      ESCROW_USER_LIST_TTL,
+    );
+
+    return result;
+  }
+
+  /**
+   * Invalidate Redis caches related to an escrow transaction and its
+   * participants. Called after every mutation (hold, release, refund, cancel)
+   * to ensure reads stay consistent.
+   *
+   * Strategy:
+   *  - Delete the escrow detail cache key.
+   *  - Delete user list caches for both the payer and the payee.
+   *    Because list caches are keyed by (userId, limit, offset[, status]), we
+   *    use a SCAN + DEL pattern to cover all pagination/status-filter variants.
+   */
+  private invalidateEscrowCaches(
+    transactionId: string,
+    payerId: string,
+    payeeId: string,
+  ): void {
+    const redis = this.supabaseService.getRedisClient();
+
+    void (async () => {
+      try {
+        // Delete the specific detail key
+        await redis.del(`${ESCROW_DETAIL_PREFIX}${transactionId}`);
+
+        // Scan and delete user list keys for payer and payee
+        for (const userId of [payerId, payeeId]) {
+          let cursor = '0';
+          do {
+            const [nextCursor, scannedKeys] = await redis.scan(
+              cursor,
+              'MATCH',
+              `${ESCROW_USER_LIST_PREFIX}${userId}:*`,
+              'COUNT',
+              100,
+            );
+            cursor = nextCursor;
+            if (scannedKeys.length > 0) {
+              await redis.del(...scannedKeys);
+            }
+          } while (cursor !== '0');
+        }
+      } catch (err: unknown) {
+        this.logger.warn(
+          `Failed to invalidate escrow caches for ${transactionId}: ${(err as Error)?.message ?? 'unknown'}`,
+        );
+      }
+    })();
   }
 
   /**
@@ -1289,11 +1213,19 @@ export class EscrowService {
     } catch (redisError: unknown) {
       this.logger.error(
         `Failed to access degraded queue: ${redisError instanceof Error ? redisError.message : String(redisError)}`,
->>>>>>> origin/main
       );
     }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+    return data as EscrowTransaction;
+>>>>>>> origin/main
+=======
+    return { processed, failed };
+>>>>>>> origin/main
+=======
     return sanitiseEscrowData({ processed, failed });
+>>>>>>> origin/main
   }
 
   /**
@@ -1348,6 +1280,97 @@ export class EscrowService {
     }
 
     throw new NotFoundException('Escrow transaction not found');
+  }
+
+  /**
+   * Auto-refunds stale escrow transactions that have been held for more than
+   * 30 days without being released, refunded, or cancelled. This ensures coins
+   * are returned to users rather than being locked indefinitely.
+   *
+   * Records metrics for Datadog alerting (#2381).
+   */
+  async processStaleEscrows(): Promise<{
+    autoRefunded: number;
+    failed: number;
+  }> {
+    const supabase = this.supabaseService.getClient();
+    const staleThreshold = new Date(
+      Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    let autoRefunded = 0;
+    let failed = 0;
+
+    try {
+      const { data: staleRows } = await supabase
+        .from('escrow_transactions' as never)
+        .select('id, payer_id, amount_coins')
+        .eq('status', 'held')
+        .lt('created_at', staleThreshold)
+        .limit(100);
+
+      if (!staleRows || staleRows.length === 0) {
+        return { autoRefunded: 0, failed: 0 };
+      }
+
+      for (const row of staleRows as {
+        id: string;
+        payer_id: string;
+        amount_coins: number;
+      }[]) {
+        try {
+          // Refund coins to payer
+          const { data: payerRow } = await supabase
+            .from('users')
+            .select('coins_balance')
+            .eq('id', row.payer_id)
+            .single();
+
+          if (payerRow) {
+            const payerBalance = (payerRow as { coins_balance: number })
+              .coins_balance;
+            await supabase
+              .from('users')
+              .update({ coins_balance: payerBalance + row.amount_coins })
+              .eq('id', row.payer_id);
+          }
+
+          const now = new Date().toISOString();
+          await supabase
+            .from('escrow_transactions' as never)
+            .update({
+              status: 'refunded' as EscrowStatus,
+              refunded_at: now,
+              metadata: { auto_refund: true, refunded_at: now },
+            } as never)
+            .eq('id', row.id);
+
+          this.metricsService.recordEscrowAutoRefunded(row.amount_coins);
+          this.metricsService.recordEscrowRefunded(
+            row.amount_coins,
+            'auto_expiry',
+          );
+
+          this.invalidateEscrowCaches(row.id, row.payer_id, '');
+
+          autoRefunded++;
+          this.logger.log(
+            `Auto-refunded stale escrow ${row.id}: ${row.amount_coins} coins to ${row.payer_id}`,
+          );
+        } catch (error: unknown) {
+          failed++;
+          this.logger.error(
+            `Failed to auto-refund stale escrow ${row.id}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+    } catch (error: unknown) {
+      this.logger.error(
+        `Failed to fetch stale escrows: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    return { autoRefunded, failed };
   }
 
   /**

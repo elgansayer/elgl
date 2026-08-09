@@ -5,12 +5,6 @@ import {
   IsObject,
   Min,
   MaxLength,
-<<<<<<< HEAD
-  IsOptional,
-  Max,
-  IsUUID,
-=======
->>>>>>> origin/main
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -32,7 +26,8 @@ export class CreateEscrowHoldDto {
   amount_coins!: number;
 
   @ApiProperty({
-    description: 'Description of the service being paid for via the escrow hold',
+    description:
+      'Description of the service being paid for via the escrow hold',
     maxLength: 500,
     example: 'Payment for 30-minute Spanish lesson',
   })
@@ -41,23 +36,13 @@ export class CreateEscrowHoldDto {
   reason!: string;
 
   @ApiPropertyOptional({
-    description: 'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
+    description:
+      'Additional metadata for the transaction (e.g., service type, lesson details, milestone information)',
     example: { service_type: 'lesson', lesson_id: 'abc-123' },
   })
   @IsOptional()
-<<<<<<< HEAD
-  @IsString()
-  @MaxLength(255)
-  reference_id?: string;
-
-  /** Idempotency key to prevent duplicate escrow creation (UUID v4). */
-  @IsOptional()
-  @IsUUID('4')
-  idempotency_key?: string;
-=======
   @IsObject()
   metadata?: Record<string, unknown>;
->>>>>>> origin/main
 }
 
 export class ReleaseEscrowDto {
@@ -96,6 +81,33 @@ export class CancelEscrowDto {
   transaction_id!: string;
 }
 
+export class DisputeEscrowDto {
+  @ApiProperty({
+    description: 'UUID of the escrow transaction to dispute',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
+  @IsString()
+  transaction_id!: string;
+
+  @ApiProperty({
+    description: 'Reason for the dispute',
+    example: 'Service was not delivered as agreed',
+    maxLength: 500,
+  })
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+
+  @ApiPropertyOptional({
+    description: 'Supporting evidence or details for the dispute',
+    maxLength: 2000,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  evidence?: string;
+}
+
 export interface EscrowTransactionResponse {
   id: string;
   payer_id: string;
@@ -125,7 +137,25 @@ export interface CircuitBreakerStatusResponse {
   totalSuccesses: number;
 }
 
-export class ReconcileEscrowDto {
+export class AcknowledgeCrashReportDto {
+  @ApiProperty({
+    description: 'UUID of the crash report to acknowledge',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
   @IsString()
-  escrow_id!: string;
+  report_id!: string;
+}
+
+export interface CrashReportResponse {
+  id: string;
+  operation: string;
+  escrow_id?: string;
+  user_id?: string;
+  error_type: string;
+  error_message: string;
+  stack_trace?: string;
+  context?: Record<string, unknown>;
+  created_at: string;
+  acknowledged: boolean;
+  resolved_at?: string | null;
 }

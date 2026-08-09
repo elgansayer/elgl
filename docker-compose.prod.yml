@@ -151,7 +151,7 @@ services:
       retries: 3
       start_period: 30s
 
-datadog:
+  datadog:
     image: gcr.io/datadoghq/agent:7
     restart: always
     env_file:
