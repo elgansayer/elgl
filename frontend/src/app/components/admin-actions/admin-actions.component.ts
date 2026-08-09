@@ -1,19 +1,42 @@
 import { Component, inject, resource, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { AdminService, AdminUserSummary } from '../../services/admin.service';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AdminService } from '../../services/admin.service';
 import { I18nService } from '../../services/i18n.service';
 import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, SanitiseHtmlPipe],
   template: `
+<<<<<<< HEAD
+    <div class="p-4">
+      <h2 class="text-xl font-bold mb-4 text-text-primary">{{ 'moderation.quickActions' | t }}</h2>
+      <ul class="space-y-2" role="list">
+        @for (user of users(); track user.id) {
+          <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface p-3">
+            <span class="text-sm text-text-primary">{{ user.display_name ?? user.id }}</span>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                (click)="ban(user.id)"
+                class="rounded-lg bg-red-600 text-white px-3 py-1.5 text-xs font-bold hover:bg-red-700 transition-colors"
+                [attr.aria-label]="'admin.banBtn' | t"
+              >{{ 'admin.banBtn' | t }}</button>
+              <button
+                type="button"
+                (click)="warn(user.id)"
+                class="rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-bold hover:bg-amber-700 transition-colors"
+                [attr.aria-label]="'admin.warnBtn' | t"
+              >{{ 'admin.warnBtn' | t }}</button>
+            </div>
+=======
     <div class="admin-actions" role="region" [attr.aria-label]="'admin.quickModerationAria' | t">
       <h2>{{ 'admin.quickModeration' | t }}</h2>
       <ul role="list">
         @for (user of users(); track user.id) {
           <li>
-            <span>{{ user.display_name ?? user.id }}</span>
+            <span>{{ (user.display_name ?? user.id) | sanitiseHtml }}</span>
             <button
               type="button"
               [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
@@ -24,6 +47,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
               [attr.aria-label]="'admin.warnUserAria' | t: { name: user.display_name ?? user.id }"
               (click)="warn(user.id)"
             >{{ 'admin.warnBtn' | t }}</button>
+>>>>>>> origin/main
           </li>
         }
       </ul>

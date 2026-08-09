@@ -1,13 +1,33 @@
+import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { LightboxComponent } from './lightbox.component';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { I18nService } from '../../services/i18n.service';
 
 describe('LightboxComponent', () => {
   let component: LightboxComponent;
   let fixture: ComponentFixture<LightboxComponent>;
 
+  const mockI18nService = {
+    translate: vi.fn().mockImplementation((key: string, params?: Record<string, unknown>) => {
+      if (key === 'lightbox.close') return 'Close lightbox';
+      if (key === 'lightbox.prev') return 'Previous image';
+      if (key === 'lightbox.next') return 'Next image';
+      if (key === 'lightbox.imageAlt') return `Image ${params?.['current']} of ${params?.['total']}`;
+      if (key === 'lightbox.indicator') return `Go to image ${params?.['current']}`;
+      return key;
+    }),
+    translations: signal({}),
+    loadTranslations: vi.fn(),
+    locale: signal('en'),
+    direction: signal('ltr'),
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LightboxComponent],
+      imports: [LightboxComponent, TranslatePipe],
+      providers: [{ provide: I18nService, useValue: mockI18nService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LightboxComponent);
@@ -25,7 +45,7 @@ describe('LightboxComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should set currentIndex from initialIndex during ngOnInit', () => {
+  it('should converge currentIndex to initialIndex via effect', () => {
     setup(['a', 'b', 'c'], 2);
     expect(component.currentIndex()).toBe(2);
   });
@@ -138,7 +158,7 @@ describe('LightboxComponent', () => {
     expect(component.currentIndex()).toBe(0);
   });
 
-  it('should emit closed when close() is called', () => {
+  it('should emit closed when close button is clicked', () => {
     setup(['a']);
     let closed = false;
     component.closed.subscribe(() => (closed = true));

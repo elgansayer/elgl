@@ -4,28 +4,21 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { CloudflareCacheService } from '../cloudflare/cache.service';
-import { Flashcard } from './interfaces/flashcard.interface';
-import { CreateFlashcardDto } from './dto/flashcard.dto';
+import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
+import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 
-// Mock the retry module so we can verify it's being used for SRS operations
 jest.mock('../common/retry', () => ({
   withRetry: jest.fn((fn: () => unknown) => fn()),
   isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
 }));
 
-import { withRetry } from '../common/retry';
+import { withRetry, isRateLimitError } from '../common/retry';
 
 interface MockLogger {
   info: jest.Mock;
   error: jest.Mock;
   warn: jest.Mock;
   debug: jest.Mock;
-}
-
-interface MockRedisClient {
-  get: jest.Mock;
-  set: jest.Mock;
-  del: jest.Mock;
 }
 
 interface MockQueryBuilder {
@@ -78,7 +71,6 @@ describe('FlashcardsService', () => {
   let mockQueryBuilder: MockQueryBuilder;
   let mockLogger: MockLogger;
   let mockMetricsService: MockMetricsService;
-  let mockRedisClient: MockRedisClient;
 
   beforeEach(async () => {
     mockLogger = {
@@ -100,12 +92,6 @@ describe('FlashcardsService', () => {
       recordSrsDeckCreated: jest.fn(),
     };
 
-    mockRedisClient = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1),
-    };
-
     mockQueryBuilder = {
       upsert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
@@ -113,6 +99,7 @@ describe('FlashcardsService', () => {
       eq: jest.fn().mockReturnThis(),
       lt: jest.fn().mockReturnThis(),
       lte: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
     };
@@ -132,7 +119,6 @@ describe('FlashcardsService', () => {
           provide: SupabaseService,
           useValue: {
             getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
@@ -144,10 +130,6 @@ describe('FlashcardsService', () => {
         {
           provide: MetricsService,
           useValue: mockMetricsService,
-        },
-        {
-          provide: CloudflareCacheService,
-          useValue: { purgeByCacheTags: jest.fn().mockResolvedValue(true) },
         },
       ],
     }).compile();
@@ -163,8 +145,17 @@ describe('FlashcardsService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('getHealthStatus', () => {
+    it('should report healthy with full mode when no degraded operations', () => {
+      const status = service.getHealthStatus();
+      expect(status.healthy).toBe(true);
+      expect(status.mode).toBe('full');
+      expect(status.degradedServices).toEqual([]);
+    });
+  });
+
   describe('createOrUpdateFlashcard', () => {
-    it('should clean word token, upsert flashcard, and invalidate Redis caches', async () => {
+    it('should clean word token and upsert flashcard successfully', async () => {
       const dto: CreateFlashcardDto = {
         word_token: '  BONJOUR  ',
         original_context: 'Bonjour le monde',
@@ -198,14 +189,11 @@ describe('FlashcardsService', () => {
         },
         { onConflict: 'user_id, word_token' },
       );
-      // Verify Redis invalidation was called
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:list:user-1');
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:due:user-1');
       expect(mockMetricsService.recordSrsFlashcardCreated).toHaveBeenCalled();
       expect(result).toEqual(savedCard);
     });
 
-    it('should throw Error when upsert fails (no cache invalidation)', async () => {
+    it('should throw Error when upsert fails with non-connectivity error', async () => {
       const dto: CreateFlashcardDto = {
         word_token: 'test',
         translation: 'test',
@@ -220,8 +208,23 @@ describe('FlashcardsService', () => {
       ).rejects.toThrow(
         'Failed to create/update flashcard: Unique constraint error',
       );
-      // Redis invalidation should NOT be called on error
-      expect(mockRedisClient.del).not.toHaveBeenCalled();
+    });
+
+    it('should return degraded flashcard when connectivity error occurs', async () => {
+      const dto: CreateFlashcardDto = {
+        word_token: 'bonjour',
+        translation: 'hello',
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'fetch failed', code: 'FETCH_ERROR' },
+      });
+
+      const result = await service.createOrUpdateFlashcard('user-1', dto);
+      expect(result.degraded).toBe(true);
+      expect(result.word_token).toBe('bonjour');
+      expect(result.translation).toBe('hello');
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
 
@@ -230,21 +233,18 @@ describe('FlashcardsService', () => {
 
     beforeEach(() => {
       jest.useFakeTimers().setSystemTime(fakeNow);
-      mockRedisClient.del.mockClear();
     });
 
     afterEach(() => {
       jest.useRealTimers();
     });
 
-    it('should fetch current card, apply SM-2, and invalidate Redis caches', async () => {
-      // First single() call = fetch current state, second = update result
+    it('should fetch current card and apply SM-2 with quality 5 (perfect recall, first review)', async () => {
       const currentCard = {
         easiness_factor: 2.5,
         repetitions: 0,
         interval_days: 0,
       };
-      // q=5: EF = 2.5 + 0.1 - 0 = 2.6
       const updatedCard = {
         id: 'card-1',
         srs_level: 1,
@@ -273,9 +273,6 @@ describe('FlashcardsService', () => {
         interval_days: 1,
         next_review_at: '2026-07-23T12:00:00.000Z',
       });
-      // Verify Redis cache invalidation on successful SRS update
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:list:user-1');
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:due:user-1');
       expect(mockMetricsService.recordSrsReviewCompleted).toHaveBeenCalledWith(
         5,
         'pass',
@@ -290,9 +287,6 @@ describe('FlashcardsService', () => {
         repetitions: 3,
         interval_days: 15,
       };
-      // q=5: EF = 2.6 + 0.1 = 2.7
-      // interval: 15 * 2.7 = 40.5, rounded to 41
-      // srs_level: repetitions=4, interval 41 >= 21 -> level 4
       const updatedCard = {
         id: 'card-1',
         srs_level: 4,
@@ -313,18 +307,14 @@ describe('FlashcardsService', () => {
       expect(result.repetitions).toBe(4);
       expect(result.interval_days).toBe(41);
       expect(result.easiness_factor).toBe(2.7);
-      // Verify Redis invalidation
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:list:user-1');
-      expect(mockRedisClient.del).toHaveBeenCalledWith('flashcards:due:user-1');
     });
 
-    it('should reset repetitions on quality < 3 (failed recall) and invalidate caches', async () => {
+    it('should reset repetitions on quality < 3 (failed recall)', async () => {
       const currentCard = {
         easiness_factor: 2.5,
         repetitions: 3,
         interval_days: 30,
       };
-      // q=1: EF = 2.5 + 0.1 - 4*(0.08 + 4*0.02) = 2.5 + 0.1 - 4*0.16 = 2.5 + 0.1 - 0.64 = 1.96
       const updatedCard = {
         id: 'card-1',
         srs_level: 0,
@@ -344,8 +334,6 @@ describe('FlashcardsService', () => {
       expect(result.srs_level).toBe(0);
       expect(result.repetitions).toBe(0);
       expect(result.interval_days).toBe(1);
-      // Redis invalidation still called for failures (SRS level changed)
-      expect(mockRedisClient.del).toHaveBeenCalled();
     });
 
     it('should clamp minimum easiness_factor to 1.3', async () => {
@@ -354,7 +342,6 @@ describe('FlashcardsService', () => {
         repetitions: 0,
         interval_days: 0,
       };
-      // q=0: EF = 1.35 + 0.1 - 5*(0.08 + 5*0.02) = 1.35 + 0.1 - 5*0.18 = 1.35 + 0.1 - 0.9 = 0.55, clamp to 1.3
       const updatedCard = {
         id: 'card-1',
         srs_level: 0,
@@ -374,7 +361,7 @@ describe('FlashcardsService', () => {
       expect(result.easiness_factor).toBe(1.3);
     });
 
-    it('should throw Error when fetch of current card fails (no cache invalidation)', async () => {
+    it('should throw Error when fetch of current card fails with non-connectivity error', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'Card not found' },
@@ -385,11 +372,9 @@ describe('FlashcardsService', () => {
       ).rejects.toThrow(
         'Failed to fetch flashcard for SRS update: Card not found',
       );
-      // Redis invalidation should NOT be called on error
-      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
 
-    it('should throw Error when update fails (no cache invalidation)', async () => {
+    it('should throw Error when update fails with non-connectivity error', async () => {
       mockQueryBuilder.single
         .mockResolvedValueOnce({
           data: { easiness_factor: 2.5, repetitions: 0, interval_days: 0 },
@@ -403,153 +388,140 @@ describe('FlashcardsService', () => {
       await expect(
         service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
       ).rejects.toThrow('Failed to update SRS review level: Card not found');
-      // Redis invalidation should NOT be called on error
-      expect(mockRedisClient.del).not.toHaveBeenCalled();
+    });
+
+    it('should return degraded card when fetch fails with connectivity error', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'fetch failed', code: 'FETCH_ERROR' },
+      });
+
+      // The update will also fail -- second single call
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'fetch failed', code: 'FETCH_ERROR' },
+      });
+
+      const result = await service.updateSrsLevel('user-1', 'card-1', {
+        quality: 5,
+      });
+
+      expect(result.degraded).toBe(true);
+      expect(result.srs_level).toBe(1); // SM-2 defaults: quality 5 => first review
+      expect(result.easiness_factor).toBe(2.6);
+      expect(result.interval_days).toBe(1);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should return degraded card when update fails with connectivity error', async () => {
+      const currentCard = {
+        easiness_factor: 2.5,
+        repetitions: 2,
+        interval_days: 6,
+      };
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: currentCard, error: null })
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'network error' },
+        });
+
+      const result = await service.updateSrsLevel('user-1', 'card-1', {
+        quality: 4,
+      });
+
+      expect(result.degraded).toBe(true);
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
 
   describe('getFlashcards', () => {
-    it('should return cached data when Redis cache is available', async () => {
-      const cards = [{ id: 'cached-card-1' }];
-      mockRedisClient.get.mockResolvedValue(JSON.stringify(cards));
-
-      const result = await service.getFlashcards('user-1');
-
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1');
-      // Should NOT hit the database when cache is fresh
-      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
-      expect(result).toEqual(cards);
-    });
-
-    it('should query DB and cache result when Redis is empty', async () => {
-      mockRedisClient.get.mockResolvedValue(null);
+    it('should query all flashcards for user when level is not specified', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
+      // `.range()` is the last chained method before `await` in the paginated query.
+      mockQueryBuilder.range.mockResolvedValue({
         data: cards,
         error: null,
       });
 
       const result = await service.getFlashcards('user-1');
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
         ascending: false,
       });
-      // Should cache the result
-      expect(mockRedisClient.set).toHaveBeenCalledWith(
-        'flashcards:list:user-1',
-        JSON.stringify(cards),
-        'EX',
-        300,
-      );
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
-    it('should query DB and fall back when Redis cache parse fails', async () => {
-      mockRedisClient.get.mockResolvedValue('invalid-json{{{');
-
-      const cards = [{ id: 'card-fallback' }];
-      mockQueryBuilder.order.mockResolvedValue({
+    it('should filter by level when a valid number is provided', async () => {
+      const cards = [{ id: 'card-2', srs_level: 2 }];
+      mockQueryBuilder.range.mockResolvedValue({
         data: cards,
         error: null,
       });
 
-      const result = await service.getFlashcards('user-1');
-
-      expect(mockLogger.warn).toHaveBeenCalled();
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
-      expect(result).toEqual(cards);
-    });
-
-    it('should filter by level with level-specific cache key', async () => {
-      mockRedisClient.get.mockResolvedValue(null);
-      const cards = [{ id: 'card-2', srs_level: 2 }];
-      mockQueryBuilder.eq.mockReturnThis();
-      mockQueryBuilder.then = (
-        resolve: (value: { data: unknown[]; error: null }) => void,
-      ) => resolve({ data: cards, error: null });
-
       const result = await service.getFlashcards('user-1', 2);
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:list:user-1:level:2');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
-      // Should use the level-specific cache key for storing
-      expect(mockRedisClient.set).toHaveBeenCalledWith(
-        'flashcards:list:user-1:level:2',
-        JSON.stringify(cards),
-        'EX',
-        300,
-      );
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
-    it('should return empty array when DB query errors and cache is empty', async () => {
-      mockRedisClient.get.mockResolvedValue(null);
-      mockQueryBuilder.order.mockResolvedValue({
+    it('should return empty array when query errors or returns null data', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
         data: null,
         error: { message: 'Query error' },
       });
 
       const result = await service.getFlashcards('user-1');
       expect(result).toEqual([]);
-      // Should not try to cache empty results
-      expect(mockRedisClient.set).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to memory store when connectivity error occurs', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
+        data: null,
+        error: { message: 'fetch failed' },
+      });
+
+      const result = await service.getFlashcards('user-1');
+      expect(result).toEqual([]);
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
 
   describe('getDueReviews', () => {
-    it('should return cached data when Redis cache is available', async () => {
-      const cards = [{ id: 'cached-due-1' }];
-      mockRedisClient.get.mockResolvedValue(JSON.stringify(cards));
-
-      const result = await service.getDueReviews('user-1');
-
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:due:user-1');
-      // Should NOT hit the database
-      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
-      expect(result).toEqual(cards);
-    });
-
-    it('should query DB and cache result when Redis is empty', async () => {
-      mockRedisClient.get.mockResolvedValue(null);
+    it('should return due cards ordered by next_review_at', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: cards,
         error: null,
       });
 
       const result = await service.getDueReviews('user-1');
 
-      expect(mockRedisClient.get).toHaveBeenCalledWith('flashcards:due:user-1');
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('flashcards');
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('user_id', 'user-1');
-      expect(mockQueryBuilder.lt).toHaveBeenCalledWith('srs_level', 4);
       expect(mockQueryBuilder.lte).toHaveBeenCalledWith(
         'next_review_at',
         expect.any(String),
       );
-      // Should cache with 60s TTL
-      expect(mockRedisClient.set).toHaveBeenCalledWith(
-        'flashcards:due:user-1',
-        JSON.stringify(cards),
-        'EX',
-        60,
-      );
+      expect(mockQueryBuilder.order).toHaveBeenCalledWith('next_review_at', {
+        ascending: true,
+      });
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
-    it('should return empty array when DB query errors and cache empty', async () => {
-      mockRedisClient.get.mockResolvedValue(null);
-      mockQueryBuilder.order.mockResolvedValue({
+    it('should return empty array when getDueReviews query errors', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
         data: null,
         error: { message: 'Error' },
       });
 
       const result = await service.getDueReviews('user-1');
       expect(result).toEqual([]);
-      expect(mockRedisClient.set).not.toHaveBeenCalled();
     });
   });
 
@@ -577,7 +549,7 @@ describe('FlashcardsService', () => {
       });
     });
 
-    it('should wrap updateSrsLevel fetch call with withRetry', async () => {
+    it('should wrap updateSrsLevel calls with withRetry', async () => {
       const currentCard = {
         easiness_factor: 2.5,
         repetitions: 0,
@@ -598,34 +570,38 @@ describe('FlashcardsService', () => {
 
       await service.updateSrsLevel('user-1', 'card-1', { quality: 5 });
 
-      // withRetry should be called twice: once for fetch, once for update
       expect(withRetry).toHaveBeenCalledTimes(2);
-      // Both calls should pass the logger
-      const calls = (withRetry as jest.Mock).mock.calls;
-      expect(calls[0][1]).toEqual({ logger: mockLogger });
-      expect(calls[1][1]).toEqual({ logger: mockLogger });
+    });
+  });
+
+  describe('SM-2 algorithm edge cases', () => {
+    it('handleRepetitionOne should set interval 6', () => {
+      const result = service.applySm2Algorithm(4, 2.5, 1, 1);
+      expect(result.newInterval).toBe(6);
+      expect(result.newRepetitions).toBe(2);
     });
 
-    it('should not wrap getFlashcards with withRetry', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: [],
-        error: null,
-      });
-
-      await service.getFlashcards('user-1');
-
-      expect(withRetry).not.toHaveBeenCalled();
+    it('handleRepetitionTwoPlus should multiply interval by EF', () => {
+      const result = service.applySm2Algorithm(4, 2.5, 2, 6);
+      expect(result.newInterval).toBe(15); // 6 * 2.5 = 15
+      expect(result.newRepetitions).toBe(3);
     });
 
-    it('should not wrap getDueReviews with withRetry', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: [],
-        error: null,
-      });
+    it('should derive level 2 for exactly 2 repetitions', () => {
+      const result = service.applySm2Algorithm(4, 2.5, 1, 1);
+      expect(result.newRepetitions).toBe(2);
+      expect(result.newSrsLevel).toBe(2);
+    });
 
-      await service.getDueReviews('user-1');
+    it('should derive level 3 for interval < 21', () => {
+      const result = service.applySm2Algorithm(4, 2.5, 2, 1);
+      expect(result.newRepetitions).toBe(3);
+      expect(result.newSrsLevel).toBe(3);
+    });
 
-      expect(withRetry).not.toHaveBeenCalled();
+    it('should derive level 4 for interval >= 21', () => {
+      const result = service.applySm2Algorithm(5, 3.0, 2, 7);
+      expect(result.newSrsLevel).toBe(4);
     });
   });
 });
