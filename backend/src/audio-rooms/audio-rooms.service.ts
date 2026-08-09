@@ -1115,7 +1115,11 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     const sessionSummary = transcriptText
+<<<<<<< HEAD
+      ? await this.nlpService.generateSessionSummary(transcriptText)
+=======
       ? await this.generateAiSessionSummary(transcriptText)
+>>>>>>> origin/main
       : { summary: 'No transcript available.', vocabulary: [] };
 
     await supabase
