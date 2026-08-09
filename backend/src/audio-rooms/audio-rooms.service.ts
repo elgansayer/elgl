@@ -39,6 +39,7 @@ import {
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
+  DismissRaisedHandDto,
   InviteCoHostDto,
   RaiseHandDto,
   RemoveCoHostDto,
@@ -1017,6 +1018,41 @@ export class AudioRoomsService implements OnModuleInit {
 
     this.invalidateAudioRoomCache();
     return this.getRoom(room.id);
+  }
+
+  async dismissRaisedHand(
+    hostId: string,
+    dto: DismissRaisedHandDto,
+  ): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
+
+    if (!response.data) throw new NotFoundException('Room not found');
+
+    const room = response.data as AudioRoomRow;
+
+    if (room.host_id !== hostId) {
+      throw new ForbiddenException('Only the host can dismiss raised hands.');
+    }
+
+    const updatedHands = (room.raised_hands ?? []).filter(
+      (id) => id !== dto.target_user_id,
+    );
+
+    await supabase
+      .from('audio_rooms')
+      .update({ raised_hands: updatedHands })
+      .eq('id', room.id);
+
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'hand_dismissed',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
   }
 
   async inviteCoHost(

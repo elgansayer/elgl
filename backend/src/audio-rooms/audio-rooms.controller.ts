@@ -28,6 +28,7 @@ import {
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
+  DismissRaisedHandDto,
   InviteCoHostDto,
   RaiseHandDto,
   RemoveCoHostDto,
@@ -584,6 +585,16 @@ export class AudioRoomsController {
   ): Promise<AudioRoomRecord | null> {
     if (!user) return null;
     return await this.audioRoomsService.demoteSpeaker(user.id, dto);
+  }
+
+  @Post('dismiss-raised-hand')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async dismissRaisedHand(
+    @CurrentUser() user: AuthUser | null,
+    @Body() dto: DismissRaisedHandDto,
+  ): Promise<void> {
+    if (!user) return;
+    return await this.audioRoomsService.dismissRaisedHand(user.id, dto);
   }
 
   @Post('invite-co-host')
