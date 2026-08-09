@@ -72,16 +72,23 @@ describe('VideoRoomComponent', () => {
     expect(component.isHost()).toBe(true);
     expect(component.eligibleSpeakers()).toEqual(['speaker-2']);
 
-    const button = (fixture.nativeElement as HTMLElement).querySelector('button');
-    expect(button?.textContent).toContain('Invite co-host');
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
+    const inviteBtn = Array.from(buttons).find(
+      (b) => b.textContent?.includes('Invite co-host'),
+    );
+    expect(inviteBtn).toBeTruthy();
   });
 
   it('should not show the invite co-host button to a non-host', async () => {
     await setup(baseRoom, 'speaker-2');
     expect(component.isHost()).toBe(false);
 
-    const button = (fixture.nativeElement as HTMLElement).querySelector('button');
-    expect(button).toBeNull();
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
+    // Only the onboarding help "?" button should be visible
+    const inviteCoHostBtn = Array.from(buttons).find(
+      (b) => b.textContent?.includes('Invite co-host'),
+    );
+    expect(inviteCoHostBtn).toBeUndefined();
   });
 
   it('should invite the selected speaker as co-host and hide the picker', async () => {

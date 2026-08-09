@@ -989,7 +989,7 @@ describe('EscrowService', () => {
 
       it('should fall back to DB when list cache is invalid JSON', async () => {
         mockRedisClient.get.mockResolvedValueOnce('not-valid-json');
-        (mockSupabaseClient.range as jest.Mock).mockResolvedValueOnce({
+        mockSupabaseClient.range.mockResolvedValueOnce({
           data: [tx],
           error: null,
         });
@@ -1002,7 +1002,7 @@ describe('EscrowService', () => {
 
       it('should cache list result after a DB miss', async () => {
         mockRedisClient.get.mockResolvedValueOnce(null);
-        (mockSupabaseClient.range as jest.Mock).mockResolvedValueOnce({
+        mockSupabaseClient.range.mockResolvedValueOnce({
           data: [tx],
           error: null,
         });
@@ -1049,7 +1049,12 @@ describe('EscrowService', () => {
           .mockResolvedValueOnce({ data: tx, error: null })
           .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null })
           .mockResolvedValueOnce({
-            data: { ...tx, status: 'released', payer_id: mockUserId, payee_id: mockPayeeId },
+            data: {
+              ...tx,
+              status: 'released',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
             error: null,
           });
 
@@ -1068,7 +1073,12 @@ describe('EscrowService', () => {
           .mockResolvedValueOnce({ data: tx, error: null })
           .mockResolvedValueOnce({ data: { coins_balance: 50 }, error: null })
           .mockResolvedValueOnce({
-            data: { ...tx, status: 'refunded', payer_id: mockUserId, payee_id: mockPayeeId },
+            data: {
+              ...tx,
+              status: 'refunded',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
             error: null,
           });
 
@@ -1087,7 +1097,12 @@ describe('EscrowService', () => {
           .mockResolvedValueOnce({ data: tx, error: null })
           .mockResolvedValueOnce({ data: { coins_balance: 50 }, error: null })
           .mockResolvedValueOnce({
-            data: { ...tx, status: 'cancelled', payer_id: mockUserId, payee_id: mockPayeeId },
+            data: {
+              ...tx,
+              status: 'cancelled',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
             error: null,
           });
 
@@ -1106,7 +1121,12 @@ describe('EscrowService', () => {
           .mockResolvedValueOnce({ data: tx, error: null })
           .mockResolvedValueOnce({ data: { coins_balance: 30 }, error: null })
           .mockResolvedValueOnce({
-            data: { ...tx, status: 'released', payer_id: mockUserId, payee_id: mockPayeeId },
+            data: {
+              ...tx,
+              status: 'released',
+              payer_id: mockUserId,
+              payee_id: mockPayeeId,
+            },
             error: null,
           });
 
@@ -1129,15 +1149,9 @@ describe('EscrowService', () => {
 
         const allDelArgs = mockRedisClient.del.mock.calls.flat();
         expect(allDelArgs).toContain(cachedDetailKey);
-        expect(allDelArgs).toContain(
-          `escrow:user_list:${mockUserId}:l20:o0`,
-        );
-        expect(allDelArgs).toContain(
-          `escrow:user_list:${mockUserId}:l10:o0`,
-        );
-        expect(allDelArgs).toContain(
-          `escrow:user_list:${mockPayeeId}:l20:o0`,
-        );
+        expect(allDelArgs).toContain(`escrow:user_list:${mockUserId}:l20:o0`);
+        expect(allDelArgs).toContain(`escrow:user_list:${mockUserId}:l10:o0`);
+        expect(allDelArgs).toContain(`escrow:user_list:${mockPayeeId}:l20:o0`);
       });
     });
   });

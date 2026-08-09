@@ -10,7 +10,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-streak-congratulations',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div

@@ -71,7 +71,9 @@ describe('ReadingEngineCacheService', () => {
 
   it('returns a parsed value from cache', async () => {
     redis.get.mockResolvedValue(JSON.stringify({ hello: 'world' }));
-    const result = await service.get<{ hello: string }>('reading:resource:user:abc123:res-1');
+    const result = await service.get<{ hello: string }>(
+      'reading:resource:user:abc123:res-1',
+    );
     expect(result).toEqual({ hello: 'world' });
   });
 
@@ -108,7 +110,9 @@ describe('ReadingEngineCacheService', () => {
 
   it('deletes a single key', async () => {
     await service.delete('reading:resource:user:abc123:res-1');
-    expect(redis.del).toHaveBeenCalledWith('reading:resource:user:abc123:res-1');
+    expect(redis.del).toHaveBeenCalledWith(
+      'reading:resource:user:abc123:res-1',
+    );
   });
 
   /* ---- Bulk pattern deletion ---- */
@@ -138,28 +142,46 @@ describe('ReadingEngineCacheService', () => {
     expect(redis.scan).toHaveBeenCalledTimes(2);
     // SCAN call args: cursor, "MATCH", pattern, "COUNT", count
     const calls = redis.scan.mock.calls;
-    expect(calls[0]).toEqual(['0', 'MATCH', 'reading:resource:*', 'COUNT', 100]);
+    expect(calls[0]).toEqual([
+      '0',
+      'MATCH',
+      'reading:resource:*',
+      'COUNT',
+      100,
+    ]);
     expect(calls[1]).toEqual(['0', 'MATCH', 'reading:token:*', 'COUNT', 100]);
   });
 
   it('invalidates user suggestion cache on flashcard_mutated', async () => {
     await service.handleFlashcardMutated({ userId: 'u1' });
     expect(redis.scan).toHaveBeenCalledWith(
-      '0', 'MATCH', 'reading:suggestion:user:u1:*', 'COUNT', 100,
+      '0',
+      'MATCH',
+      'reading:suggestion:user:u1:*',
+      'COUNT',
+      100,
     );
   });
 
   it('invalidates user progress cache on reading_completed', async () => {
     await service.handleReadingCompleted({ userId: 'u1' });
     expect(redis.scan).toHaveBeenCalledWith(
-      '0', 'MATCH', 'reading:progress:user:u1:*', 'COUNT', 100,
+      '0',
+      'MATCH',
+      'reading:progress:user:u1:*',
+      'COUNT',
+      100,
     );
   });
 
   it('invalidates user translation cache on translation_requested', async () => {
     await service.handleTranslationRequested({ userId: 'u1' });
     expect(redis.scan).toHaveBeenCalledWith(
-      '0', 'MATCH', 'reading:translation:user:u1:*', 'COUNT', 100,
+      '0',
+      'MATCH',
+      'reading:translation:user:u1:*',
+      'COUNT',
+      100,
     );
   });
 
@@ -180,24 +202,14 @@ describe('ReadingEngineCacheService', () => {
   /* ---- TTL inference ---- */
 
   it('infers correct TTL per namespace', () => {
-    expect(
-      service['inferTtl']('reading:resource:user:abc:1'),
-    ).toBe(300);
-    expect(
-      service['inferTtl']('reading:translation:user:abc:fr:xxx'),
-    ).toBe(3600);
-    expect(
-      service['inferTtl']('reading:progress:user:abc'),
-    ).toBe(60);
-    expect(
-      service['inferTtl']('reading:suggestion:user:abc:fr'),
-    ).toBe(120);
-    expect(
-      service['inferTtl']('reading:session:user:abc'),
-    ).toBe(1800);
-    expect(
-      service['inferTtl']('reading:token:user:abc:res:1:fr'),
-    ).toBe(600);
+    expect(service['inferTtl']('reading:resource:user:abc:1')).toBe(300);
+    expect(service['inferTtl']('reading:translation:user:abc:fr:xxx')).toBe(
+      3600,
+    );
+    expect(service['inferTtl']('reading:progress:user:abc')).toBe(60);
+    expect(service['inferTtl']('reading:suggestion:user:abc:fr')).toBe(120);
+    expect(service['inferTtl']('reading:session:user:abc')).toBe(1800);
+    expect(service['inferTtl']('reading:token:user:abc:res:1:fr')).toBe(600);
   });
 
   it('returns safe default for unknown namespace', () => {

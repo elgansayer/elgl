@@ -50,7 +50,10 @@ describe('EconomyExceptionFilter', () => {
   }
 
   it('should handle HttpException with 400 status', () => {
-    const exception = new HttpException('Bad coin request', HttpStatus.BAD_REQUEST);
+    const exception = new HttpException(
+      'Bad coin request',
+      HttpStatus.BAD_REQUEST,
+    );
     const host = createArgumentsHost('/api/economy/purchase-coins', 'POST');
 
     filter.catch(exception, host);
@@ -65,7 +68,10 @@ describe('EconomyExceptionFilter', () => {
   });
 
   it('should handle HttpException with 500 status', () => {
-    const exception = new HttpException('Internal coin crash', HttpStatus.INTERNAL_SERVER_ERROR);
+    const exception = new HttpException(
+      'Internal coin crash',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
     const host = createArgumentsHost('/api/economy/send-gift', 'POST');
 
     filter.catch(exception, host);
@@ -95,11 +101,18 @@ describe('EconomyExceptionFilter', () => {
   });
 
   it('should include x-user-id header in context when present', () => {
-    const exception = new HttpException('Forbidden coin operation', HttpStatus.FORBIDDEN);
-    const host = createArgumentsHost('/api/economy/unlock-sticker-pack', 'POST', {
-      'x-user-id': 'user-abc-123',
-      'user-agent': 'HelloTalk/1.0',
-    });
+    const exception = new HttpException(
+      'Forbidden coin operation',
+      HttpStatus.FORBIDDEN,
+    );
+    const host = createArgumentsHost(
+      '/api/economy/unlock-sticker-pack',
+      'POST',
+      {
+        'x-user-id': 'user-abc-123',
+        'user-agent': 'HelloTalk/1.0',
+      },
+    );
 
     filter.catch(exception, host);
 

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 export interface Scenario {
   id: string;
@@ -7,6 +8,10 @@ export interface Scenario {
   systemPrompt: string;
   icon: string;
 }
+
+const DAILY_AI_LIMIT_FREE = 10;
+const REDIS_KEY_PREFIX = 'daily_ai_usage:';
+const REDIS_TTL_SECONDS = 86400; // 24 hours
 
 @Injectable()
 export class AiConversationService {
@@ -174,10 +179,48 @@ The user's role: Someone practising casual English.
     },
   ];
 
-  constructor(private readonly llmProxy: LlmProxyService) {}
+  constructor(
+    private readonly llmProxy: LlmProxyService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   getScenarios(): Omit<Scenario, 'systemPrompt'>[] {
     return this.scenarios.map(({ id, name, icon }) => ({ id, name, icon }));
+  }
+
+  /**
+   * Checks and increments the Redis-backed daily AI usage counter.
+   * Free users are capped at DAILY_AI_LIMIT_FREE requests per day;
+   * VIP users are unlimited. Returns true when the request is allowed.
+   */
+  async checkDailyAiRateLimit(userId: string): Promise<boolean> {
+    const isVip = await this.supabaseService.isVipUser(userId);
+    if (isVip) return true;
+
+    const redis = this.supabaseService.getRedisClient();
+    if (!redis) {
+      // No Redis; allow but log a warning
+      this.logger.warn(
+        'Redis unavailable for AI rate limiting; allowing request.',
+      );
+      return true;
+    }
+
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const key = `${REDIS_KEY_PREFIX}${userId}:${today}`;
+
+    try {
+      const count = await redis.incr(key);
+      if (count === 1) {
+        await redis.expire(key, REDIS_TTL_SECONDS);
+      }
+      return count <= DAILY_AI_LIMIT_FREE;
+    } catch (err) {
+      this.logger.warn(
+        `Redis error checking AI rate limit, allowing request: ${(err as Error).message}`,
+      );
+      return true;
+    }
   }
 
   async generateReply(

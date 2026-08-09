@@ -76,6 +76,42 @@ export class DataRetentionService {
   }
 
   /**
+   * Purge reading progress records belonging to users who have been
+   * inactive for more than 730 days (2 years).
+   *
+   * Reading progress is behavioural data under GDPR and should not be
+   * retained indefinitely. A 2-year retention window balances the user's
+   * right to erasure (Article 17) with the legitimate interest of
+   * maintaining progress for returning learners.
+   *
+   * Runs once per day at 02:00 UTC.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async purgeInactiveReadingProgress(): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 730);
+    const supabase = this.supabaseService.getClient();
+
+    const { error, count } = await supabase
+      .from('reading_progress')
+      .delete({ count: 'exact' })
+      .lt('last_read_at', cutoff.toISOString());
+
+    if (error) {
+      this.logger.error(
+        `Failed to purge inactive reading progress: ${error.message}`,
+      );
+      return;
+    }
+
+    if (count && count > 0) {
+      this.logger.log(
+        `Purged ${count} inactive reading progress records (last read before ${cutoff.toISOString()})`,
+      );
+    }
+  }
+
+  /**
    * Finalise deletion of user accounts past their 30-day grace period.
    * Runs once per day at 04:00 UTC.
    */
@@ -157,10 +193,7 @@ export class DataRetentionService {
     // Chat / social content
     await supabase.from('chat_messages').delete().eq('sender_id', userId);
     await supabase.from('moments').delete().eq('author_id', userId);
-    await supabase
-      .from('moment_comments')
-      .delete()
-      .eq('author_id', userId);
+    await supabase.from('moment_comments').delete().eq('author_id', userId);
 
     // Flashcards / decks
     await supabase.from('flashcards').delete().eq('user_id', userId);
@@ -180,20 +213,11 @@ export class DataRetentionService {
     await supabase.from('reports').delete().eq('reporter_id', userId);
 
     // Notifications
-    await supabase
-      .from('notifications')
-      .delete()
-      .eq('recipient_id', userId);
+    await supabase.from('notifications').delete().eq('recipient_id', userId);
 
     // LingQ Reading Engine: reading progress and authored resources
-    await supabase
-      .from('reading_progress')
-      .delete()
-      .eq('user_id', userId);
-    await supabase
-      .from('reading_resources')
-      .delete()
-      .eq('created_by', userId);
+    await supabase.from('reading_progress').delete().eq('user_id', userId);
+    await supabase.from('reading_resources').delete().eq('created_by', userId);
 
     // Invalidate reading-engine Redis caches for this user
     try {
@@ -207,26 +231,19 @@ export class DataRetentionService {
     await supabase.from('coin_purchases').delete().eq('user_id', userId);
 
     // Gift transactions (both sent and received)
-    await supabase
-      .from('gift_transactions')
-      .delete()
-      .eq('sender_id', userId);
-    await supabase
-      .from('gift_transactions')
-      .delete()
-      .eq('receiver_id', userId);
+    await supabase.from('gift_transactions').delete().eq('sender_id', userId);
+    await supabase.from('gift_transactions').delete().eq('receiver_id', userId);
+
+    // Escrow transactions (payer_id and payee_id link to users; reason and
+    // metadata may contain PII under GDPR)
+    await supabase.from('escrow_transactions').delete().eq('payer_id', userId);
+    await supabase.from('escrow_transactions').delete().eq('payee_id', userId);
 
     // Sticker pack ownership
-    await supabase
-      .from('user_sticker_packs')
-      .delete()
-      .eq('user_id', userId);
+    await supabase.from('user_sticker_packs').delete().eq('user_id', userId);
 
     // User statistics (may contain coin-related aggregated data)
-    await supabase
-      .from('user_statistics')
-      .delete()
-      .eq('user_id', userId);
+    await supabase.from('user_statistics').delete().eq('user_id', userId);
 
     // Purge recommendation cache (GDPR "right to erasure")
     // The Redis cache contains PII (display names, avatar URLs) and must be

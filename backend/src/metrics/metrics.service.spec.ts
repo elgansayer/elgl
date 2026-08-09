@@ -182,7 +182,9 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_ts_moderation_actions_total');
       expect(metrics).toContain('hellotalk_ts_dating_risk_score');
       expect(metrics).toContain('hellotalk_ts_reports_by_category_total');
-      expect(metrics).toContain('hellotalk_ts_moderation_queue_latency_seconds');
+      expect(metrics).toContain(
+        'hellotalk_ts_moderation_queue_latency_seconds',
+      );
     });
   });
 
@@ -248,7 +250,9 @@ describe('MetricsService', () => {
     });
 
     it('should set daily active readers gauge', () => {
-      expect(() => service.setReadingEngineDailyActiveReaders(128)).not.toThrow();
+      expect(() =>
+        service.setReadingEngineDailyActiveReaders(128),
+      ).not.toThrow();
     });
 
     it('should include reading engine metrics in getMetrics output', async () => {
@@ -261,13 +265,25 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_reading_engine_sessions_total');
       expect(metrics).toContain('hellotalk_reading_engine_ai_requests_total');
       expect(metrics).toContain('hellotalk_reading_engine_ai_errors_total');
-      expect(metrics).toContain('hellotalk_reading_engine_flashcard_saves_total');
-      expect(metrics).toContain('hellotalk_reading_engine_daily_active_readers');
-      expect(metrics).toContain('hellotalk_reading_engine_session_duration_seconds');
-      expect(metrics).toContain('hellotalk_reading_engine_words_looked_up_total');
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_flashcard_saves_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_daily_active_readers',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_session_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_words_looked_up_total',
+      );
       expect(metrics).toContain('hellotalk_reading_engine_words_parsed_total');
-      expect(metrics).toContain('hellotalk_reading_engine_tokenisation_duration_seconds');
-      expect(metrics).toContain('hellotalk_reading_engine_ai_request_duration_seconds');
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_tokenisation_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_ai_request_duration_seconds',
+      );
     });
   });
 
@@ -363,18 +379,14 @@ describe('MetricsService', () => {
       expect(metrics).toContain(
         'hellotalk_matchmaking_fallback_tier_used_total',
       );
-      expect(metrics).toContain(
-        'hellotalk_matchmaking_empty_results_total',
-      );
+      expect(metrics).toContain('hellotalk_matchmaking_empty_results_total');
       expect(metrics).toContain(
         'hellotalk_matchmaking_request_duration_seconds',
       );
       expect(metrics).toContain(
         'hellotalk_matchmaking_daily_cache_misses_total',
       );
-      expect(metrics).toContain(
-        'hellotalk_matchmaking_tier_success_rate',
-      );
+      expect(metrics).toContain('hellotalk_matchmaking_tier_success_rate');
     });
   });
 
@@ -428,7 +440,9 @@ describe('MetricsService', () => {
       expect(metrics).toContain('hellotalk_escrow_transactions_created_total');
       expect(metrics).toContain('hellotalk_escrow_transactions_released_total');
       expect(metrics).toContain('hellotalk_escrow_transactions_refunded_total');
-      expect(metrics).toContain('hellotalk_escrow_transactions_cancelled_total');
+      expect(metrics).toContain(
+        'hellotalk_escrow_transactions_cancelled_total',
+      );
       expect(metrics).toContain('hellotalk_escrow_total_held');
       expect(metrics).toContain('hellotalk_escrow_total_coins_held');
       expect(metrics).toContain('hellotalk_escrow_amount_per_transaction');
@@ -438,57 +452,85 @@ describe('MetricsService', () => {
     });
   });
 
-  describe('Video Classroom (LiveKit) metrics', () => {
-    it('should record video room created (success)', () => {
+  describe('Video Classrooms metrics', () => {
+    it('should record video classroom created', () => {
+      expect(() => service.recordVideoClassroomCreated()).not.toThrow();
+    });
+
+    it('should record video classroom creation failed', () => {
       expect(() =>
-        service.recordVideoRoomCreated('success', 0.5),
+        service.recordVideoClassroomCreationFailed('Error'),
       ).not.toThrow();
     });
 
-    it('should record video room created (error)', () => {
+    it('should record video classroom creation failed with default', () => {
+      expect(() => service.recordVideoClassroomCreationFailed()).not.toThrow();
+    });
+
+    it('should record video classroom joined', () => {
+      expect(() => service.recordVideoClassroomJoined()).not.toThrow();
+    });
+
+    it('should record video classroom join failed', () => {
       expect(() =>
-        service.recordVideoRoomCreated('error', 1.2),
+        service.recordVideoClassroomJoinFailed('Error'),
       ).not.toThrow();
     });
 
-    it('should record video room join', () => {
-      expect(() => service.recordVideoRoomJoin()).not.toThrow();
+    it('should record video classroom join failed with default', () => {
+      expect(() => service.recordVideoClassroomJoinFailed()).not.toThrow();
     });
 
-    it('should set video room active gauge', () => {
-      expect(() => service.setVideoRoomActive(15)).not.toThrow();
+    it('should set video classrooms active rooms', () => {
+      expect(() => service.setVideoClassroomsActiveRooms(5)).not.toThrow();
     });
 
-    it('should set video room participants gauge', () => {
-      expect(() => service.setVideoRoomParticipants(30)).not.toThrow();
-    });
-
-    it('should record video room creation error', () => {
+    it('should record video classroom token generation duration', () => {
       expect(() =>
-        service.recordVideoRoomCreationError('LiveKitError'),
+        service.recordVideoClassroomTokenGenerationDuration('create', 0.15),
       ).not.toThrow();
     });
 
-    it('should record video room empty timeout', () => {
-      expect(() => service.recordVideoRoomEmptyTimeout()).not.toThrow();
+    it('should record video classroom token generation duration for join', () => {
+      expect(() =>
+        service.recordVideoClassroomTokenGenerationDuration('join', 0.25),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom room duration', () => {
+      expect(() =>
+        service.recordVideoClassroomRoomDuration(600, 2),
+      ).not.toThrow();
+    });
+
+    it('should set video classroom participant max', () => {
+      expect(() =>
+        service.setVideoClassroomParticipantMax('video_abc', 2),
+      ).not.toThrow();
     });
 
     it('should include video classroom metrics in getMetrics output', async () => {
-      service.recordVideoRoomCreated('success', 0.3);
-      service.recordVideoRoomJoin();
-      service.setVideoRoomActive(5);
-      service.setVideoRoomParticipants(10);
-      service.recordVideoRoomCreationError('ConnectionError');
-      service.recordVideoRoomEmptyTimeout();
-
+      service.recordVideoClassroomCreated();
+      service.recordVideoClassroomJoined();
+      service.setVideoClassroomsActiveRooms(3);
+      service.recordVideoClassroomCreationFailed('Error');
       const metrics = await service.getMetrics();
-      expect(metrics).toContain('hellotalk_video_room_created_total');
-      expect(metrics).toContain('hellotalk_video_room_join_total');
-      expect(metrics).toContain('hellotalk_video_room_active');
-      expect(metrics).toContain('hellotalk_video_room_participants');
-      expect(metrics).toContain('hellotalk_video_room_creation_duration_seconds');
-      expect(metrics).toContain('hellotalk_video_room_creation_errors_total');
-      expect(metrics).toContain('hellotalk_video_room_empty_timeout_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_created_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_joined_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_active_rooms');
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_failed_creations_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_failed_joins_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_room_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_token_generation_duration_seconds',
+      );
+      expect(metrics).toContain('hellotalk_video_classrooms_participant_max');
     });
   });
 });

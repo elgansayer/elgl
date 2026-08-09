@@ -55,6 +55,49 @@ jest.mock('../economy/sanitise-economy.helper', () => ({
       });
     },
   ),
+  scrubEscrowTransactionForArchive: jest.fn(
+    (
+      record: Record<string, unknown> | null | undefined,
+    ): Record<string, unknown> | null | undefined => {
+      if (record == null) return record;
+      const scrubbed = { ...record };
+      scrubbed['payer_id'] = '00000000-0000-0000-0000-000000000000';
+      scrubbed['payee_id'] = '00000000-0000-0000-0000-000000000000';
+      if (typeof scrubbed['description'] === 'string') {
+        scrubbed['description'] = null;
+      }
+      if (typeof scrubbed['reference_id'] === 'string') {
+        scrubbed['reference_id'] = null;
+      }
+      return scrubbed;
+    },
+  ),
+  scrubEscrowTransactionsForArchive: jest.fn(
+    (
+      records: unknown[] | null | undefined,
+      userId: string,
+    ): Record<string, unknown>[] => {
+      if (records == null || !Array.isArray(records)) return [];
+      return records.map((record) => {
+        if (record !== null && typeof record === 'object') {
+          const r = record as Record<string, unknown>;
+          const scrubbed = { ...r };
+          scrubbed['payer_id'] =
+            r['payer_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['payee_id'] =
+            r['payee_id'] === userId
+              ? userId
+              : '00000000-0000-0000-0000-000000000000';
+          scrubbed['description'] = null;
+          scrubbed['reference_id'] = null;
+          return scrubbed;
+        }
+        return record as Record<string, unknown>;
+      });
+    },
+  ),
 }));
 
 describe('PrivacyService', () => {
@@ -106,6 +149,15 @@ describe('PrivacyService', () => {
         };
       }
       if (table === 'gift_transactions') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === 'escrow_transactions') {
         return {
           select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
@@ -290,6 +342,97 @@ describe('PrivacyService', () => {
       expect(mockInsert).toHaveBeenCalled();
     });
 
+    it('should include escrow transactions in the archive', async () => {
+      // Override escrow_transactions mock to return data
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'coin_purchases') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'gift_transactions') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'escrow_transactions') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({
+                  data: [
+                    {
+                      id: 'esc_1',
+                      payer_id: 'user-1',
+                      payee_id: 'other-user',
+                      amount_coins: 50,
+                      status: 'held',
+                      reason: 'Lesson payment',
+                      metadata: { type: 'conversation' },
+                    },
+                  ],
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        if (table === 'user_sticker_packs') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        return {
+          select: mockSelect,
+          insert: mockInsert,
+          update: mockUpdate,
+        };
+      });
+
+      mockUpload.mockResolvedValue({ error: null });
+      mockGetPublicUrl.mockReturnValue({
+        data: { publicUrl: 'https://example.com/archive.json' },
+      });
+      mockInsert.mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      });
+
+      await service.requestArchive('user-1', {
+        receipt_id: null,
+        app_store: null,
+      });
+
+      expect(mockUpload).toHaveBeenCalled();
+      const uploadArgs = mockUpload.mock.calls[0];
+      const jsonBlob = uploadArgs[1];
+      const parsed = JSON.parse(jsonBlob);
+
+      expect(parsed.escrow_transactions).toBeDefined();
+      expect(Array.isArray(parsed.escrow_transactions)).toBe(true);
+      expect(parsed.escrow_transactions.length).toBeGreaterThanOrEqual(1);
+
+      const escrowRecord = parsed.escrow_transactions[0];
+      expect(escrowRecord.id).toBe('esc_1');
+      expect(escrowRecord.amount_coins).toBe(50);
+      expect(escrowRecord.status).toBe('held');
+      expect(escrowRecord.reason).toBe('Lesson payment');
+      // Role tag should be present
+      expect(escrowRecord.role).toBeDefined();
+      expect(['payer', 'payee']).toContain(escrowRecord.role);
+    });
+
     it('should include scrubbed coin purchases in the archive', async () => {
       // Override the coin_purchases mock to return sensitive data
       mockFrom.mockImplementation((table: string) => {
@@ -315,6 +458,15 @@ describe('PrivacyService', () => {
           };
         }
         if (table === 'gift_transactions') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'escrow_transactions') {
           return {
             select: jest.fn().mockReturnValue({
               eq: jest.fn().mockReturnValue({
