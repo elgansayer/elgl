@@ -27,6 +27,7 @@ import { Logger } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
+import { CoinEconomyHealthService } from './coin-economy-health.service';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
@@ -51,6 +52,24 @@ describe('EconomyController', () => {
             sendGift: jest.fn(),
             getStickerPacks: jest.fn(),
             unlockStickerPack: jest.fn(),
+            getTransactionHistory: jest.fn(),
+          },
+        },
+        {
+          provide: CoinEconomyHealthService,
+          useValue: {
+            getHealthSnapshot: jest.fn().mockResolvedValue({
+              overall: 'healthy',
+              timestamp: new Date().toISOString(),
+              dependencies: {},
+              circuitBreakers: {},
+              degradedFeatures: [],
+              uptimeSeconds: 3600,
+            }),
+            getDegradedFeatures: jest.fn().mockReturnValue([]),
+            markFeatureDegraded: jest.fn(),
+            clearFeatureDegradation: jest.fn(),
+            isFeatureDegraded: jest.fn().mockReturnValue(false),
           },
         },
         {
@@ -122,7 +141,9 @@ describe('EconomyController', () => {
     });
 
     it('should degrade gracefully to default 50 coins when service throws', async () => {
-      (economyService.getBalance as jest.Mock).mockRejectedValue(new Error('DB down'));
+      (economyService.getBalance as jest.Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
 
       const result = await controller.getBalance({ id: 'user-1' } as any);
       expect(result).toEqual({ coins_balance: 50 });
@@ -150,10 +171,18 @@ describe('EconomyController', () => {
     });
 
     it('should degrade gracefully when service throws', async () => {
-      (economyService.claimDailyCheckIn as jest.Mock).mockRejectedValue(new Error('DB down'));
+      (economyService.claimDailyCheckIn as jest.Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
 
-      const result = await controller.claimDailyCheckIn({ id: 'user-1' } as any);
-      expect(result).toEqual({ claimed: false, coins_rewarded: 0, new_balance: 50 });
+      const result = await controller.claimDailyCheckIn({
+        id: 'user-1',
+      } as any);
+      expect(result).toEqual({
+        claimed: false,
+        coins_rewarded: 0,
+        new_balance: 50,
+      });
     });
   });
 
@@ -261,6 +290,45 @@ describe('EconomyController', () => {
     });
   });
 
+  describe('getTransactions', () => {
+    it('should return empty transactions array when user is null', async () => {
+      const result = await controller.getTransactions(null);
+      expect(result).toEqual({ transactions: [] });
+    });
+
+    it('should return transactions from service when user is provided', async () => {
+      const mockTransactions = [
+        {
+          id: 'tx-1',
+          user_id: 'user-1',
+          type: 'daily_checkin',
+          amount: 7,
+          description: 'Daily check-in reward',
+          metadata: null,
+          created_at: '2026-08-08T12:00:00.000Z',
+        },
+      ];
+      (economyService.getTransactionHistory as jest.Mock).mockResolvedValue(
+        mockTransactions,
+      );
+
+      const result = await controller.getTransactions({ id: 'user-1' } as any);
+      expect(economyService.getTransactionHistory).toHaveBeenCalledWith(
+        'user-1',
+      );
+      expect(result).toEqual({ transactions: mockTransactions });
+    });
+
+    it('should return empty transactions on service error', async () => {
+      (economyService.getTransactionHistory as jest.Mock).mockRejectedValue(
+        new Error('DB down'),
+      );
+
+      const result = await controller.getTransactions({ id: 'user-1' } as any);
+      expect(result).toEqual({ transactions: [] });
+    });
+  });
+
   describe('rate limiting decorators', () => {
     const proto = EconomyController.prototype;
     const THROTTLER_LIMIT = 'THROTTLER:LIMIT';
@@ -292,10 +360,7 @@ describe('EconomyController', () => {
 
     it('should apply Throttle decorator to purchaseCoins', () => {
       expect(
-        Reflect.getMetadata(
-          THROTTLER_LIMIT + 'default',
-          proto.purchaseCoins,
-        ),
+        Reflect.getMetadata(THROTTLER_LIMIT + 'default', proto.purchaseCoins),
       ).toBe(5);
     });
 
@@ -327,6 +392,51 @@ describe('EconomyController', () => {
         proto.sendGift,
       );
       expect(metadata).toEqual({ maxRequests: 10, windowSeconds: 60 });
+    });
+  });
+
+  describe('getHealth', () => {
+    it('should return health snapshot from health service', async () => {
+      const mockSnapshot = {
+        overall: 'healthy' as const,
+        timestamp: '2026-08-07T12:00:00.000Z',
+        dependencies: {
+          redis: {
+            status: 'healthy' as const,
+            latencyMs: 1,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          supabase: {
+            status: 'healthy' as const,
+            latencyMs: 2,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          stripe: {
+            status: 'healthy' as const,
+            latencyMs: 50,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+          centrifugo: {
+            status: 'healthy' as const,
+            latencyMs: 3,
+            lastChecked: '2026-08-07T12:00:00.000Z',
+          },
+        },
+        circuitBreakers: {},
+        degradedFeatures: [] as string[],
+        uptimeSeconds: 3600,
+      };
+
+      const healthService = (
+        controller as unknown as { healthService: CoinEconomyHealthService }
+      ).healthService;
+      (healthService.getHealthSnapshot as jest.Mock).mockResolvedValue(
+        mockSnapshot,
+      );
+
+      const result = await controller.getHealth();
+      expect(result).toEqual(mockSnapshot);
+      expect(healthService.getHealthSnapshot).toHaveBeenCalled();
     });
   });
 });

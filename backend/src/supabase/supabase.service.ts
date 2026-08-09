@@ -56,6 +56,7 @@ export type UsersRow = {
   privacy_profile_photo?: string | null;
   privacy_about_info?: string | null;
   privacy_status?: string | null;
+  auto_play_voice_notes?: boolean | null;
   sound_effects_enabled?: boolean | null;
   vibration_enabled?: boolean | null;
   chat_enter_to_send?: boolean | null;
@@ -81,11 +82,12 @@ export type UsersRow = {
   is_deletion_pending?: boolean | null;
 };
 
-type AudioRoomsRow = {
+export type AudioRoomsRow = {
   id: string;
   room_name: string;
   title: string;
   party_type?: string | null;
+  event_id?: string | null;
   target_language: string;
   language_pair: string;
   topic_tag: string;
@@ -504,6 +506,16 @@ type GiftTransactionRow = {
   created_at?: string;
 };
 
+type CoinTransactionRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  amount: number;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string;
+};
+
 type UserStickerPackRow = {
   user_id: string;
   pack_id: string;
@@ -694,6 +706,7 @@ export interface Database {
           language_pair: string | null;
           max_participants: number | null;
           host_id: string;
+          is_cancelled?: boolean;
           proficiency?: string | null;
         };
         Insert: Partial<{
@@ -706,6 +719,7 @@ export interface Database {
           language_pair?: string | null;
           max_participants?: number | null;
           host_id: string;
+          is_cancelled?: boolean;
           proficiency?: string | null;
         }>;
         Update: Partial<{
@@ -718,6 +732,7 @@ export interface Database {
           language_pair?: string | null;
           max_participants?: number | null;
           host_id?: string;
+          is_cancelled?: boolean;
           proficiency?: string | null;
         }>;
         Relationships: [];
@@ -1538,6 +1553,12 @@ export interface Database {
         Update: Partial<GiftTransactionRow>;
         Relationships: [];
       };
+      coin_transactions: {
+        Row: CoinTransactionRow;
+        Insert: Partial<CoinTransactionRow>;
+        Update: Partial<CoinTransactionRow>;
+        Relationships: [];
+      };
       user_sticker_packs: {
         Row: UserStickerPackRow;
         Insert: Partial<UserStickerPackRow>;
@@ -1628,7 +1649,13 @@ export interface Database {
           payer_id: string;
           payee_id: string;
           amount_coins: number;
-          status: 'held' | 'released' | 'refunded' | 'disputed';
+          status:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
           description: string | null;
           reference_id: string | null;
           created_at: string;
@@ -1641,7 +1668,13 @@ export interface Database {
           payer_id: string;
           payee_id: string;
           amount_coins: number;
-          status?: 'held' | 'released' | 'refunded' | 'disputed';
+          status?:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
           description?: string | null;
           reference_id?: string | null;
           created_at?: string;
@@ -1654,7 +1687,13 @@ export interface Database {
           payer_id?: string;
           payee_id?: string;
           amount_coins?: number;
-          status?: 'held' | 'released' | 'refunded' | 'disputed';
+          status?:
+            | 'held'
+            | 'released'
+            | 'refunded'
+            | 'disputed'
+            | 'cancelled'
+            | 'pending';
           description?: string | null;
           reference_id?: string | null;
           created_at?: string;
@@ -2033,15 +2072,15 @@ export interface Database {
         Row: {
           id: string;
           operation: string;
-          escrow_id: string | null;
-          user_id: string | null;
+          escrow_id?: string | null;
+          user_id?: string | null;
           error_type: string;
           error_message: string;
-          stack_trace: string | null;
-          context: Record<string, unknown> | null;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
           created_at: string;
           acknowledged: boolean;
-          resolved_at: string | null;
+          resolved_at?: string | null;
         };
         Insert: Partial<{
           id?: string;
@@ -2052,9 +2091,9 @@ export interface Database {
           error_message: string;
           stack_trace?: string | null;
           context?: Record<string, unknown> | null;
-          created_at?: string;
           acknowledged?: boolean;
           resolved_at?: string | null;
+          created_at?: string;
         }>;
         Update: Partial<{
           operation?: string;
@@ -2064,6 +2103,49 @@ export interface Database {
           error_message?: string;
           stack_trace?: string | null;
           context?: Record<string, unknown> | null;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Relationships: [];
+      };
+      matchmaking_crash_reports: {
+        Row: {
+          id: string;
+          operation: string;
+          user_id: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace: string | null;
+          context: Record<string, unknown> | null;
+          circuit_breaker_open: boolean;
+          degraded_tier: string | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at: string | null;
+        };
+        Insert: Partial<{
+          id?: string;
+          operation: string;
+          user_id?: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          circuit_breaker_open?: boolean;
+          degraded_tier?: string | null;
+          created_at?: string;
+          acknowledged?: boolean;
+          resolved_at?: string | null;
+        }>;
+        Update: Partial<{
+          operation?: string;
+          user_id?: string | null;
+          error_type?: string;
+          error_message?: string;
+          stack_trace?: string | null;
+          context?: Record<string, unknown> | null;
+          circuit_breaker_open?: boolean;
+          degraded_tier?: string | null;
           acknowledged?: boolean;
           resolved_at?: string | null;
         }>;
@@ -2137,7 +2219,9 @@ export class SupabaseService implements OnModuleDestroy {
       lazyConnect: true,
     });
     this.redisClient.on('error', (err) => {
-      this.logger.error(`Redis connection error in SupabaseService: ${err.message}`);
+      this.logger.error(
+        `Redis connection error in SupabaseService: ${err.message}`,
+      );
     });
   }
 

@@ -7,7 +7,7 @@ describe('DataRetentionService', () => {
   let service: DataRetentionService;
   let mockSupabaseClient: Record<string, jest.Mock>;
   let mockQueryBuilder: Record<string, jest.Mock>;
-let mockRedis: { del: jest.Mock };
+  let mockRedis: { del: jest.Mock };
   let mockEventEmitter: { emit: jest.Mock };
 
   beforeEach(async () => {
@@ -205,6 +205,32 @@ let mockRedis: { del: jest.Mock };
       });
 
       await expect(service.finaliseAccountDeletions()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('purgeInactiveReadingProgress', () => {
+    it('deletes reading progress with last_read_at older than 730 days', async () => {
+      mockQueryBuilder.lt.mockResolvedValue({ error: null, count: 5 });
+
+      await service.purgeInactiveReadingProgress();
+
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('reading_progress');
+      expect(mockQueryBuilder.delete).toHaveBeenCalled();
+      expect(mockQueryBuilder.lt).toHaveBeenCalledWith(
+        'last_read_at',
+        expect.any(String),
+      );
+    });
+
+    it('logs error when delete fails', async () => {
+      mockQueryBuilder.lt.mockResolvedValue({
+        error: { message: 'db error' },
+        count: null,
+      });
+
+      await expect(
+        service.purgeInactiveReadingProgress(),
+      ).resolves.toBeUndefined();
     });
   });
 });

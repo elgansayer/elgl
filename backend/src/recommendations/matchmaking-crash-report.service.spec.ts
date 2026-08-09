@@ -160,8 +160,8 @@ describe('MatchmakingCrashReportService', () => {
 
       const result = await service.reportCrash(minimalPayload);
       expect(result).toBeDefined();
-      expect(result!.user_id).toBeNull();
-      expect(result!.stack_trace).toBeNull();
+      expect(result!.user_id).toBeUndefined();
+      expect(result!.stack_trace).toBeUndefined();
       expect(result!.circuit_breaker_open).toBe(false);
     });
   });

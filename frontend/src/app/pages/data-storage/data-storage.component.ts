@@ -6,7 +6,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-data-storage',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './data-storage.component.html',
 })

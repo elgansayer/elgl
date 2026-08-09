@@ -4,7 +4,6 @@ import { I18nService } from '../../services/i18n.service';
 
 @Component({
   selector: 'app-app-language-selector',
-  standalone: true,
   imports: [TranslatePipe],
   templateUrl: './app-language-selector.component.html',
 })

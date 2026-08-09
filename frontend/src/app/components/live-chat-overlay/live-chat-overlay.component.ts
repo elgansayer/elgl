@@ -88,14 +88,15 @@ interface CentrifugoMessageData {
 export class LiveChatOverlayComponent implements OnInit {
   roomId = input<string>('');
 
-  private centrifugo = inject(CentrifugoService);
-  private i18n = inject(I18nService);
-  private destroyRef = inject(DestroyRef);
   private scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
+  centrifugo = inject(CentrifugoService);
+  i18n = inject(I18nService);
+  destroyRef = inject(DestroyRef);
+
   messages = signal<LiveMessage[]>([]);
-  private channelName = '';
-  private subscription: unknown = null;
+  channelName = '';
+  subscription: unknown = null;
 
   // Integration with Centrifugo requires imperative setup; exception permitted per AGENTS.md 5.3
   ngOnInit() {
@@ -136,7 +137,7 @@ export class LiveChatOverlayComponent implements OnInit {
     });
   }
 
-  private addMessage(msg: LiveMessage) {
+  addMessage(msg: LiveMessage) {
     this.messages.update((msgs) => {
       const newMsgs = [...msgs, msg];
       // Cap at 50 messages to maintain 60 FPS rendering performance
@@ -148,7 +149,7 @@ export class LiveChatOverlayComponent implements OnInit {
     this.scrollToBottom();
   }
 
-  private scrollToBottom() {
+  scrollToBottom() {
     afterNextRender(() => {
       const el = this.scrollContainer()?.nativeElement;
       if (el) {
