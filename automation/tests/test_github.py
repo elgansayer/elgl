@@ -1,0 +1,107 @@
+import json
+from collections.abc import Sequence
+from pathlib import Path
+
+from openhands_factory.github import GitHubClient
+from openhands_factory.repository_guard import ProcessResult
+
+
+class Runner:
+    def __init__(self, results: list[ProcessResult]) -> None:
+        self.results = results
+        self.calls: list[tuple[str, ...]] = []
+
+    def __call__(
+        self, arguments: Sequence[str], cwd: Path, timeout: int = 300
+    ) -> ProcessResult:
+        self.calls.append(tuple(arguments))
+        return self.results.pop(0)
+
+
+def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> None:
+    payload = [
+        {
+            "number": 10,
+            "title": "Normal",
+            "body": "Body",
+            "labels": [],
+        },
+        {
+            "number": 11,
+            "title": "Build failure",
+            "body": "Broken",
+            "labels": [{"name": "guardian-alert"}],
+        },
+        {
+            "number": 12,
+            "title": "Human decision",
+            "body": "Blocked",
+            "labels": [{"name": "needs-human"}],
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    tasks = client.collect_open_issues()
+
+    assert [task.identifier for task in tasks] == ["10", "11"]
+    assert tasks[0].priority == 10
+    assert tasks[1].priority == 0
+    assert "10000" in runner.calls[0]
+    assert "secret" not in repr(runner.calls)
+
+
+def test_pull_request_creation_parses_number(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "https://github.com/owner/repo/pull/42\n", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    number = client.create_pull_request("factory/12-fix", "Fix", "Body")
+
+    assert number == 42
+    assert "--draft" in runner.calls[0]
+
+
+def test_auto_merge_never_uses_admin(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.enable_auto_merge(42)
+
+    call = runner.calls[0]
+    assert "--auto" in call
+    assert "--admin" not in call
+
+
+def test_pull_request_status_requires_all_checks_to_pass(tmp_path: Path) -> None:
+    payload = {
+        "number": 42,
+        "state": "OPEN",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "reviewDecision": "APPROVED",
+        "headRefOid": "abc123",
+        "statusCheckRollup": [
+            {"status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"status": "COMPLETED", "conclusion": "SKIPPED"},
+        ],
+    }
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    status = client.pull_request_status(42)
+
+    assert status.checks_passed
+    assert not status.checks_pending
+    assert status.head_sha == "abc123"
+
+
+def test_review_status_is_anchored_to_head_sha(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.publish_review_status("abc123", approved=True, detail="Review passed")
+
+    call = runner.calls[0]
+    assert "repos/owner/repo/statuses/abc123" in call
+    assert "context=factory/independent-review" in call
+    assert "state=success" in call

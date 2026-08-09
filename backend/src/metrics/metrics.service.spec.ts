@@ -123,51 +123,414 @@ describe('MetricsService', () => {
     });
   });
 
-  describe('moderation metrics', () => {
-    it('should set moderation queue size', () => {
-      expect(() => service.setModerationQueueSize(42)).not.toThrow();
+  describe('Trust & Safety metrics', () => {
+    it('should record report submitted', () => {
+      expect(() => service.recordTsReportSubmitted('harassment')).not.toThrow();
     });
 
-    it('should record moderation report with reason category', () => {
+    it('should record report submitted with default category', () => {
+      expect(() => service.recordTsReportSubmitted()).not.toThrow();
+    });
+
+    it('should record block created', () => {
+      expect(() => service.recordTsBlockCreated()).not.toThrow();
+    });
+
+    it('should record block removed', () => {
+      expect(() => service.recordTsBlockRemoved()).not.toThrow();
+    });
+
+    it('should set pending reports gauge', () => {
+      expect(() => service.setTsPendingReports(15)).not.toThrow();
+    });
+
+    it('should set active blocks total gauge', () => {
+      expect(() => service.setTsActiveBlocksTotal(200)).not.toThrow();
+    });
+
+    it('should record moderation action', () => {
       expect(() =>
-        service.recordModerationReport('harassment'),
+        service.recordTsModerationAction('approve', 'moment', 1.2),
       ).not.toThrow();
     });
 
-    it('should record moderation report with default reason category', () => {
-      expect(() => service.recordModerationReport()).not.toThrow();
-    });
-
-    it('should record moderation approve action with duration', () => {
+    it('should record moderation action (reject)', () => {
       expect(() =>
-        service.recordModerationAction('approve', 'profile', 0.5),
+        service.recordTsModerationAction('reject', 'profile', 0.5),
       ).not.toThrow();
     });
 
-    it('should record moderation reject action with duration', () => {
-      expect(() =>
-        service.recordModerationAction('reject', 'moment', 1.2),
-      ).not.toThrow();
+    it('should record dating risk score', () => {
+      expect(() => service.recordTsDatingRiskScore(65)).not.toThrow();
     });
 
-    it('should record moderation analysis requests', () => {
-      expect(() => service.recordModerationAnalysis()).not.toThrow();
-    });
+    it('should include T&S metrics in getMetrics output', async () => {
+      service.recordTsReportSubmitted('spam');
+      service.recordTsBlockCreated();
+      service.recordTsBlockRemoved();
+      service.setTsPendingReports(10);
+      service.setTsActiveBlocksTotal(100);
+      service.recordTsModerationAction('approve', 'moment', 0.8);
+      service.recordTsDatingRiskScore(42);
 
-    it('should include moderation metrics in getMetrics output', async () => {
-      service.setModerationQueueSize(10);
-      service.recordModerationReport('spam');
-      service.recordModerationAction('approve', 'profile', 0.3);
-      service.recordModerationAction('reject', 'moment', 0.7);
-      service.recordModerationAnalysis();
       const metrics = await service.getMetrics();
-      expect(metrics).toContain('hellotalk_moderation_queue_size');
-      expect(metrics).toContain('hellotalk_moderation_reports_created_total');
-      expect(metrics).toContain('hellotalk_moderation_actions_total');
-      expect(metrics).toContain('hellotalk_moderation_analysis_requests_total');
+      expect(metrics).toContain('hellotalk_ts_reports_submitted_total');
+      expect(metrics).toContain('hellotalk_ts_blocks_created_total');
+      expect(metrics).toContain('hellotalk_ts_blocks_removed_total');
+      expect(metrics).toContain('hellotalk_ts_pending_reports');
+      expect(metrics).toContain('hellotalk_ts_active_blocks_total');
+      expect(metrics).toContain('hellotalk_ts_moderation_actions_total');
+      expect(metrics).toContain('hellotalk_ts_dating_risk_score');
+      expect(metrics).toContain('hellotalk_ts_reports_by_category_total');
       expect(metrics).toContain(
-        'hellotalk_moderation_action_duration_seconds',
+        'hellotalk_ts_moderation_queue_latency_seconds',
       );
+    });
+  });
+
+  describe('LingQ Reading Engine metrics', () => {
+    it('should record reading engine session', () => {
+      expect(() => service.recordReadingEngineSession('fr')).not.toThrow();
+    });
+
+    it('should record reading engine session with defaults', () => {
+      expect(() => service.recordReadingEngineSession()).not.toThrow();
+    });
+
+    it('should record words parsed', () => {
+      expect(() =>
+        service.recordReadingEngineWordsParsed(500, 'ja'),
+      ).not.toThrow();
+    });
+
+    it('should record tokenisation duration', () => {
+      expect(() =>
+        service.recordReadingEngineTokenisationDuration('en', 0.025),
+      ).not.toThrow();
+    });
+
+    it('should record AI request', () => {
+      expect(() =>
+        service.recordReadingEngineAiRequest('translate', '200'),
+      ).not.toThrow();
+    });
+
+    it('should record AI request duration', () => {
+      expect(() =>
+        service.recordReadingEngineAiRequestDuration('grammar-check', 1.4),
+      ).not.toThrow();
+    });
+
+    it('should record AI error', () => {
+      expect(() =>
+        service.recordReadingEngineAiError('translate', 'timeout'),
+      ).not.toThrow();
+    });
+
+    it('should record flashcard save from reading', () => {
+      expect(() =>
+        service.recordReadingEngineFlashcardSave('es', 'en'),
+      ).not.toThrow();
+    });
+
+    it('should record flashcard save from reading with defaults', () => {
+      expect(() => service.recordReadingEngineFlashcardSave()).not.toThrow();
+    });
+
+    it('should record session duration', () => {
+      expect(() =>
+        service.recordReadingEngineSessionDuration('de', 420),
+      ).not.toThrow();
+    });
+
+    it('should record word lookup', () => {
+      expect(() =>
+        service.recordReadingEngineWordLookup('pt', 'en'),
+      ).not.toThrow();
+    });
+
+    it('should set daily active readers gauge', () => {
+      expect(() =>
+        service.setReadingEngineDailyActiveReaders(128),
+      ).not.toThrow();
+    });
+
+    it('should include reading engine metrics in getMetrics output', async () => {
+      service.recordReadingEngineSession('fr');
+      service.recordReadingEngineAiRequest('translate', '200');
+      service.recordReadingEngineAiError('translate', '429');
+      service.recordReadingEngineFlashcardSave('en', 'es');
+      service.setReadingEngineDailyActiveReaders(42);
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_reading_engine_sessions_total');
+      expect(metrics).toContain('hellotalk_reading_engine_ai_requests_total');
+      expect(metrics).toContain('hellotalk_reading_engine_ai_errors_total');
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_flashcard_saves_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_daily_active_readers',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_session_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_words_looked_up_total',
+      );
+      expect(metrics).toContain('hellotalk_reading_engine_words_parsed_total');
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_tokenisation_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_reading_engine_ai_request_duration_seconds',
+      );
+    });
+  });
+
+  describe('Matchmaking metrics', () => {
+    it('should record matchmaking recommendations generated', () => {
+      expect(() =>
+        service.recordMatchmakingRecommendationsGenerated(
+          'interest',
+          'getRecommendations',
+          10,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking recommendations per request', () => {
+      expect(() =>
+        service.recordMatchmakingRecommendationsPerRequest('interest', 8),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking fallback tier used', () => {
+      expect(() =>
+        service.recordMatchmakingFallbackTierUsed(
+          'interest',
+          'language_exchange',
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking empty results', () => {
+      expect(() =>
+        service.recordMatchmakingEmptyResults('getRecommendations'),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking request duration', () => {
+      expect(() =>
+        service.recordMatchmakingRequestDuration(
+          'getRecommendations',
+          'success',
+          0.35,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking request duration (error)', () => {
+      expect(() =>
+        service.recordMatchmakingRequestDuration(
+          'getDailyRecommendations',
+          'error',
+          2.1,
+        ),
+      ).not.toThrow();
+    });
+
+    it('should record matchmaking daily cache miss', () => {
+      expect(() =>
+        service.recordMatchmakingDailyCacheMiss('redis_unavailable'),
+      ).not.toThrow();
+    });
+
+    it('should set matchmaking tier success rate', () => {
+      expect(() => service.setMatchmakingTierSuccessRate(0.72)).not.toThrow();
+    });
+
+    it('should include matchmaking metrics in getMetrics output', async () => {
+      service.recordMatchmakingRecommendationsGenerated(
+        'interest',
+        'getRecommendations',
+        10,
+      );
+      service.recordMatchmakingRecommendationsPerRequest('interest', 10);
+      service.recordMatchmakingFallbackTierUsed(
+        'interest',
+        'language_exchange',
+      );
+      service.recordMatchmakingEmptyResults('getRecommendations');
+      service.recordMatchmakingRequestDuration(
+        'getRecommendations',
+        'success',
+        0.5,
+      );
+      service.recordMatchmakingDailyCacheMiss('empty_cache');
+      service.setMatchmakingTierSuccessRate(0.65);
+
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_recommendations_generated_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_recommendations_per_request',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_fallback_tier_used_total',
+      );
+      expect(metrics).toContain('hellotalk_matchmaking_empty_results_total');
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_request_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_matchmaking_daily_cache_misses_total',
+      );
+      expect(metrics).toContain('hellotalk_matchmaking_tier_success_rate');
+    });
+  });
+
+  describe('Escrow metrics', () => {
+    it('should record escrow created', () => {
+      expect(() => service.recordEscrowCreated(100)).not.toThrow();
+    });
+
+    it('should record escrow released', () => {
+      expect(() => service.recordEscrowReleased(50)).not.toThrow();
+    });
+
+    it('should record escrow refunded', () => {
+      expect(() => service.recordEscrowRefunded(75, 'manual')).not.toThrow();
+    });
+
+    it('should record escrow refunded with default reason', () => {
+      expect(() => service.recordEscrowRefunded(75)).not.toThrow();
+    });
+
+    it('should record escrow cancelled', () => {
+      expect(() => service.recordEscrowCancelled(30)).not.toThrow();
+    });
+
+    it('should record escrow auto-refunded', () => {
+      expect(() => service.recordEscrowAutoRefunded(200)).not.toThrow();
+    });
+
+    it('should record degraded operation', () => {
+      expect(() => service.recordEscrowDegradedOperation()).not.toThrow();
+    });
+
+    it('should set escrow degraded queue size', () => {
+      expect(() => service.setEscrowDegradedQueueSize(42)).not.toThrow();
+    });
+
+    it('should set escrow stale held count', () => {
+      expect(() => service.setEscrowStaleHeldCount(5)).not.toThrow();
+    });
+
+    it('should include escrow metrics in getMetrics output', async () => {
+      service.recordEscrowCreated(100);
+      service.recordEscrowReleased(50);
+      service.recordEscrowRefunded(25, 'manual');
+      service.recordEscrowCancelled(10);
+      service.recordEscrowAutoRefunded(30);
+      service.recordEscrowDegradedOperation();
+      service.setEscrowDegradedQueueSize(3);
+      service.setEscrowStaleHeldCount(3);
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_escrow_transactions_created_total');
+      expect(metrics).toContain('hellotalk_escrow_transactions_released_total');
+      expect(metrics).toContain('hellotalk_escrow_transactions_refunded_total');
+      expect(metrics).toContain(
+        'hellotalk_escrow_transactions_cancelled_total',
+      );
+      expect(metrics).toContain('hellotalk_escrow_total_held');
+      expect(metrics).toContain('hellotalk_escrow_total_coins_held');
+      expect(metrics).toContain('hellotalk_escrow_amount_per_transaction');
+      expect(metrics).toContain('hellotalk_escrow_stale_held_count');
+      expect(metrics).toContain('hellotalk_escrow_auto_refund_total');
+      expect(metrics).toContain('hellotalk_escrow_degraded_queue_size');
+    });
+  });
+
+  describe('Video Classrooms metrics', () => {
+    it('should record video classroom created', () => {
+      expect(() => service.recordVideoClassroomCreated()).not.toThrow();
+    });
+
+    it('should record video classroom creation failed', () => {
+      expect(() =>
+        service.recordVideoClassroomCreationFailed('Error'),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom creation failed with default', () => {
+      expect(() => service.recordVideoClassroomCreationFailed()).not.toThrow();
+    });
+
+    it('should record video classroom joined', () => {
+      expect(() => service.recordVideoClassroomJoined()).not.toThrow();
+    });
+
+    it('should record video classroom join failed', () => {
+      expect(() =>
+        service.recordVideoClassroomJoinFailed('Error'),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom join failed with default', () => {
+      expect(() => service.recordVideoClassroomJoinFailed()).not.toThrow();
+    });
+
+    it('should set video classrooms active rooms', () => {
+      expect(() => service.setVideoClassroomsActiveRooms(5)).not.toThrow();
+    });
+
+    it('should record video classroom token generation duration', () => {
+      expect(() =>
+        service.recordVideoClassroomTokenGenerationDuration('create', 0.15),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom token generation duration for join', () => {
+      expect(() =>
+        service.recordVideoClassroomTokenGenerationDuration('join', 0.25),
+      ).not.toThrow();
+    });
+
+    it('should record video classroom room duration', () => {
+      expect(() =>
+        service.recordVideoClassroomRoomDuration(600, 2),
+      ).not.toThrow();
+    });
+
+    it('should set video classroom participant max', () => {
+      expect(() =>
+        service.setVideoClassroomParticipantMax('video_abc', 2),
+      ).not.toThrow();
+    });
+
+    it('should include video classroom metrics in getMetrics output', async () => {
+      service.recordVideoClassroomCreated();
+      service.recordVideoClassroomJoined();
+      service.setVideoClassroomsActiveRooms(3);
+      service.recordVideoClassroomCreationFailed('Error');
+      const metrics = await service.getMetrics();
+      expect(metrics).toContain('hellotalk_video_classrooms_created_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_joined_total');
+      expect(metrics).toContain('hellotalk_video_classrooms_active_rooms');
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_failed_creations_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_failed_joins_total',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_room_duration_seconds',
+      );
+      expect(metrics).toContain(
+        'hellotalk_video_classrooms_token_generation_duration_seconds',
+      );
+      expect(metrics).toContain('hellotalk_video_classrooms_participant_max');
     });
   });
 });
