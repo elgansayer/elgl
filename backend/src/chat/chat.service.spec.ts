@@ -200,6 +200,7 @@ describe('ChatService', () => {
         correction_request_payload: null,
         status_reply_payload: null,
         is_view_once: false,
+        delivery_status: 'sent',
       });
       expect(centrifugoService.publish).toHaveBeenCalledWith('chat:room-1', {
         message: savedMessage,

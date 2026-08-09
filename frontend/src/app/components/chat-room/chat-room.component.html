@@ -176,6 +176,7 @@
           >
             <div
               [id]="'msg-' + msg.id"
+              [attr.data-message-id]="msg.id"
               data-testid="chat-message"
               [class]="
                 'chat-message flex gap-2 ' + (isOwnMessage(msg) ? 'justify-end' : 'justify-start')
@@ -197,9 +198,94 @@
                   [class.chat-bubble-tail--received]="!isOwnMessage(msg)"
                   aria-hidden="true"
                 ></span>
-                <p class="mb-1 text-[11px] opacity-70">
-                  {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
-                  {{ msg.created_at | date: 'shortTime' }}
+                <p class="mb-1 text-[11px] opacity-70 flex items-center gap-1">
+                  <span>
+                    {{ msg.sender?.display_name || ('chatRoom.partnerFallback' | t) }} ·
+                    {{ msg.created_at | date: 'shortTime' }}
+                  </span>
+                  @if (isOwnMessage(msg) && (msg.delivery_status || msg.is_read)) {
+                    <span class="inline-flex items-center flex-shrink-0">
+                      @if (
+                        msg.delivery_status === 'sent' || (!msg.delivery_status && msg.is_read)
+                      ) {
+                        <!-- Single check: sent (gray) -->
+                        <svg
+                          class="w-3.5 h-3.5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-label="Sent"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                      @if (msg.delivery_status === 'delivered') {
+                        <!-- Double check: delivered (gray) -->
+                        <svg
+                          class="w-3.5 h-3.5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-label="Delivered"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <svg
+                          class="w-3.5 h-3.5 -ms-2 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                      @if (msg.delivery_status === 'read') {
+                        <!-- Double check: read (blue) -->
+                        <svg
+                          class="w-3.5 h-3.5 text-blue-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-label="Read"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        <svg
+                          class="w-3.5 h-3.5 -ms-2 text-blue-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      }
+                    </span>
+                  }
                 </p>
                 @if (msg.reply_to_id) {
                   <button
