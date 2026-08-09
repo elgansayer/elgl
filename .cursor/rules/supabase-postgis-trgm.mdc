@@ -1,0 +1,34 @@
+---
+description: Patterns and rules for writing Supabase PostgreSQL queries, PostGIS distance matching, and pg_trgm text search in NestJS and migrations.
+globs: backend/src/**/*.ts, supabase/migrations/*.sql
+alwaysApply: false
+---
+
+# Supabase, PostGIS & pg_trgm Domain Rules
+
+When writing queries, migrations, or NestJS services for database operations:
+
+1. **British English Spelling (`colour`, `favourite`, `monetisation`)**
+   - All table columns, TypeScript interfaces, and API request parameters must strictly use British English.
+   - Example columns: `is_vip`, `coins_balance`, `favourite_languages`, `study_streak_days`.
+
+2. **PostGIS Spatial Discovery & Matchmaking**
+   - Always use geography types for distance calculations (`ST_DWithin`):
+     ```sql
+     ST_DWithin(
+       users.location::geography,
+       ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+       :radiusMeters
+     )
+     ```
+   - When `user.is_vip === true`, check if `user.mock_location` is set and use it instead of real coordinates for location spoofing.
+
+3. **`pg_trgm` Trigram Search**
+   - For fast text searching inside `chat_messages` or `moments`, utilize trigram indexes (`GIN (content gin_trgm_ops)`):
+     ```sql
+     SELECT * FROM chat_messages WHERE content ILIKE '%' || :query || '%' ORDER BY similarity(content, :query) DESC;
+     ```
+
+4. **No Direct Angular Database Access**
+   - Angular components and services (`/frontend`) must NEVER import `@supabase/supabase-js` or query database tables directly.
+   - All data transactions must route through NestJS REST controllers or Centrifugo WebSockets with Supabase JWT authentication.

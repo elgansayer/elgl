@@ -1,18 +1,18 @@
-import { Component, ElementRef, EventEmitter, Output, ViewChild, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, output, viewChild, afterNextRender } from '@angular/core';
+
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-doodle-pad',
-  standalone: true,
-  imports: [CommonModule],
+  imports: [TranslatePipe],
   templateUrl: './doodle-pad.component.html',
-  styleUrls: ['./doodle-pad.component.scss']
+  styleUrls: ['./doodle-pad.component.scss'],
 })
-export class DoodlePadComponent implements AfterViewInit {
-  @Output() doodleSaved = new EventEmitter<string>();
-  @Output() cancelled = new EventEmitter<void>();
+export class DoodlePadComponent {
+  doodleSaved = output<string>();
+  cancelled = output<void>();
 
-  @ViewChild('canvas', { static: false }) canvasRef!: ElementRef<HTMLCanvasElement>;
+  canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private ctx: CanvasRenderingContext2D | null = null;
   private isDrawing = false;
 
@@ -20,17 +20,19 @@ export class DoodlePadComponent implements AfterViewInit {
   brushWidth = 4;
   readonly colors = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
-  ngAfterViewInit(): void {
-    const canvas = this.canvasRef.nativeElement;
-    canvas.width = 600;
-    canvas.height = 400;
-    this.ctx = canvas.getContext('2d');
-    if (this.ctx) {
-      this.ctx.fillStyle = '#ffffff';
-      this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-      this.ctx.lineCap = 'round';
-      this.ctx.lineJoin = 'round';
-    }
+  constructor() {
+    afterNextRender(() => {
+      const canvas = this.canvasRef().nativeElement;
+      canvas.width = 600;
+      canvas.height = 400;
+      this.ctx = canvas.getContext('2d');
+      if (this.ctx) {
+        this.ctx.fillStyle = '#1e1e1e';
+        this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+      }
+    });
   }
 
   startDrawing(event: MouseEvent | TouchEvent): void {
@@ -61,9 +63,9 @@ export class DoodlePadComponent implements AfterViewInit {
   }
 
   clearCanvas(): void {
-    if (!this.ctx || !this.canvasRef) return;
-    const canvas = this.canvasRef.nativeElement;
-    this.ctx.fillStyle = '#ffffff';
+    if (!this.ctx || !this.canvasRef()) return;
+    const canvas = this.canvasRef().nativeElement;
+    this.ctx.fillStyle = '#1e1e1e';
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
@@ -76,8 +78,8 @@ export class DoodlePadComponent implements AfterViewInit {
   }
 
   save(): void {
-    if (!this.canvasRef) return;
-    const dataUrl = this.canvasRef.nativeElement.toDataURL('image/png');
+    if (!this.canvasRef()) return;
+    const dataUrl = this.canvasRef().nativeElement.toDataURL('image/png');
     this.doodleSaved.emit(dataUrl);
   }
 
@@ -86,11 +88,11 @@ export class DoodlePadComponent implements AfterViewInit {
   }
 
   private getPos(event: MouseEvent | TouchEvent): { x: number; y: number } | null {
-    if (!this.canvasRef) return null;
-    const canvas = this.canvasRef.nativeElement;
+    if (!this.canvasRef()) return null;
+    const canvas = this.canvasRef().nativeElement;
     const rect = canvas.getBoundingClientRect();
-    let clientX = 0;
-    let clientY = 0;
+    let clientX: number;
+    let clientY: number;
 
     if ('touches' in event && event.touches.length > 0) {
       clientX = event.touches[0].clientX;
@@ -106,7 +108,7 @@ export class DoodlePadComponent implements AfterViewInit {
     const scaleY = canvas.height / rect.height;
     return {
       x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      y: (clientY - rect.top) * scaleY,
     };
   }
 }

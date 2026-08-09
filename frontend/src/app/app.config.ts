@@ -1,12 +1,68 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { ApplicationConfig, ErrorHandler, inject, isDevMode, APP_INITIALIZER } from '@angular/core';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideHttpClient, withFetch, withInterceptors, HttpClient } from '@angular/common/http';
+import { provideClientHydration } from '@angular/platform-browser';
+import { DOCUMENT } from '@angular/common';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideServiceWorker } from '@angular/service-worker';
+import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
+import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { routes } from './app.routes';
+import { GlobalErrorHandler } from './services/error-handler.service';
+import { DeepLinkService } from './services/deep-link.service';
+import { retryInterceptor } from './interceptors/retry.interceptor';
+
+export function createTranslateLoader(http: HttpClient): TranslateHttpLoader {
+  return new TranslateHttpLoader(http, './assets/i18n/', '.json');
+}
+
+function initialiseDeepLinks(): () => void {
+  const deepLinkService = inject(DeepLinkService);
+  const document = inject(DOCUMENT);
+
+  return (): void => {
+    const url = document?.defaultView?.location?.href;
+    if (url) {
+      deepLinkService.handleDeepLink(url);
+    }
+
+    if (typeof document?.defaultView?.navigator?.registerProtocolHandler === 'function') {
+      try {
+        document.defaultView.navigator.registerProtocolHandler(
+          'web+hellotalk',
+          `${document.defaultView.location.origin}/%s`,
+        );
+      } catch {
+        // Protocol handler registration is best-effort; browser may reject it silently
+      }
+    }
+  };
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
-    provideHttpClient(withFetch()),
-  ]
+    provideRouter(routes, withComponentInputBinding()),
+    provideHttpClient(withFetch(), withInterceptors([retryInterceptor])),
+    provideClientHydration(),
+    provideAnimations(),
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
+    ...(TranslateModule.forRoot({
+      loader: {
+        provide: TranslateLoader,
+        useFactory: createTranslateLoader,
+        deps: [HttpClient],
+      },
+      defaultLanguage: 'en-GB',
+    }).providers ?? []),
+    importProvidersFrom(JoyrideModule.forRoot()),
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initialiseDeepLinks,
+      multi: true,
+    },
+  ],
 };

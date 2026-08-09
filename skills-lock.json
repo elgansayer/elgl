@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "angular-developer": {
+      "source": "angular/skills",
+      "sourceType": "github",
+      "skillPath": "angular-developer/SKILL.md",
+      "computedHash": "258cc410839924d8c2b31afe9dd7349a1c03b9215ddba7942a87ce976c894adb"
+    },
+    "angular-new-app": {
+      "source": "angular/skills",
+      "sourceType": "github",
+      "skillPath": "angular-new-app/SKILL.md",
+      "computedHash": "49bd84ab08bd3498c52f476bed48fbb942dc6dbc0925607e84549adbed34bccf"
+    },
+    "my-style-guide": {
+      "source": "elgansayer/my-agent-skills",
+      "sourceType": "github",
+      "skillPath": "my-style-guide/SKILL.md",
+      "computedHash": "3c6221bab4b70f12ecf4c161f42b78d7c679ab3ca0f6e99eeef0c8830275e234"
+    }
+  }
+}

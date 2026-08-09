@@ -1,0 +1,2 @@
+- [x] Implement NestJS CRON job to reset streaks if inactive for 24 hours.
+- [x] Create `backend/src/streak/streak.module.ts` with StreakService and @Cron('0 0 * * *') method that queries users where last_active_at < NOW() - INTERVAL '24 hours' and sets study_streak_days = 0. Added last_active_at column migration and LastActiveInterceptor to update last_active_at on every authenticated request. Unit tests in backend/src/streak/streak.service.spec.ts.

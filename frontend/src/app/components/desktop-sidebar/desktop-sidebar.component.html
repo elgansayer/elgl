@@ -1,0 +1,41 @@
+<nav class="hidden lg:flex flex-col w-64 h-full bg-surface-200 border-e border-surface-100 py-4" role="navigation" [attr.aria-label]="'nav.mainNav' | t">
+  <div class="px-6 pb-4">
+    <span class="text-lg font-black text-primary tracking-tight">{{ 'app.title' | t }}</span>
+  </div>
+
+  <ul class="flex flex-col gap-1 px-3">
+    @for (item of navItems; track item.path) {
+      <li>
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="bg-surface-100 text-primary"
+          [routerLinkActiveOptions]="{ exact: item.exact }"
+          class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+          [attr.aria-label]="item.key | t"
+          [attr.aria-current]="false"
+        >
+          <span class="text-xl leading-none" aria-hidden="true">{{ item.icon }}</span>
+          <span>{{ item.key | t }}</span>
+          @if (unreadCounter.tabCount(item.tab) > 0) {
+            <span
+              class="ms-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+            >
+              {{ unreadCounter.tabCount(item.tab) > 99 ? '99+' : unreadCounter.tabCount(item.tab) }}
+            </span>
+          }
+        </a>
+      </li>
+    }
+  </ul>
+
+  <div class="mt-auto px-6 pt-4">
+    <a
+      routerLink="/settings"
+      class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-100 hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+      [attr.aria-label]="'nav.settings' | t"
+    >
+      <span class="text-xl leading-none" aria-hidden="true">⚙️</span>
+      <span>{{ 'nav.settings' | t }}</span>
+    </a>
+  </div>
+</nav>

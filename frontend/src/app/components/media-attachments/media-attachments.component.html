@@ -1,0 +1,21 @@
+@if (hasText()) {
+  <p class="mt-2 whitespace-pre-wrap">{{ message().text }}</p>
+}
+
+@if (voiceNote(); as voice) {
+  <div class="mt-2 mb-2">
+    <app-audio-player [src]="voice.url" [durationSec]="voice.durationSec" />
+  </div>
+}
+@if (showImages()) {
+  <div class="media-grid mt-2">
+    @for (img of images(); track img) {
+      <img
+        [src]="img"
+        [alt]="'media.image' | t"
+        class="media-image"
+        loading="lazy"
+      />
+    }
+  </div>
+}

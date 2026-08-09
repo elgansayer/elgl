@@ -1,25 +1,56 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsBoolean,
+} from 'class-validator';
 
-export class UpgradeVipDto {
+export class CreateDiagnosticLogDto {
   @IsString()
   @IsNotEmpty()
-  @IsIn(['consumer', 'developer'])
-  tier!: 'consumer' | 'developer';
+  @IsIn(['POSTGIS', 'CENTRIFUGO', 'REDIS', 'LIVEKIT'])
+  category!: 'POSTGIS' | 'CENTRIFUGO' | 'REDIS' | 'LIVEKIT';
+
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(['info', 'success', 'warn'])
+  status!: 'info' | 'success' | 'warn';
+
+  @IsString()
+  @IsNotEmpty()
+  message!: string;
 }
 
-export class StripeWebhookDto {
+export class AppleReceiptValidationDto {
   @IsString()
   @IsNotEmpty()
-  type!: string;
+  receipt_data!: string;
 
   @IsOptional()
-  data?: {
-    object?: {
-      metadata?: {
-        userId?: string;
-        tier?: 'consumer' | 'developer';
-      };
-      customer_email?: string;
-    };
-  };
+  @IsBoolean()
+  exclude_old_transactions?: boolean;
+}
+
+export class CreateCheckoutSessionDto {
+  @IsString()
+  @IsNotEmpty()
+  @IsIn([
+    'consumer_8_ukp_10_usd',
+    'consumer_50_ukp_63_usd',
+    'pro_12_ukp_15_usd',
+    'developer_20_ukp_26_usd',
+  ])
+  planId!: string;
+
+  @IsString()
+  @IsIn(['month', 'year'])
+  interval!: 'month' | 'year';
+}
+
+export interface AppleReceiptValidationResponse {
+  valid: boolean;
+  product_id?: string;
+  expiration_date?: string;
+  error?: string;
 }

@@ -41,3 +41,25 @@ coverage/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+.aider*
+claude.log
+current_claude.log
+current_aider.log
+STUCK_LOG.md
+e2e/ux-snapshots/
+e2e/test-results/
+e2e/playwright-report/
+
+# Swarm log noise (never commit these - they grow unbounded)
+qa_errors.log
+qa_aider.log
+test_errors.log
+ux_capture.log
+
+
+node_modules
+.tasks/i18n-fix-*.md
+analysis/
+__pycache__/
+logs/*.log

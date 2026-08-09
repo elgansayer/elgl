@@ -1,13 +1,27 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
+import { MetricsModule } from '../metrics/metrics.module';
 import { EconomyController } from './economy.controller';
 import { EconomyService } from './economy.service';
+import { CoinEconomyHealthService } from './coin-economy-health.service';
+import { EconomyExceptionFilter } from './economy-exception.filter';
+import { EconomyRateLimiterGuard } from './economy-rate-limiter.guard';
+import { AppleNotificationService } from './apple-notification.service';
+import { GooglePlayNotificationService } from './google-play-notification.service';
 
 @Module({
-  imports: [UsersModule, ChatModule],
+  imports: [UsersModule, ChatModule, HttpModule, MetricsModule],
   controllers: [EconomyController],
-  providers: [EconomyService],
-  exports: [EconomyService],
+  providers: [
+    EconomyService,
+    CoinEconomyHealthService,
+    EconomyRateLimiterGuard,
+    AppleNotificationService,
+    GooglePlayNotificationService,
+    EconomyExceptionFilter,
+  ],
+  exports: [EconomyService, CoinEconomyHealthService],
 })
 export class EconomyModule {}
