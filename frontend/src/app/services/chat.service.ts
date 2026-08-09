@@ -82,6 +82,9 @@ export interface ChatMessage {
 
   /** True when the message has been soft‑deleted for all users */
   is_deleted?: boolean;
+
+  /** Whether this message was forwarded from another conversation */
+  is_forwarded?: boolean;
 }
 
 export interface FavouriteRecord {
