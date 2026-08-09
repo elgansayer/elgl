@@ -30,7 +30,11 @@ import { FixMessageDto } from './dto/fix-message.dto';
 import { ForwardMessageDto } from './dto/forward-message.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
 import { ShareContactDto } from './dto/share-contact.dto';
+<<<<<<< HEAD
+import { SendTypingDto } from './dto/send-typing.dto';
+=======
 import { UpdateMessageStatusDto } from './dto/update-message-status.dto';
+>>>>>>> origin/main
 import {
   ChatMessage,
   ChatRoomRecord,
@@ -472,5 +476,16 @@ export class ChatController {
     if (!user) return null;
     const wallpaperUrl = await this.chatService.getWallpaper(roomId);
     return { wallpaperUrl };
+  }
+
+  @Post('typing')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async sendTyping(
+    @CurrentUser() user: User | null,
+    @Body() dto: SendTypingDto,
+  ): Promise<{ success: boolean } | null> {
+    if (!user) return null;
+    await this.chatService.sendTyping(user.id, dto);
+    return { success: true };
   }
 }
