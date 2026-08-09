@@ -2,10 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { ConfigService } from '@nestjs/config';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
@@ -114,7 +114,6 @@ export interface StageInfo {
 
 @Injectable()
 export class AudioRoomsService implements OnModuleInit {
-  private readonly logger = new Logger(AudioRoomsService.name);
   private livekitUrl = '';
   private apiKey = '';
   private secretKey = '';
@@ -126,6 +125,8 @@ export class AudioRoomsService implements OnModuleInit {
     private readonly usersService: UsersService,
     private readonly centrifugoService: CentrifugoService,
     private readonly transcriptEgress: TranscriptEgressService,
+    @InjectPinoLogger(AudioRoomsService.name)
+    private readonly logger: PinoLogger,
     private readonly nlpService: NlpService,
     private readonly r2Service: R2Service,
     private readonly chatLlmService: ChatLlmService,
@@ -173,7 +174,7 @@ export class AudioRoomsService implements OnModuleInit {
     try {
       await this.r2Service.uploadFromUrl(r2Key, recordingUrl);
     } catch (error) {
-      this.logger.error('Failed to upload recording to R2', error);
+      this.logger.error({ error }, 'Failed to upload recording to R2');
       throw new Error('Failed to upload recording to R2');
     }
 
@@ -499,7 +500,7 @@ export class AudioRoomsService implements OnModuleInit {
       .eq('id', room.id);
 
     if (error) {
-      this.logger.warn('Failed to set private fields', error);
+      this.logger.warn({ error }, 'Failed to set private fields');
     }
 
     this.invalidateAudioRoomCache();
@@ -724,7 +725,7 @@ export class AudioRoomsService implements OnModuleInit {
       .update({ speakers: speakerOrder })
       .eq('id', roomId);
     if (error) {
-      this.logger.error('Failed to reorder speakers', error);
+      this.logger.error({ error }, 'Failed to reorder speakers');
       throw new Error('Failed to reorder speakers.');
     }
     void this.centrifugoService.publish(`room_${roomId}`, {
@@ -747,7 +748,7 @@ export class AudioRoomsService implements OnModuleInit {
       .update({ speakers: [hostId], raised_hands: [] })
       .eq('id', roomId);
     if (error) {
-      this.logger.error('Failed to clear stage', error);
+      this.logger.error({ error }, 'Failed to clear stage');
       throw new Error('Failed to clear stage.');
     }
     void this.centrifugoService.publish(`room_${roomId}`, {
@@ -1156,7 +1157,7 @@ export class AudioRoomsService implements OnModuleInit {
       .select('topic_tag')
       .eq('is_active', true);
     if (error || !data) {
-      this.logger.warn('Could not fetch topics', error);
+      this.logger.warn({ error }, 'Could not fetch topics');
       return [];
     }
     const tags = new Set(
@@ -1172,7 +1173,7 @@ export class AudioRoomsService implements OnModuleInit {
       .select('level')
       .eq('is_active', true);
     if (error || !data) {
-      this.logger.warn('Could not fetch levels', error);
+      this.logger.warn({ error }, 'Could not fetch levels');
       return [];
     }
     const levels = new Set(
@@ -1195,7 +1196,7 @@ export class AudioRoomsService implements OnModuleInit {
       .limit(50);
 
     if (error || !data) {
-      this.logger.warn('Could not fetch invited private rooms', error);
+      this.logger.warn({ error }, 'Could not fetch invited private rooms');
       return [];
     }
 
@@ -1231,7 +1232,7 @@ export class AudioRoomsService implements OnModuleInit {
       .select('host_id, is_private')
       .eq('is_active', true);
     if (error || !data) {
-      this.logger.warn('Could not fetch active host IDs', error);
+      this.logger.warn({ error }, 'Could not fetch active host IDs');
       return [];
     }
     const rows = data as Array<{ host_id: string; is_private?: boolean }>;
@@ -1561,7 +1562,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     const { data, error } = await supabaseQuery;
     if (error) {
-      this.logger.warn('Failed to fetch call logs', error);
+      this.logger.warn({ error }, 'Failed to fetch call logs');
       return [];
     }
     return data ?? [];
