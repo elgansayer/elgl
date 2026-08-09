@@ -595,12 +595,69 @@ export class UsersService {
         `Supabase update failed, falling back to mock: ${updateError.message}`,
       );
     }
+
+    // Invalidate matchmaking caches when profile fields that affect
+    // discovery / recommendations / partner-of-week are mutated.
+    this.invalidateMatchmakingCachesAfterUpdate(userId, dto);
+
     const profile = await this.getProfile(userId);
 
     // Fire-and-forget: emit profile.updated event for system bubble broadcasting
     this.eventEmitter.emit('profile.updated', { userId });
 
     return { ...profile, ...updatePayload };
+  }
+
+  /**
+   * Invalidate Redis matchmaking caches when profile fields that drive
+   * discovery, recommendations, or Partner of the Week eligibility are
+   * mutated.
+   */
+  private invalidateMatchmakingCachesAfterUpdate(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): void {
+    const affectsMatchmaking =
+      dto.native_languages !== undefined ||
+      dto.target_languages !== undefined ||
+      dto.proficiency_level !== undefined ||
+      dto.privacy_hide_from_search !== undefined ||
+      dto.serious_learner_mode !== undefined ||
+      dto.interests !== undefined;
+
+    const affectsPartnerOfWeek =
+      affectsMatchmaking ||
+      dto.study_streak_days !== undefined ||
+      dto.correction_ratio !== undefined;
+
+    if (!affectsMatchmaking && !affectsPartnerOfWeek) return;
+
+    void (async () => {
+      try {
+        const redis = this.supabaseService.getRedisClient();
+        const keys: string[] = [];
+
+        if (affectsMatchmaking) {
+          keys.push(
+            `daily_recommendations:${userId}`,
+            `recommendations:daily:${userId}`,
+          );
+        }
+
+        if (affectsPartnerOfWeek) {
+          keys.push('partner_of_week_ids');
+        }
+
+        if (keys.length > 0) {
+          await redis.del(...keys);
+        }
+      } catch (err: unknown) {
+        // Non-critical cache invalidation; log and continue.
+        Logger.warn(
+          `Failed to invalidate matchmaking caches after profile update for ${userId}: ${(err as Error)?.message ?? 'unknown'}`,
+        );
+      }
+    })();
   }
 
   async updateNotificationPreferences(
