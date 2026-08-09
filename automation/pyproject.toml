@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hellotalk-openhands-factory"
+version = "0.1.0"
+description = "Supervised autonomous development factory for HelloTalk"
+requires-python = ">=3.12"
+dependencies = [
+  "filelock==3.20.1",
+  "httpx==0.28.1",
+  "openhands-sdk==1.41.0",
+  "openhands-tools==1.41.0",
+  "pydantic==2.12.5",
+]
+
+[project.optional-dependencies]
+development = [
+  "mypy==1.17.1",
+  "pytest==8.4.1",
+  "pytest-cov==6.2.1",
+  "ruff==0.12.8",
+]
+
+[project.scripts]
+hellotalk-factory = "openhands_factory.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["openhands_factory"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["openhands_factory"]

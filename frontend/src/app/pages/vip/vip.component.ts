@@ -18,6 +18,7 @@ interface BenefitRow {
   labelKey: string;
   free: boolean;
   consumer: boolean;
+  pro: boolean;
   developer: boolean;
 }
 
@@ -52,12 +53,26 @@ export class VipComponent {
       id: 'consumer',
       nameKey: 'vip.consumerPlan',
       priceKey: 'vip.consumerPrice',
-      isPopular: true,
+      isPopular: false,
       features: [
         'vip.consumerFeature1',
         'vip.consumerFeature2',
         'vip.consumerFeature3',
         'vip.consumerFeature4',
+      ],
+      ctaKey: 'vip.subscribeNow',
+    },
+    {
+      id: 'pro',
+      nameKey: 'vip.proPlan',
+      priceKey: 'vip.proPrice',
+      isPopular: true,
+      features: [
+        'vip.proFeature1',
+        'vip.proFeature2',
+        'vip.proFeature3',
+        'vip.proFeature4',
+        'vip.proFeature5',
       ],
       ctaKey: 'vip.subscribeNow',
     },
@@ -87,17 +102,22 @@ export class VipComponent {
   readonly openFaqIndex = signal<number | null>(null);
 
   readonly benefitRows = signal<BenefitRow[]>([
-    { labelKey: 'vip.freeFeature1', free: true, consumer: true, developer: true },
-    { labelKey: 'vip.freeFeature2', free: true, consumer: true, developer: true },
-    { labelKey: 'vip.freeFeature3', free: true, consumer: true, developer: true },
-    { labelKey: 'vip.consumerFeature1', free: false, consumer: true, developer: true },
-    { labelKey: 'vip.consumerFeature2', free: false, consumer: true, developer: true },
-    { labelKey: 'vip.consumerFeature3', free: false, consumer: true, developer: true },
-    { labelKey: 'vip.consumerFeature4', free: false, consumer: true, developer: true },
-    { labelKey: 'vip.developerFeature2', free: false, consumer: false, developer: true },
-    { labelKey: 'vip.developerFeature3', free: false, consumer: false, developer: true },
-    { labelKey: 'vip.developerFeature4', free: false, consumer: false, developer: true },
-    { labelKey: 'vip.developerFeature5', free: false, consumer: false, developer: true },
+    { labelKey: 'vip.freeFeature1', free: true, consumer: true, pro: true, developer: true },
+    { labelKey: 'vip.freeFeature2', free: true, consumer: true, pro: true, developer: true },
+    { labelKey: 'vip.freeFeature3', free: true, consumer: true, pro: true, developer: true },
+    { labelKey: 'vip.consumerFeature1', free: false, consumer: true, pro: true, developer: true },
+    { labelKey: 'vip.consumerFeature2', free: false, consumer: true, pro: true, developer: true },
+    { labelKey: 'vip.consumerFeature3', free: false, consumer: true, pro: true, developer: true },
+    { labelKey: 'vip.consumerFeature4', free: false, consumer: true, pro: true, developer: true },
+    { labelKey: 'vip.proFeature1', free: false, consumer: false, pro: true, developer: false },
+    { labelKey: 'vip.proFeature2', free: false, consumer: false, pro: true, developer: false },
+    { labelKey: 'vip.proFeature3', free: false, consumer: false, pro: true, developer: false },
+    { labelKey: 'vip.proFeature4', free: false, consumer: false, pro: true, developer: false },
+    { labelKey: 'vip.proFeature5', free: false, consumer: false, pro: true, developer: false },
+    { labelKey: 'vip.developerFeature2', free: false, consumer: false, pro: false, developer: true },
+    { labelKey: 'vip.developerFeature3', free: false, consumer: false, pro: false, developer: true },
+    { labelKey: 'vip.developerFeature4', free: false, consumer: false, pro: false, developer: true },
+    { labelKey: 'vip.developerFeature5', free: false, consumer: false, pro: false, developer: true },
   ]);
 
   scrollToPlans(): void {
@@ -116,7 +136,6 @@ export class VipComponent {
     if (planId === 'free') {
       this.router.navigate(['/']);
     } else {
-      // Navigate to subscription checkout page
       this.router.navigate(['/subscription']);
     }
   }

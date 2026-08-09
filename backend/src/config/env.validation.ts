@@ -42,6 +42,42 @@ export class EnvironmentVariables {
   LIVEKIT_SECRET!: string;
 
   @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_ENABLED?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_DOMAIN?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_CERT_FILE?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_KEY_FILE?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_TLS_PORT?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_UDP_PORT?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_USERNAME?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_TURN_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
+  LIVEKIT_RTC_STUN_SERVERS?: string;
+
+  @IsString()
   CLOUDFLARE_R2_ENDPOINT!: string;
 
   @IsString()

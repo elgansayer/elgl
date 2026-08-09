@@ -7,6 +7,7 @@ import { CentrifugeService } from '../../services/centrifuge.service';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { SafetyService } from '../../services/safety.service';
+import { TypingService } from '../../services/typing.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
 
@@ -87,6 +88,13 @@ describe('ChatRoomComponent (threaded replies)', () => {
       updateSrsLevel: vi.fn(),
     };
 
+    const mockTypingService = {
+      typingUsers: signal([]),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      sendTyping: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ChatRoomComponent],
       providers: [
@@ -95,6 +103,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: SafetyService, useValue: mockSafetyService },
         { provide: UserService, useValue: mockUserService },
+        { provide: TypingService, useValue: mockTypingService },
         { provide: VocabularyStore, useValue: mockVocabularyStore },
         I18nService,
       ],
@@ -347,6 +356,21 @@ describe('ChatRoomComponent (threaded replies)', () => {
 
       expect(component.showCorrectionForm()).toBe(true);
       expect(component.originalText).toBe('I goed to school');
+    });
+
+    it('requestCorrection sends a correction_request message', async () => {
+      const msg = makeMessage({ id: 'm1', text_content: 'I goed to school' });
+      const sent = makeMessage({ id: 'm2', message_type: 'correction_request' });
+      mockChatService.sendMessage.mockResolvedValueOnce(sent);
+
+      await component.requestCorrection(msg);
+
+      expect(mockChatService.sendMessage).toHaveBeenCalledWith({
+        room_id: 'room-1',
+        message_type: 'correction_request',
+        correction_request_payload: { original_text: 'I goed to school' },
+        reply_to_id: 'm1',
+      });
     });
   });
 

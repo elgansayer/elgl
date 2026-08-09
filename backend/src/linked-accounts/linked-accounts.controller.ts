@@ -1,20 +1,21 @@
 import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { LinkedAccountsService } from './linked-accounts.service';
 import type { Request } from 'express';
 
 @Controller('users/me/linked-accounts')
+@UseGuards(SupabaseAuthGuard)
 export class LinkedAccountsController {
   constructor(private readonly linkedAccountsService: LinkedAccountsService) {}
 
-  @UseGuards(SupabaseAuthGuard)
   @Get()
   async getLinkedAccounts(@Req() req: Request) {
     const userId = (req as any).user?.id;
     return this.linkedAccountsService.getLinkedAccounts(userId);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('link')
   async linkAccount(
     @Req() req: Request,
@@ -29,7 +30,7 @@ export class LinkedAccountsController {
     return { success: true };
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('unlink')
   async unlinkAccount(@Req() req: Request, @Body() body: { provider: string }) {
     const userId = (req as any).user?.id;

@@ -20,27 +20,28 @@ interface CatalogItem {
   standalone: true,
   imports: [TranslatePipe, RouterLink],
   template: `
-    <div class="p-4">
+    <div class="max-w-6xl mx-auto p-4">
       <h1 class="text-xl font-bold mb-4">{{ 'shop.title' | t }}</h1>
       <p class="mb-6 text-sm opacity-70">{{ 'shop.subtitle' | t }}</p>
       <a routerLink="/cart" class="mb-6 block text-sm font-medium text-indigo-400 underline">{{ 'cart.title' | t }}</a>
       @if (message()) {
-        <p class="mb-4 text-sm text-indigo-300">{{ message() }}</p>
+        <p class="mb-4 text-sm text-indigo-300" aria-live="polite">{{ message() }}</p>
       }
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" role="list">
         @for (item of items(); track item.id) {
-          <div class="rounded-xl bg-surface p-3 shadow">
-            <div class="h-20 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl">
+          <div class="rounded-xl bg-surface p-3 shadow flex flex-col" role="listitem">
+            <div class="h-24 sm:h-28 w-full rounded-lg bg-neutral-700 mb-2 flex items-center justify-center text-3xl sm:text-4xl" aria-hidden="true">
               {{ item.imageUrl ? '' : '🎁' }}
             </div>
-            <h2 class="font-semibold">{{ item.name }}</h2>
-            <p class="text-xs opacity-60">{{ item.description }}</p>
-            <p class="mt-1 font-semibold text-indigo-400">
+            <h2 class="font-semibold text-sm sm:text-base truncate">{{ item.name }}</h2>
+            <p class="text-xs opacity-60 line-clamp-2">{{ item.description }}</p>
+            <p class="mt-auto pt-1 font-semibold text-indigo-400 text-sm sm:text-base" [attr.aria-label]="('shop.priceAria' | t: { price: item.price, name: item.name })">
               {{ item.price }} {{ 'common.coins' | t: { currency: 'coins' } }}
             </p>
             <button
-              class="mt-2 w-full rounded-full bg-indigo-600 py-1 text-sm font-medium hover:bg-indigo-500"
-              (click)="addToCart(item.id)">
+              class="mt-2 w-full rounded-full bg-indigo-600 py-1.5 text-xs sm:text-sm font-medium hover:bg-indigo-500 transition-colors"
+              (click)="addToCart(item.id)"
+              [attr.aria-label]="('shop.addToCartAria' | t: { name: item.name })">
               {{ 'cart.add' | t }}
             </button>
           </div>

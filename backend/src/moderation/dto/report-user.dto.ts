@@ -1,23 +1,29 @@
-import { IsString, IsOptional, IsNotEmpty, IsIn, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ReportUserDto {
+  @ApiProperty({
+    description: 'UUID of the user being reported',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
   @IsString()
   @IsNotEmpty()
   reportedUserId!: string;
 
+  @ApiProperty({
+    description:
+      'Reason category for the report (e.g., "spam", "harassment", "inappropriate_content")',
+    example: 'harassment',
+  })
   @IsString()
   @IsNotEmpty()
-  @IsIn([
-    'harassment',
-    'spam',
-    'inappropriate_content',
-    'fake_profile',
-    'other',
-  ])
   reasonCategory!: string;
 
-  @IsOptional()
+  @ApiPropertyOptional({
+    description: 'Optional detailed description of the report',
+    example: 'User sent unsolicited messages with offensive content.',
+  })
   @IsString()
-  @MaxLength(500)
+  @IsOptional()
   description?: string;
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { PronunciationFeedbackResponseDto } from './dto/pronunciation-feedback.dto';
 
 @Injectable()
@@ -7,7 +8,11 @@ export class PronunciationService {
   private readonly region: string;
   private readonly subscriptionKey: string | undefined;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    @InjectPinoLogger(PronunciationService.name)
+    private readonly logger: PinoLogger,
+  ) {
     this.region = config.get<string>('AZURE_SPEECH_REGION') ?? 'eastus';
     this.subscriptionKey = config.get<string>('AZURE_SPEECH_KEY');
   }
@@ -105,8 +110,10 @@ export class PronunciationService {
   ): Promise<{ success: boolean }> {
     // Placeholder logic for processing voice feedback
     // In a real implementation, this could involve saving the audio and text to a database
-    console.log('Received voice feedback:', feedbackText);
-    console.log('Audio file size:', audio.size);
+    this.logger.info(
+      { feedbackTextLength: feedbackText.length, audioSize: audio.size },
+      'Received voice feedback',
+    );
     return Promise.resolve({ success: true });
   }
 }
