@@ -2,6 +2,8 @@ import { Component, inject, signal, computed, ErrorHandler } from '@angular/core
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { JoyrideDirective } from 'ngx-joyride';
+import { SrsTourTriggerComponent } from '../srs-tour-trigger/srs-tour-trigger.component';
 import { DeckService, Deck, CreateDeckDto } from '../../services/deck.service';
 import { VocabularyStore, Flashcard } from '../../services/vocabulary.store';
 import { I18nService } from '../../services/i18n.service';
@@ -12,11 +14,16 @@ type DeckView = 'list' | 'detail';
 
 const DECK_COLOURS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
 const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '📖', '🎓', '🌟', '💡', '🗣️', '📝', '🎵', '🏆'];
+const DRAG_THRESHOLD_PX = 60;
 
 @Component({
   selector: 'app-flashcard-deck',
   standalone: true,
+<<<<<<< HEAD
+  imports: [FormsModule, TranslatePipe, JoyrideDirective, SrsTourTriggerComponent],
+=======
   imports: [FormsModule, TranslatePipe, SrsErrorBoundaryComponent],
+>>>>>>> origin/main
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -31,13 +38,16 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
             <h2 class="app-section-title">{{ 'deck.title' | t }}</h2>
             <p class="app-muted">{{ 'deck.subtitle' | t }}</p>
           </div>
-          <button
-            type="button"
-            (click)="activeView.set('list')"
-            class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
-          >
-            {{ 'deck.browseBtn' | t }}
-          </button>
+          <div class="flex items-center gap-2">
+            <app-srs-tour-trigger />
+            <button
+              type="button"
+              (click)="activeView.set('list')"
+              class="rounded-app border ps-3 pe-3 pt-2 pb-2 text-xs font-bold bg-surface-200 text-text-secondary border-surface-100"
+            >
+              {{ 'deck.browseBtn' | t }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -63,7 +73,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
             <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
               <h4 class="text-sm font-bold text-text-primary">{{ 'deck.createTitle' | t }}</h4>
               <div>
-                <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</span>
+                <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</label>
                 <input
                   [(ngModel)]="newDeckName"
                   [placeholder]="'deck.namePlaceholder' | t"
@@ -72,7 +82,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
                 />
               </div>
               <div>
-                <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</span>
+                <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</label>
                 <input
                   [(ngModel)]="newDeckDescription"
                   [placeholder]="'deck.descriptionPlaceholder' | t"
@@ -82,7 +92,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               </div>
               <div class="flex flex-wrap gap-3">
                 <div class="min-w-[120px]">
-                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</span>
+                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</label>
                   <div class="flex flex-wrap gap-1.5">
                     @for (c of deckColourOptions; track c) {
                       <button
@@ -94,12 +104,12 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
                         [class.border-white]="newDeckColour() === c"
                         [class.border-transparent]="newDeckColour() !== c"
                         [attr.aria-label]="'deck.colourAriaLabel' | t: { colour: c }"
-                      ><span class="sr-only">{{ c }}</span></button>
+                      ></button>
                     }
                   </div>
                 </div>
                 <div class="min-w-[120px]">
-                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</span>
+                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</label>
                   <div class="flex flex-wrap gap-1.5">
                     @for (ic of deckIconOptions; track ic) {
                       <button
@@ -128,17 +138,23 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
 
           <!-- Deck Grid -->
           @if (isLoading()) {
-            <div class="py-12 text-center" role="status" aria-busy="true">
+            <div class="py-12 text-center">
               <p class="app-muted text-sm">{{ 'deck.loading' | t }}</p>
             </div>
           } @else if (decks().length === 0) {
-            <div class="app-empty-state py-12 text-center" role="status">
-              <p class="text-3xl mb-3" aria-hidden="true">📚</p>
+            <div class="app-empty-state py-12 text-center">
+              <p class="text-3xl mb-3">📚</p>
               <p class="font-bold text-text-primary">{{ 'deck.emptyTitle' | t }}</p>
               <p class="app-muted text-xs mt-1">{{ 'deck.emptyDesc' | t }}</p>
             </div>
           } @else {
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              joyrideStep="srsTourFlashcardDecks"
+              [title]="'srsTour.flashcardDecksTitle' | t"
+              [text]="'srsTour.flashcardDecksText' | t"
+              stepPosition="bottom"
+            >
               @for (deck of decks(); track deck.id) {
                 <article
                   class="rounded-card border border-surface-100 p-4 group transition-shadow cursor-pointer relative overflow-hidden"
@@ -238,16 +254,16 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               <div class="rounded-card border border-surface-100 bg-surface-300 p-4 space-y-3">
                 <h4 class="text-sm font-bold text-text-primary">{{ 'deck.editTitle' | t }}</h4>
                 <div>
-                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</span>
+                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.nameLabel' | t }}</label>
                   <input [(ngModel)]="editDeckName" class="app-input w-full" maxlength="60" />
                 </div>
                 <div>
-                  <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</span>
+                  <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.descriptionLabel' | t }}</label>
                   <input [(ngModel)]="editDeckDescription" class="app-input w-full" maxlength="120" />
                 </div>
                 <div class="flex flex-wrap gap-3">
                   <div class="min-w-[120px]">
-                    <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</span>
+                    <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.colourLabel' | t }}</label>
                     <div class="flex flex-wrap gap-1.5">
                       @for (c of deckColourOptions; track c) {
                         <button
@@ -258,13 +274,12 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
                           [class.scale-125]="editDeckColour() === c"
                           [class.border-white]="editDeckColour() === c"
                           [class.border-transparent]="editDeckColour() !== c"
-                          [attr.aria-label]="'deck.colourAriaLabel' | t: { colour: c }"
-                        ><span class="sr-only">{{ c }}</span></button>
+                        ></button>
                       }
                     </div>
                   </div>
                   <div class="min-w-[120px]">
-                    <span class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</span>
+                    <label class="mb-1 block text-xs font-bold text-text-primary">{{ 'deck.iconLabel' | t }}</label>
                     <div class="flex flex-wrap gap-1.5">
                       @for (ic of deckIconOptions; track ic) {
                         <button
@@ -274,7 +289,6 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
                           [class.scale-125]="editDeckIcon() === ic"
                           [class.border-white]="editDeckIcon() === ic"
                           [class.border-transparent]="editDeckIcon() !== ic"
-                          [attr.aria-label]="ic"
                         >{{ ic }}</button>
                       }
                     </div>
@@ -294,7 +308,7 @@ const DECK_ICONS = ['📚', '🔥', '⭐', '🎯', '✈️', '💬', '🌍', '�
               <div class="app-card app-padded space-y-3">
                 <h4 class="text-sm font-bold text-text-primary">{{ 'deck.addCardsTitle' | t }}</h4>
                 @if (availableFlashcards().length === 0) {
-                  <div class="app-empty-state py-4" role="status">
+                  <div class="app-empty-state py-4">
                     <p class="text-xs text-text-secondary">{{ 'deck.noCardsAvailable' | t }}</p>
                   </div>
                 } @else {
@@ -569,7 +583,7 @@ export class FlashcardDeckComponent {
     }
   }
 
-  startDeckReview(_deck: Deck): void {
+  startDeckReview(deck: Deck): void {
     // Set pending review cards in the vocab store and navigate to review page
     this.vocabStore.pendingReviewCards.set([...this.deckCards()]);
     void this.router.navigate(['/review']);

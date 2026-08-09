@@ -43,20 +43,14 @@
       >
         <span class="text-sm leading-none">{{ isLocked() ? '🔒' : '🔓' }}</span>
       </button>
-      <input
-        type="text"
-        [(ngModel)]="searchQuery"
-        (keyup.enter)="onSearch()"
-        [placeholder]="'chatRoom.searchPlaceholder' | t"
-        class="app-input w-28 sm:w-44 text-xs pt-2 pb-2"
-        [attr.aria-label]="'text input'"
-      />
       <button
-        (click)="onSearch()"
-        class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
+        type="button"
+        (click)="showSearchPanel.update(v => !v)"
+        class="app-button-secondary p-2 text-xs"
         [attr.aria-label]="'chatRoom.searchBtn' | t"
+        [attr.title]="'chatRoom.searchBtn' | t"
       >
-        {{ 'chatRoom.searchBtn' | t }}
+        <span class="text-sm leading-none">🔍</span>
       </button>
     </div>
   </div>
@@ -75,6 +69,12 @@
       </button>
     </div>
   } @else {
+    <!-- Search Panel -->
+    @if (showSearchPanel()) {
+      <div class="mt-2.5">
+        <app-chat-search [roomId]="roomId" (messageSelect)="onSearchResultSelect($event)"></app-chat-search>
+      </div>
+    }
     @if (showAdminPanel()) {
       <div
         class="mt-2 rounded-card border border-primary/30 bg-primary/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
@@ -172,6 +172,7 @@
             (transliterate)="transliterateMessage(msg)"
             (speak)="speakMessage(msg)"
             (correct)="startCorrection(msg)"
+            (requestCorrection)="requestCorrection(msg)"
           >
             <div
               [id]="'msg-' + msg.id"
@@ -339,6 +340,12 @@
                     [corrected]="msg.correction_payload?.corrected ?? ''"
                     [explanation]="msg.correction_payload?.explanation ?? ''"
                   ></app-visual-diff>
+                }
+                @if (msg.message_type === 'correction_request' && msg.correction_request_payload) {
+                  <div>
+                    <p class="text-sm">{{ msg.correction_request_payload.original_text }}</p>
+                    <p class="text-xs text-yellow-400">✏️ {{ 'chatRoom.correctionRequested' | t }}</p>
+                  </div>
                 }
                 @if (msg.message_type === 'doodle' && msg.media_url) {
                   <img

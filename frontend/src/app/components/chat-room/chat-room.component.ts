@@ -1,14 +1,5 @@
 import { showToast, showErrorToast } from '../../services/toast.service';
-import {
-  Component,
-  inject,
-  signal,
-  computed,
-  OnDestroy,
-  input,
-  effect,
-  afterNextRender,
-} from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -20,6 +11,7 @@ import { UserService } from '../../services/user.service';
 import { TypingService } from '../../services/typing.service';
 import { TypingIndicatorComponent } from '../primitives/typing-indicator/typing-indicator.component';
 import { VocabularyStore } from '../../services/vocabulary.store';
+import { TranslationCacheService } from '../../services/translation-cache.service';
 import { VisualDiffComponent } from '../visual-diff/visual-diff.component';
 import { DoodlePadComponent } from '../doodle-pad/doodle-pad.component';
 import { VoiceRecorderComponent } from '../voice-recorder/voice-recorder.component';
@@ -33,10 +25,8 @@ import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
-import {
-  GroupParticipantDrawerComponent,
-  GroupParticipant,
-} from '../group-participant-drawer/group-participant-drawer.component';
+import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
+import { ChatSearchComponent } from '../chat-search/chat-search.component';
 import { DraftService } from '../../services/draft.service';
 
 @Component({
@@ -58,6 +48,7 @@ import { DraftService } from '../../services/draft.service';
     ReplyPreviewComponent,
     LinkPreviewCardComponent,
     GroupParticipantDrawerComponent,
+    ChatSearchComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -73,6 +64,7 @@ export class ChatRoomComponent implements OnDestroy {
   private readonly safetyService = inject(SafetyService);
   private readonly tts = inject(TextToSpeechService);
   private readonly draftService = inject(DraftService);
+  private readonly translationCache = inject(TranslationCacheService);
 
   id = input.required<string>();
 
@@ -100,6 +92,7 @@ export class ChatRoomComponent implements OnDestroy {
   readonly showParticipantDrawer = signal<boolean>(false);
   readonly isLocked = signal<boolean>(false);
   readonly pendingUnlock = signal<boolean>(false);
+  readonly autoPlayVoiceNotes = signal(false);
 
   readonly participants = signal<GroupMember[]>([]);
   readonly groupParticipants = computed<GroupParticipant[]>(() =>
@@ -162,6 +155,7 @@ export class ChatRoomComponent implements OnDestroy {
   roomId = '';
   roomDetails: ChatRoom | null = null;
   searchQuery = '';
+  showSearchPanel = signal(false);
   textInput = '';
 
   // Admin fields
@@ -176,15 +170,13 @@ export class ChatRoomComponent implements OnDestroy {
 
   private subscription: { unsubscribe: () => void } | null = null;
 
-  private isChatEventPayload(value: unknown): value is {
-    message?: ChatMessage;
-    typing?: boolean;
-    status_update?: { message_id: string; delivery_status: string };
-  } {
+  private isChatEventPayload(
+    value: unknown,
+  ): value is { message?: ChatMessage; typing?: boolean } {
     return (
       !!value &&
       typeof value === 'object' &&
-      ('message' in value || 'typing' in value || 'status_update' in value)
+      ('message' in value || 'typing' in value)
     );
   }
 
@@ -205,6 +197,16 @@ export class ChatRoomComponent implements OnDestroy {
     await this.setupRealTime();
     await this.loadParticipants();
     await this.resolvePartnerLanguage();
+    await this.loadAutoPlayPreference();
+  }
+
+  private async loadAutoPlayPreference(): Promise<void> {
+    try {
+      const profile = await this.userService.getMyProfile();
+      this.autoPlayVoiceNotes.set(Boolean(profile?.auto_play_voice_notes));
+    } catch {
+      // keep default false
+    }
   }
 
   /** Requests app unlock (biometric/PIN) before revealing a locked chat's messages. */
@@ -282,10 +284,6 @@ export class ChatRoomComponent implements OnDestroy {
     if (this.subscription) {
       this.centrifugeService.unsubscribe(`chat:${this.roomId}`);
     }
-    if (this.readObserver) {
-      this.readObserver.disconnect();
-      this.readObserver = null;
-    }
     this.typingService.disconnect();
     this.saveChatDrafts();
   }
@@ -331,15 +329,6 @@ export class ChatRoomComponent implements OnDestroy {
     try {
       const data = await this.chatService.getMessages(this.roomId, this.searchQuery);
       this.messages.set(data);
-      // Auto-mark non-owned messages as delivered when loading history
-      const currentUserId = this.authService.currentUser()?.id;
-      if (currentUserId) {
-        for (const msg of data) {
-          if (msg.sender_id !== currentUserId && !msg.delivery_status) {
-            this.chatService.markMessageStatus(msg.id, 'delivered').catch(() => {});
-          }
-        }
-      }
       // Restore reply-to target from the persisted draft once messages are available
       if (this._restoredReplyToId) {
         const target = data.find((m) => m.id === this._restoredReplyToId);
@@ -364,81 +353,13 @@ export class ChatRoomComponent implements OnDestroy {
       const payload = this.isChatEventPayload(data) ? data : null;
       if (payload?.message) {
         this.messages.update((list) => [...list, payload.message!]);
-        // Auto-mark as delivered for messages received via real-time
-        const msg = payload.message;
-        if (msg && !this.isOwnMessage(msg) && !msg.delivery_status) {
-          this.chatService.markMessageStatus(msg.id, 'delivered').catch(() => {});
-          this.messages.update((list) =>
-            list.map((m) => (m.id === msg.id ? { ...m, delivery_status: 'delivered' } : m)),
-          );
-        }
       } else if (payload?.typing) {
         this.isTyping.set(true);
         setTimeout(() => this.isTyping.set(false), 3000);
-      } else if (payload?.status_update) {
-        // Handle delivery/read status updates from Centrifugo
-        const { message_id, delivery_status } = payload.status_update as {
-          message_id: string;
-          delivery_status: string;
-        };
-        this.messages.update((list) =>
-          list.map((m) =>
-            m.id === message_id
-              ? { ...m, delivery_status: delivery_status as 'sent' | 'delivered' | 'read' }
-              : m,
-          ),
-        );
       }
     });
 
-    // Set up IntersectionObserver to auto-mark messages as read
-    afterNextRender(() => {
-      this.setupReadObserver();
-    });
-
     this.typingService.connect(this.roomId);
-  }
-
-  private readObserver: IntersectionObserver | null = null;
-  private pendingDelivered: Set<string> = new Set();
-
-  private setupReadObserver(): void {
-    this.readObserver = new IntersectionObserver(
-      (entries) => {
-        const currentUserId = this.authService.currentUser()?.id;
-        if (!currentUserId) return;
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          const el = entry.target as HTMLElement;
-          const messageId = el.getAttribute('data-message-id');
-          if (!messageId) continue;
-          // Check if this message is from someone else and not yet marked read
-          const msg = this.messages().find((m) => m.id === messageId);
-          if (!msg) continue;
-          if (msg.sender_id === currentUserId) continue;
-          if (msg.delivery_status === 'read') continue;
-          // Mark as delivered first if needed
-          if (!msg.delivery_status || msg.delivery_status === 'sent') {
-            this.chatService.markMessageStatus(messageId, 'delivered').catch(() => {});
-            this.messages.update((list) =>
-              list.map((m) => (m.id === messageId ? { ...m, delivery_status: 'delivered' } : m)),
-            );
-          }
-          // Then mark as read
-          this.chatService.markMessageStatus(messageId, 'read').catch(() => {});
-          this.messages.update((list) =>
-            list.map((m) => (m.id === messageId ? { ...m, delivery_status: 'read' } : m)),
-          );
-          this.readObserver?.unobserve(el);
-        }
-      },
-      { threshold: 0.5 },
-    );
-  }
-
-  /** Observe a message element for read receipt tracking */
-  observeMessageElement(element: HTMLElement): void {
-    this.readObserver?.observe(element);
   }
 
   onWordClicked(event: { token: string; context: string }): void {
@@ -512,10 +433,8 @@ export class ChatRoomComponent implements OnDestroy {
     if (!this.textInput.trim()) return;
     const text = this.textInput.trim();
     const replyToId = this.replyingTo()?.id;
-    this.textInput = '';
     this.mentionQuery.set(null);
     this.typingService.sendTyping(false);
-    this.clearChatDrafts();
 
     try {
       const sent = await this.chatService.sendMessage({
@@ -527,8 +446,12 @@ export class ChatRoomComponent implements OnDestroy {
       // Add locally if not duplicate
       this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
       this.replyingTo.set(null);
+      this.textInput = '';
+      this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send text message:', e);
+      // Restore draft so the unsent text is recoverable
+      this.draftService.saveChatDraft(this.roomId, text);
     }
   }
 
@@ -552,6 +475,23 @@ export class ChatRoomComponent implements OnDestroy {
       this.clearChatDrafts();
     } catch (e) {
       console.error('Failed to send correction:', e);
+    }
+  }
+
+  async requestCorrection(msg: ChatMessage): Promise<void> {
+    if (!msg.text_content) return;
+    try {
+      const sent = await this.chatService.sendMessage({
+        room_id: this.roomId,
+        message_type: 'correction_request',
+        correction_request_payload: {
+          original_text: msg.text_content,
+        },
+        reply_to_id: msg.id,
+      });
+      this.messages.update((list) => (list.some((m) => m.id === sent.id) ? list : [...list, sent]));
+    } catch (e) {
+      console.error('Failed to request correction:', e);
     }
   }
 
@@ -679,9 +619,19 @@ export class ChatRoomComponent implements OnDestroy {
       return;
     }
 
+    const targetLang = this.i18n.currentLang().split('-')[0] || 'en';
+
+    // Check persistent translation cache first (issue #1037)
+    const cached = this.translationCache.get(msg.text_content, targetLang);
+    if (cached) {
+      this.translations.update((prev) => ({ ...prev, [msg.id]: cached }));
+      this.showTranslation.update((prev) => ({ ...prev, [msg.id]: true }));
+      return;
+    }
+
     try {
-      const targetLang = this.i18n.currentLang().split('-')[0] || 'en';
       const res = await this.chatService.translateText(msg.text_content, targetLang);
+      this.translationCache.set(msg.text_content, targetLang, res.translated_text);
       this.translations.update((prev) => ({
         ...prev,
         [msg.id]: res.translated_text,
@@ -723,6 +673,13 @@ export class ChatRoomComponent implements OnDestroy {
 
   onSearch(): void {
     void this.loadMessages();
+  }
+
+  onSearchResultSelect(message: ChatMessage): void {
+    this.showSearchPanel.set(false);
+    if (message.room_id === this.roomId) {
+      this.scrollToMessage(message.id);
+    }
   }
 
   async toggleParticipantDrawer(): Promise<void> {
@@ -847,26 +804,21 @@ export class ChatRoomComponent implements OnDestroy {
   }
 
   async playNextVoiceNote(currentMessageId: string): Promise<void> {
-    try {
-      const profile = await this.userService.getMyProfile();
-      if (!profile || !profile.auto_play_voice_notes) return;
+    if (!this.autoPlayVoiceNotes()) return;
 
-      const msgs = this.messages();
-      const currentIndex = msgs.findIndex((m) => m.id === currentMessageId);
-      if (currentIndex === -1) return;
+    const msgs = this.messages();
+    const currentIndex = msgs.findIndex((m) => m.id === currentMessageId);
+    if (currentIndex === -1) return;
 
-      for (let i = currentIndex + 1; i < msgs.length; i++) {
-        const nextMsg = msgs[i];
-        if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
-          const audioElement = document.getElementById(`audio-${nextMsg.id}`);
-          if (audioElement instanceof HTMLAudioElement) {
-            audioElement.play().catch((e) => console.error('Auto-play failed:', e));
-          }
-          break;
+    for (let i = currentIndex + 1; i < msgs.length; i++) {
+      const nextMsg = msgs[i];
+      if (nextMsg.message_type === 'voice' && nextMsg.media_url) {
+        const audioElement = document.getElementById(`audio-${nextMsg.id}`);
+        if (audioElement instanceof HTMLAudioElement) {
+          audioElement.play().catch(() => {});
         }
+        break;
       }
-    } catch (e) {
-      console.error('Failed to auto-play next voice note:', e);
     }
   }
 }

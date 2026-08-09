@@ -69,14 +69,6 @@ const PHYSICAL_DIRECTION_PATTERNS: ReadonlyArray<RegExp> = [
   /\btext-right\b/,
 ];
 
-/** Logical CSS properties that the Trust & Safety architecture should use. */
-const LOGICAL_PROPERTY_CHECKS: ReadonlyArray<string> = [
-  'ps-',  // padding-inline-start
-  'pe-',  // padding-inline-end
-  'ms-',  // margin-inline-start
-  'me-',  // margin-inline-end
-];
-
 describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
   const templates = new Map<string, string>();
 
@@ -258,7 +250,7 @@ describe('Trust & Safety Architecture - RTL Logical CSS Verification', () => {
       for (const component of TRUST_SAFETY_COMPONENTS) {
         const template = templates.get(component.name)!;
         for (const banned of bannedStrings) {
-          expect(template).not.toMatch(new RegExp(banned.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')));
+          expect(template).not.toMatch(new RegExp(banned.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')));
         }
       }
     });

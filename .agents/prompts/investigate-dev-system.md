@@ -1,10 +1,10 @@
-# The HelloTalk AI Swarm Development System — Full Investigation & Fix
+# The HelloTalk AI Swarm Development System - Full Investigation & Fix
 
 You are an AI agent tasked with understanding, auditing, and fixing the entire
 HelloTalk automated development pipeline. This system comprises 14 GitHub Actions
 workflows that form a fully autonomous software engineering swarm: it accepts
 issues from an AI architect, writes code, verifies correctness, reviews pull
-requests, fixes failures inline, and merges — all without human intervention.
+requests, fixes failures inline, and merges - all without human intervention.
 When things break on `main`, a guardian detects it and reverts automatically.
 
 Your job: investigate every component, explain how it works, find every bug,
@@ -19,30 +19,30 @@ fix every bug, and ensure the system is production-ready.
 **Core AI Pipeline (6)**
 
 ```
-openhands.yml        — AI Auto-Resolver (issues → code → PRs)
-resolver-fast.yml    — AI Fast Resolver (same, shorter timeout)
-pr-reviewer.yml      — PR Reviewer (reviews opened/reopened PRs)
-reviewer-fast.yml    — Fast PR Reviewer (reviews pushes, rebases stale PRs)
-scheduled-pr-fixer.yml — Stale PR Fixer (manual rebase trigger)
-guardian.yml         — Build Health Monitor (reverts `main` breakage)
+openhands.yml        - AI Auto-Resolver (issues → code → PRs)
+resolver-fast.yml    - AI Fast Resolver (same, shorter timeout)
+pr-reviewer.yml      - PR Reviewer (reviews opened/reopened PRs)
+reviewer-fast.yml    - Fast PR Reviewer (reviews pushes, rebases stale PRs)
+scheduled-pr-fixer.yml - Stale PR Fixer (manual rebase trigger)
+guardian.yml         - Build Health Monitor (reverts `main` breakage)
 ```
 
 **Dispatch & Monitoring (4)**
 
 ```
-auto-dispatcher.yml  — Picks 1 open issue, adds /openhands-fix comment
-dispatcher-batch.yml — Batch-dispatches up to 100 issues with /fast-fix
-on-failure.yml       — Reports workflow failures as informational issues
-architect.yml        — Weekly codebase exploration, creates gap issues
+auto-dispatcher.yml  - Picks 1 open issue, adds /openhands-fix comment
+dispatcher-batch.yml - Batch-dispatches up to 100 issues with /fast-fix
+on-failure.yml       - Reports workflow failures as informational issues
+architect.yml        - Weekly codebase exploration, creates gap issues
 ```
 
 **CI/CD (4)**
 
 ```
-ci.yml               — Lint backend + frontend
-deploy.yml           — Build, test, Docker build+publish
-daily-wiki-update.yml — Updates GitHub Wiki
-wiki-sync.yml        — Syncs docs to Wiki
+ci.yml               - Lint backend + frontend
+deploy.yml           - Build, test, Docker build+publish
+daily-wiki-update.yml - Updates GitHub Wiki
+wiki-sync.yml        - Syncs docs to Wiki
 ```
 
 ### The Six Core Flows
@@ -123,18 +123,18 @@ reviewer-fast.yml fix_stale_prs (every 15 min)
 
 ---
 
-## 2. INVARIANTS (HARD RULES — NEVER VIOLATE)
+## 2. INVARIANTS (HARD RULES - NEVER VIOLATE)
 
-1. Never create a follow-up "Fixes:" PR — fix inline in the existing branch
-2. Never auto-merge after rebase — PR reviewer is the sole merge authority
+1. Never create a follow-up "Fixes:" PR - fix inline in the existing branch
+2. Never auto-merge after rebase - PR reviewer is the sole merge authority
 3. Never commit conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`)
 4. Never merge without full verification (lint + build + test)
-5. Never use `--admin` for merge — `--squash --delete-branch` only
-6. Guardian issues never trigger resolver — `guardian-alert` label isolates them
+5. Never use `--admin` for merge - `--squash --delete-branch` only
+6. Guardian issues never trigger resolver - `guardian-alert` label isolates them
 7. All AI prompts must include `npm run lint` before merge
 8. All `gh pr checks --watch` calls must have `timeout 600` wrapper
 9. Tier 2 must fire when `check_claude` step itself fails
-10. `swarm-active` must be removable — stuck issues need a recovery path
+10. `swarm-active` must be removable - stuck issues need a recovery path
 
 ---
 
@@ -179,7 +179,7 @@ prompts now instruct AI to resolve merge conflicts.
 **Symptom**: Every `issue_comment` event triggers a workflow run. Jobs with
 non-`/openhands-fix` comments are skipped. This looks like errors but is
 normal filtering. However, it burns the 3-slot resolver concurrency limit.
-**Location**: `openhands.yml:13` — `on: issue_comment: [created]`
+**Location**: `openhands.yml:13` - `on: issue_comment: [created]`
 **Fix**: Filter at the `on:` level using `types:` or accept the waste.
 
 ### Bug 5: ci.yml Node Version Inconsistency
@@ -220,7 +220,7 @@ merged during Tier 2 or 3 processing, the gate correctly reports "MERGED".
 But if the merge happened AFTER the gate checked, the gate might still
 comment "needs manual review" on a merged PR.
 **Location**: `pr-reviewer.yml`, `reviewer-fast.yml` hard gate step
-**Fix**: The gate checks PR state at runtime — this is correct. Verify the
+**Fix**: The gate checks PR state at runtime - this is correct. Verify the
 `gh pr view` call includes `--repo` flag.
 
 ---

@@ -29,10 +29,7 @@ describe('LeaderboardService', () => {
     },
   ];
 
-  function setupService(
-    supabaseData: unknown,
-    supabaseError: unknown | null = null,
-  ) {
+  function setupService(supabaseData: unknown, supabaseError: unknown | null = null) {
     const fakeChain = Promise.resolve({
       data: supabaseData,
       error: supabaseError,
@@ -51,9 +48,7 @@ describe('LeaderboardService', () => {
     return { mockClient, mockSelect, mockOrder, mockLimit };
   }
 
-  async function createService(
-    mockClient: ReturnType<typeof setupService>['mockClient'],
-  ) {
+  async function createService(mockClient: ReturnType<typeof setupService>['mockClient']) {
     const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
         LeaderboardService,
@@ -75,8 +70,7 @@ describe('LeaderboardService', () => {
 
   describe('getTopCorrectors', () => {
     it('should return mapped correctors with serious learner flag', async () => {
-      const { mockClient, mockSelect, mockOrder, mockLimit } =
-        setupService(mockUsers);
+      const { mockClient, mockSelect, mockOrder, mockLimit } = setupService(mockUsers);
       service = await createService(mockClient);
 
       const result = await service.getTopCorrectors(20);
@@ -84,9 +78,7 @@ describe('LeaderboardService', () => {
       expect(mockSelect).toHaveBeenCalledWith(
         'id, display_name, avatar_url, correction_ratio, study_streak_days',
       );
-      expect(mockOrder).toHaveBeenCalledWith('correction_ratio', {
-        ascending: false,
-      });
+      expect(mockOrder).toHaveBeenCalledWith('correction_ratio', { ascending: false });
       expect(mockLimit).toHaveBeenCalledWith(20);
       expect(result).toHaveLength(3);
       expect(result[0].is_serious_learner).toBe(true);
@@ -114,9 +106,10 @@ describe('LeaderboardService', () => {
     });
 
     it('should throw if supabase returns an error', async () => {
-      const { mockClient } = setupService(null, {
-        message: 'Database connection failed',
-      });
+      const { mockClient } = setupService(
+        null,
+        { message: 'Database connection failed' },
+      );
       service = await createService(mockClient);
 
       await expect(service.getTopCorrectors(5)).rejects.toThrow(

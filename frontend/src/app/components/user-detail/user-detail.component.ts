@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
 import { UserService, UserProfile } from '../../services/user.service';
+import { DiscoveryService } from '../../services/discovery.service';
 import { ReportButtonComponent } from '../report-user-modal/report-button.component';
 import { AchievementsComponent } from '../../achievements/achievements.component';
 
@@ -16,6 +17,7 @@ import { AchievementsComponent } from '../../achievements/achievements.component
 export class UserDetailComponent {
   private location = inject(Location);
   private userService = inject(UserService);
+  private discoveryService = inject(DiscoveryService);
   private readonly i18n = inject(I18nService);
 
   userId = input.required<string>();
@@ -26,6 +28,10 @@ export class UserDetailComponent {
 
   readonly isFollowing = signal<boolean>(false);
   readonly isLiked = signal<boolean>(false);
+
+  readonly translatedBioText = signal<string>('');
+  readonly showTranslated = signal<boolean>(false);
+  readonly isTranslating = signal<boolean>(false);
 
   constructor() {
     effect(() => {
@@ -54,6 +60,52 @@ export class UserDetailComponent {
       this.errorMessage.set(message || this.i18n.translate('userProfile.loadError'));
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  get displayBio(): string {
+    const p = this.profile();
+    if (!p?.bio_text) return '';
+    if (this.showTranslated() && this.translatedBioText()) {
+      return this.translatedBioText();
+    }
+    return p.bio_text;
+  }
+
+  get translationLabelKey(): string {
+    if (this.isTranslating()) return 'profile.translatingBio';
+    return this.showTranslated() ? 'profile.showOriginal' : 'profile.translateBio';
+  }
+
+  async toggleTranslation(): Promise<void> {
+    const p = this.profile();
+    if (!p) return;
+
+    if (this.isTranslating()) return;
+
+    if (this.showTranslated()) {
+      this.showTranslated.set(false);
+      return;
+    }
+
+    if (this.translatedBioText()) {
+      this.showTranslated.set(true);
+      return;
+    }
+
+    this.isTranslating.set(true);
+    try {
+      const targetLang = this.i18n.currentLang() || 'en-GB';
+      const translated = await this.discoveryService.translateBio(
+        p.id,
+        targetLang,
+      );
+      if (translated) {
+        this.translatedBioText.set(translated);
+        this.showTranslated.set(true);
+      }
+    } finally {
+      this.isTranslating.set(false);
     }
   }
 

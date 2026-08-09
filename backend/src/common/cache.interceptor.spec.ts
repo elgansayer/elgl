@@ -7,7 +7,6 @@ import {
   CACHE_PRIVATE_SHORT,
   CACHE_PRIVATE_MEDIUM,
   CACHE_PRIVATE_NO_STORE,
-  CACHE_EDGE_SHORT,
   CACHE_EDGE_MEDIUM,
   CACHE_EDGE_VERY_SHORT,
   CACHE_NO_STORE,
@@ -18,6 +17,8 @@ import {
   CACHE_TAG_AUDIO_ROOMS,
   CACHE_TAG_AUDIO_ROOM_STAGE,
   CACHE_TAG_AUDIO_ROOM_POLLS,
+  CACHE_TAG_AUDIO_ROOM_TRANSCRIPT,
+  CACHE_TAG_AUDIO_ROOM_NOTES,
   CACHE_TAG_CALLS,
   CACHE_TAG_ESCROW,
 } from './cache.interceptor';
@@ -126,6 +127,8 @@ describe('CacheControlInterceptor', () => {
       expect(CACHE_TAG_AUDIO_ROOMS).toBe('audio-rooms');
       expect(CACHE_TAG_AUDIO_ROOM_STAGE).toBe('audio-rooms:stage');
       expect(CACHE_TAG_AUDIO_ROOM_POLLS).toBe('audio-rooms:polls');
+      expect(CACHE_TAG_AUDIO_ROOM_TRANSCRIPT).toBe('audio-rooms:transcript');
+      expect(CACHE_TAG_AUDIO_ROOM_NOTES).toBe('audio-rooms:notes');
       expect(CACHE_TAG_CALLS).toBe('calls');
       expect(CACHE_TAG_ESCROW).toBe('escrow');
     });
