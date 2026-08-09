@@ -2,10 +2,11 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService, AdminUserSummary } from '../../services/admin.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 @Component({
   selector: 'app-user-management',
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe],
   templateUrl: './user-management.component.html',
 })
 export class UserManagementComponent implements OnInit {

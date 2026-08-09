@@ -33,21 +33,43 @@ CREATE INDEX idx_escrows_type ON escrows(type);
 CREATE INDEX idx_escrows_sender_status ON escrows(sender_id, status);
 CREATE INDEX idx_escrows_expires_at ON escrows(expires_at) WHERE status = 'held';
 
--- RLS policy placeholder: enable RLS but allow authenticated access initially
--- Full RLS review will be done in #2400
+-- RLS policies: defence-in-depth for the escrows table.
+-- The NestJS backend uses the service_role key (bypasses RLS).
+-- Full RLS review and hardening: migration 20260808000002_review_rls_escrow_payments.sql (#2400).
 ALTER TABLE escrows ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Participants can view own escrows"
-  ON escrows FOR SELECT
-  TO authenticated
-  USING (auth.uid() = sender_id OR auth.uid() = recipient_id);
+-- service_role bypass: backend retains full access
+CREATE POLICY escrows_service_role ON escrows
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
 
-CREATE POLICY "Senders can create escrows"
-  ON escrows FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = sender_id);
+-- Authenticated users can only read their own escrows; admins can read all
+CREATE POLICY escrows_select_own ON escrows
+    FOR SELECT TO authenticated USING (
+        auth.uid() = sender_id
+        OR auth.uid() = recipient_id
+        OR EXISTS (
+            SELECT 1 FROM users u WHERE u.id = auth.uid() AND u.is_admin = true
+        )
+    );
 
-CREATE POLICY "Participants can update own escrows"
-  ON escrows FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = sender_id OR auth.uid() = recipient_id);
+-- Authenticated users may create escrows only as sender and only in
+-- 'pending' status (defence-in-depth; backend validates server-side)
+CREATE POLICY escrows_insert_own ON escrows
+    FOR INSERT TO authenticated
+    WITH CHECK (
+        auth.uid() = sender_id
+        AND status = 'pending'
+    );
+
+-- Authenticated users may only cancel their own pending escrows.
+-- All other mutations are restricted to service_role (backend).
+CREATE POLICY escrows_update_own ON escrows
+    FOR UPDATE TO authenticated
+    USING (
+        auth.uid() = sender_id
+        AND status = 'pending'
+    )
+    WITH CHECK (
+        auth.uid() = sender_id
+        AND status = 'cancelled'
+    );

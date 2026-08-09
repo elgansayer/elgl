@@ -135,7 +135,7 @@ export class InterestsService {
       source_language: targetLanguage,
       translation: v.translation ?? '',
       srs_level: 0,
-      next_review_date: new Date().toISOString(),
+      next_review_at: new Date().toISOString(),
       context_sentence: '',
     }));
 

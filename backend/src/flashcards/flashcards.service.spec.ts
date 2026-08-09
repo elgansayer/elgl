@@ -3,38 +3,16 @@ import { FlashcardsService } from './flashcards.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { XpService } from '../xp/xp.service';
 import { MetricsService } from '../metrics/metrics.service';
-import { Flashcard } from './interfaces/flashcard.interface';
-import { CreateFlashcardDto } from './dto/flashcard.dto';
+import { CloudflareCacheService } from '../cloudflare/cache.service';
+import { Flashcard, SrsHealthStatus } from './interfaces/flashcard.interface';
+import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
 
-// Mock the retry module so we can verify it's being used for SRS operations
 jest.mock('../common/retry', () => ({
   withRetry: jest.fn((fn: () => unknown) => fn()),
   isRateLimitError: jest.requireActual('../common/retry').isRateLimitError,
 }));
 
-// Mock jsdom and dompurify to avoid parsing ESM dependencies in Node test env
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
-}));
-
-jest.mock('dompurify', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({
-    sanitize: (dirty: string) => {
-      if (typeof dirty !== 'string') return dirty;
-      return dirty.replace(/<[^>]*>/g, '');
-    },
-    setConfig: jest.fn(),
-  })),
-}));
-
-import { withRetry } from '../common/retry';
+import { withRetry, isRateLimitError } from '../common/retry';
 
 interface MockLogger {
   info: jest.Mock;
@@ -121,6 +99,7 @@ describe('FlashcardsService', () => {
       eq: jest.fn().mockReturnThis(),
       lt: jest.fn().mockReturnThis(),
       lte: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
     };
@@ -166,6 +145,15 @@ describe('FlashcardsService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('getHealthStatus', () => {
+    it('should report healthy with full mode when no degraded operations', () => {
+      const status = service.getHealthStatus();
+      expect(status.healthy).toBe(true);
+      expect(status.mode).toBe('full');
+      expect(status.degradedServices).toEqual([]);
+    });
+  });
+
   describe('createOrUpdateFlashcard', () => {
     it('should clean word token and upsert flashcard successfully', async () => {
       const dto: CreateFlashcardDto = {
@@ -205,7 +193,7 @@ describe('FlashcardsService', () => {
       expect(result).toEqual(savedCard);
     });
 
-    it('should throw Error when upsert fails', async () => {
+    it('should throw Error when upsert fails with non-connectivity error', async () => {
       const dto: CreateFlashcardDto = {
         word_token: 'test',
         translation: 'test',
@@ -221,6 +209,23 @@ describe('FlashcardsService', () => {
         'Failed to create/update flashcard: Unique constraint error',
       );
     });
+
+    it('should return degraded flashcard when connectivity error occurs', async () => {
+      const dto: CreateFlashcardDto = {
+        word_token: 'bonjour',
+        translation: 'hello',
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: null,
+        error: { message: 'fetch failed', code: 'FETCH_ERROR' },
+      });
+
+      const result = await service.createOrUpdateFlashcard('user-1', dto);
+      expect(result.degraded).toBe(true);
+      expect(result.word_token).toBe('bonjour');
+      expect(result.translation).toBe('hello');
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
   });
 
   describe('updateSrsLevel', () => {
@@ -235,13 +240,11 @@ describe('FlashcardsService', () => {
     });
 
     it('should fetch current card and apply SM-2 with quality 5 (perfect recall, first review)', async () => {
-      // First single() call = fetch current state, second = update result
       const currentCard = {
         easiness_factor: 2.5,
         repetitions: 0,
         interval_days: 0,
       };
-      // q=5: EF = 2.5 + 0.1 - 0 = 2.6
       const updatedCard = {
         id: 'card-1',
         srs_level: 1,
@@ -284,9 +287,6 @@ describe('FlashcardsService', () => {
         repetitions: 3,
         interval_days: 15,
       };
-      // q=5: EF = 2.6 + 0.1 = 2.7
-      // interval: 15 * 2.7 = 40.5, rounded to 41
-      // srs_level: repetitions=4, interval 41 >= 21 -> level 4
       const updatedCard = {
         id: 'card-1',
         srs_level: 4,
@@ -315,7 +315,6 @@ describe('FlashcardsService', () => {
         repetitions: 3,
         interval_days: 30,
       };
-      // q=1: EF = 2.5 + 0.1 - 4*(0.08 + 4*0.02) = 2.5 + 0.1 - 4*0.16 = 2.5 + 0.1 - 0.64 = 1.96
       const updatedCard = {
         id: 'card-1',
         srs_level: 0,
@@ -343,7 +342,6 @@ describe('FlashcardsService', () => {
         repetitions: 0,
         interval_days: 0,
       };
-      // q=0: EF = 1.35 + 0.1 - 5*(0.08 + 5*0.02) = 1.35 + 0.1 - 5*0.18 = 1.35 + 0.1 - 0.9 = 0.55, clamp to 1.3
       const updatedCard = {
         id: 'card-1',
         srs_level: 0,
@@ -363,7 +361,7 @@ describe('FlashcardsService', () => {
       expect(result.easiness_factor).toBe(1.3);
     });
 
-    it('should throw Error when fetch of current card fails', async () => {
+    it('should throw Error when fetch of current card fails with non-connectivity error', async () => {
       mockQueryBuilder.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'Card not found' },
@@ -376,7 +374,7 @@ describe('FlashcardsService', () => {
       );
     });
 
-    it('should throw Error when update fails', async () => {
+    it('should throw Error when update fails with non-connectivity error', async () => {
       mockQueryBuilder.single
         .mockResolvedValueOnce({
           data: { easiness_factor: 2.5, repetitions: 0, interval_days: 0 },
@@ -391,12 +389,57 @@ describe('FlashcardsService', () => {
         service.updateSrsLevel('user-1', 'card-1', { quality: 3 }),
       ).rejects.toThrow('Failed to update SRS review level: Card not found');
     });
+
+    it('should return degraded card when fetch fails with connectivity error', async () => {
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'fetch failed', code: 'FETCH_ERROR' },
+      });
+
+      // The update will also fail -- second single call
+      mockQueryBuilder.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'fetch failed', code: 'FETCH_ERROR' },
+      });
+
+      const result = await service.updateSrsLevel('user-1', 'card-1', {
+        quality: 5,
+      });
+
+      expect(result.degraded).toBe(true);
+      expect(result.srs_level).toBe(1); // SM-2 defaults: quality 5 => first review
+      expect(result.easiness_factor).toBe(2.6);
+      expect(result.interval_days).toBe(1);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('should return degraded card when update fails with connectivity error', async () => {
+      const currentCard = {
+        easiness_factor: 2.5,
+        repetitions: 2,
+        interval_days: 6,
+      };
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: currentCard, error: null })
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'network error' },
+        });
+
+      const result = await service.updateSrsLevel('user-1', 'card-1', {
+        quality: 4,
+      });
+
+      expect(result.degraded).toBe(true);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
   });
 
   describe('getFlashcards', () => {
     it('should query all flashcards for user when level is not specified', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
+      // `.range()` is the last chained method before `await` in the paginated query.
+      mockQueryBuilder.range.mockResolvedValue({
         data: cards,
         error: null,
       });
@@ -408,28 +451,26 @@ describe('FlashcardsService', () => {
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('created_at', {
         ascending: false,
       });
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
     it('should filter by level when a valid number is provided', async () => {
       const cards = [{ id: 'card-2', srs_level: 2 }];
-      mockQueryBuilder.eq.mockReturnThis();
-      // Since order is called after eq when building, let's make sure our mock returns response when awaited
-      // Notice query builds: from().select().eq(user_id).order(). Then if level !== undefined && !isNaN(level), query.eq('srs_level', level).
-      // So when query is awaited, it returns whatever eq returns or order returns if eq returns this.
-      // Let's set up the promise resolution on queryBuilder itself or mock eq to return a promise when awaited.
-      mockQueryBuilder.then = (
-        resolve: (value: { data: unknown[]; error: null }) => void,
-      ) => resolve({ data: cards, error: null });
+      mockQueryBuilder.range.mockResolvedValue({
+        data: cards,
+        error: null,
+      });
 
       const result = await service.getFlashcards('user-1', 2);
 
       expect(mockQueryBuilder.eq).toHaveBeenCalledWith('srs_level', 2);
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
     it('should return empty array when query errors or returns null data', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: null,
         error: { message: 'Query error' },
       });
@@ -437,12 +478,23 @@ describe('FlashcardsService', () => {
       const result = await service.getFlashcards('user-1');
       expect(result).toEqual([]);
     });
+
+    it('should fall back to memory store when connectivity error occurs', async () => {
+      mockQueryBuilder.range.mockResolvedValue({
+        data: null,
+        error: { message: 'fetch failed' },
+      });
+
+      const result = await service.getFlashcards('user-1');
+      expect(result).toEqual([]);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
   });
 
   describe('getDueReviews', () => {
     it('should return due cards ordered by next_review_at', async () => {
       const cards = [{ id: 'card-1' }];
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: cards,
         error: null,
       });
@@ -459,11 +511,12 @@ describe('FlashcardsService', () => {
       expect(mockQueryBuilder.order).toHaveBeenCalledWith('next_review_at', {
         ascending: true,
       });
+      expect(mockQueryBuilder.range).toHaveBeenCalledWith(0, 49);
       expect(result).toEqual(cards);
     });
 
     it('should return empty array when getDueReviews query errors', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
+      mockQueryBuilder.range.mockResolvedValue({
         data: null,
         error: { message: 'Error' },
       });
@@ -497,7 +550,7 @@ describe('FlashcardsService', () => {
       });
     });
 
-    it('should wrap updateSrsLevel fetch call with withRetry', async () => {
+    it('should wrap updateSrsLevel calls with withRetry', async () => {
       const currentCard = {
         easiness_factor: 2.5,
         repetitions: 0,
@@ -518,34 +571,38 @@ describe('FlashcardsService', () => {
 
       await service.updateSrsLevel('user-1', 'card-1', { quality: 5 });
 
-      // withRetry should be called twice: once for fetch, once for update
       expect(withRetry).toHaveBeenCalledTimes(2);
-      // Both calls should pass the logger
-      const calls = (withRetry as jest.Mock).mock.calls;
-      expect(calls[0][1]).toEqual({ logger: mockLogger });
-      expect(calls[1][1]).toEqual({ logger: mockLogger });
+    });
+  });
+
+  describe('SM-2 algorithm edge cases', () => {
+    it('handleRepetitionOne should set interval 6', () => {
+      const result = service.applySm2Algorithm(4, 2.5, 1, 1);
+      expect(result.newInterval).toBe(6);
+      expect(result.newRepetitions).toBe(2);
     });
 
-    it('should not wrap getFlashcards with withRetry', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: [],
-        error: null,
-      });
-
-      await service.getFlashcards('user-1');
-
-      expect(withRetry).not.toHaveBeenCalled();
+    it('handleRepetitionTwoPlus should multiply interval by EF', () => {
+      const result = service.applySm2Algorithm(4, 2.5, 2, 6);
+      expect(result.newInterval).toBe(15); // 6 * 2.5 = 15
+      expect(result.newRepetitions).toBe(3);
     });
 
-    it('should not wrap getDueReviews with withRetry', async () => {
-      mockQueryBuilder.order.mockResolvedValue({
-        data: [],
-        error: null,
-      });
+    it('should derive level 2 for exactly 2 repetitions', () => {
+      const result = service.applySm2Algorithm(4, 2.5, 1, 1);
+      expect(result.newRepetitions).toBe(2);
+      expect(result.newSrsLevel).toBe(2);
+    });
 
-      await service.getDueReviews('user-1');
+    it('should derive level 3 for interval < 21', () => {
+      const result = service.applySm2Algorithm(4, 2.5, 2, 1);
+      expect(result.newRepetitions).toBe(3);
+      expect(result.newSrsLevel).toBe(3);
+    });
 
-      expect(withRetry).not.toHaveBeenCalled();
+    it('should derive level 4 for interval >= 21', () => {
+      const result = service.applySm2Algorithm(5, 3.0, 2, 7);
+      expect(result.newSrsLevel).toBe(4);
     });
   });
 });

@@ -26,13 +26,11 @@ export class NotificationsInboxComponent {
   readonly unreadCount = signal<number>(0);
 
   readonly notificationsResource = resource({
-    params: () => ({ tab: this.selectedTab() }),
-    loader: ({ params }) => this.loadNotifications(params.tab),
+    params: () => this.selectedTab(),
+    loader: ({ params: tab }) => this.loadNotifications(tab),
   });
 
-  readonly notifications = computed(
-    () => this.notificationsResource.value() ?? [],
-  );
+  readonly notifications = computed(() => this.notificationsResource.value() ?? []);
 
   readonly isLoading = this.notificationsResource.isLoading;
 
@@ -47,9 +45,7 @@ export class NotificationsInboxComponent {
     ];
   });
 
-  private async loadNotifications(
-    tab: NotificationTab,
-  ): Promise<InAppNotification[]> {
+  private async loadNotifications(tab: NotificationTab): Promise<InAppNotification[]> {
     const [list, unread] = await Promise.all([
       this.notificationService.getNotifications(tab),
       this.notificationService.getUnreadCount(),
@@ -84,7 +80,8 @@ export class NotificationsInboxComponent {
     if (
       notif.type === 'like_moment' ||
       notif.type === 'comment_moment' ||
-      notif.type === 'reply_comment'
+      notif.type === 'reply_comment' ||
+      notif.type === 'mention_comment'
     ) {
       void this.router.navigate(['/moments']);
     } else if (notif.type === 'mention_chat') {
@@ -103,6 +100,7 @@ export class NotificationsInboxComponent {
         return '❤️';
       case 'comment_moment':
       case 'reply_comment':
+      case 'mention_comment':
         return '💬';
       case 'mention_chat':
         return '📣';
@@ -127,6 +125,8 @@ export class NotificationsInboxComponent {
         return 'notifications.commentedMoment';
       case 'reply_comment':
         return 'notifications.repliedComment';
+      case 'mention_comment':
+        return 'notifications.mentionedInComment';
       case 'mention_chat':
         return 'notifications.mentionedInChat';
       case 'follow':

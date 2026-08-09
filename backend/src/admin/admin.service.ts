@@ -3,6 +3,7 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import Redis from 'ioredis';
 import { SupabaseService, type UsersRow } from '../supabase/supabase.service';
 import { DataScrubbingService } from '../privacy/data-scrubbing.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { ToggleVipDto } from './dto/toggle-vip.dto';
 import {
@@ -10,6 +11,8 @@ import {
   AdminUserSummary,
   AdminBlockEntry,
   AdminBlocksListResult,
+  AdminReportEntry,
+  AdminReportsListResult,
   LoginHistoryEntry,
 } from './interfaces/admin-user.interface';
 
@@ -18,19 +21,22 @@ const SUMMARY_COLUMNS =
 
 const CACHE_TTL_USERS = 300;
 const CACHE_TTL_BLOCKS = 300;
+const CACHE_TTL_REPORTS = 300;
 const CACHE_TTL_LOGIN_HISTORY = 600;
 
 const CACHE_PREFIX_USERS = 'admin:users:list:';
 const CACHE_PREFIX_BLOCKS = 'admin:blocks:list:';
+const CACHE_PREFIX_REPORTS = 'admin:reports:list:';
 const CACHE_PREFIX_LOGIN_HISTORY = 'admin:login-history:';
 
 @Injectable()
 export class AdminService {
   constructor(
-    @InjectPinoLogger(AdminService.name)
-    private readonly logger: PinoLogger,
     private readonly supabaseService: SupabaseService,
     private readonly scrubbingService: DataScrubbingService,
+    private readonly metrics: MetricsService,
+    @InjectPinoLogger(AdminService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   private getRedis(): Redis {
@@ -48,10 +54,7 @@ export class AdminService {
         );
       }
     } catch (err) {
-      this.logger.error(
-        { err },
-        'Failed to invalidate admin user list caches',
-      );
+      this.logger.error(err, 'Failed to invalidate admin user list caches');
     }
   }
 
@@ -66,10 +69,22 @@ export class AdminService {
         );
       }
     } catch (err) {
-      this.logger.error(
-        { err },
-        'Failed to invalidate admin blocks list caches',
-      );
+      this.logger.error(err, 'Failed to invalidate admin blocks list caches');
+    }
+  }
+
+  private async invalidateReportsListCaches(): Promise<void> {
+    try {
+      const redis = this.getRedis();
+      const keys = await redis.keys(`${CACHE_PREFIX_REPORTS}*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        this.logger.info(
+          `Invalidated ${keys.length} admin reports list cache key(s)`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(err, 'Failed to invalidate admin reports list caches');
     }
   }
 
@@ -80,7 +95,7 @@ export class AdminService {
       await redis.del(key);
     } catch (err) {
       this.logger.error(
-        { err },
+        err,
         `Failed to invalidate login history cache for user ${userId}`,
       );
     }
@@ -107,7 +122,7 @@ export class AdminService {
         }
       }
     } catch (err) {
-      this.logger.warn({ err }, 'Failed to read admin user list from cache');
+      this.logger.warn(err, 'Failed to read admin user list from cache');
     }
 
     const from = (page - 1) * pageSize;
@@ -127,12 +142,12 @@ export class AdminService {
       .range(from, to);
 
     if (error) {
-      this.logger.warn(`Failed to list admin users: ${error.message}`);
+      this.logger.warn(error, `Failed to list admin users`);
       return { users: [], total: 0, page, pageSize };
     }
 
     const result: AdminUserListResult = {
-      users: (data ?? []) as unknown as AdminUserSummary[],
+      users: data ?? [],
       total: count ?? 0,
       page,
       pageSize,
@@ -142,7 +157,7 @@ export class AdminService {
       const redis = this.getRedis();
       await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL_USERS);
     } catch (err) {
-      this.logger.warn({ err }, 'Failed to cache admin user list');
+      this.logger.warn(err, 'Failed to cache admin user list');
     }
 
     return result;
@@ -152,6 +167,7 @@ export class AdminService {
     userId: string,
     dto: ToggleVipDto,
   ): Promise<AdminUserSummary> {
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
     const updatePayload: Partial<UsersRow> = { is_vip: dto.is_vip };
     if (dto.vip_tier !== undefined) {
@@ -168,10 +184,19 @@ export class AdminService {
       .single();
 
     if (error || !data) {
+      this.metrics.recordAdminVipToggle('failure');
+      this.metrics.recordAdminApiError('users', 'database_error');
       throw new NotFoundException(
         `Unable to update VIP status for user ${userId}`,
       );
     }
+
+    this.metrics.recordAdminVipToggle('success');
+    this.metrics.observeAdminApiLatency(
+      'users',
+      'setVipStatus',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateUserListCaches();
     await this.invalidateLoginHistoryCache(userId);
@@ -188,12 +213,13 @@ export class AdminService {
       if (cached) {
         const parsed: unknown = JSON.parse(cached);
         if (Array.isArray(parsed)) {
+          this.metrics.recordAdminLoginHistoryRequest('success');
           return parsed as LoginHistoryEntry[];
         }
       }
     } catch (err) {
       this.logger.warn(
-        { err },
+        err,
         `Failed to read login history cache for user ${userId}`,
       );
     }
@@ -207,16 +233,19 @@ export class AdminService {
       .limit(50);
 
     if (error) {
+      this.metrics.recordAdminLoginHistoryRequest('failure');
       this.logger.warn(
-        `Failed to fetch login history for user ${userId}: ${error.message}`,
+        error,
+        `Failed to fetch login history for user ${userId}`,
       );
       return [];
     }
 
+    this.metrics.recordAdminLoginHistoryRequest('success');
     const result = data ?? [];
 
     // GDPR: scrub IP addresses before returning to the admin dashboard
-    this.scrubbingService.scrubLoginHistory(result as Array<{ ip_address?: string | null }>);
+    this.scrubbingService.scrubLoginHistory(result);
 
     try {
       const redis = this.getRedis();
@@ -227,25 +256,32 @@ export class AdminService {
         CACHE_TTL_LOGIN_HISTORY,
       );
     } catch (err) {
-      this.logger.warn(
-        { err },
-        `Failed to cache login history for user ${userId}`,
-      );
+      this.logger.warn(err, `Failed to cache login history for user ${userId}`);
     }
 
     return result;
   }
 
   async banUser(targetUserId: string, adminUserId: string): Promise<void> {
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase.from('blocks').insert({
       blocker_id: adminUserId,
       blocked_id: targetUserId,
     });
     if (error) {
-      this.logger.error(`Failed to ban user ${targetUserId}: ${error.message}`);
+      this.metrics.recordAdminBanAction('failure');
+      this.metrics.recordAdminApiError('ban', 'database_error');
+      this.logger.error(error, `Failed to ban user ${targetUserId}`);
       throw new NotFoundException(`Unable to ban user ${targetUserId}`);
     }
+
+    this.metrics.recordAdminBanAction('success');
+    this.metrics.observeAdminApiLatency(
+      'ban',
+      'banUser',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateUserListCaches();
     await this.invalidateBlocksListCaches();
@@ -253,6 +289,7 @@ export class AdminService {
   }
 
   async warnUser(targetUserId: string, adminUserId: string): Promise<void> {
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
     const { error } = await supabase.from('reports').insert({
       reporter_id: adminUserId,
@@ -262,13 +299,21 @@ export class AdminService {
       status: 'open',
     });
     if (error) {
-      this.logger.error(
-        `Failed to warn user ${targetUserId}: ${error.message}`,
-      );
+      this.metrics.recordAdminWarnAction('failure');
+      this.metrics.recordAdminApiError('warn', 'database_error');
+      this.logger.error(error, `Failed to warn user ${targetUserId}`);
       throw new NotFoundException(`Unable to warn user ${targetUserId}`);
     }
 
+    this.metrics.recordAdminWarnAction('success');
+    this.metrics.observeAdminApiLatency(
+      'warn',
+      'warnUser',
+      (Date.now() - start) / 1000,
+    );
+
     await this.invalidateUserListCaches();
+    await this.invalidateReportsListCaches();
     await this.invalidateLoginHistoryCache(targetUserId);
   }
 
@@ -290,7 +335,7 @@ export class AdminService {
         }
       }
     } catch (err) {
-      this.logger.warn({ err }, 'Failed to read admin blocks list from cache');
+      this.logger.warn(err, 'Failed to read admin blocks list from cache');
     }
 
     const supabase = this.supabaseService.getClient();
@@ -307,7 +352,7 @@ export class AdminService {
       .range(from, to);
 
     if (error) {
-      this.logger.warn(`Failed to list blocks: ${error.message}`);
+      this.logger.warn(error, 'Failed to list blocks');
       return { blocks: [], total: 0, page, pageSize };
     }
 
@@ -343,28 +388,123 @@ export class AdminService {
 
     try {
       const redis = this.getRedis();
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL_BLOCKS);
+    } catch (err) {
+      this.logger.warn(err, 'Failed to cache admin blocks list');
+    }
+
+    return result;
+  }
+
+  async listReports(
+    page = 1,
+    pageSize = 20,
+    statusFilter?: string,
+  ): Promise<AdminReportsListResult> {
+    const status = statusFilter ?? '';
+    const cacheKey = `${CACHE_PREFIX_REPORTS}${page}:${pageSize}:${status}`;
+
+    try {
+      const redis = this.getRedis();
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        const parsed: unknown = JSON.parse(cached);
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'reports' in parsed &&
+          'total' in parsed
+        ) {
+          return parsed as AdminReportsListResult;
+        }
+      }
+    } catch (err) {
+      this.logger.warn(err, 'Failed to read admin reports list from cache');
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let request = supabase
+      .from('reports')
+      .select(
+        'id, reporter_id, reported_user_id, reason_category, description, status, created_at, reported:reported_user_id ( display_name ), reporter:reporter_id ( display_name )',
+        { count: 'exact' },
+      );
+
+    if (statusFilter) {
+      request = request.eq('status', statusFilter);
+    }
+
+    const { data, error, count } = await request
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      this.logger.warn(error, 'Failed to list reports');
+      return { reports: [], total: 0, page, pageSize };
+    }
+
+    const reports: AdminReportEntry[] = (data ?? []).map(
+      (row: Record<string, unknown>) => {
+        const reported = row.reported as { display_name?: string } | null;
+        const reporter = row.reporter as { display_name?: string } | null;
+        return {
+          id: row.id as string,
+          reporter_id: row.reporter_id as string | null,
+          reported_user_id: row.reported_user_id as string,
+          reason_category: row.reason_category as string,
+          description: row.description as string | null,
+          status: row.status as string,
+          reported_name: reported?.display_name ?? null,
+          reporter_name: reporter?.display_name ?? null,
+          created_at: row.created_at as string,
+        };
+      },
+    );
+
+    const result: AdminReportsListResult = {
+      reports,
+      total: count ?? 0,
+      page,
+      pageSize,
+    };
+
+    try {
+      const redis = this.getRedis();
       await redis.set(
         cacheKey,
         JSON.stringify(result),
         'EX',
-        CACHE_TTL_BLOCKS,
+        CACHE_TTL_REPORTS,
       );
     } catch (err) {
-      this.logger.warn({ err }, 'Failed to cache admin blocks list');
+      this.logger.warn(err, 'Failed to cache admin reports list');
     }
 
     return result;
   }
 
   async removeBlock(blockId: string): Promise<{ success: boolean }> {
+    const start = Date.now();
     const supabase = this.supabaseService.getClient();
 
     const { error } = await supabase.from('blocks').delete().eq('id', blockId);
 
     if (error) {
-      this.logger.error(`Failed to remove block ${blockId}: ${error.message}`);
+      this.metrics.recordAdminBlockRemoval('failure');
+      this.metrics.recordAdminApiError('blocks', 'database_error');
+      this.logger.error(error, `Failed to remove block ${blockId}`);
       throw new NotFoundException(`Unable to remove block ${blockId}`);
     }
+
+    this.metrics.recordAdminBlockRemoval('success');
+    this.metrics.observeAdminApiLatency(
+      'blocks',
+      'removeBlock',
+      (Date.now() - start) / 1000,
+    );
 
     await this.invalidateBlocksListCaches();
 
