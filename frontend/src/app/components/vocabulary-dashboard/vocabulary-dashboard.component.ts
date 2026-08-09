@@ -1,82 +1,85 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input, signal, viewChild, inject, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { JoyrideDirective } from 'ngx-joyride';
-import { SrsTourTriggerComponent } from '../srs-tour-trigger/srs-tour-trigger.component';
 import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
+import {
+  SrsErrorBoundaryComponent,
+  SrsErrorContext,
+} from '../srs-error-boundary/srs-error-boundary.component';
 
 type ReviewGrade = 'again' | 'good' | 'known';
 
 @Component({
   selector: 'app-vocabulary-dashboard',
-  imports: [TranslatePipe, JoyrideDirective, SrsTourTriggerComponent],
+  imports: [TranslatePipe, SrsErrorBoundaryComponent],
   template: `
-    <div class="mx-auto w-full max-w-md ps-6 pe-6 sm:max-w-lg">
-      <h2 class="text-2xl font-bold text-slate-100">{{ 'vocabulary.title' | t }}</h2>
-      <p class="mt-1 text-sm text-slate-400">{{ 'vocabulary.subtitle' | t }}</p>
+    <app-srs-error-boundary
+      [context]="errorContext()"
+      [showReportButton]="true"
+      (retry)="handleRetry()"
+    >
+      <div class="mx-auto w-full max-w-md ps-6 pe-6 sm:max-w-lg">
+        <h2 class="text-2xl font-bold text-slate-100">{{ 'vocabulary.title' | t }}</h2>
+        <p class="mt-1 text-sm text-slate-400">{{ 'vocabulary.subtitle' | t }}</p>
 
-      <div class="mt-4 flex items-center justify-between">
-        <app-srs-tour-trigger />
-        <span class="text-sm text-slate-300">{{
-          'vocabulary.cardCounter' | t: { current: currentIndex() + 1, total: cardCount() }
-        }}</span>
-        <button type="button" (click)="restart()" class="btn-secondary text-sm">{{
-          'vocabulary.restart' | t
-        }}</button>
-      </div>
-
-      @if (isComplete()) {
-        <div class="mt-12 rounded-2xl border border-slate-700 bg-surface-800 p-8 text-center">
-          <p class="text-lg font-medium text-slate-100">📚 {{ 'vocabulary.noDue' | t }}</p>
-          <button type="button" (click)="restart()" class="mt-4 btn-secondary">{{
+        <div class="mt-8 flex items-center justify-between">
+          <span class="text-sm text-slate-300">{{
+            'vocabulary.cardCounter' | t: { current: currentIndex() + 1, total: cardCount() }
+          }}</span>
+          <button type="button" (click)="restart()" class="btn-secondary text-sm">{{
             'vocabulary.restart' | t
           }}</button>
         </div>
-      } @else {
-        @if (currentCard(); as card) {
-          <div class="mt-4">
-            <div
-              class="flashcard"
-              [class.is-flipped]="isFlipped()"
-              (click)="flipCard()"
-              (keyup.enter)="flipCard()"
-              (keyup.space)="flipCard()"
-              role="button"
-              tabindex="0"
-              [attr.aria-pressed]="isFlipped()"
-              joyrideStep="srsTourVocabularyDashboard"
-              [title]="'srsTour.vocabDashboardTitle' | t"
-              [text]="'srsTour.vocabDashboardText' | t"
-              stepPosition="bottom"
-            >
-              <div class="flashcard-inner">
-                <div class="flashcard-face flashcard-front">
-                  <span class="block text-lg font-semibold text-slate-100">{{ card.term }}</span>
-                  <span class="mt-4 block text-sm text-slate-400">{{ 'vocabulary.tapToFlip' | t }}</span>
-                </div>
-                <div class="flashcard-face flashcard-back">
-                  <p class="text-base text-slate-100">{{ card.definition }}</p>
-                  @if (card.example; as example) {
-                    <p class="mt-3 text-sm italic text-slate-400">“{{ example }}”</p>
-                  }
+
+        @if (isComplete()) {
+          <div class="mt-12 rounded-2xl border border-slate-700 bg-surface-800 p-8 text-center">
+            <p class="text-lg font-medium text-slate-100">📚 {{ 'vocabulary.noDue' | t }}</p>
+            <button type="button" (click)="restart()" class="mt-4 btn-secondary">{{
+              'vocabulary.restart' | t
+            }}</button>
+          </div>
+        } @else {
+          @if (currentCard(); as card) {
+            <div class="mt-4">
+              <div
+                class="flashcard"
+                [class.is-flipped]="isFlipped()"
+                (click)="flipCard()"
+                (keyup.enter)="flipCard()"
+                (keyup.space)="flipCard()"
+                role="button"
+                tabindex="0"
+                [attr.aria-pressed]="isFlipped()"
+              >
+                <div class="flashcard-inner">
+                  <div class="flashcard-face flashcard-front">
+                    <span class="block text-lg font-semibold text-slate-100">{{ card.term }}</span>
+                    <span class="mt-4 block text-sm text-slate-400">{{ 'vocabulary.tapToFlip' | t }}</span>
+                  </div>
+                  <div class="flashcard-face flashcard-back">
+                    <p class="text-base text-slate-100">{{ card.definition }}</p>
+                    @if (card.example; as example) {
+                      <p class="mt-3 text-sm italic text-slate-400">“{{ example }}”</p>
+                    }
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="mt-6 flex items-center justify-center gap-3">
-              <button type="button" (click)="grade('again')" class="btn-grade btn-grade-again">{{
-                'vocabulary.againBtn' | t
-              }}</button>
-              <button type="button" (click)="grade('good')" class="btn-grade btn-grade-good">{{
-                'vocabulary.goodBtn' | t
-              }}</button>
-              <button type="button" (click)="grade('known')" class="btn-grade btn-grade-known">{{
-                'vocabulary.knownBtn' | t
-              }}</button>
+              <div class="mt-6 flex items-center justify-center gap-3">
+                <button type="button" (click)="grade('again')" class="btn-grade btn-grade-again">{{
+                  'vocabulary.againBtn' | t
+                }}</button>
+                <button type="button" (click)="grade('good')" class="btn-grade btn-grade-good">{{
+                  'vocabulary.goodBtn' | t
+                }}</button>
+                <button type="button" (click)="grade('known')" class="btn-grade btn-grade-known">{{
+                  'vocabulary.knownBtn' | t
+                }}</button>
+              </div>
             </div>
-          </div>
+          }
         }
-      }
-    </div>
+      </div>
+    </app-srs-error-boundary>
   `,
   styles: [
     `
@@ -158,6 +161,8 @@ type ReviewGrade = 'again' | 'good' | 'known';
   ],
 })
 export class VocabularyDashboardComponent {
+  private errorHandler = inject(ErrorHandler);
+
   readonly deckInput = input<VocabCard[]>([]);
 
   private readonly mockDeck: readonly VocabCard[] = VOCABULARY_MOCK_DECK;
@@ -176,20 +181,42 @@ export class VocabularyDashboardComponent {
     () => this.cardCount() === 0 || this.currentIndex() >= this.cardCount(),
   );
 
+  readonly errorContext = computed<SrsErrorContext>(() => ({
+    component: 'vocabulary-dashboard',
+    operation: 'review',
+    cardCount: this.cardCount(),
+    currentIndex: this.currentIndex(),
+    srsLevel: this.currentCard()?.level ?? 0,
+  }));
+
+  readonly errorBoundary = viewChild(SrsErrorBoundaryComponent);
+
+  handleRetry(): void {
+    this.restart();
+  }
+
   flipCard(): void {
-    if (this.currentCard()) {
-      this.isFlipped.update((flipped) => !flipped);
+    try {
+      if (this.currentCard()) {
+        this.isFlipped.update((flipped) => !flipped);
+      }
+    } catch (err) {
+      this.handleComponentError(err, 'flipCard');
     }
   }
 
   grade(grade: ReviewGrade): void {
-    if (this.isComplete()) return;
-    this.grades.update((g) => ({ ...g, [grade]: g[grade] + 1 }));
-    this.isFlipped.set(false);
-    if (this.currentIndex() < this.cardCount() - 1) {
-      this.currentIndex.update((i) => i + 1);
-    } else {
-      this.currentIndex.set(this.cardCount());
+    try {
+      if (this.isComplete()) return;
+      this.grades.update((g) => ({ ...g, [grade]: g[grade] + 1 }));
+      this.isFlipped.set(false);
+      if (this.currentIndex() < this.cardCount() - 1) {
+        this.currentIndex.update((i) => i + 1);
+      } else {
+        this.currentIndex.set(this.cardCount());
+      }
+    } catch (err) {
+      this.handleComponentError(err, 'grade');
     }
   }
 
@@ -197,5 +224,14 @@ export class VocabularyDashboardComponent {
     this.currentIndex.set(0);
     this.isFlipped.set(false);
     this.grades.set({ again: 0, good: 0, known: 0 });
+  }
+
+  private handleComponentError(err: unknown, operation: string): void {
+    const error = err instanceof Error ? err : new Error(String(err));
+    this.errorBoundary()?.captureError(error, undefined, {
+      operation,
+      cardIndex: this.currentIndex(),
+      cardCount: this.cardCount(),
+    });
   }
 }

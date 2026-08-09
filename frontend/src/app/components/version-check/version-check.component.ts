@@ -5,7 +5,6 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-version-check',
-  standalone: true,
   imports: [TranslatePipe],
   template: `
     <div class="p-4">
