@@ -476,12 +476,13 @@ describe('ReadingEngineService', () => {
       expect(builder.eq).toHaveBeenCalledWith('topic', 'science');
     });
 
-    it('applies limit and offset together', async () => {
+    it('applies limit and offset together using range', async () => {
       const builder = makeBuilder({ data: rows, error: null });
       mockDb['reading_resources'] = builder;
 
       await service.listResources({ limit: 10, offset: 5 });
 
+      // When offset is provided, range is used instead of limit
       expect(builder.range).toHaveBeenCalledWith(5, 14);
     });
 

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { DataExportWorker } from './data-export.worker';
@@ -66,6 +67,10 @@ describe('UsersService', () => {
               exported_at: new Date().toISOString(),
             }),
           },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn() },
         },
       ],
     }).compile();
@@ -217,12 +222,14 @@ describe('UsersService', () => {
           }),
         }),
       });
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'users') {
-          return { select: mockSelectFn };
-        }
-        return mockQueryBuilder;
-      });
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'users') {
+            return { select: mockSelectFn };
+          }
+          return mockQueryBuilder;
+        });
 
       await expect(service.updateProfile('user-1', dto, true)).rejects.toThrow(
         new BadRequestException(
@@ -244,17 +251,19 @@ describe('UsersService', () => {
         }),
       });
 
-      mockSupabaseClient.from = jest.fn().mockImplementation((table: string) => {
-        if (table === 'users') {
-          return {
-            select: mockSelectFn,
-            update: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null }),
-            }),
-          };
-        }
-        return mockQueryBuilder;
-      });
+      mockSupabaseClient.from = jest
+        .fn()
+        .mockImplementation((table: string) => {
+          if (table === 'users') {
+            return {
+              select: mockSelectFn,
+              update: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({ error: null }),
+              }),
+            };
+          }
+          return mockQueryBuilder;
+        });
 
       const result = await service.updateProfile('user-1', dto, true);
       expect(result).toBeDefined();

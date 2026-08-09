@@ -79,7 +79,7 @@ function collectFiles(rootPath: string): string[] {
   return files.filter((f) => !f.endsWith('.spec.ts') && TEMPLATE_EXTS.has(extname(f)));
 }
 
-describe('RTL Logical CSS Properties — Video Classrooms', () => {
+describe('RTL Logical CSS Properties - Video Classrooms', () => {
   let allContent: string;
   let fileList: string[];
 

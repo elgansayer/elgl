@@ -12,7 +12,6 @@ import { AudioIntroService } from '../../services/audio-intro.service';
 
 @Component({
   selector: 'app-audio-recorder',
-  standalone: true,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './audio-recorder.component.html',
   host: { class: 'block' },

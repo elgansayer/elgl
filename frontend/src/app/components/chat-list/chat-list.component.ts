@@ -10,7 +10,7 @@ import { ChatMessage, ChatRoom, ChatService } from '../../services/chat.service'
 import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
-import { GroupsService, DiscoverableGroup } from '../../services/groups.service';
+import { GroupsDiscoveryComponent } from '../groups-discovery/groups-discovery.component';
 
 interface ChatRoomPreview {
   id: string;
@@ -28,7 +28,7 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent, GroupsDiscoveryComponent],
   templateUrl: './chat-list.component.html',
 })
 export class ChatListComponent implements OnInit {
@@ -36,7 +36,6 @@ export class ChatListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly unreadCounter = inject(UnreadCounterService);
-  private readonly groupsService = inject(GroupsService);
 
   readonly isLoading = signal<boolean>(true);
   readonly labels = signal<string[]>([]);
@@ -44,18 +43,12 @@ export class ChatListComponent implements OnInit {
   readonly previews = signal<ChatRoomPreview[]>([]);
   readonly search = signal<string>('');
 
+  /** Active tab: 'chats' | 'groups' */
+  readonly activeTab = signal<'chats' | 'groups'>('chats');
+
   // ---------- Locked chat state ----------
   readonly lockedRoomIds = signal<string[]>([]);
   readonly showLocked = signal<boolean>(false);
-
-  // ---------- Tab state ----------
-  readonly activeTab = signal<'chats' | 'groups'>('chats');
-
-  // ---------- Groups discovery state ----------
-  readonly groupsLoading = signal<boolean>(false);
-  readonly groupsError = signal<string>('');
-  readonly groups = signal<DiscoverableGroup[]>([]);
-  readonly joiningGroupId = signal<string | null>(null);
 
   // Computed previews after excluding locked rooms
   readonly regularAndPinnedPreviews = computed(() => {
@@ -167,39 +160,6 @@ export class ChatListComponent implements OnInit {
     await this.loadPreviews();
     await this.loadLockedRooms();
     await this.loadLabels();
-  }
-
-  switchTab(tab: 'chats' | 'groups'): void {
-    this.activeTab.set(tab);
-    if (tab === 'groups' && this.groups().length === 0 && !this.groupsLoading()) {
-      this.loadGroups();
-    }
-  }
-
-  async loadGroups(): Promise<void> {
-    this.groupsLoading.set(true);
-    this.groupsError.set('');
-    try {
-      const result = await this.groupsService.getDiscoverableGroups();
-      this.groups.set(result);
-    } catch {
-      this.groupsError.set(this.i18n.translate('groups_discovery_error'));
-    } finally {
-      this.groupsLoading.set(false);
-    }
-  }
-
-  async handleJoinGroup(groupId: string): Promise<void> {
-    this.joiningGroupId.set(groupId);
-    this.groupsError.set('');
-    try {
-      await this.groupsService.joinGroup(groupId);
-      await this.loadGroups();
-    } catch {
-      this.groupsError.set(this.i18n.translate('groups_discovery_error'));
-    } finally {
-      this.joiningGroupId.set(null);
-    }
   }
 
   async loadPreviews(): Promise<void> {

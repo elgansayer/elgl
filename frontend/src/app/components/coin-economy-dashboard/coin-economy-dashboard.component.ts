@@ -6,10 +6,6 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoinEconomyOnboardingService } from '../../services/coin-economy-onboarding.service';
 import { AppCardComponent } from '../primitives/card/card.component';
-import { AppPillComponent } from '../primitives/pill/pill.component';
-import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
-import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skeleton-loader.component';
-import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-coin-economy-dashboard',
@@ -19,10 +15,10 @@ import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.co
     RouterLink,
     DecimalPipe,
     AppCardComponent,
-    AppPillComponent,
-    AppButtonPrimaryComponent,
-    AppSkeletonLoaderComponent,
-    AppEmptyStateComponent,
+    
+    
+    
+    
   ],
   template: `<div class="min-h-screen bg-surface-300 text-text-primary">
   <!-- Header with Coin Balance -->
