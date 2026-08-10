@@ -83,7 +83,9 @@ describe('DataRetentionService', () => {
     it('deletes captions older than 180 days', async () => {
       mockQueryBuilder.lt.mockResolvedValue({ error: null, count: 8 });
       await service.purgeAudioRoomCaptions();
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('audio_room_captions');
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith(
+        'audio_room_captions',
+      );
     });
   });
 
@@ -99,7 +101,9 @@ describe('DataRetentionService', () => {
     it('deletes transcripts older than 180 days', async () => {
       mockQueryBuilder.lt.mockResolvedValue({ error: null, count: 2 });
       await service.purgeAudioRoomTranscripts();
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('audio_room_transcripts');
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith(
+        'audio_room_transcripts',
+      );
     });
   });
 

@@ -1376,7 +1376,9 @@ describe('ChatService', () => {
 
       await expect(
         service.editMessage(senderId, messageId, dto),
-      ).rejects.toThrow('Messages can only be edited within 5 minutes of sending');
+      ).rejects.toThrow(
+        'Messages can only be edited within 5 minutes of sending',
+      );
     });
 
     it('should throw ForbiddenException when user is not a room member', async () => {

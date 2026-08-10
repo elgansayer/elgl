@@ -460,7 +460,9 @@ describe('MonetisationController', () => {
 
   describe('restorePurchases', () => {
     it('should return null if user is not provided', async () => {
-      const result = await controller.restorePurchases(null, { platform: 'ios' });
+      const result = await controller.restorePurchases(null, {
+        platform: 'ios',
+      });
       expect(result).toBeNull();
       expect(monetisationService.restorePurchases).not.toHaveBeenCalled();
     });

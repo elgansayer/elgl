@@ -82,7 +82,10 @@ describe('ReadingEngineCrashReportService', () => {
         resolved_at: null,
       };
 
-      mockInsertSingle.mockResolvedValueOnce({ data: mockDbRecord, error: null });
+      mockInsertSingle.mockResolvedValueOnce({
+        data: mockDbRecord,
+        error: null,
+      });
 
       const result = await service.reportCrash({
         operation: 'GET /reading/resources',

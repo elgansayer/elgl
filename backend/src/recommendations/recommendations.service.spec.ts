@@ -1032,7 +1032,11 @@ describe('RecommendationsService', () => {
       const usersChain = makeQueryChain();
       usersChain._setResolve([
         { id: 'user-a', native_languages: ['en'], target_languages: ['es'] },
-        { id: 'user-b', native_languages: ['ja'], target_languages: ['en', 'ko'] },
+        {
+          id: 'user-b',
+          native_languages: ['ja'],
+          target_languages: ['en', 'ko'],
+        },
         { id: 'user-c', native_languages: ['es'], target_languages: ['en'] },
         { id: 'user-d', native_languages: ['en'], target_languages: null },
       ]);

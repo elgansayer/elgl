@@ -14,9 +14,7 @@ describe('AnalyticsService', () => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     insertBuilder = {
-      insert: jest.fn().mockReturnValue(
-        Promise.resolve({ error: null }),
-      ),
+      insert: jest.fn().mockReturnValue(Promise.resolve({ error: null })),
     };
 
     mockSupabaseClient = {
@@ -70,7 +68,9 @@ describe('AnalyticsService', () => {
           url: 'https://example.com/page',
           user_agent: 'Chrome/120',
           metadata: { userId: 'user-1' },
-          stack_frames: [{ fileName: 'app.ts', lineNumber: 10, columnNumber: 5 }],
+          stack_frames: [
+            { fileName: 'app.ts', lineNumber: 10, columnNumber: 5 },
+          ],
           client_timestamp: '2026-08-07T00:00:00.000Z',
         }),
       );
@@ -122,7 +122,9 @@ describe('AnalyticsService', () => {
       await service.recordClientError(validPayload);
 
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Exception while recording client error: Connection refused'),
+        expect.stringContaining(
+          'Exception while recording client error: Connection refused',
+        ),
       );
     });
   });
