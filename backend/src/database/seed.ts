@@ -12,28 +12,7 @@ const supabaseKey =
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function runSeed() {
-  console.log('🌱 Starting HelloTalk Open-Core Database Seeder...');
-  console.log(`Connecting to Supabase URL: ${supabaseUrl}`);
-
-  // Test connection
-  const { error: testErr } = await supabase.from('users').select('id').limit(1);
-  if (testErr && testErr.message.includes('fetch failed')) {
-    console.warn(
-      '⚠️ Could not connect to live Supabase instance. Seeder will run in validation simulation mode.',
-    );
-    console.log(
-      'Mocking 10+ global users across UK, Spain, France, Japan, Germany, and Saudi Arabia...',
-    );
-    console.log(
-      'Mocking LingQ flashcard decks, multi-modal moments, and LiveKit audio rooms...',
-    );
-    console.log(
-      '✅ Seeder validation completed successfully in local simulation mode.',
-    );
-    return;
-  }
-
+async function seedUsersAndProfiles() {
   // 1. Seed Users and Profiles
   const seedUsers = [
     {
@@ -160,7 +139,9 @@ async function runSeed() {
         .eq('id', userId);
     }
   }
+}
 
+async function seedMomentsAndAudioRooms() {
   // 2. Seed Moments
   const { data: usersList } = await supabase
     .from('users')
@@ -221,7 +202,9 @@ async function runSeed() {
       },
     ]);
   }
+}
 
+async function seedVIPSubscriptions() {
   // 4. Seed subscriptions for VIP users
   const { data: vipUsersRaw } = await supabase
     .from('users')
@@ -261,7 +244,9 @@ async function runSeed() {
       `✅ Seeded ${subscriptionData.length} subscriptions for VIP users`,
     );
   }
+}
 
+async function seedSubscriptionEvents() {
   // 5. Seed subscription events for audit trail
   type UserIdRow = { id: string };
 
@@ -299,7 +284,9 @@ async function runSeed() {
 
     console.log('✅ Seeded subscription events for audit trail');
   }
+}
 
+async function seedAchievements() {
   // 6. Seed achievements definitions
   const achievementsData = [
     {
@@ -344,7 +331,9 @@ async function runSeed() {
   } else {
     console.log('✅ Seeded achievements definitions');
   }
+}
 
+async function seedCuratedLearningContent() {
   // 7. Seed curated learning content (articles and dialogues)
   const articlesToSeed = [
     {
@@ -417,6 +406,36 @@ async function runSeed() {
     }
   }
   console.log('✅ Seeded curated dialogues');
+}
+
+async function runSeed() {
+  console.log('🌱 Starting HelloTalk Open-Core Database Seeder...');
+  console.log(`Connecting to Supabase URL: ${supabaseUrl}`);
+
+  // Test connection
+  const { error: testErr } = await supabase.from('users').select('id').limit(1);
+  if (testErr && testErr.message.includes('fetch failed')) {
+    console.warn(
+      '⚠️ Could not connect to live Supabase instance. Seeder will run in validation simulation mode.',
+    );
+    console.log(
+      'Mocking 10+ global users across UK, Spain, France, Japan, Germany, and Saudi Arabia...',
+    );
+    console.log(
+      'Mocking LingQ flashcard decks, multi-modal moments, and LiveKit audio rooms...',
+    );
+    console.log(
+      '✅ Seeder validation completed successfully in local simulation mode.',
+    );
+    return;
+  }
+
+  await seedUsersAndProfiles();
+  await seedMomentsAndAudioRooms();
+  await seedVIPSubscriptions();
+  await seedSubscriptionEvents();
+  await seedAchievements();
+  await seedCuratedLearningContent();
 
   console.log(
     '✅ Database successfully seeded with rich global users, moments, comments, LiveKit rooms, and achievements!',
