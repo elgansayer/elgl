@@ -83,12 +83,7 @@ describe('ChatPageComponent', () => {
     aiConversationServiceMock.sendMessage.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [
-        FormsModule,
-        DatePipe,
-        TranslatePipe,
-        ChatPageComponent,
-      ],
+      imports: [FormsModule, DatePipe, TranslatePipe, ChatPageComponent],
       providers: [
         { provide: ChatService, useValue: chatServiceMock },
         { provide: AuthService, useValue: authServiceMock },
@@ -222,9 +217,7 @@ describe('ChatPageComponent', () => {
     it('should close AI partner and reset state', () => {
       component.aiMode.set(true);
       component.aiSelectedScenario.set(scenarios[0]);
-      component.aiMessages.set([
-        { id: 'm1', role: 'user', text: 'hi', created_at: new Date() },
-      ]);
+      component.aiMessages.set([{ id: 'm1', role: 'user', text: 'hi', created_at: new Date() }]);
 
       component.closeAiPartner();
 
@@ -301,14 +294,8 @@ describe('ChatPageComponent', () => {
 
       await component.selectRoom(room);
 
-      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith(
-        'msg-other',
-        'delivered',
-      );
-      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith(
-        'msg-other',
-        'read',
-      );
+      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith('msg-other', 'delivered');
+      expect(chatServiceMock.markMessageStatus).toHaveBeenCalledWith('msg-other', 'read');
       // Own messages should not be marked
       expect(chatServiceMock.markMessageStatus).not.toHaveBeenCalledWith(
         'msg-own',
@@ -337,10 +324,7 @@ describe('ChatPageComponent', () => {
         is_read: false,
         delivery_status: 'delivered',
       };
-      chatServiceMock.getMessages.mockResolvedValue([
-        alreadyReadMessage,
-        alreadyDeliveredMessage,
-      ]);
+      chatServiceMock.getMessages.mockResolvedValue([alreadyReadMessage, alreadyDeliveredMessage]);
 
       await component.selectRoom(room);
 

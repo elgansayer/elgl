@@ -21,7 +21,14 @@ A right-click (or long-press) context menu for chat messages with actions like r
 
 ```typescript
 type ContextMenuAction =
-  'reply' | 'copy' | 'edit' | 'delete' | 'favourite' | 'report' | 'translate' | 'speak';
+  | 'reply'
+  | 'copy'
+  | 'edit'
+  | 'delete'
+  | 'favourite'
+  | 'report'
+  | 'translate'
+  | 'speak';
 ```
 
 ## States

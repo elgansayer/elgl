@@ -61,7 +61,9 @@ describe('SplitScreenVideoComponent', () => {
 
   it('should emit invite when the invite button is clicked', () => {
     let invited = false;
-    component.invite.subscribe(() => { invited = true; });
+    component.invite.subscribe(() => {
+      invited = true;
+    });
 
     const inviteBtn = fixture.nativeElement.querySelector('button');
     inviteBtn!.click();

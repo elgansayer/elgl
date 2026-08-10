@@ -1,4 +1,5 @@
-import {Component, inject, signal, PLATFORM_ID} from '@angular/core';import { isPlatformServer } from '@angular/common';
+import { Component, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformServer } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
@@ -8,7 +9,9 @@ import { SupabaseService } from '../../services/supabase.service';
 @Component({
   selector: 'app-device-transfer',
   template: `
-    <div class="flex flex-col items-center justify-center min-h-screen p-8 bg-surface text-on-surface">
+    <div
+      class="flex flex-col items-center justify-center min-h-screen p-8 bg-surface text-on-surface"
+    >
       <h1 class="text-2xl font-bold mb-4">Device Transfer</h1>
 
       @if (status() === 'generating') {
@@ -18,10 +21,7 @@ import { SupabaseService } from '../../services/supabase.service';
         <div class="bg-card p-4 rounded-lg break-all">
           <code>{{ deviceLink() }}</code>
         </div>
-        <button
-          class="mt-4 px-6 py-2 bg-accent text-white rounded-full"
-          (click)="copyLink()"
-        >
+        <button class="mt-4 px-6 py-2 bg-accent text-white rounded-full" (click)="copyLink()">
           Copy Link
         </button>
         <p class="mt-2 text-sm opacity-70">Link expires in 5 minutes.</p>
@@ -75,10 +75,7 @@ export class DeviceTransferComponent {
     try {
       // Call backend to consume the one‑time token and obtain a swap JWT
       const consumeRes = await lastValueFrom(
-        this.http.post<{ swapToken: string }>(
-          '/api/transfer/consume',
-          { token },
-        ),
+        this.http.post<{ swapToken: string }>('/api/transfer/consume', { token }),
       );
       // Exchange the swap JWT for a real session
       const swapRes = await lastValueFrom(
@@ -94,7 +91,9 @@ export class DeviceTransferComponent {
         refresh_token: swapRes.refresh_token,
       });
       // Reload auth state
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) {
         // The AuthService listener will pick it up automatically
         this.status.set('done');

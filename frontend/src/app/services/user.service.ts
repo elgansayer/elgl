@@ -572,10 +572,9 @@ export class UserService {
     if (!query.trim()) return [];
     return firstValueFrom(
       this.http
-        .get<{ id: string; display_name: string; avatar_url: string | null }[]>(
-          `${this.baseUrl}/search`,
-          { headers: this.getHeaders(), params: { q: query, limit: String(limit) } },
-        )
+        .get<
+          { id: string; display_name: string; avatar_url: string | null }[]
+        >(`${this.baseUrl}/search`, { headers: this.getHeaders(), params: { q: query, limit: String(limit) } })
         .pipe(catchError(() => of([]))),
     );
   }
@@ -585,11 +584,9 @@ export class UserService {
   ): Promise<UserProfile[]> {
     return firstValueFrom(
       this.http
-        .post<UserProfile[]>(
-          `${this.baseUrl}/query-language-pairs`,
-          { languagePairs },
-          { headers: this.getHeaders() },
-        )
+        .post<
+          UserProfile[]
+        >(`${this.baseUrl}/query-language-pairs`, { languagePairs }, { headers: this.getHeaders() })
         .pipe(catchError(() => of([]))),
     );
   }
@@ -605,11 +602,9 @@ export class UserService {
   async assessProficiency(score: number): Promise<string> {
     const result = await firstValueFrom(
       this.http
-        .post<{ level: string }>(
-          `${this.baseUrl}/me/assess-proficiency`,
-          { score },
-          { headers: this.getHeaders() },
-        )
+        .post<{
+          level: string;
+        }>(`${this.baseUrl}/me/assess-proficiency`, { score }, { headers: this.getHeaders() })
         .pipe(catchError(() => of({ level: 'A1' }))),
     );
     return result.level;
@@ -730,11 +725,9 @@ export class UserService {
   async subscribeToFcmTopic(topic: string): Promise<{ success: boolean }> {
     return firstValueFrom(
       this.http
-        .post<{ success: boolean }>(
-          `${this.baseUrl}/fcm/subscribe`,
-          { topic },
-          { headers: this.getHeaders() },
-        )
+        .post<{
+          success: boolean;
+        }>(`${this.baseUrl}/fcm/subscribe`, { topic }, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
             throw new Error('Failed to subscribe to topic');
@@ -746,11 +739,9 @@ export class UserService {
   async unsubscribeFromFcmTopic(topic: string): Promise<{ success: boolean }> {
     return firstValueFrom(
       this.http
-        .post<{ success: boolean }>(
-          `${this.baseUrl}/fcm/unsubscribe`,
-          { topic },
-          { headers: this.getHeaders() },
-        )
+        .post<{
+          success: boolean;
+        }>(`${this.baseUrl}/fcm/unsubscribe`, { topic }, { headers: this.getHeaders() })
         .pipe(
           catchError(() => {
             throw new Error('Failed to unsubscribe from topic');

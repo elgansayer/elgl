@@ -1,19 +1,27 @@
-import {Component, inject, signal, viewChild, computed, OnInit} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {RouterLink} from '@angular/router';
-import {TranslatePipe} from '../../services/translate.pipe';
-import {NgxSkeletonLoaderComponent} from 'ngx-skeleton-loader';
-import {I18nService} from '../../services/i18n.service';
-import {UserService, UserProfile, VisitorLog, BusinessCatalogItem} from '../../services/user.service';
-import {CoverPhotoUploaderComponent} from '../cover-photo-uploader/cover-photo-uploader.component';
-import {HobbyTagsComponent} from '../hobby-tags/hobby-tags.component';
-import {LanguagePickerComponent, getLanguageFlag} from '../primitives/language-picker/language-picker.component';
-import {CelebrationOverlayComponent} from '../celebration-overlay/celebration-overlay.component';
-import {SafetyService} from '../../services/safety.service';
-import {showToast} from '../../services/toast.service';
-import {AchievementsComponent} from '../../achievements/achievements.component';
-import {AudioIntroRecorderComponent} from '../audio-intro-recorder/audio-intro-recorder.component';
+import { Component, inject, signal, viewChild, computed, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '../../services/translate.pipe';
+import { NgxSkeletonLoaderComponent } from 'ngx-skeleton-loader';
+import { I18nService } from '../../services/i18n.service';
+import {
+  UserService,
+  UserProfile,
+  VisitorLog,
+  BusinessCatalogItem,
+} from '../../services/user.service';
+import { CoverPhotoUploaderComponent } from '../cover-photo-uploader/cover-photo-uploader.component';
+import { HobbyTagsComponent } from '../hobby-tags/hobby-tags.component';
+import {
+  LanguagePickerComponent,
+  getLanguageFlag,
+} from '../primitives/language-picker/language-picker.component';
+import { CelebrationOverlayComponent } from '../celebration-overlay/celebration-overlay.component';
+import { SafetyService } from '../../services/safety.service';
+import { showToast } from '../../services/toast.service';
+import { AchievementsComponent } from '../../achievements/achievements.component';
+import { AudioIntroRecorderComponent } from '../audio-intro-recorder/audio-intro-recorder.component';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';

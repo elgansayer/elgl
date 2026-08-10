@@ -19,9 +19,7 @@ export class AiConversationService {
   private readonly baseUrl = `${environment.apiUrl}/ai-conversation`;
 
   getScenarios(): Promise<Scenario[]> {
-    return firstValueFrom(
-      this.http.get<Scenario[]>(`${this.baseUrl}/scenarios`),
-    );
+    return firstValueFrom(this.http.get<Scenario[]>(`${this.baseUrl}/scenarios`));
   }
 
   sendMessage(

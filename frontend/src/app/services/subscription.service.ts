@@ -46,26 +46,18 @@ export class SubscriptionService {
   private readonly baseUrl = `${environment.apiUrl}/monetisation`;
 
   getSubscriptionDetails(): Promise<SubscriptionDetails> {
-    return firstValueFrom(
-      this.http.get<SubscriptionDetails>(`${this.baseUrl}/subscription`),
-    );
+    return firstValueFrom(this.http.get<SubscriptionDetails>(`${this.baseUrl}/subscription`));
   }
 
   cancelSubscription(): Promise<CancelSubscriptionResponse> {
     return firstValueFrom(
-      this.http.post<CancelSubscriptionResponse>(
-        `${this.baseUrl}/subscription/cancel`,
-        {},
-      ),
+      this.http.post<CancelSubscriptionResponse>(`${this.baseUrl}/subscription/cancel`, {}),
     );
   }
 
   resumeSubscription(): Promise<ResumeSubscriptionResponse> {
     return firstValueFrom(
-      this.http.post<ResumeSubscriptionResponse>(
-        `${this.baseUrl}/subscription/resume`,
-        {},
-      ),
+      this.http.post<ResumeSubscriptionResponse>(`${this.baseUrl}/subscription/resume`, {}),
     );
   }
 

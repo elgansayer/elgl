@@ -1,8 +1,4 @@
-import {
-  HttpHandlerFn,
-  HttpInterceptorFn,
-  HttpRequest,
-} from '@angular/common/http';
+import { HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { retry, timer } from 'rxjs';
 
 /** Maximum number of retries when a request receives HTTP 429. */
@@ -41,9 +37,7 @@ export const httpRetryInterceptor: HttpInterceptorFn = (
       count: MAX_RETRIES,
       delay: (error, retryCount) => {
         if (error && error.status === 429) {
-          const delayMs =
-            BASE_DELAY_MS * Math.pow(2, retryCount - 1) +
-            jitter(BASE_DELAY_MS);
+          const delayMs = BASE_DELAY_MS * Math.pow(2, retryCount - 1) + jitter(BASE_DELAY_MS);
           return timer(delayMs);
         }
 

@@ -33,11 +33,13 @@ interface CartItem {
                 <span class="ms-2 text-xs opacity-50">x{{ item.quantity }}</span>
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-sm font-semibold">{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span>
+                <span class="text-sm font-semibold"
+                  >{{ item.unitPrice * item.quantity }} {{ 'common.coins' | t }}</span
+                >
                 <button
                   class="rounded-full bg-rose-500 px-3 py-1 text-xs font-medium text-white hover:bg-rose-600"
                   (click)="removeItem(item.itemId)"
-                  [attr.aria-label]="('cart.removeItem' | t)"
+                  [attr.aria-label]="'cart.removeItem' | t"
                 >
                   {{ 'cart.remove' | t }}
                 </button>
@@ -47,12 +49,17 @@ interface CartItem {
         </ul>
         <div class="mt-4 flex items-center justify-between rounded-xl bg-surface p-3">
           <span class="font-semibold">{{ 'cart.total' | t }}</span>
-          <span class="font-bold text-indigo-400" [attr.aria-label]="('cart.totalAria' | t: { total: totalCoins() })">{{ totalCoins() }} {{ 'common.coins' | t }}</span>
+          <span
+            class="font-bold text-indigo-400"
+            [attr.aria-label]="'cart.totalAria' | t: { total: totalCoins() }"
+            >{{ totalCoins() }} {{ 'common.coins' | t }}</span
+          >
         </div>
         <button
           class="mt-4 w-full rounded-full bg-indigo-600 py-2 font-semibold hover:bg-indigo-500"
           (click)="checkout()"
-          [attr.aria-label]="('cart.checkoutAria' | t)">
+          [attr.aria-label]="'cart.checkoutAria' | t"
+        >
           {{ 'cart.checkout' | t }}
         </button>
       }

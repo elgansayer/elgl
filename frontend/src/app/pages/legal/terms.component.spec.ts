@@ -38,9 +38,7 @@ describe('TermsComponent', () => {
     vi.spyOn(legalService, 'fetchTermsOfService').mockResolvedValue({
       title: 'Terms of Service',
       lastUpdated: '2026-07-01',
-      sections: [
-        { id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' },
-      ],
+      sections: [{ id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' }],
     });
 
     fixture = TestBed.createComponent(TermsComponent);

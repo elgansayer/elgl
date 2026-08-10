@@ -14,24 +14,14 @@ interface ConfettiPiece {
   duration: number;
 }
 
-const CONFETTI_COLOURS = [
-  '#ff0084',
-  '#ff8c00',
-  '#ffe600',
-  '#00e5ff',
-  '#9d00ff',
-  '#00ff94',
-];
+const CONFETTI_COLOURS = ['#ff0084', '#ff8c00', '#ffe600', '#00e5ff', '#9d00ff', '#00ff94'];
 
 @Component({
   selector: 'app-streak-celebration-overlay',
   imports: [TranslatePipe],
   template: `
     @if (visible()) {
-      <div
-        class="fixed inset-0 z-[60] overflow-hidden pointer-events-none"
-        aria-hidden="true"
-      >
+      <div class="fixed inset-0 z-[60] overflow-hidden pointer-events-none" aria-hidden="true">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
 
         <div class="absolute inset-0 flex items-center justify-center pointer-events-auto">

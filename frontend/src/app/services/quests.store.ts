@@ -22,9 +22,7 @@ export class QuestStore {
   async fetchQuests(): Promise<void> {
     this.loading.set(true);
     try {
-      const data = await firstValueFrom(
-        this.http.get<Quest[]>(`${environment.apiUrl}/quests`),
-      );
+      const data = await firstValueFrom(this.http.get<Quest[]>(`${environment.apiUrl}/quests`));
       this.quests.set(data);
     } catch {
       this.quests.set([]);

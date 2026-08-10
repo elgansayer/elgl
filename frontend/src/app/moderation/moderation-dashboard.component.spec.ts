@@ -20,10 +20,16 @@ describe('ModerationDashboardComponent', () => {
 
     it('should not contain any physical direction CSS utilities', () => {
       const violations = [
-        /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
-        /\bleft-[0-9]/, /\bright-[0-9]/,
-        /\bborder-l\b/, /\bborder-r\b/,
-        /\btext-left\b/, /\btext-right\b/,
+        /\bpl-\d/,
+        /\bpr-\d/,
+        /\bml-\d/,
+        /\bmr-\d/,
+        /\bleft-[0-9]/,
+        /\bright-[0-9]/,
+        /\bborder-l\b/,
+        /\bborder-r\b/,
+        /\btext-left\b/,
+        /\btext-right\b/,
       ];
       for (const pattern of violations) {
         expect(templateContent).not.toMatch(pattern);
@@ -49,14 +55,28 @@ describe('ModerationDashboardComponent', () => {
 
     it('should use i18n translate pipe for user-facing strings', () => {
       const keys = [
-        'moderation.title', 'moderation.filterAria', 'moderation.profile',
-        'moderation.moment', 'moderation.dismiss', 'moderation.loading',
-        'moderation.error', 'moderation.reporter', 'moderation.reported_user',
-        'moderation.reason', 'moderation.approveAria', 'moderation.rejectAria',
-        'moderation.analyseAria', 'moderation.approve', 'moderation.reject',
-        'moderation.analyse', 'moderation.empty',
-        'moderation.reportItemAria', 'moderation.riskAnalysisAria',
-        'moderation.riskScore', 'moderation.flags', 'moderation.noFlags',
+        'moderation.title',
+        'moderation.filterAria',
+        'moderation.profile',
+        'moderation.moment',
+        'moderation.dismiss',
+        'moderation.loading',
+        'moderation.error',
+        'moderation.reporter',
+        'moderation.reported_user',
+        'moderation.reason',
+        'moderation.approveAria',
+        'moderation.rejectAria',
+        'moderation.analyseAria',
+        'moderation.approve',
+        'moderation.reject',
+        'moderation.analyse',
+        'moderation.empty',
+        'moderation.reportItemAria',
+        'moderation.riskAnalysisAria',
+        'moderation.riskScore',
+        'moderation.flags',
+        'moderation.noFlags',
       ];
       for (const key of keys) {
         expect(templateContent).toContain("'" + key + "'");

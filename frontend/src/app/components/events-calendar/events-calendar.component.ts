@@ -36,7 +36,9 @@ import { AppCardComponent } from '../primitives/card/card.component';
         <!-- Day names -->
         <div class="grid grid-cols-7 mb-2">
           @for (name of dayNames(); track $index) {
-            <div class="text-center text-xs font-medium text-gray-400 uppercase tracking-wider py-2">
+            <div
+              class="text-center text-xs font-medium text-gray-400 uppercase tracking-wider py-2"
+            >
               {{ name }}
             </div>
           }
@@ -61,10 +63,9 @@ import { AppCardComponent } from '../primitives/card/card.component';
               (keydown.space)="day && selectDate(day)"
             >
               @if (day) {
-                <span
-                  class="text-sm font-medium mb-1"
-                  [class.text-blue-400]="isToday(day)"
-                >{{ day }}</span>
+                <span class="text-sm font-medium mb-1" [class.text-blue-400]="isToday(day)">{{
+                  day
+                }}</span>
                 @if (eventsByDate().has(day)) {
                   <div class="w-full space-y-0.5">
                     @for (ev of eventsByDate().get(day)!.slice(0, 2); track ev.id) {
@@ -77,7 +78,10 @@ import { AppCardComponent } from '../primitives/card/card.component';
                     }
                     @if (eventsByDate().get(day)!.length > 2) {
                       <span class="text-[10px] text-gray-400 block text-center">
-                        {{ 'events.calendar.moreEvents' | t: { count: eventsByDate().get(day)!.length - 2 } }}
+                        {{
+                          'events.calendar.moreEvents'
+                            | t: { count: eventsByDate().get(day)!.length - 2 }
+                        }}
                       </span>
                     }
                   </div>
@@ -94,9 +98,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
               {{ selectedDateLabel() }}
             </h2>
             @if (selectedDateEvents().length === 0) {
-              <app-empty-state
-                [description]="'events.calendar.noEvents' | t"
-              />
+              <app-empty-state [description]="'events.calendar.noEvents' | t" />
             }
             <div class="space-y-3">
               @for (ev of selectedDateEvents(); track ev.id) {
@@ -105,7 +107,9 @@ import { AppCardComponent } from '../primitives/card/card.component';
                     <div class="flex items-start justify-between mb-2">
                       <h3 class="font-semibold text-white">{{ ev.title }}</h3>
                       @if (ev.category) {
-                        <span class="text-xs bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded-full">
+                        <span
+                          class="text-xs bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded-full"
+                        >
                           {{ ev.category }}
                         </span>
                       }
@@ -189,9 +193,7 @@ export class EventsCalendarComponent {
   private eventsResource = resource<Event[], { status: string }>({
     params: () => ({ status: 'upcoming' }),
     loader: async ({ params }) => {
-      const events = await firstValueFrom(
-        this.eventsService.getMyEvents(params.status),
-      );
+      const events = await firstValueFrom(this.eventsService.getMyEvents(params.status));
       return events ?? [];
     },
   });
@@ -261,16 +263,16 @@ export class EventsCalendarComponent {
 
   selectDate(day: number | null): void {
     if (!day) return;
-    this.selectedDay.update(current => (current === day ? null : day));
+    this.selectedDay.update((current) => (current === day ? null : day));
   }
 
   previousMonth(): void {
     this.selectedDay.set(null);
-    this.monthOffset.update(o => o - 1);
+    this.monthOffset.update((o) => o - 1);
   }
 
   nextMonth(): void {
     this.selectedDay.set(null);
-    this.monthOffset.update(o => o + 1);
+    this.monthOffset.update((o) => o + 1);
   }
 }

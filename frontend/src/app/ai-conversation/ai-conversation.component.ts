@@ -45,8 +45,17 @@ interface ChatMessage {
             class="text-neutral-400 hover:text-white p-1"
             [attr.aria-label]="'aiConversation.backToScenarios' | t"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                clip-rule="evenodd"
+              />
             </svg>
           </button>
           <span class="text-sm">{{ selectedScenario()!.icon }}</span>
@@ -124,10 +133,9 @@ interface ChatMessage {
 export class AiConversationComponent {
   private aiService = inject(AiConversationService);
 
-  readonly scenarioList = toSignal(
-    from(this.aiService.getScenarios()),
-    { initialValue: EMPTY_SCENARIO_LIST },
-  );
+  readonly scenarioList = toSignal(from(this.aiService.getScenarios()), {
+    initialValue: EMPTY_SCENARIO_LIST,
+  });
 
   readonly selectedScenario = signal<Scenario | null>(null);
   readonly messages = signal<ChatMessage[]>([]);

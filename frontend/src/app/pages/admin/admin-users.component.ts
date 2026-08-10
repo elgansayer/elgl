@@ -14,7 +14,14 @@ import { CrashReportService } from '../../services/crash-report.service';
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AdminOfflineBannerComponent,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+  ],
   templateUrl: './admin-users.component.html',
 })
 export class AdminUsersComponent {

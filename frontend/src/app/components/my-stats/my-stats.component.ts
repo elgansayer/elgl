@@ -53,22 +53,34 @@ interface MyStatsResponse {
             </canvas>
           </div>
 
-          <div class="bg-surface-200 p-5 rounded-2xl shadow-sm border border-surface-100 md:col-span-2">
+          <div
+            class="bg-surface-200 p-5 rounded-2xl shadow-sm border border-surface-100 md:col-span-2"
+          >
             <h2 class="text-lg font-semibold mb-4 text-text-primary">
               {{ 'stats.myStats.summary' | t }}
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div class="bg-surface-300 p-4 rounded-xl text-center">
-                <div class="text-3xl font-bold text-blue-400">{{ stats()?.messages_sent ?? 0 }}</div>
+                <div class="text-3xl font-bold text-blue-400">
+                  {{ stats()?.messages_sent ?? 0 }}
+                </div>
                 <div class="text-sm text-gray-400 mt-1">{{ 'stats.myStats.messagesSent' | t }}</div>
               </div>
               <div class="bg-surface-300 p-4 rounded-xl text-center">
-                <div class="text-3xl font-bold text-emerald-400">{{ stats()?.corrections_count ?? 0 }}</div>
-                <div class="text-sm text-gray-400 mt-1">{{ 'stats.myStats.correctionsMade' | t }}</div>
+                <div class="text-3xl font-bold text-emerald-400">
+                  {{ stats()?.corrections_count ?? 0 }}
+                </div>
+                <div class="text-sm text-gray-400 mt-1">
+                  {{ 'stats.myStats.correctionsMade' | t }}
+                </div>
               </div>
               <div class="bg-surface-300 p-4 rounded-xl text-center">
-                <div class="text-3xl font-bold text-amber-400">{{ stats()?.moments_count ?? 0 }}</div>
-                <div class="text-sm text-gray-400 mt-1">{{ 'stats.myStats.momentsPosted' | t }}</div>
+                <div class="text-3xl font-bold text-amber-400">
+                  {{ stats()?.moments_count ?? 0 }}
+                </div>
+                <div class="text-sm text-gray-400 mt-1">
+                  {{ 'stats.myStats.momentsPosted' | t }}
+                </div>
               </div>
             </div>
           </div>
@@ -101,7 +113,7 @@ export class MyStatsComponent {
   protected readonly lineChartData = computed<ChartConfiguration<'line'>['data']>(() => {
     const data = this.statsResource.value();
     const labels = data?.study_hours?.map((s) =>
-      this.i18nService.translate(`stats.dayAbbr.${s.day.toLowerCase()}`)
+      this.i18nService.translate(`stats.dayAbbr.${s.day.toLowerCase()}`),
     ) ?? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const hours = data?.study_hours?.map((s) => s.hours) ?? [0, 0, 0, 0, 0, 0, 0];
 
@@ -146,11 +158,7 @@ export class MyStatsComponent {
       ],
       datasets: [
         {
-          data: [
-            data?.messages_sent ?? 0,
-            data?.corrections_count ?? 0,
-            data?.moments_count ?? 0,
-          ],
+          data: [data?.messages_sent ?? 0, data?.corrections_count ?? 0, data?.moments_count ?? 0],
           backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
         },
       ],

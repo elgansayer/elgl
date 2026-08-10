@@ -12,11 +12,7 @@ describe('VersionService', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [
-        VersionService,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [VersionService, provideHttpClient(), provideHttpClientTesting()],
     });
 
     service = TestBed.inject(VersionService);
@@ -35,7 +31,8 @@ describe('VersionService', () => {
     const mockVersion: VersionInfo = {
       current: '1.0.0',
       latest: '1.1.0',
-      updateUrl: 'https://example.com/update',    };
+      updateUrl: 'https://example.com/update',
+    };
 
     service.getVersion().subscribe((version) => {
       expect(version).toEqual(mockVersion);

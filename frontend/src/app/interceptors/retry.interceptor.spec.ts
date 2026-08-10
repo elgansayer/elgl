@@ -6,10 +6,7 @@ import {
   provideHttpClient,
   withInterceptors,
 } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { retryInterceptor } from './retry.interceptor';
 
 describe('RetryInterceptor (HTTP 429 exponential backoff)', () => {
@@ -50,10 +47,7 @@ describe('RetryInterceptor (HTTP 429 exponential backoff)', () => {
     // Initial request + 3 retries = 4 total
     for (let i = 0; i < 4; i++) {
       const req = httpTesting.expectOne('/api/test');
-      req.flush(
-        { message: 'Too Many Requests' },
-        { status: 429, statusText: 'Too Many Requests' },
-      );
+      req.flush({ message: 'Too Many Requests' }, { status: 429, statusText: 'Too Many Requests' });
 
       if (i < 3) {
         await vi.runAllTimersAsync();
@@ -78,10 +72,7 @@ describe('RetryInterceptor (HTTP 429 exponential backoff)', () => {
 
     // First request fails with 429
     const req1 = httpTesting.expectOne('/api/test-ok');
-    req1.flush(
-      { message: 'Too Many Requests' },
-      { status: 429, statusText: 'Too Many Requests' },
-    );
+    req1.flush({ message: 'Too Many Requests' }, { status: 429, statusText: 'Too Many Requests' });
 
     await vi.runAllTimersAsync();
 
@@ -105,10 +96,7 @@ describe('RetryInterceptor (HTTP 429 exponential backoff)', () => {
     });
 
     const req = httpTesting.expectOne('/api/teapot');
-    req.flush(
-      { message: "I'm a teapot" },
-      { status: 418, statusText: "I'm a teapot" },
-    );
+    req.flush({ message: "I'm a teapot" }, { status: 418, statusText: "I'm a teapot" });
 
     // Should immediately propagate 418 without any retries
     httpTesting.verify();

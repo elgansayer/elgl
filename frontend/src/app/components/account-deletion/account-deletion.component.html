@@ -9,7 +9,8 @@
       class="btn btn-secondary"
       (click)="restoreAccount()"
       [disabled]="isLoading()"
-     [attr.aria-label]="'account_deletion.restore_button' | t">
+      [attr.aria-label]="'account_deletion.restore_button' | t"
+    >
       {{ 'account_deletion.restore_button' | t }}
     </button>
   } @else {
@@ -20,7 +21,8 @@
       class="btn btn-danger"
       (click)="requestDeletion()"
       [disabled]="isLoading()"
-     [attr.aria-label]="'account_deletion.delete_button' | t">
+      [attr.aria-label]="'account_deletion.delete_button' | t"
+    >
       {{ 'account_deletion.delete_button' | t }}
     </button>
   }
@@ -35,16 +37,13 @@
     class="btn btn-primary"
     (click)="exportData()"
     [disabled]="isLoading()"
-   [attr.aria-label]="'account_deletion.export_button' | t">
+    [attr.aria-label]="'account_deletion.export_button' | t"
+  >
     {{ 'account_deletion.export_button' | t }}
   </button>
 
   @if (message(); as msg) {
-    <p
-      [class.text-green-400]="!isError()"
-      [class.text-red-400]="isError()"
-      class="mt-2 text-sm"
-    >
+    <p [class.text-green-400]="!isError()" [class.text-red-400]="isError()" class="mt-2 text-sm">
       {{ msg }}
     </p>
   }

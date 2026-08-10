@@ -50,15 +50,13 @@ describe.skip('DoodlePadComponent', () => {
     } as unknown as CanvasRenderingContext2D;
 
     const origGetContext = HTMLCanvasElement.prototype.getContext;
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
-      function (
-        this: HTMLCanvasElement,
-        ctxType: string,
-      ): RenderingContext | null {
-        if (ctxType === '2d') return mockCtx;
-        return origGetContext.call(this, ctxType);
-      },
-    );
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (
+      this: HTMLCanvasElement,
+      ctxType: string,
+    ): RenderingContext | null {
+      if (ctxType === '2d') return mockCtx;
+      return origGetContext.call(this, ctxType);
+    });
 
     vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(
       'data:image/png;base64,mock',
@@ -172,15 +170,23 @@ describe.skip('DoodlePadComponent', () => {
   describe.skip('touch drawing', () => {
     function mkTouch(type: string, x: number, y: number): TouchEvent {
       const t = new Touch({
-        identifier: 0, target: canvasEl,
-        clientX: x, clientY: y,
-        pageX: x, pageY: y,
-        screenX: x, screenY: y,
-        radiusX: 1, radiusY: 1,
-        rotationAngle: 0, force: 1,
+        identifier: 0,
+        target: canvasEl,
+        clientX: x,
+        clientY: y,
+        pageX: x,
+        pageY: y,
+        screenX: x,
+        screenY: y,
+        radiusX: 1,
+        radiusY: 1,
+        rotationAngle: 0,
+        force: 1,
       });
       return new TouchEvent(type, {
-        touches: [t], changedTouches: [t], bubbles: true,
+        touches: [t],
+        changedTouches: [t],
+        bubbles: true,
       });
     }
 
@@ -197,9 +203,7 @@ describe.skip('DoodlePadComponent', () => {
 
     it('skips a touchmove event with zero active touches', () => {
       vi.clearAllMocks();
-      component.draw(
-        new TouchEvent('touchmove', { touches: [], bubbles: true }),
-      );
+      component.draw(new TouchEvent('touchmove', { touches: [], bubbles: true }));
       expect(mockCtx.stroke).not.toHaveBeenCalled();
     });
   });

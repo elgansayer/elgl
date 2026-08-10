@@ -66,8 +66,8 @@ describe.skip('MomentsFeedComponent', () => {
               comments: [
                 {
                   id: 'c1',
-        moment_id: 'm1',
-        user_id: 'u2',
+                  moment_id: 'm1',
+                  user_id: 'u2',
                   text_content: 'Nice post',
                   created_at: new Date().toISOString(),
                 } as MomentComment,

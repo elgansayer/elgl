@@ -122,14 +122,7 @@ describe('GlobalSearchComponent', () => {
 
   it('should have six proficiency levels', () => {
     expect(component.levels.length).toBe(6);
-    expect(component.levels.map((l) => l.value)).toEqual([
-      'a1',
-      'a2',
-      'b1',
-      'b2',
-      'c1',
-      'c2',
-    ]);
+    expect(component.levels.map((l) => l.value)).toEqual(['a1', 'a2', 'b1', 'b2', 'c1', 'c2']);
   });
 
   it('should react to select changes', () => {
@@ -151,8 +144,9 @@ describe('GlobalSearchComponent', () => {
 
     expect(component.targetLanguage()).toBe('fr');
 
-    const levelSelect: HTMLSelectElement =
-      fixture.nativeElement.querySelector('#global-proficiencyLevel');
+    const levelSelect: HTMLSelectElement = fixture.nativeElement.querySelector(
+      '#global-proficiencyLevel',
+    );
 
     levelSelect.value = 'c1';
     levelSelect.dispatchEvent(new Event('change'));

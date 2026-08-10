@@ -73,7 +73,9 @@ describe('SrsCircuitBreakerService', () => {
   it('should return fallback on operation failure', async () => {
     const result = await service.executeWithBreaker(
       'test-service',
-      async () => { throw new Error('Boom'); },
+      async () => {
+        throw new Error('Boom');
+      },
       async () => 'fallback',
     );
     expect(result).toBe('fallback');

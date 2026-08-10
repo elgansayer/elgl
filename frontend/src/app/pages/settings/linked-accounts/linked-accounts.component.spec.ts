@@ -8,7 +8,11 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 describe.skip('LinkedAccountsComponent', () => {
   let component: LinkedAccountsComponent;
   let fixture: ComponentFixture<LinkedAccountsComponent>;
-  let linkedAccountsService: { getLinkedAccounts: ReturnType<typeof vi.fn>; linkAccount: ReturnType<typeof vi.fn>; unlinkAccount: ReturnType<typeof vi.fn> };
+  let linkedAccountsService: {
+    getLinkedAccounts: ReturnType<typeof vi.fn>;
+    linkAccount: ReturnType<typeof vi.fn>;
+    unlinkAccount: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     const spy = {
@@ -29,7 +33,9 @@ describe.skip('LinkedAccountsComponent', () => {
       ],
     }).compileComponents();
 
-    linkedAccountsService = TestBed.inject(LinkedAccountsService) as unknown as typeof linkedAccountsService;
+    linkedAccountsService = TestBed.inject(
+      LinkedAccountsService,
+    ) as unknown as typeof linkedAccountsService;
     fixture = TestBed.createComponent(LinkedAccountsComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();

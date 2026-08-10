@@ -79,7 +79,8 @@
               <td class="px-4 py-3 text-start">
                 <div class="flex items-center gap-3">
                   <div class="flex-shrink-0 h-10 w-10">
-                    <img loading="lazy"
+                    <img
+                      loading="lazy"
                       class="h-10 w-10 rounded-full object-cover"
                       [src]="user.avatar_url || 'assets/default-avatar.png'"
                       alt=""
@@ -87,9 +88,11 @@
                   </div>
                   <div>
                     <div class="text-sm font-medium text-text-primary">
-                      {{ (user.display_name || ('common.unknownUser' | t)) | sanitiseHtml }}
+                      {{ user.display_name || ('common.unknownUser' | t) | sanitiseHtml }}
                     </div>
-                    <div class="text-xs text-text-secondary truncate max-w-[8rem]">{{ user.id }}</div>
+                    <div class="text-xs text-text-secondary truncate max-w-[8rem]">
+                      {{ user.id }}
+                    </div>
                   </div>
                 </div>
               </td>
@@ -117,7 +120,8 @@
                 <button
                   (click)="toggleVip(user)"
                   class="text-primary hover:text-primary/80 transition-colors"
-                 [attr.aria-label]="'admin.userManagement.action.toggleVip' | t">
+                  [attr.aria-label]="'admin.userManagement.action.toggleVip' | t"
+                >
                   {{ 'admin.userManagement.action.toggleVip' | t }}
                 </button>
               </td>

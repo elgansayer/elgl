@@ -269,9 +269,7 @@ export class AppComponent implements OnInit {
 
   private async loadInitialUnreadCounts(): Promise<void> {
     try {
-      const [notificationCount] = await Promise.all([
-        this.notificationService.getUnreadCount(),
-      ]);
+      const [notificationCount] = await Promise.all([this.notificationService.getUnreadCount()]);
       this.unreadCounter.setNotificationUnread(notificationCount);
     } catch {
       // Silently ignore - real-time events will update counts

@@ -1,4 +1,13 @@
-import { Component, input, output, effect, viewChild, ElementRef, inject, DestroyRef } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  effect,
+  viewChild,
+  ElementRef,
+  inject,
+  DestroyRef,
+} from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 export interface IncomingCallData {
@@ -28,7 +37,9 @@ function getAudioContextClass(): typeof AudioContext | undefined {
   imports: [TranslatePipe],
   template: `
     @if (callData(); as data) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-3 sm:px-4">
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-3 sm:px-4"
+      >
         <div
           class="bg-surface-800 border border-slate-700 rounded-2xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200"
         >
@@ -40,7 +51,8 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   [src]="data.callerAvatarUrl"
                   [alt]="'voip.callerAvatar' | t: { name: data.callerName }"
                   class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-purple-500/50"
-                 loading="lazy" />
+                  loading="lazy"
+                />
               } @else {
                 <div
                   class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center ring-4 ring-purple-500/50"
@@ -91,7 +103,9 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
               </div>
-              <span class="text-xs sm:text-sm text-text-muted group-hover:text-slate-300">{{ 'voip.decline' | t }}</span>
+              <span class="text-xs sm:text-sm text-text-muted group-hover:text-slate-300">{{
+                'voip.decline' | t
+              }}</span>
             </button>
 
             <!-- Accept Button -->
@@ -134,7 +148,9 @@ function getAudioContextClass(): typeof AudioContext | undefined {
                   </svg>
                 }
               </div>
-              <span class="text-xs sm:text-sm text-green-400 group-hover:text-green-300">{{ 'voip.accept' | t }}</span>
+              <span class="text-xs sm:text-sm text-green-400 group-hover:text-green-300">{{
+                'voip.accept' | t
+              }}</span>
             </button>
           </div>
         </div>

@@ -64,9 +64,7 @@ export class ChatSettingsService {
     this.textSize.set('medium');
   }
 
-  private getLocal(
-    key: keyof ChatSettings,
-  ): boolean | 'small' | 'medium' | 'large' {
+  private getLocal(key: keyof ChatSettings): boolean | 'small' | 'medium' | 'large' {
     switch (key) {
       case 'autoTranslate':
         return this.autoTranslate();
@@ -79,10 +77,7 @@ export class ChatSettingsService {
     }
   }
 
-  private setLocal(
-    key: keyof ChatSettings,
-    value: boolean | 'small' | 'medium' | 'large',
-  ): void {
+  private setLocal(key: keyof ChatSettings, value: boolean | 'small' | 'medium' | 'large'): void {
     switch (key) {
       case 'autoTranslate':
         this.autoTranslate.set(Boolean(value));

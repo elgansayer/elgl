@@ -53,7 +53,9 @@ import {
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs mb-1" for="quiet-hours-start">{{ 'notification_preferences.quiet_hours_start' | t }}</label>
+              <label class="block text-xs mb-1" for="quiet-hours-start">{{
+                'notification_preferences.quiet_hours_start' | t
+              }}</label>
               <input
                 id="quiet-hours-start"
                 type="time"
@@ -63,7 +65,9 @@ import {
               />
             </div>
             <div>
-              <label class="block text-xs mb-1" for="quiet-hours-end">{{ 'notification_preferences.quiet_hours_end' | t }}</label>
+              <label class="block text-xs mb-1" for="quiet-hours-end">{{
+                'notification_preferences.quiet_hours_end' | t
+              }}</label>
               <input
                 id="quiet-hours-end"
                 type="time"
@@ -143,18 +147,30 @@ export class NotificationPreferencesComponent {
     if (!p) return undefined;
     // explicit switch to avoid any / type assertion
     switch (cat) {
-      case 'new_message': return p.new_message;
-      case 'call_invite': return p.call_invite;
-      case 'moment_like': return p.moment_like;
-      case 'moment_comment': return p.moment_comment;
-      case 'correction': return p.correction;
-      case 'gift': return p.gift;
-      case 'profile_view': return p.profile_view;
-      case 'study_reminder': return p.study_reminder;
-      case 'friend_request': return p.friend_request;
-      case 'audio_room_invite': return p.audio_room_invite;
-      case 'new_follower': return p.new_follower;
-      default: return undefined;
+      case 'new_message':
+        return p.new_message;
+      case 'call_invite':
+        return p.call_invite;
+      case 'moment_like':
+        return p.moment_like;
+      case 'moment_comment':
+        return p.moment_comment;
+      case 'correction':
+        return p.correction;
+      case 'gift':
+        return p.gift;
+      case 'profile_view':
+        return p.profile_view;
+      case 'study_reminder':
+        return p.study_reminder;
+      case 'friend_request':
+        return p.friend_request;
+      case 'audio_room_invite':
+        return p.audio_room_invite;
+      case 'new_follower':
+        return p.new_follower;
+      default:
+        return undefined;
     }
   }
 
@@ -176,28 +192,34 @@ export class NotificationPreferencesComponent {
     const cp = this.categoryPref(cat);
     if (!cp) return;
     const newVal = !cp[ch];
-    this.service.toggleCategoryChannel(cat, ch, newVal, this.prefs()!).then((updated) => {
-      this.prefs.set(updated);
-      this.doNotDisturb.set(updated.do_not_disturb);
-      this.quietStart.set(updated.quiet_hours_start ?? '');
-      this.quietEnd.set(updated.quiet_hours_end ?? '');
-    }).catch(() => {
-      this.error.set(this.i18n.translate('common.error_generic'));
-    });
+    this.service
+      .toggleCategoryChannel(cat, ch, newVal, this.prefs()!)
+      .then((updated) => {
+        this.prefs.set(updated);
+        this.doNotDisturb.set(updated.do_not_disturb);
+        this.quietStart.set(updated.quiet_hours_start ?? '');
+        this.quietEnd.set(updated.quiet_hours_end ?? '');
+      })
+      .catch(() => {
+        this.error.set(this.i18n.translate('common.error_generic'));
+      });
   }
 
   toggleDnd(): void {
     const p = this.prefs();
     if (!p) return;
     const newVal = !p.do_not_disturb;
-    this.service.toggleDoNotDisturb(newVal, this.quietStart(), this.quietEnd()).then((updated) => {
-      this.prefs.set(updated);
-      this.doNotDisturb.set(updated.do_not_disturb);
-      this.quietStart.set(updated.quiet_hours_start ?? '');
-      this.quietEnd.set(updated.quiet_hours_end ?? '');
-    }).catch(() => {
-      this.error.set(this.i18n.translate('common.error_generic'));
-    });
+    this.service
+      .toggleDoNotDisturb(newVal, this.quietStart(), this.quietEnd())
+      .then((updated) => {
+        this.prefs.set(updated);
+        this.doNotDisturb.set(updated.do_not_disturb);
+        this.quietStart.set(updated.quiet_hours_start ?? '');
+        this.quietEnd.set(updated.quiet_hours_end ?? '');
+      })
+      .catch(() => {
+        this.error.set(this.i18n.translate('common.error_generic'));
+      });
   }
 
   updateQuietStart(event: Event): void {
@@ -215,26 +237,32 @@ export class NotificationPreferencesComponent {
   }
 
   reset(): void {
-    this.service.resetToDefaults().then((updated) => {
-      this.prefs.set(updated);
-      this.doNotDisturb.set(updated.do_not_disturb);
-      this.quietStart.set(updated.quiet_hours_start ?? '');
-      this.quietEnd.set(updated.quiet_hours_end ?? '');
-    }).catch(() => {
-      this.error.set(this.i18n.translate('common.error_generic'));
-    });
+    this.service
+      .resetToDefaults()
+      .then((updated) => {
+        this.prefs.set(updated);
+        this.doNotDisturb.set(updated.do_not_disturb);
+        this.quietStart.set(updated.quiet_hours_start ?? '');
+        this.quietEnd.set(updated.quiet_hours_end ?? '');
+      })
+      .catch(() => {
+        this.error.set(this.i18n.translate('common.error_generic'));
+      });
   }
 
   save(): void {
     const p = this.prefs();
     if (!p) return;
-    this.service.updatePreferences(p).then((updated) => {
-      this.prefs.set(updated);
-      this.doNotDisturb.set(updated.do_not_disturb);
-      this.quietStart.set(updated.quiet_hours_start ?? '');
-      this.quietEnd.set(updated.quiet_hours_end ?? '');
-    }).catch(() => {
-      this.error.set(this.i18n.translate('common.error_generic'));
-    });
+    this.service
+      .updatePreferences(p)
+      .then((updated) => {
+        this.prefs.set(updated);
+        this.doNotDisturb.set(updated.do_not_disturb);
+        this.quietStart.set(updated.quiet_hours_start ?? '');
+        this.quietEnd.set(updated.quiet_hours_end ?? '');
+      })
+      .catch(() => {
+        this.error.set(this.i18n.translate('common.error_generic'));
+      });
   }
 }

@@ -121,28 +121,40 @@ describe('UnreadCounterService', () => {
 
   it('should call setAppBadge when totalUnread is positive', async () => {
     service.set('chat', 1);
-    await vi.waitFor(() => {
-      expect(setAppBadgeSpy).toHaveBeenCalledWith(1);
-    }, { timeout: 100 });
+    await vi.waitFor(
+      () => {
+        expect(setAppBadgeSpy).toHaveBeenCalledWith(1);
+      },
+      { timeout: 100 },
+    );
   });
 
   it('should call clearAppBadge when totalUnread becomes zero', async () => {
     service.set('profile', 5);
-    await vi.waitFor(() => {
-      expect(setAppBadgeSpy).toHaveBeenCalledWith(5);
-    }, { timeout: 100 });
+    await vi.waitFor(
+      () => {
+        expect(setAppBadgeSpy).toHaveBeenCalledWith(5);
+      },
+      { timeout: 100 },
+    );
 
     service.set('profile', 0);
-    await vi.waitFor(() => {
-      expect(clearAppBadgeSpy).toHaveBeenCalled();
-    }, { timeout: 100 });
+    await vi.waitFor(
+      () => {
+        expect(clearAppBadgeSpy).toHaveBeenCalled();
+      },
+      { timeout: 100 },
+    );
   });
 
   it('should handle badge update errors gracefully', async () => {
     setAppBadgeSpy.mockRejectedValueOnce(new Error('badge failed'));
     service.set('chat', 3);
-    await vi.waitFor(() => {
-      expect(setAppBadgeSpy).toHaveBeenCalled();
-    }, { timeout: 100 });
+    await vi.waitFor(
+      () => {
+        expect(setAppBadgeSpy).toHaveBeenCalled();
+      },
+      { timeout: 100 },
+    );
   });
 });

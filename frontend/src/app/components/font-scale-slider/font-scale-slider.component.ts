@@ -7,7 +7,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-font-scale-slider',
   imports: [TranslatePipe],
   template: `
-    <div class="flex items-center gap-2 ps-4 text-sm" role="group" aria-label="{{ 'settings.fontScale' | t }}">
+    <div
+      class="flex items-center gap-2 ps-4 text-sm"
+      role="group"
+      aria-label="{{ 'settings.fontScale' | t }}"
+    >
       <label for="fontScaleSlider" class="text-text-secondary whitespace-nowrap">
         {{ 'settings.fontScale' | t }}
       </label>
@@ -25,7 +29,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
         (input)="onInput($event)"
         class="w-24 h-1 accent-primary"
       />
-      <span class="text-text-secondary w-8 text-end" aria-hidden="true">{{ scalePercentLabel() }}</span>
+      <span class="text-text-secondary w-8 text-end" aria-hidden="true">{{
+        scalePercentLabel()
+      }}</span>
     </div>
   `,
 })
@@ -42,7 +48,7 @@ export class FontScaleSliderComponent {
     new Intl.NumberFormat(this.i18nService.currentLang(), {
       style: 'percent',
       maximumFractionDigits: 0,
-    }).format(this.scale())
+    }).format(this.scale()),
   );
 
   protected onInput(event: Event): void {

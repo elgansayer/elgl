@@ -213,11 +213,12 @@ export class LanguagePartyCreateModalComponent {
   level = signal<string>('all');
   isVideoStream = signal<boolean>(false);
 
-  readonly isValid = computed(() =>
-    this.title().trim().length > 0
-    && this.languagePair().length > 0
-    && this.topicTag().length > 0
-    && this.level().length > 0,
+  readonly isValid = computed(
+    () =>
+      this.title().trim().length > 0 &&
+      this.languagePair().length > 0 &&
+      this.topicTag().length > 0 &&
+      this.level().length > 0,
   );
 
   closeModal(): void {

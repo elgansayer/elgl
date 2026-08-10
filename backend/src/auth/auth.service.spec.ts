@@ -99,7 +99,9 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            generateLink: jest.fn().mockRejectedValue(new Error('Network error')),
+            generateLink: jest
+              .fn()
+              .mockRejectedValue(new Error('Network error')),
           },
         },
       };
@@ -210,7 +212,9 @@ describe('AuthService (unit)', () => {
         newPassword: 'newPass123',
       });
 
-      expect(mockClient.auth.admin.getUserById).toHaveBeenCalledWith('user-123');
+      expect(mockClient.auth.admin.getUserById).toHaveBeenCalledWith(
+        'user-123',
+      );
       expect(mockClient.auth.signInWithPassword).toHaveBeenCalledWith({
         email: 'user@example.com',
         password: 'oldPass',
@@ -311,7 +315,10 @@ describe('AuthService (unit)', () => {
 
       const result = await service.disableTwoFactor('user-123', '123456');
 
-      expect(twoFactorService.disable).toHaveBeenCalledWith('user-123', '123456');
+      expect(twoFactorService.disable).toHaveBeenCalledWith(
+        'user-123',
+        '123456',
+      );
       expect(result).toBe(true);
     });
 

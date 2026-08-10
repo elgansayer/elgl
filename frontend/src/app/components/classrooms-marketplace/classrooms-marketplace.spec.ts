@@ -52,7 +52,14 @@ describe.skip('ClassroomsMarketplace', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: AudioRoomsStore, useValue: mockStore },
         { provide: ErrorHandler, useClass: GlobalErrorHandler },
-        { provide: VideoClassroomOnboardingService, useValue: { startMarketplaceTour: vi.fn(), isCompleted: vi.fn().mockReturnValue(true), isTourInProgress: signal(false) } },
+        {
+          provide: VideoClassroomOnboardingService,
+          useValue: {
+            startMarketplaceTour: vi.fn(),
+            isCompleted: vi.fn().mockReturnValue(true),
+            isTourInProgress: signal(false),
+          },
+        },
         VideoClassroomErrorHandlerService,
       ],
       schemas: [NO_ERRORS_SCHEMA],

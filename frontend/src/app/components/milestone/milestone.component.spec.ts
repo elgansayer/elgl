@@ -32,7 +32,9 @@ describe('MilestoneComponent', () => {
       getMilestones: vi.fn().mockResolvedValue(mockMilestones),
       getProgress: vi.fn().mockResolvedValue(mockProgress),
       createMilestone: vi.fn().mockResolvedValue({ id: '2', title: 'New goal', completed: false }),
-      markCompleted: vi.fn().mockResolvedValue({ id: '1', title: 'Complete 10 flashcards', completed: true }),
+      markCompleted: vi
+        .fn()
+        .mockResolvedValue({ id: '1', title: 'Complete 10 flashcards', completed: true }),
       deleteMilestone: vi.fn().mockResolvedValue(undefined),
     };
 

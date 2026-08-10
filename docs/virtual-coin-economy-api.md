@@ -13,16 +13,16 @@ The Virtual Coin Economy is a server-authoritative in-app currency system that p
 
 ## Technology Stack
 
-| Component | Technology |
-|---|---|
-| API Framework | NestJS (TypeScript) |
-| Database | Supabase (PostgreSQL) |
-| Cache | Redis (via ioredis) |
+| Component          | Technology                                              |
+| ------------------ | ------------------------------------------------------- |
+| API Framework      | NestJS (TypeScript)                                     |
+| Database           | Supabase (PostgreSQL)                                   |
+| Cache              | Redis (via ioredis)                                     |
 | Payment Processing | Stripe SDK, Apple Server API, Google Play Developer API |
-| Real-Time Events | Centrifugo WebSocket |
-| Logging | Pino (structured JSON) |
-| Rate Limiting | `@nestjs/throttler` + custom `EconomyRateLimiterGuard` |
-| API Documentation | Swagger/OpenAPI (`@nestjs/swagger`) |
+| Real-Time Events   | Centrifugo WebSocket                                    |
+| Logging            | Pino (structured JSON)                                  |
+| Rate Limiting      | `@nestjs/throttler` + custom `EconomyRateLimiterGuard`  |
+| API Documentation  | Swagger/OpenAPI (`@nestjs/swagger`)                     |
 
 ## Endpoint Reference
 
@@ -93,7 +93,7 @@ export const COIN_PACKAGES: CoinPackage[] = [
     id: 'coins_small',
     name: 'Small Coin Pack',
     coins: 100,
-    price: 499,  // in cents/pence
+    price: 499, // in cents/pence
     price_ukp: 4,
     price_usd: 4.99,
     platform_product_id: {
@@ -113,27 +113,27 @@ Each economy endpoint has two layers of rate limiting:
 1. **Global Throttle** (`@Throttle`): Standard NestJS throttler limits.
 2. **Per-User Rate Limit** (`@EconomyRateLimit`): Custom guard using Redis counters with per-user sliding windows.
 
-| Endpoint | Global Limit | Per-User Limit |
-|---|---|---|
-| GET /catalog | 30 req/min | N/A (public) |
-| GET /packages | 30 req/min | N/A (public) |
-| GET /balance | 30 req/min | 20 req/60s |
-| POST /daily-check-in | 3 req/min | 3 req/60s |
-| POST /create-checkout-session | 5 req/min | 5 req/60s |
-| POST /purchase-coins | 5 req/min | 5 req/60s |
-| POST /send-gift | 10 req/min | 10 req/60s |
-| GET /sticker-packs | 20 req/min | N/A (public) |
-| POST /unlock-sticker-pack | 5 req/min | 10 req/60s |
+| Endpoint                      | Global Limit | Per-User Limit |
+| ----------------------------- | ------------ | -------------- |
+| GET /catalog                  | 30 req/min   | N/A (public)   |
+| GET /packages                 | 30 req/min   | N/A (public)   |
+| GET /balance                  | 30 req/min   | 20 req/60s     |
+| POST /daily-check-in          | 3 req/min    | 3 req/60s      |
+| POST /create-checkout-session | 5 req/min    | 5 req/60s      |
+| POST /purchase-coins          | 5 req/min    | 5 req/60s      |
+| POST /send-gift               | 10 req/min   | 10 req/60s     |
+| GET /sticker-packs            | 20 req/min   | N/A (public)   |
+| POST /unlock-sticker-pack     | 5 req/min    | 10 req/60s     |
 
 ### Caching Strategy
 
-| Data | Cache Level | TTL | Rationale |
-|---|---|---|---|
-| Gift catalogue | Public CDN | 1h browser / 24h edge | Rarely changes |
-| Coin packages | Public CDN | 1h browser / 24h edge | Changes only with app updates |
-| User balance | Never cached | N/A | Strictly private data |
-| Sticker packs | Public CDN | 5min browser / 30min edge | User-ownership freshness |
-| Mutation endpoints | Never cached | N/A | Must always hit server |
+| Data               | Cache Level  | TTL                       | Rationale                     |
+| ------------------ | ------------ | ------------------------- | ----------------------------- |
+| Gift catalogue     | Public CDN   | 1h browser / 24h edge     | Rarely changes                |
+| Coin packages      | Public CDN   | 1h browser / 24h edge     | Changes only with app updates |
+| User balance       | Never cached | N/A                       | Strictly private data         |
+| Sticker packs      | Public CDN   | 5min browser / 30min edge | User-ownership freshness      |
+| Mutation endpoints | Never cached | N/A                       | Must always hit server        |
 
 ## DTO Validation
 
@@ -148,16 +148,16 @@ All request bodies are validated using `class-validator` decorators with `whitel
 
 ## Related Files
 
-| File | Purpose |
-|---|---|
-| `backend/src/economy/economy.controller.ts` | REST endpoint definitions with Swagger decorators |
-| `backend/src/economy/economy.service.ts` | Core business logic for all coin operations |
-| `backend/src/economy/dto/economy.dto.ts` | Request DTOs with validation decorators |
-| `backend/src/economy/cache.interceptor.ts` | Cache-Control header management |
-| `backend/src/economy/economy-exception.filter.ts` | Economy-specific error formatting |
-| `backend/src/economy/economy-rate-limiter.guard.ts` | Per-user Redis-based rate limiter |
-| `backend/src/economy/apple-notification.service.ts` | Apple App Store server notifications |
-| `backend/src/economy/google-play-notification.service.ts` | Google Play real-time developer notifications |
-| `backend/src/economy/sanitise-economy.helper.ts` | XSS sanitisation for gift/sticker metadata |
-| `backend/src/economy/interfaces/subscription.interface.ts` | Subscription type definitions |
-| `backend/src/main.ts` | Swagger setup and global tag registration |
+| File                                                       | Purpose                                           |
+| ---------------------------------------------------------- | ------------------------------------------------- |
+| `backend/src/economy/economy.controller.ts`                | REST endpoint definitions with Swagger decorators |
+| `backend/src/economy/economy.service.ts`                   | Core business logic for all coin operations       |
+| `backend/src/economy/dto/economy.dto.ts`                   | Request DTOs with validation decorators           |
+| `backend/src/economy/cache.interceptor.ts`                 | Cache-Control header management                   |
+| `backend/src/economy/economy-exception.filter.ts`          | Economy-specific error formatting                 |
+| `backend/src/economy/economy-rate-limiter.guard.ts`        | Per-user Redis-based rate limiter                 |
+| `backend/src/economy/apple-notification.service.ts`        | Apple App Store server notifications              |
+| `backend/src/economy/google-play-notification.service.ts`  | Google Play real-time developer notifications     |
+| `backend/src/economy/sanitise-economy.helper.ts`           | XSS sanitisation for gift/sticker metadata        |
+| `backend/src/economy/interfaces/subscription.interface.ts` | Subscription type definitions                     |
+| `backend/src/main.ts`                                      | Swagger setup and global tag registration         |

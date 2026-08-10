@@ -1,7 +1,16 @@
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { Component, effect, inject, input, output, signal, computed, OnDestroy } from '@angular/core';
+import {
+  Component,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  computed,
+  OnDestroy,
+} from '@angular/core';
 
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { WordDefinitionModalComponent } from '../word-definition-modal/word-definition-modal.component';

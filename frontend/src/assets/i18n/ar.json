@@ -552,8 +552,7 @@
   "helpAbout.title": "المساعدة وحول",
   "helpAbout.appVersion": "إصدار التطبيق",
   "helpAbout.buildNumber": "رقم البناء",
-  "helpAbout.openSourceLicences": "تراخيص مفتوحة المصدر"
-,
+  "helpAbout.openSourceLicences": "تراخيص مفتوحة المصدر",
   "forcedUpdateModal.message": "يتوفر إصدار جديد من التطبيق. يرجى التحديث للمتابعة.",
   "forcedUpdateModal.title": "التحديث مطلوب",
   "forcedUpdateModal.updateButton": "تحديث الآن"

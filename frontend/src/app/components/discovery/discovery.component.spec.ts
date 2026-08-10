@@ -343,7 +343,9 @@ describe.skip('DiscoveryComponent', () => {
   it('should render voice room active toggle checkbox', async () => {
     await init();
 
-    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('#voiceRoomActiveCheckbox');
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector(
+      '#voiceRoomActiveCheckbox',
+    );
     expect(checkbox).toBeTruthy();
     expect(checkbox.checked).toBe(false);
 
@@ -376,9 +378,7 @@ describe.skip('DiscoveryComponent', () => {
   });
 
   it('should format distances over 1km in kilometres and miles', async () => {
-    mockDiscoveryService.findPartners.mockResolvedValue([
-      makePartner({ distance_metres: 5000 }),
-    ]);
+    mockDiscoveryService.findPartners.mockResolvedValue([makePartner({ distance_metres: 5000 })]);
 
     await init();
 
@@ -528,7 +528,9 @@ describe.skip('DiscoveryComponent', () => {
   it('should have radiogroup role on filter pills', async () => {
     await init();
 
-    const radiogroup = fixture.nativeElement.querySelector('app-scrollable-pills [role="radiogroup"]');
+    const radiogroup = fixture.nativeElement.querySelector(
+      'app-scrollable-pills [role="radiogroup"]',
+    );
     expect(radiogroup).toBeTruthy();
   });
 
@@ -798,9 +800,7 @@ describe.skip('DiscoveryComponent', () => {
 
       await init();
 
-      const button: HTMLButtonElement = fixture.nativeElement.querySelector(
-        'button[aria-pressed]',
-      );
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[aria-pressed]');
       expect(button).toBeTruthy();
       expect(button.getAttribute('aria-pressed')).toBe('false');
     });
@@ -821,9 +821,7 @@ describe.skip('DiscoveryComponent', () => {
 
       await init();
 
-      const button: HTMLButtonElement = fixture.nativeElement.querySelector(
-        'button[aria-pressed]',
-      );
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector('button[aria-pressed]');
       button.click();
       await flush();
 
@@ -833,9 +831,7 @@ describe.skip('DiscoveryComponent', () => {
 
   describe.skip('skeleton and empty states', () => {
     it('should render skeleton cards while loading', async () => {
-      mockDiscoveryService.findPartners.mockImplementation(
-        () => new Promise(() => undefined),
-      );
+      mockDiscoveryService.findPartners.mockImplementation(() => new Promise(() => undefined));
       await init();
 
       const skeletons = fixture.nativeElement.querySelectorAll('app-discovery-skeleton-card');

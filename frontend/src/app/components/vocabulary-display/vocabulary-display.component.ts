@@ -126,11 +126,17 @@ export class VocabularyDisplayComponent {
     return this.tagIconMap().get(tagName) || '&#127991;&#65039;';
   }
 
-  async addToFlashcards(item: { word: string; translation: string; hobbyTagName: string }): Promise<void> {
+  async addToFlashcards(item: {
+    word: string;
+    translation: string;
+    hobbyTagName: string;
+  }): Promise<void> {
     try {
       await this.flashcardService.createFlashcard({
         word_token: item.word,
-        original_context: this.i18n.translate('vocabDisplay.contextSentence', { tag: item.hobbyTagName }),
+        original_context: this.i18n.translate('vocabDisplay.contextSentence', {
+          tag: item.hobbyTagName,
+        }),
         translation: item.translation,
       });
       showToast(this.i18n.translate('vocabDisplay.addSuccess'), 'success');

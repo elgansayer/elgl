@@ -1,10 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { NetworkStatusService } from './network-status.service';
-import type {
-  AdminUserSummary,
-  AdminBlockEntry,
-  LoginHistoryEntry,
-} from './admin.service';
+import type { AdminUserSummary, AdminBlockEntry, LoginHistoryEntry } from './admin.service';
 import type { ModerationItem } from './moderation.service';
 
 type StoreName = 'adminUsers' | 'adminBlocks' | 'moderationItems' | 'loginHistory';
@@ -30,9 +26,7 @@ export class OfflineAdminStorageService {
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
       this.initPromise = this.initDB();
-      this.initPromise
-        .then(() => this.refreshAvailability())
-        .catch(() => undefined);
+      this.initPromise.then(() => this.refreshAvailability()).catch(() => undefined);
     }
   }
 
@@ -186,10 +180,7 @@ export class OfflineAdminStorageService {
 
   // ─── Login History ──────────────────────────────────────────────
 
-  async cacheLoginHistory(
-    userId: string,
-    entries: LoginHistoryEntry[],
-  ): Promise<void> {
+  async cacheLoginHistory(userId: string, entries: LoginHistoryEntry[]): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
     const entry = { key: `user:${userId}`, data: entries, cachedAt: Date.now() };
@@ -201,9 +192,7 @@ export class OfflineAdminStorageService {
     });
   }
 
-  async getCachedLoginHistory(
-    userId: string,
-  ): Promise<LoginHistoryEntry[] | null> {
+  async getCachedLoginHistory(userId: string): Promise<LoginHistoryEntry[] | null> {
     if (!this.isAvailable()) return null;
     const db = await this.ensureDB();
     return new Promise((resolve, reject) => {

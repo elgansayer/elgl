@@ -1,10 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  input,
-  output,
-} from '@angular/core';
+import { Component, inject, signal, input, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
 
@@ -22,9 +16,11 @@ export interface DiscoveryMapErrorContext {
     @if (!hasError()) {
       <ng-content />
     } @else {
-      <section class="min-h-[300px] flex flex-col items-center justify-center p-8"
-               role="alert"
-               aria-live="assertive">
+      <section
+        class="min-h-[300px] flex flex-col items-center justify-center p-8"
+        role="alert"
+        aria-live="assertive"
+      >
         <div class="text-center max-w-md space-y-5">
           <p class="text-5xl" aria-hidden="true">🗺️</p>
           <h2 class="text-xl font-black text-text-primary">
@@ -59,7 +55,9 @@ export interface DiscoveryMapErrorContext {
             }
           </div>
           @if (reportedMessage()) {
-            <p class="text-xs text-emerald-400 font-bold">{{ 'discoveryMapErrorBoundary.reportedMessage' | t }}</p>
+            <p class="text-xs text-emerald-400 font-bold">
+              {{ 'discoveryMapErrorBoundary.reportedMessage' | t }}
+            </p>
           }
         </div>
       </section>

@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
 import { StudyStreakService } from './study-streak.service';
 import { environment } from '../../environments/environment';
@@ -14,11 +11,7 @@ describe.skip('StudyStreakService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        StudyStreakService,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [StudyStreakService, provideHttpClient(), provideHttpClientTesting()],
     });
 
     service = TestBed.inject(StudyStreakService);
@@ -53,9 +46,7 @@ describe.skip('StudyStreakService', () => {
 
       const promise = firstValueFrom(service.checkin());
 
-      const req = httpTesting.expectOne(
-        `${environment.apiUrl}/study-streak/checkin`,
-      );
+      const req = httpTesting.expectOne(`${environment.apiUrl}/study-streak/checkin`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({});
       req.flush(expected);

@@ -3,7 +3,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DiscoveryErrorBoundaryComponent, DiscoveryErrorContext } from './discovery-error-boundary.component';
+import {
+  DiscoveryErrorBoundaryComponent,
+  DiscoveryErrorContext,
+} from './discovery-error-boundary.component';
 import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
 

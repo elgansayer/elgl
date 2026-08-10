@@ -13,11 +13,7 @@ describe.skip('TipHostModalComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TipHostModalComponent],
-      providers: [
-        AudioRoomsStore,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [AudioRoomsStore, provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TipHostModalComponent);

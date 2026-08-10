@@ -29,7 +29,10 @@ describe('MetricsController', () => {
 
     await controller.getMetrics(mockResponse as unknown as Response);
 
-    expect(mockResponse.set).toHaveBeenCalledWith('Content-Type', metricsService.getContentType());
+    expect(mockResponse.set).toHaveBeenCalledWith(
+      'Content-Type',
+      metricsService.getContentType(),
+    );
     expect(mockResponse.send).toHaveBeenCalled();
     const sentMetrics = (mockResponse.send as jest.Mock).mock.calls[0][0];
     expect(sentMetrics).toContain('hellotalk_');

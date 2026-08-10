@@ -19,10 +19,29 @@ import { QuestStore } from '../../services/quests.store';
               role="listitem"
               [class.bg-success]="quest.completed"
               [class.bg-surface-alt]="!quest.completed"
-              [attr.aria-label]="('quests.' + quest.quest_type + '_' + quest.quest_key | t) + ', ' + ('quests.progress' | t) + ': ' + quest.progress + ' ' + ('common.of' | t) + ' ' + quest.target + ', ' + ('quests.reward' | t) + ': ' + quest.reward_coins + ' ' + ('common.coins' | t) + (quest.completed ? ', ' + ('quests.completedStatus' | t) : '')"
+              [attr.aria-label]="
+                ('quests.' + quest.quest_type + '_' + quest.quest_key | t) +
+                ', ' +
+                ('quests.progress' | t) +
+                ': ' +
+                quest.progress +
+                ' ' +
+                ('common.of' | t) +
+                ' ' +
+                quest.target +
+                ', ' +
+                ('quests.reward' | t) +
+                ': ' +
+                quest.reward_coins +
+                ' ' +
+                ('common.coins' | t) +
+                (quest.completed ? ', ' + ('quests.completedStatus' | t) : '')
+              "
             >
               <div class="flex justify-between items-center">
-                <span class="font-medium">{{ 'quests.' + quest.quest_type + '_' + quest.quest_key | t }}</span>
+                <span class="font-medium">{{
+                  'quests.' + quest.quest_type + '_' + quest.quest_key | t
+                }}</span>
                 <span class="text-sm text-muted" aria-hidden="true">
                   {{ quest.progress }} / {{ quest.target }}
                 </span>
@@ -33,11 +52,19 @@ import { QuestStore } from '../../services/quests.store';
                 [attr.aria-valuenow]="quest.progress"
                 [attr.aria-valuemin]="0"
                 [attr.aria-valuemax]="quest.target"
-                [attr.aria-label]="('quests.progressLabel' | t) + ': ' + quest.progress + ' ' + ('common.of' | t) + ' ' + quest.target"
+                [attr.aria-label]="
+                  ('quests.progressLabel' | t) +
+                  ': ' +
+                  quest.progress +
+                  ' ' +
+                  ('common.of' | t) +
+                  ' ' +
+                  quest.target
+                "
               >
                 <div
                   class="bg-accent h-2 rounded-full transition-all duration-300"
-                  [style.width.%]="quest.progress / quest.target * 100"
+                  [style.width.%]="(quest.progress / quest.target) * 100"
                 ></div>
               </div>
               <div class="text-xs text-muted mt-1">

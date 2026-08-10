@@ -12,12 +12,7 @@ describe.skip('VoiceroomPreviewComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [VoiceroomPreviewComponent],
-      providers: [
-        provideHttpClient(),
-        provideRouter([]),
-        Title,
-        Meta,
-      ],
+      providers: [provideHttpClient(), provideRouter([]), Title, Meta],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VoiceroomPreviewComponent);
@@ -36,9 +31,7 @@ describe.skip('VoiceroomPreviewComponent', () => {
 
   it('should render placeholder content while resource is loading', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent?.trim()).toBe(
-      'Live Audio Room',
-    );
+    expect(compiled.querySelector('h1')?.textContent?.trim()).toBe('Live Audio Room');
   });
 
   it('should render Join Room link', () => {

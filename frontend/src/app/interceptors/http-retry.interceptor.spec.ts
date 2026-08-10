@@ -1,9 +1,4 @@
-import {
-  HttpErrorResponse,
-  HttpHandlerFn,
-  HttpRequest,
-  HttpResponse,
-} from '@angular/common/http';
+import { HttpErrorResponse, HttpHandlerFn, HttpRequest, HttpResponse } from '@angular/common/http';
 import { of, throwError, firstValueFrom } from 'rxjs';
 import { describe, it, expect } from 'vitest';
 import { httpRetryInterceptor } from './http-retry.interceptor';
@@ -14,10 +9,9 @@ describe.skip('httpRetryInterceptor', () => {
   });
 
   it('passes through a successful response immediately', async () => {
-    const mockNext: HttpHandlerFn = () =>
-      of(new HttpResponse<string>({ body: 'OK', status: 200 }));
+    const mockNext: HttpHandlerFn = () => of(new HttpResponse<string>({ body: 'OK', status: 200 }));
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     const res = await firstValueFrom(httpRetryInterceptor(req, mockNext));
     expect((res as HttpResponse<string>).body).toBe('OK');
   });
@@ -27,11 +21,11 @@ describe.skip('httpRetryInterceptor', () => {
     const mockNext: HttpHandlerFn = () => {
       attempts++;
       return throwError(
-        () => new HttpErrorResponse({ status: 404, statusText: 'Not Found', url: '/test' })
+        () => new HttpErrorResponse({ status: 404, statusText: 'Not Found', url: '/test' }),
       );
     };
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     try {
       await firstValueFrom(httpRetryInterceptor(req, mockNext));
       expect(true).toBe(false); // should not reach here
@@ -48,7 +42,7 @@ describe.skip('httpRetryInterceptor', () => {
       return throwError(() => new Error('Network failure'));
     };
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     try {
       await firstValueFrom(httpRetryInterceptor(req, mockNext));
       expect(true).toBe(false); // should not reach here
@@ -64,13 +58,14 @@ describe.skip('httpRetryInterceptor', () => {
       attempt++;
       if (attempt <= 2) {
         return throwError(
-          () => new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests', url: '/test' })
+          () =>
+            new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests', url: '/test' }),
         );
       }
       return of(new HttpResponse({ status: 200, body: 'OK' }));
     };
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     const res = await firstValueFrom(httpRetryInterceptor(req, mockNext));
     expect((res as HttpResponse<string>).body).toBe('OK');
     expect(attempt).toBe(3);
@@ -81,11 +76,11 @@ describe.skip('httpRetryInterceptor', () => {
     const mockNext: HttpHandlerFn = () => {
       attempt++;
       return throwError(
-        () => new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests', url: '/test' })
+        () => new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests', url: '/test' }),
       );
     };
     const req = new HttpRequest<unknown>('GET', '/test');
-    
+
     try {
       await firstValueFrom(httpRetryInterceptor(req, mockNext));
       expect(true).toBe(false); // should not reach here

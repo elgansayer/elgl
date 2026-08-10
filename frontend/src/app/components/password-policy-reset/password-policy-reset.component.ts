@@ -16,7 +16,9 @@ function getInputValue(event: Event): string {
       <h2 class="mb-6 text-xl font-semibold">{{ 'password.resetTitle' | t }}</h2>
 
       <div class="mb-4">
-        <label for="current-password" class="block mb-1 text-sm" style="color: #aaa;">{{ 'password.currentPassword' | t }}</label>
+        <label for="current-password" class="block mb-1 text-sm" style="color: #aaa;">{{
+          'password.currentPassword' | t
+        }}</label>
         <input
           id="current-password"
           type="password"
@@ -28,7 +30,9 @@ function getInputValue(event: Event): string {
       </div>
 
       <div class="mb-4">
-        <label for="new-password" class="block mb-1 text-sm" style="color: #aaa;">{{ 'password.newPassword' | t }}</label>
+        <label for="new-password" class="block mb-1 text-sm" style="color: #aaa;">{{
+          'password.newPassword' | t
+        }}</label>
         <input
           id="new-password"
           type="password"
@@ -55,7 +59,9 @@ function getInputValue(event: Event): string {
       </ul>
 
       <div class="mb-4">
-        <label for="confirm-password" class="block mb-1 text-sm" style="color: #aaa;">{{ 'password.confirmPassword' | t }}</label>
+        <label for="confirm-password" class="block mb-1 text-sm" style="color: #aaa;">{{
+          'password.confirmPassword' | t
+        }}</label>
         <input
           id="confirm-password"
           type="password"
@@ -76,7 +82,7 @@ function getInputValue(event: Event): string {
       <button
         class="block w-full py-2.5 rounded-lg text-white font-semibold cursor-pointer"
         [disabled]="!allValid() || isSubmitting()"
-        [style.opacity]="(!allValid() || isSubmitting()) ? 0.4 : 1"
+        [style.opacity]="!allValid() || isSubmitting() ? 0.4 : 1"
         style="background: linear-gradient(135deg, #7c3aed, #a855f7);"
         (click)="resetPassword()"
       >
@@ -84,10 +90,14 @@ function getInputValue(event: Event): string {
       </button>
 
       @if (successMessage()) {
-        <div class="mt-3 p-2 rounded-lg text-sm" style="background: #14532d; color: #bbf7d0;">{{ successMessage()! | t }}</div>
+        <div class="mt-3 p-2 rounded-lg text-sm" style="background: #14532d; color: #bbf7d0;">
+          {{ successMessage()! | t }}
+        </div>
       }
       @if (errorMessage()) {
-        <div class="mt-3 p-2 rounded-lg text-sm" style="background: #7f1d1d; color: #fca5a5;">{{ errorMessage()! | t }}</div>
+        <div class="mt-3 p-2 rounded-lg text-sm" style="background: #7f1d1d; color: #fca5a5;">
+          {{ errorMessage()! | t }}
+        </div>
       }
     </div>
   `,
@@ -106,7 +116,9 @@ export class PasswordPolicyResetComponent {
   readonly hasNumber = computed(() => /\d/.test(this.newPassword()));
   readonly hasSymbol = computed(() => /[!@#$%^&*(),.?":{}|<>]/.test(this.newPassword()));
   readonly passwordsMatch = computed(() => this.newPassword() === this.confirmPassword());
-  readonly allValid = computed(() => this.hasMinLength() && this.hasNumber() && this.hasSymbol() && this.passwordsMatch());
+  readonly allValid = computed(
+    () => this.hasMinLength() && this.hasNumber() && this.hasSymbol() && this.passwordsMatch(),
+  );
 
   onCurrentPasswordChange(event: Event): void {
     this.currentPassword.set(getInputValue(event));

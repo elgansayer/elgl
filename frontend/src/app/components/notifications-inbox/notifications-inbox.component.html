@@ -12,7 +12,8 @@
       class="text-sm text-white/60 hover:text-white cursor-pointer"
       [class.opacity-30]="unreadCount() === 0"
       (click)="markAllAsRead()"
-     [attr.aria-label]="'notifications.markAllRead' | t">
+      [attr.aria-label]="'notifications.markAllRead' | t"
+    >
       {{ 'notifications.markAllRead' | t }}
     </button>
   </div>
@@ -27,7 +28,10 @@
   <!-- Content -->
   @if (isLoading()) {
     <div class="flex-1 flex items-center justify-center">
-      <span class="block w-8 h-8 rounded-full border-2 border-white/20 border-t-transparent animate-spin" role="status"></span>
+      <span
+        class="block w-8 h-8 rounded-full border-2 border-white/20 border-t-transparent animate-spin"
+        role="status"
+      ></span>
     </div>
   } @else if (notifications().length === 0) {
     <div class="flex-1 flex flex-col items-center justify-center ps-4 pe-4 text-white/50">
@@ -52,12 +56,16 @@
                 class="size-full object-cover"
               />
             } @else {
-              <div class="flex items-center justify-center size-full text-sm font-medium text-white/70">
+              <div
+                class="flex items-center justify-center size-full text-sm font-medium text-white/70"
+              >
                 {{ notif.actor?.display_name?.charAt(0) ?? '?' }}
               </div>
             }
             @if (!notif.is_read) {
-              <span class="absolute top-0 start-0 size-2.5 bg-sky-400 rounded-full ring-2 ring-[#121212]"></span>
+              <span
+                class="absolute top-0 start-0 size-2.5 bg-sky-400 rounded-full ring-2 ring-[#121212]"
+              ></span>
             }
           </div>
 

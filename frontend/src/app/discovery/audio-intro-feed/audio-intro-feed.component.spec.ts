@@ -20,10 +20,7 @@ describe('AudioIntroFeedComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AudioIntroFeedComponent],
-      providers: [
-        provideRouter([]),
-        { provide: I18nService, useValue: i18nServiceMock },
-      ],
+      providers: [provideRouter([]), { provide: I18nService, useValue: i18nServiceMock }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AudioIntroFeedComponent);

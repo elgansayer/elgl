@@ -43,10 +43,7 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
       @if (roomsResource.isLoading()) {
         <p class="text-slate-400">{{ 'common.loading' | t }}</p>
       } @else if (rooms().length) {
-        <label
-          for="roomSelect"
-          class="block mb-2 text-sm font-medium text-slate-300"
-        >
+        <label for="roomSelect" class="block mb-2 text-sm font-medium text-slate-300">
           {{ 'backupRestore.selectRoom' | t }}
           <select
             id="roomSelect"
@@ -78,7 +75,13 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
           class="inline-flex cursor-pointer items-center rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
         >
           {{ 'backupRestore.importBtn' | t }}
-          <input id="importFile" type="file" accept="application/json" class="hidden" (change)="onFileSelected($event)" />
+          <input
+            id="importFile"
+            type="file"
+            accept="application/json"
+            class="hidden"
+            (change)="onFileSelected($event)"
+          />
         </label>
 
         <button
@@ -110,9 +113,7 @@ export class BackupRestoreComponent {
   readonly roomsResource = resource({
     loader: async (): Promise<BackupRoom[]> => {
       try {
-        const rooms = await firstValueFrom(
-          this.http.get<unknown>(`${this.apiBase}/chat/rooms`),
-        );
+        const rooms = await firstValueFrom(this.http.get<unknown>(`${this.apiBase}/chat/rooms`));
         if (isBackupRoomArray(rooms)) {
           return rooms;
         }

@@ -27,10 +27,7 @@ describe('HostDashboardService', () => {
 
   describe('getDashboardStats', () => {
     it('should emit a valid HostDashboardStats object', async () => {
-      randomSpy
-        .mockReturnValueOnce(0)
-        .mockReturnValueOnce(0.5)
-        .mockReturnValueOnce(0.25);
+      randomSpy.mockReturnValueOnce(0).mockReturnValueOnce(0.5).mockReturnValueOnce(0.25);
       dateNowSpy.mockReturnValue(1_000_000);
 
       const stats: HostDashboardStats = await service.getDashboardStats('room-id');

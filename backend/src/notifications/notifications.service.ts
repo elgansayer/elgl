@@ -299,7 +299,11 @@ export class NotificationsService {
 
       // Determine notification category for push‑toggle check
       let pushCategory:
-        'direct_messages' | 'groups' | 'likes' | 'voice_rooms' | undefined;
+        | 'direct_messages'
+        | 'groups'
+        | 'likes'
+        | 'voice_rooms'
+        | undefined;
       switch (type) {
         case 'follow':
         case 'like_profile':

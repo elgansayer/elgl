@@ -15,23 +15,20 @@ export class UserInterestsService {
   private readonly baseUrl = '/api/user-interests';
 
   getUserTags(): Promise<string[]> {
-    return firstValueFrom(
-      this.http.get<{ tags: string[] }>(`${this.baseUrl}/tags`),
-    ).then((r) => r.tags);
+    return firstValueFrom(this.http.get<{ tags: string[] }>(`${this.baseUrl}/tags`)).then(
+      (r) => r.tags,
+    );
   }
 
   updateUserTags(tags: string[]): Promise<void> {
-    return firstValueFrom(
-      this.http.post(`${this.baseUrl}/tags`, { tags }),
-    ).then(() => undefined);
+    return firstValueFrom(this.http.post(`${this.baseUrl}/tags`, { tags })).then(() => undefined);
   }
 
   getVocabulary(language: string): Promise<VocabularyEntry[]> {
     return firstValueFrom(
-      this.http.get<{ entries: VocabularyEntry[] }>(
-        `${this.baseUrl}/vocabulary`,
-        { params: { language } },
-      ),
+      this.http.get<{ entries: VocabularyEntry[] }>(`${this.baseUrl}/vocabulary`, {
+        params: { language },
+      }),
     ).then((r) => r.entries);
   }
 }

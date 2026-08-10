@@ -26,7 +26,10 @@ export class RestorePurchasesService {
   private http = inject(HttpClient);
   private i18n = inject(I18nService);
 
-  async restorePurchases(platform: 'ios' | 'android' | 'stripe' = 'stripe', receiptData?: string): Promise<RestoreResult> {
+  async restorePurchases(
+    platform: 'ios' | 'android' | 'stripe' = 'stripe',
+    receiptData?: string,
+  ): Promise<RestoreResult> {
     this.isRestoring.set(true);
     this.lastRestoreResult.set(null);
 

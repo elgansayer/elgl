@@ -16,10 +16,7 @@ describe.skip('VipComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [VipComponent],
-      providers: [
-        provideRouter([]),
-        { provide: I18nService, useValue: mockI18nService },
-      ],
+      providers: [provideRouter([]), { provide: I18nService, useValue: mockI18nService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(VipComponent);
@@ -62,9 +59,7 @@ describe.skip('VipComponent', () => {
     fixture.detectChanges();
     expect(component.openFaqIndex()).toBe(0);
 
-    const answer = fixture.nativeElement.querySelector(
-      'button[aria-expanded="true"]',
-    );
+    const answer = fixture.nativeElement.querySelector('button[aria-expanded="true"]');
     expect(answer).toBeTruthy();
 
     component.toggleFaq(0);

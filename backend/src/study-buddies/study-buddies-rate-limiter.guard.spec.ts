@@ -90,7 +90,11 @@ describe('StudyBuddiesRateLimiterGuard', () => {
         return undefined;
       });
 
-      const ctx = createMockExecutionContext(undefined, handler, TestController);
+      const ctx = createMockExecutionContext(
+        undefined,
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(ctx);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -146,7 +150,8 @@ describe('StudyBuddiesRateLimiterGuard', () => {
       await expect(guard.canActivate(ctx)).rejects.toThrow(HttpException);
       await expect(guard.canActivate(ctx)).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        message: 'Too many matchmaking requests. Please wait before trying again.',
+        message:
+          'Too many matchmaking requests. Please wait before trying again.',
       });
     });
 
@@ -232,11 +237,7 @@ describe('StudyBuddiesRateLimiterGuard', () => {
         DecoratorTest.prototype,
         'testMethod',
       );
-      MatchmakingRateLimit(opts)(
-        DecoratorTest.prototype,
-        'testMethod',
-        desc!,
-      );
+      MatchmakingRateLimit(opts)(DecoratorTest.prototype, 'testMethod', desc!);
 
       const metadata = Reflect.getMetadata(
         MATCHMAKING_RATE_LIMIT_KEY,

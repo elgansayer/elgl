@@ -32,24 +32,17 @@ export class AudioIntroService {
   ): Promise<PresignedUploadResponse> {
     const body = { filename, contentType };
     const result = await firstValueFrom(
-      this.http.post<PresignedUploadResponse>(
-        `${this.baseUrl}/presigned-upload`,
-        body,
-        { headers: this.getHeaders() },
-      ),
+      this.http.post<PresignedUploadResponse>(`${this.baseUrl}/presigned-upload`, body, {
+        headers: this.getHeaders(),
+      }),
     );
     return result;
   }
 
   async uploadAudioBlob(blob: Blob): Promise<string> {
     const contentType = blob.type || 'audio/webm';
-    const filename = `audio-intro-${Date.now()}.${
-      contentType === 'audio/webm' ? 'webm' : 'mp3'
-    }`;
-    const { uploadUrl, mediaUrl } = await this.getPresignedUploadUrl(
-      filename,
-      contentType,
-    );
+    const filename = `audio-intro-${Date.now()}.${contentType === 'audio/webm' ? 'webm' : 'mp3'}`;
+    const { uploadUrl, mediaUrl } = await this.getPresignedUploadUrl(filename, contentType);
 
     const response = await fetch(uploadUrl, {
       method: 'PUT',
@@ -73,14 +66,11 @@ export class AudioIntroService {
     );
   }
 
-  async getAudioIntro(
-    userId: string,
-  ): Promise<AudioIntroResponse> {
+  async getAudioIntro(userId: string): Promise<AudioIntroResponse> {
     return firstValueFrom(
-      this.http.get<AudioIntroResponse>(
-        `${this.baseUrl}/${userId}`,
-        { headers: this.getHeaders() },
-      ),
+      this.http.get<AudioIntroResponse>(`${this.baseUrl}/${userId}`, {
+        headers: this.getHeaders(),
+      }),
     );
   }
 }

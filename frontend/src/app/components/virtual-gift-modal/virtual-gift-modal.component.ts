@@ -84,7 +84,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   <button
                     (click)="buyCoins(pkg.id)"
                     class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
-                    [attr.aria-label]="('giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name })"
+                    [attr.aria-label]="
+                      'giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name }
+                    "
                   >
                     {{ 'giftModal.priceLabel' | t: { ukp: pkg.price_ukp, usd: pkg.price_usd } }}
                   </button>
@@ -99,7 +101,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.selectPrompt' | t: { name: receiverName() }
             }}</span>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" role="radiogroup" [attr.aria-label]="'giftModal.giftListAria' | t">
+            <div
+              class="grid grid-cols-2 sm:grid-cols-3 gap-3"
+              role="radiogroup"
+              [attr.aria-label]="'giftModal.giftListAria' | t"
+            >
               @for (gift of economyStore.catalog(); track gift.id) {
                 <button
                   type="button"
@@ -107,7 +113,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   (click)="selectGift(gift)"
                   [disabled]="gift.cost_coins > effectiveBalance()"
                   [attr.aria-checked]="selectedGift()?.id === gift.id"
-                  [attr.aria-label]="('giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins })"
+                  [attr.aria-label]="
+                    'giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins }
+                  "
                   [class]="
                     'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
                     (selectedGift()?.id === gift.id
@@ -143,7 +151,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
                 [disabled]="isSending()"
                 (click)="confirmSend()"
                 class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
-                [attr.aria-label]="('giftModal.sendAria' | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() })"
+                [attr.aria-label]="
+                  'giftModal.sendAria'
+                    | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() }
+                "
               >
                 {{
                   isSending()
@@ -164,11 +175,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class VirtualGiftModalComponent {
   receiverId = input.required<string>();
@@ -219,11 +232,7 @@ export class VirtualGiftModalComponent {
     if (!gift) return;
     this.isSending.set(true);
     try {
-      const ok = await this.economyStore.sendGift(
-        this.receiverId(),
-        gift.id,
-        this.roomId(),
-      );
+      const ok = await this.economyStore.sendGift(this.receiverId(), gift.id, this.roomId());
       if (ok) {
         this.economyStore.triggerGiftAnimation({
           gift,

@@ -36,9 +36,7 @@ describe('ThemeSelectorComponent', () => {
     await TestBed.configureTestingModule({
       // 1. Import the real component (this pulls in its own imports)
       imports: [ThemeSelectorComponent],
-      providers: [
-        { provide: ThemeService, useValue: themeService },
-      ],
+      providers: [{ provide: ThemeService, useValue: themeService }],
     })
       // 2. Replace the real TranslatePipe with our standalone stub
       .overrideComponent(ThemeSelectorComponent, {

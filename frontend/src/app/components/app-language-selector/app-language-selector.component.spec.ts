@@ -11,11 +11,7 @@ describe('AppLanguageSelectorComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppLanguageSelectorComponent],
-      providers: [
-        provideHttpClient(),
-        I18nService,
-        TranslatePipe,
-      ],
+      providers: [provideHttpClient(), I18nService, TranslatePipe],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AppLanguageSelectorComponent);

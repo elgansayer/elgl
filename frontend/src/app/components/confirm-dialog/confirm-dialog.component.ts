@@ -16,10 +16,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <div
           class="bg-[#121212] rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-neutral-700 space-y-5"
         >
-          <p
-            id="confirm-message"
-            class="text-white text-sm font-medium leading-relaxed"
-          >
+          <p id="confirm-message" class="text-white text-sm font-medium leading-relaxed">
             {{ state.message }}
           </p>
           <div class="flex gap-3 justify-end">

@@ -21,14 +21,10 @@ export class LegalService {
   private readonly baseUrl = `${environment.apiUrl}/legal`;
 
   async fetchTermsOfService(): Promise<LegalDocument> {
-    return firstValueFrom(
-      this.http.get<LegalDocument>(`${this.baseUrl}/terms`),
-    );
+    return firstValueFrom(this.http.get<LegalDocument>(`${this.baseUrl}/terms`));
   }
 
   async fetchPrivacyPolicy(): Promise<LegalDocument> {
-    return firstValueFrom(
-      this.http.get<LegalDocument>(`${this.baseUrl}/privacy`),
-    );
+    return firstValueFrom(this.http.get<LegalDocument>(`${this.baseUrl}/privacy`));
   }
 }

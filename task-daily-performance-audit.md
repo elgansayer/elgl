@@ -1,9 +1,11 @@
 # Daily Frontend Performance & Bundle Audit
 
 ## Objective
+
 Maintain strict performance standards and prevent bundle bloat to ensure 60 FPS on mobile.
 
 ## Instructions
+
 1. Run `npx ng build --stats-json` in the frontend directory.
 2. Analyze the bundle using `webpack-bundle-analyzer` or similar tools.
 3. Identify any exceptionally large third-party dependencies imported recently.

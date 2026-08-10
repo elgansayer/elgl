@@ -1,9 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  input,
-} from '@angular/core';
+import { Component, inject, signal, input } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { EconomyErrorHandlerService } from '../../services/economy-error-handler.service';
 
@@ -12,8 +7,10 @@ import { EconomyErrorHandlerService } from '../../services/economy-error-handler
   imports: [TranslatePipe],
   template: `
     @if (hasError()) {
-      <div class="min-h-[300px] flex flex-col items-center justify-center p-8"
-           [class.min-h-screen]="fullPage()">
+      <div
+        class="min-h-[300px] flex flex-col items-center justify-center p-8"
+        [class.min-h-screen]="fullPage()"
+      >
         <div class="text-center max-w-md">
           <div class="text-5xl mb-4">🪙</div>
           <h2 class="text-xl font-bold text-white mb-3">
@@ -67,10 +64,9 @@ export class ErrorBoundaryComponent {
 
   reportCrash(): void {
     if (this.lastError) {
-      this.economyErrorHandler.reportEconomyCrash(
-        this.lastError,
-        { boundaryContext: this.context() },
-      );
+      this.economyErrorHandler.reportEconomyCrash(this.lastError, {
+        boundaryContext: this.context(),
+      });
     }
   }
 

@@ -64,17 +64,11 @@ export class LivekitService {
    * Get a LiveKit access token from the backend. Returns both the token
    * and whether the response was served from a degraded fallback.
    */
-  async getToken(
-    roomName: string,
-    _participantIdentity: string,
-  ): Promise<TokenFetchResult> {
+  async getToken(roomName: string, _participantIdentity: string): Promise<TokenFetchResult> {
     const response = await firstValueFrom(
-      this.http.post<VideoClassroomTokenResponse>(
-        `${environment.apiUrl}/video-calls/accept`,
-        {
-          roomName: roomName,
-        },
-      ),
+      this.http.post<VideoClassroomTokenResponse>(`${environment.apiUrl}/video-calls/accept`, {
+        roomName: roomName,
+      }),
     );
     return {
       token: response.token,
@@ -87,14 +81,15 @@ export class LivekitService {
   /**
    * Start a new video call room. Returns token and whether degraded.
    */
-  async startRoom(
-    _userId: string,
-  ): Promise<{ token: string; roomName: string; iceServers?: IceServer[]; degraded: boolean; degradationReason?: string }> {
+  async startRoom(_userId: string): Promise<{
+    token: string;
+    roomName: string;
+    iceServers?: IceServer[];
+    degraded: boolean;
+    degradationReason?: string;
+  }> {
     const response = await firstValueFrom(
-      this.http.post<VideoClassroomTokenResponse>(
-        `${environment.apiUrl}/video-calls/start`,
-        {},
-      ),
+      this.http.post<VideoClassroomTokenResponse>(`${environment.apiUrl}/video-calls/start`, {}),
     );
     return {
       token: response.token,
@@ -129,12 +124,9 @@ export class LivekitService {
 
     if (e2eeKey) {
       const keyProvider = new ExternalE2EEKeyProvider();
-      this.e2eeWorker = new Worker(
-        new URL('./livekit-e2ee.worker', import.meta.url),
-        {
-          type: 'module',
-        },
-      );
+      this.e2eeWorker = new Worker(new URL('./livekit-e2ee.worker', import.meta.url), {
+        type: 'module',
+      });
       roomOptions = {
         e2ee: {
           keyProvider,
@@ -147,16 +139,17 @@ export class LivekitService {
     const room = this.createRoom(roomOptions);
     this.room = room;
 
-    const iceServersToUse = tokenResult.iceServers && tokenResult.iceServers.length > 0 
-      ? tokenResult.iceServers 
-      : [
-          { urls: 'stun:stun.l.google.com:19302' },
-          {
-            urls: environment.turnServerUrl,
-            username: environment.turnUsername,
-            credential: environment.turnPassword,
-          },
-        ];
+    const iceServersToUse =
+      tokenResult.iceServers && tokenResult.iceServers.length > 0
+        ? tokenResult.iceServers
+        : [
+            { urls: 'stun:stun.l.google.com:19302' },
+            {
+              urls: environment.turnServerUrl,
+              username: environment.turnUsername,
+              credential: environment.turnPassword,
+            },
+          ];
 
     // Connect with retry for transient network failures
     let lastError: Error | undefined;
@@ -196,9 +189,7 @@ export class LivekitService {
       return { audioTrack: null, videoTrack: null };
     }
     await this.room.localParticipant.setMicrophoneEnabled(true);
-    const pub = this.room.localParticipant.getTrackPublication(
-      Track.Source.Microphone,
-    );
+    const pub = this.room.localParticipant.getTrackPublication(Track.Source.Microphone);
     const audioTrack = pub?.track ?? null;
     this._localAudioTrack = audioTrack;
     return { audioTrack, videoTrack: null };

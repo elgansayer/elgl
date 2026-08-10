@@ -106,7 +106,7 @@ export class AppLockService {
       const displayName =
         typeof metadataDisplayName === 'string' && metadataDisplayName.length > 0
           ? metadataDisplayName
-          : user.email ?? user.id;
+          : (user.email ?? user.id);
       const publicKey: PublicKeyCredentialCreationOptions = {
         challenge,
         rp: { name: 'HelloTalk Clone' },

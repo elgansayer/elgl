@@ -29,7 +29,9 @@ export class QuickRepliesComponent {
     loader: () => this.quickRepliesService.getQuickReplies(),
   });
 
-  readonly replies = computed(() => this.quickRepliesInput() ?? this.quickRepliesResource.value() ?? []);
+  readonly replies = computed(
+    () => this.quickRepliesInput() ?? this.quickRepliesResource.value() ?? [],
+  );
 
   readonly replySelected = output<QuickReply>();
 

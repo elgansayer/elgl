@@ -22,7 +22,11 @@ export class CallLogsService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl: string = `${environment.apiUrl}/audio-rooms`;
 
-  async getCallLogs(options?: { callType?: string; limit?: number; offset?: number }): Promise<CallLogRecord[]> {
+  async getCallLogs(options?: {
+    callType?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<CallLogRecord[]> {
     let params = new HttpParams()
       .set('limit', String(options?.limit ?? 20))
       .set('offset', String(options?.offset ?? 0));
@@ -30,8 +34,6 @@ export class CallLogsService {
       params = params.set('callType', options.callType);
     }
 
-    return firstValueFrom(
-      this.http.get<CallLogRecord[]>(`${this.baseUrl}/call-logs`, { params }),
-    );
+    return firstValueFrom(this.http.get<CallLogRecord[]>(`${this.baseUrl}/call-logs`, { params }));
   }
 }

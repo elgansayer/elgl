@@ -13,11 +13,7 @@ describe.skip('FavouriteService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        FavouriteService,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [FavouriteService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(FavouriteService);
     httpMock = TestBed.inject(HttpTestingController);

@@ -40,8 +40,7 @@ import { resource } from '@angular/core';
             }
           </button>
         </div>
-      }
-      @empty {
+      } @empty {
         @if (!users.isLoading()) {
           <div class="flex flex-col items-center py-12 text-text-secondary">
             <span class="i-ph-microphone-slash text-4xl mb-2"></span>

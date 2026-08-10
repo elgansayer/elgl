@@ -51,9 +51,7 @@ export class ResourceLibraryService {
     let params = new HttpParams();
     if (topic) params = params.set('topic', topic);
     if (difficulty) params = params.set('difficulty', difficulty);
-    return firstValueFrom(
-      this.http.get<ResourceItem[]>(this.baseUrl, { params }),
-    );
+    return firstValueFrom(this.http.get<ResourceItem[]>(this.baseUrl, { params }));
   }
 
   async getById(id: string): Promise<ResourceItem> {

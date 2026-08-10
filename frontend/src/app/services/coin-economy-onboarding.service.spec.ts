@@ -9,12 +9,11 @@ describe('CoinEconomyOnboardingService', () => {
   beforeAll(() => {
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => store[key] || null,
-      setItem: (key: string, value: string) => store[key] = value,
+      setItem: (key: string, value: string) => (store[key] = value),
       removeItem: (key: string) => delete store[key],
-      clear: () => store = {}
+      clear: () => (store = {}),
     });
   });
-
 
   beforeEach(() => {
     window.localStorage.removeItem('hellotalk_coin_economy_onboarding_done');

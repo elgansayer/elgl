@@ -1,4 +1,12 @@
-import { Component, input, output, effect, viewChild, ElementRef, afterNextRender } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  effect,
+  viewChild,
+  ElementRef,
+  afterNextRender,
+} from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -28,7 +36,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
           #primaryButton
           (click)="closed.emit()"
           class="w-full py-3 mt-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold shadow transition-all focus:outline-none focus:ring-2 focus:ring-primary/50"
-          [attr.aria-label]="('dailyLoginModal.cta' | t) + ', ' + ('dailyLoginModal.body' | t: { coins: coins() })"
+          [attr.aria-label]="
+            ('dailyLoginModal.cta' | t) + ', ' + ('dailyLoginModal.body' | t: { coins: coins() })
+          "
         >
           {{ 'dailyLoginModal.cta' | t }}
         </button>

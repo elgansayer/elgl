@@ -1,11 +1,4 @@
-import {
-  Component,
-  input,
-  output,
-  afterNextRender,
-  inject,
-  ElementRef,
-} from '@angular/core';
+import { Component, input, output, afterNextRender, inject, ElementRef } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -19,10 +12,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       tabindex="0"
       role="dialog"
     >
-      <canvas
-        #confettiCanvas
-        class="absolute inset-0 pointer-events-none"
-      ></canvas>
+      <canvas #confettiCanvas class="absolute inset-0 pointer-events-none"></canvas>
 
       <div
         class="relative z-10 flex flex-col items-center gap-6 p-8 rounded-2xl bg-surface shadow-2xl border border-accent"
@@ -60,9 +50,7 @@ export class StreakCongratulationsComponent {
   }
 
   private startConfetti(): void {
-    const canvas = this.host.nativeElement.querySelector<HTMLCanvasElement>(
-      'canvas',
-    );
+    const canvas = this.host.nativeElement.querySelector<HTMLCanvasElement>('canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;

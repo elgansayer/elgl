@@ -24,18 +24,11 @@ function beforeRequest(requestParams, context, events, next) {
 function afterResponse(requestParams, response, context, events, next) {
   if (response.body) {
     try {
-      const body =
-        typeof response.body === 'string'
-          ? JSON.parse(response.body)
-          : response.body;
+      const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
       if (Array.isArray(body) && body.length > 0) {
         const tier = body[0].matchTier;
         if (tier && tier !== 'interest') {
-          events.emit(
-            'counter',
-            `matchmaking.tier.${tier}`,
-            1,
-          );
+          events.emit('counter', `matchmaking.tier.${tier}`, 1);
         }
       }
     } catch {

@@ -153,9 +153,7 @@ export class RecommendationsService {
           const userEntries = pairIndex.get(pairKey) ?? [];
 
           for (const entry of userEntries) {
-            const filtered = matchRows.filter(
-              (m) => m.id !== entry.userId,
-            );
+            const filtered = matchRows.filter((m) => m.id !== entry.userId);
             if (filtered.length > 0) {
               const dtos: RecommendedUserDto[] = filtered.map((m) => ({
                 id: m.id,

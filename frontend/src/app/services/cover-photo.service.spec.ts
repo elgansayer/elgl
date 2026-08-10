@@ -10,11 +10,7 @@ describe('CoverPhotoService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        CoverPhotoService,
-      ],
+      providers: [provideHttpClient(), provideHttpClientTesting(), CoverPhotoService],
     });
     service = TestBed.inject(CoverPhotoService);
     httpMock = TestBed.inject(HttpTestingController);

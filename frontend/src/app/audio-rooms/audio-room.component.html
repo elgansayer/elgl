@@ -14,7 +14,9 @@
         [class.bg-emerald-400]="host().isSpeaking"
         [class.bg-slate-500]="!host().isSpeaking"
       ></span>
-      <span>{{ host().isSpeaking ? ('audioRoom.speaking' | t) : ('audioRoom.listening' | t) }}</span>
+      <span>{{
+        host().isSpeaking ? ('audioRoom.speaking' | t) : ('audioRoom.listening' | t)
+      }}</span>
       @if (isVideoStream()) {
         <span class="text-sm ms-1" [title]="'audioRoom.videoStreamLabel' | t">🎥</span>
       }
@@ -78,15 +80,21 @@
               </div>
             }
 
-            <p class="font-medium text-sm text-center leading-tight">{{ participant.displayName }}</p>
+            <p class="font-medium text-sm text-center leading-tight">
+              {{ participant.displayName }}
+            </p>
 
             <div class="flex items-center gap-2">
               @if (participant.isHost) {
-                <span class="text-xs font-semibold rounded-full px-2 py-0.5 bg-indigo-500/20 text-indigo-200">
+                <span
+                  class="text-xs font-semibold rounded-full px-2 py-0.5 bg-indigo-500/20 text-indigo-200"
+                >
                   {{ 'audioRoom.host' | t }}
                 </span>
               } @else if (participant.isCoHost) {
-                <span class="text-xs font-semibold rounded-full px-2 py-0.5 bg-purple-500/20 text-purple-200">
+                <span
+                  class="text-xs font-semibold rounded-full px-2 py-0.5 bg-purple-500/20 text-purple-200"
+                >
                   {{ 'audioRoom.coHostBadge' | t }}
                 </span>
               }

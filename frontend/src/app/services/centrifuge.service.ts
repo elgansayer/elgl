@@ -43,10 +43,7 @@ export class CentrifugeService {
    * Reads the `Retry-After` header from an HTTP response, falling back to our
    * exponential backoff when the header is absent or unparseable.
    */
-  private getRetryAfterMs(
-    response: HttpResponseBase,
-    fallbackMs: number,
-  ): number {
+  private getRetryAfterMs(response: HttpResponseBase, fallbackMs: number): number {
     const raw = response.headers.get('Retry-After');
     if (!raw) return fallbackMs;
     const seconds = parseInt(raw, 10);
@@ -56,9 +53,7 @@ export class CentrifugeService {
     return fallbackMs;
   }
 
-  private scheduleReconnect(
-    overrideDelayMs?: number,
-  ): void {
+  private scheduleReconnect(overrideDelayMs?: number): void {
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.connectionStatus.set('error: max reconnection attempts reached');
       console.error('Max Centrifugo reconnection attempts reached. Giving up.');

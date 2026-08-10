@@ -14,9 +14,7 @@ describe.skip('PasswordPolicyResetComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [PasswordPolicyResetComponent],
-      providers: [
-        { provide: AuthService, useValue: authServiceMock },
-      ],
+      providers: [{ provide: AuthService, useValue: authServiceMock }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PasswordPolicyResetComponent);

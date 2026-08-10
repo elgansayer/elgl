@@ -154,7 +154,8 @@
           type="button"
           class="flex-1 py-3.5 rounded-full text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
           (click)="cancel()"
-         [attr.aria-label]="'report.cancel' | t">
+          [attr.aria-label]="'report.cancel' | t"
+        >
           {{ 'report.cancel' | t }}
         </button>
         <button
@@ -162,7 +163,8 @@
           [disabled]="!canSubmit()"
           class="flex-1 py-3.5 rounded-full text-sm font-bold bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:hover:bg-red-600 text-white transition-colors shadow-lg shadow-red-900/20"
           (click)="submitReport()"
-         [attr.aria-label]="'report.submitting' | t">
+          [attr.aria-label]="'report.submitting' | t"
+        >
           {{ isSubmitting() ? ('report.submitting' | t) : ('report.submit' | t) }}
         </button>
       </div>

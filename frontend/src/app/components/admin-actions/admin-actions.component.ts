@@ -70,7 +70,8 @@ export class AdminActionsComponent {
 
   private readonly usersResource = resource({
     params: () => ({ page: 1, pageSize: 10, search: '' }),
-    loader: ({ params }) => this.adminService.listUsers(params.search, params.page, params.pageSize),
+    loader: ({ params }) =>
+      this.adminService.listUsers(params.search, params.page, params.pageSize),
   });
 
   readonly users = computed(() => this.usersResource.value()?.users ?? []);

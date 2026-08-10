@@ -1031,7 +1031,9 @@ export class NlpService {
 
     const apiKey = this.configService.get<string>('LLM_API_KEY');
     if (!apiKey) {
-      this.logger.warn('LLM_API_KEY not configured, using fallback summary extraction');
+      this.logger.warn(
+        'LLM_API_KEY not configured, using fallback summary extraction',
+      );
       return this.extractSummaryFallback(text);
     }
 
@@ -1055,11 +1057,15 @@ ${text.slice(0, 8000)}`;
         };
       }
 
-      this.logger.warn('LLM response could not be parsed as JSON, using fallback');
+      this.logger.warn(
+        'LLM response could not be parsed as JSON, using fallback',
+      );
       return this.extractSummaryFallback(text);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`LLM session summary generation failed: ${message}, using fallback`);
+      this.logger.warn(
+        `LLM session summary generation failed: ${message}, using fallback`,
+      );
       return this.extractSummaryFallback(text);
     }
   }

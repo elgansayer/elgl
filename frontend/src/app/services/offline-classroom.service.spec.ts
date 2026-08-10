@@ -9,18 +9,36 @@ import { NetworkStatusService } from './network-status.service';
  * service's Promise wrappers resolve predictably.
  */
 function idbReq(result?: unknown) {
-  const r: Record<string, unknown> = { result: result ?? null, _onsuccess: null, _onerror: null, _onupgradeneeded: null };
+  const r: Record<string, unknown> = {
+    result: result ?? null,
+    _onsuccess: null,
+    _onerror: null,
+    _onupgradeneeded: null,
+  };
   Object.defineProperty(r, 'onsuccess', {
-    get() { return r._onsuccess; },
-    set(f: (() => void) | null) { r._onsuccess = f; if (f) setTimeout(f, 0); },
+    get() {
+      return r._onsuccess;
+    },
+    set(f: (() => void) | null) {
+      r._onsuccess = f;
+      if (f) setTimeout(f, 0);
+    },
   });
   Object.defineProperty(r, 'onerror', {
-    get() { return r._onerror; },
-    set(f: ((e: unknown) => void) | null) { r._onerror = f; },
+    get() {
+      return r._onerror;
+    },
+    set(f: ((e: unknown) => void) | null) {
+      r._onerror = f;
+    },
   });
   Object.defineProperty(r, 'onupgradeneeded', {
-    get() { return r._onupgradeneeded; },
-    set(f: ((e: unknown) => void) | null) { r._onupgradeneeded = f; },
+    get() {
+      return r._onupgradeneeded;
+    },
+    set(f: ((e: unknown) => void) | null) {
+      r._onupgradeneeded = f;
+    },
   });
   return r;
 }
@@ -73,16 +91,26 @@ describe('OfflineClassroomService', () => {
           },
           get: (key: string) => idbReq(s.get(key) ?? null),
           getAll: () => idbReq([...s.values()]),
-          delete: (key: string) => { s.delete(key); return idbReq(); },
-          clear: () => { s.clear(); return idbReq(); },
+          delete: (key: string) => {
+            s.delete(key);
+            return idbReq();
+          },
+          clear: () => {
+            s.clear();
+            return idbReq();
+          },
         };
       },
-      get oncomplete() { return completeCallback; },
+      get oncomplete() {
+        return completeCallback;
+      },
       set oncomplete(f: (() => void) | null) {
         completeCallback = f;
         if (f) setTimeout(f, 0);
       },
-      get onerror() { return null as unknown; },
+      get onerror() {
+        return null as unknown;
+      },
       set onerror(_f: ((e: unknown) => void) | null) {},
     };
   }
@@ -103,10 +131,7 @@ describe('OfflineClassroomService', () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
 
     TestBed.configureTestingModule({
-      providers: [
-        OfflineClassroomService,
-        NetworkStatusService,
-      ],
+      providers: [OfflineClassroomService, NetworkStatusService],
     });
     service = TestBed.inject(OfflineClassroomService);
   });

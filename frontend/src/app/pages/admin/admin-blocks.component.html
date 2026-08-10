@@ -18,29 +18,13 @@
     <div class="space-y-3">
       @for (i of [1, 2, 3, 4, 5]; track i) {
         <div class="border border-slate-200 rounded-lg p-4 flex items-center gap-3">
-          <app-skeleton-loader
-            [height]="'40px'"
-            [width]="'40px'"
-            [variant]="'circle'"
-          />
+          <app-skeleton-loader [height]="'40px'" [width]="'40px'" [variant]="'circle'" />
           <div class="flex-1 space-y-2">
-            <app-skeleton-loader
-              [height]="'14px'"
-              [width]="'50%'"
-              [variant]="'text'"
-            />
-            <app-skeleton-loader
-              [height]="'12px'"
-              [width]="'35%'"
-              [variant]="'text'"
-            />
+            <app-skeleton-loader [height]="'14px'" [width]="'50%'" [variant]="'text'" />
+            <app-skeleton-loader [height]="'12px'" [width]="'35%'" [variant]="'text'" />
           </div>
           <div class="flex gap-2">
-            <app-skeleton-loader
-              [height]="'28px'"
-              [width]="'70px'"
-              [borderRadius]="'6px'"
-            />
+            <app-skeleton-loader [height]="'28px'" [width]="'70px'" [borderRadius]="'6px'" />
           </div>
         </div>
       }
@@ -82,11 +66,15 @@
                       class="h-8 w-8 rounded-full object-cover"
                     />
                   } @else {
-                    <span class="h-8 w-8 rounded-full bg-surface-100 flex items-center justify-center text-xs text-slate-500">
+                    <span
+                      class="h-8 w-8 rounded-full bg-surface-100 flex items-center justify-center text-xs text-slate-500"
+                    >
                       {{ (block.blocker_name ?? '?').charAt(0) }}
                     </span>
                   }
-                  <span>{{ (block.blocker_name ?? ('admin.blocks.unknown' | t)) | sanitiseHtml }}</span>
+                  <span>{{
+                    block.blocker_name ?? ('admin.blocks.unknown' | t) | sanitiseHtml
+                  }}</span>
                 </div>
               </td>
               <td class="px-3 py-2">
@@ -98,11 +86,15 @@
                       class="h-8 w-8 rounded-full object-cover"
                     />
                   } @else {
-                    <span class="h-8 w-8 rounded-full bg-surface-100 flex items-center justify-center text-xs text-slate-500">
+                    <span
+                      class="h-8 w-8 rounded-full bg-surface-100 flex items-center justify-center text-xs text-slate-500"
+                    >
                       {{ (block.blocked_name ?? '?').charAt(0) }}
                     </span>
                   }
-                  <span>{{ (block.blocked_name ?? ('admin.blocks.unknown' | t)) | sanitiseHtml }}</span>
+                  <span>{{
+                    block.blocked_name ?? ('admin.blocks.unknown' | t) | sanitiseHtml
+                  }}</span>
                 </div>
               </td>
               <td class="px-3 py-2 text-sm text-slate-500">

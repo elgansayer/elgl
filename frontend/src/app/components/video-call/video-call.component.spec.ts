@@ -223,9 +223,9 @@ describe('VideoCallComponent - screen sharing', () => {
       source: Track.Source.Microphone,
     } as unknown as RemoteTrack;
 
-    (
-      component as unknown as { onTrackSubscribed: (t: RemoteTrack) => void }
-    ).onTrackSubscribed(audioTrack);
+    (component as unknown as { onTrackSubscribed: (t: RemoteTrack) => void }).onTrackSubscribed(
+      audioTrack,
+    );
 
     expect(component.remoteCameraTrack()).toBeNull();
     expect(component.remoteScreenShareTrack()).toBeNull();

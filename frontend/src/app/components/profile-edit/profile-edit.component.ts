@@ -14,7 +14,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
       <!-- Cover Photo Section -->
       <div class="mb-8">
-        <span class="block text-sm font-medium text-text-secondary mb-2">{{ 'profileEdit.coverPhoto' | t }}</span>
+        <span class="block text-sm font-medium text-text-secondary mb-2">{{
+          'profileEdit.coverPhoto' | t
+        }}</span>
         <div class="relative h-48 bg-surface-200 rounded-xl overflow-hidden">
           @if (coverPhotoPreview()) {
             <img
@@ -60,7 +62,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <!-- Other profile fields -->
       <div class="space-y-4">
         <div>
-          <label for="displayNameInput" class="block text-sm font-medium text-text-secondary mb-1"
+          <label
+            for="displayNameInput"
+            class="block text-sm font-medium text-text-secondary mb-1"
             >{{ 'profileEdit.displayName' | t }}</label
           >
           <input
@@ -70,9 +74,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
           />
         </div>
         <div>
-          <label for="genderSelect" class="block text-sm font-medium text-text-secondary mb-1"
-            >{{ 'profileEdit.gender' | t }}</label
-          >
+          <label for="genderSelect" class="block text-sm font-medium text-text-secondary mb-1">{{
+            'profileEdit.gender' | t
+          }}</label>
           <select
             id="genderSelect"
             [(ngModel)]="gender"
@@ -87,7 +91,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
         <!-- Business profile fields -->
         <div>
-          <label for="businessNameInput" class="block text-sm font-medium text-text-secondary mb-1"
+          <label
+            for="businessNameInput"
+            class="block text-sm font-medium text-text-secondary mb-1"
             >{{ 'profileEdit.businessName' | t }}</label
           >
           <input
@@ -97,7 +103,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
           />
         </div>
         <div>
-          <label for="businessHoursInput" class="block text-sm font-medium text-text-secondary mb-1"
+          <label
+            for="businessHoursInput"
+            class="block text-sm font-medium text-text-secondary mb-1"
             >{{ 'profileEdit.businessHours' | t }}</label
           >
           <input
@@ -107,9 +115,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
           />
         </div>
         <div>
-          <label for="websiteUrlInput" class="block text-sm font-medium text-text-secondary mb-1"
-            >{{ 'profileEdit.websiteUrl' | t }}</label
-          >
+          <label for="websiteUrlInput" class="block text-sm font-medium text-text-secondary mb-1">{{
+            'profileEdit.websiteUrl' | t
+          }}</label>
           <input
             id="websiteUrlInput"
             [(ngModel)]="websiteUrl"

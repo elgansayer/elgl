@@ -242,10 +242,16 @@ describe('ChatRoomComponent (threaded replies)', () => {
     it('ArrowDown/ArrowUp move the active suggestion without sending the message', () => {
       component.onComposerInput(inputEvent('Hi @Al', 6));
 
-      component.onComposerKeydown({ key: 'ArrowDown', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'ArrowDown',
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent);
       expect(component.mentionActiveIndex()).toBe(1);
 
-      component.onComposerKeydown({ key: 'ArrowUp', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'ArrowUp',
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent);
       expect(component.mentionActiveIndex()).toBe(0);
 
       expect(mockChatService.sendMessage).not.toHaveBeenCalled();
@@ -255,7 +261,10 @@ describe('ChatRoomComponent (threaded replies)', () => {
       component.textInput = 'Hi @Al';
       component.onComposerInput(inputEvent('Hi @Al', 6));
 
-      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'Enter',
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent);
 
       expect(component.textInput).toBe('Hi @Alice ');
       expect(mockChatService.sendMessage).not.toHaveBeenCalled();
@@ -264,7 +273,10 @@ describe('ChatRoomComponent (threaded replies)', () => {
     it('Enter sends the message when no mention list is open', () => {
       component.textInput = 'Just a message';
 
-      component.onComposerKeydown({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
+      component.onComposerKeydown({
+        key: 'Enter',
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent);
 
       expect(mockChatService.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ text_content: 'Just a message' }),

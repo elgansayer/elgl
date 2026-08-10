@@ -65,10 +65,7 @@ describe('CentrifugeService', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [
-        CentrifugeService,
-        { provide: AuthService, useClass: MockAuthService },
-      ],
+      providers: [CentrifugeService, { provide: AuthService, useClass: MockAuthService }],
     }).compileComponents();
 
     service = TestBed.inject(CentrifugeService);

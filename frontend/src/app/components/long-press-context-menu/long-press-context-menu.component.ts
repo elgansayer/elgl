@@ -1,4 +1,5 @@
-import {Component, input, output, signal} from '@angular/core';import { TranslatePipe } from '../../services/translate.pipe';
+import { Component, input, output, signal } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-long-press-context-menu',

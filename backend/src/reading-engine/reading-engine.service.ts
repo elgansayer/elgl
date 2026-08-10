@@ -87,9 +87,11 @@ export class ReadingEngineService {
     if (sanitised.title !== undefined) update.title = sanitised.title;
     if (sanitised.content !== undefined) update.content = sanitised.content;
     if (sanitised.language !== undefined) update.language = sanitised.language;
-    if (sanitised.difficulty !== undefined) update.difficulty = sanitised.difficulty;
+    if (sanitised.difficulty !== undefined)
+      update.difficulty = sanitised.difficulty;
     if (sanitised.topic !== undefined) update.topic = sanitised.topic;
-    if (sanitised.sourceUrl !== undefined) update.source_url = sanitised.sourceUrl;
+    if (sanitised.sourceUrl !== undefined)
+      update.source_url = sanitised.sourceUrl;
 
     const { data, error } = await this.db
       .from('reading_resources')

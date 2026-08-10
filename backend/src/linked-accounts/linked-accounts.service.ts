@@ -35,14 +35,14 @@ export class LinkedAccountsService {
     }
 
     // Fallback to mock data for seeded users
-    const mockAccounts = MOCK_LINKED_ACCOUNTS
-      .filter((a) => a.user_id === userId)
-      .map((row) => ({
-        provider: row.provider,
-        name: row.name ?? undefined,
-        active: row.active,
-        created_at: row.created_at,
-      }));
+    const mockAccounts = MOCK_LINKED_ACCOUNTS.filter(
+      (a) => a.user_id === userId,
+    ).map((row) => ({
+      provider: row.provider,
+      name: row.name ?? undefined,
+      active: row.active,
+      created_at: row.created_at,
+    }));
 
     return mockAccounts;
   }

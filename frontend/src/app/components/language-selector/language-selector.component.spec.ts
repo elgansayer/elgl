@@ -12,7 +12,13 @@ describe('LanguageSelectorComponent', () => {
     i18nServiceMock = {
       currentLang: signal('en-GB'),
       availableLanguages: [
-        { code: 'en-GB', name: 'British English', nativeName: 'English (UK)', flag: '🇬🇧', isRtl: false },
+        {
+          code: 'en-GB',
+          name: 'British English',
+          nativeName: 'English (UK)',
+          flag: '🇬🇧',
+          isRtl: false,
+        },
         { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isRtl: false },
       ],
       translate: vi.fn((key: string) => key),

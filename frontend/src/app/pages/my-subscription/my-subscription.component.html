@@ -30,7 +30,10 @@
   }
 
   @if (actionError()) {
-    <div class="rounded-app border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400" role="alert">
+    <div
+      class="rounded-app border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400"
+      role="alert"
+    >
       {{ actionError() }}
     </div>
   }
@@ -48,16 +51,22 @@
     <app-card variant="elevated">
       <div class="space-y-4">
         <div class="flex items-center justify-between">
-          <span class="text-sm font-semibold text-text-secondary">{{ 'subscription.status' | t }}</span>
+          <span class="text-sm font-semibold text-text-secondary">{{
+            'subscription.status' | t
+          }}</span>
           <app-pill
-            [label]="currentDetails.isVip ? ('subscription.active' | t) : ('subscription.inactive' | t)"
+            [label]="
+              currentDetails.isVip ? ('subscription.active' | t) : ('subscription.inactive' | t)
+            "
             [colour]="currentDetails.isVip ? 'success' : 'neutral'"
             size="sm"
           />
         </div>
 
         <div class="flex items-center justify-between">
-          <span class="text-sm font-semibold text-text-secondary">{{ 'subscription.plan' | t }}</span>
+          <span class="text-sm font-semibold text-text-secondary">{{
+            'subscription.plan' | t
+          }}</span>
           <span class="text-sm font-bold text-text-primary">
             {{ currentDetails.vipTier ?? ('subscription.free' | t) }}
           </span>
@@ -65,7 +74,9 @@
 
         @if (currentDetails.email) {
           <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold text-text-secondary">{{ 'subscription.email' | t }}</span>
+            <span class="text-sm font-semibold text-text-secondary">{{
+              'subscription.email' | t
+            }}</span>
             <span class="text-sm text-text-primary">{{ currentDetails.email }}</span>
           </div>
         }
@@ -76,13 +87,17 @@
 
         @if (nextPaymentLabel(); as amount) {
           <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold text-text-secondary">{{ 'subscription.nextPayment' | t }}</span>
+            <span class="text-sm font-semibold text-text-secondary">{{
+              'subscription.nextPayment' | t
+            }}</span>
             <span class="text-sm text-text-primary">{{ amount }}</span>
           </div>
         }
 
         @if (cancelBannerMessage(); as banner) {
-          <div class="rounded-app border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-400">
+          <div
+            class="rounded-app border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-400"
+          >
             {{ banner }}
           </div>
         }

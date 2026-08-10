@@ -1,5 +1,10 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { UserSettings, SocialPrivacySettings, ProfileDiscoverySettings, AccountSettings } from '../models/settings.model';
+import {
+  UserSettings,
+  SocialPrivacySettings,
+  ProfileDiscoverySettings,
+  AccountSettings,
+} from '../models/settings.model';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {

@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ImageCompressionService } from './image-compression.service';
 
-function createMockFile(
-  type: string = 'image/png',
-  name: string = 'test.png',
-): File {
+function createMockFile(type: string = 'image/png', name: string = 'test.png'): File {
   const content = new Uint8Array(1024);
   return new File([content], name, { type });
 }
@@ -46,7 +43,9 @@ describe('ImageCompressionService', () => {
       set src(_value: string) {
         setTimeout(() => this.onload?.(), 0);
       }
-      get src(): string { return ''; }
+      get src(): string {
+        return '';
+      }
     } as unknown as typeof Image;
 
     // Canvas not available in jsdom, so getContext returns null and service
@@ -80,7 +79,9 @@ describe('ImageCompressionService', () => {
       set src(_value: string) {
         setTimeout(() => this.onload?.(), 0);
       }
-      get src(): string { return ''; }
+      get src(): string {
+        return '';
+      }
     } as unknown as typeof Image;
 
     const file = new File(['fake-png-data'], 'photo.png', { type: 'image/png' });

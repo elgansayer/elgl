@@ -36,12 +36,10 @@ export class SwUpdateService {
         console.warn('New app version available:', evt.latestVersion);
       });
 
-    this.swUpdate.unrecoverable
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((evt) => {
-        console.error('Unrecoverable SW state:', evt.reason);
-        document.location.reload();
-      });
+    this.swUpdate.unrecoverable.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((evt) => {
+      console.error('Unrecoverable SW state:', evt.reason);
+      document.location.reload();
+    });
 
     this.checkForUpdate();
   }

@@ -1,10 +1,6 @@
 import { Component, input, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  ChatService,
-  ReadReceiptUser,
-  MessageReceiptStatus,
-} from '../../services/chat.service';
+import { ChatService, ReadReceiptUser, MessageReceiptStatus } from '../../services/chat.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -23,30 +19,42 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <!-- Sending: grey clock icon -->
       @if (displayStatus() === 'sending') {
         <svg class="w-3 h-3 text-gray-400 animate-pulse" fill="currentColor" viewBox="0 0 16 16">
-          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm.5-10.75v4.19l2.97 1.72-.75 1.25L7.5 9.06V4.25h1z"/>
+          <path
+            d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm.5-10.75v4.19l2.97 1.72-.75 1.25L7.5 9.06V4.25h1z"
+          />
         </svg>
       }
 
       <!-- Sent: single grey check -->
       @if (displayStatus() === 'sent') {
         <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 16 16">
-          <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/>
+          <path
+            d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
+          />
         </svg>
       }
 
       <!-- Delivered: double grey check -->
       @if (displayStatus() === 'delivered') {
         <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 16 16">
-          <path d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"/>
-          <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/>
+          <path
+            d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"
+          />
+          <path
+            d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
+          />
         </svg>
       }
 
       <!-- Read: blue double check -->
       @if (displayStatus() === 'read') {
         <svg class="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 16 16">
-          <path d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"/>
-          <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/>
+          <path
+            d="M3.72 8.78l1.06-1.06 2.22 2.22L7.25 9.7 3.78 6.22a.75.75 0 0 0-1.06 0L.47 8.47a.75.75 0 0 0 0 1.06l1.5 1.5a.75.75 0 0 0 1.06 0L5.53 8.53z"
+          />
+          <path
+            d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
+          />
         </svg>
       }
 
@@ -86,7 +94,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
             }
             @if (hasGroupInfo()) {
               <p class="text-xs text-gray-500 mt-1">
-                {{ 'readReceipts.readByCount' | t: { read: data.readBy.length, total: data.totalMembers } }}
+                {{
+                  'readReceipts.readByCount'
+                    | t: { read: data.readBy.length, total: data.totalMembers }
+                }}
               </p>
             }
             @if (remainingCount() > 0) {

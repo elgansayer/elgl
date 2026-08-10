@@ -9,7 +9,13 @@ describe('SwUpdateService', () => {
   let service: SwUpdateService;
   let versionUpdatesSubject: Subject<unknown>;
   let unrecoverableSubject: Subject<unknown>;
-  let mockSwUpdate: { isEnabled: boolean; versionUpdates: Subject<unknown>; unrecoverable: Subject<unknown>; checkForUpdate: ReturnType<typeof vi.fn>; activateUpdate: ReturnType<typeof vi.fn> };
+  let mockSwUpdate: {
+    isEnabled: boolean;
+    versionUpdates: Subject<unknown>;
+    unrecoverable: Subject<unknown>;
+    checkForUpdate: ReturnType<typeof vi.fn>;
+    activateUpdate: ReturnType<typeof vi.fn>;
+  };
   let mockAppRef: { isStable: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {

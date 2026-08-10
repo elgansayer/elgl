@@ -29,7 +29,6 @@ describe('VocabularyDashboardComponent', () => {
               }
               return text;
             },
-             
           } as any,
         },
         { provide: ErrorHandler, useValue: mockErrorHandler },

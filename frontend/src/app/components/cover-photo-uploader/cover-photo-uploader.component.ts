@@ -30,7 +30,11 @@ interface CropBox {
       @if (!imageSource()) {
         <div class="relative w-full h-48 md:h-64 rounded-xl overflow-hidden group">
           @if (currentCoverUrl()) {
-            <img [src]="currentCoverUrl()" alt="{{ 'coverPhoto.previewAlt' | t }}" class="w-full h-full object-cover" />
+            <img
+              [src]="currentCoverUrl()"
+              alt="{{ 'coverPhoto.previewAlt' | t }}"
+              class="w-full h-full object-cover"
+            />
           } @else {
             <div class="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900"></div>
           }

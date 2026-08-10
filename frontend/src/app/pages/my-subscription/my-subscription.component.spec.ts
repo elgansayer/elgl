@@ -99,10 +99,9 @@ describe.skip('MySubscriptionComponent', () => {
 
   it('should show an error banner when the subscription request fails', async () => {
     fixture.detectChanges();
-    httpTesting.expectOne(`${monetisationBase}/subscription`).flush(
-      { message: 'boom' },
-      { status: 500, statusText: 'Server Error' },
-    );
+    httpTesting
+      .expectOne(`${monetisationBase}/subscription`)
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
     httpTesting.expectOne(`${monetisationBase}/subscription/invoices`).flush([]);
     httpTesting.expectOne(plansUrl).flush([]);
     await fixture.whenStable();

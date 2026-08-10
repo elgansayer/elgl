@@ -1,12 +1,12 @@
 import {
-    Component,
-    inject,
-    input,
-    signal,
-    effect,
-    computed,
-    untracked,
-    DestroyRef,
+  Component,
+  inject,
+  input,
+  signal,
+  effect,
+  computed,
+  untracked,
+  DestroyRef,
 } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -131,7 +131,9 @@ export class SoundboardComponent {
     }
     const audio = new Audio(url);
     audio.volume = 0.6;
-    audio.play().catch(() => { /* ignore autoplay restrictions */ });
+    audio.play().catch(() => {
+      /* ignore autoplay restrictions */
+    });
     this.playbackAudio = audio;
     audio.addEventListener('ended', () => {
       if (this.playbackAudio === audio) {

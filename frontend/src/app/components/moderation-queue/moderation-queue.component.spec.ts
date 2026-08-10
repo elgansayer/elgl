@@ -18,10 +18,16 @@ describe('ModerationQueueComponent', () => {
 
     it('should not contain any physical direction CSS utilities', () => {
       const violations = [
-        /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
-        /\bleft-[0-9]/, /\bright-[0-9]/,
-        /\bborder-l\b/, /\bborder-r\b/,
-        /\btext-left\b/, /\btext-right\b/,
+        /\bpl-\d/,
+        /\bpr-\d/,
+        /\bml-\d/,
+        /\bmr-\d/,
+        /\bleft-[0-9]/,
+        /\bright-[0-9]/,
+        /\bborder-l\b/,
+        /\bborder-r\b/,
+        /\btext-left\b/,
+        /\btext-right\b/,
       ];
       for (const pattern of violations) {
         expect(templateContent).not.toMatch(pattern);
@@ -39,12 +45,19 @@ describe('ModerationQueueComponent', () => {
 
     it('should use i18n translate pipe for user-facing strings', () => {
       const keys = [
-        'moderation.title', 'moderation.filterAria', 'moderation.moment',
-        'moderation.profile', 'moderation.approveAria', 'moderation.rejectAria',
-        'moderation.approve', 'moderation.reject',
-        'moderation.reported_user', 'moderation.reporter',
+        'moderation.title',
+        'moderation.filterAria',
+        'moderation.moment',
+        'moderation.profile',
+        'moderation.approveAria',
+        'moderation.rejectAria',
+        'moderation.approve',
+        'moderation.reject',
+        'moderation.reported_user',
+        'moderation.reporter',
         'moderation.reportItemAria',
-        'safety.moderation.emptyTitle', 'safety.moderation.emptyDesc',
+        'safety.moderation.emptyTitle',
+        'safety.moderation.emptyDesc',
       ];
       for (const key of keys) {
         expect(templateContent).toContain("'" + key + "'");

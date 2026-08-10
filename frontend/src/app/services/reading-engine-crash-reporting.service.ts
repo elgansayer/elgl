@@ -46,9 +46,7 @@ const MAX_RECENT_CRASHES = 10;
 const STACK_FRAME_RE =
   /^\s*at\s+(?:(?<functionName>[^\s(]+)\s*\(?\s*(?<source>[^)]+)?\)?|(?<sourceOnly>[^\s(]+))$/;
 
-function parseStackFrames(
-  stack: string,
-): ReadingEngineCrashPayload['stackFrames'] {
+function parseStackFrames(stack: string): ReadingEngineCrashPayload['stackFrames'] {
   return stack
     .split('\n')
     .slice(1)
@@ -76,9 +74,9 @@ export class ReadingEngineCrashReportingService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
 
-  readonly recentCrashes = signal<
-    Array<{ message: string; timestamp: string; context: string }>
-  >([]);
+  readonly recentCrashes = signal<Array<{ message: string; timestamp: string; context: string }>>(
+    [],
+  );
 
   /**
    * Report a reading-engine-specific crash with rich context for debugging.

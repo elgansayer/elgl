@@ -409,8 +409,8 @@ export class DiscoveryService {
         this.http.post<{ translated_text: string }>(
           `${environment.apiUrl}/nlp/translate-bio`,
           { target_user_id: targetUserId, target_language: targetLanguage },
-          { headers: this.getHeaders() }
-        )
+          { headers: this.getHeaders() },
+        ),
       );
       return result.translated_text;
     } catch {

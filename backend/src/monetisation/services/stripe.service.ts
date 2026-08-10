@@ -62,7 +62,8 @@ export class StripeService {
 
     // For yearly, we need to create a price or use a fixed one
     let priceData:
-      Stripe.Checkout.SessionCreateParams.LineItem.PriceData | undefined;
+      | Stripe.Checkout.SessionCreateParams.LineItem.PriceData
+      | undefined;
     if (interval === 'year' || !priceId) {
       priceData = {
         currency: 'usd',

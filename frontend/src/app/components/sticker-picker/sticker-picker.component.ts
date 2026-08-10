@@ -36,14 +36,20 @@ import { EconomyStore } from '../../services/economy.store';
       <div
         class="px-4 pb-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center"
       >
-        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">{{ 'chatRoom.stickersDrawerTitle' | t }}</h3>
+        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+          {{ 'chatRoom.stickersDrawerTitle' | t }}
+        </h3>
       </div>
 
       <!-- Sticker Packs (tab-style) -->
       <div class="flex-1 overflow-y-auto p-4">
         <!-- Default free stickers -->
         <div class="mb-4">
-          <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">{{ 'stickerStore.defaultStickers' | t }}</h4>
+          <h4
+            class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2"
+          >
+            {{ 'stickerStore.defaultStickers' | t }}
+          </h4>
           <div class="grid grid-cols-4 gap-3">
             @for (sticker of defaultStickers; track sticker.id) {
               <button
@@ -66,9 +72,16 @@ import { EconomyStore } from '../../services/economy.store';
           @for (pack of unlockedPacks(); track pack.id) {
             <div class="mb-4">
               <div class="flex items-center gap-2 mb-2">
-                <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{{ pack.name }}</h4>
+                <h4
+                  class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide"
+                >
+                  {{ pack.name }}
+                </h4>
                 @if (pack.is_animated) {
-                  <span class="rounded-full bg-fuchsia-500 px-2 py-0.5 text-xs font-bold text-white">{{ 'stickerStore.animatedBadge' | t }}</span>
+                  <span
+                    class="rounded-full bg-fuchsia-500 px-2 py-0.5 text-xs font-bold text-white"
+                    >{{ 'stickerStore.animatedBadge' | t }}</span
+                  >
                 }
               </div>
               <div class="grid grid-cols-4 gap-3">
@@ -117,16 +130,31 @@ export class StickerPickerComponent {
     { id: 'default_happy', url: 'assets/stickers/happy.png', name: 'Happy', is_animated: false },
     { id: 'default_laugh', url: 'assets/stickers/laugh.png', name: 'Laugh', is_animated: false },
     { id: 'default_love', url: 'assets/stickers/love.png', name: 'Love', is_animated: false },
-    { id: 'default_thumbs', url: 'assets/stickers/thumbs-up.png', name: 'Thumbs Up', is_animated: false },
+    {
+      id: 'default_thumbs',
+      url: 'assets/stickers/thumbs-up.png',
+      name: 'Thumbs Up',
+      is_animated: false,
+    },
     { id: 'default_sad', url: 'assets/stickers/sad.png', name: 'Sad', is_animated: false },
-    { id: 'default_confused', url: 'assets/stickers/confused.png', name: 'Confused', is_animated: false },
+    {
+      id: 'default_confused',
+      url: 'assets/stickers/confused.png',
+      name: 'Confused',
+      is_animated: false,
+    },
     { id: 'default_sleepy', url: 'assets/stickers/sleepy.png', name: 'Sleepy', is_animated: false },
     { id: 'default_angry', url: 'assets/stickers/angry.png', name: 'Angry', is_animated: false },
   ];
 
   readonly unlockedPacks = computed(() => this.economyStore.unlockedStickerPacks());
 
-  getPackStickers(pack: { id: string; name: string; sticker_urls?: string[]; is_animated?: boolean }): { id: string; url: string; is_animated: boolean }[] {
+  getPackStickers(pack: {
+    id: string;
+    name: string;
+    sticker_urls?: string[];
+    is_animated?: boolean;
+  }): { id: string; url: string; is_animated: boolean }[] {
     if (!pack.sticker_urls || pack.sticker_urls.length === 0) {
       return [];
     }

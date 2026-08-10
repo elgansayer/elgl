@@ -50,9 +50,7 @@ describe('ReadingEngineErrorHandlerService', () => {
       activeTab: 'articles',
     });
 
-    const req = httpTesting.expectOne((request) =>
-      request.url.includes('/analytics/client-error'),
-    );
+    const req = httpTesting.expectOne((request) => request.url.includes('/analytics/client-error'));
     expect(req.request.method).toBe('POST');
 
     const body = req.request.body as Record<string, unknown>;
@@ -94,9 +92,7 @@ describe('ReadingEngineErrorHandlerService', () => {
       filterDifficulty: 'advanced',
     });
 
-    const req = httpTesting.expectOne((request) =>
-      request.url.includes('/analytics/client-error'),
-    );
+    const req = httpTesting.expectOne((request) => request.url.includes('/analytics/client-error'));
     const body = req.request.body as Record<string, unknown>;
     const metadata = body['metadata'] as Record<string, unknown>;
     expect(metadata['resourceId']).toBe('res-123');
@@ -114,9 +110,7 @@ describe('ReadingEngineErrorHandlerService', () => {
 
     expect(result).toBeNull();
 
-    const req = httpTesting.expectOne((request) =>
-      request.url.includes('/analytics/client-error'),
-    );
+    const req = httpTesting.expectOne((request) => request.url.includes('/analytics/client-error'));
     expect(req.request.method).toBe('POST');
     const body = req.request.body as Record<string, unknown>;
     expect(body['message']).toBe('Network failure');
@@ -124,25 +118,21 @@ describe('ReadingEngineErrorHandlerService', () => {
   });
 
   it('should wrap API calls and return value on success', async () => {
-    const result = await service.wrapReadingEngineCall(
-      'fetchArticles',
-      () => Promise.resolve({ data: 'success' }),
+    const result = await service.wrapReadingEngineCall('fetchArticles', () =>
+      Promise.resolve({ data: 'success' }),
     );
 
     expect(result).toEqual({ data: 'success' });
   });
 
   it('should handle non-Error throws in wrapReadingEngineCall', async () => {
-    const result = await service.wrapReadingEngineCall(
-      'stringError',
-      () => Promise.reject('plain string error'),
+    const result = await service.wrapReadingEngineCall('stringError', () =>
+      Promise.reject('plain string error'),
     );
 
     expect(result).toBeNull();
 
-    const req = httpTesting.expectOne((request) =>
-      request.url.includes('/analytics/client-error'),
-    );
+    const req = httpTesting.expectOne((request) => request.url.includes('/analytics/client-error'));
     expect(req.request.method).toBe('POST');
     const body = req.request.body as Record<string, unknown>;
     expect(body['message']).toBe('plain string error');

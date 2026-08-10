@@ -13,9 +13,35 @@ type Database = {
         Relationships: [];
       };
       users: {
-        Row: { id: string; display_name: string; avatar_url: string | null; native_languages: string[]; target_languages: string[]; audio_intro_url: string | null; is_vip: boolean; vip_tier: string; is_serious_learner?: boolean; auto_download_preference: string; joined_at?: string };
-        Insert: { id: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean; auto_download_preference?: string };
-        Update: { id?: string; audio_intro_url?: string | null; is_vip?: boolean; vip_tier?: string; is_serious_learner?: boolean; auto_download_preference?: string };
+        Row: {
+          id: string;
+          display_name: string;
+          avatar_url: string | null;
+          native_languages: string[];
+          target_languages: string[];
+          audio_intro_url: string | null;
+          is_vip: boolean;
+          vip_tier: string;
+          is_serious_learner?: boolean;
+          auto_download_preference: string;
+          joined_at?: string;
+        };
+        Insert: {
+          id: string;
+          audio_intro_url?: string | null;
+          is_vip?: boolean;
+          vip_tier?: string;
+          is_serious_learner?: boolean;
+          auto_download_preference?: string;
+        };
+        Update: {
+          id?: string;
+          audio_intro_url?: string | null;
+          is_vip?: boolean;
+          vip_tier?: string;
+          is_serious_learner?: boolean;
+          auto_download_preference?: string;
+        };
         Relationships: [];
       };
       status_views: {
@@ -54,13 +80,12 @@ export class SupabaseService {
     this.supabase = createClient<Database>(environment.supabaseUrl, environment.supabaseAnonKey);
   }
 
-
   async getRecentlyJoinedNativeSpeakers(limit: number = 10): Promise<UserProfile[]> {
     const { data, error } = await this.supabase
       .from('users')
       .select('*')
       .order('joined_at', { ascending: false })
-      .limit(limit)
+      .limit(limit);
 
     if (error) {
       console.warn('Failed to fetch recently joined native speakers', error);
@@ -242,12 +267,10 @@ export class SupabaseService {
 
   async uploadFile(file: File, folder: string): Promise<{ fileUrl: string | null }> {
     const fileName = `${folder}/${Date.now()}-${file.name}`;
-    const uploadResponse = await this.supabase.storage
-      .from('documents')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+    const uploadResponse = await this.supabase.storage.from('documents').upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
 
     if (uploadResponse.error) {
       throw new Error(`Failed to upload file: ${uploadResponse.error.message}`);
@@ -262,12 +285,10 @@ export class SupabaseService {
 
   async uploadAvatar(file: File): Promise<string> {
     const fileName = `avatars/${Date.now()}-${file.name}`;
-    const uploadResponse = await this.supabase.storage
-      .from('avatars')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+    const uploadResponse = await this.supabase.storage.from('avatars').upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
 
     if (uploadResponse.error) {
       throw new Error(`Failed to upload avatar: ${uploadResponse.error.message}`);

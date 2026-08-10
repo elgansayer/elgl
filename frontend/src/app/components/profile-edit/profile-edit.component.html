@@ -68,7 +68,9 @@
 
       <!-- Bio -->
       <div>
-        <label for="bio_text" class="block text-sm font-medium mb-1">{{ 'profile.bioLabel' | t }}</label>
+        <label for="bio_text" class="block text-sm font-medium mb-1">{{
+          'profile.bioLabel' | t
+        }}</label>
         <textarea
           id="bio_text"
           formControlName="bio_text"
@@ -103,7 +105,12 @@
 
       <!-- Submit -->
       <div class="flex justify-end">
-        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || loading()" [attr.aria-label]="'profile.saveChangesBtn' | t">
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="form.invalid || loading()"
+          [attr.aria-label]="'profile.saveChangesBtn' | t"
+        >
           @if (loading()) {
             <span class="loading loading-spinner"></span>
           }

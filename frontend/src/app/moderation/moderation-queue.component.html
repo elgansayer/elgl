@@ -69,7 +69,10 @@
   </div>
 
   @if (actionError()) {
-    <div class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm" role="alert">
+    <div
+      class="mb-3 p-3 rounded bg-rose-50 border border-rose-300 text-rose-800 text-sm"
+      role="alert"
+    >
       {{ actionError() }}
       <button
         type="button"
@@ -116,13 +119,16 @@
       @for (item of items.value(); track item.id) {
         <li class="rounded bg-elevated p-4">
           <div class="flex items-center justify-between">
-            <span class="font-semibold text-text-primary">{{ 'moderation.reason' | t }}: {{ item.reason | sanitiseHtml }}</span>
+            <span class="font-semibold text-text-primary"
+              >{{ 'moderation.reason' | t }}: {{ item.reason | sanitiseHtml }}</span
+            >
             <span class="text-sm text-muted">{{ item.created_at | date: 'medium' }}</span>
           </div>
 
           @if (item.type === 'profile' && item.reported_user) {
             <p class="text-text-secondary">
-              {{ 'moderation.user' | t }}: {{ (item.reported_user.display_name || item.reported_user.name) | sanitiseHtml }}
+              {{ 'moderation.user' | t }}:
+              {{ item.reported_user.display_name || item.reported_user.name | sanitiseHtml }}
             </p>
             <button
               class="mt-2 rounded bg-secondary px-3 py-1 text-sm font-bold disabled:opacity-50"
@@ -134,11 +140,15 @@
           }
 
           @if (item.type === 'moment' && item.moment_content) {
-            <p class="text-text-secondary">{{ 'moderation.content' | t }}: {{ item.moment_content | sanitiseHtml }}</p>
+            <p class="text-text-secondary">
+              {{ 'moderation.content' | t }}: {{ item.moment_content | sanitiseHtml }}
+            </p>
           }
 
           @if (item.description) {
-            <p class="text-text-secondary">{{ 'moderation.description' | t }}: {{ item.description | sanitiseHtml }}</p>
+            <p class="text-text-secondary">
+              {{ 'moderation.description' | t }}: {{ item.description | sanitiseHtml }}
+            </p>
           }
 
           <div class="mt-4 flex gap-2">
@@ -168,7 +178,9 @@
         {{ 'moderation.riskScore' | t }}: {{ analysisResult()?.riskScore }}%
       </h2>
       @if (analysisResult()?.flags?.length) {
-        <p class="text-text-secondary">{{ 'moderation.flags' | t }}: {{ analysisResult()?.flags?.join(', ') }}</p>
+        <p class="text-text-secondary">
+          {{ 'moderation.flags' | t }}: {{ analysisResult()?.flags?.join(', ') }}
+        </p>
       } @else {
         <p class="text-text-secondary">{{ 'moderation.noFlags' | t }}</p>
       }

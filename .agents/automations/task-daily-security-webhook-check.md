@@ -1,9 +1,11 @@
 # Daily Monetisation Webhook Security Audit
 
 ## Objective
+
 Prevent forged Stripe, Apple, or Google payments from granting VIP access or coins.
 
 ## Instructions
+
 1. Open the `payment-webhook-security` skill document and review recent changes in the monetisation endpoints (`backend/src/monetisation`).
 2. Verify that `stripe.webhooks.constructEvent()` is rigorously used with the verified signature.
 3. Ensure no unauthenticated endpoints (like `POST /monetisation/upgrade`) have crept back into the codebase.

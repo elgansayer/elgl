@@ -26,9 +26,7 @@ describe('CallLogsComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [CallLogsComponent],
-      providers: [
-        { provide: CallLogsService, useValue: { getCallLogs: getCallLogsMock } },
-      ],
+      providers: [{ provide: CallLogsService, useValue: { getCallLogs: getCallLogsMock } }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CallLogsComponent);

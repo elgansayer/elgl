@@ -11,7 +11,14 @@ import { CrashReportService } from '../../services/crash-report.service';
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [CommonModule, TranslatePipe, SanitiseHtmlPipe, AdminOfflineBannerComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+  imports: [
+    CommonModule,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AdminOfflineBannerComponent,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+  ],
 
   templateUrl: './admin-blocks.component.html',
 })
@@ -36,8 +43,7 @@ export class AdminBlocksComponent {
 
   private readonly blocksResource = resource({
     params: () => this.request(),
-    loader: ({ params }) =>
-      this.adminService.listAllBlocks(params.page, params.pageSize),
+    loader: ({ params }) => this.adminService.listAllBlocks(params.page, params.pageSize),
   });
 
   readonly blocks = computed(() => this.blocksResource.value()?.blocks ?? []);
@@ -45,9 +51,7 @@ export class AdminBlocksComponent {
   readonly isLoading = computed(() => this.blocksResource.isLoading());
   readonly resourceError = computed(() => this.blocksResource.error());
 
-  readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.total() / this.pageSize())),
-  );
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
 
   retry(): void {
     this.refreshToken.update((v) => v + 1);

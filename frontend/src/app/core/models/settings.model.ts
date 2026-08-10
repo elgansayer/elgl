@@ -1,5 +1,10 @@
 export type LanguageLevel =
-  'Beginner' | 'Elementary' | 'Intermediate' | 'Upper Intermediate' | 'Advanced' | 'Native';
+  | 'Beginner'
+  | 'Elementary'
+  | 'Intermediate'
+  | 'Upper Intermediate'
+  | 'Advanced'
+  | 'Native';
 export type JLPTLevel = 'N5' | 'N4' | 'N3' | 'N2' | 'N1' | 'None';
 
 export interface AccountSettings {

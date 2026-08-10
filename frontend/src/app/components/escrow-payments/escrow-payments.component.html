@@ -25,9 +25,7 @@
   }
 
   <!-- Header -->
-  <div
-    class="flex items-center gap-3 ps-3 pe-3 sm:ps-4 sm:pe-4 py-3 sm:py-4"
-  >
+  <div class="flex items-center gap-3 ps-3 pe-3 sm:ps-4 sm:pe-4 py-3 sm:py-4">
     <button
       (click)="goBack()"
       class="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
@@ -49,9 +47,7 @@
   </div>
 
   <!-- Status filter pills -->
-  <div
-    class="ps-3 pe-3 sm:ps-4 sm:pe-4 pb-3 flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide"
-  >
+  <div class="ps-3 pe-3 sm:ps-4 sm:pe-4 pb-3 flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
     @for (filter of statusFilters; track filter.value) {
       <button
         (click)="setStatusFilter(filter.value)"
@@ -70,7 +66,10 @@
   <!-- Content area -->
   @if (loading()) {
     <div class="flex items-center justify-center py-20">
-      <div class="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" role="status">
+      <div
+        class="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"
+        role="status"
+      >
         <span class="sr-only">{{ 'common.loading' | t }}</span>
       </div>
     </div>
@@ -80,9 +79,7 @@
       <p class="text-slate-400 text-base sm:text-lg">{{ 'escrow.emptyState' | t }}</p>
     </div>
   } @else {
-    <div
-      class="ps-3 pe-3 sm:ps-4 sm:pe-4 space-y-3 pb-8"
-    >
+    <div class="ps-3 pe-3 sm:ps-4 sm:pe-4 space-y-3 pb-8">
       @for (escrow of escrows(); track escrow.id) {
         <div
           class="bg-slate-800/60 rounded-2xl p-3 sm:p-4 border border-slate-700/50 hover:border-slate-600/50 transition-colors"
@@ -92,7 +89,7 @@
               class="ps-2.5 pe-2.5 sm:ps-3 sm:pe-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold capitalize"
               [class]="statusBadgeClass(escrow.status)"
             >
-              {{ ('escrow.status.' + escrow.status) | t }}
+              {{ 'escrow.status.' + escrow.status | t }}
             </span>
             <span class="text-purple-400 font-bold text-base sm:text-lg">
               🪙 {{ escrow.amount }}
@@ -101,7 +98,9 @@
 
           <p class="text-slate-200 text-sm mb-2">{{ escrow.description }}</p>
 
-          <div class="flex flex-wrap items-center gap-x-1.5 sm:gap-x-2 gap-y-0.5 text-[11px] sm:text-xs text-slate-500 mb-3">
+          <div
+            class="flex flex-wrap items-center gap-x-1.5 sm:gap-x-2 gap-y-0.5 text-[11px] sm:text-xs text-slate-500 mb-3"
+          >
             <span>{{ escrow.service_type }}</span>
             <span aria-hidden="true">•</span>
             <span>{{ escrow.created_at | date: 'mediumDate' }}</span>

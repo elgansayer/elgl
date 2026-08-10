@@ -103,9 +103,13 @@ describe('VideoClassroomErrorHandlerService', () => {
 
   it('wrapClassroomCall should report crash and return null on non-429 error', async () => {
     const testError = new Error('API unreachable');
-    const result = await service.wrapClassroomCall('fetchRooms', async () => {
-      throw testError;
-    }, { roomId: 'room-abc' });
+    const result = await service.wrapClassroomCall(
+      'fetchRooms',
+      async () => {
+        throw testError;
+      },
+      { roomId: 'room-abc' },
+    );
 
     expect(result).toBeNull();
     expect(service.recentCrashes().length).toBe(1);

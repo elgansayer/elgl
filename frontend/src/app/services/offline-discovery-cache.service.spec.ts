@@ -8,8 +8,13 @@ import { NetworkStatusService } from './network-status.service';
 function syncReq(result?: unknown) {
   const r: Record<string, unknown> = { result: result ?? null, ['_onsuccess']: null };
   Object.defineProperty(r, 'onsuccess', {
-    get() { return r['_onsuccess']; },
-    set(f: () => void) { r['_onsuccess'] = f; if (f) f(); },
+    get() {
+      return r['_onsuccess'];
+    },
+    set(f: () => void) {
+      r['_onsuccess'] = f;
+      if (f) f();
+    },
   });
   return r;
 }
@@ -55,8 +60,14 @@ describe.skip('OfflineDiscoveryCacheService', () => {
       },
       get: (key: string) => syncReq(s.get(key) ?? null),
       getAll: () => syncReq(structuredClone([...s.values()])),
-      delete: (key: string) => { s.delete(key); return syncReq(); },
-      clear: () => { s.clear(); return syncReq(); },
+      delete: (key: string) => {
+        s.delete(key);
+        return syncReq();
+      },
+      clear: () => {
+        s.clear();
+        return syncReq();
+      },
     };
   }
 
@@ -110,7 +121,6 @@ describe.skip('OfflineDiscoveryCacheService', () => {
 
   describe.skip('partner caching', () => {
     it('should cache and retrieve a single partner', async () => {
-       
       await service.cachePartner(fakeProfile('p1') as any);
 
       const cached = await service.getCachedPartner('p1');
@@ -124,7 +134,6 @@ describe.skip('OfflineDiscoveryCacheService', () => {
     });
 
     it('should cache multiple partners at once', async () => {
-       
       await service.cachePartners([fakeProfile('a'), fakeProfile('b')] as any);
 
       const all = await service.getAllCachedPartners();
@@ -137,13 +146,11 @@ describe.skip('OfflineDiscoveryCacheService', () => {
     });
 
     it('should set cachedDataAvailable after caching', async () => {
-       
       await service.cachePartner(fakeProfile('p1') as any);
       expect(service.cachedDataAvailable()).toBe(true);
     });
 
     it('should return valid cached data for fresh partners', async () => {
-       
       await service.cachePartner(fakeProfile('fresh') as any);
 
       const all = await service.getAllCachedPartners();
@@ -154,8 +161,10 @@ describe.skip('OfflineDiscoveryCacheService', () => {
 
   describe.skip('search result caching', () => {
     it('should cache and retrieve search results by filter key', async () => {
-       
-      await service.cacheSearchResults('target_language=JA&radius_metres=50000', [fakeProfile('s1'), fakeProfile('s2')] as any);
+      await service.cacheSearchResults('target_language=JA&radius_metres=50000', [
+        fakeProfile('s1'),
+        fakeProfile('s2'),
+      ] as any);
 
       const cached = await service.getCachedSearchResults('target_language=JA&radius_metres=50000');
       expect(cached).toHaveLength(2);
@@ -185,7 +194,6 @@ describe.skip('OfflineDiscoveryCacheService', () => {
 
   describe.skip('clearAll', () => {
     it('should delete all cached data', async () => {
-       
       await service.cachePartner(fakeProfile('p1') as any);
       await service.clearAll();
 

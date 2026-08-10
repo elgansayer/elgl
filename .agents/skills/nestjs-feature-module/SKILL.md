@@ -72,6 +72,7 @@ backend/src/<feature>/
 
 name: nestjs-feature-module
 description: 'Scaffold a new NestJS backend feature module in backend/src (controller, service, DTOs, module wiring, Jest specs). Use when adding a new REST resource, API endpoint, background worker, or backend capability to the HelloTalk clone (e.g. a new "flashcards", "safety", "economy"-style module).'
+
 ---
 
 # NestJS Feature Module

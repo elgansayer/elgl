@@ -6,7 +6,8 @@
       (click)="join(roomInfo.value().roomId)"
       [disabled]="joinPending()"
       class="rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-8 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-     [attr.aria-label]="'join.joining' | t">
+      [attr.aria-label]="'join.joining' | t"
+    >
       @if (joinPending()) {
         {{ 'join.joining' | t }}
       } @else {
@@ -20,7 +21,11 @@
     <p class="text-slate-400">{{ 'join.loading' | t }}</p>
   } @else {
     <p class="text-red-400">{{ 'join.invalidLink' | t }}</p>
-    <a routerLink="/groups" class="mt-4 text-purple-400 underline" [attr.aria-label]="'join.backToGroups' | t">
+    <a
+      routerLink="/groups"
+      class="mt-4 text-purple-400 underline"
+      [attr.aria-label]="'join.backToGroups' | t"
+    >
       {{ 'join.backToGroups' | t }}
     </a>
   }

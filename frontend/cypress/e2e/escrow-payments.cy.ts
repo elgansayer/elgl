@@ -348,11 +348,11 @@ describe('Escrow Payments - View Escrow', () => {
       body: [],
     }).as('emptyIncoming');
 
-    cy.request({ method: 'GET', url: `${API_BASE}/outgoing`, failOnStatusCode: false }).then(
-      (r) => expect(r.body).to.deep.eq([]),
+    cy.request({ method: 'GET', url: `${API_BASE}/outgoing`, failOnStatusCode: false }).then((r) =>
+      expect(r.body).to.deep.eq([]),
     );
-    cy.request({ method: 'GET', url: `${API_BASE}/incoming`, failOnStatusCode: false }).then(
-      (r) => expect(r.body).to.deep.eq([]),
+    cy.request({ method: 'GET', url: `${API_BASE}/incoming`, failOnStatusCode: false }).then((r) =>
+      expect(r.body).to.deep.eq([]),
     );
   });
 });
@@ -717,7 +717,9 @@ describe('Escrow Payments - History & Filtering', () => {
   });
 
   it('should filter escrows by multiple statuses', () => {
-    const filtered = historyEscrows.filter((e) => e.status === 'released' || e.status === 'refunded');
+    const filtered = historyEscrows.filter(
+      (e) => e.status === 'released' || e.status === 'refunded',
+    );
 
     cy.intercept('GET', `${API_BASE}/history?status=released&status=refunded`, {
       statusCode: 200,

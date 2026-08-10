@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: write
       issues: read
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -36,10 +36,10 @@ jobs:
           # It generates the markdown files directly.
           python3 build_granular_wiki.py
           python3 generate_wiki.py
-          
+
           # We update README features list automatically (if the script does it)
           # Alternatively, ensure the script writes to the wiki-repo folder
-          
+
           # Move all generated files to the wiki repo
           cp -r /home/runner/work/hellotalk/hellotalk/wiki/* wiki-repo/ || true
           cp /home/runner/work/hellotalk/hellotalk/Exhaustive-Minute-Feature-List.md wiki-repo/ || true

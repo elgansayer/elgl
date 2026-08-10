@@ -56,12 +56,20 @@ export class VideoClassroomOnboardingService {
 
   /** Marketplace-only steps (used on the listing page). */
   get marketplaceStepNames(): string[] {
-    return ['videoClassroomStepMarketplace', 'videoClassroomStepFilters', 'videoClassroomStepRoomCard'];
+    return [
+      'videoClassroomStepMarketplace',
+      'videoClassroomStepFilters',
+      'videoClassroomStepRoomCard',
+    ];
   }
 
   /** Room-only steps (used inside an active video room). */
   get roomStepNames(): string[] {
-    return ['videoClassroomStepHostVideo', 'videoClassroomStepCoHost', 'videoClassroomStepInviteCoHost'];
+    return [
+      'videoClassroomStepHostVideo',
+      'videoClassroomStepCoHost',
+      'videoClassroomStepInviteCoHost',
+    ];
   }
 
   startMarketplaceTour(): void {

@@ -6,7 +6,12 @@ export interface Subscription {
   user_id: string;
   product_id: string;
   status:
-    'active' | 'canceled' | 'expired' | 'on_hold' | 'grace_period' | 'revoked';
+    | 'active'
+    | 'canceled'
+    | 'expired'
+    | 'on_hold'
+    | 'grace_period'
+    | 'revoked';
   auto_renew: boolean;
   renewal_product_id: string | null;
   purchase_token: string | null;

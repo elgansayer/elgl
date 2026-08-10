@@ -93,7 +93,8 @@ export class GooglePlayNotificationService {
       // Google Play Developer Notifications come as a Pub/Sub message wrapper
       const payloadRecord = payload as Record<string, unknown>;
       const message = payloadRecord?.message as
-        Record<string, unknown> | undefined;
+        | Record<string, unknown>
+        | undefined;
       if (!message) {
         this.logger.warn('Google notification missing message');
         return { received: true, status: 'ignored' };

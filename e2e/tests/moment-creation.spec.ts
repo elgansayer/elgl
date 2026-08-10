@@ -63,7 +63,9 @@ test.describe('HelloTalk Moment Creation E2E', () => {
       const textarea = page.locator('textarea');
       if (await textarea.isVisible().catch(() => false)) {
         await textarea.fill('This is my test moment! Can anyone correct my English?');
-        await expect(textarea).toHaveValue('This is my test moment! Can anyone correct my English?');
+        await expect(textarea).toHaveValue(
+          'This is my test moment! Can anyone correct my English?',
+        );
       }
     });
 

@@ -8,11 +8,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-coins-success',
   imports: [TranslatePipe],
   template: `
-    <div
-      class="min-h-screen bg-[#121212] flex items-center justify-center px-4"
-    >
+    <div class="min-h-screen bg-[#121212] flex items-center justify-center px-4">
       <div class="text-center max-w-md w-full">
-        <div class="text-5xl sm:text-6xl mb-6" aria-hidden="true">{{ status() === 'failed' ? '😕' : '🎉' }}</div>
+        <div class="text-5xl sm:text-6xl mb-6" aria-hidden="true">
+          {{ status() === 'failed' ? '😕' : '🎉' }}
+        </div>
         <h1 class="text-2xl sm:text-3xl font-bold text-white mb-4">
           {{ (status() === 'failed' ? 'coinsSuccess.failureTitle' : 'coinsSuccess.title') | t }}
         </h1>

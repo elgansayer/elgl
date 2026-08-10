@@ -13,7 +13,8 @@ describe.skip('VocabularyDisplayComponent', () => {
   const mockFlashcardService = { createFlashcard: mockCreateFlashcard };
   const mockI18n = {
     translate: vi.fn((key: string, params?: Record<string, string>) => {
-      if (key === 'vocabDisplay.contextSentence') return `Vocabulary from hobby: ${params?.['tag'] ?? ''}`;
+      if (key === 'vocabDisplay.contextSentence')
+        return `Vocabulary from hobby: ${params?.['tag'] ?? ''}`;
       if (key === 'vocabDisplay.addSuccess') return 'Added to flashcards successfully';
       if (key === 'vocabDisplay.addError') return 'Failed to add to flashcards';
       return key;
@@ -28,7 +29,9 @@ describe.skip('VocabularyDisplayComponent', () => {
     vi.clearAllMocks();
     const mockStore = {
       loading: signal(false),
-      vocabularyByTag: signal(new Map([['tag1', [{ word: 'test', translation: 'prueba', hobbyTagName: 'tag1' }]]])),
+      vocabularyByTag: signal(
+        new Map([['tag1', [{ word: 'test', translation: 'prueba', hobbyTagName: 'tag1' }]]]),
+      ),
       allTags: signal([]),
       loadVocabulary: vi.fn(),
     };

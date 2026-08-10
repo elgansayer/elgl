@@ -30,9 +30,7 @@ export class LessonService {
   }
 
   async listLessons(): Promise<Lesson[]> {
-    return firstValueFrom(
-      this.http.get<Lesson[]>(this.baseUrl, { headers: this.getHeaders() }),
-    );
+    return firstValueFrom(this.http.get<Lesson[]>(this.baseUrl, { headers: this.getHeaders() }));
   }
 
   async getLesson(id: string): Promise<Lesson> {
@@ -54,9 +52,7 @@ export class LessonService {
   }
 
   async deleteLesson(id: string): Promise<void> {
-    await firstValueFrom(
-      this.http.delete(`${this.baseUrl}/${id}`, { headers: this.getHeaders() }),
-    );
+    await firstValueFrom(this.http.delete(`${this.baseUrl}/${id}`, { headers: this.getHeaders() }));
   }
 
   async uploadFile(file: File): Promise<string> {

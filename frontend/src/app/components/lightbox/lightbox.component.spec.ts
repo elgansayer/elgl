@@ -14,7 +14,8 @@ describe('LightboxComponent', () => {
       if (key === 'lightbox.close') return 'Close lightbox';
       if (key === 'lightbox.prev') return 'Previous image';
       if (key === 'lightbox.next') return 'Next image';
-      if (key === 'lightbox.imageAlt') return `Image ${params?.['current']} of ${params?.['total']}`;
+      if (key === 'lightbox.imageAlt')
+        return `Image ${params?.['current']} of ${params?.['total']}`;
       if (key === 'lightbox.indicator') return `Go to image ${params?.['current']}`;
       return key;
     }),

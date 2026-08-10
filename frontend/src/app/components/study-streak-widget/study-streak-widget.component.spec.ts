@@ -56,16 +56,14 @@ describe('StudyStreakWidgetComponent', () => {
   });
 
   it('triggers checkin when the button is clicked', () => {
-    const button: HTMLButtonElement =
-      fixture.nativeElement.querySelector('button');
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
     expect(button).toBeTruthy();
     button.click();
     expect(mockStreakService.checkin).toHaveBeenCalled();
   });
 
   it('updates the streak value after checkin', async () => {
-    const button: HTMLButtonElement =
-      fixture.nativeElement.querySelector('button');
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
     button.click();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -77,8 +75,7 @@ describe('StudyStreakWidgetComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const streakElement: HTMLElement | null =
-      fixture.nativeElement.querySelector('.streak-value');
+    const streakElement: HTMLElement | null = fixture.nativeElement.querySelector('.streak-value');
     expect(streakElement).toBeTruthy();
     expect(streakElement!.textContent).toContain('5');
   });

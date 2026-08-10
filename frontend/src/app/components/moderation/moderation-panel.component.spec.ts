@@ -83,7 +83,10 @@ describe.skip('ModerationPanelComponent', () => {
   });
 
   it('renders a card for each moderation item', async () => {
-    getItemsSpy.mockResolvedValue([moderationItem({ id: 'item-1' }), moderationItem({ id: 'item-2' })]);
+    getItemsSpy.mockResolvedValue([
+      moderationItem({ id: 'item-1' }),
+      moderationItem({ id: 'item-2' }),
+    ]);
     fixture = await createComponent();
 
     const cards = fixture.nativeElement.querySelectorAll('.border-slate-700');
@@ -128,7 +131,9 @@ describe.skip('ModerationPanelComponent', () => {
   });
 
   it('calls getUserRiskAnalysis with the reported user id when analyse is clicked', async () => {
-    getItemsSpy.mockResolvedValue([moderationItem({ reported_user: { id: 'user-9', name: 'Someone' } })]);
+    getItemsSpy.mockResolvedValue([
+      moderationItem({ reported_user: { id: 'user-9', name: 'Someone' } }),
+    ]);
     fixture = await createComponent();
 
     const analyseButton = fixture.nativeElement.querySelector('button.bg-yellow-600');

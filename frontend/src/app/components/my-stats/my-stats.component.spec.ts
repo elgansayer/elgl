@@ -70,10 +70,9 @@ describe('MyStatsComponent', () => {
     });
     fixture.detectChanges();
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:3000/api/stats/me',
-      { headers: { Authorization: 'Bearer mock-access-token' } },
-    );
+    expect(mockFetch).toHaveBeenCalledWith('http://localhost:3000/api/stats/me', {
+      headers: { Authorization: 'Bearer mock-access-token' },
+    });
   });
 
   it('should render stats summary cards once loaded', async () => {

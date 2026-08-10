@@ -112,7 +112,11 @@ function createMockRooms(): AudioRoomRecord[] {
       language_pair: 'ja-en',
       topic_tag: 'beginner',
       host_id: 'host-user-2',
-      host: { id: 'host-user-2', display_name: 'Yuki T.', avatar_url: 'https://i.pravatar.cc/150?u=host-2' },
+      host: {
+        id: 'host-user-2',
+        display_name: 'Yuki T.',
+        avatar_url: 'https://i.pravatar.cc/150?u=host-2',
+      },
       is_video_stream: true,
       co_host_id: 'cohost-1',
       speakers: ['host-user-2', 'cohost-1'],
@@ -125,7 +129,11 @@ function createMockRooms(): AudioRoomRecord[] {
       language_pair: 'fr-en',
       topic_tag: 'intermediate',
       host_id: 'host-user-3',
-      host: { id: 'host-user-3', display_name: 'Sophie D.', avatar_url: 'https://i.pravatar.cc/150?u=host-3' },
+      host: {
+        id: 'host-user-3',
+        display_name: 'Sophie D.',
+        avatar_url: 'https://i.pravatar.cc/150?u=host-3',
+      },
       is_video_stream: true,
       listeners_count: 42,
     }),
@@ -136,7 +144,11 @@ function createMockRooms(): AudioRoomRecord[] {
       language_pair: 'ko-en',
       topic_tag: 'culture',
       host_id: 'host-user-4',
-      host: { id: 'host-user-4', display_name: 'Min-ji P.', avatar_url: 'https://i.pravatar.cc/150?u=host-4' },
+      host: {
+        id: 'host-user-4',
+        display_name: 'Min-ji P.',
+        avatar_url: 'https://i.pravatar.cc/150?u=host-4',
+      },
       listeners_count: 8,
     }),
   ];
@@ -587,9 +599,21 @@ describe('Video Classrooms - Stage Management', () => {
         },
         co_host_id: null,
         speakers: [
-          { user_id: 'host-user-1', display_name: 'Carlos M.', avatar_url: 'https://i.pravatar.cc/150?u=host-1' },
-          { user_id: 'speaker-2', display_name: 'Maria G.', avatar_url: 'https://i.pravatar.cc/150?u=speaker-2' },
-          { user_id: 'speaker-3', display_name: 'Kenji T.', avatar_url: 'https://i.pravatar.cc/150?u=speaker-3' },
+          {
+            user_id: 'host-user-1',
+            display_name: 'Carlos M.',
+            avatar_url: 'https://i.pravatar.cc/150?u=host-1',
+          },
+          {
+            user_id: 'speaker-2',
+            display_name: 'Maria G.',
+            avatar_url: 'https://i.pravatar.cc/150?u=speaker-2',
+          },
+          {
+            user_id: 'speaker-3',
+            display_name: 'Kenji T.',
+            avatar_url: 'https://i.pravatar.cc/150?u=speaker-3',
+          },
         ],
         raised_hands: testRoom.raised_hands,
         listeners_count: testRoom.listeners_count,

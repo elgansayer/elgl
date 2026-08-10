@@ -173,10 +173,11 @@ export class VoiceroomCreateModalComponent {
   topicTag = signal<string>('Free Talk');
   isVideoStream = signal<boolean>(false);
 
-  readonly isValid = computed(() =>
-    this.title().trim().length > 0
-    && this.languagePair().length > 0
-    && this.topicTag().length > 0,
+  readonly isValid = computed(
+    () =>
+      this.title().trim().length > 0 &&
+      this.languagePair().length > 0 &&
+      this.topicTag().length > 0,
   );
 
   closeModal(): void {

@@ -14,8 +14,6 @@ export class VersionService {
   private http = inject(HttpClient);
 
   getVersion(): Observable<VersionInfo> {
-    return this.http.get<VersionInfo>(
-      `${environment.apiUrl}/version`,
-    );
+    return this.http.get<VersionInfo>(`${environment.apiUrl}/version`);
   }
 }

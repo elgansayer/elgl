@@ -1,7 +1,13 @@
 <!-- Loading State -->
 @if (loading() && !hasResult()) {
-  <div class="flex flex-col items-center justify-center p-12" role="status" aria-label="{{ 'diagnosticQuiz.loading' | t }}">
-    <div class="w-12 h-12 border-4 border-purple-500/30 border-t-purple-400 rounded-full animate-spin mb-4"></div>
+  <div
+    class="flex flex-col items-center justify-center p-12"
+    role="status"
+    aria-label="{{ 'diagnosticQuiz.loading' | t }}"
+  >
+    <div
+      class="w-12 h-12 border-4 border-purple-500/30 border-t-purple-400 rounded-full animate-spin mb-4"
+    ></div>
     <p class="text-purple-300/70 text-sm">{{ 'diagnosticQuiz.loading' | t }}</p>
   </div>
 }
@@ -10,7 +16,9 @@
 @if (error() && !hasResult()) {
   <div class="text-center p-12" role="alert">
     <span class="text-5xl block mb-4">&#x26A0;&#xFE0F;</span>
-    <h3 class="text-xl font-semibold text-purple-200 mb-2">{{ 'diagnosticQuiz.errorTitle' | t }}</h3>
+    <h3 class="text-xl font-semibold text-purple-200 mb-2">
+      {{ 'diagnosticQuiz.errorTitle' | t }}
+    </h3>
     <p class="text-purple-300/60 text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
     <button
       type="button"
@@ -36,14 +44,26 @@
           {{ 'diagnosticQuiz.title' | t }}
         </h2>
         <span class="text-sm text-purple-300/50 bg-purple-500/10 px-3 py-1 rounded-full text-end">
-          {{ 'diagnosticQuiz.questionCounter' | t: { current: currentQuestionNumber(), total: totalQuestions() } }}
+          {{
+            'diagnosticQuiz.questionCounter'
+              | t: { current: currentQuestionNumber(), total: totalQuestions() }
+          }}
         </span>
       </div>
-      <div class="w-full bg-[#0f0f23] rounded-full h-2 overflow-hidden" role="progressbar" [attr.aria-valuenow]="progressPercentage()" aria-valuemin="0" aria-valuemax="100">
+      <div
+        class="w-full bg-[#0f0f23] rounded-full h-2 overflow-hidden"
+        role="progressbar"
+        [attr.aria-valuenow]="progressPercentage()"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
         <div
           class="h-2 rounded-full transition-all duration-500 ease-out"
           [style.width.%]="progressPercentage()"
-          style="background: linear-gradient(90deg, #a855f7, #ec4899); box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);"
+          style="
+            background: linear-gradient(90deg, #a855f7, #ec4899);
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+          "
         ></div>
       </div>
     </div>
@@ -67,8 +87,14 @@
               [class.shadow-lg]="isSelected"
               [class.shadow-purple-500/20]="isSelected"
               [attr.aria-pressed]="isSelected"
-              [attr.aria-label]="'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }"
-              [style.background]="isSelected ? 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.1))' : 'rgba(15,15,35,0.6)'"
+              [attr.aria-label]="
+                'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }
+              "
+              [style.background]="
+                isSelected
+                  ? 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.1))'
+                  : 'rgba(15,15,35,0.6)'
+              "
             >
               <span class="text-sm text-white font-medium">
                 {{ option.text }}
@@ -80,7 +106,9 @@
     </div>
 
     <!-- Navigation Actions -->
-    <div class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-[#0f0f23]/60 border-t border-purple-500/10">
+    <div
+      class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-[#0f0f23]/60 border-t border-purple-500/10"
+    >
       <button
         type="button"
         (click)="previous()"
@@ -96,11 +124,16 @@
           (click)="next()"
           [disabled]="!canProceed() || isSubmitting()"
           class="px-8 py-3 text-sm font-bold text-white rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a2e]"
-          style="background: linear-gradient(135deg, #a855f7, #ec4899); box-shadow: 0 4px 24px rgba(168, 85, 247, 0.3);"
-          [style.opacity]="(!canProceed() || isSubmitting()) ? '0.5' : '1'"
+          style="
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            box-shadow: 0 4px 24px rgba(168, 85, 247, 0.3);
+          "
+          [style.opacity]="!canProceed() || isSubmitting() ? '0.5' : '1'"
         >
           @if (isSubmitting()) {
-            <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin me-2 align-middle"></span>
+            <span
+              class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin me-2 align-middle"
+            ></span>
           }
           {{ 'diagnosticQuiz.submit' | t }}
         </button>
@@ -120,15 +153,26 @@
 
 <!-- Results Screen -->
 @if (hasResult()) {
-  <div class="w-full max-w-3xl mx-auto bg-[#1a1a2e] rounded-[2rem] border border-purple-500/20 overflow-hidden" role="region" aria-label="{{ 'diagnosticQuiz.resultTitle' | t }}">
+  <div
+    class="w-full max-w-3xl mx-auto bg-[#1a1a2e] rounded-[2rem] border border-purple-500/20 overflow-hidden"
+    role="region"
+    aria-label="{{ 'diagnosticQuiz.resultTitle' | t }}"
+  >
     <div class="text-center p-8">
-      <div class="inline-flex items-center justify-center w-24 h-24 rounded-full mb-4"
-        [class]="cefrColour() + ' border-2'">
+      <div
+        class="inline-flex items-center justify-center w-24 h-24 rounded-full mb-4"
+        [class]="cefrColour() + ' border-2'"
+      >
         <span class="text-3xl font-extrabold">{{ finalResult()?.suggestedLevel }}</span>
       </div>
-      <h2 class="text-2xl font-bold text-purple-100 mb-2">{{ 'diagnosticQuiz.resultTitle' | t }}</h2>
+      <h2 class="text-2xl font-bold text-purple-100 mb-2">
+        {{ 'diagnosticQuiz.resultTitle' | t }}
+      </h2>
       <p class="text-sm text-purple-300/60 mb-4">
-        {{ 'diagnosticQuiz.scoreLabel' | t: { score: finalResult()?.score ?? 0, maxScore: finalResult()?.maxScore ?? 0 } }}
+        {{
+          'diagnosticQuiz.scoreLabel'
+            | t: { score: finalResult()?.score ?? 0, maxScore: finalResult()?.maxScore ?? 0 }
+        }}
       </p>
       <p class="text-sm text-purple-300/80 mb-8">
         {{ 'diagnosticQuiz.levelLabel' | t: { level: finalResult()?.suggestedLevel ?? 'A1' } }}
@@ -137,7 +181,10 @@
         type="button"
         (click)="continueAfterResult()"
         class="px-8 py-3 text-sm font-bold text-white rounded-xl transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
-        style="background: linear-gradient(135deg, #a855f7, #ec4899); box-shadow: 0 4px 24px rgba(168, 85, 247, 0.3);"
+        style="
+          background: linear-gradient(135deg, #a855f7, #ec4899);
+          box-shadow: 0 4px 24px rgba(168, 85, 247, 0.3);
+        "
       >
         {{ 'diagnosticQuiz.resultContinue' | t }}
       </button>

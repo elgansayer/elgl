@@ -135,29 +135,35 @@ export class EconomyStore {
       // Load each independently so one failure does not block the others
       const loadCatalog = firstValueFrom(
         this.http.get<VirtualGift[]>(`${this.baseUrl}/catalog`, { headers: this.getHeaders() }),
-      ).then((cat) => {
-        this.catalog.set(cat);
-        this.offlineEconomy.cacheCatalog(cat);
-      }).catch((e) => {
-        console.error('Error loading catalog:', e);
-      });
+      )
+        .then((cat) => {
+          this.catalog.set(cat);
+          this.offlineEconomy.cacheCatalog(cat);
+        })
+        .catch((e) => {
+          console.error('Error loading catalog:', e);
+        });
 
       const loadBalance = firstValueFrom(
         this.http.get<{ coins_balance: number }>(`${this.baseUrl}/balance`, {
           headers: this.getHeaders(),
         }),
-      ).then((bal) => {
-        this.coinsBalance.set(bal.coins_balance);
-        this.offlineEconomy.cacheBalance(bal.coins_balance);
-      }).catch((e) => {
-        console.error('Error loading balance:', e);
-      });
+      )
+        .then((bal) => {
+          this.coinsBalance.set(bal.coins_balance);
+          this.offlineEconomy.cacheBalance(bal.coins_balance);
+        })
+        .catch((e) => {
+          console.error('Error loading balance:', e);
+        });
 
       const loadBlocked = firstValueFrom(
         this.http.get<string[]>(`${this.safetyUrl}/blocked-ids`, { headers: this.getHeaders() }),
-      ).then((blocked) => this.blockedUserIds.set(new Set(blocked))).catch((e) => {
-        console.error('Error loading blocked users:', e);
-      });
+      )
+        .then((blocked) => this.blockedUserIds.set(new Set(blocked)))
+        .catch((e) => {
+          console.error('Error loading blocked users:', e);
+        });
 
       const loadTransactions = this.loadTransactionHistory().catch((e) => {
         console.error('Error loading transactions:', e);
@@ -167,7 +173,13 @@ export class EconomyStore {
         console.error('Error loading sticker packs:', e);
       });
 
-      await Promise.allSettled([loadCatalog, loadBalance, loadBlocked, loadTransactions, loadPacks]);
+      await Promise.allSettled([
+        loadCatalog,
+        loadBalance,
+        loadBlocked,
+        loadTransactions,
+        loadPacks,
+      ]);
     } catch (e) {
       console.error('Error loading economy/safety data:', e);
       await this.hydrateFromOfflineCache();
@@ -194,15 +206,32 @@ export class EconomyStore {
     }
   }
 
-
   private getDefaultCatalog(): VirtualGift[] {
     return [
       { id: 'gift_rose', name: 'Rose', icon: '🌹', cost_coins: 10, animation_type: 'float' },
       { id: 'gift_heart', name: 'Heart', icon: '❤️', cost_coins: 20, animation_type: 'hearts' },
-      { id: 'gift_confetti', name: 'Confetti Burst', icon: '🎉', cost_coins: 30, animation_type: 'confetti' },
-      { id: 'gift_sparkle', name: 'Sparkle', icon: '✨', cost_coins: 50, animation_type: 'sparkle' },
+      {
+        id: 'gift_confetti',
+        name: 'Confetti Burst',
+        icon: '🎉',
+        cost_coins: 30,
+        animation_type: 'confetti',
+      },
+      {
+        id: 'gift_sparkle',
+        name: 'Sparkle',
+        icon: '✨',
+        cost_coins: 50,
+        animation_type: 'sparkle',
+      },
       { id: 'gift_crown', name: 'Crown', icon: '👑', cost_coins: 100, animation_type: 'premium' },
-      { id: 'gift_diamond', name: 'Diamond', icon: '💎', cost_coins: 200, animation_type: 'premium' },
+      {
+        id: 'gift_diamond',
+        name: 'Diamond',
+        icon: '💎',
+        cost_coins: 200,
+        animation_type: 'premium',
+      },
     ];
   }
 

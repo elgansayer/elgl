@@ -32,9 +32,7 @@ export class OfflineDiscoveryCacheService {
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
       this.initPromise = this.initDB();
-      this.initPromise
-        .then(() => this.refreshAvailability())
-        .catch(() => undefined);
+      this.initPromise.then(() => this.refreshAvailability()).catch(() => undefined);
     }
   }
 
@@ -176,10 +174,7 @@ export class OfflineDiscoveryCacheService {
 
   // --- Search-result caching (whole result sets for filter combinations) ---
 
-  async cacheSearchResults(
-    filtersKey: string,
-    partners: UserProfile[],
-  ): Promise<void> {
+  async cacheSearchResults(filtersKey: string, partners: UserProfile[]): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
     const entry: CacheEntry<UserProfile[]> = {
@@ -198,9 +193,7 @@ export class OfflineDiscoveryCacheService {
     });
   }
 
-  async getCachedSearchResults(
-    filtersKey: string,
-  ): Promise<UserProfile[] | null> {
+  async getCachedSearchResults(filtersKey: string): Promise<UserProfile[] | null> {
     if (!this.isAvailable()) return null;
     const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
@@ -272,7 +265,7 @@ export class OfflineDiscoveryCacheService {
       req.onsuccess = () => {
         const cursor = req.result;
         if (!cursor) return;
-        const entry = cursor.value as (UserProfile & { _cachedAt?: number });
+        const entry = cursor.value as UserProfile & { _cachedAt?: number };
         if (entry._cachedAt && entry._cachedAt < cutoff) {
           void cursor.delete();
         }

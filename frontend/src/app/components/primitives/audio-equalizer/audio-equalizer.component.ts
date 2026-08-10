@@ -7,10 +7,7 @@ import { Component, input, computed } from '@angular/core';
     '[class]': 'customClass()',
   },
   template: `
-    <div
-      class="flex items-end justify-center gap-0.5 h-5"
-      [class.opacity-40]="!isActive()"
-    >
+    <div class="flex items-end justify-center gap-0.5 h-5" [class.opacity-40]="!isActive()">
       @for (bar of bars(); track $index) {
         <div
           class="w-1 rounded-t-sm bg-current"
@@ -27,7 +24,8 @@ import { Component, input, computed } from '@angular/core';
         display: inline-flex;
       }
       @keyframes eq {
-        0%, 100% {
+        0%,
+        100% {
           height: 20%;
         }
         50% {

@@ -20,12 +20,7 @@
     },
     "git": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-git",
-        "--repository",
-        "/home/dev/hellotalk"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "/home/dev/hellotalk"]
     },
     "flyonui": {
       "command": "npx",

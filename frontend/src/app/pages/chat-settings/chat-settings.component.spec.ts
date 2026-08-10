@@ -38,9 +38,7 @@ describe.skip('ChatSettingsComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [ChatSettingsComponent],
-      providers: [
-        { provide: ChatSettingsService, useValue: mockService },
-      ],
+      providers: [{ provide: ChatSettingsService, useValue: mockService }],
     })
       .overrideComponent(ChatSettingsComponent, {
         set: { imports: [MockTranslatePipe] },

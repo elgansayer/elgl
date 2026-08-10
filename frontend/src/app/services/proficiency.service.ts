@@ -19,13 +19,7 @@ export interface AssessmentResult {
   testedAt: string;
 }
 
-export type ProficiencyLevel =
-  | 'A1'
-  | 'A2'
-  | 'B1'
-  | 'B2'
-  | 'C1'
-  | 'C2';
+export type ProficiencyLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 export function isProficiencyLevel(value: string): value is ProficiencyLevel {
   switch (value) {
@@ -59,18 +53,10 @@ export class ProficiencyService {
   private http = inject(HttpClient);
 
   assess(dto: AssessmentResultDto) {
-    return this.http.post<AssessmentResult>(
-      `${environment.apiUrl}/proficiency/assess`,
-      dto,
-    );
+    return this.http.post<AssessmentResult>(`${environment.apiUrl}/proficiency/assess`, dto);
   }
 
-  setLanguagePreferences(
-    dto: LanguageSelectionDto,
-  ): Observable<{ success: boolean }> {
-    return this.http.post<{ success: boolean }>(
-      `${environment.apiUrl}/proficiency/languages`,
-      dto,
-    );
+  setLanguagePreferences(dto: LanguageSelectionDto): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(`${environment.apiUrl}/proficiency/languages`, dto);
   }
 }

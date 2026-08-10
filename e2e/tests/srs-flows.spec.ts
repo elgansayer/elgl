@@ -35,16 +35,22 @@ test.describe('SRS - Flashcard Deck Management', () => {
     await page.goto('/decks');
     await page.waitForTimeout(3000);
 
-    const createBtn = page.locator('button').filter({ hasText: /Create|deck\.createBtn/i }).first();
+    const createBtn = page
+      .locator('button')
+      .filter({ hasText: /Create|deck\.createBtn/i })
+      .first();
 
     // Click to open create form
     await createBtn.click();
     await page.waitForTimeout(500);
 
     // Form should appear with name and description inputs
-    const nameInput = page.locator('input').filter({
-      has: page.locator('[placeholder*="Name" i]'),
-    }).first();
+    const nameInput = page
+      .locator('input')
+      .filter({
+        has: page.locator('[placeholder*="Name" i]'),
+      })
+      .first();
     const nameVisible = await nameInput.isVisible().catch(() => false);
 
     // Check for inputs by their labels instead
@@ -61,7 +67,10 @@ test.describe('SRS - Flashcard Deck Management', () => {
     await page.waitForTimeout(3000);
 
     // Open create form
-    const createBtn = page.locator('button').filter({ hasText: /Create|deck\.createBtn/i }).first();
+    const createBtn = page
+      .locator('button')
+      .filter({ hasText: /Create|deck\.createBtn/i })
+      .first();
     await createBtn.click();
     await page.waitForTimeout(500);
 
@@ -101,7 +110,10 @@ test.describe('SRS - Flashcard Deck Management', () => {
     await page.goto('/decks');
     await page.waitForTimeout(3000);
 
-    const createBtn = page.locator('button').filter({ hasText: /Create|deck\.createBtn/i }).first();
+    const createBtn = page
+      .locator('button')
+      .filter({ hasText: /Create|deck\.createBtn/i })
+      .first();
     await createBtn.click();
     await page.waitForTimeout(500);
 
@@ -149,7 +161,10 @@ test.describe('SRS - Flashcard Deck Management', () => {
     await page.goto('/decks');
     await page.waitForTimeout(3000);
 
-    const createBtn = page.locator('button').filter({ hasText: /Create|deck\.createBtn/i }).first();
+    const createBtn = page
+      .locator('button')
+      .filter({ hasText: /Create|deck\.createBtn/i })
+      .first();
 
     // Toggle rapidly multiple times
     await createBtn.click();
@@ -199,7 +214,10 @@ test.describe('SRS - Deck Detail View', () => {
       await deckCards.first().click();
       await page.waitForTimeout(1500);
 
-      const editBtn = page.locator('button').filter({ hasText: /Edit|deck\.editBtn/i }).first();
+      const editBtn = page
+        .locator('button')
+        .filter({ hasText: /Edit|deck\.editBtn/i })
+        .first();
       if (await editBtn.isVisible().catch(() => false)) {
         await editBtn.click();
         await page.waitForTimeout(500);
@@ -248,7 +266,9 @@ test.describe('SRS - Deck Detail View', () => {
       await page.waitForTimeout(300);
 
       // Delete button should appear on hover
-      const deleteBtn = page.locator('button[aria-label*="Delete" i], button[aria-label*="delete" i]');
+      const deleteBtn = page.locator(
+        'button[aria-label*="Delete" i], button[aria-label*="delete" i]',
+      );
       const deleteVisible = await deleteBtn.isVisible().catch(() => false);
 
       if (deleteVisible) {
@@ -347,9 +367,7 @@ test.describe('SRS - Flashcard Review Flow', () => {
       await page.waitForTimeout(800);
 
       // Card should be flipped
-      const isFlipped = await cardElement.evaluate((el) =>
-        el.classList.contains('is-flipped'),
-      );
+      const isFlipped = await cardElement.evaluate((el) => el.classList.contains('is-flipped'));
       expect(isFlipped).toBeTruthy();
     }
   });
@@ -366,9 +384,7 @@ test.describe('SRS - Flashcard Review Flow', () => {
       await page.keyboard.press('Space');
       await page.waitForTimeout(800);
 
-      const isFlipped = await cardElement.evaluate((el) =>
-        el.classList.contains('is-flipped'),
-      );
+      const isFlipped = await cardElement.evaluate((el) => el.classList.contains('is-flipped'));
       expect(isFlipped).toBeTruthy();
     }
   });
@@ -408,7 +424,11 @@ test.describe('SRS - Flashcard Review Flow', () => {
 
     if (hasCard) {
       // Get current card text
-      const currentWord = await cardElement.locator('h3').first().textContent().catch(() => '');
+      const currentWord = await cardElement
+        .locator('h3')
+        .first()
+        .textContent()
+        .catch(() => '');
 
       // Flip the card
       await cardElement.click();
@@ -515,7 +535,9 @@ test.describe('SRS - Navigation & Routing', () => {
       await page.waitForTimeout(1500);
 
       // Start Review button may be visible
-      const reviewBtn = page.locator('button').filter({ hasText: /Start Review|deck\.startReview/i });
+      const reviewBtn = page
+        .locator('button')
+        .filter({ hasText: /Start Review|deck\.startReview/i });
       const reviewVisible = await reviewBtn.isVisible().catch(() => false);
 
       if (reviewVisible) {
@@ -541,7 +563,10 @@ test.describe('SRS - Navigation & Routing', () => {
       await page.waitForTimeout(1500);
 
       // Click back button
-      const backBtn = page.locator('button').filter({ hasText: /←|Back|deck\.backBtn/i }).first();
+      const backBtn = page
+        .locator('button')
+        .filter({ hasText: /←|Back|deck\.backBtn/i })
+        .first();
       if (await backBtn.isVisible().catch(() => false)) {
         await backBtn.click();
         await page.waitForTimeout(500);
@@ -590,7 +615,10 @@ test.describe('SRS - Error Handling & Edge Cases', () => {
       await page.waitForTimeout(1000);
 
       // Go back
-      const backBtn = page.locator('button').filter({ hasText: /←|Back|deck\.backBtn/i }).first();
+      const backBtn = page
+        .locator('button')
+        .filter({ hasText: /←|Back|deck\.backBtn/i })
+        .first();
       if (await backBtn.isVisible().catch(() => false)) {
         await backBtn.click();
         await page.waitForTimeout(500);
@@ -653,7 +681,10 @@ test.describe('SRS - Error Handling & Edge Cases', () => {
       if (btnCount > 0) {
         // Click all visible grade buttons quickly
         for (let i = 0; i < Math.min(btnCount, 3); i++) {
-          await buttons.nth(i).click().catch(() => undefined);
+          await buttons
+            .nth(i)
+            .click()
+            .catch(() => undefined);
           await page.waitForTimeout(100);
         }
       }
@@ -869,7 +900,11 @@ test.describe('SRS - Full Review Session Flow', () => {
     }
 
     // Step 1: Read the front of the card
-    const frontText = await cardElement.locator('h3').first().textContent().catch(() => '');
+    const frontText = await cardElement
+      .locator('h3')
+      .first()
+      .textContent()
+      .catch(() => '');
     expect(frontText).toBeTruthy();
 
     // Step 2: Flip the card
@@ -877,9 +912,7 @@ test.describe('SRS - Full Review Session Flow', () => {
     await page.waitForTimeout(800);
 
     // Step 3: Verify back is visible
-    const isFlipped = await cardElement.evaluate((el) =>
-      el.classList.contains('is-flipped'),
-    );
+    const isFlipped = await cardElement.evaluate((el) => el.classList.contains('is-flipped'));
     expect(isFlipped).toBeTruthy();
 
     // Step 4: Verify answer side has content

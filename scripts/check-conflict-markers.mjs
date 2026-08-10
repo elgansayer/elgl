@@ -1,9 +1,13 @@
 import { spawnSync } from 'node:child_process';
 
-const result = spawnSync('git', ['grep', '-n', '-E', '^(<<<<<<<|=======|>>>>>>>)', '--', ':!package-lock.json'], {
-  encoding: 'utf8',
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
+const result = spawnSync(
+  'git',
+  ['grep', '-n', '-E', '^(<<<<<<<|=======|>>>>>>>)', '--', ':!package-lock.json'],
+  {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  },
+);
 
 if (result.status === 0 && result.stdout.trim()) {
   process.stderr.write(`Conflict markers found:\n${result.stdout}`);

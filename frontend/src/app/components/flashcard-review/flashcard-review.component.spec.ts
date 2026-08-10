@@ -28,12 +28,18 @@ describe.skip('FlashcardReviewComponent', () => {
     TestBed.configureTestingModule({
       imports: [FlashcardReviewComponent],
       providers: [
-        { provide: I18nService, useValue: { translate: (k: string, params?: Record<string, unknown>) => {
-          if (params && 'current' in params) return `Card ${params['current']} of ${params['total']}`;
-          if (params && 'percent' in params) return `${params['percent']}% complete`;
-          if (params && 'word' in params) return `Flashcard: ${params['word']}`;
-          return k;
-        }}},
+        {
+          provide: I18nService,
+          useValue: {
+            translate: (k: string, params?: Record<string, unknown>) => {
+              if (params && 'current' in params)
+                return `Card ${params['current']} of ${params['total']}`;
+              if (params && 'percent' in params) return `${params['percent']}% complete`;
+              if (params && 'word' in params) return `Flashcard: ${params['word']}`;
+              return k;
+            },
+          },
+        },
         {
           provide: VocabularyStore,
           useValue: {
@@ -77,7 +83,7 @@ describe.skip('FlashcardReviewComponent', () => {
     fixture.componentRef.setInput('cards', MOCK_CARDS);
     fixture.detectChanges();
     // Flush async loadReviewData microtasks
-    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
     fixture.detectChanges();
 
     const progressBar = fixture.nativeElement.querySelector('[role="progressbar"]');

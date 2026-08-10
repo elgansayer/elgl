@@ -34,7 +34,8 @@ describe('AudioPlayerComponent', () => {
 
   const getAudioEl = () => fixture.nativeElement.querySelector('audio') as HTMLAudioElement;
   const getButton = () => fixture.nativeElement.querySelector('button') as HTMLButtonElement;
-  const getRange = () => fixture.nativeElement.querySelector('input[type="range"]') as HTMLInputElement;
+  const getRange = () =>
+    fixture.nativeElement.querySelector('input[type="range"]') as HTMLInputElement;
 
   it('should create', () => {
     expect(component).toBeTruthy();

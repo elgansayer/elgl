@@ -13,7 +13,10 @@ import { I18nService } from '../../services/i18n.service';
 describe.skip('ForgotPasswordComponent', () => {
   let component: ForgotPasswordComponent;
   let fixture: ComponentFixture<ForgotPasswordComponent>;
-  let authServiceMock: { requestPasswordReset: ReturnType<typeof vi.fn>; resetPassword: ReturnType<typeof vi.fn> };
+  let authServiceMock: {
+    requestPasswordReset: ReturnType<typeof vi.fn>;
+    resetPassword: ReturnType<typeof vi.fn>;
+  };
   let routerMock: { navigate: ReturnType<typeof vi.fn> };
   let i18nServiceMock: { translate: ReturnType<typeof vi.fn> };
   let queryParamMap: WritableSignal<Map<string, string>>;

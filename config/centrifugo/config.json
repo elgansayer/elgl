@@ -2,9 +2,7 @@
   "v3_use_offset": true,
   "token_hmac_secret_key": "secret-centrifugo-token-key-change-in-prod",
   "api_key": "secret-centrifugo-api-key-change-in-prod",
-  "allowed_origins": [
-    "*"
-  ],
+  "allowed_origins": ["*"],
   "engine": "redis",
   "redis_address": "redis://cache:6379",
   "prometheus": true,

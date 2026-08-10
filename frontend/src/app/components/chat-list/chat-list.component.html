@@ -6,7 +6,12 @@
         <span class="text-xl">≡</span>
       </button>
       <h1 class="text-base font-bold text-text-primary">{{ 'chatList.topTitle' | t }}</h1>
-      <a [routerLink]="['/discovery']" class="text-text-primary" [attr.aria-label]="'chatList.newChat' | t"><span class="text-xl">+</span></a>
+      <a
+        [routerLink]="['/discovery']"
+        class="text-text-primary"
+        [attr.aria-label]="'chatList.newChat' | t"
+        ><span class="text-xl">+</span></a
+      >
     </div>
 
     <!-- Tab Navigation: Chats | Groups -->
@@ -36,7 +41,11 @@
     <!-- Quick Access Row (chats tab only) -->
     @if (activeTab() === 'chats') {
       <div class="flex justify-between items-center mb-6 px-4">
-        <a [routerLink]="['/discovery']" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickCourses' | t">
+        <a
+          [routerLink]="['/discovery']"
+          class="flex flex-col items-center gap-1"
+          [attr.aria-label]="'chatList.quickCourses' | t"
+        >
           <div
             class="w-12 h-12 rounded-[1rem] bg-blue-500 flex items-center justify-center text-white text-xl shadow-lg"
           >
@@ -46,7 +55,11 @@
             'chatList.quickCourses' | t
           }}</span>
         </a>
-        <a [routerLink]="['/moments']" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickPlay' | t">
+        <a
+          [routerLink]="['/moments']"
+          class="flex flex-col items-center gap-1"
+          [attr.aria-label]="'chatList.quickPlay' | t"
+        >
           <div
             class="w-12 h-12 rounded-2xl bg-gradient-to-br from-neon-cyan to-emerald-400 flex items-center justify-center text-white text-xl shadow-lg shadow-green-500/20"
           >
@@ -56,7 +69,11 @@
             'chatList.quickPlay' | t
           }}</span>
         </a>
-        <button (click)="notImplemented()" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickAiTrans' | t">
+        <button
+          (click)="notImplemented()"
+          class="flex flex-col items-center gap-1"
+          [attr.aria-label]="'chatList.quickAiTrans' | t"
+        >
           <div
             class="w-12 h-12 rounded-2xl bg-gradient-to-br from-neon-purple to-accent-500 flex items-center justify-center text-white text-xl shadow-lg shadow-purple-500/20"
           >
@@ -66,7 +83,11 @@
             'chatList.quickAiTrans' | t
           }}</span>
         </button>
-        <button (click)="notImplemented()" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickJpAi' | t">
+        <button
+          (click)="notImplemented()"
+          class="flex flex-col items-center gap-1"
+          [attr.aria-label]="'chatList.quickJpAi' | t"
+        >
           <div
             class="w-12 h-12 rounded-[1rem] bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg"
           >
@@ -76,7 +97,11 @@
             'chatList.quickJpAi' | t
           }}</span>
         </button>
-        <button (click)="notImplemented()" class="flex flex-col items-center gap-1" [attr.aria-label]="'chatList.quickMore' | t">
+        <button
+          (click)="notImplemented()"
+          class="flex flex-col items-center gap-1"
+          [attr.aria-label]="'chatList.quickMore' | t"
+        >
           <div
             class="w-12 h-12 rounded-[1rem] bg-surface-200 flex items-center justify-center text-text-secondary text-lg shadow-lg"
           >
@@ -99,7 +124,8 @@
           type="text"
           [placeholder]="'chatList.searchPlaceholder' | t"
           class="bg-transparent border-none outline-none text-sm text-text-primary w-full placeholder-text-muted"
-         [attr.aria-label]="'chatList.searchPlaceholder' | t"/>
+          [attr.aria-label]="'chatList.searchPlaceholder' | t"
+        />
       </div>
     }
 
@@ -128,9 +154,7 @@
   @if (activeTab() === 'chats') {
     <main class="flex-1 overflow-y-auto divide-y divide-surface-200">
       @if (isLoading()) {
-        <app-empty-state
-          [title]="'chatList.loading' | t"
-          [customClass]="'py-16'">
+        <app-empty-state [title]="'chatList.loading' | t" [customClass]="'py-16'">
         </app-empty-state>
       }
 
@@ -140,8 +164,12 @@
           [title]="'chatList.noMessagesFound' | t"
           [description]="'chatList.noMessagesHint' | t"
           [actionLabel]="'chatList.findPartnersBtn' | t"
-          [customClass]="'py-16'">
-          <a [routerLink]="['/discovery']" class="text-primary font-semibold text-xs mt-2 inline-block">
+          [customClass]="'py-16'"
+        >
+          <a
+            [routerLink]="['/discovery']"
+            class="text-primary font-semibold text-xs mt-2 inline-block"
+          >
             {{ 'chatList.browseDiscovery' | t }}
           </a>
         </app-empty-state>
@@ -168,7 +196,9 @@
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline mb-0.5">
               <div class="flex items-center gap-2 truncate">
-                <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
+                <h3 class="text-[15px] font-bold text-text-primary truncate">
+                  {{ preview.title }}
+                </h3>
                 <span
                   class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none"
                   >{{ 'discovery.vipBadge' | t }}</span
@@ -209,7 +239,11 @@
       <!-- Locked folder section -->
       @if (lockedRoomIds().length > 0) {
         <div class="px-4 py-2 border-t border-surface-200">
-          <button (click)="toggleLockedFolder()" class="flex items-center gap-2 text-text-primary" [attr.aria-label]="'chatList.lockedFolder' | t">
+          <button
+            (click)="toggleLockedFolder()"
+            class="flex items-center gap-2 text-text-primary"
+            [attr.aria-label]="'chatList.lockedFolder' | t"
+          >
             <span>{{ showLocked() ? '🔓' : '🔒' }}</span>
             <span>{{ 'chatList.lockedFolder' | t }}</span>
             <span class="text-xs text-text-secondary">({{ lockedRoomIds().length }})</span>
@@ -237,7 +271,9 @@
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-baseline mb-0.5">
                   <div class="flex items-center gap-2 truncate">
-                    <h3 class="text-[15px] font-bold text-text-primary truncate">{{ preview.title }}</h3>
+                    <h3 class="text-[15px] font-bold text-text-primary truncate">
+                      {{ preview.title }}
+                    </h3>
                     <span
                       class="rounded bg-vip px-1 py-0.5 text-[9px] font-black uppercase text-black italic leading-none"
                       >{{ 'discovery.vipBadge' | t }}</span
@@ -255,7 +291,7 @@
                   </p>
                   @if (preview.unreadCount > 0) {
                     <span
-                  class="bg-gradient-to-br from-primary to-accent-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-purple-500/30"
+                      class="bg-gradient-to-br from-primary to-accent-500 text-white text-[10px] font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shrink-0 shadow-md shadow-purple-500/30"
                     >
                       {{ preview.unreadCount }}
                     </span>

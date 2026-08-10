@@ -1,4 +1,5 @@
-import {Component, inject, OnInit, signal} from '@angular/core';import { CommonModule, DatePipe } from '@angular/common';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
 import { EventsService, Event } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { firstValueFrom } from 'rxjs';
@@ -16,13 +17,17 @@ import { firstValueFrom } from 'rxjs';
         [class.bg-primary]="status() === 'upcoming'"
         [class.text-white]="status() === 'upcoming'"
         (click)="onStatusChange('upcoming')"
-      >{{ 'events.filter_upcoming' | t }}</button>
+      >
+        {{ 'events.filter_upcoming' | t }}
+      </button>
       <button
         class="px-3 py-1 rounded-full text-sm"
         [class.bg-primary]="status() === 'past'"
         [class.text-white]="status() === 'past'"
         (click)="onStatusChange('past')"
-      >{{ 'events.filter_past' | t }}</button>
+      >
+        {{ 'events.filter_past' | t }}
+      </button>
 
       <select
         [value]="languagePair() ?? ''"
@@ -52,14 +57,14 @@ import { firstValueFrom } from 'rxjs';
           <div class="p-4 bg-surface rounded-lg shadow">
             <h2 class="font-semibold text-lg">{{ event.title }}</h2>
             <p class="text-sm text-text-secondary">
-              {{ event.date_time | date:'medium' }}
+              {{ event.date_time | date: 'medium' }}
             </p>
             @if (event.location) {
               <p class="text-xs">{{ event.location }}</p>
             }
             @if (event.host_name) {
               <p class="text-xs">
-                {{ 'events.hosted_by' | t : { name: event.host_name } }}
+                {{ 'events.hosted_by' | t: { name: event.host_name } }}
               </p>
             }
           </div>

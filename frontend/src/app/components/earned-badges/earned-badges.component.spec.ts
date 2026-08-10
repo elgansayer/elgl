@@ -51,8 +51,8 @@ describe('EarnedBadgesComponent', () => {
     badgesSignal.set({ isVip: true, isSeriousLearner: false });
     fixture.detectChanges();
 
-    const vipBadge = Array.from(fixture.nativeElement.querySelectorAll('span')).find(
-      (span) => (span as HTMLElement).textContent?.includes('👑'),
+    const vipBadge = Array.from(fixture.nativeElement.querySelectorAll('span')).find((span) =>
+      (span as HTMLElement).textContent?.includes('👑'),
     );
 
     expect(vipBadge).toBeTruthy();
@@ -62,8 +62,8 @@ describe('EarnedBadgesComponent', () => {
     badgesSignal.set({ isVip: false, isSeriousLearner: true });
     fixture.detectChanges();
 
-    const seriousBadge = Array.from(fixture.nativeElement.querySelectorAll('span')).find(
-      (span) => (span as HTMLElement).textContent?.includes('🎓'),
+    const seriousBadge = Array.from(fixture.nativeElement.querySelectorAll('span')).find((span) =>
+      (span as HTMLElement).textContent?.includes('🎓'),
     );
 
     expect(seriousBadge).toBeTruthy();

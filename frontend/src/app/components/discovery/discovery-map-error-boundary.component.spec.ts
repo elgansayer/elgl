@@ -19,10 +19,7 @@ describe('DiscoveryMapErrorBoundaryComponent', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [DiscoveryMapErrorBoundaryComponent],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     });
 
     httpTesting = TestBed.inject(HttpTestingController);
@@ -194,8 +191,8 @@ describe('DiscoveryMapErrorBoundaryComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const buttons = compiled.querySelectorAll('button');
-    const reportButton = Array.from(buttons).find(
-      (btn) => btn.textContent?.includes('discoveryMapErrorBoundary.report'),
+    const reportButton = Array.from(buttons).find((btn) =>
+      btn.textContent?.includes('discoveryMapErrorBoundary.report'),
     );
     expect(reportButton).toBeDefined();
 

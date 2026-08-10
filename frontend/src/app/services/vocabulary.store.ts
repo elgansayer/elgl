@@ -82,9 +82,13 @@ export class VocabularyStore {
       ...fc,
       word_token: this.sanitisation.sanitiseText(fc.word_token),
       translation: this.sanitisation.sanitiseText(fc.translation),
-      original_context: fc.original_context ? this.sanitisation.sanitiseText(fc.original_context) : undefined,
+      original_context: fc.original_context
+        ? this.sanitisation.sanitiseText(fc.original_context)
+        : undefined,
       definition: fc.definition ? this.sanitisation.sanitiseText(fc.definition) : undefined,
-      pronunciation_url: fc.pronunciation_url ? this.sanitisation.sanitiseUrl(fc.pronunciation_url) : undefined,
+      pronunciation_url: fc.pronunciation_url
+        ? this.sanitisation.sanitiseUrl(fc.pronunciation_url)
+        : undefined,
     };
   }
 
@@ -199,12 +203,20 @@ export class VocabularyStore {
     const sanitisedPayload = {
       word_token: this.sanitisation.sanitiseText(payload.word_token),
       translation: this.sanitisation.sanitiseText(payload.translation),
-      original_context: payload.original_context ? this.sanitisation.sanitiseText(payload.original_context) : undefined,
-      definition: payload.definition ? this.sanitisation.sanitiseText(payload.definition) : undefined,
-      pronunciation_url: payload.pronunciation_url ? this.sanitisation.sanitiseUrl(payload.pronunciation_url) : undefined,
+      original_context: payload.original_context
+        ? this.sanitisation.sanitiseText(payload.original_context)
+        : undefined,
+      definition: payload.definition
+        ? this.sanitisation.sanitiseText(payload.definition)
+        : undefined,
+      pronunciation_url: payload.pronunciation_url
+        ? this.sanitisation.sanitiseUrl(payload.pronunciation_url)
+        : undefined,
     };
     const fc = await firstValueFrom(
-      this.http.post<Flashcard>(this.flashcardsUrl, sanitisedPayload, { headers: this.getHeaders() }),
+      this.http.post<Flashcard>(this.flashcardsUrl, sanitisedPayload, {
+        headers: this.getHeaders(),
+      }),
     );
     const sanitisedFc = this.sanitiseFlashcard(fc);
     this.allFlashcards.update((list) => {
@@ -236,7 +248,9 @@ export class VocabularyStore {
       );
       const sanitisedFc = this.sanitiseFlashcard(fc);
       this.triggerHapticFeedback(sanitisedFc.srs_level);
-      this.allFlashcards.update((list) => list.map((item) => (item.id === sanitisedFc.id ? sanitisedFc : item)));
+      this.allFlashcards.update((list) =>
+        list.map((item) => (item.id === sanitisedFc.id ? sanitisedFc : item)),
+      );
       this.flashcardMap.update((map) => {
         const next = new Map(map);
         next.set(sanitisedFc.word_token.toLowerCase(), sanitisedFc);
@@ -250,9 +264,7 @@ export class VocabularyStore {
         this.triggerHapticFeedback(newLevel);
         // Optimistically update local state
         this.allFlashcards.update((list) =>
-          list.map((item) =>
-            item.id === flashcardId ? { ...item, srs_level: newLevel } : item,
-          ),
+          list.map((item) => (item.id === flashcardId ? { ...item, srs_level: newLevel } : item)),
         );
         this.flashcardMap.update((map) => {
           const next = new Map(map);

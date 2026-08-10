@@ -42,10 +42,7 @@ export class SoundboardService {
    * The server broadcasts a `soundboard_play` Centrifugo event to all
    * room participants.
    */
-  async playSound(
-    roomId: string,
-    soundId: string,
-  ): Promise<PlaySoundResponse> {
+  async playSound(roomId: string, soundId: string): Promise<PlaySoundResponse> {
     const response = await fetch(`${this.baseUrl}/play`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

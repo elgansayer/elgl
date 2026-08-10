@@ -105,10 +105,7 @@ export class CentrifugoService {
     });
   }
 
-  subscribeLiveRoom(
-    roomId: string,
-    callback: (data: RoomLiveMessage) => void,
-  ): void {
+  subscribeLiveRoom(roomId: string, callback: (data: RoomLiveMessage) => void): void {
     this.subscribe(`room_${roomId}`, (data: unknown) => {
       if (this.isRoomMessage(data)) {
         callback(data);
@@ -140,9 +137,7 @@ export class CentrifugoService {
     this.unsubscribe(`location_live_${userId}`);
   }
 
-  private isLiveLocationPayload(
-    data: unknown,
-  ): data is {
+  private isLiveLocationPayload(data: unknown): data is {
     latitude: number;
     longitude: number;
     sharer_user_id: string;
@@ -162,9 +157,7 @@ export class CentrifugoService {
     return typeof data === 'object' && data !== null;
   }
 
-  private isVoiceRoomPayload(
-    data: unknown,
-  ): data is {
+  private isVoiceRoomPayload(data: unknown): data is {
     original_text: string;
     translated_text: string;
     detected_language: string;

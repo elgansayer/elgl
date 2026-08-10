@@ -159,25 +159,31 @@ describe('LingQ Reading Engine - Article Listing & Filters', () => {
   it('should display difficulty badges on articles', () => {
     cy.visit('/read');
     cy.wait('@listResources');
-    cy.get('[role="listitem"]').first().within(() => {
-      cy.contains('readingEngine.difficulty.beginner').should('be.visible');
-    });
+    cy.get('[role="listitem"]')
+      .first()
+      .within(() => {
+        cy.contains('readingEngine.difficulty.beginner').should('be.visible');
+      });
   });
 
   it('should display topic badges on articles', () => {
     cy.visit('/read');
     cy.wait('@listResources');
-    cy.get('[role="listitem"]').first().within(() => {
-      cy.contains('readingEngine.topic.daily-life').should('be.visible');
-    });
+    cy.get('[role="listitem"]')
+      .first()
+      .within(() => {
+        cy.contains('readingEngine.topic.daily-life').should('be.visible');
+      });
   });
 
   it('should display word count on articles', () => {
     cy.visit('/read');
     cy.wait('@listResources');
-    cy.get('[role="listitem"]').first().within(() => {
-      cy.contains('readingEngine.wordCountShort').should('be.visible');
-    });
+    cy.get('[role="listitem"]')
+      .first()
+      .within(() => {
+        cy.contains('readingEngine.wordCountShort').should('be.visible');
+      });
   });
 });
 
@@ -192,7 +198,8 @@ describe('LingQ Reading Engine - Article Detail View', () => {
         {
           id: 'art-1',
           title: 'A Day in the Life of a Language Learner',
-          content: 'Every morning I wake up and start my day with a cup of coffee. I open my favourite language learning app and review my flashcards for ten minutes.',
+          content:
+            'Every morning I wake up and start my day with a cup of coffee. I open my favourite language learning app and review my flashcards for ten minutes.',
           language: 'en-GB',
           difficulty: 'beginner',
           topic: 'daily-life',

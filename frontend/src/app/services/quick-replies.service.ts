@@ -19,14 +19,10 @@ export class QuickRepliesService {
   private readonly apiUrl = environment.apiUrl;
 
   getQuickReplies(): Promise<QuickReply[]> {
-    return firstValueFrom(
-      this.http.get<QuickReply[]>(`${this.apiUrl}/chat/quick-replies`),
-    );
+    return firstValueFrom(this.http.get<QuickReply[]>(`${this.apiUrl}/chat/quick-replies`));
   }
 
   createQuickReply(dto: CreateQuickReplyDto): Promise<QuickReply> {
-    return firstValueFrom(
-      this.http.post<QuickReply>(`${this.apiUrl}/chat/quick-replies`, dto),
-    );
+    return firstValueFrom(this.http.post<QuickReply>(`${this.apiUrl}/chat/quick-replies`, dto));
   }
 }

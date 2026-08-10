@@ -273,11 +273,7 @@ describe('Discovery Map browser acceptance', () => {
       .first()
       .should('have.attr', 'aria-label', 'Language partner: Maria Garcia');
     cy.get('img[alt="Avatar of Maria Garcia"]').should('be.visible');
-    cy.get('button[aria-label="Play introduction"]').should(
-      'have.attr',
-      'aria-pressed',
-      'false',
-    );
+    cy.get('button[aria-label="Play introduction"]').should('have.attr', 'aria-pressed', 'false');
   });
 
   it('navigates from a partner card to the matching chat', () => {

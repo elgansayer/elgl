@@ -17,11 +17,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p class="text-primary-500">{{ 'chat_backup.importing' | t }}</p>
       }
 
-      <button
-        class="btn btn-primary"
-        (click)="onExport()"
-        [disabled]="exporting()"
-      >
+      <button class="btn btn-primary" (click)="onExport()" [disabled]="exporting()">
         {{ 'chat_backup.export_button' | t }}
       </button>
 
@@ -32,11 +28,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         style="display: none"
         (change)="onFileSelected($event)"
       />
-      <button
-        class="btn btn-outline"
-        (click)="fileInput.click()"
-        [disabled]="importing()"
-      >
+      <button class="btn btn-outline" (click)="fileInput.click()" [disabled]="importing()">
         {{ 'chat_backup.import_button' | t }}
       </button>
 
@@ -114,4 +106,3 @@ export class ChatBackupComponent {
     reader.readAsText(file);
   }
 }
-

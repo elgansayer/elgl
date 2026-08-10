@@ -25,9 +25,7 @@ export class SrsOfflineService {
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
       this.initPromise = this.initDB();
-      this.initPromise
-        .then(() => this.refreshPendingCount())
-        .catch(() => undefined);
+      this.initPromise.then(() => this.refreshPendingCount()).catch(() => undefined);
     }
   }
 
@@ -76,9 +74,7 @@ export class SrsOfflineService {
     const store = tx.objectStore('flashcards');
     // Bulk put using Promise.all instead of sequential awaits.
     await Promise.all(
-      list.map((item) =>
-        this.putInStore(store, item as unknown as Record<string, unknown>),
-      ),
+      list.map((item) => this.putInStore(store, item as unknown as Record<string, unknown>)),
     );
   }
 
@@ -98,9 +94,7 @@ export class SrsOfflineService {
     const tx = db.transaction('due_reviews', 'readwrite');
     const store = tx.objectStore('due_reviews');
     await Promise.all(
-      list.map((item) =>
-        this.putInStore(store, item as unknown as Record<string, unknown>),
-      ),
+      list.map((item) => this.putInStore(store, item as unknown as Record<string, unknown>)),
     );
   }
 

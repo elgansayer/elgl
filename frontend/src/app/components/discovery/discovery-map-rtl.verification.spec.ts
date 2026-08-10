@@ -9,10 +9,13 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, extname } from 'path';
 
-const PHYSICAL_CLASS_REGEX = /\b(pl-|pr-|ml-|mr-|left-|right-|border-l\b|border-r\b|text-left|text-right|float-left|float-right|rounded-l\b|rounded-r\b)/g;
-const PHYSICAL_STYLE_INLINE_REGEX = /\b(margin-left|margin-right|padding-left|padding-right|border-left\b|border-right\b)\s*:/gi;
+const PHYSICAL_CLASS_REGEX =
+  /\b(pl-|pr-|ml-|mr-|left-|right-|border-l\b|border-r\b|text-left|text-right|float-left|float-right|rounded-l\b|rounded-r\b)/g;
+const PHYSICAL_STYLE_INLINE_REGEX =
+  /\b(margin-left|margin-right|padding-left|padding-right|border-left\b|border-right\b)\s*:/gi;
 
-const LOGICAL_CLASS_REGEX = /\b(ps-|pe-|ms-|me-|border-s\b|border-e\b|text-start|text-end|float-start|float-end)/g;
+const LOGICAL_CLASS_REGEX =
+  /\b(ps-|pe-|ms-|me-|border-s\b|border-e\b|text-start|text-end|float-start|float-end)/g;
 
 const DISCOVERY_MAP_PATHS = [
   'src/app/components/discovery',

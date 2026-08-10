@@ -12,7 +12,15 @@ import lottie, { AnimationItem } from 'lottie-web';
 @Component({
   selector: 'app-lottie-player',
   template: `<div class="w-full h-full"></div>`,
-  styles: [`:host { display: block; width: 100%; height: 100%; }`],
+  styles: [
+    `
+      :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    `,
+  ],
 })
 export class LottiePlayerComponent {
   private readonly elRef = inject(ElementRef<HTMLElement>);

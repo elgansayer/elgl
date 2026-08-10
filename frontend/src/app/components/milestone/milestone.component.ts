@@ -1,10 +1,6 @@
 import { Component, inject, resource, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import {
-  MilestoneService,
-  Milestone,
-  MilestoneProgress,
-} from '../../services/milestone.service';
+import { MilestoneService, Milestone, MilestoneProgress } from '../../services/milestone.service';
 
 const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 0 };
 
@@ -51,10 +47,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
           />
         </div>
         <div>
-          <label
-            for="milestone-description"
-            class="block text-sm font-medium text-text-secondary"
-          >
+          <label for="milestone-description" class="block text-sm font-medium text-text-secondary">
             {{ 'milestones.descriptionLabel' | t }}
           </label>
           <input
@@ -150,10 +143,7 @@ export class MilestoneComponent {
 
     this.creating.set(true);
     try {
-      await this.milestoneService.createMilestone(
-        title,
-        this.newDescription().trim() || undefined,
-      );
+      await this.milestoneService.createMilestone(title, this.newDescription().trim() || undefined);
       this.newTitle.set('');
       this.newDescription.set('');
       this.milestonesData.reload();

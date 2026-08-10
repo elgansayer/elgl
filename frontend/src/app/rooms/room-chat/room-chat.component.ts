@@ -1,12 +1,4 @@
-import {
-  Component,
-  DestroyRef,
-  effect,
-  inject,
-  input,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, signal, viewChild } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CentrifugoService, RoomLiveMessage } from '../../services/centrifugo.service';
 import { DraftService } from '../../services/draft.service';

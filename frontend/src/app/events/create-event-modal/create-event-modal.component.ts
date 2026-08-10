@@ -9,9 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div
-        class="max-w-md w-full rounded-2xl bg-surface-dark p-6 shadow-xl"
-      >
+      <div class="max-w-md w-full rounded-2xl bg-surface-dark p-6 shadow-xl">
         <h2 class="mb-4 text-start text-lg font-semibold">
           {{ 'events.createEvent' | t }}
         </h2>

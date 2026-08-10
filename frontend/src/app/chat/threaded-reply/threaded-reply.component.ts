@@ -14,13 +14,16 @@ import { ChatMessage } from '../../services/chat.service';
             [alt]="parentMessage().sender?.display_name"
             class="w-6 h-6 rounded-full object-cover"
           />
-          <span class="font-semibold text-sm"
-            >{{ parentMessage().sender?.display_name || ('chat.unknown_user' | t) }}</span
-          >
+          <span class="font-semibold text-sm">{{
+            parentMessage().sender?.display_name || ('chat.unknown_user' | t)
+          }}</span>
         } @else {
           <span class="font-semibold text-sm">{{ 'chat.unknown_user' | t }}</span>
         }
-        <button (click)="cancelReply.emit()" class="ms-auto text-sm text-gray-400 hover:text-white transition-colors">
+        <button
+          (click)="cancelReply.emit()"
+          class="ms-auto text-sm text-gray-400 hover:text-white transition-colors"
+        >
           {{ 'chat.cancel_reply' | t }}
         </button>
       </div>

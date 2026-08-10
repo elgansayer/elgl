@@ -42,10 +42,11 @@ describe('http-retry', () => {
     });
 
     it('retries on HTTP 429 and succeeds on second attempt', async () => {
-      const rateLimitError = new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests' });
-      const operation = vi.fn()
-        .mockRejectedValueOnce(rateLimitError)
-        .mockResolvedValue('success');
+      const rateLimitError = new HttpErrorResponse({
+        status: 429,
+        statusText: 'Too Many Requests',
+      });
+      const operation = vi.fn().mockRejectedValueOnce(rateLimitError).mockResolvedValue('success');
 
       const result = await withRetry(operation, { baseDelayMs: 1 });
       expect(result).toBe('success');
@@ -61,22 +62,28 @@ describe('http-retry', () => {
     });
 
     it('throws after exhausting all retries on 429 errors', async () => {
-      const rateLimitError = new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests' });
+      const rateLimitError = new HttpErrorResponse({
+        status: 429,
+        statusText: 'Too Many Requests',
+      });
       const operation = vi.fn().mockRejectedValue(rateLimitError);
 
-      await expect(
-        withRetry(operation, { maxRetries: 2, baseDelayMs: 1 }),
-      ).rejects.toEqual(rateLimitError);
+      await expect(withRetry(operation, { maxRetries: 2, baseDelayMs: 1 })).rejects.toEqual(
+        rateLimitError,
+      );
       expect(operation).toHaveBeenCalledTimes(3);
     });
 
     it('respects custom maxRetries', async () => {
-      const rateLimitError = new HttpErrorResponse({ status: 429, statusText: 'Too Many Requests' });
+      const rateLimitError = new HttpErrorResponse({
+        status: 429,
+        statusText: 'Too Many Requests',
+      });
       const operation = vi.fn().mockRejectedValue(rateLimitError);
 
-      await expect(
-        withRetry(operation, { maxRetries: 0, baseDelayMs: 1 }),
-      ).rejects.toEqual(rateLimitError);
+      await expect(withRetry(operation, { maxRetries: 0, baseDelayMs: 1 })).rejects.toEqual(
+        rateLimitError,
+      );
       expect(operation).toHaveBeenCalledTimes(1);
     });
   });

@@ -41,14 +41,10 @@ export class HelpService {
     if (query.search) {
       params = params.set('search', query.search);
     }
-    return firstValueFrom(
-      this.http.get<HelpResult>(`${this.baseUrl}/articles`, { params }),
-    );
+    return firstValueFrom(this.http.get<HelpResult>(`${this.baseUrl}/articles`, { params }));
   }
 
   async fetchCategories(): Promise<string[]> {
-    return firstValueFrom(
-      this.http.get<string[]>(`${this.baseUrl}/categories`),
-    );
+    return firstValueFrom(this.http.get<string[]>(`${this.baseUrl}/categories`));
   }
 }

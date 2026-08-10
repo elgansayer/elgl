@@ -44,7 +44,7 @@ export class BlockedUsersService {
       const users: BlockedUserResponse[] = await firstValueFrom(
         this.http.get<BlockedUserResponse[]>(`${this.apiUrl}/blocks`, {
           headers: this.getHeaders(),
-        })
+        }),
       );
       this.blockedUsersSignal.set(users ?? []);
     } catch {
@@ -61,7 +61,7 @@ export class BlockedUsersService {
       await firstValueFrom(
         this.http.delete(`${this.apiUrl}/blocks/${userId}`, {
           headers: this.getHeaders(),
-        })
+        }),
       );
       this.blockedUsersSignal.update((prev) => prev.filter((u) => u.id !== userId));
     } catch {

@@ -25,7 +25,10 @@ describe.skip('TokenisedTextComponent', () => {
     await TestBed.configureTestingModule({
       imports: [TokenisedTextComponent],
       providers: [
-        { provide: VocabularyStore, useValue: { getWordStatus: (_word: string) => ({ colorClass: '', colourClass: '' }) } },
+        {
+          provide: VocabularyStore,
+          useValue: { getWordStatus: (_word: string) => ({ colorClass: '', colourClass: '' }) },
+        },
         { provide: I18nService, useClass: I18nStub },
         { provide: TransliterationService, useClass: TransliterationStub },
       ],
@@ -41,11 +44,11 @@ describe.skip('TokenisedTextComponent', () => {
 
     expect(segments.length).toBeGreaterThan(0);
 
-    const wordTokens = segments.filter(s => s.isWordLike).map(s => s.segment);
+    const wordTokens = segments.filter((s) => s.isWordLike).map((s) => s.segment);
     expect(wordTokens).toContain('Hello');
     expect(wordTokens).toContain('world');
 
-    const spaceTokens = segments.filter(s => !s.isWordLike).map(s => s.segment);
+    const spaceTokens = segments.filter((s) => !s.isWordLike).map((s) => s.segment);
     expect(spaceTokens).toContain(' ');
   });
 
@@ -53,8 +56,8 @@ describe.skip('TokenisedTextComponent', () => {
     const segmenter = new Intl.Segmenter('en', { granularity: 'word' });
     const segments = [...segmenter.segment('Hello world')];
 
-    const wordToken = segments.find(s => s.segment === 'Hello');
-    const spaceToken = segments.find(s => s.segment === ' ');
+    const wordToken = segments.find((s) => s.segment === 'Hello');
+    const spaceToken = segments.find((s) => s.segment === ' ');
 
     expect(wordToken).toBeDefined();
     expect(spaceToken).toBeDefined();
@@ -70,7 +73,7 @@ describe.skip('TokenisedTextComponent', () => {
     const segments = [...segmenter.segment('\u65e5\u672c\u8a9e\u3092\u52c9\u5f37\u3059\u308b')];
 
     expect(segments.length).toBeGreaterThan(0);
-    const wordLike = segments.filter(s => s.isWordLike);
+    const wordLike = segments.filter((s) => s.isWordLike);
     expect(wordLike.length).toBeGreaterThan(0);
   });
 

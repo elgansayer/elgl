@@ -73,9 +73,7 @@ describe('VideoRoomComponent', () => {
     expect(component.eligibleSpeakers()).toEqual(['speaker-2']);
 
     const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
-    const inviteBtn = Array.from(buttons).find(
-      (b) => b.textContent?.includes('Invite co-host'),
-    );
+    const inviteBtn = Array.from(buttons).find((b) => b.textContent?.includes('Invite co-host'));
     expect(inviteBtn).toBeTruthy();
   });
 
@@ -85,8 +83,8 @@ describe('VideoRoomComponent', () => {
 
     const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
     // Only the onboarding help "?" button should be visible
-    const inviteCoHostBtn = Array.from(buttons).find(
-      (b) => b.textContent?.includes('Invite co-host'),
+    const inviteCoHostBtn = Array.from(buttons).find((b) =>
+      b.textContent?.includes('Invite co-host'),
     );
     expect(inviteCoHostBtn).toBeUndefined();
   });

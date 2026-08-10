@@ -1,4 +1,11 @@
-import { ApplicationConfig, ErrorHandler, inject, isDevMode, APP_INITIALIZER, importProvidersFrom } from '@angular/core';
+import {
+  ApplicationConfig,
+  ErrorHandler,
+  inject,
+  isDevMode,
+  APP_INITIALIZER,
+  importProvidersFrom,
+} from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors, HttpClient } from '@angular/common/http';
 import { provideClientHydration } from '@angular/platform-browser';

@@ -22,10 +22,7 @@ export class PronunciationService {
     return this.http.post<{ success: boolean }>(`${this.apiUrl}/voice-feedback`, formData);
   }
 
-  analyse(
-    audioBlob: Blob,
-    referenceText?: string,
-  ): Observable<PronunciationFeedback> {
+  analyse(audioBlob: Blob, referenceText?: string): Observable<PronunciationFeedback> {
     const formData = new FormData();
     formData.append('audio', audioBlob, 'recording.webm');
     if (referenceText) {

@@ -149,10 +149,7 @@ export class OfflineReadingService {
   async clearAll(): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
-    await Promise.all([
-      this.clearStore(db, STORE_ARTICLES),
-      this.clearStore(db, STORE_HISTORY),
-    ]);
+    await Promise.all([this.clearStore(db, STORE_ARTICLES), this.clearStore(db, STORE_HISTORY)]);
     this.isOfflineMode.set(false);
   }
 

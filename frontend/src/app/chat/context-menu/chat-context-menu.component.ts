@@ -30,7 +30,9 @@ export interface ChatContextMenuAction {
           (keyup.space)="$event.stopPropagation()"
         >
           <div class="flex items-center justify-between mb-2 ps-1 pe-1">
-            <span class="text-lg font-semibold text-neutral-100">{{ 'chat.contextMenu.title' | t }}</span>
+            <span class="text-lg font-semibold text-neutral-100">{{
+              'chat.contextMenu.title' | t
+            }}</span>
             <button
               type="button"
               class="p-2 rounded-lg text-neutral-400 hover:text-neutral-100 focus:outline-none"

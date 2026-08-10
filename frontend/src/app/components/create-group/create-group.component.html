@@ -24,7 +24,13 @@
 
       <div class="search-row">
         <div class="search-input-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            class="search-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.35-4.35" />
           </svg>
@@ -35,7 +41,8 @@
             class="search-input"
             [placeholder]="'group.searchPlaceholder' | t"
             [disabled]="!canAddMore()"
-           [attr.aria-label]="'text input'"/>
+            [attr.aria-label]="'text input'"
+          />
           @if (isSearching()) {
             <span class="search-spinner"></span>
           }
@@ -53,12 +60,15 @@
               class="search-result-item"
               (click)="addMember(user)"
               [disabled]="selectedMemberIds().includes(user.id)"
-             [attr.aria-label]="(user.display_name || user.id)">
+              [attr.aria-label]="user.display_name || user.id"
+            >
               <div class="user-avatar">
                 @if (user.avatar_url) {
                   <img [src]="user.avatar_url" alt="" class="avatar-img" />
                 } @else {
-                  <span class="avatar-placeholder">{{ (user.display_name || user.id).charAt(0).toUpperCase() }}</span>
+                  <span class="avatar-placeholder">{{
+                    (user.display_name || user.id).charAt(0).toUpperCase()
+                  }}</span>
                 }
               </div>
               <div class="user-info">
@@ -74,9 +84,7 @@
       }
 
       <div class="selected-section">
-        <h3 class="selected-heading">
-          {{ 'group.selectedMembers' | t }} ({{ selectedCount() }})
-        </h3>
+        <h3 class="selected-heading">{{ 'group.selectedMembers' | t }} ({{ selectedCount() }})</h3>
         @if (selectedMembers().length === 0) {
           <div class="no-selection">
             <p class="empty-hint">{{ 'group.noMembersSelected' | t }}</p>
@@ -89,7 +97,9 @@
                   @if (member.avatar_url) {
                     <img [src]="member.avatar_url" alt="" class="avatar-img" />
                   } @else {
-                    <span class="avatar-placeholder">{{ (member.display_name || member.id).charAt(0).toUpperCase() }}</span>
+                    <span class="avatar-placeholder">{{
+                      (member.display_name || member.id).charAt(0).toUpperCase()
+                    }}</span>
                   }
                 </div>
                 <div class="user-info">
@@ -98,9 +108,17 @@
                 <button
                   class="remove-btn"
                   (click)="removeMember(member)"
-                  [attr.aria-label]="'group.removeMemberAria' | t: { name: member.display_name || member.id }"
+                  [attr.aria-label]="
+                    'group.removeMemberAria' | t: { name: member.display_name || member.id }
+                  "
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="remove-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="remove-icon"
+                  >
                     <path d="M18 6 6 18" />
                     <path d="m6 6 12 12" />
                   </svg>
@@ -125,7 +143,8 @@
       class="create-btn"
       (click)="createGroup()"
       [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"
-     [attr.aria-label]="'group.creatingBtn' | t">
+      [attr.aria-label]="'group.creatingBtn' | t"
+    >
       @if (isCreating()) {
         <span class="btn-spinner"></span>
         {{ 'group.creatingBtn' | t }}

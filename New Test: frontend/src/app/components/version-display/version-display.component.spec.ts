@@ -11,7 +11,7 @@ describe('VersionDisplayComponent', () => {
   beforeEach(async () => {
     mockVersionService = jasmine.createSpyObj('VersionService', ['getVersion']);
     mockVersionService.getVersion.and.returnValue(
-      of({ current: '1.0.0', latest: '1.1.0', updateUrl: 'https://example.com' })
+      of({ current: '1.0.0', latest: '1.1.0', updateUrl: 'https://example.com' }),
     );
 
     await TestBed.configureTestingModule({

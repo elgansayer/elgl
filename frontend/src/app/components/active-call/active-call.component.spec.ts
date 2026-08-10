@@ -32,14 +32,16 @@ describe('ActiveCallComponent', () => {
     translate: (key: string) => key,
   };
 
-  async function createComponent(inputs: {
-    callerName?: string;
-    callerAvatar?: string;
-    roomName?: string;
-    callDirection?: 'incoming' | 'outgoing';
-    isMuted?: boolean;
-    isSpeakerphone?: boolean;
-  } = {}): Promise<void> {
+  async function createComponent(
+    inputs: {
+      callerName?: string;
+      callerAvatar?: string;
+      roomName?: string;
+      callDirection?: 'incoming' | 'outgoing';
+      isMuted?: boolean;
+      isSpeakerphone?: boolean;
+    } = {},
+  ): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [ActiveCallComponent],
       providers: [

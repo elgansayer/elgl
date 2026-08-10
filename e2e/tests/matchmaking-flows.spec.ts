@@ -208,7 +208,10 @@ test.describe('Matchmaking - Discovery Filters', () => {
     const locationInputs = page.locator(
       'input[placeholder*="country" i], input[placeholder*="city" i], input[aria-label*="country" i], input[aria-label*="city" i]',
     );
-    const locationVisible = await locationInputs.first().isVisible().catch(() => false);
+    const locationVisible = await locationInputs
+      .first()
+      .isVisible()
+      .catch(() => false);
 
     if (locationVisible) {
       await locationInputs.first().fill('Japan');
@@ -408,9 +411,7 @@ test.describe('Matchmaking - Search by Location', () => {
     await page.goto('/discovery');
     await page.waitForTimeout(4000);
 
-    const cityInput = page.locator(
-      'input[placeholder*="city" i], input[aria-label*="city" i]',
-    );
+    const cityInput = page.locator('input[placeholder*="city" i], input[aria-label*="city" i]');
     const inputVisible = await cityInput.isVisible().catch(() => false);
 
     if (inputVisible) {
@@ -430,9 +431,7 @@ test.describe('Matchmaking - Search by Location', () => {
     const countryInput = page.locator(
       'input[placeholder*="country" i], input[aria-label*="country" i]',
     );
-    const cityInput = page.locator(
-      'input[placeholder*="city" i], input[aria-label*="city" i]',
-    );
+    const cityInput = page.locator('input[placeholder*="city" i], input[aria-label*="city" i]');
 
     const countryVisible = await countryInput.isVisible().catch(() => false);
     const cityVisible = await cityInput.isVisible().catch(() => false);
@@ -450,7 +449,9 @@ test.describe('Matchmaking - Search by Location', () => {
 });
 
 test.describe('Matchmaking - Multi-Tier Fallback Algorithm', () => {
-  test('should return results from GET /recommendations/for-you (Tier 1: interest-based)', async ({ page }) => {
+  test('should return results from GET /recommendations/for-you (Tier 1: interest-based)', async ({
+    page,
+  }) => {
     // Navigate first to establish session
     await page.goto('/discovery');
     await page.waitForTimeout(3000);
@@ -471,7 +472,9 @@ test.describe('Matchmaking - Multi-Tier Fallback Algorithm', () => {
     expect(response.length).toBeGreaterThanOrEqual(0);
   });
 
-  test('should return results from GET /recommendations/daily (cached daily partners)', async ({ page }) => {
+  test('should return results from GET /recommendations/daily (cached daily partners)', async ({
+    page,
+  }) => {
     await page.goto('/discovery');
     await page.waitForTimeout(3000);
 
@@ -552,7 +555,9 @@ test.describe('Matchmaking - Multi-Tier Fallback Algorithm', () => {
     expect(response.length).toBeGreaterThanOrEqual(0);
   });
 
-  test('should return recent native speakers from GET /discovery/recent-native-speakers', async ({ page }) => {
+  test('should return recent native speakers from GET /discovery/recent-native-speakers', async ({
+    page,
+  }) => {
     await page.goto('/discovery');
     await page.waitForTimeout(3000);
 
@@ -588,7 +593,9 @@ test.describe('Matchmaking - Multi-Tier Fallback Algorithm', () => {
     expect(response.length).toBeGreaterThanOrEqual(0);
   });
 
-  test('should return partner of week IDs from GET /discovery/partner-of-week', async ({ page }) => {
+  test('should return partner of week IDs from GET /discovery/partner-of-week', async ({
+    page,
+  }) => {
     await page.goto('/discovery');
     await page.waitForTimeout(3000);
 
@@ -624,7 +631,9 @@ test.describe('Matchmaking - Multi-Tier Fallback Algorithm', () => {
     expect(response.length).toBeGreaterThanOrEqual(0);
   });
 
-  test('should gracefully degrade through all tiers and return mock data as ultimate fallback', async ({ page }) => {
+  test('should gracefully degrade through all tiers and return mock data as ultimate fallback', async ({
+    page,
+  }) => {
     await page.goto('/discovery');
     await page.waitForTimeout(3000);
 
@@ -669,7 +678,9 @@ test.describe('Matchmaking - Profile Discovery Card', () => {
     await expect(body).toBeVisible();
 
     // Study streak or correction ratio might be shown as badges or indicators
-    const streakBadges = page.locator('[data-testid*="streak"], [data-testid*="correction"], .streak-badge');
+    const streakBadges = page.locator(
+      '[data-testid*="streak"], [data-testid*="correction"], .streak-badge',
+    );
     // They might or might not be present depending on mock data
     const count = await streakBadges.count();
     expect(count).toBeGreaterThanOrEqual(0);
@@ -761,9 +772,7 @@ test.describe('Matchmaking - Edge Cases and Error Handling', () => {
     await expect(body).toBeVisible();
 
     // Rapidly toggle filters if available
-    const filterBtns = page.locator(
-      'button[aria-label*="filter" i], [data-testid*="filter-chip"]',
-    );
+    const filterBtns = page.locator('button[aria-label*="filter" i], [data-testid*="filter-chip"]');
     const btnCount = await filterBtns.count();
 
     if (btnCount > 0) {
@@ -810,7 +819,9 @@ test.describe('Matchmaking - Edge Cases and Error Handling', () => {
     await page.waitForTimeout(4000);
 
     // Empty state should be accessible if no partners are shown
-    const emptyState = page.locator('[role="status"], app-empty-state, [data-testid="empty-state"]');
+    const emptyState = page.locator(
+      '[role="status"], app-empty-state, [data-testid="empty-state"]',
+    );
     const isEmpty = await emptyState.isVisible().catch(() => false);
 
     if (isEmpty) {
@@ -897,4 +908,4 @@ test.describe('Matchmaking - VIP and Monetisation Integration', () => {
     const body = page.locator('body');
     await expect(body).toBeVisible();
   });
-}); 
+});

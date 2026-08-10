@@ -99,7 +99,7 @@ describe('EscrowService', () => {
     expect(mockOfflineStore.getCachedEscrows).toHaveBeenCalled();
   });
 
-    // ── createEscrow ─────────────────────────────────────────
+  // ── createEscrow ─────────────────────────────────────────
   it('should create escrow via API when online', async () => {
     vi.spyOn(mockNetwork, 'isOnline').mockReturnValue(true as unknown as boolean);
     const dto = { partner_id: 'partner-1', amount: 100, description: 'Test' };
@@ -131,7 +131,12 @@ describe('EscrowService', () => {
     const promise = service.releaseEscrow('escrow-1');
     const req = httpMock.expectOne('http://localhost:3000/api/escrow/release');
     expect(req.request.method).toBe('POST');
-    req.flush({ id: 'escrow-1', status: 'released', amount_released: 100, receiver_new_balance: 600 });
+    req.flush({
+      id: 'escrow-1',
+      status: 'released',
+      amount_released: 100,
+      receiver_new_balance: 600,
+    });
 
     const result = await promise;
     expect(result.status).toBe('released');
@@ -153,7 +158,12 @@ describe('EscrowService', () => {
     const promise = service.refundEscrow('escrow-1', 'Changed mind');
     const req = httpMock.expectOne('http://localhost:3000/api/escrow/refund');
     expect(req.request.method).toBe('POST');
-    req.flush({ id: 'escrow-1', status: 'refunded', amount_refunded: 100, sender_new_balance: 500 });
+    req.flush({
+      id: 'escrow-1',
+      status: 'refunded',
+      amount_refunded: 100,
+      sender_new_balance: 500,
+    });
 
     const result = await promise;
     expect(result.status).toBe('refunded');

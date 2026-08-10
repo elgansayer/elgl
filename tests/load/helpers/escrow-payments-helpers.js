@@ -44,8 +44,7 @@ function generateEscrowPayload(userContext, events, done) {
  */
 function beforeRequest(requestParams, context, events, next) {
   if (requestParams.headers) {
-    requestParams.headers['X-Load-Test-Id'] =
-      context.vars.loadTestId || `load-${Date.now()}`;
+    requestParams.headers['X-Load-Test-Id'] = context.vars.loadTestId || `load-${Date.now()}`;
   }
   return next();
 }

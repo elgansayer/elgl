@@ -28,7 +28,8 @@ export class GooglePlayNotificationService {
     try {
       // 1. Decode the Pub/Sub message
       const messageData = message?.message as
-        Record<string, unknown> | undefined;
+        | Record<string, unknown>
+        | undefined;
       const data = messageData?.data as string | undefined;
       if (!data) {
         this.logger.warn('Google Play notification missing data');
@@ -41,7 +42,8 @@ export class GooglePlayNotificationService {
 
       // 3. Extract subscription notification details
       const subscriptionNotification = notification.subscriptionNotification as
-        Record<string, unknown> | undefined;
+        | Record<string, unknown>
+        | undefined;
       if (!subscriptionNotification) {
         this.logger.warn(
           'Google Play notification missing subscriptionNotification',
@@ -124,7 +126,9 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.info(`User ${userId} subscription recovered: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} subscription recovered: ${subscriptionId}`,
+    );
 
     this.updateSubscriptionStatus(
       userId,
@@ -190,7 +194,9 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.info(`User ${userId} purchased subscription: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} purchased subscription: ${subscriptionId}`,
+    );
 
     this.updateSubscriptionStatus(
       userId,
@@ -258,7 +264,9 @@ export class GooglePlayNotificationService {
       return;
     }
 
-    this.logger.info(`User ${userId} subscription restarted: ${subscriptionId}`);
+    this.logger.info(
+      `User ${userId} subscription restarted: ${subscriptionId}`,
+    );
 
     this.updateSubscriptionStatus(
       userId,

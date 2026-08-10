@@ -1148,8 +1148,25 @@ describe('Admin - Batch Operations', () => {
   it('should fetch all admin data in sequence', () => {
     cy.intercept('GET', '**/api/admin/users?*', {
       body: {
-        users: [{ id: 'u1', display_name: 'User1', avatar_url: null, native_languages: ['en'], target_languages: ['es'], is_vip: false, vip_tier: 'free', is_admin: false, coins_balance: 0, study_streak_days: 0, last_active_at: null, created_at: new Date().toISOString() }],
-        total: 1, page: 1, pageSize: 20,
+        users: [
+          {
+            id: 'u1',
+            display_name: 'User1',
+            avatar_url: null,
+            native_languages: ['en'],
+            target_languages: ['es'],
+            is_vip: false,
+            vip_tier: 'free',
+            is_admin: false,
+            coins_balance: 0,
+            study_streak_days: 0,
+            last_active_at: null,
+            created_at: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
       },
     }).as('listUsers');
 

@@ -46,53 +46,34 @@ export class LanguageIslandsService {
     if (query.language_pair) params['language_pair'] = query.language_pair;
     if (query.page) params['page'] = query.page;
     if (query.limit) params['limit'] = query.limit;
-    return firstValueFrom(
-      this.http.get<LanguageIsland[]>(this.baseUrl, { params }),
-    );
+    return firstValueFrom(this.http.get<LanguageIsland[]>(this.baseUrl, { params }));
   }
 
   getIsland(id: string): Promise<LanguageIsland> {
-    return firstValueFrom(
-      this.http.get<LanguageIsland>(`${this.baseUrl}/${id}`),
-    );
+    return firstValueFrom(this.http.get<LanguageIsland>(`${this.baseUrl}/${id}`));
   }
 
   createIsland(dto: CreateLanguageIslandDto): Promise<LanguageIsland> {
-    return firstValueFrom(
-      this.http.post<LanguageIsland>(this.baseUrl, dto),
-    );
+    return firstValueFrom(this.http.post<LanguageIsland>(this.baseUrl, dto));
   }
 
-  updateIsland(
-    id: string,
-    dto: UpdateLanguageIslandDto,
-  ): Promise<LanguageIsland> {
-    return firstValueFrom(
-      this.http.patch<LanguageIsland>(`${this.baseUrl}/${id}`, dto),
-    );
+  updateIsland(id: string, dto: UpdateLanguageIslandDto): Promise<LanguageIsland> {
+    return firstValueFrom(this.http.patch<LanguageIsland>(`${this.baseUrl}/${id}`, dto));
   }
 
   deleteIsland(id: string): Promise<void> {
-    return firstValueFrom(
-      this.http.delete<void>(`${this.baseUrl}/${id}`),
-    );
+    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/${id}`));
   }
 
   joinIsland(id: string): Promise<void> {
-    return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/${id}/join`, {}),
-    );
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/join`, {}));
   }
 
   leaveIsland(id: string): Promise<void> {
-    return firstValueFrom(
-      this.http.post<void>(`${this.baseUrl}/${id}/leave`, {}),
-    );
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${id}/leave`, {}));
   }
 
   getMyIslands(): Promise<LanguageIsland[]> {
-    return firstValueFrom(
-      this.http.get<LanguageIsland[]>(`${this.baseUrl}/my`),
-    );
+    return firstValueFrom(this.http.get<LanguageIsland[]>(`${this.baseUrl}/my`));
   }
 }

@@ -71,9 +71,7 @@ export class SupportCentreComponent {
     params: () => ({ category: this.selectedCategory() || undefined }),
     loader: async ({ params }) => {
       const res = await this.helpFaqService.getFAQs(params.category);
-      return (
-        res ?? { items: [], total: 0, page: 1, limit: 50 }
-      );
+      return res ?? { items: [], total: 0, page: 1, limit: 50 };
     },
     defaultValue: { items: [], total: 0, page: 1, limit: 50 },
   });

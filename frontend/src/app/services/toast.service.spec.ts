@@ -5,7 +5,7 @@ import {
   showErrorToast,
   notImplementedToast,
   removeToast,
-  toastsSignal
+  toastsSignal,
 } from './toast.service';
 
 describe('ToastService', () => {

@@ -9,9 +9,7 @@ export class StudyBuddiesService {
   private readonly apiUrl = environment.apiUrl;
 
   async follow(targetUserId: string): Promise<void> {
-    await firstValueFrom(
-      this.http.post(`${this.apiUrl}/study-buddies/follow`, { targetUserId }),
-    );
+    await firstValueFrom(this.http.post(`${this.apiUrl}/study-buddies/follow`, { targetUserId }));
   }
 
   async unfollow(targetUserId: string): Promise<void> {

@@ -220,7 +220,9 @@ describe('Matchmaking Algorithm', () => {
       cy.intercept('GET', '**/api/discovery/partners*').as('filteredPartners');
 
       // Click on a language pill (Spanish)
-      cy.get('button').contains(/🇪🇸|Spanish/i).click();
+      cy.get('button')
+        .contains(/🇪🇸|Spanish/i)
+        .click();
 
       cy.wait('@filteredPartners').its('request.url').should('include', 'target_language=es');
     });
@@ -358,11 +360,7 @@ describe('Matchmaking Algorithm', () => {
       cy.wait('@getBuddyMatches');
 
       // Click the "Request" button on the first match
-      cy.contains('Luis Gomez')
-        .closest('div')
-        .find('button')
-        .contains('Request')
-        .click();
+      cy.contains('Luis Gomez').closest('div').find('button').contains('Request').click();
 
       cy.wait('@postBuddyRequest');
 
@@ -379,11 +377,7 @@ describe('Matchmaking Algorithm', () => {
       cy.wait('@getBuddyRequests');
 
       // Click the "Accept" button on the incoming request
-      cy.contains('Jin Park')
-        .closest('div')
-        .find('button')
-        .contains('Accept')
-        .click();
+      cy.contains('Jin Park').closest('div').find('button').contains('Accept').click();
 
       cy.wait('@acceptBuddyRequest');
     });
@@ -393,11 +387,7 @@ describe('Matchmaking Algorithm', () => {
       cy.wait('@getBuddyRequests');
 
       // Click the "Decline" button on the incoming request
-      cy.contains('Jin Park')
-        .closest('div')
-        .find('button')
-        .contains('Decline')
-        .click();
+      cy.contains('Jin Park').closest('div').find('button').contains('Decline').click();
 
       cy.wait('@declineBuddyRequest');
     });
@@ -454,7 +444,8 @@ describe('Matchmaking Algorithm', () => {
 
       // Validate tier presence
       cy.get('@getForYou').then((interception: unknown) => {
-        const body = (interception as { response: { body: typeof mockRecommendations } }).response.body;
+        const body = (interception as { response: { body: typeof mockRecommendations } }).response
+          .body;
         const tiers = body.map((r) => r.matchTier);
         expect(tiers).to.include('interest');
         expect(tiers).to.include('language_exchange');
@@ -468,7 +459,8 @@ describe('Matchmaking Algorithm', () => {
 
       cy.wait('@getDaily').its('response.body').should('have.length', 1);
       cy.get('@getDaily').then((interception: unknown) => {
-        const body = (interception as { response: { body: typeof mockDailyRecommendations } }).response.body;
+        const body = (interception as { response: { body: typeof mockDailyRecommendations } })
+          .response.body;
         expect(body[0].displayName).to.equal('Sofia Rossi');
       });
     });
@@ -555,10 +547,7 @@ describe('Matchmaking Algorithm', () => {
       // Toggle serious learner mode
       cy.get('input#seriousModeCheckbox').check();
 
-      cy.wait('@getPartners').its('request.url').should(
-        'include',
-        'serious_learner_mode=true',
-      );
+      cy.wait('@getPartners').its('request.url').should('include', 'serious_learner_mode=true');
     });
 
     it('should reset filters and send default parameters', () => {
@@ -589,7 +578,8 @@ describe('Matchmaking Algorithm', () => {
       cy.wait('@getForYouTier1');
 
       cy.get('@getForYouTier1').then((interception: unknown) => {
-        const body = (interception as { response: { body: typeof mockRecommendations } }).response.body;
+        const body = (interception as { response: { body: typeof mockRecommendations } }).response
+          .body;
         expect(body[0].matchTier).to.equal('interest');
         expect(body[0].sharedInterests).to.be.greaterThan(0);
       });
@@ -604,7 +594,8 @@ describe('Matchmaking Algorithm', () => {
       cy.wait('@getForYouTier2');
 
       cy.get('@getForYouTier2').then((interception: unknown) => {
-        const body = (interception as { response: { body: typeof mockRecommendations } }).response.body;
+        const body = (interception as { response: { body: typeof mockRecommendations } }).response
+          .body;
         expect(body[0].matchTier).to.equal('language_exchange');
         expect(body[0].sharedInterests).to.equal(0);
       });
@@ -619,7 +610,8 @@ describe('Matchmaking Algorithm', () => {
       cy.wait('@getForYouTier3');
 
       cy.get('@getForYouTier3').then((interception: unknown) => {
-        const body = (interception as { response: { body: typeof mockRecommendations } }).response.body;
+        const body = (interception as { response: { body: typeof mockRecommendations } }).response
+          .body;
         expect(body[0].matchTier).to.equal('active_users');
         expect(body[0].studyStreakDays).to.be.greaterThan(100);
       });
@@ -686,7 +678,9 @@ describe('Matchmaking Algorithm', () => {
       cy.visit('/discovery');
       cy.wait('@getPartners');
 
-      cy.get('button').contains(/🇪🇸|Spanish/i).click();
+      cy.get('button')
+        .contains(/🇪🇸|Spanish/i)
+        .click();
 
       cy.wait('@getPartners').its('request.url').should('include', 'target_language=es');
 

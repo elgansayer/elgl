@@ -26,7 +26,9 @@ interface WallpaperOption {
           (click)="$event.stopPropagation()"
         >
           <div class="flex items-center justify-between mb-4 ps-1 pe-1">
-            <span class="text-lg font-semibold text-neutral-100">{{ 'chat.wallpaper.title' | t }}</span>
+            <span class="text-lg font-semibold text-neutral-100">{{
+              'chat.wallpaper.title' | t
+            }}</span>
             <button
               type="button"
               class="p-2 rounded-lg text-neutral-400 hover:text-neutral-100 focus:outline-none"

@@ -121,10 +121,10 @@ export class MonetisationService {
     receiptData?: string,
   ): Promise<{ received: boolean; status: string }> {
     return firstValueFrom(
-      this.http.post<{ received: boolean; status: string }>(
-        `${this.baseUrl}/restore-purchases`,
-        { platform, receipt_data: receiptData },
-      ),
+      this.http.post<{ received: boolean; status: string }>(`${this.baseUrl}/restore-purchases`, {
+        platform,
+        receipt_data: receiptData,
+      }),
     );
   }
 

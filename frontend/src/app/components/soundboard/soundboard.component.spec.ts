@@ -8,7 +8,9 @@ import { CentrifugoService } from '../../services/centrifugo.service';
 import { AuthService } from '../../services/auth.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
-interface UserInfo { id: string }
+interface UserInfo {
+  id: string;
+}
 
 describe('SoundboardComponent', () => {
   let component: SoundboardComponent;
@@ -46,7 +48,10 @@ describe('SoundboardComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SoundboardComponent],
       providers: [
-        { provide: SoundboardService, useValue: { getSounds: getSoundsMock, playSound: playSoundMock } },
+        {
+          provide: SoundboardService,
+          useValue: { getSounds: getSoundsMock, playSound: playSoundMock },
+        },
         { provide: CentrifugoService, useValue: { subscribe: subscribeFn } },
         { provide: AuthService, useValue: { currentUser: currentUserSignal } },
         { provide: HapticFeedbackService, useValue: { tap: hapticTapFn } },
@@ -104,7 +109,12 @@ describe('SoundboardComponent', () => {
     (currentUserSignal as ReturnType<typeof signal<UserInfo | null>>).set({ id: 'host-1' });
     setInputsAndInit('room-1', 'host-1');
 
-    const sound: SoundItem = { id: 's1', name: 'Laugh', url: 'https://example.com/laugh.mp3', icon: '😂' };
+    const sound: SoundItem = {
+      id: 's1',
+      name: 'Laugh',
+      url: 'https://example.com/laugh.mp3',
+      icon: '😂',
+    };
     await component.playSound(sound);
 
     expect(playSoundMock).toHaveBeenCalledWith('room-1', 's1');
@@ -115,7 +125,12 @@ describe('SoundboardComponent', () => {
     (currentUserSignal as ReturnType<typeof signal<UserInfo | null>>).set({ id: 'guest-9' });
     setInputsAndInit('room-1', 'host-1');
 
-    const sound: SoundItem = { id: 's1', name: 'Laugh', url: 'https://example.com/laugh.mp3', icon: '😂' };
+    const sound: SoundItem = {
+      id: 's1',
+      name: 'Laugh',
+      url: 'https://example.com/laugh.mp3',
+      icon: '😂',
+    };
     await component.playSound(sound);
 
     expect(playSoundMock).not.toHaveBeenCalled();

@@ -28,9 +28,9 @@ export class VideoClassroomErrorHandlerService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
 
-  readonly recentCrashes = signal<
-    Array<{ message: string; timestamp: string; context: string }>
-  >([]);
+  readonly recentCrashes = signal<Array<{ message: string; timestamp: string; context: string }>>(
+    [],
+  );
 
   private getHeaders(): Record<string, string> {
     const token = this.authService.getAccessToken();
@@ -45,9 +45,10 @@ export class VideoClassroomErrorHandlerService {
     const payload = {
       message: (error.message || 'Unknown video classroom crash').slice(0, MAX_MESSAGE_LENGTH),
       name: error.name || 'VideoClassroomError',
-      stack: rawStack.length > MAX_STACK_LENGTH
-        ? rawStack.slice(0, MAX_STACK_LENGTH) + '...'
-        : rawStack || undefined,
+      stack:
+        rawStack.length > MAX_STACK_LENGTH
+          ? rawStack.slice(0, MAX_STACK_LENGTH) + '...'
+          : rawStack || undefined,
       url: typeof window !== 'undefined' ? window.location.href : '',
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
       timestamp: new Date().toISOString(),
@@ -104,8 +105,7 @@ export class VideoClassroomErrorHandlerService {
     try {
       return await withRetry(fn, retryOptions);
     } catch (err: unknown) {
-      const error =
-        err instanceof Error ? err : new Error(String(err));
+      const error = err instanceof Error ? err : new Error(String(err));
       this.reportVideoClassroomCrash(error, {
         ...context,
         action,

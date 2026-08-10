@@ -89,7 +89,9 @@ interface InterestTopic {
 
       <!-- Empty state -->
       @if (!loading() && filteredGroups().length === 0) {
-        <div class="flex-1 flex flex-col items-center justify-center text-text-secondary py-12 px-4">
+        <div
+          class="flex-1 flex flex-col items-center justify-center text-text-secondary py-12 px-4"
+        >
           <span class="text-4xl mb-3">👥</span>
           <p class="text-sm">{{ 'groups_discovery_empty' | t }}</p>
           @if (selectedInterest()) {
@@ -135,7 +137,9 @@ interface InterestTopic {
                       class="bg-accent-500 hover:bg-accent-400 text-white px-4 py-1.5 rounded-full text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                       [disabled]="joiningId() === group.id"
                     >
-                      {{ joiningId() === group.id ? ('loading' | t) : ('groups_discovery_join' | t) }}
+                      {{
+                        joiningId() === group.id ? ('loading' | t) : ('groups_discovery_join' | t)
+                      }}
                     </button>
                   } @else if (group.is_member) {
                     <span
@@ -202,7 +206,7 @@ export class GroupsDiscoveryComponent {
       try {
         const lang = this.i18n.currentLang();
         return await firstValueFrom(
-          this.http.get<InterestTopic[]>(`${this.apiUrl}/interests?language=${lang}`)
+          this.http.get<InterestTopic[]>(`${this.apiUrl}/interests?language=${lang}`),
         );
       } catch {
         return [];
@@ -221,7 +225,7 @@ export class GroupsDiscoveryComponent {
       this.error.set('');
       try {
         return await firstValueFrom(
-          this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/groups/discoverable`)
+          this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/groups/discoverable`),
         );
       } catch {
         this.error.set('Failed to load groups');
@@ -245,9 +249,7 @@ export class GroupsDiscoveryComponent {
   async joinGroup(groupId: string): Promise<void> {
     this.joiningId.set(groupId);
     try {
-      await firstValueFrom(
-        this.http.post<unknown>(`${this.apiUrl}/groups/${groupId}/join`, {})
-      );
+      await firstValueFrom(this.http.post<unknown>(`${this.apiUrl}/groups/${groupId}/join`, {}));
       this.groupsResource.reload();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to join';

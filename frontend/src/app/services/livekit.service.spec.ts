@@ -1,8 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import {
-  HttpClientTestingModule,
-  HttpTestingController,
-} from '@angular/common/http/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { LivekitService } from './livekit.service';
 import { environment } from '../../environments/environment';
 import * as livekitClient from 'livekit-client';
@@ -123,7 +120,8 @@ describe('LivekitService', () => {
         connect: mockRoomConnect,
         disconnect: mockRoomDisconnect,
       });
-      (service as unknown as { createRoom: (options: unknown) => unknown }).createRoom = () => fakeRoom;
+      (service as unknown as { createRoom: (options: unknown) => unknown }).createRoom = () =>
+        fakeRoom;
 
       mockRoomConnect.mockImplementation(async () => {});
       const roomPromise = service.joinRoom('my-room', 'user-123', false);
@@ -131,15 +129,17 @@ describe('LivekitService', () => {
       expect(req.request.method).toBe('POST');
       const mockIceServers = [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'turn:turn.example.com:3478?transport=udp', username: 'guest', credential: 'somepassword' },
+        {
+          urls: 'turn:turn.example.com:3478?transport=udp',
+          username: 'guest',
+          credential: 'somepassword',
+        },
       ];
       req.flush({ token: 'test-token', iceServers: mockIceServers });
       const room = await roomPromise;
-      expect(mockRoomConnect).toHaveBeenCalledWith(
-        environment.liveKitUrl,
-        'test-token',
-        { rtcConfig: { iceServers: mockIceServers } },
-      );
+      expect(mockRoomConnect).toHaveBeenCalledWith(environment.liveKitUrl, 'test-token', {
+        rtcConfig: { iceServers: mockIceServers },
+      });
       expect(room).toBe(fakeRoom);
       expect(internals(service).room).toEqual(fakeRoom);
     });

@@ -24,7 +24,9 @@ import { environment } from '../../../environments/environment';
     <div class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-8 sm:py-12 px-4">
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-8 sm:mb-12">
-          <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">{{ 'subscription.plans.title' | t }}</h1>
+          <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">
+            {{ 'subscription.plans.title' | t }}
+          </h1>
           <p class="text-slate-300 text-sm sm:text-base lg:text-lg">
             {{ 'subscription.plans.subtitle' | t }}
           </p>
@@ -53,7 +55,9 @@ import { environment } from '../../../environments/environment';
               class="px-4 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all duration-200"
             >
               {{ 'subscription.plans.yearly' | t }}
-              <span class="text-xs ms-1 text-green-400">{{ 'subscription.plans.saveAmount' | t }}</span>
+              <span class="text-xs ms-1 text-green-400">{{
+                'subscription.plans.saveAmount' | t
+              }}</span>
             </button>
           </div>
         </div>

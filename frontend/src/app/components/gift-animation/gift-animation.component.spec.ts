@@ -26,9 +26,7 @@ describe('GiftAnimationComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [GiftAnimationComponent],
-      providers: [
-        { provide: TranslatePipe, useValue: mockTranslatePipe },
-      ],
+      providers: [{ provide: TranslatePipe, useValue: mockTranslatePipe }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(GiftAnimationComponent);

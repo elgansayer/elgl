@@ -47,8 +47,12 @@ export class FluencyIndicatorComponent {
   targetLanguages = input.required<{ code: string; level?: number }[]>();
 
   readonly fluencyLabel = computed(() => {
-    const native = this.nativeLanguages().map((l) => l.code).join(', ');
-    const target = this.targetLanguages().map((l) => l.code).join(', ');
+    const native = this.nativeLanguages()
+      .map((l) => l.code)
+      .join(', ');
+    const target = this.targetLanguages()
+      .map((l) => l.code)
+      .join(', ');
     return `Speaks ${native}; learning ${target}`;
   });
 

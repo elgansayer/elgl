@@ -18,4 +18,3 @@ i18n or component work.
 
 Inspect existing code, tests, Git history, issues and pull requests before editing. Preserve listed dirty files.
 Run focused tests after each logical change and the supplied full verification gate before completion.
-

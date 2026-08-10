@@ -21,9 +21,13 @@ class NetworkStatusStub {
 class OfflineReadingStub {
   isOfflineMode = signal(false);
   async cacheArticles(): Promise<void> {}
-  async getCachedArticles(): Promise<unknown[]> { return []; }
+  async getCachedArticles(): Promise<unknown[]> {
+    return [];
+  }
   async recordReadingHistory(): Promise<void> {}
-  async getReadingHistory(): Promise<unknown[]> { return []; }
+  async getReadingHistory(): Promise<unknown[]> {
+    return [];
+  }
   async clearAll(): Promise<void> {}
 }
 

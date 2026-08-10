@@ -36,14 +36,7 @@ export class AppearanceSettingsComponent {
   readonly primaryAccentColor = signal(DEFAULT_ACCENT);
   readonly isVip = signal(false);
 
-  readonly availableColors = [
-    '#4f46e5',
-    '#e11d48',
-    '#16a34a',
-    '#d97706',
-    '#9333ea',
-    '#0891b2',
-  ];
+  readonly availableColors = ['#4f46e5', '#e11d48', '#16a34a', '#d97706', '#9333ea', '#0891b2'];
 
   private profileResource = resource<UserProfile | null, void>({
     loader: async () => {

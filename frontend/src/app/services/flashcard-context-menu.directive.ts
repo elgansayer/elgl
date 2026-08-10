@@ -43,7 +43,8 @@ export class FlashcardContextMenuDirective {
 
   private showOverlay(x: number, y: number, word: string, context: string, lang: string): void {
     const div = document.createElement('div');
-    div.className = 'fixed bg-surface text-on-surface shadow-lg rounded-lg px-4 py-2 z-50 cursor-pointer hover:bg-surface-hover transition-colors';
+    div.className =
+      'fixed bg-surface text-on-surface shadow-lg rounded-lg px-4 py-2 z-50 cursor-pointer hover:bg-surface-hover transition-colors';
     div.style.left = `${x}px`;
     div.style.top = `${y}px`;
     div.textContent = 'Create Flashcard';

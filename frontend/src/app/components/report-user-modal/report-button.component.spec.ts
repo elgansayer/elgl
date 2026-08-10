@@ -10,20 +10,23 @@ describe('ReportButtonComponent', () => {
     let templateContent: string;
 
     beforeAll(() => {
-      const content = readFileSync(
-        resolve(__dirname, 'report-button.component.ts'),
-        'utf-8',
-      );
+      const content = readFileSync(resolve(__dirname, 'report-button.component.ts'), 'utf-8');
       const match = content.match(/template:\s*`([\s\S]*?)`\s*,/);
       templateContent = match ? match[1] : content;
     });
 
     it('should not contain any physical direction CSS utilities', () => {
       const violations = [
-        /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
-        /\bleft-[0-9]/, /\bright-[0-9]/,
-        /\bborder-l\b/, /\bborder-r\b/,
-        /\btext-left\b/, /\btext-right\b/,
+        /\bpl-\d/,
+        /\bpr-\d/,
+        /\bml-\d/,
+        /\bmr-\d/,
+        /\bleft-[0-9]/,
+        /\bright-[0-9]/,
+        /\bborder-l\b/,
+        /\bborder-r\b/,
+        /\btext-left\b/,
+        /\btext-right\b/,
       ];
       for (const pattern of violations) {
         expect(templateContent).not.toMatch(pattern);

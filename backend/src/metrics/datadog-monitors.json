@@ -25,7 +25,12 @@
       "type": "query alert",
       "query": "avg(last_30m):anomalies(sum:hellotalk.economy.coins.total_revenue.as_rate() by {platform}, 'basic', 3, direction='below') >= 0.8",
       "message": "Coin purchase revenue has dropped significantly below the expected range over the last 30 minutes. {{#is_alert}}Platform: {{platform.name}} - Check if checkout is functional.{{/is_alert}}\n@oncall-monetisation",
-      "tags": ["service:hellotalk", "team:monetisation", "component:economy", "anomaly"],
+      "tags": [
+        "service:hellotalk",
+        "team:monetisation",
+        "component:economy",
+        "anomaly"
+      ],
       "priority": 2,
       "options": {
         "notify_audit": false,
@@ -61,7 +66,12 @@
       "type": "query alert",
       "query": "sum(last_5m):sum:hellotalk.economy.gift.coins_spent.sum{*} by {gift_id} > 5000",
       "message": "Unusually high coin spend detected on a single gift type in the last 5 minutes. {{#is_alert}}Gift ID: {{gift_id.name}}, Total coins spent: {{value}} - Potential abuse or exploit.{{/is_alert}}\n@oncall-monetisation @oncall-security",
-      "tags": ["service:hellotalk", "team:monetisation", "component:economy", "fraud"],
+      "tags": [
+        "service:hellotalk",
+        "team:monetisation",
+        "component:economy",
+        "fraud"
+      ],
       "priority": 2,
       "options": {
         "notify_audit": true,

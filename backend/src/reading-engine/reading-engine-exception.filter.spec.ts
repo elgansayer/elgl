@@ -172,13 +172,15 @@ describe('ReadingEngineExceptionFilter', () => {
 
   it('should include stack_trace in crash report', async () => {
     const exception = new Error('Tokenisation error');
-    exception.stack = 'Error: Tokenisation error\n    at reading-engine.service.ts:150:20';
+    exception.stack =
+      'Error: Tokenisation error\n    at reading-engine.service.ts:150:20';
 
     await filter.catch(exception, mockHost);
 
     expect(crashReportService.reportCrash).toHaveBeenCalledWith(
       expect.objectContaining({
-        stack_trace: 'Error: Tokenisation error\n    at reading-engine.service.ts:150:20',
+        stack_trace:
+          'Error: Tokenisation error\n    at reading-engine.service.ts:150:20',
       }),
     );
   });

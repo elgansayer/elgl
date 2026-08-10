@@ -12,8 +12,13 @@ import { VirtualGift, CoinPackage, StickerPack } from './economy.store';
 function syncReq(result?: unknown) {
   const r: Record<string, unknown> = { result: result ?? null, _onsuccess: null };
   Object.defineProperty(r, 'onsuccess', {
-    get() { return r['_onsuccess']; },
-    set(f: () => void) { r['_onsuccess'] = f; if (f) f(); },
+    get() {
+      return r['_onsuccess'];
+    },
+    set(f: () => void) {
+      r['_onsuccess'] = f;
+      if (f) f();
+    },
   });
   return r;
 }
@@ -30,11 +35,20 @@ describe('OfflineEconomyService', () => {
   function os(storeName: string) {
     const s = getStore(storeName);
     return {
-      put: (v: Record<string, unknown>) => { s.set(String(v['id'] ?? v['key']), v); return syncReq(); },
+      put: (v: Record<string, unknown>) => {
+        s.set(String(v['id'] ?? v['key']), v);
+        return syncReq();
+      },
       get: (key: string) => syncReq(s.get(key) ?? null),
       getAll: () => syncReq([...s.values()]),
-      delete: (key: string) => { s.delete(key); return syncReq(); },
-      clear: () => { s.clear(); return syncReq(); },
+      delete: (key: string) => {
+        s.delete(key);
+        return syncReq();
+      },
+      clear: () => {
+        s.clear();
+        return syncReq();
+      },
     };
   }
 
@@ -127,9 +141,7 @@ describe('OfflineEconomyService', () => {
 
   describe('sticker packs caching', () => {
     it('should cache and retrieve sticker packs', async () => {
-      const packs: StickerPack[] = [
-        { id: 's1', name: 'Fun Pack', cost_coins: 20, owned: false },
-      ];
+      const packs: StickerPack[] = [{ id: 's1', name: 'Fun Pack', cost_coins: 20, owned: false }];
       await service.cacheStickerPacks(packs);
       const cached = await service.getCachedStickerPacks();
       expect(cached).toHaveLength(1);
@@ -143,7 +155,10 @@ describe('OfflineEconomyService', () => {
 
   describe('pending action queue', () => {
     it('should enqueue and retrieve pending actions', async () => {
-      const id = await service.enqueuePendingAction('send_gift', { giftId: 'g1', receiverId: 'u1' });
+      const id = await service.enqueuePendingAction('send_gift', {
+        giftId: 'g1',
+        receiverId: 'u1',
+      });
       expect(id).toBeTruthy();
       expect(service.pendingActionCount()).toBe(1);
 
@@ -173,7 +188,9 @@ describe('OfflineEconomyService', () => {
   describe('clearAll', () => {
     it('should clear all cached data and pending actions', async () => {
       await service.cacheBalance(100);
-      await service.cacheCatalog([{ id: 'g1', name: 'Rose', icon: '🌹', cost_coins: 10, animation_type: 'float' }]);
+      await service.cacheCatalog([
+        { id: 'g1', name: 'Rose', icon: '🌹', cost_coins: 10, animation_type: 'float' },
+      ]);
       await service.enqueuePendingAction('send_gift', { giftId: 'g1' });
       expect(service.pendingActionCount()).toBe(1);
 

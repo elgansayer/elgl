@@ -76,12 +76,8 @@ describe('AvatarUploadComponent', () => {
   });
 
   it('should load image preview and natural dimensions when a file is selected', async () => {
-    const createObjectURLSpy = vi
-      .spyOn(URL, 'createObjectURL')
-      .mockReturnValue('blob:preview');
-    const revokeObjectURLSpy = vi
-      .spyOn(URL, 'revokeObjectURL')
-      .mockImplementation(() => undefined);
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview');
+    const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
 
     class FakeImage {
       naturalWidth = 320;
@@ -180,8 +176,7 @@ describe('AvatarUploadComponent', () => {
 
     // Provide a fake image element so drawImage can accept it
     const fakeImage = { naturalWidth: 400, naturalHeight: 300 } as HTMLImageElement;
-    (component as unknown as { imageElement: HTMLImageElement }).imageElement =
-      fakeImage;
+    (component as unknown as { imageElement: HTMLImageElement }).imageElement = fakeImage;
 
     // Mock the canvas creation
     const drawImageMock = vi.fn();
@@ -233,8 +228,7 @@ describe('AvatarUploadComponent', () => {
     privates.cropSize.set(80);
 
     const fakeImage = { naturalWidth: 400, naturalHeight: 300 } as HTMLImageElement;
-    (component as unknown as { imageElement: HTMLImageElement }).imageElement =
-      fakeImage;
+    (component as unknown as { imageElement: HTMLImageElement }).imageElement = fakeImage;
 
     const canvasMock: CanvasMock = {
       width: 0,
@@ -251,9 +245,7 @@ describe('AvatarUploadComponent', () => {
       return document.createElement(tag);
     });
 
-    vi.spyOn(supabaseInstance, 'uploadAvatar').mockRejectedValue(
-      new Error('upload failed'),
-    );
+    vi.spyOn(supabaseInstance, 'uploadAvatar').mockRejectedValue(new Error('upload failed'));
 
     await component.confirmCrop();
 

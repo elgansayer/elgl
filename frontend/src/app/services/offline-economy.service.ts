@@ -1,10 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { NetworkStatusService } from './network-status.service';
-import {
-  VirtualGift,
-  CoinPackage,
-  StickerPack,
-} from './economy.store';
+import { VirtualGift, CoinPackage, StickerPack } from './economy.store';
 
 const DB_NAME = 'hellotalk_economy_offline';
 const DB_VERSION = 1;
@@ -168,7 +164,9 @@ export class OfflineEconomyService {
     await this.ensureDB();
     const all = await this.getAllFromStore<Record<string, unknown>>(STORE_STATE);
     return all
-      .filter((item) => typeof item['actionType'] === 'string' && typeof item['payload'] === 'object')
+      .filter(
+        (item) => typeof item['actionType'] === 'string' && typeof item['payload'] === 'object',
+      )
       .map((item) => item as unknown as PendingEconomyAction);
   }
 

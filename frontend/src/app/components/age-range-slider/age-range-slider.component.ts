@@ -53,7 +53,10 @@ export interface AgeRange {
           [style.zIndex]="maxAge() > minAge() ? 20 : 10"
         />
         <!-- visual bar -->
-        <div class="absolute bottom-1 w-full h-2 bg-surface-container pointer-events-none" aria-hidden="true">
+        <div
+          class="absolute bottom-1 w-full h-2 bg-surface-container pointer-events-none"
+          aria-hidden="true"
+        >
           <div
             class="h-full bg-primary pointer-events-none"
             [style.left.%]="minPercent()"
@@ -110,11 +113,11 @@ export class AgeRangeSliderComponent {
   protected minAge = signal(18);
   protected maxAge = signal(100);
 
-  protected minPercent = computed(() =>
-    ((this.minAge() - this.minLimit()) / (this.maxLimit() - this.minLimit())) * 100,
+  protected minPercent = computed(
+    () => ((this.minAge() - this.minLimit()) / (this.maxLimit() - this.minLimit())) * 100,
   );
-  protected maxPercent = computed(() =>
-    ((this.maxAge() - this.minLimit()) / (this.maxLimit() - this.minLimit())) * 100,
+  protected maxPercent = computed(
+    () => ((this.maxAge() - this.minLimit()) / (this.maxLimit() - this.minLimit())) * 100,
   );
   protected barWidth = computed(() => this.maxPercent() - this.minPercent());
 

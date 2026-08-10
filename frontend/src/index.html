@@ -12,11 +12,13 @@
     />
     <link rel="manifest" href="manifest.webmanifest" />
     <script>
-      (function(){
+      (function () {
         var theme;
         try {
           theme = localStorage.getItem('app_theme');
-        } catch(e) { /* ignore */ }
+        } catch (e) {
+          /* ignore */
+        }
         if (!theme || theme === 'system') {
           theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }

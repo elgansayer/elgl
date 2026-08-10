@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ErrorHandler } from '@angular/core';
-import {
-  SrsErrorBoundaryComponent,
-  SrsErrorContext,
-} from './srs-error-boundary.component';
+import { SrsErrorBoundaryComponent, SrsErrorContext } from './srs-error-boundary.component';
 
 describe.skip('SrsErrorBoundaryComponent', () => {
   let fixture: ComponentFixture<SrsErrorBoundaryComponent>;
@@ -88,7 +85,7 @@ describe.skip('SrsErrorBoundaryComponent', () => {
     expect(mockErrorHandler.handleError).toHaveBeenCalledTimes(1);
     const reportedError = mockErrorHandler.handleError.mock.calls[0][0] as Error;
     expect(reportedError.name).toBe('SrsError');
-     
+
     expect((reportedError as any).srsContext.component).toBe('unknown');
     expect(reportedError.message).toContain('[SRS:unknown]');
     expect(reportedError.message).toContain('Grading failed');
@@ -100,7 +97,7 @@ describe.skip('SrsErrorBoundaryComponent', () => {
 
     expect(mockErrorHandler.handleError).toHaveBeenCalledTimes(1);
     const reportedError = mockErrorHandler.handleError.mock.calls[0][0] as Error;
-     
+
     const srsCtx = (reportedError as any).srsContext;
     expect(srsCtx.metadata.custom).toBe('metadata');
   });
@@ -208,7 +205,8 @@ describe.skip('SrsErrorBoundaryComponent', () => {
     it('should parse stack frames from stack trace', () => {
       const ctx: SrsErrorContext = { component: 'test' };
       const error = new Error('Test');
-      error.stack = 'Error: Test\n    at testFunction (http://localhost:4200/main.js:42:10)\n    at <anonymous>';
+      error.stack =
+        'Error: Test\n    at testFunction (http://localhost:4200/main.js:42:10)\n    at <anonymous>';
 
       const payload = SrsErrorBoundaryComponent.buildCrashPayload(error, ctx);
 

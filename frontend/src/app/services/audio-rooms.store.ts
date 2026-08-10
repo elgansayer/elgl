@@ -169,16 +169,20 @@ export class AudioRoomsStore {
 
   private livekitRoom: Room | null = null;
   private roomSubscription: unknown = null;
-  private onTrackSubscribedBound: ((
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ) => void) | null = null;
-  private onTrackUnsubscribedBound: ((
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ) => void) | null = null;
+  private onTrackSubscribedBound:
+    | ((
+        track: RemoteTrack,
+        publication: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => void)
+    | null = null;
+  private onTrackUnsubscribedBound:
+    | ((
+        track: RemoteTrack,
+        publication: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => void)
+    | null = null;
 
   /**
    * Type guard that narrows the raw Centrifugo payload into the expected shape.

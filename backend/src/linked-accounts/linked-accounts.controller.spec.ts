@@ -5,7 +5,11 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 describe('LinkedAccountsController', () => {
   let controller: LinkedAccountsController;
-  let service: { getLinkedAccounts: jest.Mock; linkAccount: jest.Mock; unlinkAccount: jest.Mock };
+  let service: {
+    getLinkedAccounts: jest.Mock;
+    linkAccount: jest.Mock;
+    unlinkAccount: jest.Mock;
+  };
 
   const mockRequest = (userId = 'user-1') =>
     ({
@@ -21,9 +25,7 @@ describe('LinkedAccountsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LinkedAccountsController],
-      providers: [
-        { provide: LinkedAccountsService, useValue: service },
-      ],
+      providers: [{ provide: LinkedAccountsService, useValue: service }],
     })
       .overrideGuard(SupabaseAuthGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })

@@ -27,9 +27,9 @@ export class DiscoveryErrorHandlerService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
 
-  readonly recentCrashes = signal<
-    Array<{ message: string; timestamp: string; context: string }>
-  >([]);
+  readonly recentCrashes = signal<Array<{ message: string; timestamp: string; context: string }>>(
+    [],
+  );
 
   private getHeaders(): Record<string, string> {
     const token = this.authService.getAccessToken();
@@ -95,8 +95,7 @@ export class DiscoveryErrorHandlerService {
     try {
       return await fn();
     } catch (err: unknown) {
-      const error =
-        err instanceof Error ? err : new Error(String(err));
+      const error = err instanceof Error ? err : new Error(String(err));
       this.reportDiscoveryCrash(error, {
         ...context,
         action,

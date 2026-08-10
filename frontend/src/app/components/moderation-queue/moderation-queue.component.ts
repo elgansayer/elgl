@@ -9,7 +9,14 @@ import { ModerationService, ModerationItem } from '../../services/moderation.ser
 
 @Component({
   selector: 'app-moderation-queue',
-  imports: [DatePipe, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [
+    DatePipe,
+    TranslatePipe,
+    SanitiseHtmlPipe,
+    AppEmptyStateComponent,
+    AppSkeletonLoaderComponent,
+    AppCardComponent,
+  ],
   templateUrl: './moderation-queue.component.html',
   styleUrls: ['./moderation-queue.component.scss'],
 })
@@ -46,7 +53,7 @@ export class ModerationQueueComponent {
         this.error.set(
           params.tab === 'moment'
             ? 'Failed to load flagged moments.'
-            : 'Failed to load flagged profiles.'
+            : 'Failed to load flagged profiles.',
         );
         return [];
       } finally {

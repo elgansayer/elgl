@@ -27,9 +27,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
   ],
   template: `
     <div class="app-screen app-padded pb-10">
-      <header
-        class="flex items-center gap-3 pt-2"
-      >
+      <header class="flex items-center gap-3 pt-2">
         <button
           type="button"
           (click)="goBack()"
@@ -54,10 +52,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
       </header>
 
       <!-- Status Filter Pills -->
-      <nav
-        class="flex gap-2 overflow-x-auto py-3"
-        aria-label="{{ 'escrow.filterLabel' | t }}"
-      >
+      <nav class="flex gap-2 overflow-x-auto py-3" aria-label="{{ 'escrow.filterLabel' | t }}">
         @for (f of statusFilters; track f) {
           <button
             type="button"
@@ -70,7 +65,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
             (click)="onFilterChange(f)"
             [attr.aria-pressed]="selectedStatus() === f"
           >
-            {{ ('escrow.status.' + f) | t }}
+            {{ 'escrow.status.' + f | t }}
             @if (f === 'all') {
               ({{ totalCount() }})
             } @else {
@@ -124,7 +119,9 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
         } @else {
           <app-empty-state
             icon="🔍"
-            [title]="'escrow.emptyFilteredTitle' | t: { status: ('escrow.status.' + selectedStatus()) | t }"
+            [title]="
+              'escrow.emptyFilteredTitle' | t: { status: 'escrow.status.' + selectedStatus() | t }
+            "
             [description]="'escrow.emptyFilteredDescription' | t"
             [actionLabel]="'escrow.showAll' | t"
             (actionClicked)="onFilterChange('all')"
@@ -134,9 +131,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 
       <!-- Escrow List -->
       @if (!loading() && !error() && filteredEscrows().length > 0) {
-        <div
-          class="space-y-3"
-        >
+        <div class="space-y-3">
           @for (escrow of filteredEscrows(); track escrow.id) {
             <a
               [routerLink]="['/escrow', escrow.id]"
@@ -149,7 +144,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
                       {{ escrow.description }}
                     </span>
                     <app-pill
-                      [label]="('escrow.status.' + escrow.status) | t"
+                      [label]="'escrow.status.' + escrow.status | t"
                       [colour]="statusColour(escrow.status)"
                       size="sm"
                     />
@@ -162,7 +157,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
                       <span class="text-xs text-text-secondary">{{ 'escrow.coins' | t }}</span>
                     </div>
                     <span class="text-xs text-text-secondary">
-                      {{ escrow.created_at | date:'mediumDate' }}
+                      {{ escrow.created_at | date: 'mediumDate' }}
                     </span>
                   </div>
                   <p class="text-xs text-text-secondary truncate">

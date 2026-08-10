@@ -25,9 +25,7 @@ function isIncomingCallEvent(
   if (typeof value !== 'object' || value === null) return false;
   if (!('type' in value) || !('callInfo' in value)) return false;
   return (
-    typeof value.type === 'string' &&
-    typeof value.callInfo === 'object' &&
-    value.callInfo !== null
+    typeof value.type === 'string' && typeof value.callInfo === 'object' && value.callInfo !== null
   );
 }
 
@@ -84,7 +82,8 @@ function getAudioContextClass(): typeof AudioContext | undefined {
             </p>
             @if (callInfo()?.e2eeKey) {
               <p class="text-xs text-green-500 mt-2 flex items-center gap-1">
-                <span>{{ 'voip.endToEndEncryptedIcon' | t }}</span> {{ 'voip.endToEndEncrypted' | t }}
+                <span>{{ 'voip.endToEndEncryptedIcon' | t }}</span>
+                {{ 'voip.endToEndEncrypted' | t }}
               </p>
             }
           </div>

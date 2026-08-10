@@ -115,7 +115,11 @@ export class EscrowService {
       headers['Authorization'] = `Bearer ${token}`;
     }
     return firstValueFrom(
-      this.http.post<EscrowReleaseResult>(`${this.baseUrl}/release`, { escrow_id: escrowId }, { headers }),
+      this.http.post<EscrowReleaseResult>(
+        `${this.baseUrl}/release`,
+        { escrow_id: escrowId },
+        { headers },
+      ),
     );
   }
 
@@ -148,18 +152,18 @@ export class EscrowService {
       headers['Authorization'] = `Bearer ${token}`;
     }
     return firstValueFrom(
-      this.http.post<EscrowRefundResult>(`${this.baseUrl}/refund`, { escrow_id: escrowId, reason }, { headers }),
+      this.http.post<EscrowRefundResult>(
+        `${this.baseUrl}/refund`,
+        { escrow_id: escrowId, reason },
+        { headers },
+      ),
     );
   }
 
   /**
    * Opens a dispute for an escrow. Queues offline if needed.
    */
-  async disputeEscrow(
-    escrowId: string,
-    reason: string,
-    evidence?: string,
-  ): Promise<EscrowRow> {
+  async disputeEscrow(escrowId: string, reason: string, evidence?: string): Promise<EscrowRow> {
     if (!this.network.isOnline()) {
       const key = `dispute_${escrowId}_${Date.now()}`;
       const op: EscrowOperation = {
@@ -191,7 +195,11 @@ export class EscrowService {
       headers['Authorization'] = `Bearer ${token}`;
     }
     return firstValueFrom(
-      this.http.post<EscrowRow>(`${this.baseUrl}/dispute`, { escrow_id: escrowId, reason, evidence }, { headers }),
+      this.http.post<EscrowRow>(
+        `${this.baseUrl}/dispute`,
+        { escrow_id: escrowId, reason, evidence },
+        { headers },
+      ),
     );
   }
 

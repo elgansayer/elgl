@@ -96,10 +96,7 @@ export class UserDetailComponent {
     this.isTranslating.set(true);
     try {
       const targetLang = this.i18n.currentLang() || 'en-GB';
-      const translated = await this.discoveryService.translateBio(
-        p.id,
-        targetLang,
-      );
+      const translated = await this.discoveryService.translateBio(p.id, targetLang);
       if (translated) {
         this.translatedBioText.set(translated);
         this.showTranslated.set(true);

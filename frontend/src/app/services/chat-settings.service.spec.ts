@@ -118,9 +118,7 @@ describe('ChatSettingsService', () => {
 
     it('should update enterToSend and call the API', async () => {
       const promise = service.updateSetting('enterToSend', true);
-      httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
-        .flush({ enterToSend: true });
+      httpTesting.expectOne('http://localhost:3000/api/chat/settings').flush({ enterToSend: true });
 
       await promise;
       expect(service.enterToSend()).toBe(true);
@@ -128,9 +126,7 @@ describe('ChatSettingsService', () => {
 
     it('should update textSize and call the API', async () => {
       const promise = service.updateSetting('textSize', 'small');
-      httpTesting
-        .expectOne('http://localhost:3000/api/chat/settings')
-        .flush({ textSize: 'small' });
+      httpTesting.expectOne('http://localhost:3000/api/chat/settings').flush({ textSize: 'small' });
 
       await promise;
       expect(service.textSize()).toBe('small');

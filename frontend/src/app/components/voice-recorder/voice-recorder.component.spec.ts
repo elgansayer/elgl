@@ -57,9 +57,7 @@ describe('VoiceRecorderComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [VoiceRecorderComponent],
-      providers: [
-        { provide: MediaService, useClass: MockMediaService },
-      ],
+      providers: [{ provide: MediaService, useClass: MockMediaService }],
     })
       .overrideComponent(VoiceRecorderComponent, {
         set: { imports: [MockTranslatePipe] },

@@ -2,7 +2,8 @@
   <div class="ps-3 pe-3 sm:ps-4 sm:pe-4 w-full max-w-md">
     <!-- caller info -->
     <div class="text-center mb-6 sm:mb-8">
-      <img loading="lazy"
+      <img
+        loading="lazy"
         [src]="avatarUrl()"
         [alt]="callerName()"
         class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto object-cover ring-4 ring-blue-500"
@@ -24,7 +25,9 @@
         <span class="material-icons text-xl sm:text-2xl">
           {{ isMuted() ? 'mic_off' : 'mic' }}
         </span>
-        <span class="text-[10px] sm:text-xs mt-0.5 sm:mt-1">{{ isMuted() ? ('call.unmute' | t) : ('call.mute' | t) }}</span>
+        <span class="text-[10px] sm:text-xs mt-0.5 sm:mt-1">{{
+          isMuted() ? ('call.unmute' | t) : ('call.mute' | t)
+        }}</span>
       </button>
 
       <!-- Speakerphone -->

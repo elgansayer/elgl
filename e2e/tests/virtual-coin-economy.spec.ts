@@ -97,7 +97,10 @@ test.describe('Virtual Coin Economy - Shop & Cart', () => {
     await page.goto('/shop');
     await page.waitForTimeout(3000);
 
-    const addBtn = page.locator('button').filter({ hasText: /Add|cart\.add/i }).first();
+    const addBtn = page
+      .locator('button')
+      .filter({ hasText: /Add|cart\.add/i })
+      .first();
     const addVisible = await addBtn.isVisible().catch(() => false);
 
     if (addVisible) {
@@ -179,7 +182,10 @@ test.describe('Virtual Coin Economy - Sticker Store', () => {
     if (cardCount > 0) {
       // Each card should have a button (purchase/unlock)
       const buttons = cards.first().locator('button, div.rounded-full');
-      const buttonVisible = await buttons.first().isVisible().catch(() => false);
+      const buttonVisible = await buttons
+        .first()
+        .isVisible()
+        .catch(() => false);
       expect(buttonVisible || true).toBeTruthy();
     }
   });
@@ -396,7 +402,9 @@ test.describe('Virtual Coin Economy - Edge Cases & Resilience', () => {
     await expect(body).toBeVisible();
   });
 
-  test('should handle direct navigation to coins/success with session_id param', async ({ page }) => {
+  test('should handle direct navigation to coins/success with session_id param', async ({
+    page,
+  }) => {
     await page.goto('/coins/success?session_id=cs_test_fake_session_12345');
     await page.waitForTimeout(3000);
 

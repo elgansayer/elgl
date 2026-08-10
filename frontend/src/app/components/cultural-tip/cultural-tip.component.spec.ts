@@ -40,7 +40,9 @@ describe('CulturalTipComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Bowing is the customary greeting in Japan.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Bowing is the customary greeting in Japan.',
+    );
     const region = fixture.nativeElement.querySelector('[role="region"]');
     expect(region).toBeTruthy();
   });
@@ -70,6 +72,8 @@ describe('CulturalTipComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Bonjour is the customary greeting in France.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Bonjour is the customary greeting in France.',
+    );
   });
 });

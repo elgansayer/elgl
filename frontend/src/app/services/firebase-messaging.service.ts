@@ -4,7 +4,8 @@ import { Injectable, signal } from '@angular/core';
 export class FirebaseMessagingService {
   readonly fcmToken = signal<string | null>(null);
   readonly permissionGranted = signal<boolean>(false);
-  private readonly isBrowser = typeof window !== 'undefined' &&
+  private readonly isBrowser =
+    typeof window !== 'undefined' &&
     typeof navigator !== 'undefined' &&
     typeof navigator.serviceWorker !== 'undefined';
 

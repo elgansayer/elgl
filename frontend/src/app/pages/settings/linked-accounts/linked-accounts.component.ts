@@ -1,10 +1,7 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
-import {
-  LinkedAccountsService,
-  LinkedAccount,
-} from '../../../services/linked-accounts.service';
+import { LinkedAccountsService, LinkedAccount } from '../../../services/linked-accounts.service';
 
 interface ProviderInfo {
   readonly id: string;
@@ -35,26 +32,32 @@ export class LinkedAccountsComponent {
     { id: 'google', icon: 'G', colour: '#4285F4', labelKey: 'settings.linkedAccounts.linkGoogle' },
     { id: 'apple', icon: 'A', colour: '#A2AAAD', labelKey: 'settings.linkedAccounts.linkApple' },
     { id: 'email', icon: '@', colour: '#34D399', labelKey: 'settings.linkedAccounts.linkEmail' },
-    { id: 'facebook', icon: 'f', colour: '#1877F2', labelKey: 'settings.linkedAccounts.linkFacebook' },
-    { id: 'twitter', icon: 'X', colour: '#E5E5E5', labelKey: 'settings.linkedAccounts.linkTwitter' },
+    {
+      id: 'facebook',
+      icon: 'f',
+      colour: '#1877F2',
+      labelKey: 'settings.linkedAccounts.linkFacebook',
+    },
+    {
+      id: 'twitter',
+      icon: 'X',
+      colour: '#E5E5E5',
+      labelKey: 'settings.linkedAccounts.linkTwitter',
+    },
   ];
 
-  readonly linkedCount = computed(() =>
-    this.linkedAccountsResource.value()?.filter((a) => a.active).length ?? 0,
+  readonly linkedCount = computed(
+    () => this.linkedAccountsResource.value()?.filter((a) => a.active).length ?? 0,
   );
 
   isLinked(provider: string): boolean {
     return (
-      this.linkedAccountsResource.value()?.some(
-        (a) => a.provider === provider && a.active,
-      ) ?? false
+      this.linkedAccountsResource.value()?.some((a) => a.provider === provider && a.active) ?? false
     );
   }
 
   getLinkedAccount(provider: string): LinkedAccount | undefined {
-    return this.linkedAccountsResource
-      .value()
-      ?.find((a) => a.provider === provider);
+    return this.linkedAccountsResource.value()?.find((a) => a.provider === provider);
   }
 
   canUnlink(provider: string): boolean {

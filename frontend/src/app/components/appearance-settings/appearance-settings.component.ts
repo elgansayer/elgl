@@ -19,9 +19,14 @@ import { AppCardComponent } from '../primitives/card/card.component';
           @for (opt of themeOptions; track opt) {
             <button
               (click)="setTheme(opt)"
-              [class]="'px-4 py-2 rounded-lg transition-colors ' + (themeService.currentTheme() === opt ? 'bg-primary text-white' : 'bg-surface-100 text-content hover:bg-surface-200')"
+              [class]="
+                'px-4 py-2 rounded-lg transition-colors ' +
+                (themeService.currentTheme() === opt
+                  ? 'bg-primary text-white'
+                  : 'bg-surface-100 text-content hover:bg-surface-200')
+              "
             >
-              {{ ('theme.' + opt) | t }}
+              {{ 'theme.' + opt | t }}
             </button>
           }
         </div>
@@ -36,9 +41,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
           class="w-full rounded-lg border border-surface-100 bg-surface-200 px-3 py-2 text-content focus:outline-none focus:ring-2 focus:ring-primary"
         >
           @for (lang of i18nService.availableLanguages; track lang.code) {
-            <option [value]="lang.code">
-              {{ lang.nativeName }} ({{ lang.flag }})
-            </option>
+            <option [value]="lang.code">{{ lang.nativeName }} ({{ lang.flag }})</option>
           }
         </select>
       </div>

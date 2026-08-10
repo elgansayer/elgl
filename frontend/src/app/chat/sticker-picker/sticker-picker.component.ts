@@ -9,7 +9,12 @@ interface Sticker {
   selector: 'app-sticker-picker',
   template: `
     @if (isOpen()) {
-      <div class="fixed inset-0 z-50 bg-black/50" tabindex="0" (keydown.enter)="$event.preventDefault(); closeDrawer()" (click)="closeDrawer()">
+      <div
+        class="fixed inset-0 z-50 bg-black/50"
+        tabindex="0"
+        (keydown.enter)="$event.preventDefault(); closeDrawer()"
+        (click)="closeDrawer()"
+      >
         <div
           class="fixed bottom-0 start-0 end-0 bg-neutral-900 rounded-t-2xl p-4 shadow-2xl max-h-80 overflow-y-auto"
           tabindex="0"

@@ -17,9 +17,7 @@ export class AiConversationService {
   private readonly baseUrl = `${environment.apiUrl}/ai-conversation`;
 
   async getScenarios(): Promise<Scenario[]> {
-    return firstValueFrom(
-      this.http.get<Scenario[]>(`${this.baseUrl}/scenarios`),
-    );
+    return firstValueFrom(this.http.get<Scenario[]>(`${this.baseUrl}/scenarios`));
   }
 
   async sendMessage(
@@ -28,14 +26,11 @@ export class AiConversationService {
     conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<{ reply: string }> {
     return firstValueFrom(
-      this.http.post<{ reply: string }>(
-        `${this.baseUrl}/message`,
-        {
-          message: text,
-          scenarioId: scenarioId ?? null,
-          conversationHistory: conversationHistory ?? [],
-        },
-      ),
+      this.http.post<{ reply: string }>(`${this.baseUrl}/message`, {
+        message: text,
+        scenarioId: scenarioId ?? null,
+        conversationHistory: conversationHistory ?? [],
+      }),
     );
   }
 }

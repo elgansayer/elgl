@@ -158,7 +158,9 @@
 }
 
 @keyframes visitor-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Visitor list */
@@ -173,7 +175,9 @@
   background: rgba(255, 255, 255, 0.035);
   border-radius: 0.875rem;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 
   &:hover {
     background: rgba(255, 255, 255, 0.05);

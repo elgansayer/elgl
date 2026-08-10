@@ -29,24 +29,24 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:reading-en
 
 ## Test Scripts
 
-| Script | File | Description |
-|--------|------|-------------|
-| `test:trust-safety` | `trust-and-safety.load.yml` | Load tests all Safety, Moderation, and Blocks endpoints |
-| `test:spam-detection` | `spam-detection.load.yml` | Load tests the SpamDetectionService `/spam-detection/check` endpoint |
-| `test:economy` | `economy.load.yml` | Load tests the Virtual Coin Economy: gift catalog, coin packages, balance, daily check-in, checkout, purchase, gift sending, sticker packs |
-| `test:matchmaking` | `matchmaking.load.yml` | Load tests the Discovery/Matchmaking Algorithm: partner search, language pair matching, location search, partner of the week, audio intros, recent native speakers, spotlight |
-| `test:matchmaking:report` | (output + HTML) | Runs the Matchmaking test and generates an HTML report |
-| `test:trust-safety:report` | (output + HTML) | Runs the Trust & Safety test and generates an HTML report |
-| `test:srs-flashcards` | `srs-flashcards.load.yml` | SRS flashcard creation, review (SM-2), and retrieval load testing |
-| `test:srs-flashcards:report` | (output + HTML) | Runs the SRS Flashcards test and generates an HTML report |
-| `test:escrow-payments` | `escrow-payments.load.yml` | Load tests the Escrow Payments endpoints |
-| `test:escrow-payments:report` | (output + HTML) | Runs the Escrow Payments test and generates an HTML report |
-| `test:video-classrooms` | `video-classrooms.load.yml` | Load tests the Video Classrooms endpoints (LiveKit room creation and joining) |
-| `test:video-classrooms:report` | (output + HTML) | Runs the Video Classrooms test and generates an HTML report |
-| `test:discovery-map` | `discovery-map.load.yml` | Load tests all Discovery Map endpoints including partner search, language pair matching, location search, audio intros, partner of the week, recent native speakers, and spotlight users |
-| `test:discovery-map:report` | (output + HTML) | Runs the Discovery Map test and generates an HTML report |
-| `test:reading-engine` | `reading-engine.load.yml` | Load tests the LingQ Reading Engine: resource CRUD, tokenisation, reading progress, and cache admin |
-| `test:reading-engine:report` | (output + HTML) | Runs the Reading Engine test and generates an HTML report |
+| Script                         | File                        | Description                                                                                                                                                                              |
+| ------------------------------ | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test:trust-safety`            | `trust-and-safety.load.yml` | Load tests all Safety, Moderation, and Blocks endpoints                                                                                                                                  |
+| `test:spam-detection`          | `spam-detection.load.yml`   | Load tests the SpamDetectionService `/spam-detection/check` endpoint                                                                                                                     |
+| `test:economy`                 | `economy.load.yml`          | Load tests the Virtual Coin Economy: gift catalog, coin packages, balance, daily check-in, checkout, purchase, gift sending, sticker packs                                               |
+| `test:matchmaking`             | `matchmaking.load.yml`      | Load tests the Discovery/Matchmaking Algorithm: partner search, language pair matching, location search, partner of the week, audio intros, recent native speakers, spotlight            |
+| `test:matchmaking:report`      | (output + HTML)             | Runs the Matchmaking test and generates an HTML report                                                                                                                                   |
+| `test:trust-safety:report`     | (output + HTML)             | Runs the Trust & Safety test and generates an HTML report                                                                                                                                |
+| `test:srs-flashcards`          | `srs-flashcards.load.yml`   | SRS flashcard creation, review (SM-2), and retrieval load testing                                                                                                                        |
+| `test:srs-flashcards:report`   | (output + HTML)             | Runs the SRS Flashcards test and generates an HTML report                                                                                                                                |
+| `test:escrow-payments`         | `escrow-payments.load.yml`  | Load tests the Escrow Payments endpoints                                                                                                                                                 |
+| `test:escrow-payments:report`  | (output + HTML)             | Runs the Escrow Payments test and generates an HTML report                                                                                                                               |
+| `test:video-classrooms`        | `video-classrooms.load.yml` | Load tests the Video Classrooms endpoints (LiveKit room creation and joining)                                                                                                            |
+| `test:video-classrooms:report` | (output + HTML)             | Runs the Video Classrooms test and generates an HTML report                                                                                                                              |
+| `test:discovery-map`           | `discovery-map.load.yml`    | Load tests all Discovery Map endpoints including partner search, language pair matching, location search, audio intros, partner of the week, recent native speakers, and spotlight users |
+| `test:discovery-map:report`    | (output + HTML)             | Runs the Discovery Map test and generates an HTML report                                                                                                                                 |
+| `test:reading-engine`          | `reading-engine.load.yml`   | Load tests the LingQ Reading Engine: resource CRUD, tokenisation, reading progress, and cache admin                                                                                      |
+| `test:reading-engine:report`   | (output + HTML)             | Runs the Reading Engine test and generates an HTML report                                                                                                                                |
 
 ## Configuration
 
@@ -78,6 +78,7 @@ Both test scripts include the following phases:
 ## Endpoints Covered
 
 ### Safety Module (`/safety`)
+
 - `GET /safety/report-categories` - Report category lookup
 - `POST /safety/report` - User reporting
 - `POST /safety/block/:id` - Block a user
@@ -90,17 +91,21 @@ Both test scripts include the following phases:
 - `GET /safety/blocked-users-details` - Detailed blocked user profiles
 
 ### Moderation Module (`/moderation`)
+
 - `GET /moderation/items` - Moderation queue retrieval
 - `POST /moderation/report` - User report submission
 - `GET /moderation/analyse/:userId` - Dating behaviour analysis
 
 ### Blocks Module (`/blocks`)
+
 - `GET /blocks` - Get blocked users list
 
 ### Spam Detection (`/spam-detection`)
+
 - `POST /spam-detection/check` - Content spam check
 
 ### SRS Flashcards (`/flashcards`)
+
 - `POST /flashcards` - Create or update a flashcard
 - `PATCH /flashcards/:id/srs` - Review a flashcard with SM-2 spaced repetition scoring
 - `GET /flashcards` - List all flashcards for the authenticated user
@@ -108,6 +113,7 @@ Both test scripts include the following phases:
 - `GET /flashcards/due` - Get flashcards currently due for review
 
 ### Escrow Payments (`/escrow`)
+
 - `GET /escrow/transactions` - List paginated user escrow transactions with status/sort filters
 - `POST /escrow/transactions` - Create a new escrow transaction with milestones
 - `GET /escrow/transactions/:id` - Get details for a single escrow transaction
@@ -119,6 +125,7 @@ Both test scripts include the following phases:
 - `GET /escrow/summary` - Get escrow summary statistics
 
 ### Discovery / Matchmaking Module (`/discovery`)
+
 - `GET /discovery/partners` - Partner search with filters (language, level, distance, age, interests, serious learners, availability, learning goals, voice room, audio intro)
 - `GET /discovery/partner-of-week` - Weekly partner of the week list
 - `GET /discovery/audio-intros` - Audio intro discovery
@@ -128,6 +135,7 @@ Both test scripts include the following phases:
 - `GET /discovery/search-by-location` - Location-based search by country/city
 
 ### Economy Module (`/economy`)
+
 - `GET /economy/catalog` - Virtual gift catalog
 - `GET /economy/packages` - Coin package definitions
 - `GET /economy/balance` - User coin balance
@@ -139,10 +147,12 @@ Both test scripts include the following phases:
 - `POST /economy/unlock-sticker-pack` - Unlock a sticker pack
 
 ### Video Classrooms Module (`/video-calls`)
+
 - `POST /video-calls/start` - Create a new LiveKit video room and return an access token
 - `POST /video-calls/accept` - Join an existing LiveKit video room with a room name
 
 ### Discovery Module (`/discovery`)
+
 - `GET /discovery/partners` - Personalised partner search with filters (language, location, level, age, gender, interests, availability, serious learner mode)
 - `GET /discovery/partner-of-week` - Partner of the Week cached list
 - `GET /discovery/audio-intros` - Audio intro discovery with language filters
@@ -152,6 +162,7 @@ Both test scripts include the following phases:
 - `GET /discovery/search-by-location` - Location-based user search by country and city
 
 ### LingQ Reading Engine (`/reading`)
+
 - `POST /reading/resources` - Create a new reading resource
 - `GET /reading/resources` - List reading resources with filters (language, difficulty, topic)
 - `GET /reading/resources/:id` - Get a single reading resource

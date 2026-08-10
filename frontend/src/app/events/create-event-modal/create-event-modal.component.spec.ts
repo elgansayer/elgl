@@ -139,9 +139,7 @@ describe('CreateEventModalComponent', () => {
     component.created.subscribe(createdSpy);
     component.dismiss.subscribe(dismissSpy);
 
-    eventsServiceSpy.createEvent.mockReturnValue(
-      throwError(() => new Error('creation failed')),
-    );
+    eventsServiceSpy.createEvent.mockReturnValue(throwError(() => new Error('creation failed')));
 
     component.eventForm.setValue({
       title: 'Fail Event',

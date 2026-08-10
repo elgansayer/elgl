@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';import { ThemeService } from './theme.service';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
   let service: ThemeService;
@@ -9,16 +10,16 @@ describe('ThemeService', () => {
 
     // Mock localStorage
     vi.stubGlobal('localStorage', {
-        getItem: vi.fn(),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
     });
 
     // Mock matchMedia
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
-      value: vi.fn().mockImplementation(_query => ({
+      value: vi.fn().mockImplementation((_query) => ({
         matches: false,
         media: _query,
         onchange: null,
@@ -86,7 +87,7 @@ describe('ThemeService', () => {
   });
 
   it('should apply dark theme if theme is system and system prefers dark', () => {
-    (window.matchMedia as Mock).mockImplementation(_query => ({
+    (window.matchMedia as Mock).mockImplementation((_query) => ({
       matches: _query === '(prefers-color-scheme: dark)',
       addEventListener: vi.fn(),
     }));
@@ -97,7 +98,7 @@ describe('ThemeService', () => {
   });
 
   it('should apply light theme if theme is system and system prefers light', () => {
-    (window.matchMedia as Mock).mockImplementation(_query => ({
+    (window.matchMedia as Mock).mockImplementation((_query) => ({
       matches: false,
       addEventListener: vi.fn(),
     }));
@@ -127,12 +128,12 @@ describe('ThemeService', () => {
   it('should apply updated theme when system theme changes while in system mode', () => {
     let changeListener: EventListenerOrEventListenerObject | null = null;
 
-    (window.matchMedia as Mock).mockImplementation(_query => ({
+    (window.matchMedia as Mock).mockImplementation((_query) => ({
       matches: false,
       media: _query,
       addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
         if (type === 'change') changeListener = listener;
-      }
+      },
     }));
 
     service = TestBed.inject(ThemeService);
@@ -140,10 +141,10 @@ describe('ThemeService', () => {
     (document.documentElement.classList.toggle as Mock).mockClear();
 
     // Simulate system theme changing to dark
-    (window.matchMedia as Mock).mockImplementation(_query => ({
+    (window.matchMedia as Mock).mockImplementation((_query) => ({
       matches: true,
       media: _query,
-      addEventListener: vi.fn()
+      addEventListener: vi.fn(),
     }));
 
     expect(changeListener).toBeTruthy();

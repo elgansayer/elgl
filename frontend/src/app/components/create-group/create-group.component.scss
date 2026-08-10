@@ -334,7 +334,9 @@
   color: #ffffff;
   border: none;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.15s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;

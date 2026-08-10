@@ -4,10 +4,7 @@ import { of, throwError } from 'rxjs';
 import { vi, type Mock } from 'vitest';
 
 import { PronunciationFeedbackComponent } from './pronunciation-feedback.component';
-import {
-  PronunciationService,
-  PronunciationFeedback,
-} from '../../services/pronunciation.service';
+import { PronunciationService, PronunciationFeedback } from '../../services/pronunciation.service';
 import { I18nService } from '../../services/i18n.service';
 
 describe('PronunciationFeedbackComponent', () => {
@@ -120,8 +117,10 @@ describe('PronunciationFeedbackComponent', () => {
 
       expect(pronunciationServiceMock.analyse).toHaveBeenCalledTimes(1);
 
-      const [blobArg, refArg] =
-        pronunciationServiceMock.analyse.mock.calls[0] as [Blob, string | undefined];
+      const [blobArg, refArg] = pronunciationServiceMock.analyse.mock.calls[0] as [
+        Blob,
+        string | undefined,
+      ];
       expect(blobArg).toBeInstanceOf(Blob);
       expect(refArg).toBe('Hello world');
     });

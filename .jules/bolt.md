@@ -1,4 +1,5 @@
 ## Performance Optimizations
+
 - **Date:** 2026-08-06
 - **Context:** Resolving N+1 query in `EventsService.checkReminders` (backend)
 - **Bottleneck:** Iterating over events and calling `.eq()` for each event RSVP fetch leads to significant database roundtrips (N queries for N events).

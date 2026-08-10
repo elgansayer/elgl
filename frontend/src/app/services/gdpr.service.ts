@@ -8,7 +8,10 @@ export class GdprService {
 
   async requestArchive(receiptId?: string, appStore?: string): Promise<void> {
     await lastValueFrom(
-      this.http.post('/api/privacy/request-archive', { receipt_id: receiptId, app_store: appStore }),
+      this.http.post('/api/privacy/request-archive', {
+        receipt_id: receiptId,
+        app_store: appStore,
+      }),
     );
   }
 
@@ -19,8 +22,6 @@ export class GdprService {
   }
 
   async cancelDeletion(): Promise<void> {
-    await lastValueFrom(
-      this.http.post('/api/privacy/cancel-deletion', {}),
-    );
+    await lastValueFrom(this.http.post('/api/privacy/cancel-deletion', {}));
   }
 }

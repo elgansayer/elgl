@@ -25,17 +25,17 @@ type ReviewGrade = 'again' | 'good' | 'known';
           <span class="text-sm text-slate-300">{{
             'vocabulary.cardCounter' | t: { current: currentIndex() + 1, total: cardCount() }
           }}</span>
-          <button type="button" (click)="restart()" class="btn-secondary text-sm">{{
-            'vocabulary.restart' | t
-          }}</button>
+          <button type="button" (click)="restart()" class="btn-secondary text-sm">
+            {{ 'vocabulary.restart' | t }}
+          </button>
         </div>
 
         @if (isComplete()) {
           <div class="mt-12 rounded-2xl border border-slate-700 bg-surface-800 p-8 text-center">
             <p class="text-lg font-medium text-slate-100">📚 {{ 'vocabulary.noDue' | t }}</p>
-            <button type="button" (click)="restart()" class="mt-4 btn-secondary">{{
-              'vocabulary.restart' | t
-            }}</button>
+            <button type="button" (click)="restart()" class="mt-4 btn-secondary">
+              {{ 'vocabulary.restart' | t }}
+            </button>
           </div>
         } @else {
           @if (currentCard(); as card) {
@@ -53,7 +53,9 @@ type ReviewGrade = 'again' | 'good' | 'known';
                 <div class="flashcard-inner">
                   <div class="flashcard-face flashcard-front">
                     <span class="block text-lg font-semibold text-slate-100">{{ card.term }}</span>
-                    <span class="mt-4 block text-sm text-slate-400">{{ 'vocabulary.tapToFlip' | t }}</span>
+                    <span class="mt-4 block text-sm text-slate-400">{{
+                      'vocabulary.tapToFlip' | t
+                    }}</span>
                   </div>
                   <div class="flashcard-face flashcard-back">
                     <p class="text-base text-slate-100">{{ card.definition }}</p>
@@ -65,15 +67,15 @@ type ReviewGrade = 'again' | 'good' | 'known';
               </div>
 
               <div class="mt-6 flex items-center justify-center gap-3">
-                <button type="button" (click)="grade('again')" class="btn-grade btn-grade-again">{{
-                  'vocabulary.againBtn' | t
-                }}</button>
-                <button type="button" (click)="grade('good')" class="btn-grade btn-grade-good">{{
-                  'vocabulary.goodBtn' | t
-                }}</button>
-                <button type="button" (click)="grade('known')" class="btn-grade btn-grade-known">{{
-                  'vocabulary.knownBtn' | t
-                }}</button>
+                <button type="button" (click)="grade('again')" class="btn-grade btn-grade-again">
+                  {{ 'vocabulary.againBtn' | t }}
+                </button>
+                <button type="button" (click)="grade('good')" class="btn-grade btn-grade-good">
+                  {{ 'vocabulary.goodBtn' | t }}
+                </button>
+                <button type="button" (click)="grade('known')" class="btn-grade btn-grade-known">
+                  {{ 'vocabulary.knownBtn' | t }}
+                </button>
               </div>
             </div>
           }

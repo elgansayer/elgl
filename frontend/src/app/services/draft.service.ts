@@ -95,11 +95,25 @@ export class DraftService {
       const result: ChatDraft = {};
       let hasValid = false;
 
-      if (typeof d['textInput'] === 'string') { result.textInput = d['textInput']; hasValid = true; }
-      if (d['replyToId'] === null || typeof d['replyToId'] === 'string') { result.replyToId = d['replyToId']; }
-      if (typeof d['originalText'] === 'string') { result.originalText = d['originalText']; hasValid = true; }
-      if (typeof d['correctedText'] === 'string') { result.correctedText = d['correctedText']; hasValid = true; }
-      if (typeof d['explanationText'] === 'string') { result.explanationText = d['explanationText']; hasValid = true; }
+      if (typeof d['textInput'] === 'string') {
+        result.textInput = d['textInput'];
+        hasValid = true;
+      }
+      if (d['replyToId'] === null || typeof d['replyToId'] === 'string') {
+        result.replyToId = d['replyToId'];
+      }
+      if (typeof d['originalText'] === 'string') {
+        result.originalText = d['originalText'];
+        hasValid = true;
+      }
+      if (typeof d['correctedText'] === 'string') {
+        result.correctedText = d['correctedText'];
+        hasValid = true;
+      }
+      if (typeof d['explanationText'] === 'string') {
+        result.explanationText = d['explanationText'];
+        hasValid = true;
+      }
 
       return hasValid ? result : null;
     } catch {
@@ -117,8 +131,7 @@ export class DraftService {
   saveMomentDraft(draft: MomentDraft): void {
     if (!this.isAvailable()) return;
     const hasContent =
-      (draft.text && draft.text.trim()) ||
-      (draft.mediaUrls && draft.mediaUrls.length > 0);
+      (draft.text && draft.text.trim()) || (draft.mediaUrls && draft.mediaUrls.length > 0);
 
     if (hasContent) {
       localStorage.setItem(this.momentKey(), JSON.stringify(draft));
@@ -138,16 +151,24 @@ export class DraftService {
       const result: MomentDraft = {};
       let hasValidField = false;
 
-      if (typeof d['text'] === 'string') { result.text = d['text']; hasValidField = true; }
+      if (typeof d['text'] === 'string') {
+        result.text = d['text'];
+        hasValidField = true;
+      }
       if (Array.isArray(d['mediaUrls'])) {
-        result.mediaUrls = (d['mediaUrls'] as unknown[]).filter((u): u is string => typeof u === 'string');
+        result.mediaUrls = (d['mediaUrls'] as unknown[]).filter(
+          (u): u is string => typeof u === 'string',
+        );
         if (result.mediaUrls.length > 0) hasValidField = true;
       }
       if (d['mediaType'] === 'none' || d['mediaType'] === 'images' || d['mediaType'] === 'audio') {
         result.mediaType = d['mediaType'];
         hasValidField = true;
       }
-      if (typeof d['targetLanguage'] === 'string') { result.targetLanguage = d['targetLanguage']; hasValidField = true; }
+      if (typeof d['targetLanguage'] === 'string') {
+        result.targetLanguage = d['targetLanguage'];
+        hasValidField = true;
+      }
       if (typeof d['voiceDurationSec'] === 'number' || d['voiceDurationSec'] === null) {
         result.voiceDurationSec = d['voiceDurationSec'];
         hasValidField = true;

@@ -1,17 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeEach,
-  afterEach,
-} from 'vitest';
-import {
-  SoundboardService,
-  SoundboardListResponse,
-  PlaySoundResponse,
-} from './soundboard.service';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { SoundboardService, SoundboardListResponse, PlaySoundResponse } from './soundboard.service';
 
 describe('SoundboardService', () => {
   let service: SoundboardService;
@@ -106,17 +95,14 @@ describe('SoundboardService', () => {
       const result = await service.playSound('room-123', 'sound-456');
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/audio-rooms/soundboard/play',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            room_id: 'room-123',
-            sound_id: 'sound-456',
-          }),
-        },
-      );
+      expect(mockFetch).toHaveBeenCalledWith('/api/audio-rooms/soundboard/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_id: 'room-123',
+          sound_id: 'sound-456',
+        }),
+      });
       expect(result).toEqual(playResult);
     });
 
@@ -126,9 +112,9 @@ describe('SoundboardService', () => {
         statusText: 'Bad Request',
       });
 
-      await expect(
-        service.playSound('room-123', 'sound-456'),
-      ).rejects.toThrow('Failed to play sound: Bad Request');
+      await expect(service.playSound('room-123', 'sound-456')).rejects.toThrow(
+        'Failed to play sound: Bad Request',
+      );
     });
 
     it('should return the response when success is false', async () => {
@@ -150,9 +136,7 @@ describe('SoundboardService', () => {
     it('should throw an error when the network request rejects', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network Error'));
 
-      await expect(
-        service.playSound('room-123', 'sound-456'),
-      ).rejects.toThrow('Network Error');
+      await expect(service.playSound('room-123', 'sound-456')).rejects.toThrow('Network Error');
     });
   });
 });

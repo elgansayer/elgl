@@ -11,11 +11,7 @@ describe.skip('RestorePurchasesService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        RestorePurchasesService,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [RestorePurchasesService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(RestorePurchasesService);
     httpMock = TestBed.inject(HttpTestingController);

@@ -32,7 +32,11 @@ export class QuickPollService {
     return data;
   }
 
-  async createPoll(roomId: string, question: string, options: string[]): Promise<{ poll_id: string }> {
+  async createPoll(
+    roomId: string,
+    question: string,
+    options: string[],
+  ): Promise<{ poll_id: string }> {
     return this.apiFetch<{ poll_id: string }>(`/${roomId}/polls`, {
       method: 'POST',
       body: JSON.stringify({ question, options }),

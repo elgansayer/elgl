@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -12,28 +12,7 @@ const supabaseKey =
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function runSeed() {
-  console.log('🌱 Starting HelloTalk Open-Core Database Seeder...');
-  console.log(`Connecting to Supabase URL: ${supabaseUrl}`);
-
-  // Test connection
-  const { error: testErr } = await supabase.from('users').select('id').limit(1);
-  if (testErr && testErr.message.includes('fetch failed')) {
-    console.warn(
-      '⚠️ Could not connect to live Supabase instance. Seeder will run in validation simulation mode.',
-    );
-    console.log(
-      'Mocking 10+ global users across UK, Spain, France, Japan, Germany, and Saudi Arabia...',
-    );
-    console.log(
-      'Mocking LingQ flashcard decks, multi-modal moments, and LiveKit audio rooms...',
-    );
-    console.log(
-      '✅ Seeder validation completed successfully in local simulation mode.',
-    );
-    return;
-  }
-
+async function seedUsersAndProfiles(supabase: SupabaseClient) {
   // 1. Seed Users and Profiles
   const seedUsers = [
     {
@@ -50,18 +29,19 @@ async function runSeed() {
           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
         native_languages: ['en'],
         target_languages: ['ja', 'es'],
-        location: `POINT(-0.1278 51.5074)`,
+        location: `POINT(-0.1276 51.5072)`,
       },
     },
     {
-      email: 'sofia.garcia@hellotalk.es',
-      is_vip: true,
-      vip_tier: 'consumer',
-      coins_balance: 420,
+      email: 'carmen.garcia@hellotalk.es',
+      is_vip: false,
+      vip_tier: null,
+      coins_balance: 200,
+      developer_api_key: null,
       profile: {
-        display_name: 'Sofía García 🇪🇸',
+        display_name: 'Carmen Garcia 🇪🇸',
         bio_text:
-          '¡Hola a todos! Architect from Madrid. Seeking British English practice partners. I love coffee, literature, and travelling across Europe.',
+          'Estudiante de medicina. Me encanta viajar y conocer nuevas culturas. Busco mejorar mi inglés.',
         avatar_url:
           'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
         native_languages: ['es'],
@@ -71,32 +51,52 @@ async function runSeed() {
     },
     {
       email: 'yuki.tanaka@hellotalk.jp',
-      is_vip: false,
-      coins_balance: 80,
+      is_vip: true,
+      vip_tier: 'consumer',
+      coins_balance: 800,
+      developer_api_key: null,
       profile: {
         display_name: 'Yuki Tanaka 🇯🇵',
         bio_text:
-          'こんにちは！ Tokyo-based UX designer. Want to practice casual conversational English and French. Happy to correct your Japanese Kanji & grammar!',
+          'こんにちは！私は東京でデザイナーをしています。Let us exchange languages! Open to calls.',
         avatar_url:
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
         native_languages: ['ja'],
         target_languages: ['en', 'fr'],
-        location: `POINT(139.6503 35.6762)`,
+        location: `POINT(139.6917 35.6895)`,
       },
     },
     {
-      email: 'claire.dubois@hellotalk.fr',
+      email: 'marcus.weber@hellotalk.de',
+      is_vip: false,
+      vip_tier: null,
+      coins_balance: 50,
+      developer_api_key: null,
+      profile: {
+        display_name: 'Marcus Weber 🇩🇪',
+        bio_text:
+          'Software architecture and linguistics. Looking to practice my Arabic and Spanish.',
+        avatar_url:
+          'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150',
+        native_languages: ['de'],
+        target_languages: ['ar', 'es'],
+        location: `POINT(13.4050 52.5200)`,
+      },
+    },
+    {
+      email: 'chloe.dubois@hellotalk.fr',
       is_vip: true,
       vip_tier: 'consumer',
-      coins_balance: 310,
+      coins_balance: 1200,
+      developer_api_key: null,
       profile: {
-        display_name: 'Claire Dubois 🇫🇷',
+        display_name: 'Chloé Dubois 🇫🇷',
         bio_text:
-          'Bonjour ! Art historian living in Paris. Learning Arabic and British English. Let us exchange voice notes and cultural recommendations.',
+          "Passionnée de littérature japonaise. J'aimerais beaucoup pratiquer mon japonais avec des locuteurs natifs.",
         avatar_url:
           'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
         native_languages: ['fr'],
-        target_languages: ['ar', 'en'],
+        target_languages: ['ja', 'en'],
         location: `POINT(2.3522 48.8566)`,
       },
     },
@@ -160,7 +160,9 @@ async function runSeed() {
         .eq('id', userId);
     }
   }
+}
 
+async function seedMoments(supabase: SupabaseClient) {
   // 2. Seed Moments
   const { data: usersList } = await supabase
     .from('users')
@@ -221,7 +223,9 @@ async function runSeed() {
       },
     ]);
   }
+}
 
+async function seedSubscriptions(supabase: SupabaseClient) {
   // 4. Seed subscriptions for VIP users
   const { data: vipUsersRaw } = await supabase
     .from('users')
@@ -261,7 +265,9 @@ async function runSeed() {
       `✅ Seeded ${subscriptionData.length} subscriptions for VIP users`,
     );
   }
+}
 
+async function seedSubscriptionEvents(supabase: SupabaseClient) {
   // 5. Seed subscription events for audit trail
   type UserIdRow = { id: string };
 
@@ -299,7 +305,9 @@ async function runSeed() {
 
     console.log('✅ Seeded subscription events for audit trail');
   }
+}
 
+async function seedAchievements(supabase: SupabaseClient) {
   // 6. Seed achievements definitions
   const achievementsData = [
     {
@@ -344,7 +352,9 @@ async function runSeed() {
   } else {
     console.log('✅ Seeded achievements definitions');
   }
+}
 
+async function seedCuratedContent(supabase: SupabaseClient) {
   // 7. Seed curated learning content (articles and dialogues)
   const articlesToSeed = [
     {
@@ -417,6 +427,36 @@ async function runSeed() {
     }
   }
   console.log('✅ Seeded curated dialogues');
+}
+
+async function runSeed() {
+  console.log('🌱 Starting HelloTalk Open-Core Database Seeder...');
+  console.log(`Connecting to Supabase URL: ${supabaseUrl}`);
+
+  // Test connection
+  const { error: testErr } = await supabase.from('users').select('id').limit(1);
+  if (testErr && testErr.message.includes('fetch failed')) {
+    console.warn(
+      '⚠️ Could not connect to live Supabase instance. Seeder will run in validation simulation mode.',
+    );
+    console.log(
+      'Mocking 10+ global users across UK, Spain, France, Japan, Germany, and Saudi Arabia...',
+    );
+    console.log(
+      'Mocking LingQ flashcard decks, multi-modal moments, and LiveKit audio rooms...',
+    );
+    console.log(
+      '✅ Seeder validation completed successfully in local simulation mode.',
+    );
+    return;
+  }
+
+  await seedUsersAndProfiles(supabase);
+  await seedMoments(supabase);
+  await seedSubscriptions(supabase);
+  await seedSubscriptionEvents(supabase);
+  await seedAchievements(supabase);
+  await seedCuratedContent(supabase);
 
   console.log(
     '✅ Database successfully seeded with rich global users, moments, comments, LiveKit rooms, and achievements!',

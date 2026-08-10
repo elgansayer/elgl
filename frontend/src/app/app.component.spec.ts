@@ -27,10 +27,10 @@ describe('AppComponent', () => {
   const authServiceMock = {
     isAuthenticated: vi.fn(() => true),
     currentUser: vi.fn(() => ({ id: 'test-user-1' })),
-getAccessToken: vi.fn(() => 'mock-token'),
-  unlockApp: vi.fn(),
-  appLocked: vi.fn(() => false),
-  biometricLockEnabled: vi.fn(() => false),
+    getAccessToken: vi.fn(() => 'mock-token'),
+    unlockApp: vi.fn(),
+    appLocked: vi.fn(() => false),
+    biometricLockEnabled: vi.fn(() => false),
   };
 
   const appLockServiceMock = {
@@ -44,9 +44,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
 
   const economyStoreMock = {
     loadInitialData: vi.fn(() => Promise.resolve()),
-    claimDailyCheckIn: vi.fn(() =>
-      Promise.resolve({ claimed: true, coins_rewarded: 123 }),
-    ),
+    claimDailyCheckIn: vi.fn(() => Promise.resolve({ claimed: true, coins_rewarded: 123 })),
     triggerGiftAnimation: vi.fn(),
     activeGiftAnimation: vi.fn(() => null),
   };
@@ -162,7 +160,7 @@ getAccessToken: vi.fn(() => 'mock-token'),
     expect(component).toBeTruthy();
   });
 
-it('should initialise unread counter', () => {
+  it('should initialise unread counter', () => {
     expect(component.unreadCounter.totalUnread()).toBe(0);
   });
 

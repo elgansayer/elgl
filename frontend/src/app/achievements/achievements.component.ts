@@ -65,7 +65,10 @@ interface FullAchievementDto {
                       ></div>
                     </div>
                     <span class="mt-1 block text-xs text-text-secondary">
-                      {{ 'achievements.progressLabel' | t: { current: ach.current, required: ach.required } }}
+                      {{
+                        'achievements.progressLabel'
+                          | t: { current: ach.current, required: ach.required }
+                      }}
                     </span>
                   </div>
                 </div>

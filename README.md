@@ -18,12 +18,14 @@ HelloTalk AI Clone aims to replicate and extend the best features of modern lang
 Comprehensive documentation has been dynamically generated from the repository's codebase and GitHub issues tracking backlog.
 
 Please refer to the following Wiki pages for exhaustive details:
+
 - **[Home (`wiki/Home.md`)](wiki/Home.md)**: Main landing page for the project Wiki.
 - **[Features List (`wiki/Features.md`)](wiki/Features.md)**: An exhaustive list of all implemented and planned features, sourced from our specification files.
 - **[Codebase Reference (`wiki/Codebase_Reference.md`)](wiki/Codebase_Reference.md)**: A complete architectural dump listing every file and method in the backend and frontend codebases.
 - **[Issues Backlog (`wiki/Issues_Backlog.md`)](wiki/Issues_Backlog.md)**: A compiled status report of all active GitHub issues assigned to the swarm queue.
 
 Additional specifications:
+
 - `AGENTS.md`: The Engineering Constitution and system rules.
 - `SPEC.md`: Architectural Blueprint covering the PostGIS and PostgREST structures.
 
@@ -132,7 +134,6 @@ The logic enforced by NestJS to drive subscriptions across tiers and power the i
 - **Granular Privacy Toggles:** Users can hide their age, hide their exact GPS location, or remove themselves from global search entirely.
 - **Visitor Logs ("Who Viewed Me"):** A dashboard showing exactly who has clicked on a profile (blurred for free users, fully visible for VIPs).
 - **Block & Report System:** Essential moderation tools to combat inappropriate behaviour, scammers, and spam. Reports flag the user ID and message/moment context in the Supabase admin dashboard.
-
 
 ## Tech Stack
 

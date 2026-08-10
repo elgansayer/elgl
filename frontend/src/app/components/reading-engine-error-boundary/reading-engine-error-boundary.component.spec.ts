@@ -158,8 +158,9 @@ describe('ReadingEngineErrorBoundaryComponent', () => {
   });
 
   it('should handle default context values', () => {
-    const component2 = TestBed.createComponent(ReadingEngineErrorBoundaryComponent)
-      .componentInstance;
+    const component2 = TestBed.createComponent(
+      ReadingEngineErrorBoundaryComponent,
+    ).componentInstance;
     expect(component2.context()).toEqual({ component: 'unknown' });
     expect(component2.showReportButton()).toBe(true);
   });

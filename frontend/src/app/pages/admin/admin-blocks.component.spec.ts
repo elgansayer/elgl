@@ -14,18 +14,21 @@ describe('AdminBlocksComponent RTL logical CSS compliance', () => {
   let templateContent: string;
 
   beforeAll(() => {
-    templateContent = readFileSync(
-      resolve(__dirname, 'admin-blocks.component.html'),
-      'utf-8',
-    );
+    templateContent = readFileSync(resolve(__dirname, 'admin-blocks.component.html'), 'utf-8');
   });
 
   it('should not contain any physical direction CSS utilities', () => {
     const violations = [
-      /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
-      /\bleft-[0-9]/, /\bright-[0-9]/,
-      /\bborder-l\b/, /\bborder-r\b/,
-      /\btext-left\b/, /\btext-right\b/,
+      /\bpl-\d/,
+      /\bpr-\d/,
+      /\bml-\d/,
+      /\bmr-\d/,
+      /\bleft-[0-9]/,
+      /\bright-[0-9]/,
+      /\bborder-l\b/,
+      /\bborder-r\b/,
+      /\btext-left\b/,
+      /\btext-right\b/,
     ];
     for (const pattern of violations) {
       expect(templateContent).not.toMatch(pattern);

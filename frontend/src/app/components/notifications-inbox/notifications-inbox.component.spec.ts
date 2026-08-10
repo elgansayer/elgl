@@ -22,11 +22,13 @@ function makeNotif(partial: Partial<InAppNotification> = {}): InAppNotification 
 }
 
 const mockNotificationService = {
-  getNotifications: vi.fn<(type?: string) => Promise<InAppNotification[]>>().mockResolvedValue([
-    makeNotif({ id: '1', type: 'like_moment', message: 'liked your moment' }),
-    makeNotif({ id: '2', type: 'comment_moment', message: 'commented' }),
-    makeNotif({ id: '3', type: 'follow', is_read: true }),
-  ]),
+  getNotifications: vi
+    .fn<(type?: string) => Promise<InAppNotification[]>>()
+    .mockResolvedValue([
+      makeNotif({ id: '1', type: 'like_moment', message: 'liked your moment' }),
+      makeNotif({ id: '2', type: 'comment_moment', message: 'commented' }),
+      makeNotif({ id: '3', type: 'follow', is_read: true }),
+    ]),
   getUnreadCount: vi.fn<() => Promise<number>>().mockResolvedValue(5),
   markAllAsRead: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   markAsRead: vi.fn<(notificationId: string) => Promise<void>>().mockResolvedValue(undefined),
@@ -81,7 +83,13 @@ describe('NotificationsInboxComponent', () => {
   it('should expose filterPills with correct labels', () => {
     const pills = component.filterPills();
     expect(pills.length).toBe(5);
-    expect(pills.map((p: { id: string }) => p.id)).toEqual(['all', 'likes', 'comments', 'follows', 'system']);
+    expect(pills.map((p: { id: string }) => p.id)).toEqual([
+      'all',
+      'likes',
+      'comments',
+      'follows',
+      'system',
+    ]);
   });
 
   it('should mark all notifications as read', async () => {
@@ -103,8 +111,12 @@ describe('NotificationsInboxComponent', () => {
   it('should return correct notification message key', () => {
     expect(component.getNotificationMessageKey('follow')).toBe('notifications.followedYou');
     expect(component.getNotificationMessageKey('like_profile')).toBe('notifications.likedProfile');
-    expect(component.getNotificationMessageKey('mention_comment')).toBe('notifications.mentionedInComment');
-    expect(component.getNotificationMessageKey('mention_chat')).toBe('notifications.mentionedInChat');
+    expect(component.getNotificationMessageKey('mention_comment')).toBe(
+      'notifications.mentionedInComment',
+    );
+    expect(component.getNotificationMessageKey('mention_chat')).toBe(
+      'notifications.mentionedInChat',
+    );
     expect(component.getNotificationMessageKey('system')).toBe('notifications.systemAlert');
     expect(component.getNotificationMessageKey('unknown_type')).toBe('notifications.newActivity');
   });

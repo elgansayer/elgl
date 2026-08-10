@@ -30,7 +30,13 @@ interface FaqItem {
 
 @Component({
   selector: 'app-vip',
-  imports: [JoyrideDirective, TranslatePipe, AppButtonComponent, AppCardComponent, AppPillComponent],
+  imports: [
+    JoyrideDirective,
+    TranslatePipe,
+    AppButtonComponent,
+    AppCardComponent,
+    AppPillComponent,
+  ],
   templateUrl: './vip.component.html',
   styleUrl: './vip.component.scss',
 })
@@ -43,11 +49,7 @@ export class VipComponent {
       nameKey: 'vip.freePlan',
       priceKey: 'vip.freePrice',
       isPopular: false,
-      features: [
-        'vip.freeFeature1',
-        'vip.freeFeature2',
-        'vip.freeFeature3',
-      ],
+      features: ['vip.freeFeature1', 'vip.freeFeature2', 'vip.freeFeature3'],
       ctaKey: 'vip.startFree',
     },
     {
@@ -115,10 +117,34 @@ export class VipComponent {
     { labelKey: 'vip.proFeature3', free: false, consumer: false, pro: true, developer: false },
     { labelKey: 'vip.proFeature4', free: false, consumer: false, pro: true, developer: false },
     { labelKey: 'vip.proFeature5', free: false, consumer: false, pro: true, developer: false },
-    { labelKey: 'vip.developerFeature2', free: false, consumer: false, pro: false, developer: true },
-    { labelKey: 'vip.developerFeature3', free: false, consumer: false, pro: false, developer: true },
-    { labelKey: 'vip.developerFeature4', free: false, consumer: false, pro: false, developer: true },
-    { labelKey: 'vip.developerFeature5', free: false, consumer: false, pro: false, developer: true },
+    {
+      labelKey: 'vip.developerFeature2',
+      free: false,
+      consumer: false,
+      pro: false,
+      developer: true,
+    },
+    {
+      labelKey: 'vip.developerFeature3',
+      free: false,
+      consumer: false,
+      pro: false,
+      developer: true,
+    },
+    {
+      labelKey: 'vip.developerFeature4',
+      free: false,
+      consumer: false,
+      pro: false,
+      developer: true,
+    },
+    {
+      labelKey: 'vip.developerFeature5',
+      free: false,
+      consumer: false,
+      pro: false,
+      developer: true,
+    },
   ]);
 
   scrollToPlans(): void {

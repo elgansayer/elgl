@@ -14,7 +14,9 @@
       </div>
     }
     @if (successMessage()) {
-      <div class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
+      <div
+        class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400"
+      >
         {{ successMessage() | t }}
       </div>
     }
@@ -24,16 +26,21 @@
         {{ 'settings.linkedAccounts.subtitle' | t }}
       </p>
 
-      <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm">
+      <div
+        class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden divide-y divide-surface-200 shadow-sm"
+      >
         @for (provider of supportedProviders; track provider.id) {
           <div class="flex items-center justify-between p-4 hover:bg-surface-200 transition-colors">
             <div class="flex items-center gap-3">
               <span
                 class="inline-flex items-center justify-center w-10 h-10 rounded-full text-white font-bold text-sm"
                 [style.background-color]="provider.colour"
-              >{{ provider.icon }}</span>
+                >{{ provider.icon }}</span
+              >
               <div>
-                <span class="text-sm font-medium text-text-primary">{{ provider.labelKey | t }}</span>
+                <span class="text-sm font-medium text-text-primary">{{
+                  provider.labelKey | t
+                }}</span>
                 @if (isLinked(provider.id)) {
                   <span class="block text-xs text-emerald-400">
                     {{ 'settings.linkedAccounts.active' | t }}

@@ -11,10 +11,7 @@ describe.skip('ErrorBoundaryComponent', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [ErrorBoundaryComponent],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     });
 
     httpTesting = TestBed.inject(HttpTestingController);

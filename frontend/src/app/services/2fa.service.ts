@@ -57,14 +57,11 @@ export class TwoFactorService {
 
   async checkStatus(): Promise<boolean> {
     const res = await lastValueFrom(
-      this.http.get<{ enabled: boolean }>(
-        `${this.apiUrl}/two-factor/status`,
-        {
-          headers: {
-            Authorization: `Bearer ${this.authService.getAccessToken()}`,
-          },
+      this.http.get<{ enabled: boolean }>(`${this.apiUrl}/two-factor/status`, {
+        headers: {
+          Authorization: `Bearer ${this.authService.getAccessToken()}`,
         },
-      ),
+      }),
     );
     return res.enabled;
   }

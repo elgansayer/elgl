@@ -9,7 +9,10 @@ import { provideRouter } from '@angular/router';
 describe.skip('VisitorLogsComponent', () => {
   let component: VisitorLogsComponent;
   let fixture: ComponentFixture<VisitorLogsComponent>;
-  let userService: { getMyProfile: ReturnType<typeof vi.fn>; getMyVisitors: ReturnType<typeof vi.fn> };
+  let userService: {
+    getMyProfile: ReturnType<typeof vi.fn>;
+    getMyVisitors: ReturnType<typeof vi.fn>;
+  };
   let i18nService: { translate: ReturnType<typeof vi.fn> };
 
   const mockProfile: UserProfile = {

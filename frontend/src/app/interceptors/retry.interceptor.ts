@@ -30,9 +30,8 @@ export const retryInterceptor: HttpInterceptorFn = (req, next) => {
           30_000,
         );
 
-        const delayMs = retryAfterSeconds !== null
-          ? Math.max(retryAfterSeconds * 1000, backoffMs)
-          : backoffMs;
+        const delayMs =
+          retryAfterSeconds !== null ? Math.max(retryAfterSeconds * 1000, backoffMs) : backoffMs;
 
         return timer(delayMs);
       },

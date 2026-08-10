@@ -42,9 +42,7 @@ describe('AppPillComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TestHostComponent, AppPillComponent],
-      providers: [
-        { provide: I18nService, useClass: MockI18nService },
-      ],
+      providers: [{ provide: I18nService, useClass: MockI18nService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);

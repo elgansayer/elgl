@@ -91,7 +91,10 @@ function mockStickerPacks(): StickerPack[] {
       name: 'Cute Animals',
       cost_coins: 50,
       is_animated: false,
-      sticker_urls: ['https://r2.example.com/stickers/cat.png', 'https://r2.example.com/stickers/dog.png'],
+      sticker_urls: [
+        'https://r2.example.com/stickers/cat.png',
+        'https://r2.example.com/stickers/dog.png',
+      ],
     },
     {
       id: 'stk_pack_2',
@@ -119,10 +122,42 @@ function mockStickerPacks(): StickerPack[] {
 
 function mockQuests(): Quest[] {
   return [
-    { id: 'q-1', quest_type: 'daily', quest_key: 'send_messages', progress: 3, target: 10, reward_coins: 5, completed: false },
-    { id: 'q-2', quest_type: 'daily', quest_key: 'voice_call', progress: 7, target: 15, reward_coins: 10, completed: false },
-    { id: 'q-3', quest_type: 'weekly', quest_key: 'corrections_given', progress: 20, target: 50, reward_coins: 30, completed: false },
-    { id: 'q-4', quest_type: 'daily', quest_key: 'study_flashcards', progress: 10, target: 10, reward_coins: 5, completed: true },
+    {
+      id: 'q-1',
+      quest_type: 'daily',
+      quest_key: 'send_messages',
+      progress: 3,
+      target: 10,
+      reward_coins: 5,
+      completed: false,
+    },
+    {
+      id: 'q-2',
+      quest_type: 'daily',
+      quest_key: 'voice_call',
+      progress: 7,
+      target: 15,
+      reward_coins: 10,
+      completed: false,
+    },
+    {
+      id: 'q-3',
+      quest_type: 'weekly',
+      quest_key: 'corrections_given',
+      progress: 20,
+      target: 50,
+      reward_coins: 30,
+      completed: false,
+    },
+    {
+      id: 'q-4',
+      quest_type: 'daily',
+      quest_key: 'study_flashcards',
+      progress: 10,
+      target: 10,
+      reward_coins: 5,
+      completed: true,
+    },
   ];
 }
 
@@ -461,7 +496,10 @@ describe('Virtual Coin Economy - Purchase Flow', () => {
     for (let i = 0; i < packages.length; i++) {
       cy.intercept('POST', `${ECONOMY_BASE}/create-checkout-session`, {
         statusCode: 201,
-        body: { sessionUrl: 'https://checkout.stripe.com/c/pay/test', sessionId: `cs_test_${packages[i]}` },
+        body: {
+          sessionUrl: 'https://checkout.stripe.com/c/pay/test',
+          sessionId: `cs_test_${packages[i]}`,
+        },
       }).as(`session_${packages[i]}`);
 
       // Verify we can book each package
@@ -662,7 +700,10 @@ describe('Virtual Coin Economy - Send Gift', () => {
     cy.request({
       method: 'POST',
       url: `${ECONOMY_BASE}/send-gift`,
-      body: { receiver_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', gift_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+      body: {
+        receiver_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        gift_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      },
       failOnStatusCode: false,
     }).then((response) => {
       expect(response.status).to.eq(404);
@@ -829,7 +870,13 @@ describe('Virtual Coin Economy - Quests', () => {
         expect(response.body).to.have.length(4);
         for (const quest of response.body) {
           expect(quest).to.have.all.keys(
-            'id', 'quest_type', 'quest_key', 'progress', 'target', 'reward_coins', 'completed',
+            'id',
+            'quest_type',
+            'quest_key',
+            'progress',
+            'target',
+            'reward_coins',
+            'completed',
           );
           expect(quest.quest_type).to.match(/^(daily|weekly)$/);
           expect(quest.reward_coins).to.be.greaterThan(0);
@@ -1158,9 +1205,7 @@ describe('Virtual Coin Economy - UI Rendering', () => {
     }).as('getStickerPacks');
     cy.intercept('GET', `${QUESTS_BASE}`, { body: mockQuests() }).as('getQuests');
     cy.intercept('GET', `${SHOPPING_BASE}/catalog`, {
-      body: [
-        { id: 'item-1', name: 'Language Guide', description: 'Guide', price: 75 },
-      ],
+      body: [{ id: 'item-1', name: 'Language Guide', description: 'Guide', price: 75 }],
     }).as('shopCatalog');
     cy.intercept('GET', `${SHOPPING_BASE}/cart`, { body: [] }).as('getCart');
   });
@@ -1310,7 +1355,11 @@ describe('Virtual Coin Economy - Error & Edge Cases', () => {
   it('should handle unauthenticated access to protected endpoints', () => {
     const protectedEndpoints = [
       { method: 'POST', url: `${ECONOMY_BASE}/daily-check-in` },
-      { method: 'POST', url: `${ECONOMY_BASE}/send-gift`, body: { receiver_id: 'x', gift_id: 'y' } },
+      {
+        method: 'POST',
+        url: `${ECONOMY_BASE}/send-gift`,
+        body: { receiver_id: 'x', gift_id: 'y' },
+      },
       { method: 'POST', url: `${ECONOMY_BASE}/unlock-sticker-pack`, body: { pack_id: 'x' } },
       { method: 'POST', url: `${ECONOMY_BASE}/create-checkout-session`, body: { package_id: 'x' } },
       { method: 'POST', url: `${ECONOMY_BASE}/purchase-coins`, body: { receipt_token: 'x' } },

@@ -96,7 +96,7 @@ describe('FollowListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('No followers yet.');
   });
 
-  it('should not render a follow toggle for the signed-in user\'s own row', async () => {
+  it("should not render a follow toggle for the signed-in user's own row", async () => {
     mockUserService.getFollowers.mockResolvedValue({
       data: [makeUser({ id: 'viewer-1', display_name: 'Me' })],
       total: 1,

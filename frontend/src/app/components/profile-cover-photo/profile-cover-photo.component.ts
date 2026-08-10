@@ -1,11 +1,4 @@
-import {
-  Component,
-  inject,
-  input,
-  output,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, inject, input, output, signal, viewChild } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoverPhotoService } from '../../services/cover-photo.service';
 
@@ -41,11 +34,7 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
       />
       @if (previewUrl()) {
         <div class="flex gap-2 mt-4 justify-end">
-          <button
-            type="button"
-            class="btn-secondary px-4 py-2 rounded-lg"
-            (click)="cancel()"
-          >
+          <button type="button" class="btn-secondary px-4 py-2 rounded-lg" (click)="cancel()">
             {{ 'coverPhoto.cancel' | t }}
           </button>
           <button

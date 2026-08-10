@@ -10,12 +10,7 @@
 @if (showImages()) {
   <div class="media-grid mt-2">
     @for (img of images(); track img) {
-      <img
-        [src]="img"
-        [alt]="'media.image' | t"
-        class="media-image"
-        loading="lazy"
-      />
+      <img [src]="img" [alt]="'media.image' | t" class="media-image" loading="lazy" />
     }
   </div>
 }

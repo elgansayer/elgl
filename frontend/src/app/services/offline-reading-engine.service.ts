@@ -31,9 +31,7 @@ export class OfflineReadingEngineService {
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
       this.initPromise = this.initDB();
-      this.initPromise
-        .then(() => this.refreshAvailability())
-        .catch(() => undefined);
+      this.initPromise.then(() => this.refreshAvailability()).catch(() => undefined);
     }
   }
 
@@ -121,7 +119,8 @@ export class OfflineReadingEngineService {
                 title: String(cached['title'] ?? ''),
                 content: String(cached['content'] ?? ''),
                 language: String(cached['language'] ?? 'en-GB'),
-                difficulty: (cached['difficulty'] as OfflineArticle['difficulty']) ?? 'intermediate',
+                difficulty:
+                  (cached['difficulty'] as OfflineArticle['difficulty']) ?? 'intermediate',
                 topic: String(cached['topic'] ?? ''),
                 audioUrl: cached['audioUrl'] ? String(cached['audioUrl']) : undefined,
                 wordCount: Number(cached['wordCount'] ?? 0),

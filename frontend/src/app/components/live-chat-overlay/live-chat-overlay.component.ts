@@ -49,8 +49,12 @@ interface CentrifugoMessageData {
           <div
             class="flex flex-col bg-black/40 rounded-xl p-2 sm:p-2.5 max-w-[90%] sm:max-w-[85%] backdrop-blur-md animate-fade-in border border-white/10 shadow-sm"
           >
-            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5">{{ msg.senderName }}</span>
-            <span class="text-white text-xs sm:text-sm leading-snug break-words">{{ msg.text }}</span>
+            <span class="text-white/70 text-[10px] sm:text-xs font-semibold mb-0.5">{{
+              msg.senderName
+            }}</span>
+            <span class="text-white text-xs sm:text-sm leading-snug break-words">{{
+              msg.text
+            }}</span>
           </div>
         }
       </div>

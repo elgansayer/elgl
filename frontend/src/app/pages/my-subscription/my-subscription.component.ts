@@ -80,9 +80,7 @@ export class MySubscriptionComponent {
     },
     defaultValue: EMPTY_INVOICES,
   });
-  protected readonly invoices = computed(
-    () => this.invoicesResource.value() ?? EMPTY_INVOICES,
-  );
+  protected readonly invoices = computed(() => this.invoicesResource.value() ?? EMPTY_INVOICES);
 
   private readonly plansResource = resource({
     loader: async (): Promise<SubscriptionPlan[]> => {

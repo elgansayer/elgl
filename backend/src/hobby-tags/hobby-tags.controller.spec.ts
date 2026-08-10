@@ -51,9 +51,7 @@ describe('HobbyTagsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HobbyTagsController],
-      providers: [
-        { provide: HobbyTagsService, useValue: mockService },
-      ],
+      providers: [{ provide: HobbyTagsService, useValue: mockService }],
     })
       .overrideGuard(SupabaseAuthGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
@@ -84,7 +82,11 @@ describe('HobbyTagsController', () => {
         icon: '📸',
       });
       expect(result).toEqual(mockTag);
-      expect(service.createTag).toHaveBeenCalledWith('photography', 'Arts', '📸');
+      expect(service.createTag).toHaveBeenCalledWith(
+        'photography',
+        'Arts',
+        '📸',
+      );
     });
   });
 
@@ -99,7 +101,9 @@ describe('HobbyTagsController', () => {
 
   describe('getUserVocabulary', () => {
     it('should return vocabulary for user tags', async () => {
-      (service.getUserVocabulary as jest.Mock).mockResolvedValue([mockVocabularyItem]);
+      (service.getUserVocabulary as jest.Mock).mockResolvedValue([
+        mockVocabularyItem,
+      ]);
       const result = await controller.getUserVocabulary(
         { user: { id: 'user-1' } },
         'es',
@@ -158,7 +162,11 @@ describe('HobbyTagsController', () => {
         { proficiency_level: 3 },
       );
       expect(result).toEqual(mockUserTag);
-      expect(service.updateProficiency).toHaveBeenCalledWith('user-1', 'tag-1', 3);
+      expect(service.updateProficiency).toHaveBeenCalledWith(
+        'user-1',
+        'tag-1',
+        3,
+      );
     });
   });
 });

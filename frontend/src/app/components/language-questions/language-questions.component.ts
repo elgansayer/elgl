@@ -83,7 +83,9 @@ export class LanguageQuestionsComponent {
   protected async submitAnswer(questionId: string, answer: string): Promise<void> {
     try {
       await firstValueFrom(
-        this.http.post<{ correct: boolean }>(`${this.apiUrl}/moments/${questionId}/answer`, { answer }),
+        this.http.post<{ correct: boolean }>(`${this.apiUrl}/moments/${questionId}/answer`, {
+          answer,
+        }),
       );
       await this.questionsResource.reload();
     } catch {

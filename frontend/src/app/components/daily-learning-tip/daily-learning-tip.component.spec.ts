@@ -40,22 +40,30 @@ describe.skip('DailyLearningTipComponent', () => {
   });
 
   it('should create', () => {
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ tip: 'Practise daily.' }) });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ tip: 'Practise daily.' }),
+    });
     expect(fixture.componentInstance).toBeTruthy();
   });
 
   it('sends the bearer token from AuthService when fetching the tip', () => {
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ tip: 'Practise daily.' }) });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ tip: 'Practise daily.' }),
+    });
     fixture.detectChanges();
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:3000/api/daily-tip',
-      { headers: { Authorization: 'Bearer mock-access-token' } },
-    );
+    expect(mockFetch).toHaveBeenCalledWith('http://localhost:3000/api/daily-tip', {
+      headers: { Authorization: 'Bearer mock-access-token' },
+    });
   });
 
   it('renders the fetched tip once loaded', async () => {
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ tip: 'Practise daily.' }) });
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ tip: 'Practise daily.' }),
+    });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();

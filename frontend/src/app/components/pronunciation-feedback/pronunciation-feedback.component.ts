@@ -45,9 +45,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
       @if (feedback(); as fb) {
         <div class="mt-6 rounded-2xl bg-surface-700 p-5 space-y-3">
-          <p class="text-lg font-bold">
-            {{ 'pronunciation.score' | t }}: {{ fb.score }}%
-          </p>
+          <p class="text-lg font-bold">{{ 'pronunciation.score' | t }}: {{ fb.score }}%</p>
           <p>{{ fb.overallAssessment }}</p>
           @if (fb.phonemeBreakdown.length) {
             <details>
@@ -115,7 +113,8 @@ export class PronunciationFeedbackComponent {
 
   private sendForAnalysis(blob: Blob): void {
     const ref = this.sentence().trim();
-    this.pronunciationService.analyse(blob, ref || undefined)
+    this.pronunciationService
+      .analyse(blob, ref || undefined)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (result) => {

@@ -43,8 +43,11 @@ export class StudyBuddyService {
       );
       if (!data) return [];
       const matches: StudyBuddyMatch[] = data
-        .filter(item => typeof item === 'object' && item !== null && 'id' in item && 'display_name' in item)
-        .map(item => ({
+        .filter(
+          (item) =>
+            typeof item === 'object' && item !== null && 'id' in item && 'display_name' in item,
+        )
+        .map((item) => ({
           id: String(item['id']),
           display_name: String(item['display_name']),
           avatar_url: typeof item['avatar_url'] === 'string' ? item['avatar_url'] : undefined,

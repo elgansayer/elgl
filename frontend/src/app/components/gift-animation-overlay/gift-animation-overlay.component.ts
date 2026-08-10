@@ -26,7 +26,16 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
         [class.opacity-0]="!animationService.isVisible()"
         role="alert"
         aria-live="polite"
-        [attr.aria-label]="'gift.broadcastDesc' | t: { sender: anim.senderName, receiver: anim.receiverName, giftName: anim.giftName, cost: anim.coinValue }"
+        [attr.aria-label]="
+          'gift.broadcastDesc'
+            | t
+              : {
+                  sender: anim.senderName,
+                  receiver: anim.receiverName,
+                  giftName: anim.giftName,
+                  cost: anim.coinValue,
+                }
+        "
       >
         <!-- Full-screen Lottie animation layer -->
         <div class="absolute inset-0 z-0 bg-black/30" aria-hidden="true">
@@ -38,13 +47,24 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
           class="relative z-10 flex flex-col items-center gap-3"
           [class.animate-zoom-in]="animationService.isVisible()"
         >
-          <div class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-4 sm:px-8 py-4 sm:py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 max-w-[90vw]">
+          <div
+            class="bg-gradient-to-r from-amber-500 via-purple-600 to-amber-500 text-white px-4 sm:px-8 py-4 sm:py-6 rounded-3xl shadow-2xl border-4 border-amber-500/30 flex flex-col items-center gap-2 max-w-[90vw]"
+          >
             <span class="text-5xl sm:text-7xl filter drop-shadow-lg">{{ anim.giftIcon }}</span>
             <h3 class="text-lg sm:text-2xl font-black tracking-wide text-center">
               {{ 'gift.broadcastTitle' | t: { giftName: anim.giftName } }}
             </h3>
             <p class="text-xs sm:text-sm font-extrabold text-amber-100 text-center">
-              {{ 'gift.broadcastDesc' | t: { sender: anim.senderName, receiver: anim.receiverName, giftName: anim.giftName, cost: anim.coinValue } }}
+              {{
+                'gift.broadcastDesc'
+                  | t
+                    : {
+                        sender: anim.senderName,
+                        receiver: anim.receiverName,
+                        giftName: anim.giftName,
+                        cost: anim.coinValue,
+                      }
+              }}
             </p>
           </div>
           <!-- Dismiss button -->

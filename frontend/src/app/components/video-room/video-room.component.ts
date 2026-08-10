@@ -18,15 +18,15 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
         role="region"
       >
         <!-- Room Header -->
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-3 sm:mb-4 text-white">
+        <div
+          class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-3 sm:mb-4 text-white"
+        >
           <h2 class="text-lg sm:text-xl font-bold line-clamp-2">{{ room.title }}</h2>
 
           <div class="flex items-center gap-2">
             @if (isHost() && !hasCoHost()) {
               @if (eligibleSpeakers().length > 0) {
-                <span
-                  
-                >
+                <span>
                   <button
                     (click)="showInvitePicker.set(!showInvitePicker())"
                     [attr.aria-label]="'videoRoom.inviteCoHostAria' | t"
@@ -38,7 +38,9 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
                   </button>
                 </span>
               } @else {
-                <p class="app-muted text-xs" role="status">{{ 'videoRoom.noEligibleSpeakers' | t }}</p>
+                <p class="app-muted text-xs" role="status">
+                  {{ 'videoRoom.noEligibleSpeakers' | t }}
+                </p>
               }
             }
             <button
@@ -85,20 +87,13 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
             class="relative bg-black rounded-xl overflow-hidden border-2 border-slate-700 flex items-center justify-center shadow-lg min-h-0"
             role="region"
             [attr.aria-label]="'videoRoom.hostBadge' | t"
-            
           >
             @if (!hasHostVideo()) {
-<div class="absolute inset-0 flex flex-col items-center justify-center gap-2 sm:gap-3 p-4 sm:p-6">
-                <app-skeleton-loader
-                  [height]="'48px'"
-                  [width]="'48px'"
-                  [variant]="'circle'"
-                />
-                <app-skeleton-loader
-                  [height]="'12px'"
-                  [width]="'50%'"
-                  [variant]="'text'"
-                />
+              <div
+                class="absolute inset-0 flex flex-col items-center justify-center gap-2 sm:gap-3 p-4 sm:p-6"
+              >
+                <app-skeleton-loader [height]="'48px'" [width]="'48px'" [variant]="'circle'" />
+                <app-skeleton-loader [height]="'12px'" [width]="'50%'" [variant]="'text'" />
                 <p class="text-slate-500 text-xs sm:text-sm" aria-live="polite">
                   {{ 'videoRoom.waitingForHost' | t }}
                 </p>
@@ -129,20 +124,13 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
               class="relative bg-black rounded-xl overflow-hidden border-2 border-blue-500 flex items-center justify-center shadow-lg animate-fade-in min-h-0"
               role="region"
               [attr.aria-label]="'videoRoom.coHostBadge' | t"
-              
             >
               @if (!hasCoHostVideo()) {
-<div class="absolute inset-0 flex flex-col items-center justify-center gap-2 sm:gap-2 p-3 sm:p-4">
-                  <app-skeleton-loader
-                    [height]="'48px'"
-                    [width]="'48px'"
-                    [variant]="'circle'"
-                  />
-                  <app-skeleton-loader
-                    [height]="'12px'"
-                    [width]="'50%'"
-                    [variant]="'text'"
-                  />
+                <div
+                  class="absolute inset-0 flex flex-col items-center justify-center gap-2 sm:gap-2 p-3 sm:p-4"
+                >
+                  <app-skeleton-loader [height]="'48px'" [width]="'48px'" [variant]="'circle'" />
+                  <app-skeleton-loader [height]="'12px'" [width]="'50%'" [variant]="'text'" />
                   <p class="text-slate-500 text-xs sm:text-sm" aria-live="polite">
                     {{ 'videoRoom.waitingForCoHost' | t }}
                   </p>
@@ -188,22 +176,12 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
         </div>
       </section>
     } @else {
-      <div class="flex flex-col items-center justify-center h-full w-full bg-slate-900 rounded-2xl p-8 gap-4">
-        <app-skeleton-loader
-          [height]="'80px'"
-          [width]="'80px'"
-          [variant]="'circle'"
-        />
-        <app-skeleton-loader
-          [height]="'20px'"
-          [width]="'60%'"
-          [variant]="'text'"
-        />
-        <app-skeleton-loader
-          [height]="'14px'"
-          [width]="'40%'"
-          [variant]="'text'"
-        />
+      <div
+        class="flex flex-col items-center justify-center h-full w-full bg-slate-900 rounded-2xl p-8 gap-4"
+      >
+        <app-skeleton-loader [height]="'80px'" [width]="'80px'" [variant]="'circle'" />
+        <app-skeleton-loader [height]="'20px'" [width]="'60%'" [variant]="'text'" />
+        <app-skeleton-loader [height]="'14px'" [width]="'40%'" [variant]="'text'" />
         <p class="text-slate-500 text-sm mt-2">{{ 'videoRoom.connectingToRoom' | t }}</p>
       </div>
     }

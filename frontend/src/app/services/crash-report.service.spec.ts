@@ -11,7 +11,8 @@ const indexedDBMock = {
 };
 
 Object.defineProperty(globalThis, 'indexedDB', {
-  value: indexedDBMock, configurable: true,
+  value: indexedDBMock,
+  configurable: true,
   writable: true,
 });
 

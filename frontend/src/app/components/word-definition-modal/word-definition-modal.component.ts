@@ -1,8 +1,20 @@
-import { Component, inject, signal, computed, input, output, viewChild, ErrorHandler } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  input,
+  output,
+  viewChild,
+  ErrorHandler,
+} from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { HtmlSanitisationService } from '../../services/html-sanitisation.service';
 import { VocabularyStore, TranslationResult, Flashcard } from '../../services/vocabulary.store';
-import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundary/srs-error-boundary.component';
+import {
+  SrsErrorBoundaryComponent,
+  SrsErrorContext,
+} from '../srs-error-boundary/srs-error-boundary.component';
 
 @Component({
   selector: 'app-word-definition-modal',
@@ -13,8 +25,12 @@ import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundar
       [showReportButton]="true"
       (retry)="handleRetry()"
     >
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-300 p-6 shadow-2xl">
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      >
+        <div
+          class="w-full max-w-md rounded-2xl border border-surface-100 bg-surface-300 p-6 shadow-2xl"
+        >
           @if (isLoading()) {
             <div class="text-center py-8" role="status" aria-busy="true">
               <p class="animate-spin text-2xl" aria-hidden="true">&#8635;</p>
@@ -32,7 +48,13 @@ import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundar
                   class="rounded-app p-1.5 text-text-muted hover:bg-surface-200 hover:text-text-primary"
                   [attr.aria-label]="'wordModal.closeAriaLabel' | t"
                 >
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -49,7 +71,9 @@ import { SrsErrorBoundaryComponent, SrsErrorContext } from '../srs-error-boundar
                 </button>
               }
               <div class="border-t border-surface-100 pt-4">
-                <p class="mb-2 text-xs font-bold text-text-primary">{{ 'wordModal.srsLabel' | t }}</p>
+                <p class="mb-2 text-xs font-bold text-text-primary">
+                  {{ 'wordModal.srsLabel' | t }}
+                </p>
                 <div class="flex gap-2">
                   <button
                     (click)="setLevel(0)"
@@ -142,9 +166,13 @@ export class WordDefinitionModalComponent {
         original_text: this.sanitisation.sanitiseText(res.original_text),
         translated_text: this.sanitisation.sanitiseText(res.translated_text),
         detected_language: this.sanitisation.sanitiseText(res.detected_language),
-        transliteration: res.transliteration ? this.sanitisation.sanitiseText(res.transliteration) : undefined,
+        transliteration: res.transliteration
+          ? this.sanitisation.sanitiseText(res.transliteration)
+          : undefined,
         definition: res.definition ? this.sanitisation.sanitiseText(res.definition) : undefined,
-        pronunciation_url: res.pronunciation_url ? this.sanitisation.sanitiseUrl(res.pronunciation_url) : undefined,
+        pronunciation_url: res.pronunciation_url
+          ? this.sanitisation.sanitiseUrl(res.pronunciation_url)
+          : undefined,
       });
     } catch (e) {
       this.translationResult.set({
@@ -186,7 +214,9 @@ export class WordDefinitionModalComponent {
       } else {
         const created = await this.vocabStore.saveWord({
           word_token: this.wordToken(),
-          translation: this.translationResult()?.translated_text || `Word: ${this.sanitisation.sanitiseText(this.wordToken())}`,
+          translation:
+            this.translationResult()?.translated_text ||
+            `Word: ${this.sanitisation.sanitiseText(this.wordToken())}`,
           original_context: this.contextSentence(),
           definition: this.translationResult()?.definition,
           pronunciation_url: this.translationResult()?.pronunciation_url,

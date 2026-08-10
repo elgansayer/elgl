@@ -43,7 +43,9 @@ describe.skip('EscrowOfflineService', () => {
       _onsuccess: null,
     };
     Object.defineProperty(req, 'onsuccess', {
-      get() { return this._onsuccess; },
+      get() {
+        return this._onsuccess;
+      },
       set(fn: () => void) {
         this._onsuccess = fn;
         fn();
@@ -63,27 +65,32 @@ describe.skip('EscrowOfflineService', () => {
         const req = createSyncRequest();
         req.result = {
           objectStoreNames: {
-            contains: (name: string) =>
-              name === 'escrows' || name === 'operations',
+            contains: (name: string) => name === 'escrows' || name === 'operations',
           },
           transaction: () => {
             const tx = {
               _oncomplete: null as (() => void) | null,
-              get oncomplete(): (() => void) | null { return this._oncomplete; },
+              get oncomplete(): (() => void) | null {
+                return this._oncomplete;
+              },
               set oncomplete(fn: (() => void) | null) {
                 this._oncomplete = fn;
                 // Fire oncomplete after a microtick so put/get operations complete
                 Promise.resolve().then(() => fn?.());
               },
               _onerror: null as (() => void) | null,
-              get onerror(): (() => void) | null { return this._onerror; },
+              get onerror(): (() => void) | null {
+                return this._onerror;
+              },
               set onerror(fn: (() => void) | null) {
                 this._onerror = fn;
               },
               objectStore: (name: string) => ({
                 put: (item: EscrowRow | EscrowOperation) => {
-                  if (name === 'escrows') escrowStore.set((item as EscrowRow).id, item as EscrowRow);
-                  if (name === 'operations') operationStore.set((item as EscrowOperation).key, item as EscrowOperation);
+                  if (name === 'escrows')
+                    escrowStore.set((item as EscrowRow).id, item as EscrowRow);
+                  if (name === 'operations')
+                    operationStore.set((item as EscrowOperation).key, item as EscrowOperation);
                   return createSyncRequest();
                 },
                 get: (key: string) => {
@@ -93,9 +100,10 @@ describe.skip('EscrowOfflineService', () => {
                 },
                 getAll: () => {
                   const r = createSyncRequest();
-                  r.result = name === 'escrows'
-                    ? Array.from(escrowStore.values())
-                    : Array.from(operationStore.values());
+                  r.result =
+                    name === 'escrows'
+                      ? Array.from(escrowStore.values())
+                      : Array.from(operationStore.values());
                   return r;
                 },
                 delete: (key: string) => {
@@ -248,9 +256,7 @@ describe.skip('EscrowOfflineService', () => {
       ],
     });
     const noDBService = TestBed.inject(EscrowOfflineService);
-    await expect(
-      noDBService.enqueueOperation(createMockOperation()),
-    ).resolves.toBeUndefined();
+    await expect(noDBService.enqueueOperation(createMockOperation())).resolves.toBeUndefined();
     expect(noDBService.pendingOperationCount()).toBe(0);
   });
 });

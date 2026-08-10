@@ -5,11 +5,7 @@
 
   @if (existingAudioUrl() && !hasRecording()) {
     <div class="flex flex-wrap items-center gap-3 mb-3">
-      <audio
-        controls
-        [src]="existingAudioUrl()!"
-        class="h-9 w-full max-w-xs rounded"
-      ></audio>
+      <audio controls [src]="existingAudioUrl()!" class="h-9 w-full max-w-xs rounded"></audio>
     </div>
   }
 
@@ -25,7 +21,11 @@
         [attr.aria-label]="'audioIntro.record' | t"
       >
         <span class="inline-block h-3 w-3 rounded-full bg-red-500"></span>
-        {{ (hasRecording() || existingAudioUrl()) ? ('profile.audioIntroRerecord' | t) : ('profile.audioIntroRecord' | t) }}
+        {{
+          hasRecording() || existingAudioUrl()
+            ? ('profile.audioIntroRerecord' | t)
+            : ('profile.audioIntroRecord' | t)
+        }}
       </button>
     }
 
@@ -45,16 +45,13 @@
     }
 
     @if (hasRecording() && !isRecording()) {
-      <audio
-        controls
-        [src]="recordingUrl()"
-        class="h-9 w-full max-w-xs rounded"
-      ></audio>
+      <audio controls [src]="recordingUrl()" class="h-9 w-full max-w-xs rounded"></audio>
 
       <button
         class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
         (click)="uploadRecording()"
-       [attr.aria-label]="'profile.audioIntroSave' | t">
+        [attr.aria-label]="'profile.audioIntroSave' | t"
+      >
         {{ 'profile.audioIntroSave' | t }}
       </button>
     }

@@ -328,7 +328,9 @@ describe('MatchmakingAlgorithmService', () => {
       // Partner with getter that throws to simulate a truly malformed object
       const badPartner = makeUser({ native_languages: ['fr'], target_languages: ['de'] });
       Object.defineProperty(badPartner, 'learning_goals', {
-        get() { throw new Error('Corrupt IndexedDB entry'); },
+        get() {
+          throw new Error('Corrupt IndexedDB entry');
+        },
         configurable: true,
       });
 
@@ -345,7 +347,12 @@ describe('MatchmakingAlgorithmService', () => {
       const score = {
         partner: makeUser({ id: 'p1' }),
         totalScore: 85,
-        breakdown: { languageComplementarity: 40, sharedInterests: 0, activityStreak: 0, seriousLearnerBonus: 0 },
+        breakdown: {
+          languageComplementarity: 40,
+          sharedInterests: 0,
+          activityStreak: 0,
+          seriousLearnerBonus: 0,
+        },
       };
 
       const label = service.getMatchReasonLabel(score);
@@ -356,7 +363,12 @@ describe('MatchmakingAlgorithmService', () => {
       const score = {
         partner: makeUser({ id: 'p1' }),
         totalScore: 60,
-        breakdown: { languageComplementarity: 10, sharedInterests: 25, activityStreak: 0, seriousLearnerBonus: 0 },
+        breakdown: {
+          languageComplementarity: 10,
+          sharedInterests: 25,
+          activityStreak: 0,
+          seriousLearnerBonus: 0,
+        },
       };
 
       const label = service.getMatchReasonLabel(score);
@@ -367,7 +379,12 @@ describe('MatchmakingAlgorithmService', () => {
       const score = {
         partner: makeUser({ id: 'p1' }),
         totalScore: 30,
-        breakdown: { languageComplementarity: 5, sharedInterests: 0, activityStreak: 5, seriousLearnerBonus: 10 },
+        breakdown: {
+          languageComplementarity: 5,
+          sharedInterests: 0,
+          activityStreak: 5,
+          seriousLearnerBonus: 10,
+        },
       };
 
       const label = service.getMatchReasonLabel(score);
@@ -378,7 +395,12 @@ describe('MatchmakingAlgorithmService', () => {
       const score = {
         partner: makeUser({ id: 'p1' }),
         totalScore: 5,
-        breakdown: { languageComplementarity: 0, sharedInterests: 0, activityStreak: 0, seriousLearnerBonus: 0 },
+        breakdown: {
+          languageComplementarity: 0,
+          sharedInterests: 0,
+          activityStreak: 0,
+          seriousLearnerBonus: 0,
+        },
       };
 
       const label = service.getMatchReasonLabel(score);

@@ -14,22 +14,22 @@ A pixel-perfect, mobile-first clone of HelloTalk - a language exchange social ne
 
 ## 2. Technology Stack
 
-| Layer | Technology | Notes |
-|---|---|---|
-| Frontend | Angular v22+ | Standalone components, signals-first, no legacy decorators |
-| Styling | Tailwind CSS | Logical properties only (RTL-safe), dark mode via `class` strategy |
-| Backend API | NestJS (TypeScript) | Modular, one folder per domain |
-| Database | Supabase (PostgreSQL) | PostGIS for geospatial, `pg_trgm` for fuzzy search |
-| Auth | Supabase Auth | JWT, custom `SupabaseAuthGuard`, 2FA, device transfer |
-| Real-Time Messaging | Centrifugo + Redis | Pub/sub, fan-out feeds, presence, typing indicators |
-| Real-Time AV | LiveKit (WebRTC SFU) | VoIP, video calls, drop-in rooms, live streams |
-| Media Storage | Cloudflare R2 | S3-compatible, zero egress fees |
-| Translation | DeepL API | 260+ languages, free-tier daily cap via Redis |
-| Grammar/Pronunciation | Azure Cognitive Services | Azure Translator + Azure Speech SDK |
-| Language Detection | NLP.js | Backend, lightweight, no external dependency |
-| Payments | Stripe + Apple IAP + Google Play | Webhook-verified, receipt-validated |
-| AI Conversations | LLM Proxy (backend) | Proxied OpenAI/Anthropic calls for AI conversation feature |
-| Push Notifications | Firebase Cloud Messaging (FCM) | Mobile and web push |
+| Layer                 | Technology                       | Notes                                                              |
+| --------------------- | -------------------------------- | ------------------------------------------------------------------ |
+| Frontend              | Angular v22+                     | Standalone components, signals-first, no legacy decorators         |
+| Styling               | Tailwind CSS                     | Logical properties only (RTL-safe), dark mode via `class` strategy |
+| Backend API           | NestJS (TypeScript)              | Modular, one folder per domain                                     |
+| Database              | Supabase (PostgreSQL)            | PostGIS for geospatial, `pg_trgm` for fuzzy search                 |
+| Auth                  | Supabase Auth                    | JWT, custom `SupabaseAuthGuard`, 2FA, device transfer              |
+| Real-Time Messaging   | Centrifugo + Redis               | Pub/sub, fan-out feeds, presence, typing indicators                |
+| Real-Time AV          | LiveKit (WebRTC SFU)             | VoIP, video calls, drop-in rooms, live streams                     |
+| Media Storage         | Cloudflare R2                    | S3-compatible, zero egress fees                                    |
+| Translation           | DeepL API                        | 260+ languages, free-tier daily cap via Redis                      |
+| Grammar/Pronunciation | Azure Cognitive Services         | Azure Translator + Azure Speech SDK                                |
+| Language Detection    | NLP.js                           | Backend, lightweight, no external dependency                       |
+| Payments              | Stripe + Apple IAP + Google Play | Webhook-verified, receipt-validated                                |
+| AI Conversations      | LLM Proxy (backend)              | Proxied OpenAI/Anthropic calls for AI conversation feature         |
+| Push Notifications    | Firebase Cloud Messaging (FCM)   | Mobile and web push                                                |
 
 ---
 
@@ -145,12 +145,12 @@ duration-slow: 260ms   /* page transitions, modals */
 
 ALL layout utilities must use Tailwind logical properties:
 
-| Physical (BANNED) | Logical (REQUIRED) |
-|---|---|
-| `pl-` / `pr-` | `ps-` / `pe-` |
-| `ml-` / `mr-` | `ms-` / `me-` |
-| `left-` / `right-` | `start-` / `end-` |
-| `border-l` / `border-r` | `border-s` / `border-e` |
+| Physical (BANNED)          | Logical (REQUIRED)        |
+| -------------------------- | ------------------------- |
+| `pl-` / `pr-`              | `ps-` / `pe-`             |
+| `ml-` / `mr-`              | `ms-` / `me-`             |
+| `left-` / `right-`         | `start-` / `end-`         |
+| `border-l` / `border-r`    | `border-s` / `border-e`   |
 | `text-left` / `text-right` | `text-start` / `text-end` |
 
 ---
@@ -160,6 +160,7 @@ ALL layout utilities must use Tailwind logical properties:
 Every feature component is assembled from these shared primitives. All primitives are in `src/app/components/primitives/`.
 
 ### 4.1 `app-button-primary`
+
 **Purpose:** Primary CTA button - purple gradient, full or inline width.
 
 ```
@@ -185,6 +186,7 @@ Styles:
 ```
 
 ### 4.2 `app-button-secondary`
+
 **Purpose:** Secondary / ghost button - outlined or subtle fill.
 
 ```
@@ -200,6 +202,7 @@ Styles:
 ```
 
 ### 4.3 `app-gradient-button`
+
 **Purpose:** Full-width gradient CTA - used on subscription, onboarding, key flows.
 
 ```
@@ -218,6 +221,7 @@ Styles:
 ```
 
 ### 4.4 `app-card`
+
 **Purpose:** Standard content container.
 
 ```
@@ -234,6 +238,7 @@ Styles:
 ```
 
 ### 4.5 `app-chip`
+
 **Purpose:** Filter chip / tag - toggleable.
 
 ```
@@ -254,6 +259,7 @@ Styles:
 ```
 
 ### 4.6 `app-pill`
+
 **Purpose:** Language/skill label - purely display (non-interactive).
 
 ```
@@ -271,6 +277,7 @@ Styles:
 ```
 
 ### 4.7 `app-scrollable-pills`
+
 **Purpose:** Horizontal scrollable row of filter pills - hides scrollbar.
 
 ```
@@ -289,6 +296,7 @@ Styles:
 ```
 
 ### 4.8 `app-input`
+
 **Purpose:** Standard text input.
 
 ```
@@ -314,6 +322,7 @@ Styles:
 ```
 
 ### 4.9 `app-textarea`
+
 **Purpose:** Multi-line text input - auto-grows with content.
 
 ```
@@ -324,6 +333,7 @@ Styles: same as app-input, resize-none, auto-height via scrollHeight
 ```
 
 ### 4.10 `app-empty-state`
+
 **Purpose:** Placeholder for empty lists/sections.
 
 ```
@@ -345,6 +355,7 @@ Styles:
 ```
 
 ### 4.11 `app-toast`
+
 **Purpose:** Ephemeral notification toast - appears at top of screen.
 
 ```
@@ -363,6 +374,7 @@ Styles:
 ```
 
 ### 4.12 `app-fluency-indicator`
+
 **Purpose:** Visual language fluency level (coloured dots or bars).
 
 ```
@@ -379,6 +391,7 @@ Styles:
 ```
 
 ### 4.13 `app-language-picker`
+
 **Purpose:** Searchable language selection dropdown/sheet.
 
 ```
@@ -398,6 +411,7 @@ Styles:
 ```
 
 ### 4.14 `app-audio-equalizer`
+
 **Purpose:** Animated audio bar visualiser (used in voice rooms, voice notes).
 
 ```
@@ -419,17 +433,19 @@ Styles:
 ## 5. Navigation Architecture
 
 ### 5.1 Bottom Tab Bar (Mobile)
+
 Present on all main screens. Five tabs:
 
-| Tab | Icon | Route | Badge |
-|---|---|---|---|
-| Home | house | `/home` | - |
-| Find | compass | `/discovery` | - |
-| Moments | image-stack | `/moments` | - |
-| Chat | chat-bubble | `/chat` | unread count |
-| Me | person-circle | `/profile` | - |
+| Tab     | Icon          | Route        | Badge        |
+| ------- | ------------- | ------------ | ------------ |
+| Home    | house         | `/home`      | -            |
+| Find    | compass       | `/discovery` | -            |
+| Moments | image-stack   | `/moments`   | -            |
+| Chat    | chat-bubble   | `/chat`      | unread count |
+| Me      | person-circle | `/profile`   | -            |
 
 ### 5.2 Sidebar Navigation (Desktop - 1024px+)
+
 Left sidebar, 256px wide, `surface-300` background:
 
 - Logo + app name at top
@@ -438,6 +454,7 @@ Left sidebar, 256px wide, `surface-300` background:
 - Right side: main content area (min 600px) + optional detail pane (flex-1)
 
 ### 5.3 App Shell
+
 ```
 <app-shell>
   <app-sidebar />         <!-- desktop only -->
@@ -455,7 +472,9 @@ Left sidebar, 256px wide, `surface-300` background:
 ### 6.1 Authentication Screens
 
 #### `/onboarding` - Onboarding Wizard
+
 Multi-step welcome wizard for new users:
+
 - Step 1: Welcome splash (logo, tagline, "Get Started" gradient button)
 - Step 2: Native language selection (searchable list with flags)
 - Step 3: Target language selection (multi-select, max 3)
@@ -468,11 +487,13 @@ Multi-step welcome wizard for new users:
 - Design: full-screen dark, gradient hero on step 1, `app-gradient-button` for primary actions
 
 #### `/forgot-password` - Password Reset
+
 - Email input with `app-input`
 - "Send Reset Email" primary button
 - Confirmation screen with email illustration
 
 #### `/account/deletion` - Account Deletion
+
 - Warning card explaining consequences
 - Confirmation checkbox
 - Red "Delete Account" `app-button-primary` (error colour variant)
@@ -480,9 +501,11 @@ Multi-step welcome wizard for new users:
 ### 6.2 Home Dashboard
 
 #### `/home` - Home Page
+
 Dashboard combining feed preview, quick actions, and live indicators:
 
 **Sections:**
+
 - **Header bar:** greeting (localised, time-aware), notification bell with badge, search icon
 - **Study streak widget:** flame icon, streak count, XP progress ring
 - **Quick actions row:** horizontal scroll - "Find Partner", "Moments", "Voice Room", "Lessons", "AI Chat"
@@ -495,9 +518,11 @@ Dashboard combining feed preview, quick actions, and live indicators:
 ### 6.3 Discovery (Find Partners)
 
 #### `/discovery` - Discovery Screen
+
 **Layout:** Full-screen with fixed filter bar at top, scrollable card grid below.
 
 **Filter bar (horizontal scrollable pills):**
+
 - All / Online Now / Nearby / Serious Learners / New Users
 - Country chip (opens country picker sheet)
 - Language chip (opens language picker sheet)
@@ -506,6 +531,7 @@ Dashboard combining feed preview, quick actions, and live indicators:
 - Proficiency chip
 
 **Profile cards (grid, 2 columns on mobile, 3+ on desktop):**
+
 - Cover photo background with gradient overlay
 - Circular avatar (72px)
 - Display name + flag emoji (native language)
@@ -518,7 +544,9 @@ Dashboard combining feed preview, quick actions, and live indicators:
 **Global search:** slide-down search bar, searches by name / language / country using `pg_trgm`
 
 #### `/discovery/audio-intro-feed` - Audio Intro Feed
+
 Grid of users with audio introductions:
+
 - Avatar with play button overlay
 - Name + languages
 - `app-audio-equalizer` animates while playing
@@ -527,11 +555,13 @@ Grid of users with audio introductions:
 ### 6.4 Social Feed (Moments)
 
 #### `/moments` - Moments Feed
+
 Instagram-style vertical timeline:
 
 **Tab bar:** All / Following / Classmates (chip row at top)
 
 **Moment card:**
+
 - Header: avatar (40px), username, native/target language pills, timestamp, "..." menu
 - Content: text (tokenised via `Intl.Segmenter`, tappable words), up to 9 images (grid), or audio player bar
 - AI toolbar row: Translate (globe icon), TTS (speaker icon), Correction (pen icon), Transliterate (ABC icon)
@@ -540,6 +570,7 @@ Instagram-style vertical timeline:
 - Pinned badge (VIP feature)
 
 **Create moment FAB:** purple gradient floating button (+), opens creation sheet:
+
 - Text input with language detection label
 - Image attachment (up to 9)
 - Audio record button (60s max)
@@ -548,9 +579,11 @@ Instagram-style vertical timeline:
 ### 6.5 Chat System
 
 #### `/chat` - Chat List
+
 **Search bar** at top (inline, not separate page).
 
 **Conversation list items:**
+
 - Avatar (48px) with unread dot
 - Display name + language flag
 - Last message preview (truncated, 1 line)
@@ -565,9 +598,11 @@ Instagram-style vertical timeline:
 **Filter tabs at top:** All / Unread / Groups
 
 #### `/chat/:id` - Chat Room
+
 **Header:** back arrow, avatar (40px), name, "Online" / last-seen label, video-call icon, phone icon, "..." icon.
 
 **Message bubbles:**
+
 - Own messages: aligned to end, primary purple background, white text
 - Partner messages: aligned to start, `surface-200` background, `text-text-primary`
 - Timestamps: below bubble, `text-text-muted text-xs`
@@ -578,6 +613,7 @@ Instagram-style vertical timeline:
 - Long-press: context menu (Reply / Copy / Correct / Translate / TTS / React / Delete / Report)
 
 **Message types:**
+
 - Text: rendered via `app-tokenised-text` (word tokens clickable)
 - Voice note: waveform bar, duration, play/pause button, `app-audio-equalizer`
 - Image: rounded thumbnail (max 240px wide), tap to expand in `app-image-lightbox`
@@ -588,6 +624,7 @@ Instagram-style vertical timeline:
 - AI correction bubble: different accent colour, robot icon
 
 **Input bar (bottom):**
+
 - Voice record hold-button (microphone)
 - Text input (`app-input` variant, expands to 4 rows max)
 - Emoji picker button (opens `app-emoji-picker`)
@@ -596,6 +633,7 @@ Instagram-style vertical timeline:
 - Send button (arrow icon, activates when text non-empty)
 
 **AI tools (slide-up panel from "+" button):**
+
 - Translate message
 - Grammar check
 - Correction tool (opens `app-correction-modal`)
@@ -606,6 +644,7 @@ Instagram-style vertical timeline:
 #### Chat Modals & Overlays
 
 **`app-correction-modal`:**
+
 - Original text displayed
 - Editable correction text field
 - Explanation text field
@@ -613,22 +652,26 @@ Instagram-style vertical timeline:
 - Visual diff preview (red/green diff)
 
 **`app-visual-diff`:**
+
 - Side-by-side original (red strikethrough) vs corrected (green text)
 - Explanation card below
 - Accept/Dismiss buttons
 
 **`app-emoji-picker`:**
+
 - Grid of emoji by category
 - Search bar at top
 - Recent emojis row
 - Category tabs (faces, nature, food, etc.)
 
 **`app-sticker-picker`:**
+
 - Horizontal category tabs
 - Grid of sticker thumbnails
 - GIF search tab powered by backend proxy
 
 **`app-doodle-pad`:**
+
 - HTML5 canvas (full screen overlay on mobile)
 - Colour palette row (8 colours)
 - Brush size slider
@@ -637,6 +680,7 @@ Instagram-style vertical timeline:
 - "Send Drawing" button
 
 **`app-gift-picker`:**
+
 - Grid of animated sticker gifts
 - Coin cost shown on each (e.g., "10 coins")
 - Coin balance shown at top
@@ -644,37 +688,46 @@ Instagram-style vertical timeline:
 - Confirmation: "Send [gift] for [X] coins?"
 
 **`app-message-reaction-bar`:**
+
 - Row of emoji reaction options (6 common + "+" for more)
 - Long-press message triggers this
 - Reaction counts shown on bubble
 
 **`app-message-context-menu` / `app-long-press-context-menu`:**
+
 - Bottom sheet list: Reply, Copy, Correct, Translate, Read Aloud, React, Forward, Delete, Report
 
 **`app-chat-search`:**
+
 - Slide-in overlay from top
 - Text input, searches message history
 - Highlights matching text in results
 
 **`app-threaded-reply`:**
+
 - Quoted message preview bar above input
 - Dismiss X button on quote bar
 - Sent reply appears indented under original
 
 #### `/groups` - Groups Discovery
+
 **Browse groups by language pair:**
+
 - Group card: cover image, name, member count, language chips, "Join" button
 - My Groups section at top
 - Create Group FAB
 
 **`app-create-group` modal:**
+
 - Group name, description
 - Language selection
 - Privacy toggle (Public / Private)
 - Invite friends list
 
 #### `/communities` - Communities
+
 Topic-based discussion communities:
+
 - Community cards: icon, name, member count, description snippet
 - Browse by topic tags (Technology, Travel, Culture, etc.)
 - Join/Leave button
@@ -683,13 +736,16 @@ Topic-based discussion communities:
 ### 6.6 Audio & Video Rooms
 
 #### `/audio-rooms` - Audio Room Browser
+
 **Live rooms list:**
+
 - Room card: language flag pair, topic chip, participant avatars (max 5 shown), live count, "Join" button
 - Room status badge: "LIVE" (pulsing red dot)
 - Filter pills: by language, by topic, by audience size
 - "Create Room" FAB (`app-voiceroom-create-modal`)
 
 **`app-voiceroom-create-modal`:**
+
 - Room title input
 - Language pair selection
 - Topic tags (chip selection)
@@ -697,10 +753,13 @@ Topic-based discussion communities:
 - "Go Live" `app-gradient-button`
 
 #### `/preview/room/:id` - Voice Room Preview
+
 Pre-join screen showing room details, participant list, and "Join" button.
 
 #### Active Audio Room (full-screen overlay)
+
 **Layout:**
+
 - Top bar: room title, language chips, listener count, share icon, X (leave)
 - Stage area (large): speaking participants shown as avatar cards with audio ring animation + `app-audio-equalizer`
 - Audience row: small avatars grid
@@ -709,13 +768,17 @@ Pre-join screen showing room details, participant list, and "Join" button.
 - Notes button: opens `app-voiceroom-notes`
 
 #### `/voiceroom-notes/:roomId` - Voice Room Notes
+
 Notepad for taking notes during a room session:
+
 - Markdown-ish text area
 - Auto-saved to Supabase
 - "Add Flashcard" inline button (saves selected word to vocabulary)
 
 #### `/host-dashboard` - Host Dashboard
+
 Analytics for audio/video room hosts:
+
 - Total listeners today/week/month (line chart)
 - Tips received (coin count)
 - Follower growth
@@ -724,8 +787,11 @@ Analytics for audio/video room hosts:
 - "Start New Room" CTA
 
 #### Video Call (LiveKit)
+
 #### `/video-call` - Video Call Screen
+
 Full-screen LiveKit video:
+
 - Partner video feed (large)
 - Self preview (small, draggable PiP)
 - Controls bar: mute audio, mute video, flip camera, end call, chat overlay toggle
@@ -733,7 +799,9 @@ Full-screen LiveKit video:
 - Incoming call: `app-incoming-call-modal` (avatar, name, "Accept" green / "Decline" red)
 
 #### `/active-call` - Active VoIP Call
+
 Audio-only call screen:
+
 - Large avatar circle (64px) with audio ring animation
 - Name + language
 - Call duration timer
@@ -742,7 +810,9 @@ Audio-only call screen:
 ### 6.7 AI & Learning Tools
 
 #### `/ai-conversation` - AI Conversation Partner
+
 Chat interface with an AI language tutor:
+
 - AI avatar at top (animated speaking indicator)
 - Standard chat bubble layout
 - Language context selector (I'm learning: X, My level: A2)
@@ -751,7 +821,9 @@ Chat interface with an AI language tutor:
 - Session summary card at end: words learned, corrections made
 
 #### `/vocabulary` - Vocabulary Dashboard
+
 SRS flashcard and vocabulary management:
+
 - Stats header: total words, words due today, mastery % ring chart
 - Tab bar: Due Now / All / By Language / By Status
 - Word list: word token, translation, SRS level indicator (`vocab-new` blue / `vocab-learning` yellow / `vocab-known` white), next review date
@@ -760,6 +832,7 @@ SRS flashcard and vocabulary management:
 - Filters: by language, by SRS level
 
 **`app-word-definition-modal`:**
+
 - Word in large heading
 - Phonetic pronunciation + speaker button
 - Translation (target language)
@@ -769,27 +842,34 @@ SRS flashcard and vocabulary management:
 - "Hear it" TTS button
 
 **`app-tokenised-text`:**
+
 - Every word rendered as `<span>` with click handler
 - SRS colour applied as background or underline
 - Tap: opens `app-word-definition-modal`
 - Long-press: "Copy", "Translate all", "Search" context menu
 
 #### `/lessons` - Lessons Page
+
 Curated lesson catalogue:
+
 - Featured lesson carousel (full-width cards with image)
 - Category filter pills: Grammar, Vocabulary, Pronunciation, Culture, Reading
 - Lesson card: image thumbnail, title, language, difficulty chip, duration, "Start" button
 - Progress bar on started lessons
 
 #### `/quests` - Daily Quests
+
 Gamified daily tasks:
+
 - Quest list: icon, title, description, progress bar (X/Y), XP reward badge
 - Daily streak quest at top (most prominent)
 - Completed quests shown with green checkmark + confetti micro-animation
 - "Claim XP" button on completed quests
 
 #### `/milestones` - Learning Milestones
+
 Achievement milestone timeline:
+
 - Vertical timeline, milestones as nodes
 - Completed: filled purple circle, checkmark
 - Current: pulsing ring
@@ -797,26 +877,32 @@ Achievement milestone timeline:
 - Milestone detail: title, description, reward (badge image + XP)
 
 #### `/study-buddy` - Study Buddy Matching
+
 Find a dedicated language exchange partner:
+
 - Filter by timezone, availability, goals, language level
 - Profile cards with match % indicator
 - "Invite as Study Buddy" button
 - Study buddy dashboard: shared goals, streak together, scheduled sessions
 
 #### `/resource-library` - Resource Library
+
 Curated learning resources:
+
 - Category tabs: Articles, Videos, Podcasts, Worksheets
 - Resource cards: thumbnail, title, language, level, duration
 - Bookmarking (saves to favourites)
 - Opens in-app document/video viewer
 
 **`app-audio-sync-reader`:**
+
 - Article text rendered via `app-tokenised-text`
 - Audio player bar at bottom
 - As audio plays, current phrase highlighted (cyan underline)
 - Synced via `timeupdate` event + timestamp map from backend
 
 #### `/pronunciation-feedback` - Pronunciation Feedback
+
 - Text prompt card
 - "Record" hold-button
 - Waveform visualiser during recording
@@ -824,14 +910,18 @@ Curated learning resources:
 - Phoneme-level heat map (red=wrong, green=correct)
 
 #### `/proficiency` - Proficiency Assessment
+
 Diagnostic quiz to determine language level:
+
 - Multi-step quiz (reading, listening, grammar)
 - Question card with multiple choice or type-in
 - Progress bar
 - Result: CEFR level badge (A1/A2/B1/B2/C1/C2)
 
 #### `/study-streak` - Study Streak
+
 Dedicated streak management:
+
 - Flame icon, day count, "X days in a row!"
 - Calendar heatmap (GitHub-style) showing activity
 - Today's tasks checklist
@@ -841,7 +931,9 @@ Dedicated streak management:
 ### 6.8 Profile & Social
 
 #### `/profile` - Own Profile
+
 **Layout:**
+
 - Cover photo (full-width, 200px high) with edit button
 - Avatar (80px circle) overlapping cover, with camera edit icon
 - Name, age, country flag
@@ -854,6 +946,7 @@ Dedicated streak management:
 - Moments grid / list toggle
 
 **`app-profile-edit` sheet:**
+
 - Display name input
 - Bio textarea (200 char limit)
 - Birthday picker
@@ -862,16 +955,20 @@ Dedicated streak management:
 - Language manager
 
 **`app-cover-photo-uploader` + `app-cover-photo-cropper`:**
+
 - Image picker (camera or gallery)
 - Crop UI with aspect ratio locked 16:9
 - Upload to R2
 
 **`app-avatar-upload`:**
+
 - Circle crop UI
 - Upload to R2
 
 #### `/profile/:userId` - User Detail (External Profile)
+
 Same layout as own profile but:
+
 - "Message" gradient button replaces "Edit Profile"
 - "Follow" / "Unfollow" toggle button
 - "Gift" coin button
@@ -883,23 +980,30 @@ Same layout as own profile but:
 Component version used in chat and discovery cards (side panel on desktop).
 
 #### `/visitors` - Visitor Logs
+
 Who viewed your profile:
+
 - "Blurred" state for free users (3 blurred cards + "Unlock with VIP" card)
 - Full list for VIPs: avatar, name, language, timestamp, "Message" button
 
 #### `/favourites` - Saved Content
+
 Tabbed: Messages / Moments / Words / Resources
+
 - Saved items in list format
 - Remove button (swipe left)
 
 #### `/leaderboard` - Global Leaderboard
+
 - Tab bar: This Week / All Time / Friends
 - Rank list: position number, avatar, name, language flags, XP count
 - Top 3: podium cards with gold/silver/bronze styling
 - Own rank card pinned at bottom (always visible)
 
 #### `/stats` - My Stats
+
 Personal usage analytics:
+
 - Cards: Messages sent, Corrections given/received, Words learned, Study hours
 - Bar chart: activity over 7 days
 - Language breakdown pie chart
@@ -908,6 +1012,7 @@ Personal usage analytics:
 ### 6.9 Settings & Account
 
 #### `/settings` - Settings Hub
+
 Settings list (grouped):
 
 **Account:** Profile, Language Settings, Linked Accounts, Privacy Settings, Notification Preferences, Appearance
@@ -920,27 +1025,33 @@ Settings list (grouped):
 Each row: icon (left), label, value/chevron (right), `surface-300` background rows with `surface-100` dividers.
 
 #### `/language` - Language Settings
+
 - Native language (single select)
 - Learning languages (multi, up to 3 for VIP / 1 for free)
 - App UI language (locale)
 - Study reminders per language
 
 #### `/settings/linked-accounts` - Linked Accounts
+
 Connect social: Google, Apple, Facebook
 Shows connected/disconnected status with connect/disconnect buttons.
 
 #### `/notification-preferences` - Notification Preferences
+
 Toggle list:
+
 - New message / New follower / Corrections / Moments likes / Voice room invites / Daily reminder
 - Push / In-app / Email columns
 - "Quiet hours" time range picker
 
 #### `/pages/appearance-settings` - Appearance Settings
+
 - Theme: Dark only (default, non-changeable for MVP)
 - Font size: `app-font-scale-slider` (5 steps, preview text below)
 - Language (UI locale): `app-language-selector`
 
 #### `/chat-settings` - Chat Settings
+
 - Read receipts toggle
 - Typing indicators toggle
 - Auto-download media (WiFi only / Always / Never)
@@ -948,19 +1059,23 @@ Toggle list:
 - Bubble colour selector (own messages accent colour)
 
 #### `/data-storage` - Data & Storage
+
 - Storage used breakdown (messages, media, cache)
 - "Clear Cache" button
 - "Manage Downloads" list
 - Auto-delete old media toggle
 
 #### `/pages/chat-backup` - Chat Backup
+
 - Last backup: timestamp
 - "Back Up Now" button
 - Auto-backup toggle (WiFi only)
 - Cloud storage used indicator
 
 #### `/privacy` (as a settings sub-page) - Privacy Settings
+
 **`app-privacy-settings`:**
+
 - Profile visibility: Everyone / Followers Only / Nobody
 - "Who viewed me" visibility toggle
 - Hide age toggle
@@ -969,10 +1084,13 @@ Toggle list:
 - Block list link
 
 #### `/blocks` - Block Management
+
 List of blocked users:
+
 - Avatar, name, "Unblock" button per row
 
 #### `/gdpr` - GDPR & Personal Data
+
 - Download my data button
 - View data breakdown
 - Right to erasure explanation
@@ -981,7 +1099,9 @@ List of blocked users:
 ### 6.10 Monetisation
 
 #### `/vip` - VIP Landing Page
+
 Sales page for VIP subscription:
+
 - Hero: gold crown illustration, "Go VIP" heading, tagline
 - Feature comparison table: Free vs VIP
 - Price cards: Monthly (8 UKP / $10 USD) and Annual (6 UKP / $8 USD/month)
@@ -990,7 +1110,9 @@ Sales page for VIP subscription:
 - VIP badge preview animation
 
 #### `/subscription` - Subscription Plans
+
 Full plan selection:
+
 - Consumer VIP: 8 UKP / $10 USD/month
 - Annual Consumer VIP: 6 UKP / $8 USD/month billed annually
 - Developer/Creator: 20 UKP / $26 USD/month
@@ -1000,17 +1122,20 @@ Full plan selection:
 **`app-subscription-plans` component:** Reusable plan card grid
 
 #### `/subscription/success` - Subscription Success
+
 - Checkmark animation (celebration)
 - "You are now VIP!" confirmation
 - Unlocked features list
 - "Get Started" CTA to home
 
 #### `/subscription/cancel` - Subscription Cancelled
+
 - "No worries" messaging
 - Benefits reminder
 - "Try VIP Free" secondary offer
 
 #### `/my-subscription` - Current Subscription
+
 - Current plan badge
 - Next billing date
 - Payment method (masked card)
@@ -1018,18 +1143,22 @@ Full plan selection:
 - "Upgrade Plan" if on free/basic
 
 #### `/shop` - Coins & Shop
+
 **Coin packages:**
+
 - Package cards: coin count + bonus %, price (dual currency)
 - "Best Value" badge on popular package
 - Gift items grid (stickers, custom themes, XP boosters)
 
 #### `/cart` - Shopping Cart
+
 - Line items: package/item, price
 - Total (dual currency)
 - Stripe "Pay Now" button
 - Saved payment method or new card
 
 #### `/coins/success` / `/coins/cancel` - Post-Coin Purchase
+
 Standard success/cancel feedback screens.
 
 **`app-restore-purchases-button`:** Triggers Apple/Google IAP restore flow.
@@ -1037,13 +1166,17 @@ Standard success/cancel feedback screens.
 ### 6.11 Events & Language Parties
 
 #### `/events` - Events Feed
+
 Community learning events:
+
 - Event card: cover image, title, language chips, date, host avatar, attendee count, "RSVP" button
 - Filter: Upcoming / Today / This Week
 - My Events section
 
 #### `/events/calendar` - Event Calendar
+
 Monthly calendar view with event dots:
+
 - Calendar grid
 - Selected day event list below
 - "Add Event" FAB (admin/creator only)
@@ -1051,7 +1184,9 @@ Monthly calendar view with event dots:
 **`app-events-calendar` component:** Used in both `/events` and widget on home.
 
 #### `/language-parties` - Language Parties
+
 Themed group video/audio events (special rooms):
+
 - Party card: theme banner, language, scheduled time, capacity indicator
 - Live status indicator
 - "Join Party" button
@@ -1059,41 +1194,53 @@ Themed group video/audio events (special rooms):
 ### 6.12 Help & Legal
 
 #### `/help` - Help Centre
+
 Searchable FAQ:
+
 - Search bar
 - Category cards: Getting Started, Chat & Calls, Account, Payments
 - FAQ accordion list
 
 #### `/support` - Support Centre
+
 - Submit support ticket form
 - Status of existing tickets
 
 #### `/help-about` - Help & About
+
 App version, credits, open-source licences.
 
 #### `/terms`, `/privacy` - Legal Pages
+
 Scrollable legal text in `app-legal-document-viewer` component.
 
 #### `/version` - Version Check
+
 Current app version, build info, "Check for Updates" button.
 
 ### 6.13 Admin Screens
 
 #### `/admin` - Admin Portal
-*(Requires adminGuard)*
+
+_(Requires adminGuard)_
+
 - Dashboard: user count, active rooms, reports queue count
 - Links to: User Management, Lesson Manager, Moderation Queue
 
 **`app-admin-user-actions`:** Ban/unban, promote to VIP, send notification.
 
 #### `/admin/lessons` - Lesson Manager
+
 CRUD for curated lessons:
+
 - Lesson list table
 - Create/Edit form: title, content editor, media uploads, language/level tags
 - Publish/Unpublish toggle
 
 #### `/admin/moderation` - Moderation Queue
+
 Report review workflow:
+
 - Queue list: reporter, reported user, reason, content preview
 - Actions: Dismiss / Warn / Ban
 - Moderator notes field
@@ -1103,21 +1250,27 @@ Report review workflow:
 ### 6.14 Additional Overlays & Modals
 
 #### `app-incoming-call-modal`
+
 Full-screen incoming call:
+
 - Animated ring/pulse around caller avatar
 - Caller name + language
 - Call type label (Audio / Video)
 - Decline (red) / Accept (green) large circular buttons
 
 #### `app-daily-login-modal`
+
 Daily login reward:
+
 - Calendar grid showing reward streak
 - Today's reward highlighted (coin amount)
 - "Claim" button
 - Confetti animation on claim
 
 #### `app-achievement-overlay` / `app-celebration-overlay`
+
 Triggered on milestone completion:
+
 - Full-screen overlay with confetti animation
 - Achievement badge illustration
 - Title + description
@@ -1125,100 +1278,132 @@ Triggered on milestone completion:
 - "Continue" dismiss
 
 #### `app-streak-celebration-overlay` / `app-streak-congratulations`
+
 Triggered when streak milestone hit:
+
 - Flame animation
 - Day count prominent display
 - Social share option
 
 #### `app-forced-update-modal` / `app-update-modal`
+
 Version enforcement:
+
 - Current vs required version
 - "Update Now" button (deep link to store)
 - Force close if critical update
 
 #### `app-confirm-dialog`
+
 General-purpose confirmation:
+
 - Title, message
 - Cancel (secondary) + Confirm (primary or error) buttons
 
 #### `app-report-user-modal`
+
 Report flow:
+
 - Reason selection (chip list)
 - Optional description textarea
 - Submit button
 
 #### `app-trust-safety-modal`
+
 Safety tips shown on first message to a new user.
 
 #### `app-liked-by-modal`
+
 Who liked a Moment: avatar list with names.
 
 #### `app-image-lightbox` / `app-lightbox`
+
 Full-screen image viewer:
+
 - Pinch-to-zoom
 - Swipe between images
 - Download button
 - Share button
 
 #### `app-document-viewer`
+
 In-app PDF / article reader using `app-tokenised-text` rendering.
 
 #### `app-cultural-tip`
+
 Periodic pop-up teaching cultural context about the target language (backend-driven).
 
 #### `app-word-of-the-day`
+
 Daily vocabulary widget:
+
 - Word + definition
 - Example sentence
 - "Add to deck" button
 - `app-tokenised-text` for interactive example
 
 #### `app-split-screen-video`
+
 LiveKit co-host layout: two video tiles, 50/50 split, host controls.
 
 #### `app-live-chat-overlay`
+
 Centrifugo text chat layered over audio/video room.
 
 #### `app-soundboard`
+
 Room host soundboard: pre-loaded audio clips (applause, laughter, etc.).
 
 #### `app-diagnostic-quiz`
+
 Multi-question adaptive quiz component used in proficiency assessment.
 
 #### `app-profile-discovery-card`
+
 Profile card used in discovery grid - compact version of profile.
 
 #### `app-hobby-tag-selector`
+
 Grid of hobby chips for profile setup / filter.
 
 #### `app-suggest-flashcards`
+
 Post-conversation modal suggesting words to add to vocabulary deck.
 
 #### `app-pronunciation-feedback`
+
 Score display component (dial + phoneme heatmap).
 
 #### `app-text-to-speech` button component
+
 Inline TTS trigger button (speaker icon).
 
 #### `app-social-login-buttons`
+
 Google + Apple sign-in buttons, properly branded.
 
 #### `app-age-range-slider`
+
 Dual-handle range slider for discovery age filter.
 
 #### `app-font-scale-slider`
+
 Single-handle slider for font size preference.
 
 #### `app-app-language-selector`
+
 UI language dropdown.
 
 #### `app-theme-selector`
+
 Theme picker (dark only for now, future light mode hook).
 
 #### `app-device-transfer`
+
 QR code display + scanner for device-to-device session transfer.
 
 #### `app-developer-dashboard`
+
 API key management, usage stats, webhook configuration.
 
 ---
@@ -1226,6 +1411,7 @@ API key management, usage stats, webhook configuration.
 ## 7. Complete Feature Inventory
 
 ### 7.1 Messaging & Chat
+
 - Real-time 1-on-1 text chat (Centrifugo)
 - Group chats (multi-user channels)
 - Typing indicators
@@ -1248,6 +1434,7 @@ API key management, usage stats, webhook configuration.
 - Reporting individual messages
 
 ### 7.2 VoIP & Video
+
 - 1-on-1 audio call (LiveKit)
 - 1-on-1 video call (LiveKit)
 - Call logs history
@@ -1256,6 +1443,7 @@ API key management, usage stats, webhook configuration.
 - Call end-of-session summary (duration, words discussed)
 
 ### 7.3 Drop-In Audio/Video Rooms
+
 - Public audio room creation
 - Room roles: Host / Speaker / Listener
 - Raise-hand to speak (permission granting flow)
@@ -1273,6 +1461,7 @@ API key management, usage stats, webhook configuration.
 - Split-screen co-host video mode
 
 ### 7.4 Social Feed (Moments)
+
 - Text posts (multi-language)
 - Multi-image posts (up to 9)
 - Audio posts (60s max)
@@ -1287,6 +1476,7 @@ API key management, usage stats, webhook configuration.
 - Post reporting / moderation
 
 ### 7.5 Discovery & Matchmaking
+
 - Goal-based partner discovery
 - Filters: language, country, age, gender, proficiency, online status
 - "Serious Learner" algorithmic filter
@@ -1298,6 +1488,7 @@ API key management, usage stats, webhook configuration.
 - Groups discovery
 
 ### 7.6 AI & NLP Tools
+
 - In-line message translation (DeepL, rate-limited)
 - Transliteration (Pinyin, Romaji, Cyrillic romanisation)
 - Native speaker correction tool (visual diff)
@@ -1311,6 +1502,7 @@ API key management, usage stats, webhook configuration.
 - Cultural insights / tips (backend-generated)
 
 ### 7.7 Interactive Reading & Vocabulary
+
 - Universal word tokenisation (`Intl.Segmenter`)
 - Click-to-define any word
 - SRS flashcard system (Blue/Yellow/White levels)
@@ -1320,6 +1512,7 @@ API key management, usage stats, webhook configuration.
 - Vocabulary suggestions post-conversation
 
 ### 7.8 Gamification & Learning Streaks
+
 - Daily study streak tracking
 - XP point system
 - Leaderboard (weekly + all-time)
@@ -1332,6 +1525,7 @@ API key management, usage stats, webhook configuration.
 - Corrector score (reputation for giving quality corrections)
 
 ### 7.9 Profile & Social Graph
+
 - User profile (name, age, country, bio, languages, hobbies)
 - Cover photo + avatar (R2 storage)
 - Follow / unfollow
@@ -1342,6 +1536,7 @@ API key management, usage stats, webhook configuration.
 - My stats page (activity analytics)
 
 ### 7.10 Monetisation
+
 - VIP Consumer subscription: 8 UKP / $10 USD per month
 - VIP Annual: 6 UKP / $8 USD per month (billed annually)
 - Developer/Creator tier: 20 UKP / $26 USD per month
@@ -1352,6 +1547,7 @@ API key management, usage stats, webhook configuration.
 - VIP features: ad-free, unlimited AI, 3 languages, incognito mode, VIP badge, boosted discovery, streak freeze, profile pin
 
 ### 7.11 Trust, Safety & Privacy
+
 - Block user
 - Report user (reason categorised)
 - Report message/moment
@@ -1364,6 +1560,7 @@ API key management, usage stats, webhook configuration.
 - Trust & safety modal (first DM prompt)
 
 ### 7.12 Notifications
+
 - Push notifications (FCM)
 - In-app notification inbox
 - Notification types: new message, new follower, correction received, moment liked, voice room invite, daily reminder, achievement unlocked
@@ -1371,6 +1568,7 @@ API key management, usage stats, webhook configuration.
 - Quiet hours setting
 
 ### 7.13 Settings & Account
+
 - Profile editing
 - Language management (native + target)
 - App UI language (full i18n, any locale)
@@ -1387,12 +1585,14 @@ API key management, usage stats, webhook configuration.
 - Version check + forced update modal
 
 ### 7.14 Events & Communities
+
 - Event creation, RSVP, calendar view
 - Community groups (topic-based)
 - Group join via invite code/link
 - Scheduled language exchange events
 
 ### 7.15 Admin & Developer
+
 - Admin portal (user management, lesson CRUD, moderation queue)
 - Developer dashboard (API keys, webhook config, usage analytics)
 - LLM proxy (rate-limited AI API access for dev tier)
@@ -1406,79 +1606,79 @@ API key management, usage stats, webhook configuration.
 
 Each NestJS module lives under `backend/src/<module>/` with `controller.ts`, `service.ts`, `module.ts`, `dto/`, and `*.spec.ts`.
 
-| Module | Routes (prefix) | Responsibility |
-|---|---|---|
-| `auth` | `/auth` | Supabase JWT validation, 2FA, device transfer tokens |
-| `users` | `/users` | Profile CRUD, avatar/cover upload, follower graph |
-| `chat` | `/chat` | Message CRUD, Centrifugo token minting, message search |
-| `chat-backup` | `/chat-backup` | Cloud backup sync endpoints |
-| `groups` | `/groups` | Group chat management |
-| `communities` | `/communities` | Community CRUD |
-| `moments` | `/moments` | Social feed CRUD, fan-out via Redis |
-| `feed` | `/feed` | Personalised feed assembly |
-| `discovery` | `/discovery` | Partner search, PostGIS proximity, recommendation engine |
-| `audio-rooms` | `/audio-rooms` | Room CRUD, LiveKit token minting, stage management |
-| `calls` | `/calls` | VoIP/video call initiation, LiveKit room creation, call log |
-| `video-calls` | `/video-calls` | Video call specific management |
-| `nlp` | `/nlp` | Translation (DeepL), grammar (Azure), TTS (Azure), detection (NLP.js) |
-| `pronunciation` | `/pronunciation` | Azure Speech pronunciation scoring |
-| `ai-conversation` | `/ai-conversation` | LLM-powered conversation tutor |
-| `ai` | `/ai` | General AI utilities |
-| `llm-proxy` | `/llm-proxy` | Dev-tier proxied AI API access |
-| `flashcards` | `/flashcards` | SRS vocab deck CRUD, review queue |
-| `vocabulary` | *(part of flashcards)* | Word state management |
-| `lessons` | `/lessons` | Curated lesson CRUD |
-| `achievements` | `/achievements` | Achievement definitions + user progress |
-| `xp` | `/xp` | XP tracking, award events |
-| `leaderboard` | `/leaderboard` | Ranked XP leaderboard queries |
-| `streak` | `/streak` | Daily streak tracking |
-| `study-streak` | `/study-streak` | Extended streak analytics |
-| `quests` | `/quests` | Daily quest definitions + completion tracking |
-| `milestones` | `/milestones` | Milestone definitions + user milestones |
-| `study-buddies` | `/study-buddies` | Buddy matching algorithm + paired sessions |
-| `events` | `/events` | Event CRUD, RSVP management |
-| `monetisation` | `/monetisation` | Stripe webhooks, VIP status, subscription management |
-| `economy` | `/economy` | Coin balance, coin purchase (IAP receipt validation), coin spending |
-| `shopping` | `/shopping` | Cart, order history |
-| `notifications` | `/notifications` | FCM push, in-app inbox, preferences |
-| `notification-preferences` | `/notification-preferences` | Per-user notification opt-in/out |
-| `favourites` | `/favourites` | Saved messages, moments, words |
-| `blocks` | `/blocks` | Block/unblock, block list |
-| `moderation` | `/moderation` | Report submission, moderation queue |
-| `spam-detection` | `/spam-detection` | Automated spam scoring |
-| `safety` | `/safety` | Trust & safety flagging |
-| `privacy` | `/privacy` | Privacy setting CRUD |
-| `profile-visits` | `/profile-visits` | Visitor log writes + VIP-gated reads |
-| `hobby-tags` | `/hobby-tags` | Hobby/interest tag catalogue |
-| `interests` | `/interests` | User interest associations |
-| `audio-intro` | `/audio-intro` | Audio intro recording upload + retrieval |
-| `media` | `/media` | Generic R2 upload/delete helpers |
-| `cloudflare-r2` | *(internal service)* | R2 presigned URL generation |
-| `link-preview` | `/link-preview` | OG metadata scraping |
-| `cultural-insights` | `/cultural-insights` | Cultural tips + facts |
-| `curated-content` | `/curated-content` | Reading articles management |
-| `resource-library` | `/resource-library` | Learning resource catalogue |
-| `word-of-the-day` | `/word-of-the-day` | Daily vocab word management |
-| `daily-tip` | `/daily-tip` | Daily learning tip CRUD |
-| `corrector-score` | `/corrector-score` | Correction quality scoring |
-| `proficiency` | `/proficiency` | CEFR assessment quiz + result |
-| `quiz` | `/quiz` | Generic quiz engine |
-| `recommendations` | `/recommendations` | Content + partner recommendation logic |
-| `stats` | `/stats` | User activity statistics |
-| `user-statistics` | `/user-statistics` | Aggregate user metrics |
-| `host-dashboard` | `/host-dashboard` | Room host analytics |
-| `language-challenges` | `/language-challenges` | Timed language challenge events |
-| `password-reset` | `/password-reset` | Email-based password reset flow |
-| `two-factor` | `/two-factor` | TOTP 2FA setup + verification |
-| `transfer` | `/transfer` | Device transfer QR token generation |
-| `linked-accounts` | `/linked-accounts` | OAuth social account linking |
-| `email` | *(internal service)* | Transactional email (Resend/SMTP) |
-| `scheduled-deletion` | *(cron)* | Processes pending account deletions after cool-off |
-| `admin` | `/admin` | Admin user management, moderation actions |
-| `version` | `/version` | App version check, forced update flags |
-| `config` | *(internal)* | Env validation schema (Joi) |
-| `supabase` | *(internal service)* | Supabase client singleton |
-| `database` | *(internal)* | Migration runner |
+| Module                     | Routes (prefix)             | Responsibility                                                        |
+| -------------------------- | --------------------------- | --------------------------------------------------------------------- |
+| `auth`                     | `/auth`                     | Supabase JWT validation, 2FA, device transfer tokens                  |
+| `users`                    | `/users`                    | Profile CRUD, avatar/cover upload, follower graph                     |
+| `chat`                     | `/chat`                     | Message CRUD, Centrifugo token minting, message search                |
+| `chat-backup`              | `/chat-backup`              | Cloud backup sync endpoints                                           |
+| `groups`                   | `/groups`                   | Group chat management                                                 |
+| `communities`              | `/communities`              | Community CRUD                                                        |
+| `moments`                  | `/moments`                  | Social feed CRUD, fan-out via Redis                                   |
+| `feed`                     | `/feed`                     | Personalised feed assembly                                            |
+| `discovery`                | `/discovery`                | Partner search, PostGIS proximity, recommendation engine              |
+| `audio-rooms`              | `/audio-rooms`              | Room CRUD, LiveKit token minting, stage management                    |
+| `calls`                    | `/calls`                    | VoIP/video call initiation, LiveKit room creation, call log           |
+| `video-calls`              | `/video-calls`              | Video call specific management                                        |
+| `nlp`                      | `/nlp`                      | Translation (DeepL), grammar (Azure), TTS (Azure), detection (NLP.js) |
+| `pronunciation`            | `/pronunciation`            | Azure Speech pronunciation scoring                                    |
+| `ai-conversation`          | `/ai-conversation`          | LLM-powered conversation tutor                                        |
+| `ai`                       | `/ai`                       | General AI utilities                                                  |
+| `llm-proxy`                | `/llm-proxy`                | Dev-tier proxied AI API access                                        |
+| `flashcards`               | `/flashcards`               | SRS vocab deck CRUD, review queue                                     |
+| `vocabulary`               | _(part of flashcards)_      | Word state management                                                 |
+| `lessons`                  | `/lessons`                  | Curated lesson CRUD                                                   |
+| `achievements`             | `/achievements`             | Achievement definitions + user progress                               |
+| `xp`                       | `/xp`                       | XP tracking, award events                                             |
+| `leaderboard`              | `/leaderboard`              | Ranked XP leaderboard queries                                         |
+| `streak`                   | `/streak`                   | Daily streak tracking                                                 |
+| `study-streak`             | `/study-streak`             | Extended streak analytics                                             |
+| `quests`                   | `/quests`                   | Daily quest definitions + completion tracking                         |
+| `milestones`               | `/milestones`               | Milestone definitions + user milestones                               |
+| `study-buddies`            | `/study-buddies`            | Buddy matching algorithm + paired sessions                            |
+| `events`                   | `/events`                   | Event CRUD, RSVP management                                           |
+| `monetisation`             | `/monetisation`             | Stripe webhooks, VIP status, subscription management                  |
+| `economy`                  | `/economy`                  | Coin balance, coin purchase (IAP receipt validation), coin spending   |
+| `shopping`                 | `/shopping`                 | Cart, order history                                                   |
+| `notifications`            | `/notifications`            | FCM push, in-app inbox, preferences                                   |
+| `notification-preferences` | `/notification-preferences` | Per-user notification opt-in/out                                      |
+| `favourites`               | `/favourites`               | Saved messages, moments, words                                        |
+| `blocks`                   | `/blocks`                   | Block/unblock, block list                                             |
+| `moderation`               | `/moderation`               | Report submission, moderation queue                                   |
+| `spam-detection`           | `/spam-detection`           | Automated spam scoring                                                |
+| `safety`                   | `/safety`                   | Trust & safety flagging                                               |
+| `privacy`                  | `/privacy`                  | Privacy setting CRUD                                                  |
+| `profile-visits`           | `/profile-visits`           | Visitor log writes + VIP-gated reads                                  |
+| `hobby-tags`               | `/hobby-tags`               | Hobby/interest tag catalogue                                          |
+| `interests`                | `/interests`                | User interest associations                                            |
+| `audio-intro`              | `/audio-intro`              | Audio intro recording upload + retrieval                              |
+| `media`                    | `/media`                    | Generic R2 upload/delete helpers                                      |
+| `cloudflare-r2`            | _(internal service)_        | R2 presigned URL generation                                           |
+| `link-preview`             | `/link-preview`             | OG metadata scraping                                                  |
+| `cultural-insights`        | `/cultural-insights`        | Cultural tips + facts                                                 |
+| `curated-content`          | `/curated-content`          | Reading articles management                                           |
+| `resource-library`         | `/resource-library`         | Learning resource catalogue                                           |
+| `word-of-the-day`          | `/word-of-the-day`          | Daily vocab word management                                           |
+| `daily-tip`                | `/daily-tip`                | Daily learning tip CRUD                                               |
+| `corrector-score`          | `/corrector-score`          | Correction quality scoring                                            |
+| `proficiency`              | `/proficiency`              | CEFR assessment quiz + result                                         |
+| `quiz`                     | `/quiz`                     | Generic quiz engine                                                   |
+| `recommendations`          | `/recommendations`          | Content + partner recommendation logic                                |
+| `stats`                    | `/stats`                    | User activity statistics                                              |
+| `user-statistics`          | `/user-statistics`          | Aggregate user metrics                                                |
+| `host-dashboard`           | `/host-dashboard`           | Room host analytics                                                   |
+| `language-challenges`      | `/language-challenges`      | Timed language challenge events                                       |
+| `password-reset`           | `/password-reset`           | Email-based password reset flow                                       |
+| `two-factor`               | `/two-factor`               | TOTP 2FA setup + verification                                         |
+| `transfer`                 | `/transfer`                 | Device transfer QR token generation                                   |
+| `linked-accounts`          | `/linked-accounts`          | OAuth social account linking                                          |
+| `email`                    | _(internal service)_        | Transactional email (Resend/SMTP)                                     |
+| `scheduled-deletion`       | _(cron)_                    | Processes pending account deletions after cool-off                    |
+| `admin`                    | `/admin`                    | Admin user management, moderation actions                             |
+| `version`                  | `/version`                  | App version check, forced update flags                                |
+| `config`                   | _(internal)_                | Env validation schema (Joi)                                           |
+| `supabase`                 | _(internal service)_        | Supabase client singleton                                             |
+| `database`                 | _(internal)_                | Migration runner                                                      |
 
 ---
 
@@ -1575,6 +1775,7 @@ presence_{userId}           -- online presence tracking
 ## 11. Angular Architecture Conventions
 
 ### 11.1 State Management Pattern
+
 ```typescript
 // Component state: signals only
 protected messages = signal<Message[]>([]);
@@ -1600,12 +1801,15 @@ readonly messageSent = output<Message>();
 ```
 
 ### 11.2 Routing & Lazy Loading
+
 All routes use `loadComponent()` for lazy loading. Route guards use functional guards (`canActivate: [authGuard]`).
 
 ### 11.3 i18n / Translations
+
 All UI text is externalised. Template usage: `{{ 'key.path' | t }}` or `{{ 'key' | t: { name: username() } }}`. TypeScript usage: `this.i18n.translate('key', params)`.
 
 ### 11.4 HTTP Services
+
 Services use `HttpClient` with typed responses, return `Promise<T>` (via `firstValueFrom`). Never `.subscribe()` outside of `toSignal()`.
 
 ---
@@ -1613,11 +1817,13 @@ Services use `HttpClient` with typed responses, return `Promise<T>` (via `firstV
 ## 12. Build & Development Setup
 
 ### Prerequisites
+
 - Node.js 22+
 - npm 10+
 - Docker & Docker Compose (for local Supabase, Redis, Centrifugo)
 
 ### Local Development
+
 ```bash
 # Start infrastructure
 docker-compose -f docker-compose.dev.yml up -d
@@ -1642,9 +1848,11 @@ cd backend && npm run build
 ```
 
 ### Environment Variables
+
 See `backend/src/config/validation.schema.ts` for the full required variable list. Copy `.env.example` to `.env` and fill in all values before starting.
 
 ### Pre-Commit Checks (Frontend)
+
 ```bash
 npm run check:control-flow    # No *ngIf/*ngFor legacy directives
 npm run check:rtl-logical     # No physical CSS direction utilities
@@ -1667,4 +1875,3 @@ npm test -- --watch=false
 - Live regions (`aria-live="polite"`) for dynamic content updates (new messages, toast)
 - Keyboard navigation: tab order is logical, Escape closes modals
 - RTL text direction via `dir` attribute on `<html>` (managed by `I18nService`)
-

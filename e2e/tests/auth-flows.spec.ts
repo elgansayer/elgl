@@ -93,9 +93,10 @@ test.describe('Authentication Flows', () => {
       const facebookButton = page.locator('button', { hasText: 'auth.login_facebook' });
       const appleButton = page.locator('button', { hasText: 'auth.login_apple' });
 
-      const anyVisible = await googleButton.isVisible().catch(() => false)
-        || await facebookButton.isVisible().catch(() => false)
-        || await appleButton.isVisible().catch(() => false);
+      const anyVisible =
+        (await googleButton.isVisible().catch(() => false)) ||
+        (await facebookButton.isVisible().catch(() => false)) ||
+        (await appleButton.isVisible().catch(() => false));
 
       if (anyVisible) {
         if (await googleButton.isVisible().catch(() => false)) {

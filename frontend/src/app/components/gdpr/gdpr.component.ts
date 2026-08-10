@@ -24,7 +24,9 @@ import { I18nService } from '../../services/i18n.service';
           <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
             {{ 'gdpr.archiveSection' | t }}
           </h2>
-          <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3">
+          <div
+            class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3"
+          >
             <p class="text-xs text-text-secondary">{{ 'gdpr.archiveInfo' | t }}</p>
             <button
               (click)="requestArchive()"
@@ -47,7 +49,9 @@ import { I18nService } from '../../services/i18n.service';
           <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
             {{ 'gdpr.deleteSection' | t }}
           </h2>
-          <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3">
+          <div
+            class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3"
+          >
             <p class="text-xs text-text-secondary">{{ 'gdpr.deleteInfo' | t }}</p>
             <label class="flex items-center gap-2 cursor-pointer">
               <input
@@ -80,7 +84,9 @@ import { I18nService } from '../../services/i18n.service';
             <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
               {{ 'gdpr.cancelDeletionSection' | t }}
             </h2>
-            <div class="rounded-2xl bg-amber-500/10 border border-amber-500/30 shadow-sm p-4 space-y-3">
+            <div
+              class="rounded-2xl bg-amber-500/10 border border-amber-500/30 shadow-sm p-4 space-y-3"
+            >
               <p class="text-xs text-amber-400">{{ 'gdpr.cancelDeletionInfo' | t }}</p>
               <button
                 (click)="cancelDeletion()"

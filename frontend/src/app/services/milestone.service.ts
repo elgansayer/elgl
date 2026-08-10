@@ -28,21 +28,15 @@ export class MilestoneService {
   }
 
   getProgress(): Promise<MilestoneProgress> {
-    return firstValueFrom(
-      this.http.get<MilestoneProgress>(`${this.apiUrl}/progress`),
-    );
+    return firstValueFrom(this.http.get<MilestoneProgress>(`${this.apiUrl}/progress`));
   }
 
   createMilestone(title: string, description?: string): Promise<Milestone> {
-    return firstValueFrom(
-      this.http.post<Milestone>(this.apiUrl, { title, description }),
-    );
+    return firstValueFrom(this.http.post<Milestone>(this.apiUrl, { title, description }));
   }
 
   markCompleted(id: string): Promise<Milestone> {
-    return firstValueFrom(
-      this.http.post<Milestone>(`${this.apiUrl}/${id}/complete`, {}),
-    );
+    return firstValueFrom(this.http.post<Milestone>(`${this.apiUrl}/${id}/complete`, {}));
   }
 
   deleteMilestone(id: string): Promise<void> {

@@ -1,10 +1,4 @@
-import {
-  Component,
-  inject,
-  input,
-  signal,
-  ErrorHandler,
-} from '@angular/core';
+import { Component, inject, input, signal, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -61,7 +55,12 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
             (click)="toggleDetails()"
             [attr.aria-label]="'admin.errorBoundary.toggleDetailsAria' | t"
           >
-            {{ (showDetails() ? 'admin.errorBoundary.hideDetails' : 'admin.errorBoundary.showDetails') | t }}
+            {{
+              (showDetails()
+                ? 'admin.errorBoundary.hideDetails'
+                : 'admin.errorBoundary.showDetails'
+              ) | t
+            }}
           </button>
         </div>
         @if (showDetails()) {
@@ -78,7 +77,8 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
                   {{ 'admin.errorBoundary.component' | t }}: {{ crashContext()?.component }}
                 </p>
                 <p class="text-xs text-text-secondary">
-                  {{ 'admin.errorBoundary.offline' | t }}: {{ crashContext()?.offline ? ('common.yes' | t) : ('common.no' | t) }}
+                  {{ 'admin.errorBoundary.offline' | t }}:
+                  {{ crashContext()?.offline ? ('common.yes' | t) : ('common.no' | t) }}
                 </p>
               </div>
             }

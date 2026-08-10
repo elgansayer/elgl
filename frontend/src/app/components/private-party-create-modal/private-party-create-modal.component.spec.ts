@@ -9,7 +9,9 @@ describe('PrivatePartyCreateModalComponent', () => {
   let component: PrivatePartyCreateModalComponent;
   let fixture: ComponentFixture<PrivatePartyCreateModalComponent>;
   let userServiceMock: { getFollowing: ReturnType<typeof vi.fn> };
-  let authServiceMock: { currentUser: ReturnType<typeof signal<{ id: string; is_vip?: boolean } | null>> };
+  let authServiceMock: {
+    currentUser: ReturnType<typeof signal<{ id: string; is_vip?: boolean } | null>>;
+  };
   let i18nServiceMock: ReturnType<typeof createI18nMock>;
 
   function createI18nMock() {

@@ -99,17 +99,13 @@ export class MessageFilterSettingsComponent implements OnInit {
 
   toggleLanguage(code: string): void {
     this.selectedLanguages.update((current) =>
-      current.includes(code)
-        ? current.filter((c) => c !== code)
-        : [...current, code],
+      current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
     );
   }
 
   toggleGender(code: string): void {
     this.selectedGenders.update((current) =>
-      current.includes(code)
-        ? current.filter((c) => c !== code)
-        : [...current, code],
+      current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
     );
   }
 
@@ -123,17 +119,10 @@ export class MessageFilterSettingsComponent implements OnInit {
         age_min: this.ageMin() ?? undefined,
         age_max: this.ageMax() ?? undefined,
         allowed_native_languages:
-          this.selectedLanguages().length > 0
-            ? this.selectedLanguages()
-            : undefined,
-        allowed_genders:
-          this.selectedGenders().length > 0
-            ? this.selectedGenders()
-            : undefined,
+          this.selectedLanguages().length > 0 ? this.selectedLanguages() : undefined,
+        allowed_genders: this.selectedGenders().length > 0 ? this.selectedGenders() : undefined,
       });
-      this.successMessage.set(
-        'settings.messageFilters.saved',
-      );
+      this.successMessage.set('settings.messageFilters.saved');
     } catch {
       this.errorMessage.set('settings.messageFilters.saveError');
     } finally {
@@ -142,7 +131,7 @@ export class MessageFilterSettingsComponent implements OnInit {
   }
 
   getLanguageName(code: string): string {
-    return this.languages.find(l => l.code === code)?.name ?? code.toUpperCase();
+    return this.languages.find((l) => l.code === code)?.name ?? code.toUpperCase();
   }
 
   goBack(): void {

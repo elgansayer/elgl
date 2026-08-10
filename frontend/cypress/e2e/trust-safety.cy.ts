@@ -18,11 +18,36 @@ describe('Trust & Safety - Report User Flow', () => {
 
     cy.intercept('GET', '**/api/safety/report-categories', {
       body: [
-        { value: 'harassment', label: 'Harassment', icon: '🚫', description: 'Unwanted advances, threats, or abusive behaviour' },
-        { value: 'spam', label: 'Spam', icon: '📧', description: 'Unsolicited promotions, phishing, or fraudulent activity' },
-        { value: 'inappropriate_content', label: 'Inappropriate Content', icon: '🔞', description: 'Sexually explicit, violent, or offensive material' },
-        { value: 'fake_profile', label: 'Fake Profile', icon: '🎭', description: 'Impersonation or false identity' },
-        { value: 'other', label: 'Other', icon: '📝', description: 'Something else not listed above' },
+        {
+          value: 'harassment',
+          label: 'Harassment',
+          icon: '🚫',
+          description: 'Unwanted advances, threats, or abusive behaviour',
+        },
+        {
+          value: 'spam',
+          label: 'Spam',
+          icon: '📧',
+          description: 'Unsolicited promotions, phishing, or fraudulent activity',
+        },
+        {
+          value: 'inappropriate_content',
+          label: 'Inappropriate Content',
+          icon: '🔞',
+          description: 'Sexually explicit, violent, or offensive material',
+        },
+        {
+          value: 'fake_profile',
+          label: 'Fake Profile',
+          icon: '🎭',
+          description: 'Impersonation or false identity',
+        },
+        {
+          value: 'other',
+          label: 'Other',
+          icon: '📝',
+          description: 'Something else not listed above',
+        },
       ],
     }).as('getReportCategories');
 
@@ -100,8 +125,12 @@ describe('Trust & Safety - Report User Flow', () => {
 
 describe('Trust & Safety - Block User Flow', () => {
   beforeEach(() => {
-    cy.intercept('GET', '**/api/safety/blocked-ids', { body: ['blocked-user-1'] }).as('getBlockedIds');
-    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: ['blocked-user-1'] }).as('getUserBlockedIds');
+    cy.intercept('GET', '**/api/safety/blocked-ids', { body: ['blocked-user-1'] }).as(
+      'getBlockedIds',
+    );
+    cy.intercept('GET', '**/api/safety/blocked-ids/*', { body: ['blocked-user-1'] }).as(
+      'getUserBlockedIds',
+    );
     cy.intercept('GET', '**/api/safety/blocker-ids/*', { body: [] }).as('getBlockerIds');
     cy.intercept('GET', '**/api/safety/blocked-and-blocker-ids/*', { body: ['blocked-user-1'] }).as(
       'getBlockedAndBlockerIds',
@@ -541,7 +570,10 @@ describe('Trust & Safety - Report Submission Validation', () => {
       } else if (reported_id === 'self-report') {
         req.reply({ statusCode: 400, body: { message: 'Cannot report yourself' } });
       } else {
-        req.reply({ statusCode: 201, body: { success: true, message: 'Report submitted successfully' } });
+        req.reply({
+          statusCode: 201,
+          body: { success: true, message: 'Report submitted successfully' },
+        });
       }
     }).as('submitReportWithValidation');
 

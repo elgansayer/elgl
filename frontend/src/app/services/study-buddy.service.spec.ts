@@ -83,12 +83,7 @@ describe('StudyBuddyService', () => {
       const matchesPromise = service.getMatches();
 
       const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/matches');
-      req.flush([
-        { id: '1', display_name: 'Alice' },
-        { id: '2' },
-        { display_name: 'No Id' },
-        null,
-      ]);
+      req.flush([{ id: '1', display_name: 'Alice' }, { id: '2' }, { display_name: 'No Id' }, null]);
 
       await expect(matchesPromise).resolves.toEqual([
         { id: '1', display_name: 'Alice', avatar_url: undefined },
@@ -140,7 +135,15 @@ describe('StudyBuddyService', () => {
 
       const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests');
       expect(req.request.method).toBe('GET');
-      req.flush([{ id: 'req-1', requesterId: 'user-2', partnerId: 'user-1', status: 'pending', createdAt: '2026-08-01T00:00:00.000Z' }]);
+      req.flush([
+        {
+          id: 'req-1',
+          requesterId: 'user-2',
+          partnerId: 'user-1',
+          status: 'pending',
+          createdAt: '2026-08-01T00:00:00.000Z',
+        },
+      ]);
 
       await expect(requestsPromise).resolves.toEqual([
         {
@@ -158,7 +161,9 @@ describe('StudyBuddyService', () => {
     it('should POST to the accept endpoint', async () => {
       const promise = service.acceptRequest('req-1');
 
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests/req-1/accept');
+      const req = httpMock.expectOne(
+        'http://localhost:3000/api/study-buddies/requests/req-1/accept',
+      );
       expect(req.request.method).toBe('POST');
       req.flush({});
 
@@ -170,7 +175,9 @@ describe('StudyBuddyService', () => {
     it('should POST to the decline endpoint', async () => {
       const promise = service.declineRequest('req-1');
 
-      const req = httpMock.expectOne('http://localhost:3000/api/study-buddies/requests/req-1/decline');
+      const req = httpMock.expectOne(
+        'http://localhost:3000/api/study-buddies/requests/req-1/decline',
+      );
       expect(req.request.method).toBe('POST');
       req.flush({});
 

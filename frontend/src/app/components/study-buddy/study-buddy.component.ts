@@ -25,7 +25,9 @@ import {
               {{ 'studyBuddy.incomingRequestsTitle' | t }}
             </h3>
             @for (req of incomingRequests(); track req.id) {
-              <div class="flex items-center justify-between gap-3 p-2 bg-surface-200 rounded-lg mb-2">
+              <div
+                class="flex items-center justify-between gap-3 p-2 bg-surface-200 rounded-lg mb-2"
+              >
                 <div class="flex items-center gap-3">
                   <img
                     [src]="req.requester?.avatar_url || ''"

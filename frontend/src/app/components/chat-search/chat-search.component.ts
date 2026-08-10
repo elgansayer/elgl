@@ -85,7 +85,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
           >
             <div class="flex items-center gap-2">
               @if (searchMode() === 'global') {
-                <span class="text-xs text-text-muted bg-surface-100 px-1.5 py-0.5 rounded truncate max-w-[120px]">
+                <span
+                  class="text-xs text-text-muted bg-surface-100 px-1.5 py-0.5 rounded truncate max-w-[120px]"
+                >
                   #{{ msg.room_id.slice(0, 8) }}
                 </span>
               }

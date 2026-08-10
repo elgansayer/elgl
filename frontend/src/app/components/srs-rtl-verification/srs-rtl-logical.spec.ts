@@ -123,9 +123,7 @@ function extractStylesContent(componentContent: string): string {
       .replace(/['"]/g, '')
       .split(',')
       .map((f) => f.trim());
-    const baseDir = componentContent.includes('styleUrls')
-      ? ''
-      : '';
+    const baseDir = componentContent.includes('styleUrls') ? '' : '';
     return filePaths
       .map((fp) => {
         // Resolve relative to component dir

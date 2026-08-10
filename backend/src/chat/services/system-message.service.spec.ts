@@ -17,7 +17,9 @@ describe('SystemMessageService', () => {
 
   beforeEach(async () => {
     centrifugoService = { publish: jest.fn().mockResolvedValue(true) };
-    supabaseService = { getClient: jest.fn().mockReturnValue(mockSupabaseClient()) };
+    supabaseService = {
+      getClient: jest.fn().mockReturnValue(mockSupabaseClient()),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -160,7 +162,10 @@ describe('SystemMessageService', () => {
       await service.publishToDirectRoom('user-a', 'user-b', 'missedCall');
 
       expect(centrifugoService.publish).toHaveBeenCalledTimes(1);
-      const [channel] = centrifugoService.publish.mock.calls[0] as [string, unknown];
+      const [channel] = centrifugoService.publish.mock.calls[0] as [
+        string,
+        unknown,
+      ];
       expect(channel).toBe('chat:dm-1');
     });
 

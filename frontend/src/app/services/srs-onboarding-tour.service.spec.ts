@@ -10,10 +10,7 @@ describe('SrsOnboardingTourService', () => {
     localStorage.clear();
 
     TestBed.configureTestingModule({
-      providers: [
-        SrsOnboardingTourService,
-        { provide: PLATFORM_ID, useValue: 'browser' },
-      ],
+      providers: [SrsOnboardingTourService, { provide: PLATFORM_ID, useValue: 'browser' }],
     });
 
     service = TestBed.inject(SrsOnboardingTourService);

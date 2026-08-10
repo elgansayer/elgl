@@ -27,10 +27,7 @@ export class AudioIntroRecorderComponent {
   readonly timer = signal(0);
   readonly errorMessage = signal<string | null>(null);
 
-  private readonly audioResource = resource<
-    { audio_url: string | null },
-    { userId: string }
-  >({
+  private readonly audioResource = resource<{ audio_url: string | null }, { userId: string }>({
     params: () => ({ userId: this.userId() }),
     loader: (ctx) =>
       this.audioIntroService.getAudioIntro(ctx.params.userId).catch(() => {
@@ -39,9 +36,7 @@ export class AudioIntroRecorderComponent {
       }),
   });
 
-  readonly audioUrl = computed(() =>
-    this.audioResource.value()?.audio_url ?? null,
-  );
+  readonly audioUrl = computed(() => this.audioResource.value()?.audio_url ?? null);
 
   readonly remainingSeconds = computed(() => 30 - this.timer());
 

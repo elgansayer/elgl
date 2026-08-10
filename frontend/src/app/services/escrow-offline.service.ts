@@ -1,11 +1,14 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { NetworkStatusService } from './network-status.service';
 
-export type EscrowStatus =
-  'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
+export type EscrowStatus = 'pending' | 'released' | 'refunded' | 'disputed' | 'cancelled';
 
 export type EscrowServiceType =
-  'lesson' | 'language_exchange' | 'proofreading' | 'translation' | 'other';
+  | 'lesson'
+  | 'language_exchange'
+  | 'proofreading'
+  | 'translation'
+  | 'other';
 
 export interface EscrowRow {
   id: string;
@@ -76,9 +79,7 @@ export class EscrowOfflineService {
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
       this.initPromise = this.initDB();
-      this.initPromise
-        .then(() => this.refreshPendingCount())
-        .catch(() => undefined);
+      this.initPromise.then(() => this.refreshPendingCount()).catch(() => undefined);
     }
   }
 
@@ -145,9 +146,7 @@ export class EscrowOfflineService {
     });
   }
 
-  async getCachedEscrows(
-    status?: string,
-  ): Promise<EscrowRow[]> {
+  async getCachedEscrows(status?: string): Promise<EscrowRow[]> {
     if (!this.isAvailable()) return [];
     await this.ensureDB();
     return new Promise((resolve, reject) => {

@@ -75,13 +75,19 @@ export class AudioRoomDegradationService {
     const state = this.degradationState();
     const degraded: string[] = [];
     if (!state.livekit.healthy || state.livekit.degraded) {
-      degraded.push(`LiveKit${state.livekit.errorMessage ? `: ${state.livekit.errorMessage}` : ''}`);
+      degraded.push(
+        `LiveKit${state.livekit.errorMessage ? `: ${state.livekit.errorMessage}` : ''}`,
+      );
     }
     if (!state.supabase.healthy || state.supabase.degraded) {
-      degraded.push(`Supabase${state.supabase.errorMessage ? `: ${state.supabase.errorMessage}` : ''}`);
+      degraded.push(
+        `Supabase${state.supabase.errorMessage ? `: ${state.supabase.errorMessage}` : ''}`,
+      );
     }
     if (!state.centrifugo.healthy || state.centrifugo.degraded) {
-      degraded.push(`Centrifugo${state.centrifugo.errorMessage ? `: ${state.centrifugo.errorMessage}` : ''}`);
+      degraded.push(
+        `Centrifugo${state.centrifugo.errorMessage ? `: ${state.centrifugo.errorMessage}` : ''}`,
+      );
     }
     return degraded;
   });
@@ -128,16 +134,32 @@ export class AudioRoomDegradationService {
 
   private async fetchHealth(): Promise<void> {
     try {
-      const state = await firstValueFrom(
-        this.http.get<DegradationState>(`${this.baseUrl}/health`),
-      );
+      const state = await firstValueFrom(this.http.get<DegradationState>(`${this.baseUrl}/health`));
       this.degradationState.set(state);
     } catch {
       // If the health endpoint itself is unreachable, mark all as unknown
       this.degradationState.update((current) => ({
-        livekit: { ...current.livekit, healthy: false, degraded: true, lastChecked: Date.now(), errorMessage: 'Endpoint unreachable' },
-        supabase: { ...current.supabase, healthy: false, degraded: true, lastChecked: Date.now(), errorMessage: 'Endpoint unreachable' },
-        centrifugo: { ...current.centrifugo, healthy: false, degraded: true, lastChecked: Date.now(), errorMessage: 'Endpoint unreachable' },
+        livekit: {
+          ...current.livekit,
+          healthy: false,
+          degraded: true,
+          lastChecked: Date.now(),
+          errorMessage: 'Endpoint unreachable',
+        },
+        supabase: {
+          ...current.supabase,
+          healthy: false,
+          degraded: true,
+          lastChecked: Date.now(),
+          errorMessage: 'Endpoint unreachable',
+        },
+        centrifugo: {
+          ...current.centrifugo,
+          healthy: false,
+          degraded: true,
+          lastChecked: Date.now(),
+          errorMessage: 'Endpoint unreachable',
+        },
         overallHealthy: false,
         allServicesUp: false,
       }));

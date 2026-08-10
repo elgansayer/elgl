@@ -31,13 +31,7 @@ export class CoinEconomyTourService {
 
     this.tourSubscription = this.joyrideService
       .startTour({
-        steps: [
-          STEP_COINS_BALANCE,
-          STEP_SHOP_NAV,
-          STEP_STICKER_NAV,
-          STEP_VIP_NAV,
-          STEP_COINS_BUY,
-        ],
+        steps: [STEP_COINS_BALANCE, STEP_SHOP_NAV, STEP_STICKER_NAV, STEP_VIP_NAV, STEP_COINS_BUY],
         themeColor: '#6366f1',
         showCounter: true,
         showPrevButton: true,

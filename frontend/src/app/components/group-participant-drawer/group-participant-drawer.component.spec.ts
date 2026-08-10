@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { GroupParticipantDrawerComponent, GroupParticipant } from './group-participant-drawer.component';
+import {
+  GroupParticipantDrawerComponent,
+  GroupParticipant,
+} from './group-participant-drawer.component';
 import { I18nService } from '../../services/i18n.service';
 
 const mockParticipants: GroupParticipant[] = [
@@ -36,10 +39,7 @@ describe.skip('GroupParticipantDrawerComponent', () => {
   let component: GroupParticipantDrawerComponent;
   let closedSpy: ReturnType<typeof vi.fn>;
 
-  function setUp(overrides?: {
-    isOpen?: boolean;
-    participants?: GroupParticipant[];
-  }): void {
+  function setUp(overrides?: { isOpen?: boolean; participants?: GroupParticipant[] }): void {
     fixture = TestBed.createComponent(GroupParticipantDrawerComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('isOpen', overrides?.isOpen ?? true);
@@ -111,9 +111,7 @@ describe.skip('GroupParticipantDrawerComponent', () => {
 
   it('should emit closed event when backdrop is clicked', () => {
     setUp();
-    const backdrop: HTMLElement | null = fixture.nativeElement.querySelector(
-      '.fixed.inset-0.z-40',
-    );
+    const backdrop: HTMLElement | null = fixture.nativeElement.querySelector('.fixed.inset-0.z-40');
     expect(backdrop).toBeTruthy();
     backdrop!.click();
     fixture.detectChanges();

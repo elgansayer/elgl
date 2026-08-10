@@ -18,7 +18,9 @@ export interface CatalogItem {
       <p class="text-slate-600 dark:text-slate-300 mb-6">{{ 'businessProfile.subtitle' | t }}</p>
 
       <div class="rounded-2xl bg-slate-100 dark:bg-surface-800 p-6">
-        <label class="mb-1 block text-sm font-medium" for="businessName">{{ 'profile.businessName' | t }}</label>
+        <label class="mb-1 block text-sm font-medium" for="businessName">{{
+          'profile.businessName' | t
+        }}</label>
         <input
           id="businessName"
           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
@@ -27,7 +29,9 @@ export interface CatalogItem {
           [placeholder]="'profile.businessNamePlaceholder' | t"
         />
 
-        <label class="mb-1 mt-4 block text-sm font-medium" for="businessHours">{{ 'profile.businessHours' | t }}</label>
+        <label class="mb-1 mt-4 block text-sm font-medium" for="businessHours">{{
+          'profile.businessHours' | t
+        }}</label>
         <input
           id="businessHours"
           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
@@ -36,7 +40,9 @@ export interface CatalogItem {
           [placeholder]="'profile.businessHoursPlaceholder' | t"
         />
 
-        <label class="mb-1 mt-4 block text-sm font-medium" for="website">{{ 'profile.website' | t }}</label>
+        <label class="mb-1 mt-4 block text-sm font-medium" for="website">{{
+          'profile.website' | t
+        }}</label>
         <input
           id="website"
           type="url"
@@ -51,7 +57,9 @@ export interface CatalogItem {
 
       @for (item of catalogItems(); track item.id) {
         <div class="mb-4 rounded-xl bg-slate-100 dark:bg-surface-800 p-4">
-          <label for="catalog-name-{{ item.id }}" class="mb-1 block text-sm font-medium">{{ 'profile.catalogNamePlaceholder' | t }}</label>
+          <label for="catalog-name-{{ item.id }}" class="mb-1 block text-sm font-medium">{{
+            'profile.catalogNamePlaceholder' | t
+          }}</label>
           <input
             id="catalog-name-{{ item.id }}"
             class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
@@ -60,7 +68,9 @@ export interface CatalogItem {
             [placeholder]="'profile.catalogNamePlaceholder' | t"
           />
 
-          <label for="catalog-desc-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{ 'profile.catalogDescPlaceholder' | t }}</label>
+          <label for="catalog-desc-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{
+            'profile.catalogDescPlaceholder' | t
+          }}</label>
           <textarea
             id="catalog-desc-{{ item.id }}"
             class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
@@ -70,7 +80,9 @@ export interface CatalogItem {
             rows="2"
           ></textarea>
 
-          <label for="catalog-price-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{ 'profile.catalogPricePlaceholder' | t }}</label>
+          <label for="catalog-price-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{
+            'profile.catalogPricePlaceholder' | t
+          }}</label>
           <input
             id="catalog-price-{{ item.id }}"
             class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
@@ -79,7 +91,9 @@ export interface CatalogItem {
             [placeholder]="'profile.catalogPricePlaceholder' | t"
           />
 
-          <label for="catalog-image-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{ 'profile.catalogImagePlaceholder' | t }}</label>
+          <label for="catalog-image-{{ item.id }}" class="mb-1 mt-3 block text-sm font-medium">{{
+            'profile.catalogImagePlaceholder' | t
+          }}</label>
           <input
             id="catalog-image-{{ item.id }}"
             class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2"

@@ -42,9 +42,7 @@ describe.skip('HomeComponent', () => {
   });
 
   it('renders the study streak widget on the home screen', () => {
-    const widget = fixture.nativeElement.querySelector(
-      'app-study-streak-widget',
-    );
+    const widget = fixture.nativeElement.querySelector('app-study-streak-widget');
     expect(widget).toBeTruthy();
   });
 

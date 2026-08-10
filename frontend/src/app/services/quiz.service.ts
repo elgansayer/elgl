@@ -28,8 +28,6 @@ export class QuizService {
   }
 
   submitResults(results: QuizResults): Promise<void> {
-    return firstValueFrom(
-      this.http.post<void>('/api/quiz/results', results),
-    );
+    return firstValueFrom(this.http.post<void>('/api/quiz/results', results));
   }
 }

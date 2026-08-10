@@ -29,7 +29,9 @@ describe('OfflineQueueService', () => {
       _onsuccess: null as (() => void) | null,
     };
     Object.defineProperty(req, 'onsuccess', {
-      get() { return this._onsuccess; },
+      get() {
+        return this._onsuccess;
+      },
       set(fn: () => void) {
         this._onsuccess = fn;
         // Fire synchronously so the IDB promise resolves immediately

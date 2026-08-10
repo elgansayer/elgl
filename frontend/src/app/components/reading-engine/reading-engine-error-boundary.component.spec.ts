@@ -96,7 +96,9 @@ describe('ReadingEngineErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h3')?.textContent).toContain('readingEngine.errorBoundary.title');
+    expect(compiled.querySelector('h3')?.textContent).toContain(
+      'readingEngine.errorBoundary.title',
+    );
     expect(compiled.textContent).toContain('Article rendering crash');
   });
 

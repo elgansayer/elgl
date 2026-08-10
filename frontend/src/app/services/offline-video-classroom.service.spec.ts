@@ -9,8 +9,13 @@ import { AudioRoomRecord } from './audio-rooms.store';
 function syncReq(result?: unknown) {
   const r: Record<string, unknown> = { result: result ?? null, _onsuccess: null };
   Object.defineProperty(r, 'onsuccess', {
-    get() { return r['_onsuccess']; },
-    set(f: () => void) { r['_onsuccess'] = f; if (f) f(); },
+    get() {
+      return r['_onsuccess'];
+    },
+    set(f: () => void) {
+      r['_onsuccess'] = f;
+      if (f) f();
+    },
   });
   return r;
 }
@@ -57,11 +62,28 @@ describe('OfflineVideoClassroomService', () => {
       },
       get: (key: string) => syncReq(s.get(key) ?? null),
       getAll: () => syncReq(structuredClone([...s.values()])),
-      delete: (key: string) => { s.delete(key); return syncReq(); },
-      clear: () => { s.clear(); return syncReq(); },
+      delete: (key: string) => {
+        s.delete(key);
+        return syncReq();
+      },
+      clear: () => {
+        s.clear();
+        return syncReq();
+      },
       openCursor: () => {
-        const entries = [...s.values()].filter((v) => v && typeof v === 'object' && 'cachedAt' in v);
-        return syncReq(entries.length > 0 ? { value: entries[0], continue: () => { /* noop */ } } : null);
+        const entries = [...s.values()].filter(
+          (v) => v && typeof v === 'object' && 'cachedAt' in v,
+        );
+        return syncReq(
+          entries.length > 0
+            ? {
+                value: entries[0],
+                continue: () => {
+                  /* noop */
+                },
+              }
+            : null,
+        );
       },
     };
   }
@@ -70,13 +92,17 @@ describe('OfflineVideoClassroomService', () => {
     let oncompleteFn: (() => void) | null = null;
     return {
       objectStore: (name: string) => os(name),
-      get oncomplete() { return oncompleteFn; },
+      get oncomplete() {
+        return oncompleteFn;
+      },
       set oncomplete(fn: (() => void) | null) {
         oncompleteFn = fn;
         // Fire oncomplete asynchronously so put() runs first
         if (fn) setTimeout(fn, 0);
       },
-      get onerror() { return null; },
+      get onerror() {
+        return null;
+      },
       set onerror(_fn: (() => void) | null) {},
     };
   }

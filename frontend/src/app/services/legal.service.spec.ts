@@ -26,9 +26,7 @@ describe('LegalService', () => {
     const mockDoc: LegalDocument = {
       title: 'Terms of Service',
       lastUpdated: '2026-08-01',
-      sections: [
-        { id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' },
-      ],
+      sections: [{ id: 'acceptance', heading: '1. Acceptance of Terms', content: 'Test content.' }],
     };
 
     const resultPromise = service.fetchTermsOfService();

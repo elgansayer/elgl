@@ -37,10 +37,15 @@ describe('AdminErrorBoundaryComponent', () => {
             isOnline: onlineSignal.asReadonly(),
           },
         },
-        { provide: I18nService, useValue: { translate: vi.fn((k: string, p?: Record<string, string | number>) => {
-          if (p && Object.keys(p).length > 0) return `${k} ${JSON.stringify(p)}`;
-          return k;
-        }) } },
+        {
+          provide: I18nService,
+          useValue: {
+            translate: vi.fn((k: string, p?: Record<string, string | number>) => {
+              if (p && Object.keys(p).length > 0) return `${k} ${JSON.stringify(p)}`;
+              return k;
+            }),
+          },
+        },
       ],
     }).compileComponents();
 
@@ -111,8 +116,8 @@ describe('AdminErrorBoundaryComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('admin.errorBoundary.showDetails');
 
-    const toggleBtn = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
-      (b) => (b as HTMLElement).textContent?.includes('admin.errorBoundary.showDetails'),
+    const toggleBtn = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+      (b as HTMLElement).textContent?.includes('admin.errorBoundary.showDetails'),
     ) as HTMLElement;
     toggleBtn?.click();
     fixture.detectChanges();
@@ -126,8 +131,8 @@ describe('AdminErrorBoundaryComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
 
-    const retryBtn = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
-      (b) => (b as HTMLElement).textContent?.includes('admin.errorBoundary.retry'),
+    const retryBtn = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) =>
+      (b as HTMLElement).textContent?.includes('admin.errorBoundary.retry'),
     ) as HTMLElement;
     retryBtn?.click();
     fixture.detectChanges();

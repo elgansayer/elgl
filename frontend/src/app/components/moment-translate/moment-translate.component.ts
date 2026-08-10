@@ -4,7 +4,6 @@ import { I18nService } from '../../services/i18n.service';
 import { TranslationCacheService } from '../../services/translation-cache.service';
 import { environment } from '../../../environments/environment';
 
-
 @Component({
   selector: 'app-moment-translate',
   imports: [TranslatePipe],

@@ -1,4 +1,12 @@
-import { Directive, ElementRef, inject, afterNextRender, DestroyRef, input, effect } from '@angular/core';
+import {
+  Directive,
+  ElementRef,
+  inject,
+  afterNextRender,
+  DestroyRef,
+  input,
+  effect,
+} from '@angular/core';
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -79,8 +87,8 @@ export class FocusTrapDirective {
   }
 
   private getFocusableElements(container: HTMLElement): HTMLElement[] {
-    return Array.from(
-      container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-    ).filter((el) => el.offsetParent !== null);
+    return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+      (el) => el.offsetParent !== null,
+    );
   }
 }

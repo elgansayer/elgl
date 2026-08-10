@@ -68,7 +68,8 @@ describe('UsersModule', () => {
       providersMetadata,
       APP_INTERCEPTOR,
     ) as
-      { provide: string; useClass: typeof LastActiveInterceptor } | undefined;
+      | { provide: string; useClass: typeof LastActiveInterceptor }
+      | undefined;
 
     expect(interceptorProvider).toBeDefined();
     expect(interceptorProvider?.useClass).toBe(LastActiveInterceptor);

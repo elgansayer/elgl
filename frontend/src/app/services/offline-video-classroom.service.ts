@@ -36,9 +36,7 @@ export class OfflineVideoClassroomService {
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {
       this.initPromise = this.initDB();
-      this.initPromise
-        .then(() => this.refreshAvailability())
-        .catch(() => undefined);
+      this.initPromise.then(() => this.refreshAvailability()).catch(() => undefined);
       this.syncOnlineStatus();
     }
   }
@@ -107,10 +105,7 @@ export class OfflineVideoClassroomService {
    * Cache the full classroom marketplace listing. Uses a single sentinel key
    * so there is a single source of truth for the listing data.
    */
-  async cacheClassroomListing(
-    rooms: AudioRoomRecord[],
-    filterKey = 'all',
-  ): Promise<void> {
+  async cacheClassroomListing(rooms: AudioRoomRecord[], filterKey = 'all'): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
     const entry: CacheEntry<AudioRoomRecord[]> = {
@@ -212,11 +207,7 @@ export class OfflineVideoClassroomService {
     void this.refreshAvailability();
   }
 
-  private purgeStaleInStore(
-    db: IDBDatabase,
-    storeName: string,
-    cutoff: number,
-  ): Promise<void> {
+  private purgeStaleInStore(db: IDBDatabase, storeName: string, cutoff: number): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const tx = db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);

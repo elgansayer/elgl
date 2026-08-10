@@ -37,7 +37,9 @@ describe('LegalController', () => {
     });
 
     it('should throw NotFoundException for invalid type', () => {
-      expect(() => controller.getDocument('invalid')).toThrow(NotFoundException);
+      expect(() => controller.getDocument('invalid')).toThrow(
+        NotFoundException,
+      );
     });
   });
 });

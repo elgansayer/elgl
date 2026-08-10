@@ -19,8 +19,13 @@ interface ReadingArticle {
 function syncReq(result?: unknown) {
   const r: Record<string, unknown> = { result: result ?? null, _onsuccess: null };
   Object.defineProperty(r, 'onsuccess', {
-    get() { return r['_onsuccess']; },
-    set(f: () => void) { r['_onsuccess'] = f; if (f) f(); },
+    get() {
+      return r['_onsuccess'];
+    },
+    set(f: () => void) {
+      r['_onsuccess'] = f;
+      if (f) f();
+    },
   });
   return r;
 }
@@ -51,7 +56,10 @@ describe.skip('OfflineReadingEngineService', () => {
       },
       get: (key: string) => syncReq(store.get(key) ?? null),
       getAll: () => syncReq(structuredClone([...store.values()])),
-      clear: () => { store.clear(); return syncReq(); },
+      clear: () => {
+        store.clear();
+        return syncReq();
+      },
     };
   }
 

@@ -24,9 +24,9 @@ export class EconomyErrorHandlerService {
   private authService = inject(AuthService);
   private economyStore = inject(EconomyStore);
 
-  readonly recentCrashes = signal<
-    Array<{ message: string; timestamp: string; context: string }>
-  >([]);
+  readonly recentCrashes = signal<Array<{ message: string; timestamp: string; context: string }>>(
+    [],
+  );
 
   private getHeaders(): Record<string, string> {
     const token = this.authService.getAccessToken();
@@ -80,15 +80,11 @@ export class EconomyErrorHandlerService {
   /**
    * Safe wrapper for economy API calls that reports crashes automatically.
    */
-  async wrapEconomyCall<T>(
-    action: string,
-    fn: () => Promise<T>,
-  ): Promise<T | null> {
+  async wrapEconomyCall<T>(action: string, fn: () => Promise<T>): Promise<T | null> {
     try {
       return await fn();
     } catch (err: unknown) {
-      const error =
-        err instanceof Error ? err : new Error(String(err));
+      const error = err instanceof Error ? err : new Error(String(err));
       this.reportEconomyCrash(error, {
         action,
         coinBalance: this.economyStore.coinsBalance(),

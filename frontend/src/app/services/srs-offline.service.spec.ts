@@ -96,10 +96,18 @@ describe.skip('SrsOfflineService', () => {
       let onsuccessFn: (() => void) | null = null;
       let onerrorFn: (() => void) | null = null;
       const req = {
-        get onsuccess() { return onsuccessFn; },
-        set onsuccess(fn: (() => void) | null) { onsuccessFn = fn; },
-        get onerror() { return onerrorFn; },
-        set onerror(fn: (() => void) | null) { onerrorFn = fn; },
+        get onsuccess() {
+          return onsuccessFn;
+        },
+        set onsuccess(fn: (() => void) | null) {
+          onsuccessFn = fn;
+        },
+        get onerror() {
+          return onerrorFn;
+        },
+        set onerror(fn: (() => void) | null) {
+          onerrorFn = fn;
+        },
         result,
         error: null,
       };
@@ -129,9 +137,15 @@ describe.skip('SrsOfflineService', () => {
           let oncompleteFn: (() => void) | null = null;
 
           const tx = {
-            get oncomplete() { return oncompleteFn; },
-            set oncomplete(fn: (() => void) | null) { oncompleteFn = fn; },
-            get onerror() { return null; },
+            get oncomplete() {
+              return oncompleteFn;
+            },
+            set oncomplete(fn: (() => void) | null) {
+              oncompleteFn = fn;
+            },
+            get onerror() {
+              return null;
+            },
             set onerror(_fn: (() => void) | null) {},
             objectStore: (name: string) => {
               const storeData = mockStores.get(name) || new Map<string, unknown>();
@@ -190,15 +204,21 @@ describe.skip('SrsOfflineService', () => {
           let _onupgradeneeded: ((event: unknown) => void) | null = null;
           Object.defineProperty(req, 'onsuccess', {
             get: () => _onsuccess,
-            set: (fn) => { _onsuccess = fn; },
+            set: (fn) => {
+              _onsuccess = fn;
+            },
           });
           Object.defineProperty(req, 'onerror', {
             get: () => _onerror,
-            set: (fn) => { _onerror = fn; },
+            set: (fn) => {
+              _onerror = fn;
+            },
           });
           Object.defineProperty(req, 'onupgradeneeded', {
             get: () => _onupgradeneeded,
-            set: (fn) => { _onupgradeneeded = fn; },
+            set: (fn) => {
+              _onupgradeneeded = fn;
+            },
           });
           setTimeout(() => {
             if (_onupgradeneeded) {

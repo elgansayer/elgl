@@ -15,12 +15,24 @@ describe.skip('OfflineReadingService', () => {
   function createMockOpenRequest() {
     openCallbacks = { onsuccess: null, onerror: null, onupgradeneeded: null };
     return {
-      get onsuccess() { return openCallbacks.onsuccess; },
-      set onsuccess(fn: (() => void) | null) { openCallbacks.onsuccess = fn; },
-      get onerror() { return openCallbacks.onerror; },
-      set onerror(fn: (() => void) | null) { openCallbacks.onerror = fn; },
-      get onupgradeneeded() { return openCallbacks.onupgradeneeded; },
-      set onupgradeneeded(fn: ((event: unknown) => void) | null) { openCallbacks.onupgradeneeded = fn; },
+      get onsuccess() {
+        return openCallbacks.onsuccess;
+      },
+      set onsuccess(fn: (() => void) | null) {
+        openCallbacks.onsuccess = fn;
+      },
+      get onerror() {
+        return openCallbacks.onerror;
+      },
+      set onerror(fn: (() => void) | null) {
+        openCallbacks.onerror = fn;
+      },
+      get onupgradeneeded() {
+        return openCallbacks.onupgradeneeded;
+      },
+      set onupgradeneeded(fn: ((event: unknown) => void) | null) {
+        openCallbacks.onupgradeneeded = fn;
+      },
       result: null as unknown,
       error: null as unknown,
     };
@@ -49,9 +61,15 @@ describe.skip('OfflineReadingService', () => {
         let oncompleteFn: (() => void) | null = null;
 
         return {
-          get oncomplete() { return oncompleteFn; },
-          set oncomplete(fn: (() => void) | null) { oncompleteFn = fn; },
-          get onerror() { return null; },
+          get oncomplete() {
+            return oncompleteFn;
+          },
+          set oncomplete(fn: (() => void) | null) {
+            oncompleteFn = fn;
+          },
+          get onerror() {
+            return null;
+          },
           set onerror(_fn: (() => void) | null) {},
           objectStore: (name: string) => {
             const storeData = mockStores.get(name) || new Map<string, unknown>();
@@ -65,7 +83,10 @@ describe.skip('OfflineReadingService', () => {
                   record['id'] = key;
                 }
                 if (key) storeData.set(String(key), value);
-                const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
+                const req = {
+                  onsuccess: null as (() => void) | null,
+                  onerror: null as (() => void) | null,
+                };
                 setTimeout(() => {
                   if (req.onsuccess) req.onsuccess();
                   if (oncompleteFn) oncompleteFn();
@@ -73,18 +94,31 @@ describe.skip('OfflineReadingService', () => {
                 return req;
               },
               getAll: () => {
-                const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null, result: [] as unknown[] };
+                const req = {
+                  onsuccess: null as (() => void) | null,
+                  onerror: null as (() => void) | null,
+                  result: [] as unknown[],
+                };
                 req.result = Array.from(storeData.values());
                 setTimeout(() => {
                   if (req.onsuccess) req.onsuccess();
-                  if (oncompleteFn) { const fn = oncompleteFn; fn(); }
+                  if (oncompleteFn) {
+                    const fn = oncompleteFn;
+                    fn();
+                  }
                 }, 0);
                 return req;
               },
               clear: () => {
                 storeData.clear();
-                if (oncompleteFn) { const fn = oncompleteFn; setTimeout(() => fn(), 0); }
-                const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
+                if (oncompleteFn) {
+                  const fn = oncompleteFn;
+                  setTimeout(() => fn(), 0);
+                }
+                const req = {
+                  onsuccess: null as (() => void) | null,
+                  onerror: null as (() => void) | null,
+                };
                 setTimeout(() => {
                   if (req.onsuccess) req.onsuccess();
                 }, 0);
@@ -92,7 +126,10 @@ describe.skip('OfflineReadingService', () => {
               },
               delete: (key: string) => {
                 storeData.delete(key);
-                const req = { onsuccess: null as (() => void) | null, onerror: null as (() => void) | null };
+                const req = {
+                  onsuccess: null as (() => void) | null,
+                  onerror: null as (() => void) | null,
+                };
                 setTimeout(() => {
                   if (req.onsuccess) req.onsuccess();
                 }, 0);
@@ -145,9 +182,20 @@ describe.skip('OfflineReadingService', () => {
         providers: [OfflineReadingService],
       });
       service = testBed.inject(OfflineReadingService);
-      await expect(service.cacheArticles([
-        { id: '1', title: 'Test', content: 'test', language: 'en', difficulty: 'beginner', topic: 'test', wordCount: 1, cachedAt: 0 },
-      ])).resolves.toBeUndefined();
+      await expect(
+        service.cacheArticles([
+          {
+            id: '1',
+            title: 'Test',
+            content: 'test',
+            language: 'en',
+            difficulty: 'beginner',
+            topic: 'test',
+            wordCount: 1,
+            cachedAt: 0,
+          },
+        ]),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -188,7 +236,16 @@ describe.skip('OfflineReadingService', () => {
       await new Promise((r) => setTimeout(r, 20));
 
       await service.cacheArticles([
-        { id: '1', title: 'Test Article', content: 'content', language: 'en', difficulty: 'beginner', topic: 'test', wordCount: 100, cachedAt: 0 },
+        {
+          id: '1',
+          title: 'Test Article',
+          content: 'content',
+          language: 'en',
+          difficulty: 'beginner',
+          topic: 'test',
+          wordCount: 100,
+          cachedAt: 0,
+        },
       ]);
 
       const articles = await service.getCachedArticles();
@@ -211,7 +268,16 @@ describe.skip('OfflineReadingService', () => {
       await new Promise((r) => setTimeout(r, 20));
 
       await service.cacheArticles([
-        { id: '1', title: 'Test', content: 'test', language: 'en', difficulty: 'beginner', topic: 'test', wordCount: 1, cachedAt: 0 },
+        {
+          id: '1',
+          title: 'Test',
+          content: 'test',
+          language: 'en',
+          difficulty: 'beginner',
+          topic: 'test',
+          wordCount: 1,
+          cachedAt: 0,
+        },
       ]);
       await service.recordReadingHistory('art1', 'Test', 'beginner', 'test');
 

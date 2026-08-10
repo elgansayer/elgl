@@ -13,24 +13,17 @@ export class ChatBackupService {
    */
   async exportChannel(channelId: string): Promise<ArrayBuffer> {
     const url = `${this.apiBase}/chat-backup/export/${encodeURIComponent(channelId)}`;
-    const response = await lastValueFrom(
-      this.http.get(url, { responseType: 'arraybuffer' }),
-    );
+    const response = await lastValueFrom(this.http.get(url, { responseType: 'arraybuffer' }));
     return response;
   }
 
   /**
    * Imports previously exported messages back into a channel.
    */
-  async importChannel(
-    channelId: string,
-    messages: Record<string, unknown>[],
-  ): Promise<number> {
+  async importChannel(channelId: string, messages: Record<string, unknown>[]): Promise<number> {
     const url = `${this.apiBase}/chat-backup/import/${encodeURIComponent(channelId)}`;
     const body: { messages: Record<string, unknown>[] } = { messages };
-    const response = await lastValueFrom(
-      this.http.post<{ importedCount: number }>(url, body),
-    );
+    const response = await lastValueFrom(this.http.post<{ importedCount: number }>(url, body));
     return response.importedCount;
   }
 }

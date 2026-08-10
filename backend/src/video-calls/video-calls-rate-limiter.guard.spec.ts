@@ -92,7 +92,11 @@ describe('VideoCallsRateLimiterGuard', () => {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       const handler = () => {};
       class TestController {}
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -120,7 +124,11 @@ describe('VideoCallsRateLimiterGuard', () => {
     it('should allow request when count is within limit', async () => {
       redisMock.incr.mockResolvedValue(3);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
     });
@@ -128,7 +136,11 @@ describe('VideoCallsRateLimiterGuard', () => {
     it('should allow request and set expire on first request', async () => {
       redisMock.incr.mockResolvedValue(1);
 
-      const context = createMockExecutionContext('user-2', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-2',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).toHaveBeenCalledWith(
@@ -140,7 +152,11 @@ describe('VideoCallsRateLimiterGuard', () => {
     it('should not set expire on subsequent requests', async () => {
       redisMock.incr.mockResolvedValue(4);
 
-      const context = createMockExecutionContext('user-3', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-3',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.expire).not.toHaveBeenCalled();
@@ -149,18 +165,27 @@ describe('VideoCallsRateLimiterGuard', () => {
     it('should block request when limit exceeded', async () => {
       redisMock.incr.mockResolvedValue(6);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       await expect(guard.canActivate(context)).rejects.toThrow(HttpException);
       await expect(guard.canActivate(context)).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        message: 'Too many video call requests. Please wait before creating or joining more calls.',
+        message:
+          'Too many video call requests. Please wait before creating or joining more calls.',
       });
     });
 
     it('should log warning when rate limit is exceeded', async () => {
       redisMock.incr.mockResolvedValue(10);
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       try {
         await guard.canActivate(context);
       } catch {
@@ -179,7 +204,11 @@ describe('VideoCallsRateLimiterGuard', () => {
     });
 
     it('should allow request if user is not authenticated', async () => {
-      const context = createMockExecutionContext(undefined, handler, TestController);
+      const context = createMockExecutionContext(
+        undefined,
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -188,7 +217,11 @@ describe('VideoCallsRateLimiterGuard', () => {
     it('should allow request and log error if Redis is unavailable', async () => {
       redisMock.incr.mockRejectedValue(new Error('Redis connection error'));
 
-      const context = createMockExecutionContext('user-1', handler, TestController);
+      const context = createMockExecutionContext(
+        'user-1',
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(context);
       expect(result).toBe(true);
       expect(logger.error).toHaveBeenCalledWith(
@@ -216,11 +249,7 @@ describe('VideoCallsRateLimiterGuard', () => {
         DecoratorTest.prototype,
         'testMethod',
       );
-      VideoCallsRateLimit(opts)(
-        DecoratorTest.prototype,
-        'testMethod',
-        desc!,
-      );
+      VideoCallsRateLimit(opts)(DecoratorTest.prototype, 'testMethod', desc!);
 
       const metadata = Reflect.getMetadata(
         VIDEO_CALLS_RATE_LIMIT_KEY,
@@ -243,11 +272,7 @@ describe('VideoCallsRateLimiterGuard', () => {
         DecoratorTest2.prototype,
         'testMethod',
       );
-      VideoCallsRateLimit(opts)(
-        DecoratorTest2.prototype,
-        'testMethod',
-        desc2!,
-      );
+      VideoCallsRateLimit(opts)(DecoratorTest2.prototype, 'testMethod', desc2!);
 
       const metadata = Reflect.getMetadata(
         VIDEO_CALLS_RATE_LIMIT_KEY,

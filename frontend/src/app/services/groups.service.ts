@@ -79,17 +79,13 @@ export class GroupsService {
 
   generateInviteLink(roomId: string): Promise<{ code: string; url: string }> {
     return firstValueFrom(
-      this.http.get<{ code: string; url: string }>(
-        `${this.apiUrl}/${roomId}/invite-link`,
-      ),
+      this.http.get<{ code: string; url: string }>(`${this.apiUrl}/${roomId}/invite-link`),
     );
   }
 
   getInviteInfo(code: string): Promise<{ roomId: string; title: string }> {
     return firstValueFrom(
-      this.http.get<{ roomId: string; title: string }>(
-        `${this.apiUrl}/invite-info/${code}`,
-      ),
+      this.http.get<{ roomId: string; title: string }>(`${this.apiUrl}/invite-info/${code}`),
     );
   }
 
@@ -129,14 +125,12 @@ export class GroupsService {
   }
 
   getDiscoverableGroups(): Promise<DiscoverableGroup[]> {
-    return firstValueFrom(
-      this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/discoverable`)
-    );
+    return firstValueFrom(this.http.get<DiscoverableGroup[]>(`${this.apiUrl}/discoverable`));
   }
 
   joinGroup(groupId: string): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/join`, {})
+      this.http.post<{ success: boolean }>(`${this.apiUrl}/${groupId}/join`, {}),
     );
   }
 }

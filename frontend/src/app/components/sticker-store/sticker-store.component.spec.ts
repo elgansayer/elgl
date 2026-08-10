@@ -36,8 +36,23 @@ class MockEmptyStateComponent {
 }
 
 const mockPacks: StickerPack[] = [
-  { id: 'stk_pack_1', name: 'Happy Corgi Pack', cost_coins: 50, owned: false, is_animated: false, sticker_urls: ['assets/stickers/happy.png'] },
-  { id: 'stk_pack_4', name: 'Golden Dragons', cost_coins: 500, owned: true, is_animated: true, sticker_urls: ['assets/stickers/dragon-fire.webm'], animation_url: 'assets/animations/dragon.json' },
+  {
+    id: 'stk_pack_1',
+    name: 'Happy Corgi Pack',
+    cost_coins: 50,
+    owned: false,
+    is_animated: false,
+    sticker_urls: ['assets/stickers/happy.png'],
+  },
+  {
+    id: 'stk_pack_4',
+    name: 'Golden Dragons',
+    cost_coins: 500,
+    owned: true,
+    is_animated: true,
+    sticker_urls: ['assets/stickers/dragon-fire.webm'],
+    animation_url: 'assets/animations/dragon.json',
+  },
 ];
 
 describe('StickerStoreComponent', () => {

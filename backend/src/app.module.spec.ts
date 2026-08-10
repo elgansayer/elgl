@@ -102,7 +102,8 @@ describe('AppModule', () => {
       (Reflect.getMetadata('providers', AppModule) as unknown[]) ?? [];
 
     const guardProvider = findProvider(providersMetadata, APP_GUARD) as
-      { provide: string; useClass: typeof ThrottlerGuard } | undefined;
+      | { provide: string; useClass: typeof ThrottlerGuard }
+      | undefined;
 
     expect(guardProvider).toBeDefined();
     expect(guardProvider?.useClass).toBe(ThrottlerGuard);

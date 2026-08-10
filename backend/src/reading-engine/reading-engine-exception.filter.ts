@@ -47,7 +47,8 @@ export class ReadingEngineExceptionFilter implements ExceptionFilter {
 
     const extractedMessage =
       typeof message === 'object' && message !== null
-        ? (message as Record<string, unknown>).message ?? JSON.stringify(message)
+        ? ((message as Record<string, unknown>).message ??
+          JSON.stringify(message))
         : String(message);
 
     const errorName =

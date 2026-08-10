@@ -23,10 +23,7 @@ describe('MessageFilterSettingsComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [
-        HttpClientTestingModule,
-        MessageFilterSettingsComponent,
-      ],
+      imports: [HttpClientTestingModule, MessageFilterSettingsComponent],
       providers: [
         TranslatePipe,
         { provide: AuthService, useValue: authSpy },

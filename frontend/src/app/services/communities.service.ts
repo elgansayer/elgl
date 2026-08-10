@@ -45,27 +45,17 @@ export class CommunitiesService {
   }
 
   get(communityId: string): Promise<Community> {
-    return firstValueFrom(
-      this.http.get<Community>(`${this.apiUrl}/${communityId}`),
-    );
+    return firstValueFrom(this.http.get<Community>(`${this.apiUrl}/${communityId}`));
   }
 
-  update(
-    communityId: string,
-    payload: UpdateCommunityPayload,
-  ): Promise<{ success: boolean }> {
+  update(communityId: string, payload: UpdateCommunityPayload): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.patch<{ success: boolean }>(
-        `${this.apiUrl}/${communityId}`,
-        payload,
-      ),
+      this.http.patch<{ success: boolean }>(`${this.apiUrl}/${communityId}`, payload),
     );
   }
 
   remove(communityId: string): Promise<void> {
-    return firstValueFrom(
-      this.http.delete<void>(`${this.apiUrl}/${communityId}`),
-    );
+    return firstValueFrom(this.http.delete<void>(`${this.apiUrl}/${communityId}`));
   }
 
   addGroup(communityId: string, groupId: string): Promise<{ success: boolean }> {
@@ -76,20 +66,13 @@ export class CommunitiesService {
     );
   }
 
-  removeGroup(
-    communityId: string,
-    groupId: string,
-  ): Promise<{ success: boolean }> {
+  removeGroup(communityId: string, groupId: string): Promise<{ success: boolean }> {
     return firstValueFrom(
-      this.http.delete<{ success: boolean }>(
-        `${this.apiUrl}/${communityId}/groups/${groupId}`,
-      ),
+      this.http.delete<{ success: boolean }>(`${this.apiUrl}/${communityId}/groups/${groupId}`),
     );
   }
 
   getGroups(communityId: string): Promise<CommunityGroup[]> {
-    return firstValueFrom(
-      this.http.get<CommunityGroup[]>(`${this.apiUrl}/${communityId}/groups`),
-    );
+    return firstValueFrom(this.http.get<CommunityGroup[]>(`${this.apiUrl}/${communityId}/groups`));
   }
 }

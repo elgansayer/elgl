@@ -54,7 +54,11 @@ interface Corrector {
                   @if (corrector.is_serious_learner) {
                     <app-pill colour="success" size="sm" [label]="'leaderboard.serious' | t" />
                   }
-                  <app-pill colour="info" size="sm" [label]="corrector.study_streak_days + ' ' + ('leaderboard.days' | t)" />
+                  <app-pill
+                    colour="info"
+                    size="sm"
+                    [label]="corrector.study_streak_days + ' ' + ('leaderboard.days' | t)"
+                  />
                 </div>
               </div>
             </app-card>

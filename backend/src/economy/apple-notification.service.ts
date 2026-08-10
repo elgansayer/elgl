@@ -219,7 +219,8 @@ export class AppleNotificationService {
   private handleFailedRenewal(data: Record<string, unknown> | undefined): void {
     const userId = (data?.appAccountToken ?? undefined) as string | undefined;
     const gracePeriodExpiresDate = data?.gracePeriodExpiresDate as
-      string | undefined;
+      | string
+      | undefined;
 
     if (!userId) {
       return;
@@ -299,7 +300,9 @@ export class AppleNotificationService {
       return;
     }
 
-    this.logger.info(`User ${userId} notified of price increase to ${newPrice}`);
+    this.logger.info(
+      `User ${userId} notified of price increase to ${newPrice}`,
+    );
 
     // Optionally notify the user about the price increase
     void this.notifyUserAboutPriceIncrease(userId, newPrice);

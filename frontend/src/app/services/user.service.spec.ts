@@ -1,15 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  provideHttpClientTesting,
-  HttpTestingController,
-} from '@angular/common/http/testing';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
-import {
-  UserService,
-  UserProfile,
-  ProfileVisitor,
-} from './user.service';
+import { UserService, UserProfile, ProfileVisitor } from './user.service';
 import { environment } from '../../environments/environment';
 import { MOCK_USER_PROFILE, MOCK_VISITORS } from './mock-data';
 
@@ -83,7 +76,6 @@ describe('UserService', () => {
       await expect(resultPromise).rejects.toThrow('Failed to subscribe to topic');
     });
   });
-
 
   afterEach(() => {
     httpMock.verify();
@@ -161,9 +153,7 @@ describe('UserService', () => {
       const profile = createProfile({ id: 'follower-1' });
       const resultPromise = service.getFollowers('user-1', 20, 0);
 
-      const req = httpMock.expectOne(
-        (r) => r.url === `${baseUrl}/user-1/followers`,
-      );
+      const req = httpMock.expectOne((r) => r.url === `${baseUrl}/user-1/followers`);
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('limit')).toBe('20');
       expect(req.request.params.get('offset')).toBe('0');
@@ -176,9 +166,7 @@ describe('UserService', () => {
     it('should return an empty list when the request fails', async () => {
       const resultPromise = service.getFollowers('user-1');
 
-      const req = httpMock.expectOne(
-        (r) => r.url === `${baseUrl}/user-1/followers`,
-      );
+      const req = httpMock.expectOne((r) => r.url === `${baseUrl}/user-1/followers`);
       req.flush('error', { status: 500, statusText: 'Internal Server Error' });
 
       expect(await resultPromise).toEqual({ data: [], total: 0 });
@@ -190,9 +178,7 @@ describe('UserService', () => {
       const profile = createProfile({ id: 'following-1' });
       const resultPromise = service.getFollowing('user-1', 10, 5);
 
-      const req = httpMock.expectOne(
-        (r) => r.url === `${baseUrl}/user-1/following`,
-      );
+      const req = httpMock.expectOne((r) => r.url === `${baseUrl}/user-1/following`);
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('limit')).toBe('10');
       expect(req.request.params.get('offset')).toBe('5');
@@ -204,9 +190,7 @@ describe('UserService', () => {
     it('should return an empty list when the request fails', async () => {
       const resultPromise = service.getFollowing('user-1');
 
-      const req = httpMock.expectOne(
-        (r) => r.url === `${baseUrl}/user-1/following`,
-      );
+      const req = httpMock.expectOne((r) => r.url === `${baseUrl}/user-1/following`);
       req.flush('error', { status: 500, statusText: 'Internal Server Error' });
 
       expect(await resultPromise).toEqual({ data: [], total: 0 });
@@ -330,15 +314,11 @@ describe('UserService', () => {
 
     it('should return recently for activity within the last day', () => {
       const recent = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-      expect(service.getOnlineStatus({ last_active_at: recent })).toBe(
-        'recently',
-      );
+      expect(service.getOnlineStatus({ last_active_at: recent })).toBe('recently');
     });
 
     it('should return offline when last_active_at is undefined', () => {
-      expect(service.getOnlineStatus({ last_active_at: undefined })).toBe(
-        'offline',
-      );
+      expect(service.getOnlineStatus({ last_active_at: undefined })).toBe('offline');
     });
 
     it('should return offline for activity older than one day', () => {
@@ -357,9 +337,7 @@ describe('UserService', () => {
     });
 
     it('should return null when last_active_at is missing', () => {
-      expect(
-        service.getLastActiveFormatted({ last_active_at: undefined }),
-      ).toBeNull();
+      expect(service.getLastActiveFormatted({ last_active_at: undefined })).toBeNull();
     });
   });
 
@@ -503,7 +481,11 @@ describe('UserService', () => {
 
       const req = httpMock.expectOne(`${mediaUrl}/presigned-url`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ filename: 'file.jpg', contentType: 'image/jpeg', folder: 'uploads' });
+      expect(req.request.body).toEqual({
+        filename: 'file.jpg',
+        contentType: 'image/jpeg',
+        folder: 'uploads',
+      });
       req.flush(responseData);
 
       await expect(resultPromise).resolves.toEqual(responseData);
@@ -586,7 +568,14 @@ describe('UserService', () => {
 
   describe('getLinkedAccounts', () => {
     it('should GET /users/me/linked-accounts', async () => {
-      const accounts = [{ id: 'acc-1', provider: 'google', provider_id: 'g-123', created_at: '2024-01-01T00:00:00Z' }];
+      const accounts = [
+        {
+          id: 'acc-1',
+          provider: 'google',
+          provider_id: 'g-123',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ];
       const resultPromise = service.getLinkedAccounts();
 
       const req = httpMock.expectOne(`${baseUrl}/me/linked-accounts`);
@@ -723,7 +712,9 @@ describe('UserService', () => {
 
   describe('getMyBadges', () => {
     it('should GET /users/me/badges', async () => {
-      const badges = [{ id: 'b-1', badge_type: 'streak', awarded_at: '2024-01-01T00:00:00Z', label: 'Streak' }];
+      const badges = [
+        { id: 'b-1', badge_type: 'streak', awarded_at: '2024-01-01T00:00:00Z', label: 'Streak' },
+      ];
       const resultPromise = service.getMyBadges();
 
       const req = httpMock.expectOne(`${baseUrl}/me/badges`);
@@ -916,7 +907,12 @@ describe('UserService', () => {
   describe('reportUser', () => {
     it('should POST to /trust-safety/report', async () => {
       const reportUrl = `${environment.apiUrl}/trust-safety/report`;
-      const resultPromise = service.reportUser('user-4', 'spam', 'Sending spam', 'https://app/post/1');
+      const resultPromise = service.reportUser(
+        'user-4',
+        'spam',
+        'Sending spam',
+        'https://app/post/1',
+      );
 
       const req = httpMock.expectOne(reportUrl);
       expect(req.request.method).toBe('POST');
@@ -944,7 +940,10 @@ describe('UserService', () => {
 
   describe('deleteMyAccount', () => {
     it('should DELETE /users/me', async () => {
-      const response = { message: 'Account scheduled for deletion', scheduled_for_deletion_at: '2024-02-01T00:00:00Z' };
+      const response = {
+        message: 'Account scheduled for deletion',
+        scheduled_for_deletion_at: '2024-02-01T00:00:00Z',
+      };
       const resultPromise = service.deleteMyAccount();
 
       const req = httpMock.expectOne(`${baseUrl}/me`);
@@ -1032,7 +1031,11 @@ describe('UserService', () => {
 
   describe('setDoNotDisturbSchedule', () => {
     it('should PATCH /users/me/dnd with the settings', async () => {
-      const settings = { do_not_disturb: true, quiet_hours_start: '22:00', quiet_hours_end: '08:00' };
+      const settings = {
+        do_not_disturb: true,
+        quiet_hours_start: '22:00',
+        quiet_hours_end: '08:00',
+      };
       const updatedProfile = createProfile();
       const resultPromise = service.setDoNotDisturbSchedule(settings);
 

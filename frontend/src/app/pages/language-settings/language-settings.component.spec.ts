@@ -14,7 +14,13 @@ describe('LanguageSettingsComponent', () => {
     i18nMock = {
       currentLang: signal('en-GB'),
       availableLanguages: [
-        { code: 'en-GB', name: 'British English', nativeName: 'English (UK)', flag: '🇬🇧', isRtl: false },
+        {
+          code: 'en-GB',
+          name: 'British English',
+          nativeName: 'English (UK)',
+          flag: '🇬🇧',
+          isRtl: false,
+        },
         { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isRtl: false },
         { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', isRtl: true },
       ],
@@ -25,10 +31,7 @@ describe('LanguageSettingsComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [LanguageSettingsComponent],
-      providers: [
-        provideHttpClient(),
-        { provide: I18nService, useValue: i18nMock },
-      ],
+      providers: [provideHttpClient(), { provide: I18nService, useValue: i18nMock }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LanguageSettingsComponent);

@@ -43,10 +43,7 @@ describe('RoomChatComponent', () => {
   });
 
   it('should subscribe to the correct room channel', () => {
-    expect(centrifugoMock.subscribeLiveRoom).toHaveBeenCalledWith(
-      'room-123',
-      expect.any(Function),
-    );
+    expect(centrifugoMock.subscribeLiveRoom).toHaveBeenCalledWith('room-123', expect.any(Function));
   });
 
   it('should send a text message when sendMessage is called', () => {
