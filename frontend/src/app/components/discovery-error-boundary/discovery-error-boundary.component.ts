@@ -1,6 +1,6 @@
 import { Component, input, output, signal, inject, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { DiscoveryErrorHandlerService, DiscoveryCrashContext } from '../../services/discovery-error-handler.service';
+import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
 
 export interface DiscoveryErrorContext {
