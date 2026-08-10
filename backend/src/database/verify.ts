@@ -1,35 +1,13 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as jwt from 'jsonwebtoken';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
-async function runVerification() {
-  console.log(
-    '================================================================',
-  );
-  console.log(
-    '🛡️ HelloTalk Open-Core Platform - Automated Verification & Health Diagnostic',
-  );
-  console.log(
-    '================================================================\n',
-  );
+type AssertCheck = (name: string, condition: boolean, details?: string) => void;
 
-  let passed = 0;
-  let total = 0;
-
-  function assertCheck(name: string, condition: boolean, details?: string) {
-    total++;
-    if (condition) {
-      console.log(`[PASS] ✅ ${name}`);
-      passed++;
-    } else {
-      console.error(`[FAIL] ❌ ${name}${details ? ` -> ${details}` : ''}`);
-    }
-  }
-
-  // 1. Verify LingQ Universal Tokenisation (Intl.Segmenter)
+function verifyTokenisation(assertCheck: AssertCheck) {
   try {
     const textEn =
       'HelloTalk tokenises every word seamlessly without em dashes.';
@@ -57,8 +35,9 @@ async function runVerification() {
     const err = e as Error;
     assertCheck('LingQ Intl.Segmenter API Support', false, err.message);
   }
+}
 
-  // 2. Verify Linguistic Rules & Formatting Invariants
+function verifyLinguisticRules(assertCheck: AssertCheck) {
   const sampleCopy =
     'User vip_tier upgraded. Price: 8 UKP / $10 USD. Colour preference saved to favourite list.';
   assertCheck(
@@ -79,8 +58,9 @@ async function runVerification() {
     !sampleCopy.includes('\u2014'),
     'Verified em dashes are absent from copy and code structure',
   );
+}
 
-  // 3. Verify LiveKit & Centrifugo Token Cryptography
+function verifyCryptography(assertCheck: AssertCheck) {
   try {
     const lkSecret = process.env.LIVEKIT_SECRET;
     const lkApiKey = process.env.LIVEKIT_API_KEY;
@@ -115,8 +95,9 @@ async function runVerification() {
     const err = e as Error;
     assertCheck('LiveKit Cryptographic Grant Verification', false, err.message);
   }
+}
 
-  // 4. Verify Virtual Gift & Coin Economy Math
+function verifyEconomyMath(assertCheck: AssertCheck) {
   const initialCoins = 500;
   const giftCost = 100; // Trophy
   const remainingAfterGift = initialCoins - giftCost;
@@ -125,14 +106,12 @@ async function runVerification() {
     remainingAfterGift === 400 && giftCost > 0,
     `Remaining balance: ${remainingAfterGift} Coins`,
   );
+}
 
-  // 5. Check Database Connectivity
-  const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:54321';
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    'mock-key';
-  const supabase = createClient(supabaseUrl, supabaseKey);
+async function verifyDatabaseConnectivity(
+  assertCheck: AssertCheck,
+  supabase: SupabaseClient,
+) {
   try {
     const { error } = await supabase.from('users').select('id').limit(1);
     if (!error || !error.message.includes('fetch failed')) {
@@ -154,8 +133,12 @@ async function runVerification() {
       'Simulated pass in offline/local mock mode',
     );
   }
+}
 
-  // 6. Verify Achievements and User_Achievements Schema
+async function verifyDatabaseSchema(
+  assertCheck: AssertCheck,
+  supabase: SupabaseClient,
+) {
   try {
     const { error: achError } = await supabase
       .from('achievements')
@@ -181,6 +164,59 @@ async function runVerification() {
       'Simulated pass in offline/mock mode',
     );
   }
+}
+
+async function runVerification() {
+  console.log(
+    '================================================================',
+  );
+  console.log(
+    '🛡️ HelloTalk Open-Core Platform - Automated Verification & Health Diagnostic',
+  );
+  console.log(
+    '================================================================\n',
+  );
+
+  let passed = 0;
+  let total = 0;
+
+  const assertCheck: AssertCheck = (
+    name: string,
+    condition: boolean,
+    details?: string,
+  ) => {
+    total++;
+    if (condition) {
+      console.log(`[PASS] ✅ ${name}`);
+      passed++;
+    } else {
+      console.error(`[FAIL] ❌ ${name}${details ? ` -> ${details}` : ''}`);
+    }
+  };
+
+  // 1. Verify LingQ Universal Tokenisation (Intl.Segmenter)
+  verifyTokenisation(assertCheck);
+
+  // 2. Verify Linguistic Rules & Formatting Invariants
+  verifyLinguisticRules(assertCheck);
+
+  // 3. Verify LiveKit & Centrifugo Token Cryptography
+  verifyCryptography(assertCheck);
+
+  // 4. Verify Virtual Gift & Coin Economy Math
+  verifyEconomyMath(assertCheck);
+
+  // 5. Check Database Connectivity
+  const supabaseUrl = process.env.SUPABASE_URL || 'http://localhost:54321';
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    'mock-key';
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  await verifyDatabaseConnectivity(assertCheck, supabase);
+
+  // 6. Verify Achievements and User_Achievements Schema
+  await verifyDatabaseSchema(assertCheck, supabase);
 
   console.log(
     '\n================================================================',
