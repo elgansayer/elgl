@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
+import { UserService } from '../services/user.service';
 import { TranslatePipe } from '../services/translate.pipe';
 
 @Component({
@@ -31,11 +32,11 @@ import { TranslatePipe } from '../services/translate.pipe';
   imports: [TranslatePipe],
 })
 export class LocationPrivacyToggleComponent {
+  private userService = inject(UserService);
   public readonly locationPrivacy = signal<'exact' | 'region'>('exact');
 
   setLocationPrivacy(value: 'exact' | 'region'): void {
     this.locationPrivacy.set(value);
-    // TODO: Add backend integration to persist the setting.
-    // Ensure the backend service is updated to save this setting.
+    this.userService.updatePrivacySettings({ privacy_hide_exact_location: value === 'region' });
   }
 }
