@@ -82,7 +82,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class ApproveSpeakerModalComponent {
-  readonly raisedHands = input<string[]>([], { alias: 'raisedHands' });
+  readonly raisedHands = input<string[]>([]);
   readonly approved = output<string>();
   readonly declined = output<string>();
   readonly closed = output<void>();
