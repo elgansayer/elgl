@@ -122,7 +122,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
         const userIds = rsvpsByEventId.get(event.id);
         if (!userIds) continue;
 
-await this.sendRemindersBatch(event.id, event.title, userIds);
+        await this.sendRemindersBatch(event.id, event.title, userIds);
       }
     } catch (err) {
       this.logger.error('Unexpected error in checkReminders', err);
@@ -472,33 +472,43 @@ await this.sendRemindersBatch(event.id, event.title, userIds);
         (event) => !existingRoomNames.has(`language_party-${event.id}`),
       );
 
-      for (const event of eventsToCreateRoomsFor) {
-        const roomName = `language_party-${event.id}`;
+      // Run room creations concurrently
+      await Promise.allSettled(
+        eventsToCreateRoomsFor.map(async (event) => {
+          try {
+            const roomName = `language_party-${event.id}`;
 
-        // Create the LiveKit audio room via the dedicated service
-        const room = await this.audioRoomsService.createRoom(
-          event.host_id,
-          {
-            title: event.title,
-            target_language:
-              event.language_pair.split('-')[1] ?? event.language_pair,
-            language_pair: event.language_pair,
-            topic_tag: event.category ?? event.language_pair,
-            is_video_stream: false,
-          },
-          roomName,
-        );
+            // Create the LiveKit audio room via the dedicated service
+            const room = await this.audioRoomsService.createRoom(
+              event.host_id,
+              {
+                title: event.title,
+                target_language:
+                  event.language_pair.split('-')[1] ?? event.language_pair,
+                language_pair: event.language_pair,
+                topic_tag: event.category ?? event.language_pair,
+                is_video_stream: false,
+              },
+              roomName,
+            );
 
-        // Mark the room as a Language Party and link it to the event
-        await supabase
-          .from('audio_rooms')
-          .update({ party_type: 'language_party', event_id: event.id })
-          .eq('id', room.id);
+            // Mark the room as a Language Party and link it to the event
+            await supabase
+              .from('audio_rooms')
+              .update({ party_type: 'language_party', event_id: event.id })
+              .eq('id', room.id);
 
-        this.logger.log(
-          `Audio room created for event ${event.id} (${event.title})`,
-        );
-      }
+            this.logger.log(
+              `Audio room created for event ${event.id} (${event.title})`,
+            );
+          } catch (err) {
+            this.logger.error(
+              `Failed to create audio room for event ${event.id} (${event.title})`,
+              err,
+            );
+          }
+        }),
+      );
     } catch (err) {
       this.logger.error('Unexpected error in checkStartEvents', err);
     }
