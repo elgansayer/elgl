@@ -12,6 +12,7 @@ from pathlib import Path
 from openhands_factory.config import FactoryConfig
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import JobState
+from openhands_factory.provider_profiles import openai_credentials_available
 from openhands_factory.secure_tools import podman_run_arguments
 from openhands_factory.state import read_json
 
@@ -138,6 +139,14 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
         Check("repository", (config.repository / ".git").exists(), str(config.repository))
     )
     checks.append(Check("podman", config.podman_path.is_file(), str(config.podman_path)))
+    openai_ready = openai_credentials_available(config)
+    checks.append(
+        Check(
+            "openai-subscription",
+            openai_ready,
+            config.openai_model if openai_ready else "OAuth credentials missing or unavailable",
+        )
+    )
     checks.append(worker_terminal_check(config))
     for executable in ("git", "node", "npm", "python"):
         path = shutil.which(executable)
