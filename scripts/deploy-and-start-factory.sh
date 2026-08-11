@@ -5,6 +5,7 @@ REPOSITORY=${FACTORY_SOURCE_REPOSITORY:-/home/dev/hellotalk}
 BRANCH=factory/update-dynamic-tasks
 WORKTREE=''
 USE_EXISTING_CREDENTIALS=false
+SOURCE_REF=HEAD
 
 usage() {
   cat <<'EOF'
@@ -47,9 +48,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-git -C "$REPOSITORY" fetch origin "$BRANCH"
+if git -C "$REPOSITORY" fetch origin "$BRANCH" >/dev/null 2>&1; then
+  SOURCE_REF="origin/$BRANCH"
+else
+  echo 'Remote fetch unavailable. Using the current checked-out factory commit.' >&2
+fi
 WORKTREE=$(mktemp -d /tmp/hellotalk-factory-deploy.XXXXXX)
-git -C "$REPOSITORY" worktree add --detach "$WORKTREE" "origin/$BRANCH" >/dev/null
+git -C "$REPOSITORY" worktree add --detach "$WORKTREE" "$SOURCE_REF" >/dev/null
 
 "$WORKTREE/scripts/repair-factory-host.sh"
 
