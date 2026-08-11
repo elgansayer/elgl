@@ -181,9 +181,10 @@ describe('DataRetentionService', () => {
       // Setup sub-queries for data wiping
       const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
-      const mockUpdateBuilder = {
+      const _mockUpdateBuilder = {
         update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
@@ -220,10 +221,11 @@ describe('DataRetentionService', () => {
       });
       const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
       // audio_room_captions and audio_room_notes need both delete and update
-      const mockDeleteAndUpdateBuilder = {
+      const _mockDeleteAndUpdateBuilder = {
         delete: jest.fn().mockReturnThis(),
         update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
@@ -235,7 +237,7 @@ describe('DataRetentionService', () => {
         }
         calledTables.push(table);
         if (table === 'audio_room_captions' || table === 'audio_room_notes') {
-          return mockDeleteAndUpdateBuilder;
+          return mockDeleteBuilder;
         }
         return mockDeleteBuilder;
       });
@@ -265,6 +267,7 @@ describe('DataRetentionService', () => {
       });
       const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
       mockSupabaseClient.from.mockImplementation((table: string) => {
@@ -289,6 +292,7 @@ describe('DataRetentionService', () => {
       });
       const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
       mockSupabaseClient.from.mockImplementation((table: string) => {
@@ -325,10 +329,11 @@ describe('DataRetentionService', () => {
       });
       const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
       // audio_room_captions and audio_room_notes need both delete and update
-      const mockDeleteAndUpdateBuilder = {
+      const _mockDeleteAndUpdateBuilder = {
         delete: jest.fn().mockReturnThis(),
         update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
@@ -340,7 +345,7 @@ describe('DataRetentionService', () => {
         }
         calledTables.push(table);
         if (table === 'audio_room_captions' || table === 'audio_room_notes') {
-          return mockDeleteAndUpdateBuilder;
+          return mockDeleteBuilder;
         }
         return mockDeleteBuilder;
       });
@@ -361,6 +366,7 @@ describe('DataRetentionService', () => {
       });
       const mockDeleteBuilder = {
         delete: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
         eq: jest.fn().mockResolvedValue({ error: null }),
       };
       const captionUpdateCount: Array<{ call: number }> = [];
