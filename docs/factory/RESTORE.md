@@ -48,6 +48,19 @@ human changes. Do not reset a worktree containing factory work. The bootstrap
 script installs the SDK, worker image, service units and all existing Node
 dependencies. It does not overwrite an existing environment file.
 
+If the service environment contains duplicated developer paths or points at a
+developer home directory, repair it with the repository script. It creates a
+timestamped backup, preserves provider credentials, and repairs service-user
+ownership:
+
+```bash
+sudo /home/dev/hellotalk/scripts/repair-factory-host.sh
+```
+
+Rotate any credential exposed in terminal output before adding the replacement
+to `/etc/hellotalk-factory/factory.env`. Do not copy the application `.env`
+wholesale into the factory environment.
+
 After editing credentials, validate before starting:
 
 ```bash
