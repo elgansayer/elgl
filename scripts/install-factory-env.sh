@@ -29,7 +29,7 @@ umask 077
 
 awk -v source="$SOURCE" '
   function is_factory_key(key) {
-    return key ~ /^(FACTORY_|OPENHANDS_OPENAI_MODEL$|OPENCODE_GO_|GEMINI_|GITHUB_TOKEN$|GITHUB_REPOSITORY$|TELEGRAM_)/
+    return key ~ /^(OPENHANDS_OPENAI_MODEL$|OPENCODE_GO_|GEMINI_|GITHUB_TOKEN$|GITHUB_REPOSITORY$|TELEGRAM_)/
   }
   BEGIN {
     while ((getline line < source) > 0) {

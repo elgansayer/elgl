@@ -30,21 +30,25 @@ def podman_run_arguments(
     pids_limit: int = 512,
     memory_limit: str = "3g",
     cpu_limit: str = "2",
+    resource_limits: bool = True,
 ) -> list[str]:
     """Build the common constrained worker-container command line."""
     arguments = [
         "run",
         "--rm",
         "--network=none",
-        f"--pids-limit={pids_limit}",
-        f"--memory={memory_limit}",
-        f"--cpus={cpu_limit}",
         "--security-opt=no-new-privileges",
         "--cap-drop=all",
         "--userns=keep-id",
         "--volume",
         f"{workspace}:/workspace:{workspace_access},Z",
     ]
+    if resource_limits:
+        arguments[3:3] = [
+            f"--pids-limit={pids_limit}",
+            f"--memory={memory_limit}",
+            f"--cpus={cpu_limit}",
+        ]
     for relative in (
         "node_modules",
         "frontend/node_modules",
@@ -122,14 +126,21 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
             "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         }
         try:
-            result = subprocess.run(
-                arguments,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                check=False,
-                env=environment,
-            )
+            result = _run_podman(arguments, timeout, environment)
+            if result.returncode != 0 and resource_limit_error(
+                f"{result.stdout}\n{result.stderr}"
+            ):
+                fallback_arguments = [
+                    str(self.podman_path),
+                    *podman_run_arguments(
+                        self.workspace,
+                        self.repository,
+                        self.image,
+                        action.command,
+                        resource_limits=False,
+                    ),
+                ]
+                result = _run_podman(fallback_arguments, timeout, environment)
         except subprocess.TimeoutExpired as error:
             stdout = (
                 error.stdout.decode(errors="replace")
@@ -156,6 +167,26 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
             exit_code=result.returncode,
             is_error=result.returncode != 0,
         )
+
+
+def _run_podman(
+    arguments: list[str], timeout: float, environment: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        arguments,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+        env=environment,
+    )
+
+
+def resource_limit_error(stderr: str) -> bool:
+    lowered = stderr.lower()
+    return "cgroup" in lowered and any(
+        marker in lowered for marker in ("permission denied", "no such device", "not supported")
+    )
 
 
 class SecureTerminalTool(TerminalTool):

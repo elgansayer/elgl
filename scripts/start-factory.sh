@@ -52,6 +52,13 @@ if ! command -v systemctl >/dev/null 2>&1; then
   exit 1
 fi
 
+set -a
+# shellcheck disable=SC1090
+. "$FACTORY_CONFIG"
+set +a
+export HOME=/var/lib/hellotalk-factory/home
+cd /tmp
+
 systemd-analyze verify \
   /etc/systemd/system/hellotalk-factory.service \
   /etc/systemd/system/hellotalk-factory-health.service \
@@ -63,6 +70,6 @@ if [ ! -x "$FACTORY_CLI" ]; then
   exit 1
 fi
 
-runuser -u hellotalk-factory -- "$FACTORY_CLI" doctor --online
+runuser -u hellotalk-factory --preserve-environment -- "$FACTORY_CLI" doctor --online
 systemctl enable --now "$FACTORY_SERVICE" "$FACTORY_HEALTH_TIMER"
 systemctl --no-pager --full status "$FACTORY_SERVICE"

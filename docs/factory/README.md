@@ -114,6 +114,10 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resu
 - `doctor --online` verifies tooling, writable state directories, disk headroom, the systemd unit and live
   provider endpoints. It also launches a constrained rootless worker-terminal smoke container and fails for
   a stale daemon heartbeat, quarantined jobs or jobs stalled beyond the conversation deadline.
+- If the host cannot delegate nested cgroups to rootless Podman, the worker smoke test and terminal executor
+  retry without nested CPU, memory and PID flags. Network isolation, dropped capabilities, no-new-privileges,
+  user namespaces and worktree confinement remain enabled, while the systemd service limits the factory as a
+  whole.
 - `providers check` reports the PASS or FAIL state of each configured provider, which isolates a blocked
   activation.
 - `status` prints the daemon state from `daemon.json` (`running`, `stopped` or `unknown`).
