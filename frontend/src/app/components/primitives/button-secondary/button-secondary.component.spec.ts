@@ -57,7 +57,13 @@ describe('AppButtonSecondaryComponent', () => {
     expect(buttonElement.classList.contains('bg-surface-100')).toBe(true);
     expect(buttonElement.classList.contains('text-text-primary')).toBe(true);
     expect(buttonElement.classList.contains('border')).toBe(true);
+    expect(buttonElement.classList.contains('rounded-app')).toBe(true);
     expect(buttonElement.classList.contains('ps-4')).toBe(true);
+  });
+
+  it('should use a real hover shade distinct from the base background', () => {
+    expect(buttonElement.classList.contains('hover:bg-surface-50')).toBe(true);
+    expect(buttonElement.classList.contains('focus:ring-primary')).toBe(true);
   });
 
   it('should emit clicked event when clicked and not disabled', () => {

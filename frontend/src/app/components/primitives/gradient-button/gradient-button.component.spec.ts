@@ -51,6 +51,10 @@ describe('AppGradientButtonComponent', () => {
 
   it('should apply gradient styles and size md by default', () => {
     expect(buttonElement.classList.contains('bg-gradient-to-r')).toBe(true);
+    expect(buttonElement.classList.contains('from-vip')).toBe(true);
+    expect(buttonElement.classList.contains('to-accent')).toBe(true);
+    expect(buttonElement.classList.contains('text-on-fill')).toBe(true);
+    expect(buttonElement.classList.contains('rounded-pill')).toBe(true);
     expect(buttonElement.classList.contains('px-6')).toBe(true);
   });
 
