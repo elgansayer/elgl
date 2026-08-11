@@ -10,6 +10,65 @@ import { I18nService } from '../../../services/i18n.service';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = resolve(__filename, '..');
 
+describe('AdminBlocksComponent RTL logical CSS compliance', () => {
+  let templateContent: string;
+
+  beforeAll(() => {
+    templateContent = readFileSync(
+      resolve(__dirname, 'admin-blocks.component.html'),
+      'utf-8',
+    );
+  });
+
+  it('should not contain any physical direction CSS utilities', () => {
+    const violations = [
+      /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
+      /\bleft-[0-9]/, /\bright-[0-9]/,
+      /\bborder-l\b/, /\bborder-r\b/,
+      /\btext-left\b/, /\btext-right\b/,
+    ];
+    for (const pattern of violations) {
+      expect(templateContent).not.toMatch(pattern);
+    }
+  });
+
+  it('should use logical CSS utilities for inline start/end padding', () => {
+    expect(templateContent).toContain('ps-4');
+    expect(templateContent).toContain('pe-4');
+  });
+
+  it('should use logical gap utilities for inline spacing', () => {
+    expect(templateContent).toContain('gap-3');
+  });
+
+  it('should use i18n translate pipe for all user-facing strings', () => {
+    const keys = [
+      "'admin.blocks.title'",
+      "'admin.blocks.loadError'",
+      "'admin.blocks.loadErrorDesc'",
+      "'admin.blocks.emptyTitle'",
+      "'admin.blocks.emptyDesc'",
+      "'admin.blocks.unblock'",
+      "'common.retry'",
+    ];
+    for (const key of keys) {
+      expect(templateContent).toContain(key);
+    }
+  });
+
+  it('should not hardcode English user-facing strings', () => {
+    // Strip i18n expressions (both template and attribute forms) to check
+    // for hardcoded English remaining in pure HTML text nodes
+    const withoutI18n = templateContent
+      .replace(/\{\{.*?\}\}/gs, '')
+      .replace(/'[^']*'\s*\|\s*t/g, '');
+    expect(withoutI18n).not.toMatch(/Blocked Users/i);
+    expect(withoutI18n).not.toMatch(/\bUnblock\b/);
+    expect(withoutI18n).not.toMatch(/Failed to load/i);
+    expect(withoutI18n).not.toMatch(/No blocked users/i);
+  });
+});
+
 describe('AdminBlocksComponent', () => {
   let component: AdminBlocksComponent;
   let fixture: ComponentFixture<AdminBlocksComponent>;
@@ -22,10 +81,9 @@ describe('AdminBlocksComponent', () => {
 
   const createUser = (overrides: Partial<AdminBlockedUser> = {}): AdminBlockedUser => ({
     id: 'user-1',
-    blocker_id: 'admin-1',
-    blocked_id: 'user-1',
-    blocked_name: 'John Doe',
-    created_at: new Date().toISOString(),
+    display_name: 'John Doe',
+    native_language: 'English',
+    target_languages: ['French', 'Spanish'],
     ...overrides,
   });
 
@@ -92,7 +150,7 @@ describe('AdminBlocksComponent', () => {
   it('renders a list item for each blocked user', async () => {
     listBlockedUsersSpy.mockResolvedValue([
       createUser({ id: 'user-a' }),
-      createUser({ id: 'user-b', blocked_name: 'Jane' }),
+      createUser({ id: 'user-b', display_name: 'Jane' }),
     ]);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -102,22 +160,26 @@ describe('AdminBlocksComponent', () => {
     expect(items.length).toBe(2);
   });
 
-  it('displays blocked_name and created_at info for each blocked user', async () => {
-    listBlockedUsersSpy.mockResolvedValue([createUser({ id: 'user-a', blocked_name: 'Alice' })]);
+  it('displays display_name and language info for each blocked user', async () => {
+    listBlockedUsersSpy.mockResolvedValue([
+      createUser({ id: 'user-a', display_name: 'Alice', native_language: 'Korean', target_languages: ['English'] }),
+    ]);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.querySelector('li p.text-sm')?.textContent ?? '';
-    expect(text).toBeTruthy();
+    expect(text).toContain('Korean');
+    expect(text).toContain('\u2192');
+    expect(text).toContain('English');
 
     const name = fixture.nativeElement.querySelector('li p.font-medium')?.textContent ?? '';
     expect(name).toContain('Alice');
   });
 
-  it('renders avatar image when blocked_avatar is present', async () => {
+  it('renders avatar image when avatar_url is present', async () => {
     listBlockedUsersSpy.mockResolvedValue([
-      createUser({ id: 'user-x', blocked_avatar: 'https://example.com/pic.png' }),
+      createUser({ id: 'user-x', avatar_url: 'https://example.com/pic.png' }),
     ]);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -128,9 +190,9 @@ describe('AdminBlocksComponent', () => {
     expect(img.getAttribute('src')).toBe('https://example.com/pic.png');
   });
 
-  it('renders fallback avatar circle when blocked_avatar is absent', async () => {
+  it('renders fallback avatar circle when avatar_url is absent', async () => {
     listBlockedUsersSpy.mockResolvedValue([
-      createUser({ id: 'user-nopic', blocked_avatar: undefined }),
+      createUser({ id: 'user-nopic', avatar_url: undefined }),
     ]);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -168,67 +230,5 @@ describe('AdminBlocksComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(listBlockedUsersSpy).toHaveBeenCalledTimes(2); // initial + retry
-  });
-
-  describe('RTL logical CSS compliance', () => {
-    let templateContent: string;
-
-    beforeAll(() => {
-      templateContent = readFileSync(resolve(__dirname, 'admin-blocks.component.html'), 'utf-8');
-    });
-
-    it('should not contain any physical direction CSS utilities', () => {
-      const violations = [
-        /\bpl-\d/,
-        /\bpr-\d/,
-        /\bml-\d/,
-        /\bmr-\d/,
-        /\bleft-[0-9]/,
-        /\bright-[0-9]/,
-        /\bborder-l\b/,
-        /\bborder-r\b/,
-        /\btext-left\b/,
-        /\btext-right\b/,
-      ];
-      for (const pattern of violations) {
-        expect(templateContent).not.toMatch(pattern);
-      }
-    });
-
-    it('should use logical CSS utilities for inline start/end padding', () => {
-      expect(templateContent).toContain('ps-4');
-      expect(templateContent).toContain('pe-4');
-    });
-
-    it('should use logical gap utilities for inline spacing', () => {
-      expect(templateContent).toContain('gap-3');
-    });
-
-    it('should use i18n translate pipe for user-facing strings', () => {
-      const keys = [
-        'admin.blocks.title',
-        'admin.blocks.loadError',
-        'admin.blocks.loadErrorDesc',
-        'admin.blocks.emptyTitle',
-        'admin.blocks.emptyDesc',
-        'admin.blocks.unblock',
-        'common.retry',
-      ];
-      for (const key of keys) {
-        expect(templateContent).toContain("'" + key + "'");
-      }
-    });
-
-    it('should not hardcode English user-facing strings', () => {
-      // Strip i18n expressions (both template and attribute forms) to check
-      // for hardcoded English remaining in pure HTML text nodes
-      const withoutI18n = templateContent
-        .replace(/\{\{.*?\}\}/gs, '')
-        .replace(/'[^']*'\s*\|\s*t/g, '');
-      expect(withoutI18n).not.toMatch(/Blocked Users/i);
-      expect(withoutI18n).not.toMatch(/\bUnblock\b/);
-      expect(withoutI18n).not.toMatch(/Failed to load/i);
-      expect(withoutI18n).not.toMatch(/No blocked users/i);
-    });
   });
 });

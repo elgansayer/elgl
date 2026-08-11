@@ -32,16 +32,14 @@ export class FlashcardContextMenuDirective {
     }
 
     const contextText = this.elRef.nativeElement.textContent ?? '';
-    const lang = this.sourceLanguage();
-
-    this.showOverlay(event.clientX, event.clientY, selectedText, contextText, lang);
+    this.showOverlay(event.clientX, event.clientY, selectedText, contextText);
   }
 
   onTouchStart(_event: TouchEvent): void {
     /* long-press detection could be added later */
   }
 
-  private showOverlay(x: number, y: number, word: string, context: string, lang: string): void {
+  private showOverlay(x: number, y: number, word: string, context: string): void {
     const div = document.createElement('div');
     div.className = 'fixed bg-surface text-on-surface shadow-lg rounded-lg px-4 py-2 z-50 cursor-pointer hover:bg-surface-hover transition-colors';
     div.style.left = `${x}px`;

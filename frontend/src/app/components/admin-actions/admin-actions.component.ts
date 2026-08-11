@@ -14,21 +14,17 @@ import { showToast, showErrorToast } from '../../services/toast.service';
       <ul role="list">
         @for (user of users(); track user.id) {
           <li>
-            <span>{{ user.display_name ?? user.id | sanitiseHtml }}</span>
+            <span>{{ (user.display_name ?? user.id) | sanitiseHtml }}</span>
             <button
               type="button"
               [attr.aria-label]="'admin.banUserAria' | t: { name: user.display_name ?? user.id }"
               (click)="ban(user.id)"
-            >
-              {{ 'admin.banBtn' | t }}
-            </button>
+            >{{ 'admin.banBtn' | t }}</button>
             <button
               type="button"
               [attr.aria-label]="'admin.warnUserAria' | t: { name: user.display_name ?? user.id }"
               (click)="warn(user.id)"
-            >
-              {{ 'admin.warnBtn' | t }}
-            </button>
+            >{{ 'admin.warnBtn' | t }}</button>
           </li>
         }
       </ul>
@@ -51,8 +47,7 @@ export class AdminActionsComponent {
 
   private readonly usersResource = resource({
     params: () => ({ page: 1, pageSize: 10, search: '' }),
-    loader: ({ params }) =>
-      this.adminService.listUsers(params.search, params.page, params.pageSize),
+    loader: ({ params }) => this.adminService.listUsers(params.search, params.page, params.pageSize),
   });
 
   readonly users = computed(() => this.usersResource.value()?.users ?? []);

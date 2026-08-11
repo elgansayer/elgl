@@ -11,7 +11,7 @@ import {
 
 /**
  * Shared position-anchored menu shell (backdrop, ARIA menu semantics,
- * ESC/backdrop dismiss, first-item auto-focus) for the "long-press / right-
+ * ESC/backdrop dismiss, first-item auto-focus) for the "long-press / secondary-
  * click a message" style menus - message-context-menu, chat-context-menu,
  * long-press-context-menu all hand-roll this today. Positioned at an
  * arbitrary x/y (the long-press or contextmenu event coordinates), unlike

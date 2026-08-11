@@ -5,7 +5,6 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { CoverPhotoUploaderComponent } from './cover-photo-uploader.component';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { PipeTransform } from '@angular/core';
-import { environment } from '../../../environments/environment';
 
 class MockTranslatePipe implements PipeTransform {
   transform(value: string): string {

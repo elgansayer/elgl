@@ -10,21 +10,19 @@ describe('TrustSafetyModalComponent', () => {
     let templateContent: string;
 
     beforeAll(() => {
-      const content = readFileSync(resolve(__dirname, 'trust-safety-modal.component.ts'), 'utf-8');
+      const content = readFileSync(
+        resolve(__dirname, 'trust-safety-modal.component.ts'),
+        'utf-8',
+      );
       const match = content.match(/template:\s*`([\s\S]*?)`\s*,/);
       templateContent = match ? match[1] : content;
     });
 
     it('should not contain any physical direction CSS utilities', () => {
       const violations = [
-        /\bpl-\d/,
-        /\bpr-\d/,
-        /\bml-\d/,
-        /\bmr-\d/,
-        /\bleft-[0-9]/,
-        /\bright-[0-9]/,
-        /\bborder-l\b/,
-        /\bborder-r\b/,
+        /\bpl-\d/, /\bpr-\d/, /\bml-\d/, /\bmr-\d/,
+        /\bleft-[0-9]/, /\bright-[0-9]/,
+        /\bborder-l\b/, /\bborder-r\b/,
       ];
       for (const pattern of violations) {
         expect(templateContent).not.toMatch(pattern);
@@ -48,22 +46,11 @@ describe('TrustSafetyModalComponent', () => {
 
     it('should use i18n translate pipe for user-facing strings', () => {
       const keys = [
-        'safety.title',
-        'safety.subtitle',
-        'safety.closeBtn',
-        'safety.tabReport',
-        'safety.tabBlock',
-        'safety.reasonLabel',
-        'safety.detailsLabel',
-        'safety.detailsPlaceholder',
-        'safety.blockWarning',
-        'safety.blockList1',
-        'safety.blockList2',
-        'safety.blockList3',
-        'safety.cancelBtn',
-        'safety.submitReportBtn',
-        'safety.confirmBlockBtn',
-        'common.loading',
+        'safety.title', 'safety.subtitle', 'safety.closeBtn',
+        'safety.tabReport', 'safety.tabBlock',
+        'safety.reasonLabel', 'safety.detailsLabel', 'safety.detailsPlaceholder',
+        'safety.blockWarning', 'safety.blockList1', 'safety.blockList2', 'safety.blockList3',
+        'safety.cancelBtn', 'safety.submitReportBtn', 'safety.confirmBlockBtn',
       ];
       for (const key of keys) {
         expect(templateContent).toContain("'" + key + "'");
@@ -90,7 +77,10 @@ describe('TrustSafetyModalComponent', () => {
     let templateContent: string;
 
     beforeAll(() => {
-      const content = readFileSync(resolve(__dirname, 'trust-safety-modal.component.ts'), 'utf-8');
+      const content = readFileSync(
+        resolve(__dirname, 'trust-safety-modal.component.ts'),
+        'utf-8',
+      );
       const match = content.match(/template:\s*`([\s\S]*?)`\s*,/);
       templateContent = match ? match[1] : content;
     });

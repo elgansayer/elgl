@@ -16,8 +16,7 @@
           {{ 'moments.correctSentenceTitle' | t }}
         </h2>
       </div>
-      <button
-        aria-label="Close modal"
+      <button aria-label="Close modal"
         (click)="closeModal()"
         class="p-1 rounded-full text-text-secondary hover:text-text-primary hover:bg-surface-300 transition-colors"
       >
@@ -33,11 +32,7 @@
           <label class="text-xs font-bold text-text-secondary uppercase tracking-wider">
             {{ 'moments.ghostOriginal' | t }}
           </label>
-          <button
-            (click)="onOriginalClick()"
-            class="text-[11px] text-neon-blue hover:underline"
-            [attr.aria-label]="'moments.resetGhost' | t"
-          >
+          <button (click)="onOriginalClick()" class="text-[11px] text-neon-blue hover:underline" [attr.aria-label]="'moments.resetGhost' | t">
             {{ 'moments.resetGhost' | t }}
           </button>
         </div>
@@ -63,8 +58,7 @@
           rows="3"
           [placeholder]="'correction.editPlaceholder' | t"
           class="w-full bg-surface-300 border border-neon-blue/40 rounded-2xl p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-neon-blue resize-none"
-          [attr.aria-label]="'correction.editPlaceholder' | t"
-        >
+         [attr.aria-label]="'correction.editPlaceholder' | t">
         </textarea>
       </div>
 
@@ -90,8 +84,7 @@
           (ngModelChange)="explanation.set($event)"
           [placeholder]="'correction.explainPlaceholder' | t"
           class="w-full bg-surface-300 border border-surface-100 rounded-2xl px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-surface-100"
-          [attr.aria-label]="'correction.explainPlaceholder' | t"
-        />
+         [attr.aria-label]="'correction.explainPlaceholder' | t"/>
       </div>
     </div>
 
@@ -99,8 +92,7 @@
     <footer
       class="p-4 bg-surface-400 border-t border-surface-100 flex items-center justify-end gap-3"
     >
-      <button
-        aria-label="Close modal"
+      <button aria-label="Close modal"
         (click)="closeModal()"
         class="px-4 py-2 text-xs font-bold text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-300 transition-colors"
       >
@@ -110,8 +102,7 @@
         (click)="submitCorrection()"
         [disabled]="!correctedText().trim() || correctedText().trim() === originalText().trim()"
         class="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-full hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"
-        [attr.aria-label]="'moments.sendCorrection' | t"
-      >
+       [attr.aria-label]="'moments.sendCorrection' | t">
         {{ 'moments.sendCorrection' | t }}
       </button>
     </footer>

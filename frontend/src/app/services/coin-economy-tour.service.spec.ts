@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { Subscription, of, Observable } from 'rxjs';
+import { of } from 'rxjs';
 import { CoinEconomyTourService } from './coin-economy-tour.service';
 import { JoyrideService } from 'ngx-joyride';
 import { I18nService } from './i18n.service';
