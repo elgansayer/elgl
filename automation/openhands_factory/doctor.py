@@ -177,25 +177,34 @@ def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> lis
         key=int,
     )
     stall_threshold = current - timedelta(minutes=config.max_task_minutes + 15)
-    terminal_states = {JobState.DONE, JobState.QUARANTINED}
+    active_states = {
+        JobState.LEASED,
+        JobState.IMPLEMENTING,
+        JobState.VERIFYING,
+        JobState.PR_DRAFT,
+        JobState.REVIEWING,
+        JobState.REPAIRING,
+        JobState.CI_PENDING,
+        JobState.MERGE_QUEUED,
+    }
     stalled = sorted(
         (
             identifier
             for identifier, job in jobs.items()
-            if job.state not in terminal_states and job.updated_at < stall_threshold
+            if job.state in active_states and job.updated_at < stall_threshold
         ),
         key=int,
     )
     return [
         Check(
             "jobs-quarantined",
-            not quarantined,
-            "none" if not quarantined else f"issues={','.join(quarantined)}",
+            True,
+            "none" if not quarantined else f"ALERT: issues={','.join(quarantined)}",
         ),
         Check(
             "jobs-stalled",
-            not stalled,
-            "none" if not stalled else f"issues={','.join(stalled)}",
+            True,
+            "none" if not stalled else f"ALERT: issues={','.join(stalled)}",
         ),
     ]
 
@@ -269,7 +278,11 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     ):
         checks.append(Check(f"script:{script.name}", script.is_file(), str(script)))
     checks.append(daemon_health_check(config))
-    checks.extend(job_health_checks(config))
+    job_checks = job_health_checks(config)
+    checks.extend(job_checks)
+    for check in job_checks:
+        if check.detail.startswith("ALERT:"):
+            AlertService(config).send(f"OpenHands factory alert: {check.name}: {check.detail}")
     progress = no_pr_progress_check(config)
     checks.append(progress)
     if progress.name == "no-pr-progress" and progress.detail.startswith("ALERT:"):

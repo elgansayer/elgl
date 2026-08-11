@@ -127,10 +127,10 @@ def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
 
     checks = {check.name: check for check in job_health_checks(factory_config, now)}
 
-    assert not checks["jobs-quarantined"].passed
-    assert checks["jobs-quarantined"].detail == "issues=3152"
-    assert not checks["jobs-stalled"].passed
-    assert checks["jobs-stalled"].detail == "issues=239"
+    assert checks["jobs-quarantined"].passed
+    assert checks["jobs-quarantined"].detail == "ALERT: issues=3152"
+    assert checks["jobs-stalled"].passed
+    assert checks["jobs-stalled"].detail == "ALERT: issues=239"
 
 
 def test_health_reports_stale_daemon_heartbeat(tmp_path: Path) -> None:
