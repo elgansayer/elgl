@@ -8,6 +8,7 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.doctor import (
     daemon_health_check,
     job_health_checks,
+    run_doctor,
     worker_terminal_check,
 )
 from openhands_factory.jobs import JobStore
@@ -51,6 +52,25 @@ def test_worker_terminal_probe_uses_small_nested_resource_limits(
     assert "--memory=256m" in calls[0]
     assert "--cpus=0.25" in calls[0]
     assert "--network=none" in calls[0]
+
+
+def test_doctor_reports_openai_subscription_credentials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    auth = tmp_path / "home" / ".openhands" / "auth"
+    auth.mkdir(parents=True)
+    (auth / "openai_oauth.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr("openhands_factory.doctor.Path.home", lambda: tmp_path / "home")
+    monkeypatch.setattr(
+        "openhands_factory.doctor.subprocess.run",
+        lambda *args, **kwargs: CompletedProcess(args, 0, "", ""),
+    )
+
+    checks = {check.name: check for check in run_doctor(factory_config)}
+
+    assert checks["openai-subscription"].passed
+    assert checks["openai-subscription"].detail == "gpt-5.6-sol"
 
 
 def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
