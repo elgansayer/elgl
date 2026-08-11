@@ -272,6 +272,7 @@ export class I18nService {
     'discovery.filterPillsLabel': 'Filter options',
     join_group_aria: 'Join group {{name}}',
     'settings.languageSelectAriaLabel': 'Select language',
+    'chatRoom.playVoiceMessage': 'Play voice message',
     'chatRoom.deliveryStatusSent': 'Sent',
     'chatRoom.deliveryStatusDelivered': 'Delivered',
     'chatRoom.deliveryStatusRead': 'Read',
