@@ -31,6 +31,7 @@ import {
   ArchiveRoomDto,
   CreateAudioRoomDto,
   DemoteSpeakerDto,
+  DismissRaisedHandDto,
   InviteCoHostDto,
   RaiseHandDto,
   RemoveCoHostDto,
@@ -568,6 +569,8 @@ export class AudioRoomsService implements OnModuleInit {
     partyType?: string,
     topic?: string,
     level?: string,
+    limit = 50,
+    offset = 0,
   ): Promise<AudioRoomRecord[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase.from('audio_rooms').select('*').eq('is_active', true);
@@ -587,7 +590,7 @@ export class AudioRoomsService implements OnModuleInit {
 
     const response = await query
       .order('created_at', { ascending: false })
-      .limit(50);
+      .range(offset, offset + limit - 1);
 
     const data = response.data as AudioRoomRow[] | null;
     if (!data || data.length === 0) return [];
@@ -826,6 +829,9 @@ export class AudioRoomsService implements OnModuleInit {
     if (room.host_id !== hostId) {
       throw new ForbiddenException('Only the host can mute a speaker.');
     }
+    if (room.host_id === dto.target_user_id) {
+      throw new ForbiddenException('The host cannot be muted.');
+    }
 
     // Notify user via Centrifugo to mute their microphone locally
     void this.centrifugoService.publish(`room_${room.id}`, {
@@ -875,6 +881,42 @@ export class AudioRoomsService implements OnModuleInit {
     });
 
     return this.getRoom(room.id);
+  }
+
+  async kickSpeaker(hostId: string, dto: DemoteSpeakerDto): Promise<AudioRoomRecord> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase.from('audio_rooms').select('*').eq('id', dto.room_id).single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+    if (room.host_id !== hostId) throw new ForbiddenException('Only the host can kick a speaker off stage.');
+    if (room.host_id === dto.target_user_id) throw new ForbiddenException('The host cannot kick themselves.');
+    const update: { speakers: string[]; co_host_id?: null } = {
+      speakers: room.speakers.filter((id) => id !== dto.target_user_id),
+    };
+    if (room.co_host_id === dto.target_user_id) update.co_host_id = null;
+    await supabase.from('audio_rooms').update(update).eq('id', room.id);
+    if (room.co_host_id === dto.target_user_id) {
+      void this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_removed',
+        target_user_id: dto.target_user_id,
+        room_id: room.id,
+      });
+    }
+    void this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'force_kick',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+    });
+    return this.getRoom(room.id);
+  }
+
+  async dismissRaisedHand(hostId: string, dto: DismissRaisedHandDto): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase.from('audio_rooms').select('*').eq('id', dto.room_id).single();
+    if (!response.data) throw new NotFoundException('Room not found');
+    const room = response.data as AudioRoomRow;
+    if (room.host_id !== hostId) throw new ForbiddenException('Only the host can dismiss raised hands.');
+    await supabase.from('audio_rooms').update({ raised_hands: room.raised_hands.filter((id) => id !== dto.target_user_id) }).eq('id', room.id);
   }
 
   async inviteCoHost(
@@ -936,11 +978,12 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
-    await this.centrifugoService.publish(`room_${room.id}`, {
-      type: 'co_host_invited',
-      target_user_id: dto.target_user_id,
-      room_id: room.id,
-    });
+      await this.centrifugoService.publish(`room_${room.id}`, {
+        type: 'co_host_changed',
+        target_user_id: dto.target_user_id,
+        room_id: room.id,
+        previous_co_host_id: previousCoHostId,
+      });
 
     return this.getRoom(room.id);
   }
@@ -1387,7 +1430,7 @@ export class AudioRoomsService implements OnModuleInit {
       note: noteRow,
     });
 
-    return noteRow;
+    return { ...noteRow, author_name: noteRow.author_name ?? 'Unknown' };
   }
 
   async getNotes(roomId: string, limit = 50): Promise<VoiceRoomNote[]> {
@@ -1401,7 +1444,10 @@ export class AudioRoomsService implements OnModuleInit {
     if (response.error) {
       throw new Error(`Failed to fetch notes: ${response.error.message}`);
     }
-    return response.data ?? [];
+    return (response.data ?? []).map((note) => ({
+      ...note,
+      author_name: note.author_name ?? 'Unknown',
+    }));
   }
 
   async deleteNote(noteId: string, userId: string): Promise<void> {

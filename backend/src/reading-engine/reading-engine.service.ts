@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   SupabaseService,
@@ -25,7 +25,7 @@ export class ReadingEngineService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly cacheService: ReadingEngineCacheService,
-    private readonly crashReportService: ReadingEngineCrashReportService,
+    @Optional() private readonly crashReportService: ReadingEngineCrashReportService | undefined,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -35,7 +35,7 @@ export class ReadingEngineService {
     context?: Record<string, unknown>,
   ): Promise<void> {
     const err = error instanceof Error ? error : new Error(String(error));
-    await this.crashReportService.reportCrash({
+    await this.crashReportService?.reportCrash({
       operation,
       error_type: err.constructor.name,
       error_message: err.message,

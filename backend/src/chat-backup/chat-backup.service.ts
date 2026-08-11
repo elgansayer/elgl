@@ -12,7 +12,7 @@ export class ChatBackupService {
     const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
-      .eq('user_id', userId)
+      .eq('sender_id', userId)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -27,7 +27,8 @@ export class ChatBackupService {
     // Stream formatting logic
     let formattedStream = 'Backup Start\n';
     for (const msg of data) {
-      formattedStream += `[${msg.created_at}] ${msg.sender}: ${msg.content}\n`;
+      const message = msg as typeof msg & { sender?: string; content?: string };
+      formattedStream += `[${msg.created_at}] ${message.sender ?? msg.sender_id}: ${message.content ?? msg.text_content ?? ''}\n`;
     }
     formattedStream += 'Backup End\n';
 

@@ -73,8 +73,9 @@ class FactoryPipeline:
             worktree = self.config.worktree_dir / f"issue-{task_id}"
             if worktree.exists():
                 workflow = GitWorkflow(self.config.repository, self.config.base_branch)
+                inspection = GitWorkflow(worktree, self.config.base_branch)
                 try:
-                    dirty = workflow.has_changes()
+                    dirty = inspection.has_changes()
                 except RepositorySafetyError:
                     # A damaged or partially-created worktree is not safe to delete silently.
                     dirty = True

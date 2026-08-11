@@ -455,7 +455,7 @@ export class DataRetentionService {
     // Anonymise the user's author_name in any remaining audio-room notes
     const { error: noteNameError } = await supabase
       .from('audio_room_notes')
-      .update({ author_name: null })
+      .update({ author_name: undefined })
       .eq('author_id', userId);
 
     if (noteNameError) {

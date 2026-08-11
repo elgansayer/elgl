@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   BadRequestException,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -63,7 +64,7 @@ export class ChatService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
-    private readonly readReceiptsService: ReadReceiptsService,
+    @Optional() private readonly readReceiptsService: ReadReceiptsService | undefined,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,
@@ -542,9 +543,9 @@ export class ChatService {
     }
 
     // Set initial delivery status to 'sent' and mark as delivered for receiver
-    void this.readReceiptsService.setInitialSent(savedMessage.id);
+    void this.readReceiptsService?.setInitialSent(savedMessage.id);
     if (receiverId) {
-      void this.readReceiptsService.markAsDelivered(
+      void this.readReceiptsService?.markAsDelivered(
         savedMessage.id,
         dto.room_id,
         receiverId,

@@ -49,7 +49,7 @@ export class GroupsService {
     memberIds: string[],
   ): Promise<ChatRoomRecord> {
     if (memberIds.length > 49) {
-      throw new Error('Group cannot exceed 50 members');
+      throw new Error('Group cannot exceed 51 members (50 selected + creator)');
     }
     const supabase = this.supabaseService.getClient();
 

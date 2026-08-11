@@ -70,8 +70,8 @@ Store credentials only in `/etc/hellotalk-factory/factory.env`, never in command
 review in parallel, while the memory-heavy local verification suite is serialised. Reduce this to two or
 three if swap usage grows; increase it only after measuring memory and CPU saturation.
 
-Only issues labelled `factory-ready` are eligible by default. `needs-human`, `factory-skip` and `duplicate`
-always exclude an issue. This prevents the daemon from consuming the entire historical issue backlog.
+All open issues are eligible by default. `needs-human`, `factory-skip` and `duplicate` always exclude an
+issue. Set `FACTORY_REQUIRE_READY_LABEL=true` if manual queueing is preferred.
 
 When a quarantined issue has an uncommitted worktree, the daemon archives it under
 `/var/lib/hellotalk-factory/recovery/` before removing the Git worktree registration. The branch is never

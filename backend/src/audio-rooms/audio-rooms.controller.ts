@@ -228,8 +228,8 @@ export class AudioRoomsController {
       partyType,
       topic,
       level,
-      limit ? parseInt(limit, 10) : undefined,
-      offset ? parseInt(offset, 10) : undefined,
+      limit ? parseInt(limit, 10) : 50,
+      offset ? parseInt(offset, 10) : 0,
     );
   }
 
