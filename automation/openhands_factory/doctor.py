@@ -298,11 +298,14 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
             checks.append(Check("opencode-go", True, config.opencode_model))
         except (RuntimeError, ValueError) as error:
             checks.append(Check("opencode-go", False, str(error)))
-        try:
-            profile = validate_gemini(config)
-            checks.append(Check("gemini", profile is not None, config.gemini_model))
-        except (RuntimeError, ValueError) as error:
-            checks.append(Check("gemini", False, str(error)))
+        if not config.gemini_enabled:
+            checks.append(Check("gemini", True, "disabled by configuration"))
+        else:
+            try:
+                profile = validate_gemini(config)
+                checks.append(Check("gemini", profile is not None, config.gemini_model))
+            except (RuntimeError, ValueError) as error:
+                checks.append(Check("gemini", False, str(error)))
     systemd = subprocess.run(
         (
             "systemd-analyze",
