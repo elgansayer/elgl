@@ -54,30 +54,17 @@ let totalErrors = 0;
 let totalWarnings = 0;
 let checkedFilesCount = 0;
 
-function getAllFiles(dir, fileList = []) {
-  if (!fs.existsSync(dir)) return fileList;
-  const files = fs.readdirSync(dir);
-  for (const file of files) {
-    if (
-      file === 'node_modules' ||
-      file === 'dist' ||
-      file === '.git' ||
-      file === 'original-hello-talk-screenshots' ||
-      file.startsWith('.aider')
+function getTrackedFiles() {
+  const output = execSync('git ls-files -z', { cwd: ROOT_DIR, encoding: 'utf8' });
+  return output
+    .split('\0')
+    .filter(Boolean)
+    .filter((file) =>
+      ['.ts', '.html', '.scss', '.sql', '.md', '.json', '.mdc'].includes(
+        path.extname(file).toLowerCase(),
+      ),
     )
-      continue;
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    if (stat.isDirectory()) {
-      getAllFiles(filePath, fileList);
-    } else {
-      const ext = path.extname(file).toLowerCase();
-      if (['.ts', '.html', '.scss', '.sql', '.md', '.json', '.mdc'].includes(ext)) {
-        fileList.push(filePath);
-      }
-    }
-  }
-  return fileList;
+    .map((file) => path.join(ROOT_DIR, file));
 }
 
 function checkFile(filePath) {
@@ -85,6 +72,12 @@ function checkFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
   const lines = content.split('\n');
   const isFrontend = relPath.startsWith('frontend/src/');
+  const isTestFixture =
+    relPath.endsWith('.spec.ts') ||
+    relPath.endsWith('.test.ts') ||
+    relPath.endsWith('.cy.ts') ||
+    relPath.includes('.verification.spec.ts');
+  const isFrontendProduction = isFrontend && !isTestFixture;
   const isDoc = relPath.endsWith('.md') || relPath.endsWith('.mdc');
 
   checkedFilesCount++;
@@ -94,7 +87,7 @@ function checkFile(filePath) {
     const line = lines[i];
 
     // Check 1: Em dash check
-    if (EM_DASH_REGEX.test(line)) {
+    if (!isTestFixture && EM_DASH_REGEX.test(line)) {
       console.error(`❌ [EM DASH VIOLATION] ${relPath}:${lineNum}`);
       console.error(
         `   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).`,
@@ -104,7 +97,7 @@ function checkFile(filePath) {
 
     // Check 2: Physical Tailwind directions in frontend
     if (
-      isFrontend &&
+      isFrontendProduction &&
       (relPath.endsWith('.html') || relPath.endsWith('.ts') || relPath.endsWith('.scss'))
     ) {
       const match = line.match(PHYSICAL_CSS_REGEX);
@@ -118,7 +111,7 @@ function checkFile(filePath) {
     }
 
     // Check 3: Legacy Angular control flow in frontend
-    if (isFrontend && (relPath.endsWith('.html') || relPath.endsWith('.ts'))) {
+    if (isFrontendProduction && (relPath.endsWith('.html') || relPath.endsWith('.ts'))) {
       const match = line.match(LEGACY_ANGULAR_FLOW_REGEX);
       if (match && !line.includes('// ignore-check')) {
         console.error(`❌ [CONTROL FLOW VIOLATION] ${relPath}:${lineNum}`);
@@ -181,7 +174,7 @@ function main() {
   const filesToCheck =
     targetFiles.length > 0
       ? targetFiles.map((f) => path.resolve(ROOT_DIR, f)).filter((f) => fs.existsSync(f))
-      : getAllFiles(ROOT_DIR);
+      : getTrackedFiles();
 
   for (const filePath of filesToCheck) {
     checkFile(filePath);

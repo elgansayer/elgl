@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically verify the HelloTalk factory
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=15min
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target
+
