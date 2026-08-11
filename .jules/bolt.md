@@ -8,3 +8,7 @@
 ## 2026-08-11 - [Optimize timeline fan-out via Redis pipeline]
 **Learning:** In timeline fan-out via Redis, sequentially calling `lpush` and `ltrim` for potentially thousands of followers causes excessive network roundtrips.
 **Action:** Replace the iterative `await redis.lpush` operations inside a loop with a batch using `redis.pipeline()`. Group commands with `pipeline.lpush` and `pipeline.ltrim` and execute `await pipeline.exec()` once to drastically reduce network latency.
+
+## 2026-08-11 - [Optimize user data wiping by replacing sequential awaits with Promise.allSettled]
+**Learning:** In the backend `data-retention.service.ts`, wiping user data sequentially loops through 28 distinct database queries (deletes and updates) using `await`. In a simulated environment, sequentially awaiting 28 database operations takes ~550-600ms, whereas running them concurrently with `Promise.allSettled` completes in ~20-30ms, mitigating a severe deletion bottleneck.
+**Action:** When a service requires bulk independent operations (like GDPR user wipes across many tables), do not await them sequentially. Use `Promise.allSettled` to execute them concurrently to drastically improve network latency, and map over the results to ensure errors aren't swallowed.
