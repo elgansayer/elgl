@@ -244,6 +244,16 @@ describe('LinkPreviewService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('bounds the response size to prevent memory exhaustion', async () => {
+    mockHtmlResponse('<html><head><title>Hello</title></head></html>');
+
+    await service.getPreview('https://example.com/');
+
+    const requestConfig = httpService.get.mock.calls[0][1];
+    expect(requestConfig.maxContentLength).toBe(5_000_000);
+    expect(requestConfig.maxBodyLength).toBe(5_000_000);
+  });
+
   it('wraps network failures in a BadRequestException', async () => {
     httpService.get.mockReturnValue(throwError(() => new Error('timeout')));
 
