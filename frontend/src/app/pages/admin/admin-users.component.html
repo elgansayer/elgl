@@ -1,7 +1,7 @@
 <div class="p-4">
   <app-admin-offline-banner />
   @if (vipUpdateError()) {
-    <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded" role="alert">
+    <div class="mb-4 p-3 bg-danger/10 border border-danger text-danger rounded" role="alert">
       {{ vipUpdateError() }}
     </div>
   }
@@ -13,7 +13,7 @@
       [value]="searchTerm()"
       (input)="onSearchInput($event)"
       placeholder="{{ 'admin.users.searchPlaceholder' | t }}"
-      class="border border-slate-300 rounded px-3 py-2 min-w-[12rem] flex-1"
+      class="border border-surface-100 rounded px-3 py-2 min-w-[12rem] flex-1"
       [attr.aria-label]="'admin.users.searchPlaceholder' | t"
     />
     <div class="flex items-center gap-2 flex-wrap">
@@ -21,7 +21,7 @@
         type="button"
         (click)="changePage(-1)"
         [disabled]="page() <= 1"
-        class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+        class="btn btn-sm rounded border border-surface-100 px-3 py-1 disabled:opacity-50"
         [attr.aria-label]="'admin.users.previous' | t"
       >
         {{ 'admin.users.previous' | t }}
@@ -33,7 +33,7 @@
         type="button"
         (click)="changePage(1)"
         [disabled]="page() >= pageTotal()"
-        class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+        class="btn btn-sm rounded border border-surface-100 px-3 py-1 disabled:opacity-50"
         [attr.aria-label]="'admin.users.next' | t"
       >
         {{ 'admin.users.next' | t }}
@@ -43,39 +43,39 @@
 
   @if (isLoading()) {
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
+      <table class="min-w-full divide-y divide-surface-100">
+        <thead class="bg-surface-100">
           <tr>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.avatar' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.name' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.nativeLanguages' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.targetLanguages' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.vip' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.coins' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.streak' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.lastActive' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.actions' | t }}
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-slate-100">
+        <tbody class="bg-surface-200 divide-y divide-surface-100">
           @for (row of [1, 2, 3, 4, 5, 6]; track row) {
             <tr>
               <td class="px-3 py-2">
@@ -122,41 +122,41 @@
     />
   } @else {
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
+      <table class="min-w-full divide-y divide-surface-100">
+        <thead class="bg-surface-100">
           <tr>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.avatar' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.name' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.nativeLanguages' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.targetLanguages' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.vip' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.coins' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.streak' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.lastActive' | t }}
             </th>
-            <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+            <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
               {{ 'admin.users.actions' | t }}
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-slate-100">
+        <tbody class="bg-surface-200 divide-y divide-surface-100">
           @for (user of users(); track user.id) {
-            <tr class="hover:bg-slate-50">
+            <tr class="hover:bg-surface-100">
               <td class="px-3 py-2">
                 @if (user.avatar_url) {
                   <img
@@ -166,7 +166,7 @@
                     class="h-8 w-8 rounded-full object-cover"
                   />
                 } @else {
-                  <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
+                  <span class="text-text-muted">{{ 'admin.users.noAvatar' | t }}</span>
                 }
               </td>
               <td class="px-3 py-2">{{ user.display_name ?? '-' | sanitiseHtml }}</td>
@@ -177,7 +177,7 @@
                 {{ user.target_languages?.join(', ') ?? '' | sanitiseHtml }}
               </td>
               <td class="px-3 py-2">
-                <span [class.text-green-600]="user.is_vip" [class.text-slate-400]="!user.is_vip">
+                <span [class.text-success]="user.is_vip" [class.text-text-muted]="!user.is_vip">
                   {{ user.is_vip ? ('admin.users.yes' | t) : ('admin.users.no' | t) }}
                 </span>
               </td>
@@ -191,7 +191,7 @@
                   <button
                     type="button"
                     (click)="openHistory(user)"
-                    class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 whitespace-nowrap"
+                    class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100 whitespace-nowrap"
                     [attr.aria-label]="'admin.users.loginHistory' | t"
                   >
                     {{ 'admin.users.loginHistory' | t }}
@@ -200,7 +200,7 @@
                     type="button"
                     (click)="toggleVip(user)"
                     [disabled]="isVipUpdating() === user.id || !isOnline()"
-                    class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100 disabled:opacity-50 whitespace-nowrap"
+                    class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100 disabled:opacity-50 whitespace-nowrap"
                     [attr.aria-label]="'admin.users.disableVip' | t"
                     [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
@@ -212,7 +212,7 @@
                     type="button"
                     (click)="warnUser(user)"
                     [disabled]="isWarning() !== null || !isOnline()"
-                    class="btn btn-sm rounded border border-amber-500 text-amber-600 px-3 py-1 hover:bg-amber-50 disabled:opacity-50 whitespace-nowrap"
+                    class="btn btn-sm rounded border border-warning text-warning px-3 py-1 hover:bg-warning/10 disabled:opacity-50 whitespace-nowrap"
                     [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
                     {{ 'admin.users.warn' | t }}
@@ -221,7 +221,7 @@
                     type="button"
                     (click)="banUser(user)"
                     [disabled]="isBanning() !== null || !isOnline()"
-                    class="btn btn-sm rounded border border-red-500 text-red-600 px-3 py-1 hover:bg-red-50 disabled:opacity-50 whitespace-nowrap"
+                    class="btn btn-sm rounded border border-danger text-danger px-3 py-1 hover:bg-danger/10 disabled:opacity-50 whitespace-nowrap"
                     [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
                     {{ 'admin.users.ban' | t }}
@@ -231,7 +231,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="9" class="px-3 py-4 text-center text-slate-400">
+              <td colspan="9" class="px-3 py-4 text-center text-text-muted">
                 {{ 'admin.users.empty' | t }}
               </td>
             </tr>
@@ -243,32 +243,32 @@
 
   @if (showHistory()) {
     <div
-      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-surface-900/40 flex items-center justify-center z-50"
       (click)="closeHistory()"
     >
       <div
-        class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        class="bg-surface-200 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
         (click)="$event.stopPropagation()"
       >
         <h3 class="text-lg font-semibold mb-4">{{ 'admin.users.loginHistoryTitle' | t }}</h3>
         @if (loginHistory().length === 0) {
-          <p class="text-slate-500">{{ 'admin.users.noHistory' | t }}</p>
+          <p class="text-text-secondary">{{ 'admin.users.noHistory' | t }}</p>
         } @else {
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
+          <table class="min-w-full divide-y divide-surface-100">
+            <thead class="bg-surface-100">
               <tr>
-                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
                   {{ 'admin.users.historyTime' | t }}
                 </th>
-                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
                   {{ 'admin.users.ip' | t }}
                 </th>
-                <th class="px-3 py-2 text-start text-xs font-medium text-slate-500 uppercase">
+                <th class="px-3 py-2 text-start text-xs font-medium text-text-secondary uppercase">
                   {{ 'admin.users.userAgent' | t }}
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-slate-100">
+            <tbody class="bg-surface-200 divide-y divide-surface-100">
               @for (entry of loginHistory(); track entry.id) {
                 <tr>
                   <td class="px-3 py-2">{{ entry.created_at | date: 'medium' }}</td>
@@ -283,7 +283,7 @@
           <button
             type="button"
             (click)="closeHistory()"
-            class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
+            class="btn btn-sm rounded border border-surface-100 px-3 py-1 hover:bg-surface-100"
             [attr.aria-label]="'admin.users.close' | t"
           >
             {{ 'admin.users.close' | t }}
