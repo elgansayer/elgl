@@ -333,7 +333,10 @@
                         class="rounded-xl border border-surface-200 object-cover w-full h-32 cursor-pointer hover:opacity-90 transition-opacity"
                         loading="lazy"
                         (click)="openLightbox(moment.media_urls ?? [], i)"
-                        [alt]="'lightbox.imageAlt' | t: { current: i + 1, total: moment.media_urls?.length ?? 0 }"
+                        [alt]="
+                          'lightbox.imageAlt'
+                            | t: { current: i + 1, total: moment.media_urls?.length ?? 0 }
+                        "
                       />
                     }
                   </div>
@@ -360,38 +363,27 @@
 
             <!-- Action Bar -->
             <div class="flex items-center gap-5 mt-4 text-text-secondary text-xs flex-wrap">
-<<<<<<< HEAD
               <div class="flex items-center gap-1.5">
                 <button
                   (click)="momentsStore.toggleLike(moment.id)"
                   class="transition-colors"
                   [class.text-red-500]="moment.is_liked_by_me"
-                  [attr.aria-label]="moment.is_liked_by_me ? ('moments.unlikeBtn' | t) : ('moments.likeBtn' | t)"
+                  [attr.aria-label]="
+                    moment.is_liked_by_me ? ('moments.unlikeBtn' | t) : ('moments.likeBtn' | t)
+                  "
                 >
-                  <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
+                  <span class="text-lg leading-none">{{
+                    moment.is_liked_by_me ? '❤️' : '🤍'
+                  }}</span>
                 </button>
                 <button
                   (click)="openLikedBy(moment)"
                   class="font-bold hover:text-text-primary transition-colors"
                   [attr.aria-label]="'moments.likedBy' | t"
-                >{{ moment.likes_count || 0 }}</button>
+                >
+                  {{ moment.likes_count || 0 }}
+                </button>
               </div>
-=======
-              <button
-                (click)="momentsStore.toggleLike(moment.id)"
-                class="flex items-center gap-1.5 transition-colors"
-                [class.text-red-500]="moment.is_liked_by_me"
-                [attr.aria-label]="'moments.likeBtn' | t"
-              >
-                <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
-              </button>
-              <button
-                (click)="openLikedBy(moment)"
-                class="flex items-center gap-1.5 hover:text-text-primary transition-colors font-bold"
-              >
-                <span>{{ moment.likes_count || 0 }}</span>
-              </button>
->>>>>>> origin/main
               <button
                 (click)="toggleComments(moment)"
                 class="flex items-center gap-1.5 hover:text-text-primary transition-colors"
@@ -530,7 +522,11 @@
                       [attr.aria-label]="'chatRoom.mentionListLabel' | t"
                       class="absolute bottom-full start-0 mb-1 bg-surface-300 border border-surface-400 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto min-w-[180px]"
                     >
-                      @for (member of mentionSuggestionsMap()[moment.id]; track member.id; let i = $index) {
+                      @for (
+                        member of mentionSuggestionsMap()[moment.id];
+                        track member.id;
+                        let i = $index
+                      ) {
                         <li
                           role="option"
                           [id]="'comment-mention-option-' + moment.id + '-' + i"
@@ -541,7 +537,12 @@
                           class="px-3 py-2 text-xs text-text-primary cursor-pointer hover:bg-surface-400 flex items-center gap-2"
                         >
                           @if (member.avatar_url) {
-                            <img [src]="member.avatar_url" alt="" class="w-5 h-5 rounded-full object-cover" loading="eager" />
+                            <img
+                              [src]="member.avatar_url"
+                              alt=""
+                              class="w-5 h-5 rounded-full object-cover"
+                              loading="eager"
+                            />
                           }
                           <span class="font-medium">&#64;{{ member.display_name }}</span>
                         </li>
@@ -554,15 +555,33 @@
                       [(ngModel)]="commentInputMap[moment.id]"
                       (input)="onCommentInput($event, moment.id)"
                       (keydown)="onCommentKeydown($event, moment)"
-                      [placeholder]="replyingToMap[moment.id] ? ('moments.commentReplyPlaceholder' | t) : ('moments.commentPlaceholder' | t)"
+                      [placeholder]="
+                        replyingToMap[moment.id]
+                          ? ('moments.commentReplyPlaceholder' | t)
+                          : ('moments.commentPlaceholder' | t)
+                      "
                       class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-purple-500 outline-none"
-                      [attr.aria-autocomplete]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'list' : null"
-                      [attr.aria-controls]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'comment-mention-listbox' : null"
+                      [attr.aria-autocomplete]="
+                        (mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'list' : null
+                      "
+                      [attr.aria-controls]="
+                        (mentionSuggestionsMap()[moment.id] ?? []).length > 0
+                          ? 'comment-mention-listbox'
+                          : null
+                      "
                       [attr.aria-expanded]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0"
-                      [attr.aria-activedescendant]="(mentionSuggestionsMap()[moment.id] ?? []).length > 0 ? 'comment-mention-option-' + moment.id + '-' + (mentionActiveIndexMap()[moment.id] ?? 0) : null"
+                      [attr.aria-activedescendant]="
+                        (mentionSuggestionsMap()[moment.id] ?? []).length > 0
+                          ? 'comment-mention-option-' +
+                            moment.id +
+                            '-' +
+                            (mentionActiveIndexMap()[moment.id] ?? 0)
+                          : null
+                      "
                       [attr.aria-label]="'text input'"
                     />
-                    <button aria-label="Submit comment"
+                    <button
+                      aria-label="Submit comment"
                       (click)="submitComment(moment)"
                       class="bg-purple-600 text-white rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"
                     >
@@ -597,15 +616,9 @@
   }
 
   <!-- Liked By Modal -->
-<<<<<<< HEAD
-  @if (activeLikedByMomentId()) {
-    <app-liked-by-modal
-      [momentId]="activeLikedByMomentId()!"
-=======
   @if (activeLikedByMomentId(); as likedMomentId) {
     <app-liked-by-modal
       [momentId]="likedMomentId"
->>>>>>> origin/main
       (closeModal)="closeLikedBy()"
     ></app-liked-by-modal>
   }
