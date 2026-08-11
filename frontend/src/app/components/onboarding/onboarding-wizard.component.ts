@@ -10,7 +10,7 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
   selector: 'app-onboarding-wizard',
   imports: [CommonModule, TranslatePipe, DiagnosticQuizComponent],
   template: `
-    <div class="onboarding-wizard surface text-on-surface ps-4 pe-4 pt-6 pb-6">
+    <div class="onboarding-wizard bg-surface-500 text-text-primary ps-4 pe-4 pt-6 pb-6">
       <h1 class="text-xl font-bold">{{ 'onboarding.title' | t }}</h1>
       <p class="text-sm opacity-80">{{ 'onboarding.subtitle' | t }}</p>
 
@@ -22,7 +22,7 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
             [class.bg-accent/20]="onboardingService.currentStep() === $index"
           >
             <span
-              class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-variant text-sm"
+              class="w-6 h-6 flex items-center justify-center rounded-full bg-surface-200 text-sm"
             >
               {{ $index + 1 }}
             </span>
@@ -39,7 +39,7 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
           }}</label>
           <select
             id="native-lang"
-            class="w-full bg-surface-variant text-on-surface p-2 rounded"
+            class="w-full bg-surface-200 border border-surface-100 text-text-primary p-2 rounded"
             [value]="onboardingService.nativeLanguage()"
             (change)="onNativeLanguageChange($event)"
           >
@@ -88,7 +88,7 @@ import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.comp
           }}</label>
           <input
             id="display-name"
-            class="w-full bg-surface-variant text-on-surface p-2 rounded"
+            class="w-full bg-surface-200 border border-surface-100 text-text-primary p-2 rounded"
             [value]="onboardingService.displayName()"
             (input)="onDisplayNameInput($event)"
             placeholder="{{ 'onboarding.step4.placeholder' | t }}"
