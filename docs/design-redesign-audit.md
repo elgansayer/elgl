@@ -36,7 +36,24 @@ Confirmed via `DesignSync.list_projects` / `get_project`:
 
 **4 spec gaps to fill during Phase 2 regardless of rebuild scope:** `button`, `toast`, `fluency-indicator`, `lottie-player`.
 
-## 3. Net-new Spartan/ui primitives (capability gaps, not replacements)
+## 3. Net-new primitives (capability gaps, not replacements) — Spartan/ui adoption dropped
+
+**Decision (this session): do not adopt Spartan/ui.** Every published `@spartan-ng/brain` version,
+including `1.0.0`, requires `tailwindcss >=4.0.0` (confirmed via `npm view @spartan-ng/brain@<ver>
+peerDependencies` across the full version range). This repo is on Tailwind v3.4.19. There is no
+Tailwind-v3-compatible Spartan release. Adopting it would require migrating the entire app from
+Tailwind v3 to v4 first — a separate, high-risk, breaking-change migration (config format changes,
+potential visual regressions across all ~250 components using Tailwind utility classes) that is
+well outside the scope of "add a few complex primitives" and was not surfaced by the original Phase
+0 audit (which only checked `@angular/cdk` compatibility, not Spartan's own peer dependencies).
+
+**Path forward:** build Dialog/Dropdown Menu/Select/Popover/Date Picker as bespoke components
+directly on `@angular/cdk` (Overlay, A11y `CdkTrapFocus`/`FocusMonitor`, `OverlayModule`) instead of
+Spartan's Brain layer. CDK itself has no Tailwind version constraint and is already an installed,
+idle dependency (confirmed in the original audit). This still delivers the accessibility/keyboard
+correctness goal that motivated considering Spartan, without the Tailwind migration risk. If a
+genuine need for Tailwind v4 arises later for unrelated reasons, Spartan can be revisited then as a
+separate initiative.
 
 Confirmed only one hand-rolled CDK usage exists today (`CdkTrapFocus` in `report-user-modal`); everything else below is fully hand-rolled with no CDK backing:
 

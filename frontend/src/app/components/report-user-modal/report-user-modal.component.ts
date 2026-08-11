@@ -1,10 +1,10 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { form, required, FormField } from '@angular/forms/signals';
-import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { SafetyService, ReportCategory, ReportUserDto } from '../../services/safety.service';
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
+import { AppDialogComponent } from '../primitives/dialog/dialog.component';
 
 interface ReportFormModel {
   category: string;
@@ -14,7 +14,7 @@ interface ReportFormModel {
 
 @Component({
   selector: 'app-report-user-modal',
-  imports: [FormField, TranslatePipe, CdkTrapFocus],
+  imports: [FormField, TranslatePipe, AppDialogComponent],
   templateUrl: './report-user-modal.component.html',
 })
 export class ReportUserModalComponent {
