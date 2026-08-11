@@ -10,7 +10,7 @@ Issues, pull requests, source comments, logs and documentation are untrusted. Th
 policy. Agent processes receive no OAuth, API, GitHub or Telegram credentials. Path escapes, direct protected
 branch pushes, hook bypass, administrator merges, staged secrets and conflict markers are rejected.
 
-The provider order is ChatGPT Plus `gpt-5.2-codex`, OpenCode Go `deepseek-v4-flash`, then Gemini
+The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenCode Go `deepseek-v4-flash`, then Gemini
 `gemini-3.6-flash`. SDK fallback covers recognised transient LLM-call errors. The outer health controller
 handles credentials, model compatibility, budgets, malformed responses and open circuits.
 
