@@ -23,6 +23,7 @@ class Check:
     name: str
     passed: bool
     detail: str
+    warning: bool = False
 
 
 def worker_terminal_check(config: FactoryConfig) -> Check:
@@ -176,11 +177,13 @@ def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> lis
             "jobs-quarantined",
             True,
             "none" if not quarantined else f"ALERT: issues={','.join(quarantined)}",
+            bool(quarantined),
         ),
         Check(
             "jobs-stalled",
             True,
             "none" if not stalled else f"ALERT: issues={','.join(stalled)}",
+            bool(stalled),
         ),
     ]
 
@@ -190,7 +193,7 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
     daemon = read_json(config.state_dir / "daemon.json", {})
     active_jobs = daemon.get("active_jobs", []) if isinstance(daemon, dict) else []
     if not isinstance(active_jobs, list) or not active_jobs:
-        return Check("no-pr-progress", True, "no active jobs to monitor")
+            return Check("no-pr-progress", True, "no active jobs to monitor")
     try:
         jobs = JobStore(config.state_dir / "jobs.json").load()
     except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
@@ -203,13 +206,15 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
             "no-pr-progress",
             True,
             f"ALERT: no pull request yet; active_jobs={len(active_jobs)}",
+            True,
         )
     latest = max(job.updated_at for job in pull_request_jobs)
     age_hours = max((current - latest).total_seconds(), 0) / 3600
     detail = f"last pull request progress={age_hours:.1f}h ago; active_jobs={len(active_jobs)}"
-    if age_hours > config.max_no_pr_hours:
+    warning = age_hours > config.max_no_pr_hours
+    if warning:
         detail = f"ALERT: {detail}"
-    return Check("no-pr-progress", True, detail)
+    return Check("no-pr-progress", True, detail, warning)
 
 
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:

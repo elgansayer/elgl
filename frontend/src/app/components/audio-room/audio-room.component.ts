@@ -49,7 +49,6 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     QuickPollDisplayComponent,
     LiveChatOverlayComponent,
     TipHostModalComponent,
-    VoiceroomNotesComponent,
     SoundboardComponent,
   ],
   templateUrl: './audio-room.component.html',
@@ -69,6 +68,7 @@ export class AudioRoomComponent implements OnInit {
   readonly showApprovalModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
+  readonly showNotesPanel = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
   readonly sidebarTab = signal<'chat' | 'notes'>('chat');
 

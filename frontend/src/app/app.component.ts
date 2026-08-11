@@ -43,6 +43,7 @@ import { DesktopSidebarComponent } from './components/desktop-sidebar/desktop-si
 import { TourService } from './services/tour.service';
 import { NotificationService } from './services/notification.service';
 import { ChatService } from './services/chat.service';
+import { JoyrideModule } from 'ngx-joyride';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
@@ -67,6 +68,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     ForcedUpdateModalComponent,
     NoNetworkBannerComponent,
     DesktopSidebarComponent,
+    JoyrideModule,
   ],
   templateUrl: './app.component.html',
   host: {

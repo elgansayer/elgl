@@ -46,6 +46,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
     unlockApp: ReturnType<typeof vi.fn>;
     appLocked: ReturnType<typeof signal>;
   };
+  let mockTextToSpeechService: { speak: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     mockChatService = {
@@ -101,7 +102,7 @@ describe('ChatRoomComponent (threaded replies)', () => {
       isOnline: signal(true),
     };
 
-    const mockTextToSpeechService = {
+    mockTextToSpeechService = {
       speak: vi.fn(),
     };
 
@@ -331,22 +332,9 @@ describe('ChatRoomComponent (threaded replies)', () => {
     });
 
     it('speakMessage speaks the message text when speech synthesis is supported', () => {
-      const speak = vi.fn();
-      const cancel = vi.fn();
-      Object.defineProperty(window, 'speechSynthesis', {
-        configurable: true,
-        value: { speak, cancel },
-      });
-      (window as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance =
-        function (this: { text: string }, text: string) {
-          this.text = text;
-        };
-
       component.speakMessage(makeMessage({ text_content: 'Hello there' }));
 
-      expect(cancel).toHaveBeenCalled();
-      expect(speak).toHaveBeenCalledTimes(1);
-      expect(speak.mock.calls[0][0]).toMatchObject({ text: 'Hello there' });
+      expect(mockTextToSpeechService.speak).toHaveBeenCalledWith('m1', 'Hello there');
     });
 
     it('speakMessage does nothing for a message with no text content', () => {

@@ -3,7 +3,7 @@ import { Component, signal } from '@angular/core';
 import { vi } from 'vitest';
 import { LottiePlayerComponent } from './lottie-player.component';
 
-const loadAnimationMock = vi.fn(() => ({
+const loadAnimationMock = vi.fn((_options: unknown) => ({
   destroy: vi.fn(),
   setSpeed: vi.fn(),
   addEventListener: vi.fn(),
@@ -11,7 +11,7 @@ const loadAnimationMock = vi.fn(() => ({
 
 vi.mock('lottie-web', () => ({
   default: {
-    loadAnimation: (...args: unknown[]) => loadAnimationMock(...args),
+    loadAnimation: (options: unknown) => loadAnimationMock(options),
   },
 }));
 
@@ -56,10 +56,11 @@ describe('LottiePlayerComponent', () => {
     await fixture.whenStable();
 
     expect(loadAnimationMock).toHaveBeenCalledTimes(1);
-    const call = loadAnimationMock.mock.calls[0][0] as Record<string, unknown>;
-    expect(call['loop']).toBe(true);
-    expect(call['autoplay']).toBe(true);
-    expect(call['renderer']).toBe('svg');
+    expect(loadAnimationMock.mock.calls[0]?.[0]).toMatchObject({
+      loop: true,
+      autoplay: true,
+      renderer: 'svg',
+    });
   });
 
   it('should not call loadAnimation when animationData is not provided', async () => {

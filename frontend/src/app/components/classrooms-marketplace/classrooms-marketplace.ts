@@ -13,10 +13,11 @@ import { firstValueFrom, interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { JoyrideModule } from 'ngx-joyride';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent],
+  imports: [TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { SettingsService } from '../../../core/services/settings.service';
 import { AccountSettings } from '../../../core/models/settings.model';
@@ -14,6 +14,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 export class AccountSettingsComponent implements OnInit {
   private fb = inject(FormBuilder);
   public settingsService = inject(SettingsService);
+  readonly successMessage = signal('');
 
   passwordForm = this.fb.group({
     currentPassword: ['', Validators.required],
@@ -51,6 +52,8 @@ export class AccountSettingsComponent implements OnInit {
       // In a real app, you'd call a service method to change password here
       // For this UI, we just reset the form on success (simulated)
       console.warn('Password changed mock'); // Using warn to avoid no-console rule for log
+      this.settingsService.updateAccountSettings({});
+      this.successMessage.set('settings.account.password.success');
       this.passwordForm.reset();
     }
   }

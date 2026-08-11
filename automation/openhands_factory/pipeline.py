@@ -9,7 +9,7 @@ from threading import Semaphore
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
-from openhands_factory.exceptions import FactoryError
+from openhands_factory.exceptions import FactoryError, RepositorySafetyError
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestStatus
 from openhands_factory.jobs import JobStore
@@ -43,6 +43,8 @@ class FactoryPipeline:
             config.repository,
             config.github_token.get_secret_value(),
             base_branch=config.base_branch,
+            require_ready_label=config.require_ready_label,
+            ready_label=config.ready_label,
         )
         self.jobs = JobStore(config.state_dir / "jobs.json")
         self.tasks = TaskStore(config.state_dir)
@@ -71,7 +73,17 @@ class FactoryPipeline:
             worktree = self.config.worktree_dir / f"issue-{task_id}"
             if worktree.exists():
                 workflow = GitWorkflow(self.config.repository, self.config.base_branch)
-                workflow.remove_worktree(worktree)
+                try:
+                    dirty = workflow.has_changes()
+                except RepositorySafetyError:
+                    # A damaged or partially-created worktree is not safe to delete silently.
+                    dirty = True
+                if dirty:
+                    recovery = self.config.recovery_dir / (
+                        f"issue-{task_id}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+                    )
+                    workflow.archive_worktree(worktree, recovery)
+                workflow.remove_worktree(worktree, force=dirty)
             self.tasks.release(task_id)
             job.state = JobState.DONE
             job.last_error = "Issue closed before pull request creation"

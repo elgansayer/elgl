@@ -21,6 +21,7 @@ export class SrsOfflineService {
   private initPromise: Promise<void> | null = null;
 
   readonly pendingSyncCount = signal(0);
+  readonly online = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
 
   constructor() {
     if (typeof window !== 'undefined' && window.indexedDB) {

@@ -36,6 +36,7 @@ import { DistanceSliderComponent } from '../distance-slider/distance-slider.comp
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { DiscoverySkeletonCardComponent } from './discovery-skeleton-card.component';
 import { DiscoveryMapErrorBoundaryComponent } from './discovery-map-error-boundary.component';
+import { DiscoveryErrorBoundaryComponent } from '../discovery-error-boundary/discovery-error-boundary.component';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 
 /** Milliseconds to debounce partner search calls triggered by interaction changes. */
@@ -57,6 +58,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     AppEmptyStateComponent,
     DiscoverySkeletonCardComponent,
     DiscoveryMapErrorBoundaryComponent,
+    DiscoveryErrorBoundaryComponent,
     SanitiseHtmlPipe,
   ],
   templateUrl: './discovery.component.html',
@@ -104,12 +106,29 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
   readonly selectedTargetLanguage = signal<string>('');
   readonly selectedProficiencyLevel = signal<string>('');
   readonly selectedGender = signal<string>('');
+  readonly selectedInterests = signal<string>('');
   readonly seriousLearnerOnly = signal<boolean>(false);
   readonly seriousLearnerMode = signal<boolean>(false);
   readonly availableTimeStart = signal<string>('');
   readonly availableTimeEnd = signal<string>('');
   private readonly authService = inject(AuthService);
   readonly isVip = computed(() => this.authService.currentUser()?.is_vip ?? false);
+
+  readonly commonInterestTags: readonly string[] = [
+    'sports', 'music', 'travel', 'photography', 'gaming', 'cooking',
+    'reading', 'movies', 'fitness', 'art', 'technology', 'nature',
+  ];
+  readonly showAllInterests = signal(false);
+  readonly visibleInterestTags = computed(() =>
+    this.showAllInterests() ? this.commonInterestTags : this.commonInterestTags.slice(0, 6),
+  );
+  readonly errorBoundaryContext = computed(() => ({
+    component: 'discovery',
+    targetLanguage: this.selectedTargetLanguage(),
+    partnerCount: this.partners().length,
+    sortMode: this.selectedSort(),
+    radiusKm: this.selectedDistanceKm(),
+  }));
 
   /** RxJS Subject for debounced search triggering, auto-cleans up via takeUntilDestroyed. */
   private readonly searchTrigger$ = new Subject<void>();
@@ -208,6 +227,15 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     void this.searchPartners();
   }
 
+  setInterest(interest: string): void {
+    this.selectedInterests.set(this.selectedInterests() === interest ? '' : interest);
+    void this.searchPartners();
+  }
+
+  toggleShowAllInterests(): void {
+    this.showAllInterests.update((value) => !value);
+  }
+
   async ngOnInit(): Promise<void> {
     // Wire up RxJS-based debounced search auto-unsubscribed via takeUntilDestroyed
     this.searchTrigger$
@@ -279,6 +307,7 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
           available_time_end: this.availableTimeEnd() || undefined,
           sort: this.selectedSort(),
           voice_room_active: this.voiceRoomActive() || undefined,
+          interests: this.selectedInterests() || undefined,
         },
         signal,
       );
@@ -455,6 +484,8 @@ export class DiscoveryComponent implements OnInit, OnDestroy {
     this.availableTimeEnd.set('');
     this.selectedSort.set('best_match');
     this.voiceRoomActive.set(false);
+    this.selectedInterests.set('');
+    this.showAllInterests.set(false);
     void this.searchPartners();
   }
 
