@@ -100,6 +100,36 @@ Baseline count at audit time: ~60+ files (see exploration report; exact rebaseli
 
 **Sync coverage target**: every route above gets at least one synced screen preview; every modal in §3 gets one; every primitive in §2 gets one. Track completion as each Phase 4 feature-folder PR merges — update this doc's checkboxes (add `- [ ]`/`- [x]` per group above) as sync work actually happens, rather than leaving this as a static snapshot.
 
+## 6a. Major finding (session 2): unresolved git conflict markers checked into `main`
+
+While migrating `report-user-modal` and `appearance-settings` this session, found both had literal
+unresolved `<<<<<<< HEAD` / `=======` / `>>>>>>> origin/main` conflict markers checked into their
+`.spec.ts` files - meaning those files are syntactically broken and cannot be parsed/compiled at
+all. Both were fixed as an incidental part of the work that touched them (kept both sides' tests
+where they covered genuinely different things, per file).
+
+A codebase-wide sweep (`grep -rlE "^<<<<<<< |^=======$|^>>>>>>> " frontend/src`) found **13 more
+files** with the same problem, not yet fixed (out of scope for this session unless organically
+touched by other design-system work):
+
+- `components/correction-modal/correction-modal.component.html`
+- `components/moderation/moderation-panel.html`
+- `components/moments-feed/moments-feed.component.html`
+- `components/moderation-queue/moderation-queue.component.html`
+- `components/classrooms-marketplace/classrooms-marketplace.html`
+- `components/settings/settings.component.ts`
+- `components/trust-safety-modal/trust-safety-modal.component.spec.ts`
+- `components/flashcard-deck/flashcard-deck.component.ts`
+- `components/audio-room/audio-room.component.html`
+- `components/admin-actions/admin-actions.component.ts`
+- `pages/block-management/block-management.component.spec.ts`
+- `pages/admin/blocks/admin-blocks.component.spec.ts`
+- `pages/admin/admin-users.component.html`
+
+This is a distinct problem from the design-system work (merge hygiene, not tokens/primitives) and
+a likely contributor to the pre-existing `npm run build` breakage noted throughout this doc and in
+memory (`project_hellotalk_build_state`). Worth a dedicated cleanup pass, separate from the redesign.
+
 ## 6. Open questions carried into Phase 1
 
 - Exact palette/typeface direction is being designed fresh (not Claude-inspired) — see `tokens.html` sync for the proposal and review checkpoint.

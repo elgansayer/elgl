@@ -271,6 +271,7 @@ export class I18nService {
     'discovery.interestsLabel': 'Interests',
     'discovery.filterPillsLabel': 'Filter options',
     join_group_aria: 'Join group {{name}}',
+    'settings.languageSelectAriaLabel': 'Select language',
     'messageContextMenu.ariaLabel': 'Message actions',
     'messageContextMenu.copy': 'Copy',
     'messageContextMenu.favourite': 'Favourite',
