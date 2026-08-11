@@ -53,7 +53,8 @@ def main(arguments: list[str] | None = None) -> int:
         if args.command == "doctor":
             checks = run_doctor(config, online=args.online)
             for check in checks:
-                print(f"{'PASS' if check.passed else 'FAIL'} {check.name}: {check.detail}")
+                status = "FAIL" if not check.passed else "WARN" if check.warning else "PASS"
+                print(f"{status} {check.name}: {check.detail}")
             return 0 if all(check.passed for check in checks) else 1
         if args.command == "auth":
             authenticate_openai(config, force=args.force)

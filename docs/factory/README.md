@@ -66,9 +66,16 @@ authentication break-glass exception.
 
 Store credentials only in `/etc/hellotalk-factory/factory.env`, never in commands or chat.
 
-`FACTORY_MAX_PARALLEL_JOBS` defaults to three. Issue agents implement and review in
-parallel, while the memory-heavy local verification suite is serialised for safe operation on
-the 4 GB VPS. Increase this only after increasing the systemd memory limit and available RAM.
+`FACTORY_MAX_PARALLEL_JOBS` defaults to five for the current 8 GB/4 vCPU host. Issue agents implement and
+review in parallel, while the memory-heavy local verification suite is serialised. Reduce this to two or
+three if swap usage grows; increase it only after measuring memory and CPU saturation.
+
+All open issues are eligible by default. `needs-human`, `factory-skip` and `duplicate` always exclude an
+issue. Set `FACTORY_REQUIRE_READY_LABEL=true` if manual queueing is preferred.
+
+When a quarantined issue has an uncommitted worktree, the daemon archives it under
+`/var/lib/hellotalk-factory/recovery/` before removing the Git worktree registration. The branch is never
+deleted, so a human can restore the work later.
 
 ```bash
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models opencode-go
@@ -92,6 +99,10 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metr
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
 ```
+
+Both units are enabled system-wide and the health timer is persistent, so the daemon and health checks start
+again after a machine reboot. Verify this with `systemctl is-enabled hellotalk-factory.service
+hellotalk-factory-health.timer` after deployment.
 
 Emergency stop: `sudo systemctl disable --now hellotalk-factory.service hellotalk-factory-health.timer`.
 

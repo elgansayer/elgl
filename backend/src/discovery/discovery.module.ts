@@ -8,6 +8,7 @@ import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
 import { CorrectorScoreModule } from '../corrector-score/corrector-score.module';
+import { DiscoveryCacheInvalidationService } from './discovery-cache-invalidation.service';
 
 @Module({
   imports: [

@@ -26,6 +26,7 @@ def config(tmp_path: Path) -> FactoryConfig:
             "FACTORY_LOG_DIR": str(tmp_path / "log"),
             "FACTORY_PROFILE_STORE": str(tmp_path / "profiles"),
             "FACTORY_WORKTREE_DIR": str(tmp_path / "worktrees"),
+            "FACTORY_RECOVERY_DIR": str(tmp_path / "recovery"),
             "OPENCODE_GO_API_KEY": "key",
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
             "GITHUB_TOKEN": "token",

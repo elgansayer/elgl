@@ -80,6 +80,7 @@ def config(tmp_path: Path) -> FactoryConfig:
             "FACTORY_LOG_DIR": str(tmp_path / "log"),
             "FACTORY_PROFILE_STORE": str(tmp_path / "profiles"),
             "FACTORY_WORKTREE_DIR": str(tmp_path / "worktrees"),
+            "FACTORY_RECOVERY_DIR": str(tmp_path / "recovery"),
             "OPENCODE_GO_API_KEY": "key",
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
             "GITHUB_TOKEN": "token",
@@ -111,7 +112,7 @@ def test_refresh_releases_closed_issue_before_pull_request(
     worktree.mkdir(parents=True)
     removed: list[Path] = []
     monkeypatch.setattr(
-        GitWorkflow, "remove_worktree", lambda workflow, path: removed.append(path)
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.tasks = []
 
@@ -134,7 +135,7 @@ def test_refresh_does_not_remove_a_closed_issue_while_its_worker_is_active(
     worktree.mkdir(parents=True)
     removed: list[Path] = []
     monkeypatch.setattr(
-        GitWorkflow, "remove_worktree", lambda workflow, path: removed.append(path)
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.tasks = []
 
@@ -154,7 +155,7 @@ def test_refresh_releases_a_closed_quarantined_issue(
     pipeline.jobs.save({"42": job})
     worktree = pipeline.config.worktree_dir / "issue-42"
     worktree.mkdir(parents=True)
-    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path: None)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     github.tasks = []
 
     refreshed = pipeline.refresh()
@@ -187,7 +188,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: None)
     monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
     monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "head")
-    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path: None)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
     pipeline = FactoryPipeline(
         factory_config,

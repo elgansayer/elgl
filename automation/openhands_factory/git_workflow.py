@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+from datetime import UTC, datetime
 from pathlib import Path
 
 from openhands_factory.exceptions import RepositorySafetyError
@@ -103,13 +105,36 @@ class GitWorkflow:
         if result.returncode != 0:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")
 
-    def remove_worktree(self, worktree: Path) -> None:
+    def remove_worktree(self, worktree: Path, *, force: bool = False) -> None:
         resolved_root = self.repository.parent.resolve()
         resolved_worktree = worktree.resolve()
         if not resolved_worktree.is_relative_to(resolved_root):
             raise RepositorySafetyError("Refusing to remove a worktree outside the factory root")
-        result = self.runner(
-            ("git", "worktree", "remove", str(resolved_worktree)), self.repository
-        )
+        arguments = ["git", "worktree", "remove"]
+        if force:
+            arguments.append("--force")
+        arguments.append(str(resolved_worktree))
+        result = self.runner(tuple(arguments), self.repository)
         if result.returncode != 0:
             raise RepositorySafetyError(f"Could not remove worktree: {result.stderr}")
+
+    def archive_worktree(self, worktree: Path, recovery_root: Path) -> Path:
+        """Copy a dirty worktree before it is retired during durable recovery."""
+        resolved_root = self.repository.parent.resolve()
+        resolved_worktree = worktree.resolve()
+        resolved_recovery = recovery_root.resolve()
+        if not resolved_worktree.is_relative_to(resolved_root):
+            raise RepositorySafetyError("Refusing to archive a worktree outside the factory root")
+        if resolved_recovery == resolved_worktree or resolved_recovery.is_relative_to(
+            resolved_worktree
+        ):
+            raise RepositorySafetyError("Recovery directory cannot be inside the worktree")
+        resolved_recovery.mkdir(parents=True, exist_ok=False)
+        shutil.copytree(resolved_worktree, resolved_recovery, symlinks=True, dirs_exist_ok=True)
+        (resolved_recovery / "RECOVERY.txt").write_text(
+            "This is a preserved OpenHands worktree archive. The original Git worktree "
+            "registration was removed after the daemon could no longer safely retire it.\n"
+            f"Archived at: {datetime.now(UTC).isoformat()}\n",
+            encoding="utf-8",
+        )
+        return resolved_recovery

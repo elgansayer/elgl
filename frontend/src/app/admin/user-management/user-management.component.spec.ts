@@ -5,6 +5,8 @@ import { Pipe, PipeTransform, Component } from '@angular/core';
 import { vi } from 'vitest';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
+import { AppCardComponent } from '../../components/primitives/card/card.component';
+import { AppSkeletonLoaderComponent } from '../../components/primitives/skeleton-loader/skeleton-loader.component';
 
 @Pipe({ name: 't', standalone: true })
 class MockTranslatePipe implements PipeTransform {
@@ -53,7 +55,14 @@ describe('UserManagementComponent', () => {
       ]
     })
     .overrideComponent(UserManagementComponent, {
-      remove: { imports: [TranslatePipe, SanitiseHtmlPipe] },
+      remove: {
+        imports: [
+          TranslatePipe,
+          SanitiseHtmlPipe,
+          AppCardComponent,
+          AppSkeletonLoaderComponent,
+        ],
+      },
       add: { imports: [MockTranslatePipe, MockSanitiseHtmlPipe, MockAppCardComponent, MockAppSkeletonLoaderComponent] }
     })
     .compileComponents();
@@ -69,6 +78,7 @@ describe('UserManagementComponent', () => {
   it('should load users on init', async () => {
     fixture.detectChanges(); // triggers ngOnInit
     await fixture.whenStable();
+    await vi.waitFor(() => expect(component.isLoading()).toBe(false));
     expect(adminServiceMock.listUsers).toHaveBeenCalled();
     expect(component.users()).toEqual(mockUsers);
     expect(component.isLoading()).toBe(false);
@@ -80,8 +90,9 @@ describe('UserManagementComponent', () => {
 
     fixture.detectChanges();
     await fixture.whenStable();
+    await vi.waitFor(() => expect(component.isLoading()).toBe(false));
 
-    expect(consoleSpy).toHaveBeenCalled();
+    expect(component.loadError()).toBe(true);
     expect(component.isLoading()).toBe(false);
     consoleSpy.mockRestore();
   });

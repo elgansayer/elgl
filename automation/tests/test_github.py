@@ -24,13 +24,13 @@ def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> N
             "number": 10,
             "title": "Normal",
             "body": "Body",
-            "labels": [],
+            "labels": [{"name": "factory-ready"}],
         },
         {
             "number": 11,
             "title": "Build failure",
             "body": "Broken",
-            "labels": [{"name": "guardian-alert"}],
+            "labels": [{"name": "guardian-alert"}, {"name": "factory-ready"}],
         },
         {
             "number": 12,

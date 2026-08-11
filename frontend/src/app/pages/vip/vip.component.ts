@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { JoyrideDirective } from 'ngx-joyride';
+import { JoyrideModule } from 'ngx-joyride';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppButtonPrimaryComponent } from '../../components/primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../../components/primitives/button-secondary/button-secondary.component';
@@ -32,7 +32,7 @@ interface FaqItem {
 @Component({
   selector: 'app-vip',
   imports: [
-    JoyrideDirective,
+    JoyrideModule,
     TranslatePipe,
     AppButtonPrimaryComponent,
     AppButtonSecondaryComponent,

@@ -9,18 +9,22 @@ import { NetworkStatusService } from './network-status.service';
  * service's Promise wrappers resolve predictably.
  */
 function idbReq(result?: unknown) {
-  const r: Record<string, unknown> = { result: result ?? null, _onsuccess: null, _onerror: null, _onupgradeneeded: null };
+  const r: Record<string, unknown> & {
+    on_success: (() => void) | null;
+    on_error: ((e: unknown) => void) | null;
+    on_upgrade_needed: ((e: unknown) => void) | null;
+  } = { result: result ?? null, on_success: null, on_error: null, on_upgrade_needed: null };
   Object.defineProperty(r, 'onsuccess', {
-    get() { return r._onsuccess; },
-    set(f: (() => void) | null) { r._onsuccess = f; if (f) setTimeout(f, 0); },
+    get() { return r.on_success; },
+    set(f: (() => void) | null) { r.on_success = f; if (f) setTimeout(f, 0); },
   });
   Object.defineProperty(r, 'onerror', {
-    get() { return r._onerror; },
-    set(f: ((e: unknown) => void) | null) { r._onerror = f; },
+    get() { return r.on_error; },
+    set(f: ((e: unknown) => void) | null) { r.on_error = f; },
   });
   Object.defineProperty(r, 'onupgradeneeded', {
-    get() { return r._onupgradeneeded; },
-    set(f: ((e: unknown) => void) | null) { r._onupgradeneeded = f; },
+    get() { return r.on_upgrade_needed; },
+    set(f: ((e: unknown) => void) | null) { r.on_upgrade_needed = f; },
   });
   return r;
 }
@@ -68,7 +72,7 @@ describe('OfflineClassroomService', () => {
         const s = getStore(name);
         return {
           put: (v: Record<string, unknown>) => {
-            s.set(String(v.id ?? v.key ?? 'unknown'), v);
+            s.set(String(v['id'] ?? v['key'] ?? 'unknown'), v);
             return idbReq();
           },
           get: (key: string) => idbReq(s.get(key) ?? null),
@@ -82,7 +86,7 @@ describe('OfflineClassroomService', () => {
         completeCallback = f;
         if (f) setTimeout(f, 0);
       },
-      get onerror() { return null as unknown; },
+      get onerror() { return null; },
       set onerror(_f: ((e: unknown) => void) | null) {},
     };
   }

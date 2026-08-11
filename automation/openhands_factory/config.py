@@ -18,6 +18,7 @@ class FactoryConfig(BaseModel):
     log_dir: Path = Path("/var/log/hellotalk-factory")
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
+    recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
     openai_model: str = "gpt-5.6-sol"
     opencode_api_key: SecretStr
     opencode_base_url: str = "https://opencode.ai/zen/go/v1"
@@ -35,7 +36,7 @@ class FactoryConfig(BaseModel):
     max_task_minutes: int = 120
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
-    max_parallel_jobs: int = 3
+    max_parallel_jobs: int = 5
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
     oauth_degraded_hours: int = 24
@@ -43,13 +44,17 @@ class FactoryConfig(BaseModel):
     max_no_pr_hours: float = 6
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
+    require_ready_label: bool = False
+    ready_label: str = "factory-ready"
     telegram_bot_token: SecretStr | None = None
     telegram_chat_id: SecretStr | None = None
     podman_path: Path = Path("/usr/bin/podman")
     task_image: str = "localhost/hellotalk-factory-worker:current"
     dry_run: bool = False
 
-    @field_validator("repository", "state_dir", "log_dir", "profile_store", "worktree_dir")
+    @field_validator(
+        "repository", "state_dir", "log_dir", "profile_store", "worktree_dir", "recovery_dir"
+    )
     @classmethod
     def absolute_paths(cls, value: Path) -> Path:
         if not value.is_absolute():
@@ -115,6 +120,9 @@ class FactoryConfig(BaseModel):
                 worktree_dir=Path(
                     env.get("FACTORY_WORKTREE_DIR", cls.model_fields["worktree_dir"].default)
                 ),
+                recovery_dir=Path(
+                    env.get("FACTORY_RECOVERY_DIR", cls.model_fields["recovery_dir"].default)
+                ),
                 openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.6-sol"),
                 opencode_api_key=SecretStr(required("OPENCODE_GO_API_KEY")),
                 opencode_base_url=env.get(
@@ -140,7 +148,7 @@ class FactoryConfig(BaseModel):
                 max_task_minutes=int(env.get("FACTORY_MAX_TASK_MINUTES", "120")),
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
-                max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "3")),
+                max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
                 cooldown_seconds=int(env.get("FACTORY_COOLDOWN_SECONDS", "60")),
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
@@ -148,6 +156,8 @@ class FactoryConfig(BaseModel):
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=env.get("GITHUB_REPOSITORY", "elgansayer/elgl"),
+                require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", False),
+                ready_label=env.get("FACTORY_READY_LABEL", "factory-ready"),
                 telegram_bot_token=SecretStr(env["TELEGRAM_BOT_TOKEN"])
                 if env.get("TELEGRAM_BOT_TOKEN")
                 else None,

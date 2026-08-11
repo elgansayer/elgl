@@ -78,7 +78,6 @@ export interface UserProfile {
   auto_play_voice_notes?: boolean;
   chat_enter_to_send?: boolean;
   chat_text_size?: 'small' | 'medium' | 'large';
-  auto_play_voice_notes?: boolean;
   auto_download_media?: boolean;
   auto_download_wifi_only?: boolean;
   auto_download_preference?: 'wifi' | 'cellular';

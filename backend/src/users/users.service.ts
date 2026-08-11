@@ -416,7 +416,6 @@ export class UsersService {
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
       silence_unknown_callers: false,
-      auto_play_voice_notes: false,
       auto_download_media: false,
       auto_download_wifi_only: false,
       auto_download_preference: 'wifi',

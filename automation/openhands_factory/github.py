@@ -40,10 +40,14 @@ class GitHubClient:
         token: str,
         runner: GitHubRunner = run_process,
         base_branch: str = "main",
+        require_ready_label: bool = True,
+        ready_label: str = "factory-ready",
     ) -> None:
         self.repository = repository
         self.workspace = workspace
         self.base_branch = base_branch
+        self.require_ready_label = require_ready_label
+        self.ready_label = ready_label
         self.runner = runner
         self.environment = {"GH_TOKEN": token}
 
@@ -87,6 +91,10 @@ class GitHubClient:
             }
             if labels.intersection({"factory-skip", "duplicate", "needs-human"}):
                 continue
+            if self.require_ready_label and not labels.intersection(
+                {self.ready_label, "factory-active", "guardian-alert"}
+            ):
+                continue
             priority = 0 if "guardian-alert" in labels else 10
             tasks.append(
                 Task(
@@ -101,6 +109,7 @@ class GitHubClient:
 
     def ensure_factory_labels(self) -> None:
         labels = {
+            "factory-ready": "1d76db",
             "factory-active": "0052cc",
             "factory-review": "5319e7",
             "factory-reviewed": "0e8a16",
