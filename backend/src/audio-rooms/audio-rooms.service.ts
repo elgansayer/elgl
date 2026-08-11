@@ -39,6 +39,7 @@ import {
 } from './dto/audio-room.dto';
 import { AudioRoomTokenDto } from './dto/audio-room-token.dto';
 import { TipHostDto } from './dto/tip-host.dto';
+import { RoomPreviewDto } from './dto/room-preview.dto';
 import {
   AudioRoomRecord,
   CaptionRecord,
@@ -634,6 +635,45 @@ export class AudioRoomsService implements OnModuleInit {
         display_name: profile?.display_name ?? 'Room Host',
         avatar_url: profile?.avatar_url ?? null,
       },
+    };
+  }
+
+  /**
+   * Returns a safe, public subset of room metadata for the SSR-rendered
+   * Voiceroom preview page. Only non-sensitive fields are exposed and
+   * private or missing rooms are treated as not found so their existence
+   * is not leaked to unauthenticated visitors.
+   */
+  async getRoomPreview(roomId: string): Promise<RoomPreviewDto> {
+    const supabase = this.supabaseService.getClient();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', roomId)
+      .single();
+    if (!response.data) throw new NotFoundException('Audio room not found');
+    const row = response.data as AudioRoomRow;
+    if (row.is_private) {
+      throw new NotFoundException('Audio room not found');
+    }
+    const profile = row.host_id
+      ? await this.usersService.getProfile(row.host_id)
+      : undefined;
+    return {
+      id: row.id,
+      room_name: row.room_name,
+      title: row.title,
+      language_pair: row.language_pair,
+      topic_tag: row.topic_tag,
+      level: row.level,
+      listeners_count: row.listeners_count,
+      is_active: row.is_active,
+      host: profile
+        ? {
+            display_name: profile.display_name,
+            avatar_url: profile.avatar_url,
+          }
+        : null,
     };
   }
 
