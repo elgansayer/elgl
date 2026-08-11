@@ -54,7 +54,7 @@ def test_provider_priority_order() -> None:
 def test_configured_three_provider_order_and_models() -> None:
     factory_config = FactoryConfig.from_environment(
         {
-            "OPENHANDS_OPENAI_MODEL": "gpt-5.6-sol",
+            "OPENHANDS_OPENAI_MODEL": "gpt-5.2-codex",
             "OPENCODE_GO_API_KEY": "not-a-real-key",
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
             "GITHUB_TOKEN": "not-a-real-token",
@@ -72,7 +72,7 @@ def test_configured_three_provider_order_and_models() -> None:
         ProviderName.GEMINI,
     ]
     assert [profile.model for profile in profiles] == [
-        "gpt-5.6-sol",
+        "gpt-5.2-codex",
         "openai/deepseek-v4-flash",
         "gemini/gemini-3.6-flash",
     ]
