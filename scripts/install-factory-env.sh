@@ -55,8 +55,8 @@ awk -v source="$SOURCE" '
     print
   }
   END {
-    for (index = 1; index <= source_count; index++) {
-      key = source_order[index]
+    for (position = 1; position <= source_count; position++) {
+      key = source_order[position]
       if (key in source_line) {
         print source_line[key]
         delete source_line[key]
