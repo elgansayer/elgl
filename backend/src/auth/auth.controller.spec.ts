@@ -147,4 +147,41 @@ describe('AuthController (unit)', () => {
       expect(result).toEqual({ enabled: true });
     });
   });
+
+  describe('throttle configuration for sensitive authentication endpoints', () => {
+    // Metadata keys used by @nestjs/throttler for the default named throttler.
+    const throttleLimitKey = 'THROTTLER:LIMITdefault';
+    const throttleTtlKey = 'THROTTLER:TTLdefault';
+
+    const throttledEndpoints: Array<{
+      method: keyof AuthController;
+      limit: number;
+      ttl: number;
+    }> = [
+      { method: 'changePassword', limit: 3, ttl: 60000 },
+      { method: 'enableTwoFactor', limit: 5, ttl: 300000 },
+      { method: 'verifyTwoFactor', limit: 5, ttl: 60000 },
+      { method: 'disableTwoFactor', limit: 3, ttl: 60000 },
+      { method: 'generateTransferLink', limit: 5, ttl: 60000 },
+      { method: 'consumeTransferLink', limit: 5, ttl: 60000 },
+      { method: 'swapTransferLink', limit: 5, ttl: 60000 },
+    ];
+
+    it.each(throttledEndpoints)(
+      'should limit $method to $limit requests per $ttl ms window',
+      ({ method, limit, ttl }) => {
+        const handler = AuthController.prototype[method];
+
+        expect(Reflect.getMetadata(throttleLimitKey, handler)).toBe(limit);
+        expect(Reflect.getMetadata(throttleTtlKey, handler)).toBe(ttl);
+      },
+    );
+
+    it('should leave the read-only two-factor status endpoint unthrottled', () => {
+      const handler = AuthController.prototype.twoFactorStatus;
+
+      expect(Reflect.getMetadata(throttleLimitKey, handler)).toBeUndefined();
+      expect(Reflect.getMetadata(throttleTtlKey, handler)).toBeUndefined();
+    });
+  });
 });

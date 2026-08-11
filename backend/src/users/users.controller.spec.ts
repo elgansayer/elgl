@@ -1143,4 +1143,30 @@ describe('UsersController', () => {
       expect(result).toEqual(updatedProfile);
     });
   });
+
+  describe('throttle configuration for account lifecycle endpoints', () => {
+    // Metadata keys used by @nestjs/throttler for the default named throttler.
+    const throttleLimitKey = 'THROTTLER:LIMITdefault';
+    const throttleTtlKey = 'THROTTLER:TTLdefault';
+
+    const throttledEndpoints: Array<{
+      method: keyof UsersController;
+      limit: number;
+      ttl: number;
+    }> = [
+      { method: 'deleteMyAccount', limit: 3, ttl: 60000 },
+      { method: 'permanentlyDeleteMyAccount', limit: 2, ttl: 300000 },
+      { method: 'restoreMyAccount', limit: 3, ttl: 60000 },
+    ];
+
+    it.each(throttledEndpoints)(
+      'should limit $method to $limit requests per $ttl ms window',
+      ({ method, limit, ttl }) => {
+        const handler = UsersController.prototype[method];
+
+        expect(Reflect.getMetadata(throttleLimitKey, handler)).toBe(limit);
+        expect(Reflect.getMetadata(throttleTtlKey, handler)).toBe(ttl);
+      },
+    );
+  });
 });
