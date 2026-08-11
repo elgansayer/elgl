@@ -253,6 +253,19 @@ export class UsersController {
     return this.usersService.getAvailableInterests();
   }
 
+  @Get('search')
+  async searchUsers(
+    @Query('q') query: string,
+    @CurrentUser() user: User | null,
+    @Query('limit') limit: number | undefined,
+  ): Promise<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  > {
+    if (!user) throw new UnauthorizedException();
+    if (!query || query.trim().length === 0) return [];
+    return this.usersService.searchUsers(query.trim(), user.id, limit ?? 10);
+  }
+
   @Get('me/badges')
   async getMyBadges(
     @CurrentUser() user: User | null,

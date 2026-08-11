@@ -2,13 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global RTL and Logical Property Styles */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap');
+
+/*
+ * "Relay" design system tokens - see docs/design-redesign-audit.md for the
+ * full rationale. Light and dark are each independently designed (not one
+ * inverted from the other); only the CSS variable names below are shared
+ * with tailwind.config.js, which is what lets every existing surface and
+ * text utility class in the app pick up the new palette without a template
+ * touch.
+ */
 @layer base {
   :root {
     --app-motion-fast: 140ms;
     --app-motion-base: 180ms;
     --app-motion-slow: 260ms;
     --app-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* Light theme */
+    --surface-50-rgb: 255, 255, 255;
+    --surface-100-rgb: 228, 231, 237;
+    --surface-200-rgb: 253, 253, 254;
+    --surface-300-rgb: 241, 243, 247;
+    --surface-400-rgb: 233, 235, 241;
+    --surface-500-rgb: 246, 247, 250;
+    --surface-600-rgb: 219, 223, 230;
+    --surface-700-rgb: 199, 204, 214;
+    --surface-800-rgb: 154, 161, 175;
+    --surface-900-rgb: 18, 21, 28;
+
+    --text-primary-rgb: 18, 21, 28;
+    --text-secondary-rgb: 74, 81, 99;
+    --text-muted-rgb: 107, 113, 130; /* darkened from initial pass to clear 4.5:1 vs surface-500 */
+
+    --color-primary-rgb:
+      198, 82, 48; /* Ember - darkened from initial pass so on-fill(paper) text clears 4.5:1 */
+    --color-primary: #c65230;
+    --color-secondary-rgb: 26, 132, 120; /* Tide, same reasoning */
+    --color-danger-rgb: 217, 58, 58;
+    --color-success-rgb: 25, 134, 84;
+    --color-warning-rgb: 161, 108, 9;
+    --color-vip-rgb: 153, 111, 16;
+    --color-accent-rgb: 204, 72, 60; /* raspberry-ember, darkened so on-fill(paper) clears 4.5:1 */
+
+    --on-fill-rgb: 255, 255, 255; /* paper */
+    --shadow-color-rgb: 16, 19, 28;
+  }
+
+  .dark {
+    --surface-50-rgb: 58, 65, 82;
+    --surface-100-rgb: 46, 52, 68;
+    --surface-200-rgb: 30, 35, 48;
+    --surface-300-rgb: 35, 40, 56;
+    --surface-400-rgb: 25, 29, 40;
+    --surface-500-rgb: 18, 21, 28;
+    --surface-600-rgb: 13, 15, 21;
+    --surface-700-rgb: 10, 12, 17;
+    --surface-800-rgb: 6, 7, 10;
+    --surface-900-rgb: 0, 0, 0;
+
+    --text-primary-rgb: 243, 244, 247;
+    --text-secondary-rgb: 180, 186, 201;
+    --text-muted-rgb: 126, 132, 148;
+
+    --color-primary-rgb: 255, 122, 82; /* Ember, brighter for dark bg */
+    --color-primary: #ff7a52;
+    --color-secondary-rgb: 53, 214, 192; /* Tide, brighter for dark bg */
+    --color-danger-rgb: 255, 107, 107;
+    --color-success-rgb: 52, 211, 153;
+    --color-warning-rgb: 242, 179, 61;
+    --color-vip-rgb: 232, 184, 75;
+    --color-accent-rgb:
+      225, 79, 66; /* raspberry-ember, already clears 4.5:1 vs on-fill(ink) unchanged */
+
+    --on-fill-rgb:
+      18, 21, 28; /* ink - fills are brighter in dark mode, read better with a dark label */
+    --shadow-color-rgb: 0, 0, 0;
   }
 
   html {
@@ -17,8 +86,7 @@
 
   html,
   body {
-    /* Enforce Dark Theme Defaults */
-    @apply antialiased text-text-primary bg-surface-500 m-0 p-0 h-full w-full;
+    @apply antialiased text-text-primary bg-surface-500 m-0 p-0 h-full w-full font-sans;
   }
 
   /* Support RTL mirroring natively */
@@ -37,14 +105,114 @@
   }
 }
 
+/* Skeleton stagger animation for list items */
+@keyframes skeleton-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.skeleton-stagger {
+  animation: skeleton-stagger-in 0.4s ease-out both;
+}
+
+/* Skeleton shimmer animation */
+@keyframes skeleton-shimmer {
+  0% {
+    opacity: 0.6;
+    background-position: -200% 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-200, #2a2a2a) 25%,
+    var(--surface-100, #3a3a3a) 50%,
+    var(--surface-200, #2a2a2a) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  will-change: opacity, background-position;
+}
+
+/* Empty state fade-in and icon pulse */
+@keyframes empty-state-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.empty-state-fade-in {
+  animation: empty-state-fade-in 0.35s ease-out;
+}
+@keyframes empty-state-icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+.empty-state-icon {
+  animation: empty-state-icon-pulse 3s ease-in-out infinite;
+}
+
+/* Content state transition animation */
+@keyframes content-state-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.content-state-enter {
+  animation: content-state-enter 0.25s ease-out;
+}
+/* Partner grid enter animation */
+@keyframes partner-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.partner-card-enter {
+  animation: partner-card-enter 0.3s ease-out both;
+}
+
 /* UI Primitives */
 @layer components {
   .app-card {
-    @apply rounded-sheet border border-surface-100 bg-surface-200 shadow-card;
+    // Converged with the <app-card> component's radius (was rounded-sheet
+    // here vs rounded-2xl there - two different shapes for "the same"
+    // primitive). Full structural convergence (deleting this class in
+    // favour of the component) is Phase 3 work.
+    @apply rounded-card border border-surface-100 bg-surface-200 shadow-card;
   }
 
   .app-screen {
-    @apply mx-auto max-w-2xl space-y-4;
+    @apply ms-auto me-auto max-w-2xl space-y-4;
   }
 
   .app-padded {
@@ -106,14 +274,30 @@
   }
 
   .word-token-new {
-    @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded px-0.5 transition-colors cursor-pointer;
+    @apply bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 border-b border-blue-400 rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
   }
 
   .word-token-learning {
-    @apply bg-vip/20 text-vip-light hover:bg-vip/40 border-b border-vip rounded px-0.5 transition-colors cursor-pointer;
+    @apply bg-vip/20 text-vip-light hover:bg-vip/40 border-b border-vip rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
   }
 
   .word-token-known {
-    @apply text-text-primary hover:bg-surface-100 rounded px-0.5 transition-colors cursor-pointer;
+    @apply text-text-primary hover:bg-surface-100 rounded ps-0.5 pe-0.5 transition-colors cursor-pointer;
+  }
+
+  /* Fade-in animation for modals and overlays */
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 }

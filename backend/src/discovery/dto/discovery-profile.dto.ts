@@ -74,7 +74,8 @@ export class DiscoveryProfileDto {
   correction_ratio!: number;
 
   @ApiProperty({
-    description: 'Serious learner status (auto-calculated: streak > 7 AND correction ratio >= 0.8)',
+    description:
+      'Serious learner status (auto-calculated: streak > 7 AND correction ratio >= 0.8)',
     example: true,
   })
   is_serious_learner!: boolean;
@@ -86,14 +87,16 @@ export class DiscoveryProfileDto {
   is_partner_of_week?: boolean;
 
   @ApiProperty({
-    description: 'Distance in metres from search coordinates (geospatial searches only)',
+    description:
+      'Distance in metres from search coordinates (geospatial searches only)',
     example: 3241.5,
     nullable: true,
   })
   distance_metres?: number | null;
 
   @ApiProperty({
-    description: 'Self-assessed proficiency level (e.g. Beginner, Intermediate, Advanced)',
+    description:
+      'Self-assessed proficiency level (e.g. Beginner, Intermediate, Advanced)',
     example: 'Intermediate',
     nullable: true,
   })

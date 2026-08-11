@@ -2,8 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
 import { DiscoveryDegradationService } from './discovery-degradation.service';
+import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 
 jest.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
@@ -40,9 +42,15 @@ describe('DiscoveryController', () => {
             getProfile: jest.fn(),
           },
         },
+        {
+          provide: DiscoveryRateLimiterGuard,
+          useValue: { canActivate: jest.fn().mockReturnValue(true) },
+        },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(DiscoveryRateLimiterGuard)
       .useValue({ canActivate: jest.fn().mockReturnValue(true) })
       .compile();
 

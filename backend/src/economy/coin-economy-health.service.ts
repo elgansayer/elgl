@@ -61,7 +61,9 @@ export class CoinEconomyHealthService {
    */
   clearFeatureDegradation(feature: string): void {
     if (this.degradedFeatures.has(feature)) {
-      this.logger.log(`Economy feature "${feature}" recovered - degradation cleared`);
+      this.logger.log(
+        `Economy feature "${feature}" recovered - degradation cleared`,
+      );
     }
     this.degradedFeatures.delete(feature);
   }

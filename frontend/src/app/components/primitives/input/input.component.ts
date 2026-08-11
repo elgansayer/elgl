@@ -44,7 +44,7 @@ export class AppInputComponent {
 
   readonly inputClasses = computed(() => {
     const base =
-      'block w-full rounded-2xl border ps-4 pe-4 pt-2.5 pb-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary';
+      'block w-full rounded-app border ps-4 pe-4 pt-2.5 pb-2.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary';
     const state = this.disabled()
       ? 'bg-surface-100 text-text-muted border-surface-100 cursor-not-allowed'
       : 'bg-surface-200 border-surface-100 text-text-primary';

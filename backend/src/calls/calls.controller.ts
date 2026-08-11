@@ -8,6 +8,7 @@ import {
   Request,
   UseInterceptors,
 } from '@nestjs/common';
+import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { CallsService } from './calls.service';
 import { CreateGroupCallDto } from './dto/create-group-call.dto';
 import { InitiateCallDto } from './dto/initiate-call.dto';
@@ -37,7 +38,11 @@ interface RequestWithUser {
 @Controller('calls')
 @ApiBearerAuth()
 export class CallsController {
-  constructor(private readonly callsService: CallsService) {}
+  constructor(
+    private readonly callsService: CallsService,
+    @InjectPinoLogger(CallsController.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   @Post('initiate')
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
@@ -55,14 +60,47 @@ export class CallsController {
     schema: {
       type: 'object',
       properties: {
-        room_name: { type: 'string', description: 'LiveKit room name', example: 'call_a1b2c3d4-e5f6-7890-abcd-ef1234567890' },
-        caller_token: { type: 'string', description: 'LiveKit access token for the caller', example: 'eyJhbGciOi...' },
-        callee_token: { type: 'string', description: 'LiveKit access token for the callee', example: 'eyJhbGciOi...' },
-        e2ee_key: { type: 'string', description: 'Base64-encoded E2EE key for end-to-end encryption', example: 'dGhpcyBpcyBhIDMyLWJ5dGUgZW5jcnlwdGlvbiBrZXk=' },
-        is_video: { type: 'boolean', description: 'Whether this is a video call', example: true },
-        call_id: { type: 'string', description: 'Unique call identifier', example: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321' },
-        waiting: { type: 'boolean', description: 'Whether the callee is busy and the call has been queued', example: false },
-        encryption: { type: 'string', description: 'Encryption type used', example: 'e2ee' },
+        room_name: {
+          type: 'string',
+          description: 'LiveKit room name',
+          example: 'call_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        },
+        caller_token: {
+          type: 'string',
+          description: 'LiveKit access token for the caller',
+          example: 'eyJhbGciOi...',
+        },
+        callee_token: {
+          type: 'string',
+          description: 'LiveKit access token for the callee',
+          example: 'eyJhbGciOi...',
+        },
+        e2ee_key: {
+          type: 'string',
+          description: 'Base64-encoded E2EE key for end-to-end encryption',
+          example: 'dGhpcyBpcyBhIDMyLWJ5dGUgZW5jcnlwdGlvbiBrZXk=',
+        },
+        is_video: {
+          type: 'boolean',
+          description: 'Whether this is a video call',
+          example: true,
+        },
+        call_id: {
+          type: 'string',
+          description: 'Unique call identifier',
+          example: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321',
+        },
+        waiting: {
+          type: 'boolean',
+          description:
+            'Whether the callee is busy and the call has been queued',
+          example: false,
+        },
+        encryption: {
+          type: 'string',
+          description: 'Encryption type used',
+          example: 'e2ee',
+        },
       },
     },
   })
@@ -95,17 +133,49 @@ export class CallsController {
     schema: {
       type: 'object',
       properties: {
-        room_name: { type: 'string', description: 'LiveKit room name', example: 'group_a1b2c3d4-e5f6-7890-abcd-ef1234567890' },
-        tokens: { type: 'array', items: { type: 'string' }, description: 'LiveKit access tokens for all participants', example: ['eyJhbG...', 'eyJhbG...'] },
-        e2ee_key: { type: 'string', description: 'Base64-encoded E2EE key', example: 'dGhpcyBpcyBhIDMyLWJ5dGUgZW5jcnlwdGlvbiBrZXk=' },
-        is_video: { type: 'boolean', description: 'Whether this is a video call', example: true },
-        call_id: { type: 'string', description: 'Unique call identifier', example: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321' },
-        participant_limit: { type: 'number', description: 'Maximum participant count', example: 10 },
-        encryption: { type: 'string', description: 'Encryption type used', example: 'e2ee' },
+        room_name: {
+          type: 'string',
+          description: 'LiveKit room name',
+          example: 'group_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        },
+        tokens: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'LiveKit access tokens for all participants',
+          example: ['eyJhbG...', 'eyJhbG...'],
+        },
+        e2ee_key: {
+          type: 'string',
+          description: 'Base64-encoded E2EE key',
+          example: 'dGhpcyBpcyBhIDMyLWJ5dGUgZW5jcnlwdGlvbiBrZXk=',
+        },
+        is_video: {
+          type: 'boolean',
+          description: 'Whether this is a video call',
+          example: true,
+        },
+        call_id: {
+          type: 'string',
+          description: 'Unique call identifier',
+          example: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321',
+        },
+        participant_limit: {
+          type: 'number',
+          description: 'Maximum participant count',
+          example: 10,
+        },
+        encryption: {
+          type: 'string',
+          description: 'Encryption type used',
+          example: 'e2ee',
+        },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Bad request - participant limit exceeded or invalid count.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - participant limit exceeded or invalid count.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async createGroupCall(
     @Request() req: RequestWithUser,
@@ -118,7 +188,9 @@ export class CallsController {
   }
 
   @Get('active')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
+  )
   @ApiOperation({
     summary: 'List active calls for the current user',
     description:
@@ -151,14 +223,20 @@ export class CallsController {
   }
 
   @Get('active/:room_name')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
+  )
   @ApiOperation({
     summary: 'Get details of a specific active call',
     description:
       'Returns details for a specific active call identified by room name. ' +
-      'Throws 400 if the call is not found in the user\'s active calls.',
+      "Throws 400 if the call is not found in the user's active calls.",
   })
-  @ApiParam({ name: 'room_name', description: 'LiveKit room name', example: 'call_abc123' })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name',
+    example: 'call_abc123',
+  })
   @ApiResponse({
     status: 200,
     description: 'Active call details.',
@@ -185,7 +263,9 @@ export class CallsController {
   }
 
   @Get('waiting')
-  @UseInterceptors(new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]))
+  @UseInterceptors(
+    new CacheControlInterceptor(CACHE_EDGE_SHORT, [CACHE_TAG_CALLS]),
+  )
   @ApiOperation({
     summary: 'List waiting (queued) calls for the current user',
     description:
@@ -220,7 +300,7 @@ export class CallsController {
     description:
       'Places the current active call on hold and accepts a waiting call. ' +
       'Both calls must belong to the authenticated user. ' +
-      'Returns the target call details and the held call\'s room name.',
+      "Returns the target call details and the held call's room name.",
   })
   @ApiResponse({
     status: 200,
@@ -228,16 +308,40 @@ export class CallsController {
     schema: {
       type: 'object',
       properties: {
-        room_name: { type: 'string', description: 'Target room name (the waiting call being answered)', example: 'call_waiting123' },
-        callee_token: { type: 'string', description: 'Callee token for the target call', example: 'eyJhbGci...' },
-        e2ee_key: { type: 'string', description: 'E2EE key for the target call', example: 'dGhpcyBp...' },
-        is_video: { type: 'boolean', description: 'Whether the target call is video', example: true },
-        held_call_room_name: { type: 'string', description: 'Room name of the call placed on hold', example: 'call_current123' },
+        room_name: {
+          type: 'string',
+          description: 'Target room name (the waiting call being answered)',
+          example: 'call_waiting123',
+        },
+        callee_token: {
+          type: 'string',
+          description: 'Callee token for the target call',
+          example: 'eyJhbGci...',
+        },
+        e2ee_key: {
+          type: 'string',
+          description: 'E2EE key for the target call',
+          example: 'dGhpcyBp...',
+        },
+        is_video: {
+          type: 'boolean',
+          description: 'Whether the target call is video',
+          example: true,
+        },
+        held_call_room_name: {
+          type: 'string',
+          description: 'Room name of the call placed on hold',
+          example: 'call_current123',
+        },
         success: { type: 'boolean', example: true },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Bad request - call not found, same call, or no waiting calls.' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request - call not found, same call, or no waiting calls.',
+  })
   switchCall(@Request() req: RequestWithUser, @Body() dto: SwitchCallDto) {
     const userId = req.user?.id || 'dummy_caller_id';
     return this.callsService.switchCall(
@@ -255,7 +359,11 @@ export class CallsController {
       'Accepts a specific waiting call for the authenticated user. ' +
       'Any other active calls are placed on hold before accepting the waiting call.',
   })
-  @ApiParam({ name: 'room_name', description: 'LiveKit room name of the waiting call to accept', example: 'call_waiting123' })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name of the waiting call to accept',
+    example: 'call_waiting123',
+  })
   @ApiResponse({
     status: 200,
     description: 'Waiting call accepted successfully.',
@@ -266,7 +374,10 @@ export class CallsController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Waiting call not found or no waiting calls.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Waiting call not found or no waiting calls.',
+  })
   acceptWaitingCall(
     @Request() req: RequestWithUser,
     @Param('room_name') roomName: string,
@@ -284,7 +395,11 @@ export class CallsController {
       'Places the specified active call on hold for the authenticated user. ' +
       'The call remains active but is marked as held.',
   })
-  @ApiParam({ name: 'room_name', description: 'LiveKit room name of the call to place on hold', example: 'call_abc123' })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name of the call to place on hold',
+    example: 'call_abc123',
+  })
   @ApiResponse({
     status: 200,
     description: 'Call placed on hold successfully.',
@@ -313,7 +428,11 @@ export class CallsController {
       'Resumes a call that was previously placed on hold by the authenticated user. ' +
       'Marks the call as no longer held.',
   })
-  @ApiParam({ name: 'room_name', description: 'LiveKit room name of the held call to resume', example: 'call_abc123' })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name of the held call to resume',
+    example: 'call_abc123',
+  })
   @ApiResponse({
     status: 200,
     description: 'Call resumed successfully.',
@@ -340,9 +459,13 @@ export class CallsController {
     summary: 'Leave an active call',
     description:
       'Removes the authenticated user from the specified active call. ' +
-      'If this was the user\'s last active call, their entire call map is cleaned up.',
+      "If this was the user's last active call, their entire call map is cleaned up.",
   })
-  @ApiParam({ name: 'room_name', description: 'LiveKit room name of the call to leave', example: 'call_abc123' })
+  @ApiParam({
+    name: 'room_name',
+    description: 'LiveKit room name of the call to leave',
+    example: 'call_abc123',
+  })
   @ApiResponse({
     status: 200,
     description: 'Left call successfully.',

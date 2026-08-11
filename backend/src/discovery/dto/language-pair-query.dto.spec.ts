@@ -157,13 +157,14 @@ describe('LanguagePairQueryDto', () => {
   });
 
   describe('availability booleans', () => {
-    it.each(['availability_morning', 'availability_afternoon', 'availability_evening'])(
-      'should transform "%s" string to boolean',
-      (field) => {
-        const dto = buildDto({ [field]: 'true' });
-        expect((dto as Record<string, unknown>)[field]).toBe(true);
-      },
-    );
+    it.each([
+      'availability_morning',
+      'availability_afternoon',
+      'availability_evening',
+    ])('should transform "%s" string to boolean', (field) => {
+      const dto = buildDto({ [field]: 'true' });
+      expect((dto as Record<string, unknown>)[field]).toBe(true);
+    });
   });
 
   describe('voice_room_active', () => {

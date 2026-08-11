@@ -1,3 +1,0 @@
-frontend/src/app/events/calendar/calendar.component.html
-frontend/src/app/events/calendar/calendar.component.ts
-frontend/src/app/events/calendar/calendar.component.scss

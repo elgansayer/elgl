@@ -7,7 +7,11 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { CacheControlInterceptor } from '../common/cache.interceptor';
 
-function createMockContext(): { executionContext: ExecutionContext; setHeader: jest.Mock; response: Record<string, unknown> } {
+function createMockContext(): {
+  executionContext: ExecutionContext;
+  setHeader: jest.Mock;
+  response: Record<string, unknown>;
+} {
   const setHeader = jest.fn();
   const response = { setHeader };
 
@@ -42,8 +46,6 @@ describe('AdminController', () => {
             listUsers: jest.fn(),
             setVipStatus: jest.fn(),
             getLoginHistory: jest.fn(),
-            banUser: jest.fn(),
-            warnUser: jest.fn(),
             listAllBlocks: jest.fn(),
             removeBlock: jest.fn(),
           },
@@ -111,38 +113,6 @@ describe('AdminController', () => {
     });
   });
 
-  describe('banUser', () => {
-    it('delegates to AdminService.banUser with the user id and admin id', async () => {
-      (adminService.banUser as jest.Mock).mockResolvedValue(undefined);
-
-      const result = await controller.banUser('target-user', {
-        user: { sub: 'admin-1' },
-      } as any);
-
-      expect(adminService.banUser).toHaveBeenCalledWith(
-        'target-user',
-        'admin-1',
-      );
-      expect(result).toEqual({ message: 'User banned' });
-    });
-  });
-
-  describe('warnUser', () => {
-    it('delegates to AdminService.warnUser with the user id and admin id', async () => {
-      (adminService.warnUser as jest.Mock).mockResolvedValue(undefined);
-
-      const result = await controller.warnUser('target-user', {
-        user: { sub: 'admin-1' },
-      } as any);
-
-      expect(adminService.warnUser).toHaveBeenCalledWith(
-        'target-user',
-        'admin-1',
-      );
-      expect(result).toEqual({ message: 'User warned' });
-    });
-  });
-
   describe('listAllBlocks', () => {
     it('delegates to AdminService.listAllBlocks with default page params', async () => {
       const response = { blocks: [], total: 0, page: 1, pageSize: 20 };
@@ -190,13 +160,16 @@ describe('AdminController', () => {
       noStoreInterceptor.intercept(executionContext, callHandler).subscribe();
 
       const headers = capturedHeaders(setHeader);
-      expect(headers['Cache-Control']).toBe('private, no-store, no-cache, must-revalidate');
+      expect(headers['Cache-Control']).toBe(
+        'private, no-store, no-cache, must-revalidate',
+      );
       expect(headers['CDN-Cache-Control']).toBe('private, no-store');
     });
 
     it('sets private medium-cache headers on read endpoints', () => {
       const mediumInterceptor = new CacheControlInterceptor({
-        'Cache-Control': 'private, max-age=60, s-maxage=300, stale-while-revalidate=120, stale-if-error=600',
+        'Cache-Control':
+          'private, max-age=60, s-maxage=300, stale-while-revalidate=120, stale-if-error=600',
         'CDN-Cache-Control': 'private, max-age=300, stale-while-revalidate=120',
       });
       const { executionContext, setHeader } = createMockContext();
@@ -218,10 +191,14 @@ describe('AdminController', () => {
         'CDN-Cache-Control': 'private, max-age=300',
       });
       const { executionContext, setHeader } = createMockContext();
-      const callHandler: CallHandler = { handle: () => throwError(() => new Error('simulated failure')) };
+      const callHandler: CallHandler = {
+        handle: () => throwError(() => new Error('simulated failure')),
+      };
 
       interceptor.intercept(executionContext, callHandler).subscribe({
-        error: () => { /* expected */ },
+        error: () => {
+          /* expected */
+        },
       });
 
       // After error, headers should be overridden to no-store

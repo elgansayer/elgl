@@ -30,6 +30,7 @@ describe('LanguageChallengesService', () => {
       select: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       returns: jest.fn().mockReturnThis(),
       single: jest.fn(),
@@ -431,12 +432,12 @@ describe('LanguageChallengesService', () => {
           data: [{ user_id: 'user-1' }],
           error: null,
         })
-        // that participant's distinct check-in days (re-checked in the completer loop)
+        // all participant activities instead of looping
         .mockResolvedValueOnce({
           data: [
-            { activity_date: '2026-01-01' },
-            { activity_date: '2026-01-02' },
-            { activity_date: '2026-01-03' },
+            { user_id: 'user-1', activity_date: '2026-01-01' },
+            { user_id: 'user-1', activity_date: '2026-01-02' },
+            { user_id: 'user-1', activity_date: '2026-01-03' },
           ],
           error: null,
         });
@@ -475,8 +476,17 @@ describe('LanguageChallengesService', () => {
           data: [{ user_id: 'user-1' }, { user_id: 'user-2' }],
           error: null,
         }) // all participants
-        .mockResolvedValueOnce({ data: threeDays, error: null }) // user-1's days
-        .mockResolvedValueOnce({ data: threeDays, error: null }); // user-2's days
+        .mockResolvedValueOnce({
+          data: [
+            { user_id: 'user-1', activity_date: '2026-01-01' },
+            { user_id: 'user-1', activity_date: '2026-01-02' },
+            { user_id: 'user-1', activity_date: '2026-01-03' },
+            { user_id: 'user-2', activity_date: '2026-01-01' },
+            { user_id: 'user-2', activity_date: '2026-01-02' },
+            { user_id: 'user-2', activity_date: '2026-01-03' },
+          ],
+          error: null,
+        }); // all activities
 
       const result = await service.claimPrize('user-1', 'challenge-1');
 
@@ -519,11 +529,15 @@ describe('LanguageChallengesService', () => {
           data: [{ user_id: 'user-1' }, { user_id: 'user-2' }],
           error: null,
         }) // all participants
-        .mockResolvedValueOnce({ data: threeDays, error: null }) // user-1's days (meets requirement)
         .mockResolvedValueOnce({
-          data: [{ activity_date: '2026-01-01' }],
+          data: [
+            { user_id: 'user-1', activity_date: '2026-01-01' },
+            { user_id: 'user-1', activity_date: '2026-01-02' },
+            { user_id: 'user-1', activity_date: '2026-01-03' },
+            { user_id: 'user-2', activity_date: '2026-01-01' },
+          ],
           error: null,
-        }); // user-2's days (does not meet requirement)
+        }); // all activities
 
       const result = await service.claimPrize('user-1', 'challenge-1');
 
@@ -554,8 +568,13 @@ describe('LanguageChallengesService', () => {
           data: [{ user_id: 'user-1' }, { user_id: 'user-2' }],
           error: null,
         }) // all participants
-        .mockResolvedValueOnce({ data: oneDay, error: null }) // ...but the recheck in the loop finds fewer days
-        .mockResolvedValueOnce({ data: oneDay, error: null }); // user-2's days (does not meet requirement)
+        .mockResolvedValueOnce({
+          data: [
+            { user_id: 'user-1', activity_date: '2026-01-01' },
+            { user_id: 'user-2', activity_date: '2026-01-01' },
+          ],
+          error: null,
+        }); // all activities
 
       await expect(service.claimPrize('user-1', 'challenge-1')).rejects.toThrow(
         'No participants completed the challenge',

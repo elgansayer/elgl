@@ -39,7 +39,7 @@ describe('AppCardComponent', () => {
 
   it('should apply default host classes and ARIA region role', () => {
     expect(cardElement.classList.contains('block')).toBe(true);
-    expect(cardElement.classList.contains('rounded-2xl')).toBe(true);
+    expect(cardElement.classList.contains('rounded-card')).toBe(true);
     expect(cardElement.classList.contains('bg-surface-200')).toBe(true);
     expect(cardElement.classList.contains('transition-all')).toBe(true);
     expect(cardElement.classList.contains('ps-4')).toBe(true);

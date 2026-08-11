@@ -27,7 +27,7 @@ export class AppButtonPrimaryComponent {
 
   readonly buttonClasses = computed(() => {
     const base =
-      'inline-flex items-center justify-center font-bold rounded-2xl transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
+      'inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500';
 
     let sizeClass = '';
     switch (this.size()) {
@@ -43,8 +43,8 @@ export class AppButtonPrimaryComponent {
     }
 
     const stateClass = this.disabled()
-      ? 'bg-surface-200 text-text-secondary cursor-not-allowed shadow-none'
-      : 'bg-primary text-white hover:bg-primary/90 shadow-sm hover:shadow-md cursor-pointer';
+      ? 'bg-surface-200 text-text-muted cursor-not-allowed shadow-none'
+      : 'bg-primary text-on-fill hover:bg-primary/90 shadow-card hover:shadow-lift cursor-pointer';
 
     const extra = this.customClass();
     return `${base} ${sizeClass} ${stateClass}${extra ? ' ' + extra : ''}`.trim();

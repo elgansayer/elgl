@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NlpService } from './nlp.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 
 const mockGuess = jest.fn();
 
@@ -22,6 +23,7 @@ describe('NlpService', () => {
   };
 
   let mockConfigService: { get: jest.Mock };
+  let mockLlmProxyService: { proxyMessage: jest.Mock };
 
   beforeEach(async () => {
     mockGuess.mockClear();
@@ -37,8 +39,13 @@ describe('NlpService', () => {
         if (key === 'DEEPL_API_KEY') return 'mock-deepl-key';
         if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
         if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
+        if (key === 'LLM_API_KEY') return 'mock-llm-key';
         return null;
       }),
+    };
+
+    mockLlmProxyService = {
+      proxyMessage: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -53,6 +60,10 @@ describe('NlpService', () => {
           useValue: {
             getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
           },
+        },
+        {
+          provide: LlmProxyService,
+          useValue: mockLlmProxyService,
         },
       ],
     }).compile();
@@ -274,7 +285,7 @@ describe('NlpService', () => {
   });
 
   describe('pronunciationScore', () => {
-    it('should score words, calculate average, and return positive feedback for high scores', async () => {
+    it('should score words with phonetic breakdown and return positive feedback for high scores', async () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
@@ -285,6 +296,7 @@ describe('NlpService', () => {
           json: () =>
             Promise.resolve({
               RecognitionStatus: 'Success',
+              DisplayText: 'Hello world test',
               NBest: [
                 {
                   PronunciationAssessment: {
@@ -293,18 +305,61 @@ describe('NlpService', () => {
                     FluencyScore: 85,
                     CompletenessScore: 90,
                   },
-                  Words: [],
+                  Words: [
+                    {
+                      Word: 'Hello',
+                      Phonemes: [
+                        { Phoneme: 'h', AccuracyScore: 92 },
+                        { Phoneme: 'ɛ', AccuracyScore: 88 },
+                        { Phoneme: 'l', AccuracyScore: 95 },
+                        { Phoneme: 'oʊ', AccuracyScore: 90 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 91 },
+                    },
+                    {
+                      Word: 'world',
+                      Phonemes: [
+                        { Phoneme: 'w', AccuracyScore: 85 },
+                        { Phoneme: 'ɝ', AccuracyScore: 80 },
+                        { Phoneme: 'l', AccuracyScore: 90 },
+                        { Phoneme: 'd', AccuracyScore: 93 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 87 },
+                    },
+                    {
+                      Word: 'test',
+                      Phonemes: [
+                        { Phoneme: 't', AccuracyScore: 96 },
+                        { Phoneme: 'ɛ', AccuracyScore: 88 },
+                        { Phoneme: 's', AccuracyScore: 94 },
+                        { Phoneme: 't', AccuracyScore: 95 },
+                      ],
+                      PronunciationAssessment: { AccuracyScore: 93 },
+                    },
+                  ],
                 },
               ],
             }),
         });
-      const dto = { target_text: 'Hello world test', audio_url: 'http://test' };
+      const dto = {
+        target_text: 'Hello world test',
+        audio_url: 'http://test',
+        language: 'en-US',
+      };
       const result = await service.pronunciationScore('user-1', true, dto);
 
       expect(result.breakdown).toHaveLength(3);
-      // scores: 85 + 0 = 85, 85 + 1 = 86, 85 + 2 = 87 -> avg 86
       expect(result.overall_score).toBe(95);
       expect(result.feedback_summary).toBe('Excellent pronunciation!');
+      expect(result.detected_language).toBe('en-US');
+      expect(result.transcription).toBe('Hello world test');
+
+      // Verify phonetic breakdown on first word
+      const firstWord = result.breakdown[0];
+      expect(firstWord.phonemes.length).toBeGreaterThan(0);
+      expect(firstWord.phonemes[0]).toHaveProperty('phoneme');
+      expect(firstWord.phonemes[0]).toHaveProperty('score');
+      expect(firstWord.phonemes[0]).toHaveProperty('expected_phoneme');
     });
 
     it('should handle empty target_text gracefully returning 90 default overall score', async () => {
@@ -318,6 +373,7 @@ describe('NlpService', () => {
           json: () =>
             Promise.resolve({
               RecognitionStatus: 'Success',
+              DisplayText: '',
               NBest: [
                 {
                   PronunciationAssessment: {
@@ -337,6 +393,20 @@ describe('NlpService', () => {
       expect(result.overall_score).toBe(95);
       expect(result.breakdown).toEqual([]);
       expect(result.feedback_summary).toContain('Excellent pronunciation!');
+    });
+
+    it('should fallback with phonetic breakdown when Azure is unavailable', async () => {
+      const dto = {
+        target_text: 'Hello world',
+        audio_url: 'http://test',
+      };
+      const result = await service.pronunciationScore('user-1', true, dto);
+
+      expect(result.overall_score).toBe(85);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown[0].phonemes.length).toBeGreaterThan(0);
+      expect(result.breakdown[0].phonemes[0].expected_phoneme).toBeTruthy();
+      expect(result.feedback_summary).toContain('temporarily unavailable');
     });
   });
 
@@ -484,6 +554,83 @@ describe('NlpService', () => {
       const result = await service.translateUi(dto);
       expect(result.cached).toBe(false);
       expect(result.translations['app.title']).toBe('Clon de HelloTalk');
+    });
+  });
+
+  describe('generateSessionSummary', () => {
+    const transcriptText =
+      'Welcome to the language exchange room. Today we discussed travel vocabulary and cultural customs in Japan. We compared the Japanese tea ceremony with British afternoon tea traditions. The group also practised ordering food in a restaurant setting.';
+
+    it('should return empty summary for empty text', async () => {
+      const result = await service.generateSessionSummary('');
+      expect(result.summary).toBe('No transcript available.');
+      expect(result.vocabulary).toEqual([]);
+    });
+
+    it('should generate summary via LLM proxy when API key is configured', async () => {
+      mockLlmProxyService.proxyMessage.mockResolvedValueOnce({
+        response: JSON.stringify({
+          summary:
+            'This session covered travel vocabulary, cultural customs in Japan, and compared tea ceremonies. The group practised restaurant ordering scenarios.',
+          vocabulary: [
+            'travel',
+            'cultural',
+            'customs',
+            'tea ceremony',
+            'restaurant',
+            'ordering',
+            'vocabulary',
+            'practised',
+          ],
+        }),
+      });
+
+      const result = await service.generateSessionSummary(transcriptText);
+
+      expect(mockLlmProxyService.proxyMessage).toHaveBeenCalledTimes(1);
+      expect(result.summary).toContain('travel vocabulary');
+      expect(result.summary).toContain('tea ceremonies');
+      expect(result.vocabulary.length).toBeGreaterThan(0);
+      expect(result.vocabulary).toContain('travel');
+      expect(result.vocabulary).toContain('tea ceremony');
+    });
+
+    it('should fall back to extractSummaryFallback when LLM response lacks JSON', async () => {
+      mockLlmProxyService.proxyMessage.mockResolvedValueOnce({
+        response: 'Here is a plain text summary without JSON formatting.',
+      });
+
+      const result = await service.generateSessionSummary(transcriptText);
+
+      expect(result.summary).toContain('Key topics covered:');
+      expect(result.vocabulary.length).toBeGreaterThan(0);
+    });
+
+    it('should fall back to extractSummaryFallback when LLM API key is not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'LLM_API_KEY') return null;
+        if (key === 'DEEPL_API_KEY') return 'mock-deepl-key';
+        if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
+        if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
+        return null;
+      });
+
+      const result = await service.generateSessionSummary(transcriptText);
+
+      expect(mockLlmProxyService.proxyMessage).not.toHaveBeenCalled();
+      expect(result.summary).toContain('Key topics covered:');
+      expect(result.vocabulary.length).toBeGreaterThan(0);
+    });
+
+    it('should fall back to extractSummaryFallback when LLM proxy throws', async () => {
+      mockLlmProxyService.proxyMessage.mockRejectedValueOnce(
+        new Error('LLM unavailable'),
+      );
+
+      const result = await service.generateSessionSummary(transcriptText);
+
+      expect(result.summary).toContain('Key topics covered:');
+      expect(result.vocabulary.length).toBeGreaterThan(0);
     });
   });
 });

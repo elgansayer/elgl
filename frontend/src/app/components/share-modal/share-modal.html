@@ -17,7 +17,7 @@
       <div class="p-4">
         <div class="flex gap-3 bg-surface-300 p-3 rounded-lg items-center border border-surface-100">
           @if (entity().thumbnailUrl) {
-            <img loading="lazy" [src]="entity().thumbnailUrl" class="w-12 h-12 rounded object-cover" alt="Preview">
+            <img [src]="entity().thumbnailUrl" class="w-12 h-12 rounded object-cover" alt="Preview">
           } @else {
             <div class="w-12 h-12 bg-primary/20 rounded flex items-center justify-center text-primary text-xl">
               🔗

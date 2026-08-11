@@ -13,9 +13,9 @@ import { toastsSignal } from '../../../services/toast.service';
           class="px-4 py-2 rounded-full shadow-lg font-bold text-sm pointer-events-auto transition-all duration-300 animate-slide-down border border-surface-100"
           [class.bg-surface-200]="toast.type === 'info'"
           [class.text-text-primary]="toast.type === 'info'"
-          [class.bg-red-500]="toast.type === 'error'"
-          [class.text-white]="toast.type === 'error' || toast.type === 'success'"
-          [class.bg-green-500]="toast.type === 'success'"
+          [class.bg-danger]="toast.type === 'error'"
+          [class.text-on-fill]="toast.type === 'error' || toast.type === 'success'"
+          [class.bg-success]="toast.type === 'success'"
         >
           {{ toast.message }}
         </div>

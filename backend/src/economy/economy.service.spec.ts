@@ -64,6 +64,7 @@ describe('EconomyService', () => {
       update: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       single: jest.fn(),
       maybeSingle: jest.fn(),
     };
@@ -804,6 +805,39 @@ describe('EconomyService', () => {
       const mockOwned = [{ pack_id: 'stk_pack_1' }];
       const mockBalance = { id: 'user-1', coins_balance: 300 };
 
+<<<<<<< HEAD
+      const buildChain = (terminalResult: unknown) => {
+        const chain: any = {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          order: jest.fn(),
+          single: jest.fn(),
+        };
+        chain.then = (resolve: (v: unknown) => void) => {
+          resolve(terminalResult);
+          return { catch: jest.fn() };
+        };
+        return chain;
+      };
+
+      const packsChain = buildChain({ data: mockPacks, error: null });
+      packsChain.order = jest.fn().mockResolvedValue({ data: mockPacks, error: null });
+
+      const ownedChain = buildChain({ data: mockOwned, error: null });
+      ownedChain.select = jest.fn().mockReturnValue(ownedChain);
+      ownedChain.eq = jest.fn().mockReturnValue(ownedChain);
+
+      const balanceChain = buildChain({ data: mockBalance, error: null });
+      balanceChain.select = jest.fn().mockReturnValue(balanceChain);
+      balanceChain.eq = jest.fn().mockReturnValue(balanceChain);
+      balanceChain.single = jest.fn().mockResolvedValue({ data: mockBalance, error: null });
+
+      (mockSupabaseClient.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'sticker_packs') return packsChain;
+        if (table === 'user_sticker_packs') return ownedChain;
+        if (table === 'users') return balanceChain;
+        return buildChain({ data: null, error: null });
+=======
       // Query 1: from('sticker_packs').select('*').order(...)
       // Query 2: from('user_sticker_packs').select('pack_id').eq('user_id', userId)
       // Query 3: from('users').select('coins_balance').eq('id', userId).single()
@@ -830,6 +864,7 @@ describe('EconomyService', () => {
         if (table === 'user_sticker_packs') return ownedBuilder;
         if (table === 'users') return usersBuilder;
         return mockQueryBuilder;
+>>>>>>> origin/main
       });
 
       const result = await service.getStickerPacks('user-1');
@@ -850,6 +885,33 @@ describe('EconomyService', () => {
     });
 
     it('should return default packs when DB returns empty', async () => {
+<<<<<<< HEAD
+      const buildChain = (terminalResult: unknown) => {
+        const chain: any = {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          order: jest.fn(),
+          single: jest.fn(),
+        };
+        chain.then = (resolve: (v: unknown) => void) => {
+          resolve(terminalResult);
+          return { catch: jest.fn() };
+        };
+        return chain;
+      };
+
+      const packsChain = buildChain({ data: [], error: null });
+      packsChain.order = jest.fn().mockResolvedValue({ data: [], error: null });
+      const ownedChain = buildChain({ data: [], error: null });
+      const balanceChain = buildChain({ data: null, error: null });
+      balanceChain.single = jest.fn().mockResolvedValue({ data: null, error: null });
+
+      (mockSupabaseClient.from as jest.Mock).mockImplementation((table: string) => {
+        if (table === 'sticker_packs') return packsChain;
+        if (table === 'user_sticker_packs') return ownedChain;
+        if (table === 'users') return balanceChain;
+        return buildChain({ data: null, error: null });
+=======
       const mockFrom = jest.fn();
       mockSupabaseClient.from = mockFrom;
 
@@ -873,12 +935,13 @@ describe('EconomyService', () => {
         if (table === 'user_sticker_packs') return ownedBuilder;
         if (table === 'users') return usersBuilder;
         return mockQueryBuilder;
+>>>>>>> origin/main
       });
 
       const result = await service.getStickerPacks('user-1');
 
       expect(result.packs).toHaveLength(8);
-      expect(result.packs[1].is_animated).toBe(true); // Rainbow Unicorns
+      expect(result.packs[1]!.is_animated).toBe(true);
     });
   });
 
@@ -939,6 +1002,78 @@ describe('EconomyService', () => {
       await expect(
         service.unlockStickerPack('user-1', { pack_id: 'stk_pack_4' }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getTransactionHistory', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should return empty array when the table does not exist', async () => {
+      mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.order.mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'relation "coin_transactions" does not exist' },
+      });
+
+      const result = await service.getTransactionHistory('user-1');
+      expect(result).toEqual([]);
+    });
+
+    it('should return filtered transaction rows', async () => {
+      const txRows = [
+        {
+          id: 'tx-1',
+          user_id: 'user-1',
+          type: 'daily_checkin',
+          amount: 7,
+          description: 'Daily check-in reward',
+          metadata: null,
+          created_at: '2026-08-08T12:00:00.000Z',
+        },
+      ];
+      mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.order.mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: txRows,
+        error: null,
+      });
+
+      const result = await service.getTransactionHistory('user-1');
+      expect(result).toEqual(txRows);
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('coin_transactions');
+    });
+
+    it('should filter out invalid rows', async () => {
+      const mixedRows = [
+        {
+          id: 'tx-1',
+          user_id: 'user-1',
+          type: 'daily_checkin',
+          amount: 5,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        { not_valid: true },
+        {
+          id: 'tx-2',
+          type: 'daily_checkin',
+          amount: 5,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        null,
+      ];
+      mockQueryBuilder.eq.mockReturnThis();
+      mockQueryBuilder.order.mockReturnThis();
+      mockQueryBuilder.limit.mockResolvedValueOnce({
+        data: mixedRows,
+        error: null,
+      });
+
+      const result = await service.getTransactionHistory('user-1');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('tx-1');
     });
   });
 

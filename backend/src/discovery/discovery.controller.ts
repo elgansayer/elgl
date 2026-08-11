@@ -41,11 +41,31 @@ const userProfileSchema = {
     properties: {
       id: { type: 'string', example: 'c9b1a2d3-e4f5-6789-abcd-ef0123456789' },
       display_name: { type: 'string', nullable: true, example: 'Taro Yamada' },
-      avatar_url: { type: 'string', nullable: true, example: 'https://r2.example.com/avatars/taro.jpg' },
-      native_languages: { type: 'array', items: { type: 'string' }, example: ['ja-JP'] },
-      target_languages: { type: 'array', items: { type: 'string' }, example: ['en', 'ko'] },
-      bio_text: { type: 'string', nullable: true, example: 'Hello! I want to practise English.' },
-      audio_intro_url: { type: 'string', nullable: true, example: 'https://r2.example.com/audio/taro.mp3' },
+      avatar_url: {
+        type: 'string',
+        nullable: true,
+        example: 'https://r2.example.com/avatars/taro.jpg',
+      },
+      native_languages: {
+        type: 'array',
+        items: { type: 'string' },
+        example: ['ja-JP'],
+      },
+      target_languages: {
+        type: 'array',
+        items: { type: 'string' },
+        example: ['en', 'ko'],
+      },
+      bio_text: {
+        type: 'string',
+        nullable: true,
+        example: 'Hello! I want to practise English.',
+      },
+      audio_intro_url: {
+        type: 'string',
+        nullable: true,
+        example: 'https://r2.example.com/audio/taro.mp3',
+      },
       is_vip: { type: 'boolean', example: false },
       is_serious_learner: { type: 'boolean', example: true },
       study_streak_days: { type: 'number', example: 30 },
@@ -73,7 +93,11 @@ export class DiscoveryController {
    */
   @Get('partners')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
-  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
+  @DiscoveryRateLimit({
+    freeMaxRequests: 30,
+    vipMaxRequests: 120,
+    windowSeconds: 60,
+  })
   @ApiOperation({
     summary: 'Search for language exchange partners',
     description:
@@ -84,8 +108,15 @@ export class DiscoveryController {
       'Results are sorted by the specified sort parameter and enriched with Partner of the Week flags. ' +
       'VIP users benefit from location and country/city spoofing via mock_location and mock_country/mock_city profile fields.',
   })
-  @ApiResponse({ status: 200, description: 'Filtered list of user profiles matching the search criteria.', schema: userProfileSchema })
-  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Filtered list of user profiles matching the search criteria.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async findPartners(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
@@ -108,7 +139,11 @@ export class DiscoveryController {
    */
   @Get('partner-of-week')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_LONG))
-  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
+  @DiscoveryRateLimit({
+    freeMaxRequests: 60,
+    vipMaxRequests: 300,
+    windowSeconds: 60,
+  })
   @ApiOperation({
     summary: 'Get Partner of the Week user IDs',
     description:
@@ -119,7 +154,11 @@ export class DiscoveryController {
   @ApiResponse({
     status: 200,
     description: 'Array of up to 10 Partner of the Week user IDs.',
-    schema: { type: 'array', items: { type: 'string' }, example: ['uuid-1', 'uuid-2'] },
+    schema: {
+      type: 'array',
+      items: { type: 'string' },
+      example: ['uuid-1', 'uuid-2'],
+    },
   })
   async getPartnerOfWeek(): Promise<string[]> {
     return this.discoveryService.getPartnerOfWeekIds();
@@ -130,21 +169,36 @@ export class DiscoveryController {
    */
   @Get('audio-intros')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
-  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
+  @DiscoveryRateLimit({
+    freeMaxRequests: 30,
+    vipMaxRequests: 120,
+    windowSeconds: 60,
+  })
   @ApiOperation({
     summary: 'Discover partners with audio introductions',
     description:
       'Returns partners filtered by the same SearchQueryDto parameters, additionally filtered to only include users who have uploaded an audio introduction.',
   })
-  @ApiResponse({ status: 200, description: 'Filtered list of user profiles with audio introductions.', schema: userProfileSchema })
-  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Filtered list of user profiles with audio introductions.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async getAudioIntros(
     @CurrentUser() user: User | null,
     @Query() query: SearchQueryDto,
   ): Promise<UserProfile[]> {
     if (!user) return [];
     const profile = await this.usersService.getProfile(user.id);
-    const result = await this.discoveryService.getAudioIntros(user.id, profile, query);
+    const result = await this.discoveryService.getAudioIntros(
+      user.id,
+      profile,
+      query,
+    );
     return sanitiseDiscoveryData(result);
   }
 
@@ -153,15 +207,26 @@ export class DiscoveryController {
    */
   @Get('recent-native-speakers')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
-  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
+  @DiscoveryRateLimit({
+    freeMaxRequests: 60,
+    vipMaxRequests: 300,
+    windowSeconds: 60,
+  })
   @ApiOperation({
     summary: 'Get recently joined native speakers',
     description:
       'Returns up to 10 users who joined within the last 7 days and have at least one native language set. ' +
       'Results are publicly cached for a short duration and enriched with Partner of the Week flags.',
   })
-  @ApiResponse({ status: 200, description: 'Recently joined native speakers.', schema: userProfileSchema })
-  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Recently joined native speakers.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async getRecentNativeSpeakers(
     @CurrentUser() user: User | null,
   ): Promise<UserProfile[]> {
@@ -175,15 +240,26 @@ export class DiscoveryController {
    */
   @Get('spotlight')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PUBLIC_SHORT))
-  @DiscoveryRateLimit({ freeMaxRequests: 60, vipMaxRequests: 300, windowSeconds: 60 })
+  @DiscoveryRateLimit({
+    freeMaxRequests: 60,
+    vipMaxRequests: 300,
+    windowSeconds: 60,
+  })
   @ApiOperation({
     summary: 'Get spotlight users',
     description:
       'Returns up to 5 recently created users with native languages set. ' +
       'Results are publicly cached for a short duration and enriched with Partner of the Week flags.',
   })
-  @ApiResponse({ status: 200, description: 'Spotlight user profiles.', schema: userProfileSchema })
-  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Spotlight user profiles.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async getSpotlight(@CurrentUser() user: User | null): Promise<UserProfile[]> {
     if (!user) return [];
     const result = await this.discoveryService.getSpotlightUsers(user.id);
@@ -195,7 +271,11 @@ export class DiscoveryController {
    */
   @Get('language-pair')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
-  @DiscoveryRateLimit({ freeMaxRequests: 30, vipMaxRequests: 120, windowSeconds: 60 })
+  @DiscoveryRateLimit({
+    freeMaxRequests: 30,
+    vipMaxRequests: 120,
+    windowSeconds: 60,
+  })
   @ApiOperation({
     summary: 'Find partners by language pair',
     description:
@@ -204,14 +284,24 @@ export class DiscoveryController {
       'Supports cursor pagination (page/limit), sort ordering (best_match/newest), and additional filters for level, audio intro, country, city, learning goals, availability, and voice room activity. ' +
       'Results are enriched with Partner of the Week flags and promoted in best_match sort order.',
   })
-  @ApiResponse({ status: 200, description: 'Paginated, filtered list of language pair matches.', schema: userProfileSchema })
-  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated, filtered list of language pair matches.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async findByLanguagePair(
     @CurrentUser() user: User | null,
     @Query() query: LanguagePairQueryDto,
   ): Promise<UserProfile[]> {
     if (!user) return [];
-    const result = await this.discoveryService.findByLanguagePair(user.id, query);
+    const result = await this.discoveryService.findByLanguagePair(
+      user.id,
+      query,
+    );
     return sanitiseDiscoveryData(result);
   }
 
@@ -220,17 +310,38 @@ export class DiscoveryController {
    */
   @Get('search-by-location')
   @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_PRIVATE_SHORT))
-  @DiscoveryRateLimit({ freeMaxRequests: 20, vipMaxRequests: 80, windowSeconds: 60 })
+  @DiscoveryRateLimit({
+    freeMaxRequests: 20,
+    vipMaxRequests: 80,
+    windowSeconds: 60,
+  })
   @ApiOperation({
     summary: 'Search partners by country and/or city',
     description:
       'Simple location-based search by country and/or city using case-insensitive ILIKE matching. ' +
       'Returns up to 50 matching user profiles.',
   })
-  @ApiQuery({ name: 'country', required: false, description: 'Country name (case-insensitive partial match).', example: 'Japan' })
-  @ApiQuery({ name: 'city', required: false, description: 'City name (case-insensitive partial match).', example: 'Tokyo' })
-  @ApiResponse({ status: 200, description: 'User profiles matching the location filter.', schema: userProfileSchema })
-  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT.' })
+  @ApiQuery({
+    name: 'country',
+    required: false,
+    description: 'Country name (case-insensitive partial match).',
+    example: 'Japan',
+  })
+  @ApiQuery({
+    name: 'city',
+    required: false,
+    description: 'City name (case-insensitive partial match).',
+    example: 'Tokyo',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User profiles matching the location filter.',
+    schema: userProfileSchema,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid JWT.',
+  })
   async searchByLocation(
     @CurrentUser() user: User | null,
     @Query('country') country?: string,
@@ -249,9 +360,7 @@ export class DiscoveryController {
    * and recent degradation events for monitoring.
    */
   @Get('degradation-status')
-  @UseInterceptors(
-    new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE),
-  )
+  @UseInterceptors(new DiscoveryCacheInterceptor(DISCOVERY_CACHE_NO_STORE))
   async getDegradationStatus(): Promise<{
     breakers: Record<string, unknown>;
     events: unknown[];

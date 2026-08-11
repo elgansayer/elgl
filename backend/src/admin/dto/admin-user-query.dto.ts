@@ -4,7 +4,8 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AdminUserQueryDto {
   @ApiPropertyOptional({
-    description: 'Search string to filter users by display name (case-insensitive ILIKE)',
+    description:
+      'Search string to filter users by display name (case-insensitive ILIKE)',
     example: 'john',
   })
   @IsOptional()

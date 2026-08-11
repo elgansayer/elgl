@@ -223,8 +223,7 @@ export class SearchQueryDto {
   learning_goals?: string;
 
   @ApiPropertyOptional({
-    description:
-      'Mode for learning_goals filtering. Reserved for future use.',
+    description: 'Mode for learning_goals filtering. Reserved for future use.',
     example: 'any',
   })
   @IsOptional()

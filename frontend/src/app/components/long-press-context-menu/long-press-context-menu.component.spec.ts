@@ -136,6 +136,19 @@ describe('LongPressContextMenuComponent', () => {
     expect(component.menuVisible()).toBe(false);
   });
 
+  it('should emit requestCorrection and close the menu when doRequestCorrection is called', () => {
+    vi.spyOn(component.requestCorrection, 'emit');
+    component.menuVisible.set(true);
+
+    component.doRequestCorrection();
+
+    expect(component.requestCorrection.emit).toHaveBeenCalledWith({
+      messageId: 'test-message-id',
+      content: 'Hello world',
+    });
+    expect(component.menuVisible()).toBe(false);
+  });
+
   it('should not render translate, transliterate, speak, or correct actions for non-text messages', () => {
     fixture.componentRef.setInput('messageType', 'voice');
     component.menuVisible.set(true);
@@ -202,7 +215,7 @@ describe('LongPressContextMenuComponent', () => {
     fixture.detectChanges();
 
     const buttons = fixture.debugElement.queryAll(By.css('button'));
-    expect(buttons.length).toBe(10);
+    expect(buttons.length).toBe(11);
   });
 
   it('should emit block toggled to false when the sender is already blocked', () => {

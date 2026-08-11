@@ -7,12 +7,16 @@ interface Sticker {
 
 @Component({
   selector: 'app-sticker-picker',
-  standalone: true,
   template: `
     @if (isOpen()) {
-      <div class="fixed inset-0 z-50 bg-black/50" tabindex="0" (keydown.enter)="$event.preventDefault(); closeDrawer()" (click)="closeDrawer()">
+      <div
+        class="fixed inset-0 z-50 bg-black/50"
+        tabindex="0"
+        (keydown.enter)="$event.preventDefault(); closeDrawer()"
+        (click)="closeDrawer()"
+      >
         <div
-          class="fixed bottom-0 start-0 end-0 bg-neutral-900 rounded-t-2xl p-4 shadow-2xl max-h-80 overflow-y-auto"
+          class="fixed bottom-0 start-0 end-0 bg-surface-200 rounded-t-sheet p-4 shadow-lift max-h-80 overflow-y-auto"
           tabindex="0"
           (keydown.enter)="$event.preventDefault(); $event.stopPropagation()"
           (click)="$event.stopPropagation()"
@@ -22,7 +26,7 @@ interface Sticker {
               <button
                 type="button"
                 (click)="onSelect(sticker)"
-                class="flex items-center justify-center w-16 h-16 rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors"
+                class="flex items-center justify-center w-16 h-16 rounded-card bg-surface-100 hover:bg-surface-50 transition-colors"
               >
                 <span class="text-3xl">{{ sticker.emoji }}</span>
               </button>

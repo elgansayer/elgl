@@ -331,7 +331,9 @@ describe('GroupsService', () => {
       const memberIds = Array.from({ length: 51 }, (_, i) => `user-${i}`);
       await expect(
         service.createGroup(ADMIN_ID, 'Big Group', memberIds),
-      ).rejects.toThrow('Group cannot exceed 51 members (50 selected + creator)');
+      ).rejects.toThrow(
+        'Group cannot exceed 51 members (50 selected + creator)',
+      );
     });
   });
 
