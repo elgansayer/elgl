@@ -25,8 +25,11 @@ export class AppGradientButtonComponent {
   readonly clicked = output<MouseEvent>();
 
   readonly buttonClasses = computed(() => {
+    // Deliberately stays pill-shaped (unlike the app/12px radius the rest of
+    // the button family uses) - the shape itself signals "this is a
+    // VIP/gift CTA", not just the gold gradient.
     const base =
-      'inline-flex items-center justify-center font-bold rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2';
+      'inline-flex items-center justify-center font-bold rounded-pill transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-vip focus:ring-offset-2 focus:ring-offset-surface-500';
 
     let sizeClass = '';
     switch (this.size()) {
@@ -42,8 +45,8 @@ export class AppGradientButtonComponent {
     }
 
     const stateClass = this.disabled()
-      ? 'bg-surface-300 text-text-secondary cursor-not-allowed opacity-50'
-      : 'bg-gradient-to-r from-orange-400 to-yellow-400 text-black hover:opacity-90 shadow-lg shadow-orange-500/20';
+      ? 'bg-surface-300 text-text-muted cursor-not-allowed opacity-50'
+      : 'bg-gradient-to-r from-vip to-accent text-on-fill hover:opacity-90 shadow-lift';
 
     const extra = this.customClass();
     return `${base} ${sizeClass} ${stateClass} ${extra}`.trim();

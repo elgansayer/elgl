@@ -31,7 +31,7 @@ export class AppButtonSecondaryComponent {
 
   readonly buttonClasses = computed(() => {
     const base =
-      'inline-flex items-center justify-center font-bold rounded-2xl transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2';
+      'inline-flex items-center justify-center font-bold rounded-app transition-all duration-base ease-app focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-500';
 
     let sizeClass = '';
     switch (this.size()) {
@@ -46,9 +46,11 @@ export class AppButtonSecondaryComponent {
         break;
     }
 
+    // Hover now moves to surface-50 (always lighter than surface-100 in both
+    // themes), fixing a bug where hover and base resolved to the same shade.
     const stateClass = this.disabled()
       ? 'bg-surface-100 text-text-muted border border-surface-100 cursor-not-allowed shadow-none'
-      : 'bg-surface-100 text-text-primary border border-surface-100 hover:bg-surface-100 hover:border-surface-100 shadow-sm cursor-pointer';
+      : 'bg-surface-100 text-text-primary border border-surface-100 hover:bg-surface-50 shadow-none cursor-pointer';
 
     const extra = this.customClass();
     return `${base} ${sizeClass} ${stateClass}${extra ? ' ' + extra : ''}`.trim();

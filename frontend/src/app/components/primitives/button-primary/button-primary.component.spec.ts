@@ -52,7 +52,8 @@ describe('AppButtonPrimaryComponent', () => {
 
   it('should apply primary styles and size md by default', () => {
     expect(buttonElement.classList.contains('bg-primary')).toBe(true);
-    expect(buttonElement.classList.contains('text-white')).toBe(true);
+    expect(buttonElement.classList.contains('text-on-fill')).toBe(true);
+    expect(buttonElement.classList.contains('rounded-app')).toBe(true);
     expect(buttonElement.classList.contains('ps-4')).toBe(true);
     expect(buttonElement.classList.contains('pe-4')).toBe(true);
   });
