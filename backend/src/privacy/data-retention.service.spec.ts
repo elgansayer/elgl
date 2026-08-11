@@ -282,6 +282,42 @@ describe('DataRetentionService', () => {
       );
     });
 
+    it('logs error when Redis recommendation cache purge fails', async () => {
+      mockQueryBuilder.limit.mockResolvedValue({
+        data: [{ id: 'user-abc-123' }],
+        error: null,
+      });
+      const mockDeleteBuilder = {
+        delete: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return mockQueryBuilder;
+        }
+        return mockDeleteBuilder;
+      });
+
+      const mockError = new Error('Redis connection failed');
+      mockRedis.del.mockRejectedValueOnce(mockError);
+
+      const loggerErrorSpy = jest.spyOn(service['logger'], 'error').mockImplementation();
+
+      await service.finaliseAccountDeletions();
+
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'recommendations:daily:user-abc-123',
+      );
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        'Failed to purge recommendation cache for user user-abc-123',
+        mockError,
+      );
+
+      loggerErrorSpy.mockRestore();
+    });
+
+
+
     it('wipes video/audio classroom tables for deleted users', async () => {
       mockQueryBuilder.limit.mockResolvedValue({
         data: [{ id: 'user-abc-123' }],
