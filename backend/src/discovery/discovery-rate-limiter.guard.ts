@@ -91,8 +91,9 @@ export class DiscoveryRateLimiterGuard implements CanActivate {
           'Discovery rate limit exceeded',
         );
 
-        const response =
-          context.switchToHttp().getResponse<import('express').Response>();
+        const response = context
+          .switchToHttp()
+          .getResponse<import('express').Response>();
         response.setHeader('Retry-After', String(retryAfter));
 
         throw new HttpException(

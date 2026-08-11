@@ -75,7 +75,7 @@ describe('AudioRoomsHealthService', () => {
     });
 
     it('should return false for unknown service', () => {
-      expect(service.isServiceAvailable('livekit' as 'centrifugo')).toBe(false);
+      expect(service.isServiceAvailable('livekit')).toBe(false);
     });
 
     it('should return false for nonexistent service key', () => {

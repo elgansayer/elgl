@@ -51,9 +51,7 @@ export class SystemMessageService {
       .eq('user_id', userId);
 
     if (error) {
-      Logger.warn(
-        `Failed to fetch rooms for user ${userId}: ${error.message}`,
-      );
+      Logger.warn(`Failed to fetch rooms for user ${userId}: ${error.message}`);
       return;
     }
 
