@@ -88,7 +88,7 @@
         <button
           (click)="setInterest('')"
           [class.bg-accent-500]="selectedInterests() === ''"
-          [class.text-white]="selectedInterests() === ''"
+          [class.text-on-fill]="selectedInterests() === ''"
           [class.bg-surface-200]="selectedInterests() !== ''"
           [class.text-text-secondary]="selectedInterests() !== ''"
           class="px-3 py-1.5 rounded-full text-xs font-bold border border-surface-100 whitespace-nowrap transition-colors"
@@ -102,7 +102,7 @@
           <button
             (click)="setInterest(tag)"
             [class.bg-accent-500]="selectedInterests() === tag"
-            [class.text-white]="selectedInterests() === tag"
+            [class.text-on-fill]="selectedInterests() === tag"
             [class.bg-surface-200]="selectedInterests() !== tag"
             [class.text-text-secondary]="selectedInterests() !== tag"
             class="px-3 py-1.5 rounded-full text-xs font-bold border border-surface-100 whitespace-nowrap capitalize transition-colors"
