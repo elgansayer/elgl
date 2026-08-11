@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
-=======
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
->>>>>>> origin/main
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +8,6 @@ import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 import { LinkedAccountsService, LinkedAccount } from '../../services/linked-accounts.service';
 import { I18nService } from '../../services/i18n.service';
-
 @Component({
   selector: 'app-settings',
   imports: [FormsModule, TranslatePipe, RouterModule],
@@ -39,7 +34,7 @@ export class SettingsComponent implements OnInit {
   readonly interests = signal<string[]>([]);
   readonly availableInterests = signal<string[]>([]);
 
-  autoPlayVoiceNotes = signal(false);
+  autoPlayVoiceNotes = false;
   soundEffectsEnabled = false;
   vibrationEnabled = false;
 
@@ -65,7 +60,7 @@ export class SettingsComponent implements OnInit {
       const profile = await this.userService.getMyProfile();
       if (profile) {
         this.isVip.set(Boolean(profile.is_vip));
-        this.autoPlayVoiceNotes.set(Boolean(profile.auto_play_voice_notes));
+        this.autoPlayVoiceNotes = Boolean(profile.auto_play_voice_notes);
         this.autoDownloadMedia.set(Boolean(profile.auto_download_media));
         this.soundEffectsEnabled = Boolean(profile.sound_effects_enabled);
         this.vibrationEnabled = Boolean(profile.vibration_enabled);
@@ -166,7 +161,7 @@ export class SettingsComponent implements OnInit {
 
     try {
       await this.userService.updateMyProfile({
-        auto_play_voice_notes: this.autoPlayVoiceNotes(),
+        auto_play_voice_notes: this.autoPlayVoiceNotes,
         auto_download_media: this.autoDownloadMedia(),
         sound_effects_enabled: this.soundEffectsEnabled,
         vibration_enabled: this.vibrationEnabled,

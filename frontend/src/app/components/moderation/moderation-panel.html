@@ -30,11 +30,7 @@
 
   <div aria-live="polite">
   @if (loading()) {
-<<<<<<< HEAD
-    <div class="space-y-3" role="status" [attr.aria-label]="'safety.moderation.loadingTitle' | t">
-=======
     <div class="space-y-3" aria-busy="true">
->>>>>>> origin/main
       <p class="text-sm text-text-secondary mb-2">{{ 'safety.moderation.loadingTitle' | t }}</p>
       @for (i of [1, 2, 3]; track i) {
         <app-card customClass="p-3 space-y-2" aria-hidden="true">
@@ -98,11 +94,7 @@
           </div>
         </div>
         @if (analysisResult(); as res) {
-<<<<<<< HEAD
-          <div class="mt-2 p-2 bg-slate-800 rounded text-xs" role="status" [attr.aria-label]="'moderation.riskScore' | t">
-=======
           <div class="mt-2 p-2 bg-slate-800 rounded text-xs" role="region" [attr.aria-label]="'moderation.riskAnalysisAria' | t">
->>>>>>> origin/main
             <p class="text-amber-300">{{ 'moderation.riskScore' | t }}: {{ res.riskScore }}%</p>
             @if (res.flags.length) {
               <p class="text-red-300 mt-1">{{ 'moderation.flags' | t }}: {{ (res.flags?.join(', ') ?? '') | sanitiseHtml }}</p>

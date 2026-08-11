@@ -33,17 +33,13 @@ import { EscrowExceptionFilter } from './escrow-exception.filter';
 import { EscrowService } from './escrow.service';
 import {
   AcknowledgeCrashReportDto,
-  CreateEscrowDto,
+  CreateEscrowHoldDto,
   ReleaseEscrowDto,
   RefundEscrowDto,
-<<<<<<< HEAD
-  ReconcileEscrowDto,
-=======
   CancelEscrowDto,
   DisputeEscrowDto,
   EscrowTransactionResponse,
   CircuitBreakerStatusResponse,
->>>>>>> origin/main
 } from './dto/escrow.dto';
 import { EscrowStatus } from './interfaces/escrow-transaction.interface';
 import {
@@ -77,7 +73,7 @@ export class EscrowController {
     description:
       'Creates an escrow hold by deducting the specified coin amount from the authenticated user (payer) and holding it in escrow. The coins are only transferred to the payee upon explicit release. The payee must be a valid user different from the payer.',
   })
-  @ApiBody({ type: CreateEscrowDto })
+  @ApiBody({ type: CreateEscrowHoldDto })
   @ApiCreatedResponse({
     description: 'Escrow hold created successfully',
     schema: {
@@ -113,7 +109,7 @@ export class EscrowController {
   })
   async holdCoins(
     @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateEscrowDto,
+    @Body() dto: CreateEscrowHoldDto,
   ) {
     return this.escrowService.holdCoins(req.user.sub, dto);
   }
@@ -212,43 +208,6 @@ export class EscrowController {
     );
   }
 
-<<<<<<< HEAD
-  /**
-   * POST /escrow/reconcile
-   * Reconcile an escrow stuck in a degraded state (release_pending
-   * or refund_pending) by retrying the failed coin operation.
-   * Rate limited to 10 requests per minute.
-   * Caching: no-store. This is a mutation.
-   */
-  @Post('reconcile')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_NO_STORE))
-  async reconcile(
-    @Req() req: { user?: { id?: string } },
-    @Body() dto: ReconcileEscrowDto,
-  ) {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new UnauthorizedException();
-    }
-    return this.escrowService.reconcileEscrow(userId, dto.escrow_id);
-  }
-
-  /**
-   * GET /escrow/list
-   * List escrow transactions for the authenticated user.
-   * Rate limited to 20 requests per minute.
-   *
-   * Caching: private short-lived. Each user sees their own escrows and
-   * statuses can change rapidly, but a short cache reduces DB pressure
-   * during repeated reads by the frontend polling loop.
-   */
-  @Get('list')
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
-  @UseInterceptors(new EscrowCacheInterceptor(ESCROW_CACHE_PRIVATE_SHORT))
-  async list(
-    @Req() req: { user?: { id?: string } },
-=======
   @Post('cancel')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(new CacheControlInterceptor(CACHE_NO_STORE))
@@ -443,7 +402,6 @@ export class EscrowController {
   async listTransactions(
     @Req() req: AuthenticatedRequest,
     @Query('status') status?: EscrowStatus,
->>>>>>> origin/main
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ): Promise<EscrowTransactionResponse[]> {
