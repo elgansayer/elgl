@@ -125,7 +125,7 @@
           />
           <button
             (click)="removeMember()"
-            class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-red-500"
+            class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-danger"
             [attr.aria-label]="'chatRoom.removeMemberBtn' | t"
           >
             {{ 'chatRoom.removeMemberBtn' | t }}
@@ -213,11 +213,11 @@
                       ) {
                         <!-- Single check: sent (gray) -->
                         <svg
-                          class="w-3.5 h-3.5 text-gray-400"
+                          class="w-3.5 h-3.5 text-text-muted"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
-                          aria-label="Sent"
+                          [attr.aria-label]="'chatRoom.deliveryStatusSent' | t"
                         >
                           <path
                             stroke-linecap="round"
@@ -230,11 +230,11 @@
                       @if (msg.delivery_status === 'delivered') {
                         <!-- Double check: delivered (gray) -->
                         <svg
-                          class="w-3.5 h-3.5 text-gray-400"
+                          class="w-3.5 h-3.5 text-text-muted"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
-                          aria-label="Delivered"
+                          [attr.aria-label]="'chatRoom.deliveryStatusDelivered' | t"
                         >
                           <path
                             stroke-linecap="round"
@@ -244,7 +244,7 @@
                           />
                         </svg>
                         <svg
-                          class="w-3.5 h-3.5 -ms-2 text-gray-400"
+                          class="w-3.5 h-3.5 -ms-2 text-text-muted"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -260,11 +260,11 @@
                       @if (msg.delivery_status === 'read') {
                         <!-- Double check: read (blue) -->
                         <svg
-                          class="w-3.5 h-3.5 text-blue-500"
+                          class="w-3.5 h-3.5 text-secondary"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
-                          aria-label="Read"
+                          [attr.aria-label]="'chatRoom.deliveryStatusRead' | t"
                         >
                           <path
                             stroke-linecap="round"
@@ -274,7 +274,7 @@
                           />
                         </svg>
                         <svg
-                          class="w-3.5 h-3.5 -ms-2 text-blue-500"
+                          class="w-3.5 h-3.5 -ms-2 text-secondary"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
