@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { CentrifugoService } from '../centrifugo.service';
 import { ChatMessage } from '../interfaces/chat-message.interface';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class SystemMessageService {
@@ -16,7 +17,7 @@ export class SystemMessageService {
     params: Record<string, unknown> = {},
   ): ChatMessage {
     return {
-      id: `sys_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      id: `sys_${Date.now()}_${randomUUID()}`,
       room_id: roomId,
       sender_id: '',
       message_type: 'system',

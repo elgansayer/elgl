@@ -523,6 +523,7 @@ export class I18nService {
     'moments.pinBtn': 'Pin',
     'moments.unpinBtn': 'Unpin',
     'moments.likeBtn': 'Like',
+    'moments.unlikeBtn': 'Unlike',
     'moments.commentBtn': 'Comment',
     'moments.replyBtn': 'Reply',
     'moments.correctBtn': 'Correct',

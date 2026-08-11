@@ -18,9 +18,16 @@ describe('TimelineWorker', () => {
       from: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
+    const mockPipeline = {
+      lpush: jest.fn().mockReturnThis(),
+      ltrim: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([]),
+    };
+
     mockRedisClient = {
       lpush: jest.fn().mockResolvedValue(1),
       ltrim: jest.fn().mockResolvedValue('OK'),
+      pipeline: jest.fn().mockReturnValue(mockPipeline),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -71,26 +78,29 @@ describe('TimelineWorker', () => {
         'author-1',
       );
 
+      const mockPipeline = mockRedisClient.pipeline();
+
       // follower-1, follower-2, author-1 -> 3 total pushes
-      expect(mockRedisClient.lpush).toHaveBeenCalledTimes(3);
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockPipeline.lpush).toHaveBeenCalledTimes(3);
+      expect(mockPipeline.lpush).toHaveBeenCalledWith(
         'timeline_queue:follower-1',
         'moment-100',
       );
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockPipeline.lpush).toHaveBeenCalledWith(
         'timeline_queue:follower-2',
         'moment-100',
       );
-      expect(mockRedisClient.lpush).toHaveBeenCalledWith(
+      expect(mockPipeline.lpush).toHaveBeenCalledWith(
         'timeline_queue:author-1',
         'moment-100',
       );
-      expect(mockRedisClient.ltrim).toHaveBeenCalledTimes(3);
-      expect(mockRedisClient.ltrim).toHaveBeenCalledWith(
+      expect(mockPipeline.ltrim).toHaveBeenCalledTimes(3);
+      expect(mockPipeline.ltrim).toHaveBeenCalledWith(
         'timeline_queue:follower-1',
         0,
         499,
       );
+      expect(mockPipeline.exec).toHaveBeenCalledTimes(1);
 
       expect(logSpy).toHaveBeenCalledWith(
         'Fanned out moment moment-100 to 3 followers via Redis queue.',

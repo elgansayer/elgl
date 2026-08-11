@@ -130,6 +130,13 @@ This is a distinct problem from the design-system work (merge hygiene, not token
 a likely contributor to the pre-existing `npm run build` breakage noted throughout this doc and in
 memory (`project_hellotalk_build_state`). Worth a dedicated cleanup pass, separate from the redesign.
 
+**Update (session 3, 2026-08-11): all 13 frontend files above were fixed** (commit `1dc99001` on
+`design/phase4-continued`). While doing so, a sweep of `backend/src` found **10 more affected
+files** with the same unresolved-conflict-marker bug, out of scope for that pass (frontend-only):
+`metrics/*`, `chat/chat.controller.ts`, `audio-rooms/audio-rooms.service.ts`, `economy/*.spec.ts`,
+`escrow/*` (exact list not yet re-confirmed - re-run `grep -rlE "^<<<<<<< |^=======$|^>>>>>>> "
+backend/src` to get current paths before starting). Worth its own dedicated pass.
+
 ## 6. Open questions carried into Phase 1
 
 - Exact palette/typeface direction is being designed fresh (not Claude-inspired) - see `tokens.html` sync for the proposal and review checkpoint.

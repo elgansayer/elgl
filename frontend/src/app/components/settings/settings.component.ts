@@ -39,7 +39,7 @@ export class SettingsComponent implements OnInit {
   vibrationEnabled = false;
 
   readonly linkedAccounts = signal<LinkedAccount[]>([]);
-  readonly linkedCount = computed(() => this.linkedAccounts().filter(a => a.active).length);
+  readonly linkedCount = computed(() => this.linkedAccounts().filter((a) => a.active).length);
   readonly autoDownloadMedia = signal(false);
   readonly autoDownloadPreference = signal<'wifi' | 'cellular'>('wifi');
   protected chatEnterToSend = signal(false);
@@ -131,9 +131,7 @@ export class SettingsComponent implements OnInit {
 
   toggleLanguageFilter(languageCode: string): void {
     this.filterAllowedLanguages.update((arr) =>
-      arr.includes(languageCode)
-        ? arr.filter((l) => l !== languageCode)
-        : [...arr, languageCode],
+      arr.includes(languageCode) ? arr.filter((l) => l !== languageCode) : [...arr, languageCode],
     );
   }
 
@@ -177,8 +175,10 @@ export class SettingsComponent implements OnInit {
       await this.userService.setMessageFilters({
         age_min: this.filterAgeMin(),
         age_max: this.filterAgeMax(),
-        allowed_genders: this.filterAllowedGenders().length > 0 ? this.filterAllowedGenders() : undefined,
-        allowed_native_languages: this.filterAllowedLanguages().length > 0 ? this.filterAllowedLanguages() : undefined,
+        allowed_genders:
+          this.filterAllowedGenders().length > 0 ? this.filterAllowedGenders() : undefined,
+        allowed_native_languages:
+          this.filterAllowedLanguages().length > 0 ? this.filterAllowedLanguages() : undefined,
       });
 
       this.successMessage.set('Settings saved successfully');
