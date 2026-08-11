@@ -43,6 +43,7 @@
     --color-success-rgb: 25, 134, 84;
     --color-warning-rgb: 161, 108, 9;
     --color-vip-rgb: 153, 111, 16;
+    --color-accent-rgb: 204, 72, 60; /* raspberry-ember, darkened so on-fill(paper) clears 4.5:1 */
 
     --on-fill-rgb: 255, 255, 255; /* paper */
     --shadow-color-rgb: 16, 19, 28;
@@ -71,6 +72,8 @@
     --color-success-rgb: 52, 211, 153;
     --color-warning-rgb: 242, 179, 61;
     --color-vip-rgb: 232, 184, 75;
+    --color-accent-rgb:
+      225, 79, 66; /* raspberry-ember, already clears 4.5:1 vs on-fill(ink) unchanged */
 
     --on-fill-rgb:
       18, 21, 28; /* ink - fills are brighter in dark mode, read better with a dark label */

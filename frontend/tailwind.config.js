@@ -63,15 +63,19 @@ module.exports = {
         },
         // Reserved for celebratory/gift moments (VIP CTAs, gift cards) -
         // distinct from the primary/secondary duet so it reads as a special
-        // occasion, not the everyday accent.
+        // occasion, not the everyday accent. DEFAULT/500 (the only shades
+        // ever used as a solid fill with on-fill text) are theme-aware like
+        // the other semantic tokens - a fixed hue can't clear 4.5:1 against
+        // both paper and ink at small text sizes simultaneously. The 50-700
+        // tint scale stays static (light-background tints, not solid fills).
         accent: {
           50: '#FFF1F0',
           100: '#FFE1DE',
           200: '#FFC3BD',
           300: '#FF9A8F',
           400: '#F96F60',
-          500: '#E14F42', // Relay raspberry-ember accent
-          DEFAULT: '#E14F42',
+          500: 'rgb(var(--color-accent-rgb) / <alpha-value>)',
+          DEFAULT: 'rgb(var(--color-accent-rgb) / <alpha-value>)',
           600: '#C23A2F',
           700: '#9C2C23',
         },
