@@ -55,10 +55,10 @@ describe('ReadingEngineExceptionFilter', () => {
     };
   });
 
-  it('should handle HttpException (4xx) without crash report', async () => {
+  it('should handle HttpException (4xx) without crash report', () => {
     const exception = new BadRequestException('Invalid resource data');
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(mockResponse.status).toHaveBeenCalledWith(400);
     expect(mockResponse.json).toHaveBeenCalledWith(
@@ -71,10 +71,10 @@ describe('ReadingEngineExceptionFilter', () => {
     expect(crashReportService.reportCrash).not.toHaveBeenCalled();
   });
 
-  it('should handle HttpException (5xx) with crash report', async () => {
+  it('should handle HttpException (5xx) with crash report', () => {
     const exception = new InternalServerErrorException('Database query failed');
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(mockResponse.status).toHaveBeenCalledWith(500);
     expect(mockResponse.json).toHaveBeenCalledWith(
@@ -96,10 +96,10 @@ describe('ReadingEngineExceptionFilter', () => {
     );
   });
 
-  it('should handle non-HttpException with crash report', async () => {
+  it('should handle non-HttpException with crash report', () => {
     const exception = new Error('Unexpected runtime error in reading engine');
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(mockResponse.status).toHaveBeenCalledWith(500);
     expect(mockResponse.json).toHaveBeenCalledWith(
@@ -116,12 +116,12 @@ describe('ReadingEngineExceptionFilter', () => {
     );
   });
 
-  it('should extract resource_id from request body', async () => {
+  it('should extract resource_id from request body', () => {
     mockRequest.body = { resourceId: 'res-123', title: 'Updated title' };
     mockRequest.path = '/reading/resources/res-123';
     const exception = new InternalServerErrorException('Update failed');
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(crashReportService.reportCrash).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -130,25 +130,25 @@ describe('ReadingEngineExceptionFilter', () => {
     );
   });
 
-  it('should extract resource_id from request params when not in body', async () => {
+  it('should extract resource_id from request params when not in body', () => {
     mockRequest.body = {};
     mockRequest.params = { id: 'res-456' };
     mockRequest.url = '/reading/resources/res-456';
     const exception = new NotFoundException('Resource not found');
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     // 404 is 4xx, no crash report
     expect(mockResponse.status).toHaveBeenCalledWith(404);
   });
 
-  it('should handle array messages from class-validator', async () => {
+  it('should handle array messages from class-validator', () => {
     const exception = new BadRequestException([
       'title must be a string',
       'content must not be empty',
     ]);
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -157,11 +157,11 @@ describe('ReadingEngineExceptionFilter', () => {
     );
   });
 
-  it('should work without a user on the request', async () => {
+  it('should work without a user on the request', () => {
     mockRequest.user = undefined;
     const exception = new InternalServerErrorException('Cache failure');
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(crashReportService.reportCrash).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -170,12 +170,12 @@ describe('ReadingEngineExceptionFilter', () => {
     );
   });
 
-  it('should include stack_trace in crash report', async () => {
+  it('should include stack_trace in crash report', () => {
     const exception = new Error('Tokenisation error');
     exception.stack =
       'Error: Tokenisation error\n    at reading-engine.service.ts:150:20';
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(crashReportService.reportCrash).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -185,7 +185,7 @@ describe('ReadingEngineExceptionFilter', () => {
     );
   });
 
-  it('should handle GET requests with resource id in params', async () => {
+  it('should handle GET requests with resource id in params', () => {
     mockRequest.method = 'GET';
     mockRequest.path = '/reading/resources/res-789';
     mockRequest.url = '/reading/resources/res-789';
@@ -193,7 +193,7 @@ describe('ReadingEngineExceptionFilter', () => {
     mockRequest.params = { id: 'res-789' };
     const exception = new InternalServerErrorException('Cache miss');
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(crashReportService.reportCrash).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -203,11 +203,11 @@ describe('ReadingEngineExceptionFilter', () => {
     );
   });
 
-  it('should include resource_id in response body', async () => {
+  it('should include resource_id in response body', () => {
     mockRequest.params = { id: 'res-abc' };
     const exception = new InternalServerErrorException('Processing error');
 
-    await filter.catch(exception, mockHost);
+    filter.catch(exception, mockHost);
 
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({

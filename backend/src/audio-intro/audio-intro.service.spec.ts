@@ -44,7 +44,6 @@ describe('AudioIntroService', () => {
     expect(service).toBeDefined();
   });
 
-
   describe('getAudioIntro', () => {
     it('should return audio_url when data is present', async () => {
       const mockUserId = 'user-123';
@@ -87,10 +86,11 @@ describe('AudioIntroService', () => {
         error: mockError,
       });
 
-      await expect(service.getAudioIntro(mockUserId)).rejects.toThrow('Database error');
+      await expect(service.getAudioIntro(mockUserId)).rejects.toThrow(
+        'Database error',
+      );
     });
   });
-
 
   describe('updateAudioIntro', () => {
     it('should successfully update the audio intro url', async () => {
@@ -104,7 +104,9 @@ describe('AudioIntroService', () => {
       await service.updateAudioIntro(mockUserId, mockAudioUrl);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ audio_intro_url: mockAudioUrl });
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({
+        audio_intro_url: mockAudioUrl,
+      });
       expect(mockSupabaseClient.eq).toHaveBeenCalledWith('id', mockUserId);
     });
 
@@ -117,10 +119,11 @@ describe('AudioIntroService', () => {
         error: mockError,
       });
 
-      await expect(service.updateAudioIntro(mockUserId, mockAudioUrl)).rejects.toThrow('Database error');
+      await expect(
+        service.updateAudioIntro(mockUserId, mockAudioUrl),
+      ).rejects.toThrow('Database error');
     });
   });
-
 
   describe('getPresignedUploadUrl', () => {
     let dateNowSpy: jest.SpyInstance;
@@ -153,10 +156,17 @@ describe('AudioIntroService', () => {
       const result = await service.getPresignedUploadUrl(filename, contentType);
 
       expect(mockSupabaseClient.storage.from).toHaveBeenCalledWith('audio');
-      expect(mockSupabaseClient.storage.createSignedUploadUrl).toHaveBeenCalledWith('audio-intros/1000_test-audio.mp3');
-      expect(mockSupabaseClient.storage.getPublicUrl).toHaveBeenCalledWith('audio-intros/1000_test-audio.mp3');
+      expect(
+        mockSupabaseClient.storage.createSignedUploadUrl,
+      ).toHaveBeenCalledWith('audio-intros/1000_test-audio.mp3');
+      expect(mockSupabaseClient.storage.getPublicUrl).toHaveBeenCalledWith(
+        'audio-intros/1000_test-audio.mp3',
+      );
 
-      expect(result).toEqual({ uploadUrl: mockSignedUrl, mediaUrl: mockPublicUrl });
+      expect(result).toEqual({
+        uploadUrl: mockSignedUrl,
+        mediaUrl: mockPublicUrl,
+      });
     });
 
     it('should fall back to empty string if public URL data is missing', async () => {
@@ -189,7 +199,9 @@ describe('AudioIntroService', () => {
         error: mockError,
       });
 
-      await expect(service.getPresignedUploadUrl(filename, contentType)).rejects.toThrow('Storage error');
+      await expect(
+        service.getPresignedUploadUrl(filename, contentType),
+      ).rejects.toThrow('Storage error');
     });
   });
 });

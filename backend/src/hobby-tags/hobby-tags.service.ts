@@ -447,13 +447,23 @@ export class HobbyTagsService {
     return results;
   }
 
-  async getUserVocabulary(userId: string, language: string): Promise<VocabularyResultItem[]> {
+  async getUserVocabulary(
+    userId: string,
+    language: string,
+  ): Promise<VocabularyResultItem[]> {
     return this.getVocabularyForUser(userId, language || 'en');
   }
 
-  async getVocabularyForTag(tagId: string, language: string): Promise<VocabularyResultItem[]> {
+  async getVocabularyForTag(
+    tagId: string,
+    language: string,
+  ): Promise<VocabularyResultItem[]> {
     const supabase = this.supabaseService.getClient();
-    const { data } = await supabase.from('hobby_tags').select('*').eq('id', tagId).single();
+    const { data } = await supabase
+      .from('hobby_tags')
+      .select('*')
+      .eq('id', tagId)
+      .single();
     if (!data) return [];
     return this.getBaseVocabulary(data.name).map((item, index) => ({
       id: `${tagId}-${index}`,

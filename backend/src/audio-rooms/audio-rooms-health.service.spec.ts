@@ -42,9 +42,9 @@ describe('AudioRoomsHealthService', () => {
     jest.useFakeTimers();
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     jest.useRealTimers();
-    await service.onModuleDestroy?.();
+    service.onModuleDestroy?.();
   });
 
   describe('getDegradationState', () => {
@@ -90,7 +90,7 @@ describe('AudioRoomsHealthService', () => {
       expect(service).toBeDefined();
     });
 
-    it('should mark livekit as degraded in mock mode', async () => {
+    it('should mark livekit as degraded in mock mode', () => {
       // Directly reflect the mock-mode state: in mock mode, livekit is
       // considered healthy but degraded (no real SFU).
       const state = service.getDegradationState();

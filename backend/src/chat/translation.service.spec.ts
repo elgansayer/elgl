@@ -48,10 +48,7 @@ describe('TranslationService', () => {
   describe('detectLanguage', () => {
     it('should return "en" if DEEPL_API_KEY is missing', async () => {
       mockConfigService.get.mockReturnValueOnce(undefined);
-      const serviceWithoutKey = new TranslationService(
-        configService as any,
-        logger as any,
-      );
+      const serviceWithoutKey = new TranslationService(configService, logger);
 
       const result = await serviceWithoutKey.detectLanguage('Hola');
       expect(result).toBe('en');
@@ -116,7 +113,9 @@ describe('TranslationService', () => {
     });
 
     it('should fallback to "en" and log warn if fetch throws error', async () => {
-      global.fetch = jest.fn().mockRejectedValueOnce(new Error('Network error'));
+      global.fetch = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Network error'));
 
       const result = await service.detectLanguage('Bonjour');
       expect(result).toBe('en');
@@ -127,10 +126,7 @@ describe('TranslationService', () => {
   describe('translate', () => {
     it('should return original text if DEEPL_API_KEY is missing', async () => {
       mockConfigService.get.mockReturnValueOnce(undefined);
-      const serviceWithoutKey = new TranslationService(
-        configService as any,
-        logger as any,
-      );
+      const serviceWithoutKey = new TranslationService(configService, logger);
 
       const result = await serviceWithoutKey.translate('Hello', 'en', 'es');
       expect(result).toBe('Hello');
@@ -206,20 +202,23 @@ describe('TranslationService', () => {
 
   describe('translateWithExplanations', () => {
     it('should return primary translation, alternatives and context explanation', async () => {
-      jest.spyOn(service, 'translate')
+      jest
+        .spyOn(service, 'translate')
         .mockResolvedValueOnce('Hola') // Primary translation
         .mockResolvedValueOnce('Hello'); // Reverse translation
 
-      const result = await service.translateWithExplanations('Hello', 'en', 'es');
+      const result = await service.translateWithExplanations(
+        'Hello',
+        'en',
+        'es',
+      );
 
       expect(result).toEqual({
         translation: 'Hola',
-        alternatives: [
-          'Hola',
-          '(more formal) Hola',
-          '(more colloquial) Hello'
-        ],
-        contextExplanation: expect.stringContaining('"Hello" is a phrase in en that')
+        alternatives: ['Hola', '(more formal) Hola', '(more colloquial) Hello'],
+        contextExplanation: expect.stringContaining(
+          '"Hello" is a phrase in en that',
+        ),
       });
 
       expect(service.translate).toHaveBeenCalledTimes(2);

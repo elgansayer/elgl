@@ -47,18 +47,17 @@ export class AchievementsService implements OnModuleInit {
 
   private async seedAchievements(): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    for (const m of this.milestones) {
-      const { error } = await supabase
-        .from('achievements')
-        .upsert(
-          { code: m.code, name: m.name, description: m.description },
-          { onConflict: 'code' },
-        );
-      if (error) {
-        this.logger.warn(
-          `Failed to upsert achievement ${m.code}: ${error.message}`,
-        );
-      }
+    const achievements = this.milestones.map((milestone) => ({
+      code: milestone.code,
+      name: milestone.name,
+      description: milestone.description,
+    }));
+    const { error } = await supabase
+      .from('achievements')
+      .upsert(achievements, { onConflict: 'code' });
+
+    if (error) {
+      this.logger.warn(`Failed to bulk upsert achievements: ${error.message}`);
     }
   }
 

@@ -38,7 +38,9 @@ describe('ChatBackupService', () => {
         { created_at: '2023-01-02', sender: 'Alice', content: 'World' },
       ];
 
-      const mockOrder = jest.fn().mockResolvedValue({ data: mockData, error: null });
+      const mockOrder = jest
+        .fn()
+        .mockResolvedValue({ data: mockData, error: null });
       const mockEq = jest.fn().mockReturnValue({ order: mockOrder });
       const mockSelect = jest.fn().mockReturnValue({ eq: mockEq });
       const mockFrom = jest.fn().mockReturnValue({ select: mockSelect });
@@ -53,9 +55,15 @@ describe('ChatBackupService', () => {
     });
 
     it('should return empty string if no data', async () => {
-      const mockOrder = jest.fn().mockResolvedValue({ data: null, error: null });
+      const mockOrder = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: null });
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({ select: jest.fn().mockReturnValue({ eq: jest.fn().mockReturnValue({ order: mockOrder }) }) }),
+        from: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({ order: mockOrder }),
+          }),
+        }),
       });
 
       const result = await service.createBackup('user-123');
@@ -64,22 +72,37 @@ describe('ChatBackupService', () => {
 
     it('should throw and log if error occurs', async () => {
       const mockError = { message: 'DB Error' };
-      const mockOrder = jest.fn().mockResolvedValue({ data: null, error: mockError });
+      const mockOrder = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: mockError });
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({ select: jest.fn().mockReturnValue({ eq: jest.fn().mockReturnValue({ order: mockOrder }) }) }),
+        from: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({ order: mockOrder }),
+          }),
+        }),
       });
 
-      await expect(service.createBackup('user-123')).rejects.toThrow('DB Error');
-      expect(service['logger'].error).toHaveBeenCalledWith('Backup failed for user user-123: DB Error');
+      await expect(service.createBackup('user-123')).rejects.toThrow(
+        'DB Error',
+      );
+      expect(service['logger'].error).toHaveBeenCalledWith(
+        'Backup failed for user user-123: DB Error',
+      );
     });
   });
 
   describe('exportChannelBackup', () => {
     it('should export messages successfully', async () => {
       const mockChannelId = 'channel-123';
-      const mockMessages = [{ id: 'msg-1', content: 'hello' }, { id: 'msg-2', content: 'world' }];
+      const mockMessages = [
+        { id: 'msg-1', content: 'hello' },
+        { id: 'msg-2', content: 'world' },
+      ];
 
-      const mockOrder = jest.fn().mockResolvedValue({ data: mockMessages, error: null });
+      const mockOrder = jest
+        .fn()
+        .mockResolvedValue({ data: mockMessages, error: null });
       const mockEq = jest.fn().mockReturnValue({ order: mockOrder });
       const mockSelect = jest.fn().mockReturnValue({ eq: mockEq });
       const mockFrom = jest.fn().mockReturnValue({ select: mockSelect });
@@ -96,7 +119,9 @@ describe('ChatBackupService', () => {
     });
 
     it('should return empty array if data is null', async () => {
-      const mockOrder = jest.fn().mockResolvedValue({ data: null, error: null });
+      const mockOrder = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: null });
       supabaseService.getClient.mockReturnValue({
         from: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({
@@ -113,7 +138,9 @@ describe('ChatBackupService', () => {
 
     it('should throw an error and log if export fails', async () => {
       const mockError = { message: 'Export error' };
-      const mockOrder = jest.fn().mockResolvedValue({ data: null, error: mockError });
+      const mockOrder = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: mockError });
       supabaseService.getClient.mockReturnValue({
         from: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({
@@ -124,8 +151,12 @@ describe('ChatBackupService', () => {
         }),
       });
 
-      await expect(service.exportChannelBackup('channel-123')).rejects.toThrow('Export error');
-      expect(service['logger'].error).toHaveBeenCalledWith('Export failed for channel channel-123: Export error');
+      await expect(service.exportChannelBackup('channel-123')).rejects.toThrow(
+        'Export error',
+      );
+      expect(service['logger'].error).toHaveBeenCalledWith(
+        'Export failed for channel channel-123: Export error',
+      );
     });
   });
 
@@ -134,41 +165,63 @@ describe('ChatBackupService', () => {
       const mockChannelId = 'channel-123';
       const mockMessages = [
         { id: '1', content: 'a', sender: 'x' },
-        { id: '2', content: 'b', sender: 'y' }
+        { id: '2', content: 'b', sender: 'y' },
       ];
 
-      const mockSelect = jest.fn().mockResolvedValue({ data: [{ id: 'new-1' }, { id: 'new-2' }], error: null });
+      const mockSelect = jest.fn().mockResolvedValue({
+        data: [{ id: 'new-1' }, { id: 'new-2' }],
+        error: null,
+      });
       const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
       const mockFrom = jest.fn().mockReturnValue({ insert: mockInsert });
 
       supabaseService.getClient.mockReturnValue({ from: mockFrom });
 
-      const result = await service.importChannelBackup(mockChannelId, mockMessages);
+      const result = await service.importChannelBackup(
+        mockChannelId,
+        mockMessages,
+      );
 
       expect(result).toBe(2);
       expect(mockFrom).toHaveBeenCalledWith('chat_messages');
       // Should strip 'id' and add 'channel_id'
       expect(mockInsert).toHaveBeenCalledWith([
         { content: 'a', sender: 'x', channel_id: mockChannelId },
-        { content: 'b', sender: 'y', channel_id: mockChannelId }
+        { content: 'b', sender: 'y', channel_id: mockChannelId },
       ]);
     });
 
     it('should import messages in multiple chunks of 500', async () => {
       const mockChannelId = 'channel-123';
-      const mockMessages = Array.from({ length: 1200 }, (_, i) => ({ id: `old-${i}`, val: i }));
+      const mockMessages = Array.from({ length: 1200 }, (_, i) => ({
+        id: `old-${i}`,
+        val: i,
+      }));
 
-      const mockSelect = jest.fn()
-        .mockResolvedValueOnce({ data: Array(500).fill({ id: 'new' }), error: null })
-        .mockResolvedValueOnce({ data: Array(500).fill({ id: 'new' }), error: null })
-        .mockResolvedValueOnce({ data: Array(200).fill({ id: 'new' }), error: null });
+      const mockSelect = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: Array(500).fill({ id: 'new' }),
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: Array(500).fill({ id: 'new' }),
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: Array(200).fill({ id: 'new' }),
+          error: null,
+        });
 
       const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
       const mockFrom = jest.fn().mockReturnValue({ insert: mockInsert });
 
       supabaseService.getClient.mockReturnValue({ from: mockFrom });
 
-      const result = await service.importChannelBackup(mockChannelId, mockMessages);
+      const result = await service.importChannelBackup(
+        mockChannelId,
+        mockMessages,
+      );
 
       expect(result).toBe(1200);
       expect(mockInsert).toHaveBeenCalledTimes(3);
@@ -183,11 +236,18 @@ describe('ChatBackupService', () => {
     });
 
     it('should throw an error and log if insert fails', async () => {
-      const mockMessages = Array.from({ length: 600 }, (_, i) => ({ id: `old-${i}`, val: i }));
+      const mockMessages = Array.from({ length: 600 }, (_, i) => ({
+        id: `old-${i}`,
+        val: i,
+      }));
       const mockError = { message: 'Insert failed' };
 
-      const mockSelect = jest.fn()
-        .mockResolvedValueOnce({ data: Array(500).fill({ id: 'new' }), error: null })
+      const mockSelect = jest
+        .fn()
+        .mockResolvedValueOnce({
+          data: Array(500).fill({ id: 'new' }),
+          error: null,
+        })
         .mockResolvedValueOnce({ data: null, error: mockError });
 
       const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
@@ -195,20 +255,28 @@ describe('ChatBackupService', () => {
         from: jest.fn().mockReturnValue({ insert: mockInsert }),
       });
 
-      await expect(service.importChannelBackup('channel-123', mockMessages)).rejects.toThrow('Insert failed');
+      await expect(
+        service.importChannelBackup('channel-123', mockMessages),
+      ).rejects.toThrow('Insert failed');
 
       expect(mockInsert).toHaveBeenCalledTimes(2);
-      expect(service['logger'].error).toHaveBeenCalledWith('Import failed for chunk starting at index 500: Insert failed');
+      expect(service['logger'].error).toHaveBeenCalledWith(
+        'Import failed for chunk starting at index 500: Insert failed',
+      );
     });
 
     it('should add up correctly when data is null but error is null', async () => {
-      const mockSelect = jest.fn().mockResolvedValue({ data: null, error: null });
+      const mockSelect = jest
+        .fn()
+        .mockResolvedValue({ data: null, error: null });
       const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
       supabaseService.getClient.mockReturnValue({
         from: jest.fn().mockReturnValue({ insert: mockInsert }),
       });
 
-      const result = await service.importChannelBackup('channel-123', [{ id: '1' }]);
+      const result = await service.importChannelBackup('channel-123', [
+        { id: '1' },
+      ]);
       expect(result).toBe(0);
     });
   });

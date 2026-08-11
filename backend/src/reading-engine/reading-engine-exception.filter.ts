@@ -29,7 +29,9 @@ interface ReadingEngineErrorLog {
 export class ReadingEngineExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(ReadingEngineExceptionFilter.name);
 
-  constructor(private readonly crashReportService: ReadingEngineCrashReportService) {}
+  constructor(
+    private readonly crashReportService: ReadingEngineCrashReportService,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -67,16 +69,20 @@ export class ReadingEngineExceptionFilter implements ExceptionFilter {
       path: request.url,
       method: request.method,
       timestamp: new Date().toISOString(),
-      resourceId: typeof request.params?.id === 'string' ? request.params.id : undefined,
+      resourceId:
+        typeof request.params?.id === 'string' ? request.params.id : undefined,
     };
 
     if (status >= 500) {
       void this.crashReportService.reportCrash({
         operation: `${request.method} ${request.url}`,
         user_id: (request as Request & { user?: { id: string } }).user?.id,
-        resource_id: typeof request.params?.id === 'string'
-          ? request.params.id
-          : typeof request.body?.resourceId === 'string' ? request.body.resourceId : undefined,
+        resource_id:
+          typeof request.params?.id === 'string'
+            ? request.params.id
+            : typeof request.body?.resourceId === 'string'
+              ? request.body.resourceId
+              : undefined,
         error_type: errorName,
         error_message: normalisedMessage,
         stack_trace: exception instanceof Error ? exception.stack : undefined,
@@ -85,7 +91,7 @@ export class ReadingEngineExceptionFilter implements ExceptionFilter {
     }
 
     this.logger.error(
-      `[ReadingEngine] ${request.method} ${request.url} → ${status} (${errorName}): ${extractedMessage}`,
+      `[ReadingEngine] ${request.method} ${request.url} → ${status} (${errorName}): ${normalisedMessage}`,
       exception instanceof Error ? exception.stack : undefined,
     );
 
@@ -95,7 +101,7 @@ export class ReadingEngineExceptionFilter implements ExceptionFilter {
       message: normalisedMessage,
       timestamp: logPayload.timestamp,
       path: request.url,
-      ...((request.params?.id || request.body?.resourceId)
+      ...(request.params?.id || request.body?.resourceId
         ? { resource_id: request.params?.id ?? request.body.resourceId }
         : {}),
     });
