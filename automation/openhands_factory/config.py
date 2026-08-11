@@ -18,7 +18,7 @@ class FactoryConfig(BaseModel):
     log_dir: Path = Path("/var/log/hellotalk-factory")
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
-    openai_model: str = "gpt-5.2-codex"
+    openai_model: str = "gpt-5.6-sol"
     opencode_api_key: SecretStr
     opencode_base_url: str = "https://opencode.ai/zen/go/v1"
     opencode_model: str
@@ -114,7 +114,7 @@ class FactoryConfig(BaseModel):
                 worktree_dir=Path(
                     env.get("FACTORY_WORKTREE_DIR", cls.model_fields["worktree_dir"].default)
                 ),
-                openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.2-codex"),
+                openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.6-sol"),
                 opencode_api_key=SecretStr(required("OPENCODE_GO_API_KEY")),
                 opencode_base_url=env.get(
                     "OPENCODE_GO_BASE_URL", "https://opencode.ai/zen/go/v1"
