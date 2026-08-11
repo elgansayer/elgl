@@ -18,6 +18,7 @@ class GitHub:
         self.auto_merged: list[int] = []
         self.closed: list[int] = []
         self.reviewed: list[str] = []
+        self.comments: list[tuple[int, str]] = []
         self.tasks = [Task("42", "Fix build", "Broken build", "github-issue", 0)]
 
     def ensure_factory_labels(self) -> None:
@@ -28,6 +29,9 @@ class GitHub:
 
     def add_issue_labels(self, issue: int, labels: tuple[str, ...]) -> None:
         self.labels.append((issue, labels))
+
+    def add_comment(self, number: int, body: str) -> None:
+        self.comments.append((number, body))
 
     def create_pull_request(self, branch: str, title: str, body: str) -> int:
         return 99
@@ -210,6 +214,8 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     assert github.auto_merged == [99]
     assert github.closed == [42]
     assert github.reviewed == ["head"]
+    assert [number for number, _ in github.comments].count(42) == 1
+    assert [number for number, _ in github.comments].count(99) == 3
 
 
 def test_successful_transition_resets_previous_failures(

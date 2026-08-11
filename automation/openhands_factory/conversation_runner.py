@@ -14,7 +14,13 @@ from typing import Protocol
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import FactoryError
-from openhands_factory.models import Task
+from openhands_factory.models import ProviderName, Task
+from openhands_factory.provider_health import (
+    CircuitBreaker,
+    ProviderHealthStore,
+    classify_failure,
+)
+from openhands_factory.provider_profiles import openai_credentials_available
 
 
 class ConversationProtocol(Protocol):
@@ -137,21 +143,32 @@ class ConversationRunner:
         result_connection.close()
         exit_code = process.exitcode
         process.close()
-        
-        from openhands_factory.provider_health import ProviderHealthStore, CircuitBreaker, classify_failure
-        from openhands_factory.models import ProviderName
-        from openhands_factory.provider_profiles import openai_credentials_available
-        
         store = ProviderHealthStore(self.config.state_dir / "health.json")
         breakers = store.load()
         if not breakers:
             breakers = [
-                CircuitBreaker(ProviderName.OPENAI_SUBSCRIPTION, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
-                CircuitBreaker(ProviderName.OPENCODE_GO, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
-                CircuitBreaker(ProviderName.GEMINI, self.config.max_consecutive_failures, self.config.provider_cooldown_seconds),
+                CircuitBreaker(
+                    ProviderName.OPENAI_SUBSCRIPTION,
+                    self.config.max_consecutive_failures,
+                    self.config.provider_cooldown_seconds,
+                ),
+                CircuitBreaker(
+                    ProviderName.OPENCODE_GO,
+                    self.config.max_consecutive_failures,
+                    self.config.provider_cooldown_seconds,
+                ),
+                CircuitBreaker(
+                    ProviderName.GEMINI,
+                    self.config.max_consecutive_failures,
+                    self.config.provider_cooldown_seconds,
+                ),
             ]
-        
-        primary_provider = ProviderName.OPENAI_SUBSCRIPTION if openai_credentials_available(self.config) else ProviderName.OPENCODE_GO
+
+        primary_provider = (
+            ProviderName.OPENAI_SUBSCRIPTION
+            if openai_credentials_available(self.config)
+            else ProviderName.OPENCODE_GO
+        )
 
         if not isinstance(outcome, dict) or outcome.get("completed") is not True:
             status_code = outcome.get("status_code") if isinstance(outcome, dict) else None

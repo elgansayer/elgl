@@ -42,6 +42,7 @@ class FactoryPipeline:
             config.github_repository,
             config.repository,
             config.github_token.get_secret_value(),
+            base_branch=config.base_branch,
         )
         self.jobs = JobStore(config.state_dir / "jobs.json")
         self.tasks = TaskStore(config.state_dir)
@@ -135,6 +136,14 @@ class FactoryPipeline:
                 worktree, job.task.identifier, job.task.title
             )
             self.github.add_issue_labels(int(job.task.identifier), ("factory-active",))
+            self.github.add_comment(
+                int(job.task.identifier),
+                (
+                    "OpenHands factory started this issue. It is using an isolated worktree, "
+                    "parallel capacity is controlled by the factory configuration, and the "
+                    "implementation will be verified before a pull request is opened."
+                ),
+            )
             job.state = JobState.IMPLEMENTING
             return
 
@@ -173,6 +182,14 @@ class FactoryPipeline:
                 f"Fixes #{job.task.identifier}: {job.task.title}",
                 self._pull_request_body(job),
             )
+            self.github.add_comment(
+                job.pull_request,
+                (
+                    "OpenHands factory created this pull request. The factory will review the "
+                    "same branch, repair verification failures, wait for required checks, and "
+                    "merge only after the reviewed commit is still current."
+                ),
+            )
             job.state = JobState.REVIEWING
             return
 
@@ -201,6 +218,14 @@ class FactoryPipeline:
             self.github.add_issue_labels(job.pull_request, ("factory-reviewed",))
             self.github.mark_ready(job.pull_request)
             self.github.request_review(job.pull_request)
+            self.github.add_comment(
+                job.pull_request,
+                (
+                    "OpenHands factory review passed. Local verification completed and the "
+                    "reviewed head SHA is recorded as a required status. Waiting for GitHub "
+                    "checks before merge."
+                ),
+            )
             job.state = JobState.CI_PENDING
             return
 
@@ -235,6 +260,14 @@ class FactoryPipeline:
             workflow.push(job.branch)
             job.head_sha = workflow.head_sha()
             job.repair_attempts += 1
+            if job.pull_request is not None:
+                self.github.add_comment(
+                    job.pull_request,
+                    (
+                        "OpenHands factory repaired the branch after verification or CI "
+                        "feedback. The branch is returning to review before merge."
+                    )
+                )
             job.state = JobState.REVIEWING
             return
 
@@ -245,6 +278,11 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.MERGED:
+            if job.pull_request is not None:
+                self.github.add_comment(
+                    job.pull_request,
+                    "OpenHands factory confirmed that GitHub merged this pull request.",
+                )
             self.github.close_issue(int(job.task.identifier))
             GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
             self.tasks.release(job.task.identifier)
