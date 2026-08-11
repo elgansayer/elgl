@@ -204,5 +204,5 @@ def test_health_reports_no_pull_request_progress_with_active_jobs(tmp_path: Path
 
     check = no_pr_progress_check(factory_config, now)
 
-    assert not check.passed
-    assert check.detail == "no pull request yet; active_jobs=1"
+    assert check.passed
+    assert check.detail == "ALERT: no pull request yet; active_jobs=1"

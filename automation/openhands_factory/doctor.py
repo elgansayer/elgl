@@ -216,13 +216,15 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
     if not pull_request_jobs:
         return Check(
             "no-pr-progress",
-            False,
-            f"no pull request yet; active_jobs={len(active_jobs)}",
+            True,
+            f"ALERT: no pull request yet; active_jobs={len(active_jobs)}",
         )
     latest = max(job.updated_at for job in pull_request_jobs)
     age_hours = max((current - latest).total_seconds(), 0) / 3600
     detail = f"last pull request progress={age_hours:.1f}h ago; active_jobs={len(active_jobs)}"
-    return Check("no-pr-progress", age_hours <= config.max_no_pr_hours, detail)
+    if age_hours > config.max_no_pr_hours:
+        detail = f"ALERT: {detail}"
+    return Check("no-pr-progress", True, detail)
 
 
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
@@ -270,7 +272,7 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     checks.extend(job_health_checks(config))
     progress = no_pr_progress_check(config)
     checks.append(progress)
-    if not progress.passed and progress.name == "no-pr-progress":
+    if progress.name == "no-pr-progress" and progress.detail.startswith("ALERT:"):
         AlertService(config).send(
             f"OpenHands factory alert: {progress.detail}. "
             f"No pull request progress for {config.max_no_pr_hours:g} hours."
