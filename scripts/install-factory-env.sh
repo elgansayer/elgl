@@ -2,7 +2,8 @@
 set -euo pipefail
 
 TARGET=/etc/hellotalk-factory/factory.env
-SOURCE=${1:-/home/dev/hellotalk/.env}
+SCRIPT_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE=${1:-"$(cd -- "$SCRIPT_DIRECTORY/.." && pwd)/.env"}
 
 if [ "$(id -u)" -ne 0 ]; then
   echo 'Run this command as root.' >&2

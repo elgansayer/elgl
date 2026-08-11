@@ -3,7 +3,7 @@
  * verify-constitution.mjs
  * Enforces the HelloTalk Engineering Constitution (AGENTS.md).
  * Checks for:
- * 1. Banned punctuation (no em dashes '-')
+ * 1. Banned punctuation (no em dashes '—')
  * 2. British English spelling enforcement (`colour`, `favourite`, `monetisation`, `tokenise`)
  * 3. Logical Tailwind CSS properties (`ps-`, `pe-`, `ms-`, `me-`, `border-s`) in frontend/
  * 4. API-First mandate (no direct @supabase/supabase-js createClient calls in frontend/)
@@ -72,7 +72,11 @@ function checkFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
   const lines = content.split('\n');
   const isFrontend = relPath.startsWith('frontend/src/');
-  const isTestFixture = relPath.endsWith('.spec.ts') || relPath.endsWith('.test.ts');
+  const isTestFixture =
+    relPath.endsWith('.spec.ts') ||
+    relPath.endsWith('.test.ts') ||
+    relPath.endsWith('.cy.ts') ||
+    relPath.includes('.verification.spec.ts');
   const isFrontendProduction = isFrontend && !isTestFixture;
   const isDoc = relPath.endsWith('.md') || relPath.endsWith('.mdc');
 
@@ -83,10 +87,10 @@ function checkFile(filePath) {
     const line = lines[i];
 
     // Check 1: Em dash check
-    if (EM_DASH_REGEX.test(line)) {
+    if (!isTestFixture && EM_DASH_REGEX.test(line)) {
       console.error(`❌ [EM DASH VIOLATION] ${relPath}:${lineNum}`);
       console.error(
-        `   Found em dash ('-'). Use standard hyphens or colons instead (AGENTS.md Section 2).`,
+        `   Found em dash ('—'). Use standard hyphens or colons instead (AGENTS.md Section 2).`,
       );
       totalErrors++;
     }

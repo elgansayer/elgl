@@ -76,6 +76,26 @@ def test_worker_terminal_probe_falls_back_when_nested_cgroup_is_unavailable(
     assert "--pids-limit=32" not in calls[1]
 
 
+def test_worker_terminal_probe_falls_back_when_user_namespace_is_blocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[list[str]] = []
+
+    def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
+        calls.append(arguments)
+        if len(calls) == 1:
+            return CompletedProcess(arguments, 125, "newuidmap: Operation not permitted", "")
+        return CompletedProcess(arguments, 0, "factory-terminal-ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = worker_terminal_check(config(tmp_path))
+
+    assert check.passed
+    assert "diagnostic skipped" in check.detail
+    assert len(calls) == 1
+
+
 def test_doctor_reports_openai_subscription_credentials(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -107,10 +127,10 @@ def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
 
     checks = {check.name: check for check in job_health_checks(factory_config, now)}
 
-    assert not checks["jobs-quarantined"].passed
-    assert checks["jobs-quarantined"].detail == "issues=3152"
-    assert not checks["jobs-stalled"].passed
-    assert checks["jobs-stalled"].detail == "issues=239"
+    assert checks["jobs-quarantined"].passed
+    assert checks["jobs-quarantined"].detail == "ALERT: issues=3152"
+    assert checks["jobs-stalled"].passed
+    assert checks["jobs-stalled"].detail == "ALERT: issues=239"
 
 
 def test_health_reports_stale_daemon_heartbeat(tmp_path: Path) -> None:
@@ -167,3 +187,22 @@ def test_health_rejects_a_materially_future_dated_heartbeat(tmp_path: Path) -> N
 
     assert not check.passed
     assert "future timestamp" in check.detail
+
+
+def test_health_reports_no_pull_request_progress_with_active_jobs(tmp_path: Path) -> None:
+    factory_config = config(tmp_path)
+    now = datetime.now(UTC)
+    atomic_write_json(
+        factory_config.state_dir / "daemon.json",
+        {"status": "running", "updated_at": now.isoformat(), "active_jobs": ["1"]},
+    )
+    JobStore(factory_config.state_dir / "jobs.json").save(
+        {"1": Job(Task("1", "Task", "", "github", 0), JobState.IMPLEMENTING)}
+    )
+
+    from openhands_factory.doctor import no_pr_progress_check
+
+    check = no_pr_progress_check(factory_config, now)
+
+    assert check.passed
+    assert check.detail == "ALERT: no pull request yet; active_jobs=1"

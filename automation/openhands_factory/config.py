@@ -40,6 +40,7 @@ class FactoryConfig(BaseModel):
     provider_cooldown_seconds: int = 300
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
+    max_no_pr_hours: float = 6
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     telegram_bot_token: SecretStr | None = None
@@ -144,6 +145,7 @@ class FactoryConfig(BaseModel):
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
+                max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=env.get("GITHUB_REPOSITORY", "elgansayer/elgl"),
                 telegram_bot_token=SecretStr(env["TELEGRAM_BOT_TOKEN"])
