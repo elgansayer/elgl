@@ -5,7 +5,10 @@ import pytest
 from openhands.tools.file_editor.definition import FileEditorAction
 from openhands.tools.terminal.definition import TerminalAction
 
-from openhands_factory.secure_tools import ContainedFileEditorExecutor, PodmanTerminalExecutor
+from openhands_factory.secure_tools import (
+    ContainedFileEditorExecutor,
+    PodmanTerminalExecutor,
+)
 
 
 def test_file_editor_rejects_path_escape(tmp_path: Path) -> None:
@@ -77,3 +80,28 @@ def test_terminal_keeps_nested_resource_and_security_limits(
     assert "--security-opt=no-new-privileges" in calls[0]
     assert "--cap-drop=all" in calls[0]
     assert "--network=none" in calls[0]
+
+
+def test_terminal_retries_without_nested_cgroup_limits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "worktree"
+    workspace.mkdir()
+    calls: list[list[str]] = []
+
+    def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
+        calls.append(arguments)
+        if len(calls) == 1:
+            return CompletedProcess(arguments, 125, "cannot set cgroup: permission denied", "")
+        return CompletedProcess(arguments, 0, "ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.secure_tools.subprocess.run", run)
+    executor = PodmanTerminalExecutor(workspace, workspace, Path("/usr/bin/podman"), "worker")
+
+    result = executor(TerminalAction(command="printf ready"))
+
+    assert not result.is_error
+    assert len(calls) == 2
+    assert "--pids-limit=512" in calls[0]
+    assert "--pids-limit=512" not in calls[1]
+    assert "--security-opt=no-new-privileges" in calls[1]
