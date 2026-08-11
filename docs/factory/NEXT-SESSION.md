@@ -5,7 +5,7 @@ Date saved: 2026-08-11
 ## Current state
 
 The active implementation is the OpenHands SDK daemon. The factory branch is
-`factory/update-dynamic-tasks` and the latest pushed commit is `fac263de`.
+`factory/update-dynamic-tasks` and the latest pushed commit is `6e66522c`.
 
 Unrelated application edits and scratch files remain uncommitted and must not
 be staged or removed.
@@ -31,6 +31,10 @@ Factory-only verification currently passes:
 - Current doctor output showed stalled and quarantined historical jobs. Do not
   delete durable job state without reviewing it.
 - Gemini was not passing validation.
+- Commit `6e66522c` adds a narrowly scoped fallback for hosts that cannot apply
+  nested Podman cgroup limits. The worker retains network, capability, user
+  namespace and worktree isolation, and the systemd unit retains aggregate
+  service limits.
 
 ## Resume sequence
 
