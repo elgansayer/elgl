@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { CrashReportService } from './crash-report.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
@@ -245,7 +246,7 @@ export class EscrowService {
     dto: CreateEscrowHoldDto,
   ): Promise<EscrowTransaction> {
     const redis = this.supabaseService.getRedisClient();
-    const id = `degraded_escrow_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const id = `degraded_escrow_${Date.now()}_${randomUUID()}`;
     const degradedRecord = {
       id,
       payer_id: payerId,
