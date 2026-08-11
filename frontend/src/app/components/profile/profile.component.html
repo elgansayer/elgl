@@ -496,15 +496,15 @@
                 <div class="flex flex-wrap gap-2 mb-2">
                   @for (code of nativeLanguages; track code) {
                     <div
-                      class="px-3 py-1.5 rounded-full text-sm font-medium border bg-primary border-primary text-white flex items-center gap-1.5"
+                      class="px-3 py-1.5 rounded-full text-sm font-medium border bg-primary border-primary text-on-fill flex items-center gap-1.5"
                     >
                       <span>{{ getLanguageFlagIcon(code) }}</span>
                       <span>{{ getLanguageName(code) }}</span>
                       <button
                         type="button"
                         (click)="removeNativeLanguage(code)"
-                        class="text-white/70 hover:text-white"
-                        aria-label="Remove language"
+                        class="text-on-fill/70 hover:text-on-fill"
+                        [attr.aria-label]="'common.removeLanguage' | t"
                       >
                         ✕
                       </button>
@@ -526,15 +526,15 @@
               <div class="flex flex-wrap gap-2 mb-2">
                 @for (code of targetLanguages; track code) {
                   <div
-                    class="px-3 py-1.5 rounded-full text-sm font-medium border bg-primary border-primary text-white flex items-center gap-1.5"
+                    class="px-3 py-1.5 rounded-full text-sm font-medium border bg-primary border-primary text-on-fill flex items-center gap-1.5"
                   >
                     <span>{{ getLanguageFlagIcon(code) }}</span>
                     <span>{{ getLanguageName(code) }}</span>
                     <button
                       type="button"
                       (click)="removeTargetLanguage(code)"
-                      class="text-white/70 hover:text-white"
-                      aria-label="Remove language"
+                      class="text-on-fill/70 hover:text-on-fill"
+                      [attr.aria-label]="'common.removeLanguage' | t"
                     >
                       ✕
                     </button>
@@ -602,7 +602,7 @@
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'everyone'"
-                [class.text-white]="profileVisibility() === 'everyone'"
+                [class.text-on-fill]="profileVisibility() === 'everyone'"
                 [class.border-primary]="profileVisibility() === 'everyone'"
                 [class.text-text-primary]="profileVisibility() !== 'everyone'"
                 [class.border-surface-300]="profileVisibility() !== 'everyone'"
@@ -615,7 +615,7 @@
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'vips_only'"
-                [class.text-white]="profileVisibility() === 'vips_only'"
+                [class.text-on-fill]="profileVisibility() === 'vips_only'"
                 [class.border-primary]="profileVisibility() === 'vips_only'"
                 [class.text-text-primary]="profileVisibility() !== 'vips_only'"
                 [class.border-surface-300]="profileVisibility() !== 'vips_only'"
@@ -628,7 +628,7 @@
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'hidden'"
-                [class.text-white]="profileVisibility() === 'hidden'"
+                [class.text-on-fill]="profileVisibility() === 'hidden'"
                 [class.border-primary]="profileVisibility() === 'hidden'"
                 [class.text-text-primary]="profileVisibility() !== 'hidden'"
                 [class.border-surface-300]="profileVisibility() !== 'hidden'"
