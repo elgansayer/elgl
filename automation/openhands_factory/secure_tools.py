@@ -31,6 +31,7 @@ def podman_run_arguments(
     memory_limit: str = "3g",
     cpu_limit: str = "2",
     resource_limits: bool = True,
+    userns: str = "keep-id",
 ) -> list[str]:
     """Build the common constrained worker-container command line."""
     arguments = [
@@ -39,7 +40,7 @@ def podman_run_arguments(
         "--network=none",
         "--security-opt=no-new-privileges",
         "--cap-drop=all",
-        "--userns=keep-id",
+        f"--userns={userns}",
         "--volume",
         f"{workspace}:/workspace:{workspace_access},Z",
     ]

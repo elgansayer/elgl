@@ -14,6 +14,7 @@ from openhands_factory.exceptions import FactoryError
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.provider_profiles import discover_gemini_models, discover_opencode_models
 from openhands_factory.state import read_json
+from openhands_factory.task_source import TaskStore
 
 
 def parser() -> argparse.ArgumentParser:
@@ -37,6 +38,7 @@ def parser() -> argparse.ArgumentParser:
     subcommands.add_parser("pause")
     subcommands.add_parser("resume")
     subcommands.add_parser("metrics")
+    subcommands.add_parser("reconcile")
     return result
 
 
@@ -98,6 +100,10 @@ def main(arguments: list[str] | None = None) -> int:
             return 0
         if args.command == "metrics":
             print(json.dumps(MetricsStore(config.state_dir / "metrics.json").snapshot(), indent=2))
+            return 0
+        if args.command == "reconcile":
+            expired = TaskStore(config.state_dir).prune_expired_leases()
+            print(json.dumps({"expired_leases_released": expired}, indent=2))
             return 0
     except FactoryError as error:
         print(f"Factory error: {error}", file=sys.stderr)

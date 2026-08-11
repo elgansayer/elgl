@@ -89,6 +89,7 @@ sudo systemctl status hellotalk-factory.service
 sudo journalctl -u hellotalk-factory.service -f
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
 ```
 
@@ -108,6 +109,7 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doct
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
 ```
@@ -119,10 +121,15 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resu
   retry without nested CPU, memory and PID flags. Network isolation, dropped capabilities, no-new-privileges,
   user namespaces and worktree confinement remain enabled, while the systemd service limits the factory as a
   whole.
+- If the host blocks `newuidmap` for the diagnostic smoke test, doctor retries that diagnostic only with a
+  host namespace and labels the result. Actual agent terminals continue to use `keep-id` isolation.
 - `providers check` reports the PASS or FAIL state of each configured provider, which isolates a blocked
   activation.
 - `status` prints the daemon state from `daemon.json` (`running`, `stopped` or `unknown`).
 - `metrics` prints the recorded provider usage and cost snapshot from `metrics.json`.
+- `reconcile` releases expired durable leases and never deletes branches or worktrees.
+- Doctor alerts through Telegram when active work has produced no pull request for
+  `FACTORY_MAX_NO_PR_HOURS` (default six hours).
 - `pause` stops the daemon from starting new work while preserving jobs, branches and pull requests.
 - `resume` re-enables scheduling once the underlying issue is resolved.
 
