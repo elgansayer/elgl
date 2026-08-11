@@ -31,7 +31,7 @@
   } @else {
     <ul class="space-y-2">
       @for (user of blockedUsers(); track user.id) {
-        <li class="flex flex-wrap items-center justify-between bg-surface rounded-lg p-3 gap-3">
+        <li class="flex flex-wrap items-center justify-between bg-surface-200 rounded-lg p-3 gap-3">
           <div class="flex items-center gap-3">
             @if (user.blocked_avatar) {
               <img
@@ -41,7 +41,7 @@
               />
             } @else {
               <div
-                class="h-10 w-10 rounded-full bg-surface-2 flex items-center justify-center text-text-secondary font-bold"
+                class="h-10 w-10 rounded-full bg-surface-100 flex items-center justify-center text-text-secondary font-bold"
               >
                 {{ (user.blocked_name ?? '?').charAt(0) }}
               </div>
@@ -54,7 +54,7 @@
             </div>
           </div>
           <button
-            class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
+            class="px-3 py-1.5 bg-danger text-on-fill rounded-lg text-sm hover:bg-danger/90 transition-colors disabled:opacity-50"
             (click)="onUnblock(user)"
             [disabled]="isUnblocking(user.id)"
             [attr.aria-label]="'admin.blocks.unblock' | t"

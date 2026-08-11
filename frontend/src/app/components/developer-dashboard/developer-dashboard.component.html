@@ -1,23 +1,21 @@
 <div class="mx-auto max-w-5xl space-y-4">
-  <section
-    class="rounded-sheet border border-indigo-300 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 p-6 text-white shadow-lift"
-  >
+  <section class="rounded-sheet bg-primary p-6 text-on-fill shadow-lift">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="space-y-2">
         <div class="flex flex-wrap items-center gap-2">
           <span
-            class="rounded-full bg-indigo-600 ps-3 pe-3 pt-1 pb-1 text-[11px] font-black uppercase tracking-wide"
+            class="rounded-full bg-on-fill/15 ps-3 pe-3 pt-1 pb-1 text-[11px] font-black uppercase tracking-wide"
             >{{ 'developer.bannerTier' | t }}</span
           >
           @if (store.developerStats()?.tier === 'developer') {
             <span
-              class="rounded-full bg-emerald-500 ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-black"
+              class="rounded-full bg-success text-on-fill ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-black"
               >{{ 'developer.bannerActive' | t }}</span
             >
           }
         </div>
         <h2 class="text-2xl font-black">{{ 'developer.bannerTitle' | t }}</h2>
-        <p class="text-sm text-indigo-100/85 max-w-2xl">
+        <p class="text-sm text-on-fill/85 max-w-2xl">
           {{ 'developer.bannerSubtitle' | t }}
         </p>
       </div>
@@ -26,16 +24,18 @@
         @if (store.developerStats()?.tier !== 'developer') {
           <button
             (click)="upgrade('developer')"
-            class="rounded-app bg-amber-500 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-black text-amber-950"
-           [attr.aria-label]="'developer.upgradeDevBtn' | t">
+            class="rounded-app bg-warning ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-black text-on-fill"
+            [attr.aria-label]="'developer.upgradeDevBtn' | t"
+          >
             {{ 'developer.upgradeDevBtn' | t }}
           </button>
         }
         @if (!authService.currentUser()?.is_vip) {
           <button
             (click)="upgrade('consumer')"
-            class="rounded-app border border-slate-500 bg-surface-800 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-text-primary"
-           [attr.aria-label]="'developer.upgradeConsumerBtn' | t">
+            class="rounded-app border border-on-fill/30 bg-on-fill/15 ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold text-on-fill"
+            [attr.aria-label]="'developer.upgradeConsumerBtn' | t"
+          >
             {{ 'developer.upgradeConsumerBtn' | t }}
           </button>
         }
@@ -47,42 +47,46 @@
   <nav class="flex flex-wrap gap-2 border-b border-surface-100 pb-2">
     <button
       (click)="setTab('overview')"
-      [class.bg-surface-800]="activeTab() === 'overview'"
-      [class.text-white]="activeTab() === 'overview'"
+      [class.bg-primary]="activeTab() === 'overview'"
+      [class.text-on-fill]="activeTab() === 'overview'"
       [class.bg-surface-100]="activeTab() !== 'overview'"
       [class.text-text-primary]="activeTab() !== 'overview'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-     [attr.aria-label]="'developer.tabOverview' | t">
+      [attr.aria-label]="'developer.tabOverview' | t"
+    >
       {{ 'developer.tabOverview' | t }}
     </button>
     <button
       (click)="setTab('postgis')"
-      [class.bg-surface-800]="activeTab() === 'postgis'"
-      [class.text-white]="activeTab() === 'postgis'"
+      [class.bg-primary]="activeTab() === 'postgis'"
+      [class.text-on-fill]="activeTab() === 'postgis'"
       [class.bg-surface-100]="activeTab() !== 'postgis'"
       [class.text-text-primary]="activeTab() !== 'postgis'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-     [attr.aria-label]="'developer.tabPostgis' | t">
+      [attr.aria-label]="'developer.tabPostgis' | t"
+    >
       {{ 'developer.tabPostgis' | t }}
     </button>
     <button
       (click)="setTab('centrifugo')"
-      [class.bg-surface-800]="activeTab() === 'centrifugo'"
-      [class.text-white]="activeTab() === 'centrifugo'"
+      [class.bg-primary]="activeTab() === 'centrifugo'"
+      [class.text-on-fill]="activeTab() === 'centrifugo'"
       [class.bg-surface-100]="activeTab() !== 'centrifugo'"
       [class.text-text-primary]="activeTab() !== 'centrifugo'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-     [attr.aria-label]="'developer.tabCentrifugo' | t">
+      [attr.aria-label]="'developer.tabCentrifugo' | t"
+    >
       {{ 'developer.tabCentrifugo' | t }}
     </button>
     <button
       (click)="setTab('livekit')"
-      [class.bg-surface-800]="activeTab() === 'livekit'"
-      [class.text-white]="activeTab() === 'livekit'"
+      [class.bg-primary]="activeTab() === 'livekit'"
+      [class.text-on-fill]="activeTab() === 'livekit'"
       [class.bg-surface-100]="activeTab() !== 'livekit'"
       [class.text-text-primary]="activeTab() !== 'livekit'"
       class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-     [attr.aria-label]="'developer.tabLivekit' | t">
+      [attr.aria-label]="'developer.tabLivekit' | t"
+    >
       {{ 'developer.tabLivekit' | t }}
     </button>
   </nav>
@@ -103,7 +107,8 @@
           <button
             (click)="generateKey()"
             class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs"
-           [attr.aria-label]="'developer.generateBtn' | t">
+            [attr.aria-label]="'developer.generateBtn' | t"
+          >
             {{ 'developer.generateBtn' | t }}
           </button>
         </div>
@@ -116,9 +121,7 @@
               <p class="app-muted font-bold uppercase">{{ 'developer.activeKeyLabel' | t }}</p>
               <code class="text-sm font-black text-text-primary">{{ key }}</code>
             </div>
-            <span class="app-chip bg-emerald-500/20 text-emerald-400">{{
-              'developer.activeRpm' | t
-            }}</span>
+            <span class="app-chip bg-success/20 text-success">{{ 'developer.activeRpm' | t }}</span>
           </div>
         } @else {
           <div class="app-empty-state">{{ 'developer.noKey' | t }}</div>
@@ -148,7 +151,7 @@
         </article>
         <article class="app-card app-padded space-y-1">
           <p class="app-muted font-bold uppercase">{{ 'developer.statLatencyLabel' | t }}</p>
-          <p class="text-3xl font-black text-emerald-400">
+          <p class="text-3xl font-black text-success">
             {{ store.developerStats()?.avg_latency_ms || 18 }} ms
           </p>
           <p class="text-[11px] text-text-secondary">{{ 'developer.statLatencySub' | t }}</p>
@@ -216,7 +219,8 @@
           (click)="runPostGisSearch()"
           [disabled]="isSearching()"
           class="app-button-primary ps-5 pe-5 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'developer.executingBtn' | t">
+          [attr.aria-label]="'developer.executingBtn' | t"
+        >
           {{ isSearching() ? ('developer.executingBtn' | t) : ('developer.executeBtn' | t) }}
         </button>
       </div>
@@ -235,7 +239,7 @@
                   <p class="text-sm font-black text-text-primary">
                     {{ partner.display_name }}
                     @if (partner.is_vip) {
-                      <span class="app-chip bg-amber-500/20 text-amber-400">{{
+                      <span class="app-chip bg-vip/20 text-vip">{{
                         'discovery.vipBadge' | t
                       }}</span>
                     }
@@ -245,7 +249,7 @@
                     {{ 'profile.targetLabel' | t }}: {{ partner.target_languages?.join(', ') }}
                   </p>
                 </div>
-                <span class="text-xs font-bold text-emerald-400">{{
+                <span class="text-xs font-bold text-success">{{
                   partner.distance_metres
                     ? ('developer.distanceAway' | t: { distance: partner.distance_metres })
                     : ('developer.nearPoint' | t)
@@ -275,8 +279,8 @@
         <div class="flex items-center gap-2">
           <span
             class="app-chip"
-            [class.bg-emerald-500/20]="centrifugeService.isConnected()"
-            [class.text-emerald-400]="centrifugeService.isConnected()"
+            [class.bg-success/20]="centrifugeService.isConnected()"
+            [class.text-success]="centrifugeService.isConnected()"
             [class.bg-surface-100]="!centrifugeService.isConnected()"
             [class.text-text-primary]="!centrifugeService.isConnected()"
           >
@@ -288,7 +292,8 @@
           <button
             (click)="toggleCentrifugo()"
             class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs"
-           [attr.aria-label]="'developer.disconnectBtn' | t">
+            [attr.aria-label]="'developer.disconnectBtn' | t"
+          >
             {{
               centrifugeService.isConnected()
                 ? ('developer.disconnectBtn' | t)
@@ -308,7 +313,8 @@
         <button
           (click)="simulateRedisTimelineFanout()"
           class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs"
-         [attr.aria-label]="'developer.triggerRedisBtn' | t">
+          [attr.aria-label]="'developer.triggerRedisBtn' | t"
+        >
           {{ 'developer.triggerRedisBtn' | t }}
         </button>
       </div>
@@ -329,15 +335,15 @@
             <span class="text-xs font-black uppercase text-text-primary">{{
               'developer.simRoleLabel' | t
             }}</span>
-            <span class="app-chip bg-indigo-500/20 text-indigo-400 font-bold uppercase">{{
+            <span class="app-chip bg-primary/20 text-primary font-bold uppercase">{{
               simulatedStageRole()
             }}</span>
           </div>
           <p class="text-xs text-text-secondary">
             {{ 'developer.permLabel' | t }}
             <strong
-              [class.text-emerald-600]="simulatedCanPublish()"
-              [class.text-amber-600]="!simulatedCanPublish()"
+              [class.text-success]="simulatedCanPublish()"
+              [class.text-warning]="!simulatedCanPublish()"
               >{{
                 simulatedCanPublish()
                   ? ('developer.permGranted' | t)
@@ -350,14 +356,16 @@
               <button
                 (click)="simulateStageHandRaise()"
                 class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs"
-               [attr.aria-label]="'developer.simApproveBtn' | t">
+                [attr.aria-label]="'developer.simApproveBtn' | t"
+              >
                 {{ 'developer.simApproveBtn' | t }}
               </button>
             } @else {
               <button
                 (click)="simulateStageDemote()"
                 class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs"
-               [attr.aria-label]="'developer.simDemoteBtn' | t">
+                [attr.aria-label]="'developer.simDemoteBtn' | t"
+              >
                 {{ 'developer.simDemoteBtn' | t }}
               </button>
             }
@@ -371,8 +379,8 @@
             }}</span>
             <span
               class="app-chip"
-              [class.bg-emerald-500/20]="isRecordingActive()"
-              [class.text-emerald-400]="isRecordingActive()"
+              [class.bg-success/20]="isRecordingActive()"
+              [class.text-success]="isRecordingActive()"
               [class.bg-surface-100]="!isRecordingActive()"
               [class.text-text-primary]="!isRecordingActive()"
             >
@@ -388,12 +396,13 @@
           </p>
           <button
             (click)="toggleRecordingArchive()"
-            [class.bg-red-600]="!isRecordingActive()"
-            [class.text-white]="!isRecordingActive()"
+            [class.bg-danger]="!isRecordingActive()"
+            [class.text-on-fill]="!isRecordingActive()"
             [class.bg-surface-200]="isRecordingActive()"
-            [class.text-white]="isRecordingActive()"
+            [class.text-text-primary]="isRecordingActive()"
             class="rounded-app ps-4 pe-4 pt-2 pb-2 text-xs font-black transition-colors"
-           [attr.aria-label]="'developer.stopRecordingBtn' | t">
+            [attr.aria-label]="'developer.stopRecordingBtn' | t"
+          >
             {{
               isRecordingActive()
                 ? ('developer.stopRecordingBtn' | t)
@@ -410,7 +419,7 @@
     class="app-card app-padded space-y-3 bg-surface-500 text-text-primary border border-surface-100"
   >
     <div class="flex items-center justify-between border-b border-surface-100 pb-2">
-      <h4 class="text-xs font-black uppercase tracking-wider text-indigo-400">
+      <h4 class="text-xs font-black uppercase tracking-wider text-primary">
         {{ 'developer.logsTitle' | t }}
       </h4>
       <span class="text-[11px] text-text-muted">{{
@@ -426,21 +435,21 @@
           <span class="text-text-muted shrink-0">[{{ log.timestamp }}]</span>
           <span
             class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase shrink-0"
-            [class.bg-indigo-900]="log.category === 'POSTGIS'"
-            [class.text-indigo-200]="log.category === 'POSTGIS'"
-            [class.bg-emerald-900]="log.category === 'CENTRIFUGO'"
-            [class.text-emerald-200]="log.category === 'CENTRIFUGO'"
-            [class.bg-amber-900]="log.category === 'REDIS'"
-            [class.text-amber-200]="log.category === 'REDIS'"
-            [class.bg-purple-900]="log.category === 'LIVEKIT'"
-            [class.text-purple-200]="log.category === 'LIVEKIT'"
+            [class.bg-primary/20]="log.category === 'POSTGIS'"
+            [class.text-primary]="log.category === 'POSTGIS'"
+            [class.bg-success/20]="log.category === 'CENTRIFUGO'"
+            [class.text-success]="log.category === 'CENTRIFUGO'"
+            [class.bg-warning/20]="log.category === 'REDIS'"
+            [class.text-warning]="log.category === 'REDIS'"
+            [class.bg-secondary/20]="log.category === 'LIVEKIT'"
+            [class.text-secondary]="log.category === 'LIVEKIT'"
           >
             {{ log.category }}
           </span>
           <span
-            class="text-slate-200 break-words"
-            [class.text-emerald-400]="log.status === 'success'"
-            [class.text-amber-400]="log.status === 'warn'"
+            class="text-text-primary break-words"
+            [class.text-success]="log.status === 'success'"
+            [class.text-warning]="log.status === 'warn'"
           >
             {{ log.message }}
           </span>
