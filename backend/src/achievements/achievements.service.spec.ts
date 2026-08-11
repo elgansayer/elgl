@@ -71,13 +71,35 @@ describe('AchievementsService', () => {
 
       await service.onModuleInit();
 
-      expect(builders['achievements'].upsert).toHaveBeenCalledTimes(5);
+      expect(builders['achievements'].upsert).toHaveBeenCalledTimes(1);
       expect(builders['achievements'].upsert).toHaveBeenCalledWith(
-        {
-          code: 'first_message',
-          name: 'First Message',
-          description: 'Send your first message in a chat.',
-        },
+        [
+          {
+            code: 'first_message',
+            name: 'First Message',
+            description: 'Send your first message in a chat.',
+          },
+          {
+            code: '100_messages',
+            name: '100 Messages',
+            description: 'Send 100 messages in chats.',
+          },
+          {
+            code: '500_messages',
+            name: '500 Messages',
+            description: 'Send 500 messages in chats.',
+          },
+          {
+            code: '7_day_streak',
+            name: '7-Day Streak',
+            description: 'Keep a 7‑day study streak.',
+          },
+          {
+            code: '30_day_streak',
+            name: '30-Day Streak',
+            description: 'Keep a 30‑day study streak.',
+          },
+        ],
         { onConflict: 'code' },
       );
     });
@@ -90,7 +112,7 @@ describe('AchievementsService', () => {
       await service.onModuleInit();
 
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to upsert achievement'),
+        expect.stringContaining('Failed to bulk upsert achievements'),
       );
     });
   });

@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   SupabaseService,
@@ -25,7 +30,9 @@ export class ReadingEngineService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly cacheService: ReadingEngineCacheService,
-    @Optional() private readonly crashReportService: ReadingEngineCrashReportService | undefined,
+    @Optional()
+    private readonly crashReportService:
+      ReadingEngineCrashReportService | undefined,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 

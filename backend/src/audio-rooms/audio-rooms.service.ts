@@ -883,13 +883,24 @@ export class AudioRoomsService implements OnModuleInit {
     return this.getRoom(room.id);
   }
 
-  async kickSpeaker(hostId: string, dto: DemoteSpeakerDto): Promise<AudioRoomRecord> {
+  async kickSpeaker(
+    hostId: string,
+    dto: DemoteSpeakerDto,
+  ): Promise<AudioRoomRecord> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase.from('audio_rooms').select('*').eq('id', dto.room_id).single();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
     if (!response.data) throw new NotFoundException('Room not found');
     const room = response.data as AudioRoomRow;
-    if (room.host_id !== hostId) throw new ForbiddenException('Only the host can kick a speaker off stage.');
-    if (room.host_id === dto.target_user_id) throw new ForbiddenException('The host cannot kick themselves.');
+    if (room.host_id !== hostId)
+      throw new ForbiddenException(
+        'Only the host can kick a speaker off stage.',
+      );
+    if (room.host_id === dto.target_user_id)
+      throw new ForbiddenException('The host cannot kick themselves.');
     const update: { speakers: string[]; co_host_id?: null } = {
       speakers: room.speakers.filter((id) => id !== dto.target_user_id),
     };
@@ -910,13 +921,28 @@ export class AudioRoomsService implements OnModuleInit {
     return this.getRoom(room.id);
   }
 
-  async dismissRaisedHand(hostId: string, dto: DismissRaisedHandDto): Promise<void> {
+  async dismissRaisedHand(
+    hostId: string,
+    dto: DismissRaisedHandDto,
+  ): Promise<void> {
     const supabase = this.supabaseService.getClient();
-    const response = await supabase.from('audio_rooms').select('*').eq('id', dto.room_id).single();
+    const response = await supabase
+      .from('audio_rooms')
+      .select('*')
+      .eq('id', dto.room_id)
+      .single();
     if (!response.data) throw new NotFoundException('Room not found');
     const room = response.data as AudioRoomRow;
-    if (room.host_id !== hostId) throw new ForbiddenException('Only the host can dismiss raised hands.');
-    await supabase.from('audio_rooms').update({ raised_hands: room.raised_hands.filter((id) => id !== dto.target_user_id) }).eq('id', room.id);
+    if (room.host_id !== hostId)
+      throw new ForbiddenException('Only the host can dismiss raised hands.');
+    await supabase
+      .from('audio_rooms')
+      .update({
+        raised_hands: room.raised_hands.filter(
+          (id) => id !== dto.target_user_id,
+        ),
+      })
+      .eq('id', room.id);
   }
 
   async inviteCoHost(
@@ -978,12 +1004,12 @@ export class AudioRoomsService implements OnModuleInit {
     }
 
     // Notify the invited user via Centrifugo to publish camera/mic and join the split-screen layout
-      await this.centrifugoService.publish(`room_${room.id}`, {
-        type: 'co_host_changed',
-        target_user_id: dto.target_user_id,
-        room_id: room.id,
-        previous_co_host_id: previousCoHostId,
-      });
+    await this.centrifugoService.publish(`room_${room.id}`, {
+      type: 'co_host_changed',
+      target_user_id: dto.target_user_id,
+      room_id: room.id,
+      previous_co_host_id: previousCoHostId,
+    });
 
     return this.getRoom(room.id);
   }

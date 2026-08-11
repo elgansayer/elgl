@@ -72,7 +72,8 @@ export class ChatController {
       user.id,
       request?.ip,
     );
-    const allowed = typeof rateLimit === 'boolean' ? rateLimit : rateLimit.allowed;
+    const allowed =
+      typeof rateLimit === 'boolean' ? rateLimit : rateLimit.allowed;
     if (!allowed) {
       const exception = new HttpException(
         'Too many WebSocket connection attempts. Please wait before reconnecting.',

@@ -30,8 +30,11 @@ export class AuthService {
     const client = this.supabaseService.getClient();
     const result = await client.auth.getUser(token);
     const userId = result.data?.user?.id;
-    if (result.error || !userId) throw new BadRequestException('Invalid or expired reset token');
-    const { error } = await client.auth.admin.updateUserById(userId, { password });
+    if (result.error || !userId)
+      throw new BadRequestException('Invalid or expired reset token');
+    const { error } = await client.auth.admin.updateUserById(userId, {
+      password,
+    });
     if (error) throw new BadRequestException(error.message);
   }
 

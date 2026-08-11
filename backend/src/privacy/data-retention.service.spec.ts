@@ -301,7 +301,9 @@ describe('DataRetentionService', () => {
       const mockError = new Error('Redis connection failed');
       mockRedis.del.mockRejectedValueOnce(mockError);
 
-      const loggerErrorSpy = jest.spyOn(service['logger'], 'error').mockImplementation();
+      const loggerErrorSpy = jest
+        .spyOn(service['logger'], 'error')
+        .mockImplementation();
 
       await service.finaliseAccountDeletions();
 
@@ -315,8 +317,6 @@ describe('DataRetentionService', () => {
 
       loggerErrorSpy.mockRestore();
     });
-
-
 
     it('wipes video/audio classroom tables for deleted users', async () => {
       mockQueryBuilder.limit.mockResolvedValue({

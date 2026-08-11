@@ -64,7 +64,8 @@ export class ChatService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
-    @Optional() private readonly readReceiptsService: ReadReceiptsService | undefined,
+    @Optional()
+    private readonly readReceiptsService: ReadReceiptsService | undefined,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,

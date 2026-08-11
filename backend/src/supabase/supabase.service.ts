@@ -717,8 +717,12 @@ export interface Database {
           acknowledged: boolean;
           resolved_at: string | null;
         };
-        Insert: Partial<Database['public']['Tables']['reading_engine_crash_reports']['Row']>;
-        Update: Partial<Database['public']['Tables']['reading_engine_crash_reports']['Row']>;
+        Insert: Partial<
+          Database['public']['Tables']['reading_engine_crash_reports']['Row']
+        >;
+        Update: Partial<
+          Database['public']['Tables']['reading_engine_crash_reports']['Row']
+        >;
         Relationships: [];
       };
       events: {
