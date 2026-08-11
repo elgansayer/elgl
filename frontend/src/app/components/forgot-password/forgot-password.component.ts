@@ -34,7 +34,7 @@ import { AuthService } from '../../services/auth.service';
             </div>
 
             @if (sendError()) {
-              <p class="text-error text-sm">{{ sendError() }}</p>
+              <p class="text-error text-sm">{{ sendError() ?? '' | t }}</p>
             }
             @if (sendSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.sent_message' | t }}</p>
@@ -65,7 +65,7 @@ import { AuthService } from '../../services/auth.service';
             </div>
 
             @if (resetError()) {
-              <p class="text-error text-sm">{{ resetError() }}</p>
+              <p class="text-error text-sm">{{ resetError() ?? '' | t }}</p>
             }
             @if (resetSuccess()) {
               <p class="text-success text-sm">{{ 'forgot_password.reset_success' | t }}</p>

@@ -4,9 +4,11 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CentrifugoService } from './centrifugo.service';
+import { ReadReceiptsService } from './read-receipts.service';
 import { SafetyService } from '../safety/safety.service';
 import { LinkPreviewService } from '../link-preview/link-preview.service';
 import { LinkPreview } from '../link-preview/interfaces/link-preview.interface';
@@ -16,6 +18,7 @@ import { AddFavouriteDto } from './dto/add-favourite.dto';
 import { SendTypingDto } from './dto/send-typing.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { EditMessageDto } from './dto/edit-message.dto';
 import { ReplyToStatusUpdateDto } from './dto/reply-to-status-update.dto';
 import {
   CorrectionPayload,
@@ -60,6 +63,7 @@ export class ChatService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly centrifugoService: CentrifugoService,
+    private readonly readReceiptsService: ReadReceiptsService,
     private readonly eventEmitter: EventEmitter2,
     private readonly safetyService: SafetyService,
     private readonly linkPreviewService: LinkPreviewService,
@@ -68,6 +72,7 @@ export class ChatService {
     private readonly systemMessageService: SystemMessageService,
     private readonly xpService: XpService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   async generateConnectionToken(userId: string): Promise<string> {
@@ -399,6 +404,7 @@ export class ChatService {
         correction_request_payload: dto.correction_request_payload ?? null,
         status_reply_payload: dto.status_reply_payload ?? null,
         is_view_once: dto.message_type === 'view_once_media' ? true : false,
+        delivery_status: 'sent',
       })
       .select(
         `
@@ -533,6 +539,16 @@ export class ChatService {
     // Send an automatic away reply if the receiver has configured one
     if (receiverId && dto.message_type !== 'system') {
       await this.sendAwayReplyIfNeeded(senderId, dto.room_id, receiverId);
+    }
+
+    // Set initial delivery status to 'sent' and mark as delivered for receiver
+    void this.readReceiptsService.setInitialSent(savedMessage.id);
+    if (receiverId) {
+      void this.readReceiptsService.markAsDelivered(
+        savedMessage.id,
+        dto.room_id,
+        receiverId,
+      );
     }
 
     return messageForPublish;
@@ -1107,6 +1123,7 @@ export class ChatService {
           avatar_url: contact.avatar_url,
         },
         is_view_once: false,
+        delivery_status: 'sent',
       } as Record<string, unknown>)
       .select(
         `
@@ -1477,6 +1494,105 @@ export class ChatService {
     if (updateErr || !updatedMsg) {
       throw new Error(
         `Failed to fix message: ${updateErr?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    await this.centrifugoService.publish(`chat:${roomId}`, {
+      message: updatedMsg,
+    });
+
+    return updatedMsg;
+  }
+
+  async editMessage(
+    userId: string,
+    messageId: string,
+    dto: EditMessageDto,
+  ): Promise<ChatMessage> {
+    const supabase = this.supabaseService.getClient();
+
+    const { data: originalMsg, error: fetchErr } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchErr || !originalMsg) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (!isRecord(originalMsg)) {
+      throw new BadRequestException('Invalid message data');
+    }
+
+    const senderId = asString(originalMsg.sender_id);
+    const messageType = asString(originalMsg.message_type);
+    const roomId = asString(originalMsg.room_id);
+    const createdAt = asString(originalMsg.created_at);
+
+    if (!senderId || !messageType || !roomId) {
+      throw new BadRequestException('Message is missing required fields');
+    }
+
+    if (senderId !== userId) {
+      throw new ForbiddenException('You can only edit your own messages');
+    }
+
+    if (messageType !== 'text') {
+      throw new BadRequestException('Only text messages can be edited');
+    }
+
+    // Check edit time window
+    if (createdAt) {
+      const editWindowMinutes = this.configService.get<number>(
+        'MESSAGE_EDIT_WINDOW_MINUTES',
+        5,
+      );
+      const messageTime = new Date(createdAt).getTime();
+      const now = Date.now();
+      const windowMs = editWindowMinutes * 60 * 1000;
+      if (now - messageTime > windowMs) {
+        throw new ForbiddenException(
+          `Messages can only be edited within ${editWindowMinutes} minutes of sending`,
+        );
+      }
+    }
+
+    // Verify the user is still a member of the room
+    const { data: membership } = await supabase
+      .from('chat_room_members')
+      .select('user_id')
+      .eq('room_id', roomId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+
+    const { data: updatedMsg, error: updateErr } = await supabase
+      .from('chat_messages')
+      .update({
+        text_content: dto.text_content,
+        is_edited: true,
+        edited_at: new Date().toISOString(),
+      })
+      .eq('id', messageId)
+      .select(
+        `
+        *,
+        sender:users!chat_messages_sender_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .single();
+
+    if (updateErr || !updatedMsg) {
+      throw new Error(
+        `Failed to edit message: ${updateErr?.message ?? 'Unknown error'}`,
       );
     }
 
@@ -2164,6 +2280,7 @@ export class ChatService {
         correction_request_payload: null,
         status_reply_payload: null,
         is_view_once: false,
+        delivery_status: 'sent',
       })
       .select()
       .single();
@@ -2246,6 +2363,7 @@ export class ChatService {
         correction_request_payload: null,
         status_reply_payload: null,
         is_view_once: false,
+        delivery_status: 'sent',
       })
       .select()
       .single();

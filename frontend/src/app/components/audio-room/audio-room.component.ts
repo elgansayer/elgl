@@ -10,6 +10,7 @@ import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.sto
 import { AuthService } from '../../services/auth.service';
 import { QuickPollService } from '../../services/quick-poll.service';
 import { RoomChatComponent } from '../room-chat/room-chat.component';
+import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { VideoRoomComponent } from '../video-room/video-room.component';
 import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
 import { VirtualGiftModalComponent } from '../virtual-gift-modal/virtual-gift-modal.component';
@@ -36,6 +37,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
   imports: [
     TranslatePipe,
     RoomChatComponent,
+    VoiceroomNotesComponent,
     VideoRoomComponent,
     VideoClassroomErrorBoundaryComponent,
     VirtualGiftModalComponent,
@@ -69,6 +71,7 @@ export class AudioRoomComponent implements OnInit {
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
+  readonly sidebarTab = signal<'chat' | 'notes'>('chat');
 
   readonly audiencePlaceholderAvatars = computed(() => {
     const count = this.store.audienceCount();
@@ -85,7 +88,6 @@ export class AudioRoomComponent implements OnInit {
 
   readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
   readonly showExclusivePicker = signal<boolean>(false);
-  readonly showNotesPanel = signal<boolean>(false);
 
   /** Toggle between flat list view and language-grouped view */
   readonly viewMode = signal<'flat' | 'grouped'>('grouped');
@@ -199,8 +201,7 @@ export class AudioRoomComponent implements OnInit {
   }
 
   async kick(targetUserId: string): Promise<void> {
-    // Kicking off stage is functionally demoting them back to a listener
-    await this.store.demoteSpeaker(targetUserId);
+    await this.store.kickSpeaker(targetUserId);
   }
 
   async archive(): Promise<void> {

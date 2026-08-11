@@ -120,9 +120,9 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
 
       for (const event of typedEvents) {
         const userIds = rsvpsByEventId.get(event.id);
-        if (!userIds || userIds.length === 0) continue;
+        if (!userIds) continue;
 
-        await this.sendRemindersBatch(event.id, event.title, userIds);
+await this.sendRemindersBatch(event.id, event.title, userIds);
       }
     } catch (err) {
       this.logger.error('Unexpected error in checkReminders', err);

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
+=======
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+>>>>>>> origin/main
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +12,7 @@ import { Router, RouterModule } from '@angular/router';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 import { LinkedAccountsService, LinkedAccount } from '../../services/linked-accounts.service';
 import { I18nService } from '../../services/i18n.service';
+
 @Component({
   selector: 'app-settings',
   imports: [FormsModule, TranslatePipe, RouterModule],

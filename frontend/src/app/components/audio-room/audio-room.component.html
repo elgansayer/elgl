@@ -1,6 +1,25 @@
 <div class="mx-auto max-w-5xl space-y-4">
   @if (store.currentRoom(); as room) {
     <section class="app-card app-padded space-y-4">
+      <!-- Degradation notice banner -->
+      @if (store.isOperatingInDegradedMode()) {
+        <div
+          class="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+          role="alert"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-lg">⚠️</span>
+            <div>
+              <p class="font-bold">{{ 'audioRoom.degradedModeBanner' | t }}</p>
+              <ul class="mt-1 list-disc ps-5 text-xs opacity-80">
+                @for (reason of store.degradationSummary(); track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
+            </div>
+          </div>
+        </div>
+      }
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p class="app-muted font-bold uppercase tracking-wide">
@@ -222,6 +241,12 @@
                        [attr.aria-label]="'audioRoom.demoteBtn' | t">
                         {{ 'audioRoom.demoteBtn' | t }}
                       </button>
+                      <button
+                        (click)="kick(participant.user_id)"
+                        class="rounded-app bg-surface-100 ps-2 pe-2 pt-1 pb-1 text-[10px] font-bold text-text-primary hover:bg-red-600/30"
+                      >
+                        {{ 'audioRoom.kickBtn' | t }}
+                      </button>
                     </div>
                   }
                 </div>
@@ -301,11 +326,45 @@
           </section>
         </div>
 
+<<<<<<< HEAD
+        <div>
+          <div class="flex border-b border-surface-100 mb-2">
+            <button
+              (click)="sidebarTab.set('chat')"
+              class="flex-1 px-3 py-2 text-xs font-bold transition-colors"
+              [class.border-b-2]="sidebarTab() === 'chat'"
+              [class.border-purple-500]="sidebarTab() === 'chat'"
+              [class.text-purple-300]="sidebarTab() === 'chat'"
+              [class.text-text-muted]="sidebarTab() !== 'chat'"
+            >
+              💬 {{ 'audioRoom.tabChat' | t }}
+            </button>
+            <button
+              (click)="sidebarTab.set('notes')"
+              class="flex-1 px-3 py-2 text-xs font-bold transition-colors"
+              [class.border-b-2]="sidebarTab() === 'notes'"
+              [class.border-purple-500]="sidebarTab() === 'notes'"
+              [class.text-purple-300]="sidebarTab() === 'notes'"
+              [class.text-text-muted]="sidebarTab() !== 'notes'"
+            >
+              📝 {{ 'audioRoom.tabNotes' | t }}
+            </button>
+          </div>
+          @if (sidebarTab() === 'chat') {
+            <app-room-chat></app-room-chat>
+          } @else {
+            <app-voiceroom-notes [roomId]="store.currentRoom()?.id ?? ''"></app-voiceroom-notes>
+          }
+=======
         <div class="flex flex-col gap-4">
           <app-room-chat></app-room-chat>
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
           @if (showNotesPanel()) {
             <app-voiceroom-notes [roomId]="room.id"></app-voiceroom-notes>
           }
+>>>>>>> origin/main
         </div>
       </div>
     </section>

@@ -26,6 +26,7 @@ import { LlmProxyDto } from './dto/llm-proxy.dto';
 import { SuggestedRepliesRequestDto } from './dto/suggested-replies-request.dto';
 import { AddLabelDto, RemoveLabelDto } from './dto/label.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
+import { EditMessageDto } from './dto/edit-message.dto';
 import { FixMessageDto } from './dto/fix-message.dto';
 import { ForwardMessageDto } from './dto/forward-message.dto';
 import { SetWallpaperDto } from './dto/set-wallpaper.dto';
@@ -306,6 +307,16 @@ export class ChatController {
       dto.correctedText,
       dto.explanation,
     );
+  }
+
+  @Patch('messages/:messageId')
+  async editMessage(
+    @CurrentUser() user: User | null,
+    @Param('messageId') messageId: string,
+    @Body() dto: EditMessageDto,
+  ): Promise<ChatMessage | null> {
+    if (!user) return null;
+    return await this.chatService.editMessage(user.id, messageId, dto);
   }
 
   @Patch('messages/:messageId/status')

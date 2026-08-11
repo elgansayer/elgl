@@ -1,3 +1,19 @@
+// Mock jsdom and dompurify to avoid ESM import failures in Jest (transitively imported through audio-rooms -> chat -> link-preview)
+jest.mock('jsdom', () => ({
+  JSDOM: jest.fn().mockImplementation(() => ({
+    window: {
+      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
+    },
+  })),
+}));
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    sanitize: jest.fn((d: string) => d.replace(/<[^>]*>/g, '')),
+    setConfig: jest.fn(),
+  })),
+}));
+
 jest.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
 }));
@@ -40,6 +56,7 @@ jest.mock('dompurify', () => ({
 import { DiscoveryModule } from './discovery.module';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
+import { DiscoveryCacheInvalidationService } from './discovery-cache-invalidation.service';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 import { AudioRoomsModule } from '../audio-rooms/audio-rooms.module';
 import { UsersModule } from '../users/users.module';
@@ -70,12 +87,13 @@ describe('DiscoveryModule', () => {
     expect(controllersMetadata).toContain(DiscoveryController);
   });
 
-  it('should register DiscoveryService and DiscoveryRateLimiterGuard in its providers metadata', () => {
+  it('should register DiscoveryService, DiscoveryRateLimiterGuard, and DiscoveryCacheInvalidationService in its providers metadata', () => {
     const providersMetadata =
       (Reflect.getMetadata('providers', DiscoveryModule) as unknown[]) ?? [];
 
     expect(providersMetadata).toContain(DiscoveryService);
     expect(providersMetadata).toContain(DiscoveryRateLimiterGuard);
+    expect(providersMetadata).toContain(DiscoveryCacheInvalidationService);
   });
 
   it('should export DiscoveryService', () => {

@@ -56,6 +56,7 @@ describe('TrustSafetyModalComponent', () => {
 >>>>>>> origin/main
         'safety.blockWarning', 'safety.blockList1', 'safety.blockList2', 'safety.blockList3',
         'safety.cancelBtn', 'safety.submitReportBtn', 'safety.confirmBlockBtn',
+        'common.loading',
       ];
       for (const key of keys) {
         expect(templateContent).toContain("'" + key + "'");
