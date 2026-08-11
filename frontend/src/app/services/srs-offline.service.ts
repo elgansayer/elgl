@@ -115,7 +115,7 @@ export class SrsOfflineService {
   async queueSrsReview(flashcardId: string, quality: number, newLevel: number): Promise<void> {
     if (!this.isAvailable()) return;
     const db = await this.ensureDB();
-    const id = `srs_review_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `srs_review_${Date.now()}_${crypto.randomUUID()}`;
     const payload: QueuedReviewPayload & { id: string } = {
       id,
       flashcardId,
