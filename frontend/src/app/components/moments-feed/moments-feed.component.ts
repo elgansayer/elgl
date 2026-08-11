@@ -32,7 +32,6 @@ import {
   LanguagePickerComponent,
   getLanguageFlag,
 } from '../primitives/language-picker/language-picker.component';
-import { LikedByModalComponent } from '../liked-by-modal/liked-by-modal.component';
 import { DraftService } from '../../services/draft.service';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { LightboxComponent } from '../lightbox/lightbox.component';

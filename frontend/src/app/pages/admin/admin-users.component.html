@@ -13,30 +13,6 @@
       [value]="searchTerm()"
       (input)="onSearchInput($event)"
       placeholder="{{ 'admin.users.searchPlaceholder' | t }}"
-<<<<<<< HEAD
-      class="border border-slate-300 rounded px-3 py-2 ms-2"
-     [attr.aria-label]=\"'admin.users.next' | t\"/>
-    <button
-      type="button"
-      (click)="changePage(-1)"
-      [disabled]="page() <= 1"
-      class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
-     [attr.aria-label]="'admin.users.previous' | t">
-      {{ 'admin.users.previous' | t }}
-    </button>
-    <span class="text-sm">
-      {{ 'admin.users.page' | t: { current: page(), total: pageTotal() } }}
-    </span>
-    <button
-      type="button"
-      (click)="changePage(1)"
-      [disabled]="page() >= pageTotal()"
-      class="btn btn-sm rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
-      [attr.aria-label]="'admin.users.next' | t"
-    >
-      {{ 'admin.users.next' | t }}
-    </button>
-=======
       class="border border-slate-300 rounded px-3 py-2 min-w-[12rem] flex-1"
       [attr.aria-label]="'admin.users.searchPlaceholder' | t"
     />
@@ -63,7 +39,6 @@
         {{ 'admin.users.next' | t }}
       </button>
     </div>
->>>>>>> origin/main
   </div>
 
   @if (isLoading()) {
@@ -104,78 +79,34 @@
           @for (row of [1, 2, 3, 4, 5, 6]; track row) {
             <tr>
               <td class="px-3 py-2">
-                <app-skeleton-loader
-                  [height]="'32px'"
-                  [width]="'32px'"
-                  [variant]="'circle'"
-                />
+                <app-skeleton-loader [height]="'32px'" [width]="'32px'" [variant]="'circle'" />
               </td>
               <td class="px-3 py-2">
-                <app-skeleton-loader
-                  [height]="'14px'"
-                  [width]="'80%'"
-                  [variant]="'text'"
-                />
+                <app-skeleton-loader [height]="'14px'" [width]="'80%'" [variant]="'text'" />
               </td>
               <td class="px-3 py-2">
-                <app-skeleton-loader
-                  [height]="'12px'"
-                  [width]="'65%'"
-                  [variant]="'text'"
-                />
+                <app-skeleton-loader [height]="'12px'" [width]="'65%'" [variant]="'text'" />
               </td>
               <td class="px-3 py-2">
-                <app-skeleton-loader
-                  [height]="'12px'"
-                  [width]="'65%'"
-                  [variant]="'text'"
-                />
+                <app-skeleton-loader [height]="'12px'" [width]="'65%'" [variant]="'text'" />
               </td>
               <td class="px-3 py-2">
-                <app-skeleton-loader
-                  [height]="'16px'"
-                  [width]="'40px'"
-                  [borderRadius]="'4px'"
-                />
+                <app-skeleton-loader [height]="'16px'" [width]="'40px'" [borderRadius]="'4px'" />
               </td>
               <td class="px-3 py-2">
-                <app-skeleton-loader
-                  [height]="'14px'"
-                  [width]="'30px'"
-                  [variant]="'text'"
-                />
+                <app-skeleton-loader [height]="'14px'" [width]="'30px'" [variant]="'text'" />
               </td>
               <td class="px-3 py-2">
-                <app-skeleton-loader
-                  [height]="'14px'"
-                  [width]="'25px'"
-                  [variant]="'text'"
-                />
+                <app-skeleton-loader [height]="'14px'" [width]="'25px'" [variant]="'text'" />
               </td>
               <td class="px-3 py-2">
-                <app-skeleton-loader
-                  [height]="'12px'"
-                  [width]="'65%'"
-                  [variant]="'text'"
-                />
+                <app-skeleton-loader [height]="'12px'" [width]="'65%'" [variant]="'text'" />
               </td>
               <td class="px-3 py-2">
                 <div class="flex flex-wrap gap-1">
-                  <app-skeleton-loader
-                    [height]="'28px'"
-                    [width]="'55px'"
-                    [borderRadius]="'6px'"
-                  />
-                  <app-skeleton-loader
-                    [height]="'28px'"
-                    [width]="'55px'"
-                    [borderRadius]="'6px'"
-                  />
-                  <app-skeleton-loader
-                    [height]="'28px'"
-                    [width]="'55px'"
-                    [borderRadius]="'6px'"
-                  />
+                  <app-skeleton-loader [height]="'28px'" [width]="'55px'" [borderRadius]="'6px'" />
+                  <app-skeleton-loader [height]="'28px'" [width]="'55px'" [borderRadius]="'6px'" />
+                  <app-skeleton-loader [height]="'28px'" [width]="'55px'" [borderRadius]="'6px'" />
                 </div>
               </td>
             </tr>
@@ -228,7 +159,8 @@
             <tr class="hover:bg-slate-50">
               <td class="px-3 py-2">
                 @if (user.avatar_url) {
-                  <img loading="lazy"
+                  <img
+                    loading="lazy"
                     [src]="user.avatar_url"
                     alt=""
                     class="h-8 w-8 rounded-full object-cover"
@@ -237,14 +169,15 @@
                   <span class="text-slate-400">{{ 'admin.users.noAvatar' | t }}</span>
                 }
               </td>
-              <td class="px-3 py-2">{{ (user.display_name ?? '-') | sanitiseHtml }}</td>
-              <td class="px-3 py-2">{{ (user.native_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
-              <td class="px-3 py-2">{{ (user.target_languages?.join(', ') ?? '') | sanitiseHtml }}</td>
+              <td class="px-3 py-2">{{ user.display_name ?? '-' | sanitiseHtml }}</td>
               <td class="px-3 py-2">
-                <span
-                  [class.text-green-600]="user.is_vip"
-                  [class.text-slate-400]="!user.is_vip"
-                >
+                {{ user.native_languages?.join(', ') ?? '' | sanitiseHtml }}
+              </td>
+              <td class="px-3 py-2">
+                {{ user.target_languages?.join(', ') ?? '' | sanitiseHtml }}
+              </td>
+              <td class="px-3 py-2">
+                <span [class.text-green-600]="user.is_vip" [class.text-slate-400]="!user.is_vip">
                   {{ user.is_vip ? ('admin.users.yes' | t) : ('admin.users.no' | t) }}
                 </span>
               </td>
@@ -271,7 +204,9 @@
                     [attr.aria-label]="'admin.users.disableVip' | t"
                     [attr.title]="!isOnline() ? ('admin.offline.actionsDisabled' | t) : null"
                   >
-                    {{ user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t) }}
+                    {{
+                      user.is_vip ? ('admin.users.disableVip' | t) : ('admin.users.enableVip' | t)
+                    }}
                   </button>
                   <button
                     type="button"
@@ -337,8 +272,8 @@
               @for (entry of loginHistory(); track entry.id) {
                 <tr>
                   <td class="px-3 py-2">{{ entry.created_at | date: 'medium' }}</td>
-                  <td class="px-3 py-2">{{ (entry.ip_address ?? '-') | sanitiseHtml }}</td>
-                  <td class="px-3 py-2">{{ (entry.user_agent ?? '-') | sanitiseHtml }}</td>
+                  <td class="px-3 py-2">{{ entry.ip_address ?? '-' | sanitiseHtml }}</td>
+                  <td class="px-3 py-2">{{ entry.user_agent ?? '-' | sanitiseHtml }}</td>
                 </tr>
               }
             </tbody>
@@ -349,7 +284,8 @@
             type="button"
             (click)="closeHistory()"
             class="btn btn-sm rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
-           [attr.aria-label]="'admin.users.close' | t">
+            [attr.aria-label]="'admin.users.close' | t"
+          >
             {{ 'admin.users.close' | t }}
           </button>
         </div>
