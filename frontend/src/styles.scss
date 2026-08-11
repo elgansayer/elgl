@@ -201,7 +201,11 @@
 /* UI Primitives */
 @layer components {
   .app-card {
-    @apply rounded-sheet border border-surface-100 bg-surface-200 shadow-card;
+    // Converged with the <app-card> component's radius (was rounded-sheet
+    // here vs rounded-2xl there - two different shapes for "the same"
+    // primitive). Full structural convergence (deleting this class in
+    // favour of the component) is Phase 3 work.
+    @apply rounded-card border border-surface-100 bg-surface-200 shadow-card;
   }
 
   .app-screen {
