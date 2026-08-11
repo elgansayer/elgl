@@ -13,7 +13,7 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import JobState
 from openhands_factory.provider_profiles import openai_credentials_available
-from openhands_factory.secure_tools import podman_run_arguments
+from openhands_factory.secure_tools import podman_run_arguments, resource_limit_error
 from openhands_factory.state import read_json
 
 
@@ -38,6 +38,7 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
             cpu_limit="0.25",
         ),
     ]
+    fallback_used = False
     try:
         result = subprocess.run(
             arguments,
@@ -50,10 +51,38 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                 "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             },
         )
+        if result.returncode != 0 and resource_limit_error(
+            f"{result.stdout}\n{result.stderr}"
+        ):
+            fallback_used = True
+            fallback_arguments = [
+                str(config.podman_path),
+                *podman_run_arguments(
+                    config.repository,
+                    config.repository,
+                    config.task_image,
+                    "printf 'factory-terminal-ready\\n'",
+                    workspace_access="ro",
+                    resource_limits=False,
+                ),
+            ]
+            result = subprocess.run(
+                fallback_arguments,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+                env={
+                    "HOME": os.environ.get("HOME", "/var/empty"),
+                    "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                },
+            )
     except (OSError, subprocess.TimeoutExpired) as error:
         return Check("worker-terminal", False, str(error)[-1000:])
     passed = result.returncode == 0 and result.stdout == "factory-terminal-ready\n"
     detail = "rootless constrained terminal ready"
+    if fallback_used:
+        detail = "rootless terminal ready without nested cgroup limits"
     if not passed:
         detail = f"exit {result.returncode}: {result.stdout}{result.stderr}"[-1000:]
     return Check("worker-terminal", passed, detail)

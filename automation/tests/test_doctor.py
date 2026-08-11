@@ -54,6 +54,28 @@ def test_worker_terminal_probe_uses_small_nested_resource_limits(
     assert "--network=none" in calls[0]
 
 
+def test_worker_terminal_probe_falls_back_when_nested_cgroup_is_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[list[str]] = []
+
+    def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
+        calls.append(arguments)
+        if len(calls) == 1:
+            return CompletedProcess(arguments, 125, "cannot set cgroup: permission denied", "")
+        return CompletedProcess(arguments, 0, "factory-terminal-ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = worker_terminal_check(config(tmp_path))
+
+    assert check.passed
+    assert "without nested cgroup limits" in check.detail
+    assert len(calls) == 2
+    assert "--pids-limit=32" in calls[0]
+    assert "--pids-limit=32" not in calls[1]
+
+
 def test_doctor_reports_openai_subscription_credentials(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
