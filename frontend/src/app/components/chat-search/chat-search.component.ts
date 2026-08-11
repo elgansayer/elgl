@@ -20,7 +20,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             [(ngModel)]="query"
             (input)="onSearch()"
             placeholder="{{ 'chatSearch.placeholder' | t }}"
-            class="w-full bg-surface-100 text-white text-sm rounded-lg ps-9 pe-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
+            class="w-full bg-surface-100 text-text-primary text-sm rounded-lg ps-9 pe-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary placeholder-text-muted"
           />
           <span class="absolute start-3 top-2.5 text-text-muted text-sm">🔍</span>
         </div>
@@ -32,8 +32,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
           (click)="searchMode.set('within')"
           [class]="
             searchMode() === 'within'
-              ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-blue-600 text-white'
-              : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'
+              ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-primary text-on-fill'
+              : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-surface-50'
           "
         >
           {{ 'chatSearch.thisChat' | t }}
@@ -42,8 +42,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
           (click)="searchMode.set('global')"
           [class]="
             searchMode() === 'global'
-              ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-blue-600 text-white'
-              : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'
+              ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-primary text-on-fill'
+              : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-surface-50'
           "
         >
           {{ 'chatSearch.allChats' | t }}
@@ -57,8 +57,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
             (click)="selectedType.set(type)"
             [class]="
               selectedType() === type
-                ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-blue-600 text-white'
-                : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'
+                ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-primary text-on-fill'
+                : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-surface-50'
             "
           >
             {{ type }}
@@ -85,7 +85,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
           >
             <div class="flex items-center gap-2">
               @if (searchMode() === 'global') {
-                <span class="text-xs text-text-muted bg-surface-100 px-1.5 py-0.5 rounded truncate max-w-[120px]">
+                <span
+                  class="text-xs text-text-muted bg-surface-100 px-1.5 py-0.5 rounded truncate max-w-[120px]"
+                >
                   #{{ msg.room_id.slice(0, 8) }}
                 </span>
               }
@@ -93,7 +95,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                 {{ msg.sender?.display_name || ('common.unknownSender' | t) }}
               </p>
             </div>
-            <div class="text-sm text-gray-200 truncate mt-1">
+            <div class="text-sm text-text-secondary truncate mt-1">
               {{ msg.text_content || msg.message_type }}
             </div>
             <div class="text-[10px] text-text-muted mt-1">
