@@ -2,17 +2,6 @@ import { Component, input, computed } from '@angular/core';
 import { GiftPayload } from '../../services/chat.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  colour: string;
-  rotation: number;
-  delay: number;
-  duration: number;
-}
-
 const PARTICLE_COLOURS = [
   '#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6',
   '#f59e0b', '#fbbf24', '#facc15', '#eab308', '#22c55e',

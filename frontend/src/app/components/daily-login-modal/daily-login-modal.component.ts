@@ -13,6 +13,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       [attr.aria-labelledby]="dialogTitleId"
       tabindex="-1"
       (click)="onBackdropClick($event)"
+      (keydown)="onBackdropKeydown($event)"
     >
       <div
         class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-sm w-full shadow-2xl border border-surface-100 text-center space-y-3 sm:space-y-4 max-h-[90vh] overflow-y-auto"
@@ -73,10 +74,16 @@ export class DailyLoginModalComponent {
     this.closed.emit();
   }
 
-  protected onBackdropClick(event: MouseEvent): void {
+  protected onBackdropClick(event: Event): void {
     const target = event.target;
     if (target instanceof HTMLElement && target.classList.contains('animate-fadeIn')) {
       this.closed.emit();
+    }
+  }
+
+  protected onBackdropKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      this.onBackdropClick(event);
     }
   }
 }
