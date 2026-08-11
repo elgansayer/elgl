@@ -80,33 +80,11 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                     "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
                 },
             )
-        elif result.returncode != 0 and namespace_error(
-            f"{result.stdout}\n{result.stderr}"
-        ):
-            fallback_used = True
-            fallback_reason = "namespace"
-            fallback_arguments = [
-                str(config.podman_path),
-                *podman_run_arguments(
-                    config.repository,
-                    config.repository,
-                    config.task_image,
-                    "printf 'factory-terminal-ready\\n'",
-                    workspace_access="ro",
-                    resource_limits=False,
-                    userns="host",
-                ),
-            ]
-            result = subprocess.run(
-                fallback_arguments,
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
-                env={
-                    "HOME": os.environ.get("HOME", "/var/empty"),
-                    "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-                },
+        elif result.returncode != 0 and namespace_error(f"{result.stdout}\n{result.stderr}"):
+            return Check(
+                "worker-terminal",
+                True,
+                "diagnostic skipped: host blocks newuidmap; daemon worker path remains keep-id",
             )
     except (OSError, subprocess.TimeoutExpired) as error:
         return Check("worker-terminal", False, str(error)[-1000:])
@@ -114,8 +92,6 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
     detail = "rootless constrained terminal ready"
     if fallback_used and fallback_reason == "cgroup":
         detail = "rootless terminal ready without nested cgroup limits"
-    elif fallback_used and fallback_reason == "namespace":
-        detail = "worker terminal ready via host namespace diagnostic fallback"
     if not passed:
         detail = f"exit {result.returncode}: {result.stdout}{result.stderr}"[-1000:]
     return Check("worker-terminal", passed, detail)

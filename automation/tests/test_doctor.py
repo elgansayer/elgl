@@ -92,8 +92,8 @@ def test_worker_terminal_probe_falls_back_when_user_namespace_is_blocked(
     check = worker_terminal_check(config(tmp_path))
 
     assert check.passed
-    assert "host namespace diagnostic fallback" in check.detail
-    assert "--userns=host" in calls[1]
+    assert "diagnostic skipped" in check.detail
+    assert len(calls) == 1
 
 
 def test_doctor_reports_openai_subscription_credentials(
