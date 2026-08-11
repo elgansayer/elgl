@@ -36,21 +36,18 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
   selector: 'app-backup-restore',
   imports: [TranslatePipe],
   template: `
-    <div class="min-h-screen bg-[#121212] text-white ps-4 pe-4 pt-6 pb-10">
+    <div class="min-h-screen bg-surface-500 text-text-primary ps-4 pe-4 pt-6 pb-10">
       <h1 class="text-2xl font-bold mb-1">{{ 'backupRestore.title' | t }}</h1>
-      <p class="text-slate-400 mb-6">{{ 'backupRestore.subtitle' | t }}</p>
+      <p class="text-text-secondary mb-6">{{ 'backupRestore.subtitle' | t }}</p>
 
       @if (roomsResource.isLoading()) {
-        <p class="text-slate-400">{{ 'common.loading' | t }}</p>
+        <p class="text-text-secondary">{{ 'common.loading' | t }}</p>
       } @else if (rooms().length) {
-        <label
-          for="roomSelect"
-          class="block mb-2 text-sm font-medium text-slate-300"
-        >
+        <label for="roomSelect" class="block mb-2 text-sm font-medium text-text-secondary">
           {{ 'backupRestore.selectRoom' | t }}
           <select
             id="roomSelect"
-            class="w-full mb-4 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100"
+            class="w-full mb-4 rounded-lg border border-surface-300 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="selectedRoom()"
             (change)="onRoomChange($event)"
           >
@@ -60,13 +57,13 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
           </select>
         </label>
       } @else {
-        <p class="text-slate-400">{{ 'chatList.empty' | t }}</p>
+        <p class="text-text-secondary">{{ 'chatList.empty' | t }}</p>
       }
 
       <div class="flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
-          class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+          class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 disabled:opacity-50"
           [disabled]="!selectedRoom()"
           (click)="exportChat()"
         >
@@ -75,15 +72,21 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
 
         <label
           for="importFile"
-          class="inline-flex cursor-pointer items-center rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
+          class="inline-flex cursor-pointer items-center rounded-lg border border-surface-300 px-4 py-2 text-sm text-text-secondary hover:bg-surface-100"
         >
           {{ 'backupRestore.importBtn' | t }}
-          <input id="importFile" type="file" accept="application/json" class="hidden" (change)="onFileSelected($event)" />
+          <input
+            id="importFile"
+            type="file"
+            accept="application/json"
+            class="hidden"
+            (change)="onFileSelected($event)"
+          />
         </label>
 
         <button
           type="button"
-          class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+          class="rounded-lg bg-success px-4 py-2 text-sm font-semibold text-on-fill hover:bg-success/90 disabled:opacity-50"
           [disabled]="!selectedRoom() || !importFile()"
           (click)="importChat()"
         >
@@ -92,7 +95,7 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
       </div>
 
       @if (statusMessage()) {
-        <p class="mt-4 text-sm text-emerald-400">{{ statusMessage() }}</p>
+        <p class="mt-4 text-sm text-success">{{ statusMessage() }}</p>
       }
     </div>
   `,
@@ -110,9 +113,7 @@ export class BackupRestoreComponent {
   readonly roomsResource = resource({
     loader: async (): Promise<BackupRoom[]> => {
       try {
-        const rooms = await firstValueFrom(
-          this.http.get<unknown>(`${this.apiBase}/chat/rooms`),
-        );
+        const rooms = await firstValueFrom(this.http.get<unknown>(`${this.apiBase}/chat/rooms`));
         if (isBackupRoomArray(rooms)) {
           return rooms;
         }
