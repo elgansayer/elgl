@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 import Redis from 'ioredis';
+import { randomUUID } from 'crypto';
 
 /**
  * Result of a connection rate-limit check.
@@ -129,7 +130,7 @@ export class CentrifugoService implements OnModuleInit {
     const key = `centrifugo:conn_rate:${identityKey}`;
     const now = Date.now();
     const windowStart = now - this.connectionRateWindowSec * 1000;
-    const member = `${now}:${Math.random().toString(36).slice(2)}`;
+    const member = `${now}:${randomUUID()}`;
 
     try {
       // Prefer atomic Lua script; fall back to pipeline when not loaded
