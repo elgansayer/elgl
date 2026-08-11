@@ -12,6 +12,7 @@ from pydantic import SecretStr
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 from openhands_factory.models import ProviderName
+from openhands_factory.provider_health import ProviderHealthStore
 
 if TYPE_CHECKING:
     from openhands.sdk import LLM
@@ -38,18 +39,17 @@ class ProviderProfile:
     api_key: SecretStr | None
 
 
-def openai_credentials_available(config: FactoryConfig | None = None, home: Path | None = None) -> bool:
+def openai_credentials_available(
+    config: FactoryConfig | None = None, home: Path | None = None
+) -> bool:
     credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
     if not (credentials.is_file() and credentials.stat().st_size > 0):
         return False
     if config is not None:
-        from openhands_factory.provider_health import ProviderHealthStore
-        from openhands_factory.models import ProviderName
         store = ProviderHealthStore(config.state_dir / "health.json")
         for breaker in store.load():
-            if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION:
-                if not breaker.permits_call():
-                    return False
+            if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION and not breaker.permits_call():
+                return False
     return True
 
 

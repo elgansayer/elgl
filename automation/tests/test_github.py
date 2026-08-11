@@ -61,6 +61,27 @@ def test_pull_request_creation_parses_number(tmp_path: Path) -> None:
     assert "--draft" in runner.calls[0]
 
 
+def test_pull_request_creation_uses_configured_base_branch(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "https://github.com/owner/repo/pull/42\n", "")])
+    client = GitHubClient(
+        "owner/repo", tmp_path, "secret", runner, base_branch="develop"
+    )
+
+    client.create_pull_request("factory/12-fix", "Fix", "Body")
+
+    assert "develop" in runner.calls[0]
+
+
+def test_comment_is_published_with_a_bounded_body(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    client.add_comment(42, "Factory update")
+
+    assert runner.calls[0][:4] == ("gh", "issue", "comment", "42")
+    assert "Factory update" in runner.calls[0]
+
+
 def test_auto_merge_never_uses_admin(tmp_path: Path) -> None:
     runner = Runner([ProcessResult(0, "", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)

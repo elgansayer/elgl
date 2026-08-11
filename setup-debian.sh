@@ -25,8 +25,15 @@ esac
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential ca-certificates curl git gh gnupg jq libgtk-3-0t64 logrotate passt podman \
+  build-essential ca-certificates curl git gh gnupg jq logrotate passt podman sudo \
   python-is-python3 python3 python3-pip python3-venv rsync shellcheck tmux uidmap
+
+if apt-cache show libgtk-3-0t64 >/dev/null 2>&1; then
+  gtk_package=libgtk-3-0t64
+else
+  gtk_package=libgtk-3-0
+fi
+DEBIAN_FRONTEND=noninteractive apt-get install -y "$gtk_package"
 
 install -d -m 0755 /etc/apt/keyrings
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key |

@@ -39,9 +39,11 @@ class GitHubClient:
         workspace: Path,
         token: str,
         runner: GitHubRunner = run_process,
+        base_branch: str = "main",
     ) -> None:
         self.repository = repository
         self.workspace = workspace
+        self.base_branch = base_branch
         self.runner = runner
         self.environment = {"GH_TOKEN": token}
 
@@ -134,6 +136,21 @@ class GitHubClient:
             arguments.extend(("--add-label", label))
         self._run(tuple(arguments))
 
+    def add_comment(self, number: int, body: str) -> None:
+        """Publish a bounded lifecycle update on an issue or pull request."""
+        self._run(
+            (
+                "gh",
+                "issue",
+                "comment",
+                str(number),
+                "--repo",
+                self.repository,
+                "--body",
+                body[:10_000],
+            )
+        )
+
     def create_pull_request(self, branch: str, title: str, body: str) -> int:
         output = self._run(
             (
@@ -143,7 +160,7 @@ class GitHubClient:
                 "--repo",
                 self.repository,
                 "--base",
-                "main",
+                self.base_branch,
                 "--head",
                 branch,
                 "--draft",

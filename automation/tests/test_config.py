@@ -125,6 +125,15 @@ def test_default_repository_is_production_clone() -> None:
     assert config.max_parallel_jobs == 3
 
 
+def test_factory_environment_template_contains_runtime_path_settings() -> None:
+    template = (Path(__file__).parents[2] / "config/systemd/factory.env.example").read_text(
+        encoding="utf-8"
+    )
+
+    assert "FACTORY_PODMAN_PATH=/usr/bin/podman" in template
+    assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
+
+
 def test_parallel_job_limit_must_be_positive() -> None:
     with pytest.raises(ConfigurationError, match="factory limits must be positive"):
         FactoryConfig.from_environment(environment(FACTORY_MAX_PARALLEL_JOBS="0"))
