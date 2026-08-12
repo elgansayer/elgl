@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openhands_factory.models import Task
+from openhands_factory.quality_gate import QualityFinding, format_findings
 
 MAX_CONTEXT_CHARS = 160_000
 
@@ -48,6 +49,18 @@ def build_phase_prompt(prompt_dir: Path, phase: str, task: Task) -> str:
         f"{instructions}\n\nTask ID: {task.identifier}\nTitle: {task.title}\n\n{task.body}\n\n"
         "Inspect AGENTS.md and the associated production and test files. Work only in the assigned "
         "worktree. If defects are found, correct them and update tests. If no defects are found, "
-        "leave "
-        "the worktree unchanged. Run the applicable verification commands before finishing."
+        "leave the worktree unchanged. Run the applicable verification commands before finishing."
+    )
+
+
+def build_quality_prompt(
+    prompt_dir: Path, task: Task, findings: list[QualityFinding]
+) -> str:
+    instructions = (prompt_dir / "quality.md").read_text(encoding="utf-8")
+    return (
+        f"{instructions}\n\nTask ID: {task.identifier}\nTitle: {task.title}\n\n{task.body}\n\n"
+        "Blocking deterministic findings:\n"
+        f"{format_findings(findings)}\n\n"
+        "Correct the underlying implementation, then inspect the complete diff and run the applicable "
+        "verification commands before finishing."
     )
