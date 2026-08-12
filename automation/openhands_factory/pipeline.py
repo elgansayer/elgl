@@ -14,7 +14,13 @@ from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestStatus
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import Job, JobState
-from openhands_factory.prompts import build_phase_prompt, build_task_prompt
+from openhands_factory.prompts import build_phase_prompt, build_quality_prompt, build_task_prompt
+from openhands_factory.quality_gate import format_findings, inspect_repository
+from openhands_factory.review_report import (
+    REVIEW_REPORT_FILENAME,
+    format_blocking_review,
+    load_review_report,
+)
 from openhands_factory.task_source import TaskStore
 from openhands_factory.verification import commands_for, run_verification
 
@@ -88,7 +94,7 @@ class FactoryPipeline:
                 workflow.remove_worktree(worktree, force=dirty)
             self.tasks.release(task_id)
             job.state = JobState.DONE
-            job.last_error = "Issue closed before pull request creation"
+            job.last_error = "Issue closed or removed from factory-ready intake before PR creation"
             self.jobs.save_job(job)
         return self.jobs.load()
 
@@ -110,7 +116,7 @@ class FactoryPipeline:
                 job.state = JobState.QUARANTINED
                 self.tasks.release(job.task.identifier)
                 self.github.add_issue_labels(
-                    int(job.task.identifier), ("factory-quarantined", "needs-human")
+                    int(job.task.identifier), self._quarantine_labels(job.last_error)
                 )
         job.updated_at = datetime.now(UTC)
         jobs[job.task.identifier] = job
@@ -134,11 +140,18 @@ class FactoryPipeline:
                 job.state = JobState.QUARANTINED
                 self.tasks.release(job.task.identifier)
                 self.github.add_issue_labels(
-                    int(job.task.identifier), ("factory-quarantined", "needs-human")
+                    int(job.task.identifier), self._quarantine_labels(job.last_error)
                 )
         job.updated_at = datetime.now(UTC)
         self.jobs.save_job(job)
         return job
+
+    def _quarantine_labels(self, detail: str | None) -> tuple[str, ...]:
+        labels = ["factory-quarantined", "needs-human"]
+        text = detail or ""
+        if "quality gate" in text.lower() or "independent review" in text.lower():
+            labels.append("factory-quality-blocked")
+        return tuple(labels)
 
     def _advance(self, job: Job) -> None:
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
@@ -186,6 +199,7 @@ class FactoryPipeline:
 
         if job.state is JobState.VERIFYING:
             self._verify(workflow)
+            self._repair_deterministic_quality(job, workflow, worktree, prompt_dir)
             workflow.stage_all()
             workflow.commit(f"fix: resolve issue {job.task.identifier}")
             if job.branch is None:
@@ -215,10 +229,36 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
+            report_path = worktree / REVIEW_REPORT_FILENAME
+            report_path.unlink(missing_ok=True)
             self.conversations.run(
                 job.task, worktree, build_phase_prompt(prompt_dir, "review", job.task)
             )
+            report = load_review_report(worktree, job.task)
+            report_path.unlink(missing_ok=True)
+            if not report.approved:
+                if job.pull_request is None:
+                    raise FactoryError("Pull request number is missing")
+                if job.head_sha is None:
+                    job.head_sha = workflow.head_sha()
+                detail = format_blocking_review(report)
+                self.github.publish_review_status(
+                    job.head_sha,
+                    approved=False,
+                    detail="Independent review found unresolved blocking findings",
+                )
+                self.github.add_comment(
+                    job.pull_request,
+                    "OpenHands factory review blocked this pull request:\n\n" + detail,
+                )
+                raise FactoryError("Independent review blocked the pull request: " + detail)
             if workflow.has_changes():
+                findings = inspect_repository(workflow.repository, workflow.base_branch)
+                if findings:
+                    raise FactoryError(
+                        "Independent review left deterministic quality gate findings:\n"
+                        + format_findings(findings)
+                    )
                 self._verify(workflow)
                 workflow.stage_all()
                 workflow.commit(f"fix: address review for issue {job.task.identifier}")
@@ -234,7 +274,7 @@ class FactoryPipeline:
             self.github.publish_review_status(
                 job.head_sha,
                 approved=True,
-                detail="Fresh-context factory review and local verification passed",
+                detail="Structured independent review and local verification passed",
             )
             self.github.add_issue_labels(job.pull_request, ("factory-reviewed",))
             self.github.mark_ready(job.pull_request)
@@ -242,9 +282,9 @@ class FactoryPipeline:
             self.github.add_comment(
                 job.pull_request,
                 (
-                    "OpenHands factory review passed. Local verification completed and the "
-                    "reviewed head SHA is recorded as a required status. Waiting for GitHub "
-                    "checks before merge."
+                    "OpenHands factory structured review passed. Every issue acceptance criterion "
+                    "was assessed, local verification completed, and the reviewed head SHA is "
+                    "recorded as a required status. Waiting for GitHub checks before merge."
                 ),
             )
             job.state = JobState.CI_PENDING
@@ -274,6 +314,12 @@ class FactoryPipeline:
             if not workflow.has_changes():
                 raise FactoryError("Repair conversation produced no changes")
             self._verify(workflow)
+            findings = inspect_repository(workflow.repository, workflow.base_branch)
+            if findings:
+                raise FactoryError(
+                    "Deterministic quality gate blocked repaired branch:\n"
+                    + format_findings(findings)
+                )
             workflow.stage_all()
             workflow.commit(f"fix: repair CI for issue {job.task.identifier}")
             if job.branch is None:
@@ -308,6 +354,29 @@ class FactoryPipeline:
             GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
             self.tasks.release(job.task.identifier)
             job.state = JobState.DONE
+
+    def _repair_deterministic_quality(
+        self,
+        job: Job,
+        workflow: GitWorkflow,
+        worktree: Path,
+        prompt_dir: Path,
+    ) -> None:
+        findings = inspect_repository(workflow.repository, workflow.base_branch)
+        if not findings:
+            return
+        self.conversations.run(
+            job.task,
+            worktree,
+            build_quality_prompt(prompt_dir, job.task, findings),
+        )
+        remaining = inspect_repository(workflow.repository, workflow.base_branch)
+        if remaining:
+            raise FactoryError(
+                "Deterministic quality gate still has blocking findings after repair:\n"
+                + format_findings(remaining)
+            )
+        self._verify(workflow)
 
     def _status(self, job: Job) -> PullRequestStatus:
         if job.pull_request is None:
@@ -346,8 +415,8 @@ class FactoryPipeline:
         return (
             f"Fixes #{job.task.identifier}\n\n"
             "## Factory execution\n\n"
-            "This pull request was planned, implemented, security reviewed, locally verified and "
-            "independently reviewed by the bounded OpenHands factory. GitHub required checks remain "
-            "authoritative.\n\n"
+            "This pull request was planned, implemented, security reviewed, locally verified, "
+            "deterministically quality-gated and independently reviewed by the bounded OpenHands "
+            "factory. GitHub required checks remain authoritative.\n\n"
             f"Reviewed head SHA: `{job.head_sha or 'pending'}`\n"
         )
