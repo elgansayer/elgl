@@ -404,27 +404,29 @@ describe('GroupsService', () => {
       select: jest.fn().mockReturnThis(),
       returns: jest.fn().mockResolvedValue({ data: groups, error: null }),
     };
-    let groupMemberCalls = 0;
+    const membershipsBuilder = {
+      select: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({
+        data: [{ group_id: 'g1' }],
+        error: null,
+      }),
+    };
+
     const countMemberBuilder = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
     };
-    const singleMembershipBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({
-        data: { user_id: 'user-1' },
-        error: null,
-      }),
-    };
+
+    let groupMemberCalls = 0;
     const mockFrom = jest.fn((table: string) => {
       if (table === 'groups') return groupsBuilder;
       if (table === 'group_members') {
         groupMemberCalls += 1;
         if (groupMemberCalls === 1) {
-          return countMemberBuilder;
+          return membershipsBuilder;
         }
-        return singleMembershipBuilder;
+        return countMemberBuilder;
       }
       return countMemberBuilder;
     });
