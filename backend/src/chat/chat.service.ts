@@ -1875,15 +1875,17 @@ export class ChatService {
 
       let blocked = false;
       if (targetRoomMembers && targetRoomMembers.length > 0) {
-        for (const member of targetRoomMembers as { user_id: string }[]) {
-          const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
-            member.user_id,
-          );
-          if (blockedIds.includes(userId)) {
-            blocked = true;
-            break;
-          }
-        }
+        // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
+        // Promise.all batch map to drastically reduce network latency during fan-out block checks.
+        // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
+        const blockedIdArrays = await Promise.all(
+          (targetRoomMembers as { user_id: string }[]).map((member) =>
+            this.safetyService.getBlockedAndBlockerIds(member.user_id),
+          ),
+        );
+        blocked = blockedIdArrays.some((blockedIds) =>
+          blockedIds.includes(userId),
+        );
       }
 
       if (blocked) {
