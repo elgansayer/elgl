@@ -1,3 +1,4 @@
+import type { Mocked } from 'vitest';
 import { UnauthorizedException } from '@nestjs/common';
 import { User } from '@supabase/supabase-js';
 import { GroupsController } from './groups.controller';
@@ -17,30 +18,30 @@ describe('GroupsController', () => {
   let controller: GroupsController;
 
   const mockGroupsService = {
-    isAdmin: jest.fn(),
-    addMember: jest.fn(),
-    removeMember: jest.fn(),
-    createGroup: jest.fn(),
-    updateSettings: jest.fn(),
-    getGroupMembers: jest.fn(),
-    getSettings: jest.fn(),
-    sendAnnouncement: jest.fn(),
-    getAnnouncements: jest.fn(),
-    getMyAdminGroups: jest.fn(),
-    getGroupInfo: jest.fn(),
-    getGroupsByInterest: jest.fn(),
-    setCommunityId: jest.fn(),
-    getGroupsByCommunity: jest.fn(),
-    getDiscoverableGroups: jest.fn(),
-    joinGroup: jest.fn(),
-    getGroupResources: jest.fn(),
-    deleteGroupResource: jest.fn(),
-    restrictSendMessages: jest.fn(),
-    restrictEditInfo: jest.fn(),
-  } as unknown as jest.Mocked<GroupsService>;
+    isAdmin: vi.fn(),
+    addMember: vi.fn(),
+    removeMember: vi.fn(),
+    createGroup: vi.fn(),
+    updateSettings: vi.fn(),
+    getGroupMembers: vi.fn(),
+    getSettings: vi.fn(),
+    sendAnnouncement: vi.fn(),
+    getAnnouncements: vi.fn(),
+    getMyAdminGroups: vi.fn(),
+    getGroupInfo: vi.fn(),
+    getGroupsByInterest: vi.fn(),
+    setCommunityId: vi.fn(),
+    getGroupsByCommunity: vi.fn(),
+    getDiscoverableGroups: vi.fn(),
+    joinGroup: vi.fn(),
+    getGroupResources: vi.fn(),
+    deleteGroupResource: vi.fn(),
+    restrictSendMessages: vi.fn(),
+    restrictEditInfo: vi.fn(),
+  } as unknown as Mocked<GroupsService>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     controller = new GroupsController(mockGroupsService);
   });
 

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { User } from '@supabase/supabase-js';
 import { AiConversationController } from './ai-conversation.controller';
 import { AiConversationService } from './ai-conversation.service';
@@ -9,16 +10,16 @@ function mockUser(): User {
 describe('AiConversationController', () => {
   let controller: AiConversationController;
   let service: {
-    getScenarios: jest.Mock;
-    generateReply: jest.Mock;
-    checkDailyAiRateLimit: jest.Mock;
+    getScenarios: Mock;
+    generateReply: Mock;
+    checkDailyAiRateLimit: Mock;
   };
 
   beforeEach(() => {
     service = {
-      getScenarios: jest.fn(),
-      generateReply: jest.fn(),
-      checkDailyAiRateLimit: jest.fn().mockResolvedValue(true),
+      getScenarios: vi.fn(),
+      generateReply: vi.fn(),
+      checkDailyAiRateLimit: vi.fn().mockResolvedValue(true),
     };
     controller = new AiConversationController(
       service as unknown as AiConversationService,

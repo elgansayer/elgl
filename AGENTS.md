@@ -138,7 +138,7 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
 
 - **Always Visit Tests:** Whenever you inspect, add, refactor, or debug any code across the workspace (frontend or backend), you must simultaneously open and review the associated test files (`*.spec.ts` / `*.e2e-spec.ts`).
 - **Full Primitive Coverage:** Every UI design primitive (`app-card`, `app-button-primary`, `app-button-secondary`, `app-input`, `app-textarea`, `app-chip`, `app-pill`, `app-empty-state`) must be backed by both a standalone component and an exhaustive Vitest unit test suite verifying signal reactivity, host class bindings, accessibility ARIA attributes, and RTL classes.
-- **Full API Controller & Service Coverage:** Every NestJS API controller, service, guard, and worker in the `backend/` workspace must have a comprehensive Jest unit test suite (`*.spec.ts`) validating request/response DTO handling, authentication/authorization flows, external service mocks (Supabase, Centrifugo, LiveKit, R2, Redis, NLP.js), and database queries (`pg_trgm`/PostGIS).
+- **Full API Controller & Service Coverage:** Every NestJS API controller, service, guard, and worker in the `backend/` workspace must have a comprehensive Vitest unit test suite (`*.spec.ts`) validating request/response DTO handling, authentication/authorization flows, external service mocks (Supabase, Centrifugo, LiveKit, R2, Redis, NLP.js), and database queries (`pg_trgm`/PostGIS).
 - **Continuous Verification:** After modifying any code or test, run the relevant test suite immediately (`npm test` in `backend/` or `npm test -- --watch=false` in `frontend/`) to guarantee zero regressions.
 
 ## 8. Known Issues / Audit Findings (Last audited 2026-07-29)
@@ -165,8 +165,8 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
 ### 8.4 Verified healthy
 
 - `npx ng build` (frontend) and `npm run build` (backend) both compile cleanly.
-- Frontend Vitest suite: 31 test files, 139 tests passing.
-- Backend Jest suite: 283/283 tests passing across 30 suites.
+- Frontend Vitest suite: 212 test files, 1828 tests passing.
+- Backend Vitest suite: 2754/2754 tests passing across 208 suites.
 - `node scripts/verify-constitution.mjs` and `check:control-flow` / `check:rtl-logical` / `check:template-bindings` all pass with zero violations.
 - Cloudflare R2, LiveKit, Centrifugo, Stripe, DeepL, Azure -- all real SDK/API integrations.
 
@@ -191,6 +191,7 @@ Domain-specific, on-demand workflows for recurring engineering tasks on this cod
 - **Design Language Consistency:** You must strictly follow the established aesthetic for all UI development. Do not build standard web forms; instead, continue building custom Angular primitives (e.g., scrollable pills, gradient buttons, flag fluency indicators) that match the mobile-first experience.
 - **No Dead Buttons:** The application must have absolutely zero buttons that do nothing. Every single `<button>`, `<a>`, or clickable element must either have a functional `(click)` handler, a valid `[routerLink]`, or trigger a "Not Implemented" toast notification if the feature is pending.
 - **Test Coverage Mandate:** A test must be added for every single feature developed. This includes unit tests for both Angular frontend components/services (`*.spec.ts`) and NestJS backend controllers/services.
+- **No Deprecated Packages:** You must never pick npm packages that are deprecated, but still feel free to pick any tools or packages widely in use. Always verify dependencies before adding them.
 - **Fake Data First:** Fake/mock seed data must be added to the backend for every feature as it is developed. The frontend should never render empty states indefinitely during development; it must always populate with realistic placeholder data served from the backend or database seeds to properly validate the UI.
 - **NEVER Hardcode Anything:** You must NEVER hardcode data, coin balances, usernames, languages, or UI strings in the frontend or backend services (except inside dedicated mock data generators like `mock-data.ts` or internationalisation dictionaries). Every piece of dynamic state MUST flow from a backend service, state store, or translation pipe. If a database query fails or returns empty, rely ONLY on the centralized `mock-data.ts` for fallback data.
 - **Aggressive Idea Stealing:** When building out features or designing UX flows, you must actively study and steal as many good ideas, mechanics, and design patterns as possible from the following apps: HelloTalk, Tandem, HiNative, Speaky, italki, X, zoom, teams, slack, google meet, whatsapp, facebook, instagram, tiktok, (Twitter), Facebook, and Discord. Incorporate their best engagement loops and layouts into this app.

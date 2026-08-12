@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -10,16 +11,16 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SystemMessageService } from './services/system-message.service';
 
 type QueryBuilder = {
-  select: jest.Mock;
-  insert: jest.Mock;
-  update: jest.Mock;
-  delete: jest.Mock;
-  eq: jest.Mock;
-  match: jest.Mock;
-  order: jest.Mock;
-  single: jest.Mock;
-  maybeSingle: jest.Mock;
-  then: jest.Mock;
+  select: Mock;
+  insert: Mock;
+  update: Mock;
+  delete: Mock;
+  eq: Mock;
+  match: Mock;
+  order: Mock;
+  single: Mock;
+  maybeSingle: Mock;
+  then: Mock;
 };
 
 function createQueryBuilder(
@@ -29,16 +30,16 @@ function createQueryBuilder(
   },
 ): QueryBuilder {
   const builder: Partial<QueryBuilder> = {};
-  builder.select = jest.fn().mockReturnValue(builder);
-  builder.insert = jest.fn().mockReturnValue(builder);
-  builder.update = jest.fn().mockReturnValue(builder);
-  builder.delete = jest.fn().mockReturnValue(builder);
-  builder.eq = jest.fn().mockReturnValue(builder);
-  builder.match = jest.fn().mockReturnValue(builder);
-  builder.order = jest.fn().mockReturnValue(builder);
-  builder.single = jest.fn().mockResolvedValue(resolved);
-  builder.maybeSingle = jest.fn().mockResolvedValue(resolved);
-  builder.then = jest.fn((resolve: (v: typeof resolved) => unknown) =>
+  builder.select = vi.fn().mockReturnValue(builder);
+  builder.insert = vi.fn().mockReturnValue(builder);
+  builder.update = vi.fn().mockReturnValue(builder);
+  builder.delete = vi.fn().mockReturnValue(builder);
+  builder.eq = vi.fn().mockReturnValue(builder);
+  builder.match = vi.fn().mockReturnValue(builder);
+  builder.order = vi.fn().mockReturnValue(builder);
+  builder.single = vi.fn().mockResolvedValue(resolved);
+  builder.maybeSingle = vi.fn().mockResolvedValue(resolved);
+  builder.then = vi.fn((resolve: (v: typeof resolved) => unknown) =>
     resolve(resolved),
   );
   return builder as QueryBuilder;
@@ -46,9 +47,9 @@ function createQueryBuilder(
 
 describe('GroupsService', () => {
   let service: GroupsService;
-  let systemMessageService: { publishToRoom: jest.Mock };
+  let systemMessageService: { publishToRoom: Mock };
   let tables: Record<string, QueryBuilder>;
-  let fromMock: jest.Mock;
+  let fromMock: Mock;
 
   const ADMIN_ID = 'admin-1';
   const ROOM_ID = 'room-1';
@@ -62,10 +63,10 @@ describe('GroupsService', () => {
       chat_room_members: createQueryBuilder({ data: [], error: null }),
       chat_room_announcements: createQueryBuilder({ data: [], error: null }),
     };
-    fromMock = jest.fn((table: string) => tables[table]);
+    fromMock = vi.fn((table: string) => tables[table]);
 
     systemMessageService = {
-      publishToRoom: jest.fn().mockResolvedValue(undefined),
+      publishToRoom: vi.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -74,13 +75,13 @@ describe('GroupsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue({ from: fromMock }),
+            getClient: vi.fn().mockReturnValue({ from: fromMock }),
           },
         },
         { provide: SystemMessageService, useValue: systemMessageService },
         {
           provide: ConfigService,
-          useValue: { get: jest.fn().mockReturnValue('http://localhost:4200') },
+          useValue: { get: vi.fn().mockReturnValue('http://localhost:4200') },
         },
       ],
     }).compile();
@@ -89,7 +90,7 @@ describe('GroupsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -238,7 +239,7 @@ describe('GroupsService', () => {
         data: { id: ROOM_ID, title: 'Group', max_members: 1 },
         error: null,
       });
-      tables.chat_room_members.then = jest.fn(
+      tables.chat_room_members.then = vi.fn(
         (resolve: (v: unknown) => unknown) =>
           resolve({ count: 1, data: [], error: null }),
       );
@@ -296,7 +297,7 @@ describe('GroupsService', () => {
           },
         },
       ];
-      tables.chat_room_members.then = jest.fn(
+      tables.chat_room_members.then = vi.fn(
         (resolve: (v: unknown) => unknown) =>
           resolve({ data: members, error: null }),
       );
@@ -369,7 +370,7 @@ describe('GroupsService', () => {
         data: { id: ROOM_ID, title: 'Group', max_members: 50 },
         error: null,
       });
-      tables.chat_room_members.then = jest.fn(
+      tables.chat_room_members.then = vi.fn(
         (resolve: (v: unknown) => unknown) =>
           resolve({ count: 2, data: [], error: null }),
       );
@@ -393,7 +394,7 @@ describe('GroupsService', () => {
         data: { id: ROOM_ID, title: 'Group', max_members: 1 },
         error: null,
       });
-      tables.chat_room_members.then = jest.fn(
+      tables.chat_room_members.then = vi.fn(
         (resolve: (v: unknown) => unknown) =>
           resolve({ count: 1, data: [], error: null }),
       );
@@ -437,7 +438,7 @@ describe('GroupsService', () => {
 
   describe('getAnnouncements', () => {
     it('maps stored rows to the announcement DTO shape', async () => {
-      tables.chat_room_announcements.then = jest.fn(
+      tables.chat_room_announcements.then = vi.fn(
         (resolve: (v: unknown) => unknown) =>
           resolve({
             data: [
