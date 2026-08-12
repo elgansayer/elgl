@@ -40,7 +40,7 @@ class GitHubClient:
         token: str,
         runner: GitHubRunner = run_process,
         base_branch: str = "main",
-        require_ready_label: bool = True,
+        require_ready_label: bool = False,
         ready_label: str = "factory-ready",
     ) -> None:
         self.repository = repository

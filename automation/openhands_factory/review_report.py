@@ -35,7 +35,11 @@ def extract_acceptance_criteria(body: str) -> list[str]:
                 # Extract bullet
                 criterion = line.strip()[2:].strip()
                 # Remove checkbox if present
-                if criterion.startswith("[ ]") or criterion.startswith("[x]") or criterion.startswith("[X]"):
+                if (
+                    criterion.startswith("[ ]")
+                    or criterion.startswith("[x]")
+                    or criterion.startswith("[X]")
+                ):
                     criterion = criterion[3:].strip()
                 criteria.append(normalize_whitespace(criterion))
     return criteria
