@@ -121,6 +121,9 @@ export class HobbyTagsController {
     @Query('language') language: string,
   ): Promise<VocabularyResultItem[]> {
     const userId = req.user?.id;
-    return this.hobbyTagsService.getVocabularyForUser(userId as string, language);
+    return this.hobbyTagsService.getVocabularyForUser(
+      userId as string,
+      language,
+    );
   }
 }

@@ -68,7 +68,6 @@ describe('StudyBuddiesRateLimiterGuard', () => {
 
   describe('when no rate limit metadata is defined', () => {
     it('allows the request through', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const handler = function () {};
       class TestController {}
       const ctx = createMockExecutionContext('user-1', handler, TestController);
@@ -80,7 +79,6 @@ describe('StudyBuddiesRateLimiterGuard', () => {
 
   describe('when the user is not authenticated', () => {
     it('allows the request through', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const handler = function () {};
       class TestController {}
 
@@ -90,7 +88,11 @@ describe('StudyBuddiesRateLimiterGuard', () => {
         return undefined;
       });
 
-      const ctx = createMockExecutionContext(undefined, handler, TestController);
+      const ctx = createMockExecutionContext(
+        undefined,
+        handler,
+        TestController,
+      );
       const result = await guard.canActivate(ctx);
       expect(result).toBe(true);
       expect(redisMock.incr).not.toHaveBeenCalled();
@@ -103,7 +105,6 @@ describe('StudyBuddiesRateLimiterGuard', () => {
       windowSeconds: 60,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const handler = async function () {};
     class TestController {}
 
@@ -146,7 +147,8 @@ describe('StudyBuddiesRateLimiterGuard', () => {
       await expect(guard.canActivate(ctx)).rejects.toThrow(HttpException);
       await expect(guard.canActivate(ctx)).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
-        message: 'Too many matchmaking requests. Please wait before trying again.',
+        message:
+          'Too many matchmaking requests. Please wait before trying again.',
       });
     });
 
@@ -189,7 +191,6 @@ describe('StudyBuddiesRateLimiterGuard', () => {
   });
 
   describe('Redis error handling', () => {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const handler = async function () {};
     class TestController {}
 
@@ -225,18 +226,13 @@ describe('StudyBuddiesRateLimiterGuard', () => {
       };
 
       class DecoratorTest {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         testMethod() {}
       }
       const desc = Object.getOwnPropertyDescriptor(
         DecoratorTest.prototype,
         'testMethod',
       );
-      MatchmakingRateLimit(opts)(
-        DecoratorTest.prototype,
-        'testMethod',
-        desc!,
-      );
+      MatchmakingRateLimit(opts)(DecoratorTest.prototype, 'testMethod', desc!);
 
       const metadata = Reflect.getMetadata(
         MATCHMAKING_RATE_LIMIT_KEY,

@@ -48,7 +48,9 @@ import { sanitiseReadingEngineData } from './sanitise-reading-engine.helper';
 describe('sanitiseReadingEngineData', () => {
   it('should strip HTML tags from strings', () => {
     expect(sanitiseReadingEngineData('<b>bold</b>')).toBe('bold');
-    expect(sanitiseReadingEngineData('<script>alert("xss")</script>')).toBe('alert("xss")');
+    expect(sanitiseReadingEngineData('<script>alert("xss")</script>')).toBe(
+      'alert("xss")',
+    );
   });
 
   it('should strip javascript: protocol links', () => {
@@ -58,15 +60,15 @@ describe('sanitiseReadingEngineData', () => {
   });
 
   it('should strip event handler attributes', () => {
-    expect(sanitiseReadingEngineData('<div onclick="steal()">click</div>')).toBe(
-      'click',
-    );
+    expect(
+      sanitiseReadingEngineData('<div onclick="steal()">click</div>'),
+    ).toBe('click');
   });
 
   it('should strip img tags with onerror', () => {
-    expect(
-      sanitiseReadingEngineData('<img src=x onerror="alert(1)">'),
-    ).toBe('');
+    expect(sanitiseReadingEngineData('<img src=x onerror="alert(1)">')).toBe(
+      '',
+    );
   });
 
   it('should sanitise nested objects deeply', () => {
@@ -86,7 +88,9 @@ describe('sanitiseReadingEngineData', () => {
       { title: '<b>Article A</b>' },
       { title: '<i>Article B</i>' },
     ];
-    const result = sanitiseReadingEngineData(input) as Array<Record<string, unknown>>;
+    const result = sanitiseReadingEngineData(input) as Array<
+      Record<string, unknown>
+    >;
     expect(result[0].title).toBe('Article A');
     expect(result[1].title).toBe('Article B');
   });

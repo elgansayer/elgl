@@ -75,7 +75,9 @@ export class DataRetentionService {
       .lt('created_at', cutoff.toISOString());
 
     if (error) {
-      this.logger.error(`Failed to purge audio-room captions: ${error.message}`);
+      this.logger.error(
+        `Failed to purge audio-room captions: ${error.message}`,
+      );
       return;
     }
 
@@ -424,10 +426,7 @@ export class DataRetentionService {
       .eq('speaker_id', userId);
 
     // Audio room notes (vocabulary notes authored by the user)
-    await supabase
-      .from('audio_room_notes')
-      .delete()
-      .eq('author_id', userId);
+    await supabase.from('audio_room_notes').delete().eq('author_id', userId);
 
     // Audio room tips (both sent and received)
     await supabase

@@ -570,8 +570,18 @@ describe('NlpService', () => {
     it('should generate summary via LLM proxy when API key is configured', async () => {
       mockLlmProxyService.proxyMessage.mockResolvedValueOnce({
         response: JSON.stringify({
-          summary: 'This session covered travel vocabulary, cultural customs in Japan, and compared tea ceremonies. The group practised restaurant ordering scenarios.',
-          vocabulary: ['travel', 'cultural', 'customs', 'tea ceremony', 'restaurant', 'ordering', 'vocabulary', 'practised'],
+          summary:
+            'This session covered travel vocabulary, cultural customs in Japan, and compared tea ceremonies. The group practised restaurant ordering scenarios.',
+          vocabulary: [
+            'travel',
+            'cultural',
+            'customs',
+            'tea ceremony',
+            'restaurant',
+            'ordering',
+            'vocabulary',
+            'practised',
+          ],
         }),
       });
 

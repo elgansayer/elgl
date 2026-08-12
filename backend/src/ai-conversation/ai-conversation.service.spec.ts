@@ -140,7 +140,9 @@ describe('AiConversationService', () => {
 
   describe('generateReply', () => {
     it('should call llmProxy.chatCompletion with system prompt from scenario', async () => {
-      llmProxy.chatCompletion.mockResolvedValue('Would you like a latte or cappuccino?');
+      llmProxy.chatCompletion.mockResolvedValue(
+        'Would you like a latte or cappuccino?',
+      );
 
       const reply = await service.generateReply('Hi', 'ordering-coffee');
 

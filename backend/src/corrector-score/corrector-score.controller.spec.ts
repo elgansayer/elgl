@@ -58,7 +58,9 @@ describe('CorrectorScoreController', () => {
     });
 
     it('should throw UnauthorizedException when no user provided', async () => {
-      await expect(controller.rateUser(null as unknown as any, dto)).rejects.toThrow();
+      await expect(
+        controller.rateUser(null as unknown as any, dto),
+      ).rejects.toThrow();
     });
 
     it('should throw UnauthorizedException when rating self', async () => {
