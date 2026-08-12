@@ -1,6 +1,7 @@
 import { Component, computed, input, signal, viewChild, inject, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { VocabCard, VOCABULARY_MOCK_DECK } from './vocab-mock-data';
+import { VocabularyStore } from '../../services/vocabulary.store';
 import {
   SrsErrorBoundaryComponent,
   SrsErrorContext,
@@ -166,6 +167,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
 })
 export class VocabularyDashboardComponent {
   private errorHandler = inject(ErrorHandler);
+  private vocabStore = inject(VocabularyStore);
 
   readonly deckInput = input<VocabCard[]>([]);
 
@@ -209,9 +211,16 @@ export class VocabularyDashboardComponent {
     }
   }
 
-  grade(grade: ReviewGrade): void {
+  async grade(grade: ReviewGrade): Promise<void> {
     try {
       if (this.isComplete()) return;
+
+      const card = this.currentCard();
+      if (card) {
+        const qualityMap: Record<ReviewGrade, number> = { again: 0, good: 3, known: 5 };
+        await this.vocabStore.updateSrsLevel(card.id, qualityMap[grade]);
+      }
+
       this.grades.update((g) => ({ ...g, [grade]: g[grade] + 1 }));
       this.isFlipped.set(false);
       if (this.currentIndex() < this.cardCount() - 1) {

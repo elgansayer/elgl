@@ -8,6 +8,8 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { JoyrideModule } from 'ngx-joyride';
+
+import { ConfigurationService } from './core/config/configuration.service';
 import { routes } from './app.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
@@ -16,6 +18,11 @@ import { retryInterceptor } from './interceptors/retry.interceptor';
 export function createTranslateLoader(http: HttpClient): TranslateHttpLoader {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
 }
+
+export function initConfig(configService: ConfigurationService): () => Promise<void> {
+  return () => configService.loadConfiguration();
+}
+
 
 function initialiseDeepLinks(): () => void {
   const deepLinkService = inject(DeepLinkService);
@@ -60,6 +67,13 @@ export const appConfig: ApplicationConfig = {
     }).providers ?? []),
     importProvidersFrom(JoyrideModule.forRoot()),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
+
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initConfig,
+      deps: [ConfigurationService],
+      multi: true,
+    },
     {
       provide: APP_INITIALIZER,
       useFactory: initialiseDeepLinks,

@@ -17,9 +17,9 @@ describe('SystemMessageService', () => {
   });
 
   beforeEach(async () => {
-    centrifugoService = { publish: vi.fn().mockResolvedValue(true) };
+    centrifugoService = { publish: jest.fn().mockResolvedValue(true) };
     supabaseService = {
-      getClient: vi.fn().mockReturnValue(mockSupabaseClient()),
+      getClient: jest.fn().mockReturnValue(mockSupabaseClient()),
     };
 
     const module: TestingModule = await Test.createTestingModule({

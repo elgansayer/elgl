@@ -287,7 +287,7 @@ describe('PrivacyService', () => {
       const dto: DeleteAccountDto = { confirm_delete: true };
       const updateError = { message: 'DB error' };
       mockUpdate.mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: updateError }),
+        eq: jest.fn().mockResolvedValue({ error: updateError }),
       });
 
       await expect(service.deleteAccount('user-1', dto)).rejects.toThrow(
@@ -313,7 +313,7 @@ describe('PrivacyService', () => {
     });
 
     it('should throw BadRequestException on error', async () => {
-      const mockEqCancel = vi
+      const mockEqCancel = jest
         .fn()
         .mockResolvedValue({ error: { message: 'DB error' } });
       mockUpdate.mockReturnValue({ eq: mockEqCancel });

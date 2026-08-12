@@ -14,7 +14,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
     <input
       [id]="inputId()"
       [type]="type()"
-      [value]="value()"
+      [value]="value() ?? ''"
       [placeholder]="placeholder() | t"
       [disabled]="disabled()"
       [readOnly]="readonly()"
@@ -29,7 +29,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
   },
 })
 export class AppInputComponent {
-  readonly value = input<string>('');
+  readonly value = input<string | null | undefined>('');
   readonly placeholder = input<string>('');
   readonly type = input<'text' | 'email' | 'password' | 'number' | 'url'>('text');
   readonly disabled = input<boolean>(false);

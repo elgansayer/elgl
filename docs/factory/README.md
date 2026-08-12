@@ -26,13 +26,11 @@ verification gate then runs on the combined diff before the pull request is open
 
 ## Issue Intake and Classification
 
-By default, the factory requires `FACTORY_REQUIRE_READY_LABEL=true`. Use `factory-ready` only when a task is bounded enough to prove completion. Do not apply it to epics or planning issues.
+By default, the factory operates with `FACTORY_REQUIRE_READY_LABEL=false`, meaning all open issues not specifically excluded are picked up. Use `factory-ready` only if you enable `FACTORY_REQUIRE_READY_LABEL=true` for manual queueing.
 
-- `factory-epic`: Broad outcomes (e.g., "Improve onboarding"). Excluded from implementation.
-- `factory-planning`: Architecture mapping, research, or decomposition. Excluded from implementation.
-- `factory-ready`: Bounded, actionable implementation issues.
-
-If `FACTORY_REQUIRE_READY_LABEL=false` is set in the environment file, it overrides the safe default, but this is only for backwards compatibility.
+Excluded from implementation:
+- `factory-epic`: Broad outcomes (e.g., "Improve onboarding").
+- `factory-planning`: Architecture mapping, research, or decomposition.
 
 ## Deterministic Quality Gate
 

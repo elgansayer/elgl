@@ -1,4 +1,8 @@
-<nav class="hidden lg:flex flex-col w-64 h-full bg-surface-200 border-e border-surface-100 py-4" role="navigation" [attr.aria-label]="'nav.mainNav' | t">
+<nav
+  class="hidden lg:flex flex-col w-64 h-full bg-surface-200 border-e border-surface-100 py-4"
+  role="navigation"
+  [attr.aria-label]="'nav.mainNav' | t"
+>
   <div class="px-6 pb-4">
     <span class="text-lg font-black text-primary tracking-tight">{{ 'app.title' | t }}</span>
   </div>
@@ -18,7 +22,7 @@
           <span>{{ item.key | t }}</span>
           @if (unreadCounter.tabCount(item.tab) > 0) {
             <span
-              class="ms-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
+              class="ms-auto bg-danger text-on-fill text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center border-2 border-surface-200"
             >
               {{ unreadCounter.tabCount(item.tab) > 99 ? '99+' : unreadCounter.tabCount(item.tab) }}
             </span>
@@ -30,7 +34,9 @@
 
   <!-- Coin Economy Section -->
   <div class="px-3 mt-4">
-    <span class="px-4 text-[10px] font-bold text-text-muted uppercase tracking-wider">{{ 'coinEco.sectionTitle' | t }}</span>
+    <span class="px-4 text-[10px] font-bold text-text-muted uppercase tracking-wider">{{
+      'coinEco.sectionTitle' | t
+    }}</span>
   </div>
   <ul class="flex flex-col gap-1 px-3">
     <li>

@@ -3,7 +3,8 @@
     class="sticky top-0 z-10 bg-surface-500/90 backdrop-blur border-b border-surface-100 p-4 flex items-center justify-between"
   >
     <div class="flex items-center gap-4">
-      <button aria-label="Go back"
+      <button
+        aria-label="Go back"
         (click)="goBack()"
         class="p-2 -ms-2 rounded-full hover:bg-surface-300 transition-colors"
       >
@@ -67,7 +68,8 @@
             [class.text-text-primary]="isFollowing()"
             [class.border]="isFollowing()"
             [class.border-surface-100]="isFollowing()"
-           [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t">
+            [attr.aria-label]="(isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t"
+          >
             {{ (isFollowing() ? 'userProfile.following' : 'userProfile.follow') | t }}
           </button>
         </div>
@@ -90,7 +92,7 @@
 
         @if (profile()?.is_vip) {
           <div
-            class="mt-2 inline-block rounded bg-vip px-2 py-1 text-xs font-black uppercase italic text-black shadow-[0_0_10px_rgba(255,215,0,0.5)]"
+            class="mt-2 inline-block rounded bg-vip px-2 py-1 text-xs font-black uppercase italic text-on-fill shadow-[0_0_10px_rgba(255,215,0,0.5)]"
           >
             {{ 'discovery.vipBadge' | t }}
           </div>
@@ -152,7 +154,7 @@
       <div class="flex flex-col gap-3">
         <a
           [routerLink]="['/chat', profile()?.id]"
-          class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-purple-600 text-white font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+          class="w-full h-12 rounded-full bg-gradient-to-r from-neon-blue to-accent text-on-fill font-bold flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
         >
           {{ 'chatList.tapToChat' | t }}
         </a>

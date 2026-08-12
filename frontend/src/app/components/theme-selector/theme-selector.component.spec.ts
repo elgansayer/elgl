@@ -36,9 +36,7 @@ describe('ThemeSelectorComponent', () => {
     await TestBed.configureTestingModule({
       // 1. Import the real component (this pulls in its own imports)
       imports: [ThemeSelectorComponent],
-      providers: [
-        { provide: ThemeService, useValue: themeService },
-      ],
+      providers: [{ provide: ThemeService, useValue: themeService }],
     })
       // 2. Replace the real TranslatePipe with our standalone stub
       .overrideComponent(ThemeSelectorComponent, {
@@ -86,7 +84,7 @@ describe('ThemeSelectorComponent', () => {
 
     const buttons = fixture.nativeElement.querySelectorAll('button');
     // The second button (index 1) corresponds to "dark"
-    expect(buttons[1].classList.contains('bg-blue-100')).toBe(true);
+    expect(buttons[1].classList.contains('bg-primary/15')).toBe(true);
   });
   it('should have accessible ARIA attributes for theme buttons', () => {
     const buttons = fixture.nativeElement.querySelectorAll('button');

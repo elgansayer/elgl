@@ -22,3 +22,6 @@
 ## 2026-08-12 - [Optimize user data fetching by replacing sequential awaits with Promise.allSettled]
 **Learning:** In the backend `privacy.service.ts`, assembling user data for the GDPR archive export sequentially looped through 15 distinct database queries (selects) using `await`. Running them concurrently with `Promise.allSettled` eliminates the sequential network roundtrips, completing much faster while avoiding the rejection of the entire batch if a single query fails.
 **Action:** When a service requires bulk independent operations (like GDPR user archives across many tables), do not await them sequentially. Use `Promise.allSettled` to execute them concurrently to drastically improve network latency, and map over the results to safely extract the data.
+## 2026-08-12 - [Optimize Sequential I/O in Loop using Promise.all]
+**Learning:** In the backend `chat.service.ts` method `forwardMessage`, checking if room members block a user was done sequentially inside a `for...of` loop with `await`. This causes an N+1 query problem, making latency scale linearly with the number of members in the target room.
+**Action:** Replaced the sequential `for...of` loop with a concurrent approach by mapping the array to `Promise.all`. This reduces the latency of checking all members to a single concurrent roundtrip.

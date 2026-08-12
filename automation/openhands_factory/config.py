@@ -44,7 +44,7 @@ class FactoryConfig(BaseModel):
     max_no_pr_hours: float = 6
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
-    require_ready_label: bool = True
+    require_ready_label: bool = False
     ready_label: str = "factory-ready"
     telegram_bot_token: SecretStr | None = None
     telegram_chat_id: SecretStr | None = None
@@ -156,7 +156,7 @@ class FactoryConfig(BaseModel):
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=env.get("GITHUB_REPOSITORY", "elgansayer/elgl"),
-                require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", True),
+                require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", False),
                 ready_label=env.get("FACTORY_READY_LABEL", "factory-ready"),
                 telegram_bot_token=SecretStr(env["TELEGRAM_BOT_TOKEN"])
                 if env.get("TELEGRAM_BOT_TOKEN")

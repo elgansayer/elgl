@@ -60,7 +60,7 @@
           [class]="
             'px-2.5 py-1 rounded-lg text-xs font-bold transition-all ' +
             (brushWidth === w
-              ? 'bg-primary text-white shadow'
+              ? 'bg-primary text-on-fill shadow'
               : 'bg-surface-100 text-text-primary hover:bg-surface-100')
           "
           [attr.aria-label]="w + 'px stroke width'"
@@ -75,7 +75,7 @@
     <app-button-secondary
       (clicked)="clearCanvas()"
       [ariaLabel]="'doodle.clearBtn' | t"
-      customClass="bg-red-500/20 text-red-400 px-4 py-2 text-sm hover:bg-red-500/30"
+      customClass="bg-danger/20 text-danger px-4 py-2 text-sm hover:bg-danger/30"
     >
       {{ 'doodle.clearBtn' | t }}
     </app-button-secondary>

@@ -11,8 +11,8 @@ import { UserInterestsService } from '../../services/user-interests.service';
         <button
           type="button"
           (click)="toggle(tag)"
-          [class.bg-blue-500]="selectedTags().includes(tag)"
-          [class.text-white]="selectedTags().includes(tag)"
+          [class.bg-primary]="selectedTags().includes(tag)"
+          [class.text-on-fill]="selectedTags().includes(tag)"
           class="px-3 py-1 rounded-full border-s border-e-0 text-sm transition-colors"
         >
           {{ 'interest.' + tag | t }}

@@ -101,3 +101,27 @@ Located in `frontend/src/app/components/primitives/`:
 - When visiting a profile, an API call is fired to log the visit.
 - If the visitor has "Incognito Mode" enabled (VIP feature), the API bypasses the logging.
 - Free users viewing their `VisitorLogsComponent` see blurred avatars for recent visitors. Tapping a blurred avatar triggers the `SubscriptionPlans` paywall modal.
+
+## 5. Performance, State & Bundle Optimization
+
+To maintain a fast, responsive mobile-first experience, the Angular architecture must strictly adhere to the following optimization strategies:
+
+### 5.1. Lazy Loading & Deferred Views
+- **Component-Level Deferral**: Use Angular's `@defer` control flow block to lazily load heavy, non-critical components that are below the fold or not immediately visible. This includes:
+  - `GiftAnimationOverlay` / `CelebrationOverlay` (which rely on the heavy `lottie-web` package).
+  - Data visualizations like `CoinEconomyDashboardComponent` charts.
+  - Complex UI elements like `DoodlePad` until the user interacts with the feature.
+- **Dynamic Imports for Third-Party Libraries**: Avoid statically importing large third-party libraries (e.g., `chart.js`, `livekit-client`, `dompurify`) at the top of a file. Use dynamic `import()` within the component or service only when the library's functionality is explicitly requested by the user.
+- **Route-Level Lazy Loading**: Continue utilizing standalone components and the `loadComponent` / `loadChildren` syntax in the router to ensure each route is chunked independently, preventing the initial bundle from bloating.
+
+### 5.2. State Management
+- **Adoption of SignalStore**: Transition complex, globally shared state (e.g., the real-time chat engine, LiveKit room states, and user authentication) to `@ngrx/signals` (SignalStore).
+- **Benefits**:
+  - Provides strict, unidirectional data flow, avoiding "spaghetti state" from ad-hoc RxJS `BehaviorSubject` architectures.
+  - Granular reactivity integrates perfectly with Angular's native Signals, minimizing change detection cycles.
+- **Optimistic UI Updates**: SignalStore allows for robust optimistic updates. For instance, when a user sends a message or updates a setting, the local signal state should update immediately. If the Supabase API or Centrifugo broadcast fails, the state can be cleanly rolled back.
+
+### 5.3. Bundle Size Reduction
+- **Image Optimization**: Replace standard `<img>` tags with the `NgOptimizedImage` directive (`ngSrc`). This enforces automated lazy loading, automatic generation of `srcset` for responsive images, and preconnect hints, dramatically reducing the LCP (Largest Contentful Paint).
+- **Strict Tree-Shaking**: Regularly audit imports to ensure only required functions/modules are included (e.g., import specific RxJS operators rather than the entire library).
+- **Bundle Analysis**: Utilize `source-map-explorer` or the Angular CLI's built-in bundle analyzer to regularly audit the output chunks. Any external dependency exceeding 50KB must be explicitly justified or lazy-loaded.

@@ -94,7 +94,7 @@ export class DiscoveryRateLimiterGuard implements CanActivate {
         const response = context
           .switchToHttp()
           .getResponse<import('express').Response>();
-        response?.setHeader?.('Retry-After', String(retryAfter));
+        response.setHeader('Retry-After', String(retryAfter));
 
         throw new HttpException(
           {
