@@ -25,6 +25,9 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:escrow-pay
 
 # Run the LingQ Reading Engine load test
 API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:reading-engine
+
+# Run the Moments load test
+API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:moments
 ```
 
 ## Test Scripts
@@ -47,6 +50,8 @@ API_URL=http://localhost:3000 TEST_USER_TOKEN=<your-jwt> npm run test:reading-en
 | `test:discovery-map:report` | (output + HTML) | Runs the Discovery Map test and generates an HTML report |
 | `test:reading-engine` | `reading-engine.load.yml` | Load tests the LingQ Reading Engine: resource CRUD, tokenisation, reading progress, and cache admin |
 | `test:reading-engine:report` | (output + HTML) | Runs the Reading Engine test and generates an HTML report |
+| `test:moments` | `moments.load.yml` | Load tests the Moments social feed: feed browsing, moment and story creation, language questions, likes, comments, correction voting, media upload URLs, editing, and pinning |
+| `test:moments:report` | (output + HTML) | Runs the Moments test and generates an HTML report |
 
 ## Configuration
 
@@ -161,3 +166,22 @@ Both test scripts include the following phases:
 - `GET /reading/progress` - Get authenticated user's reading progress
 - `POST /reading/progress/session` - Record a completed reading session
 - `DELETE /reading/cache/user` - Clear reading-engine caches for authenticated user
+
+### Moments Module (`/moments`)
+- `GET /moments/feed` - Browse the Moments feed with `All`, `Classmates`, `Following`, and `For You` filters and optional language
+- `GET /moments/lifetime-counts` - Lifetime translation, correction, and moment counts
+- `GET /moments/stories` - List active ephemeral stories for followed users
+- `POST /moments` - Create a text or media Moment
+- `POST /moments/stories` - Create an ephemeral story (default 24 hour expiry)
+- `POST /moments/language-questions` - Create a multiple-choice language question
+- `GET /moments/questions` - List questions and language questions, optionally filtered by language
+- `POST /moments/:id/answer` - Answer a language question
+- `POST /moments/:id/like` - Like or unlike a Moment (toggles)
+- `GET /moments/:id/likes` - List users who liked a Moment
+- `POST /moments/:id/comments` - Add a comment or correction to a Moment
+- `GET /moments/:id/comments` - List comments for a Moment
+- `POST /moments/:id/comments/:commentId/vote` - Up-vote or down-vote a correction
+- `PATCH /moments/:id/edit-text` - Edit the text of a Moment
+- `PATCH /moments/:id/pin` - Toggle pinning a Moment (VIP only, expects 200 or 403)
+- `POST /moments/upload-voice` - Request a Cloudflare R2 voice upload URL (VIP only, expects 201 or 403)
+- `POST /moments/upload-media` - Request a Cloudflare R2 image/video upload URL
