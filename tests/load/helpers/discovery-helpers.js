@@ -17,27 +17,23 @@ function generateUUID() {
 }
 
 /**
- * Generate a random latitude within the given bounds.
- * @param {number} min - Minimum latitude (default -90)
- * @param {number} max - Maximum latitude (default 90)
- * @returns {number}
+ * Artillery step function that generates a random latitude (-90 to 90),
+ * stores it in context.vars.latitude, and continues the scenario.
  */
-function generateRandomLatitude(min, max) {
-  const lo = min ?? -90;
-  const hi = max ?? 90;
-  return parseFloat((Math.random() * (hi - lo) + lo).toFixed(6));
+function generateRandomLatitude(userContext, events, done) {
+  userContext.vars.latitude = parseFloat((Math.random() * 180 - 90).toFixed(6));
+  return done();
 }
 
 /**
- * Generate a random longitude within the given bounds.
- * @param {number} min - Minimum longitude (default -180)
- * @param {number} max - Maximum longitude (default 180)
- * @returns {number}
+ * Artillery step function that generates a random longitude (-180 to 180),
+ * stores it in context.vars.longitude, and continues the scenario.
  */
-function generateRandomLongitude(min, max) {
-  const lo = min ?? -180;
-  const hi = max ?? 180;
-  return parseFloat((Math.random() * (hi - lo) + lo).toFixed(6));
+function generateRandomLongitude(userContext, events, done) {
+  userContext.vars.longitude = parseFloat(
+    (Math.random() * 360 - 180).toFixed(6),
+  );
+  return done();
 }
 
 /**

@@ -20,6 +20,7 @@
     "test:discovery-map:report": "artillery run --output ./reports/discovery-map-report.json discovery-map.load.yml && artillery report ./reports/discovery-map-report.json",
     "test:matchmaking": "artillery run matchmaking.load.yml",
     "test:matchmaking:report": "artillery run --output ./reports/matchmaking-report.json matchmaking.load.yml && artillery report ./reports/matchmaking-report.json",
+    "test:discovery-validate": "node validate-discovery-load-tests.js",
     "test:reading-engine": "artillery run reading-engine.load.yml",
     "test:reading-engine:report": "artillery run --output ./reports/reading-engine-report.json reading-engine.load.yml && artillery report ./reports/reading-engine-report.json",
     "test:moments": "artillery run moments.load.yml",
