@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
 
@@ -55,6 +55,20 @@ class JobStore:
         with self._process_lock:
             jobs = self.load()
             for task in tasks:
-                jobs.setdefault(task.identifier, Job(task=task))
+                existing = jobs.get(task.identifier)
+                if existing is None:
+                    jobs[task.identifier] = Job(task=task)
+                    continue
+                existing.task = task
+                if (
+                    existing.state is JobState.DONE
+                    and existing.pull_request is None
+                    and existing.last_error == "Issue closed before pull request creation"
+                ):
+                    existing.state = JobState.DISCOVERED
+                    existing.attempts = 0
+                    existing.repair_attempts = 0
+                    existing.last_error = None
+                    existing.updated_at = datetime.now(UTC)
             self.save(jobs)
             return jobs

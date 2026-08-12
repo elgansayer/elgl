@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { MediaService } from './media.service';
@@ -7,22 +8,24 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { AudioCompressionService } from './audio-compression.service';
 import { ImageCompressionService } from './image-compression.service';
 
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn(),
-  PutObjectCommand: jest.fn().mockImplementation((args) => args),
+vi.mock('@aws-sdk/client-s3', () => ({
+  S3Client: vi.fn(),
+  PutObjectCommand: vi.fn().mockImplementation(function (args) {
+    return args;
+  }),
 }));
 
-jest.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: jest.fn().mockResolvedValue('https://upload.r2.mock/url'),
+vi.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: vi.fn().mockResolvedValue('https://upload.r2.mock/url'),
 }));
 
 describe('MediaService', () => {
   let service: MediaService;
 
   beforeEach(async () => {
-    (S3Client as unknown as jest.Mock).mockClear();
-    (PutObjectCommand as unknown as jest.Mock).mockClear();
-    (getSignedUrl as jest.Mock)
+    (S3Client as unknown as Mock).mockClear();
+    (PutObjectCommand as unknown as Mock).mockClear();
+    (getSignedUrl as Mock)
       .mockClear()
       .mockResolvedValue('https://upload.r2.mock/url');
 
@@ -32,20 +35,20 @@ describe('MediaService', () => {
         {
           provide: AudioCompressionService,
           useValue: {
-            compressToOgg: jest.fn(),
-            compressToM4a: jest.fn(),
+            compressToOgg: vi.fn(),
+            compressToM4a: vi.fn(),
           },
         },
         {
           provide: ImageCompressionService,
           useValue: {
-            compress: jest.fn(),
+            compress: vi.fn(),
           },
         },
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               if (key === 'CLOUDFLARE_R2_ENDPOINT')
                 return 'https://r2.cloudflare.mock';
               if (key === 'CLOUDFLARE_R2_ACCESS_KEY_ID') return 'mock-key-id';
@@ -61,10 +64,10 @@ describe('MediaService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue({
-              from: jest.fn().mockReturnThis(),
-              update: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
+            getClient: vi.fn().mockReturnValue({
+              from: vi.fn().mockReturnThis(),
+              update: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
             }),
           },
         },
@@ -76,7 +79,7 @@ describe('MediaService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

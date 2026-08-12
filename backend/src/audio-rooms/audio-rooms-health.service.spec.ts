@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -5,18 +6,18 @@ import { AudioRoomsHealthService } from './audio-rooms-health.service';
 
 describe('AudioRoomsHealthService', () => {
   let service: AudioRoomsHealthService;
-  let mockSupabaseClient: { from: jest.Mock };
-  let mockConfigService: { get: jest.Mock };
+  let mockSupabaseClient: { from: Mock };
+  let mockConfigService: { get: Mock };
 
   beforeEach(async () => {
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue({
-        select: jest.fn().mockResolvedValue({ error: null }),
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue({ error: null }),
       }),
     };
 
     mockConfigService = {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         if (key === 'LIVEKIT_URL') return 'https://mock.livekit.cloud';
         if (key === 'CENTRIFUGO_API_URL') return 'http://localhost:8000';
         if (key === 'CENTRIFUGO_API_KEY') return '';
@@ -25,7 +26,7 @@ describe('AudioRoomsHealthService', () => {
     };
 
     const mockSupabaseService = {
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -39,11 +40,11 @@ describe('AudioRoomsHealthService', () => {
     service = module.get<AudioRoomsHealthService>(AudioRoomsHealthService);
 
     // Clean up any interval timers
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     service.onModuleDestroy?.();
   });
 

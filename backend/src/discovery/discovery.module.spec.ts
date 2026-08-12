@@ -1,44 +1,48 @@
-// Mock jsdom and dompurify to avoid ESM import failures in Jest (transitively imported through audio-rooms -> chat -> link-preview)
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
-    },
-  })),
+// Mock jsdom and dompurify to avoid ESM import failures in Vitest (transitively imported through audio-rooms -> chat -> link-preview)
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: { createElement: vi.fn(), createDocumentFragment: vi.fn() },
+      },
+    };
+  }),
 }));
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
-    sanitize: jest.fn((d: string) => d.replace(/<[^>]*>/g, '')),
-    setConfig: jest.fn(),
+  default: vi.fn(() => ({
+    sanitize: vi.fn((d: string) => d.replace(/<[^>]*>/g, '')),
+    setConfig: vi.fn(),
   })),
 }));
 
-jest.mock('./sanitise-discovery.helper', () => ({
+vi.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
 }));
 
-// Mock jsdom and dompurify to avoid ESM import failures in Jest
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation((_html: string) => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+// Mock jsdom and dompurify to avoid ESM import failures in Vitest
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: {
+          ELEMENT_NODE: 1,
+          TEXT_NODE: 3,
+          DOCUMENT_FRAGMENT_NODE: 11,
+        },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
       },
-      Node: {
-        ELEMENT_NODE: 1,
-        TEXT_NODE: 3,
-        DOCUMENT_FRAGMENT_NODE: 11,
-      },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty
@@ -49,7 +53,7 @@ jest.mock('dompurify', () => ({
         .replace(/&quot;/g, '"')
         .replace(/&#x27;/g, "'");
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 

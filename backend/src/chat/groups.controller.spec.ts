@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
@@ -14,23 +15,23 @@ describe('GroupsController', () => {
         {
           provide: GroupsService,
           useValue: {
-            createGroup: jest.fn(),
-            renameGroup: jest.fn(),
-            addGroupMembers: jest.fn(),
-            removeGroupMember: jest.fn(),
-            getGroupMembers: jest.fn(),
-            generateInviteCode: jest.fn(),
-            generateInviteLink: jest.fn(),
-            getInviteInfo: jest.fn(),
-            sendAnnouncement: jest.fn(),
-            getAnnouncements: jest.fn(),
-            joinByInviteCode: jest.fn(),
+            createGroup: vi.fn(),
+            renameGroup: vi.fn(),
+            addGroupMembers: vi.fn(),
+            removeGroupMember: vi.fn(),
+            getGroupMembers: vi.fn(),
+            generateInviteCode: vi.fn(),
+            generateInviteLink: vi.fn(),
+            getInviteInfo: vi.fn(),
+            sendAnnouncement: vi.fn(),
+            getAnnouncements: vi.fn(),
+            joinByInviteCode: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<GroupsController>(GroupsController);
@@ -38,7 +39,7 @@ describe('GroupsController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -55,7 +56,7 @@ describe('GroupsController', () => {
     it('should call groupsService.createGroup when user is provided', async () => {
       const dto: any = { name: 'Study group', memberIds: ['user-2'] };
       const room: any = { id: 'room-1', title: 'Study group' };
-      (groupsService.createGroup as jest.Mock).mockResolvedValue(room);
+      (groupsService.createGroup as Mock).mockResolvedValue(room);
 
       const result = await controller.createGroup({ id: 'user-1' } as any, dto);
       expect(groupsService.createGroup).toHaveBeenCalledWith(
@@ -77,7 +78,7 @@ describe('GroupsController', () => {
     });
 
     it('should call groupsService.renameGroup when user is provided', async () => {
-      (groupsService.renameGroup as jest.Mock).mockResolvedValue(undefined);
+      (groupsService.renameGroup as Mock).mockResolvedValue(undefined);
 
       const result = await controller.renameGroup(
         { id: 'user-1' } as any,
@@ -103,7 +104,7 @@ describe('GroupsController', () => {
     });
 
     it('should call groupsService.addGroupMembers when user is provided', async () => {
-      (groupsService.addGroupMembers as jest.Mock).mockResolvedValue(undefined);
+      (groupsService.addGroupMembers as Mock).mockResolvedValue(undefined);
 
       const result = await controller.addGroupMembers(
         { id: 'user-1' } as any,
@@ -131,9 +132,7 @@ describe('GroupsController', () => {
     });
 
     it('should call groupsService.removeGroupMember when user is provided', async () => {
-      (groupsService.removeGroupMember as jest.Mock).mockResolvedValue(
-        undefined,
-      );
+      (groupsService.removeGroupMember as Mock).mockResolvedValue(undefined);
 
       const result = await controller.removeGroupMember(
         { id: 'user-1' } as any,
@@ -158,7 +157,7 @@ describe('GroupsController', () => {
 
     it('should call groupsService.getGroupMembers when user is provided', async () => {
       const members = [{ user_id: 'user-2' }];
-      (groupsService.getGroupMembers as jest.Mock).mockResolvedValue(members);
+      (groupsService.getGroupMembers as Mock).mockResolvedValue(members);
 
       const result = await controller.getGroupMembers(
         { id: 'user-1' } as any,
@@ -177,9 +176,7 @@ describe('GroupsController', () => {
     });
 
     it('should call groupsService.generateInviteCode when user is provided', async () => {
-      (groupsService.generateInviteCode as jest.Mock).mockResolvedValue(
-        'abc123',
-      );
+      (groupsService.generateInviteCode as Mock).mockResolvedValue('abc123');
 
       const result = await controller.generateInviteCode(
         { id: 'user-1' } as any,
@@ -205,9 +202,7 @@ describe('GroupsController', () => {
         code: 'abc123',
         url: 'http://localhost:4200/join/abc123',
       };
-      (groupsService.generateInviteLink as jest.Mock).mockResolvedValue(
-        inviteLink,
-      );
+      (groupsService.generateInviteLink as Mock).mockResolvedValue(inviteLink);
 
       const result = await controller.generateInviteLink(
         { id: 'user-1' } as any,
@@ -230,7 +225,7 @@ describe('GroupsController', () => {
 
     it('should call groupsService.getInviteInfo when user is provided', async () => {
       const inviteInfo = { roomId: 'room-1', title: 'Study group' };
-      (groupsService.getInviteInfo as jest.Mock).mockResolvedValue(inviteInfo);
+      (groupsService.getInviteInfo as Mock).mockResolvedValue(inviteInfo);
 
       const result = await controller.getInviteInfo(
         { id: 'user-1' } as any,
@@ -251,9 +246,7 @@ describe('GroupsController', () => {
     });
 
     it('should call groupsService.sendAnnouncement when user is provided', async () => {
-      (groupsService.sendAnnouncement as jest.Mock).mockResolvedValue(
-        undefined,
-      );
+      (groupsService.sendAnnouncement as Mock).mockResolvedValue(undefined);
 
       const result = await controller.sendAnnouncement(
         { id: 'user-1' } as any,
@@ -285,9 +278,7 @@ describe('GroupsController', () => {
           senderId: 'user-1',
         },
       ];
-      (groupsService.getAnnouncements as jest.Mock).mockResolvedValue(
-        announcements,
-      );
+      (groupsService.getAnnouncements as Mock).mockResolvedValue(announcements);
 
       const result = await controller.getAnnouncements(
         { id: 'user-1' } as any,
@@ -308,9 +299,7 @@ describe('GroupsController', () => {
     });
 
     it('should call groupsService.joinByInviteCode when user is provided', async () => {
-      (groupsService.joinByInviteCode as jest.Mock).mockResolvedValue(
-        undefined,
-      );
+      (groupsService.joinByInviteCode as Mock).mockResolvedValue(undefined);
 
       const result = await controller.joinByInviteCode(
         { id: 'user-1' } as any,
