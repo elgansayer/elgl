@@ -41,7 +41,7 @@ def build_task_prompt(
 
 
 def build_phase_prompt(prompt_dir: Path, phase: str, task: Task) -> str:
-    if phase not in {"review", "repair"}:
+    if phase not in {"review", "repair", "security"}:
         raise ValueError(f"Unsupported factory phase: {phase}")
     instructions = (prompt_dir / f"{phase}.md").read_text(encoding="utf-8")
     return (

@@ -23,6 +23,7 @@ TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 PRE_PULL_REQUEST_STATES = {
     JobState.DISCOVERED,
     JobState.IMPLEMENTING,
+    JobState.SECURITY_REVIEW,
     JobState.VERIFYING,
     JobState.PR_DRAFT,
     JobState.QUARANTINED,
@@ -173,6 +174,13 @@ class FactoryPipeline:
             self.conversations.run(job.task, worktree, prompt)
             if not workflow.has_changes():
                 raise FactoryError("Implementation produced no repository changes")
+            job.state = JobState.SECURITY_REVIEW
+            return
+
+        if job.state is JobState.SECURITY_REVIEW:
+            self.conversations.run(
+                job.task, worktree, build_phase_prompt(prompt_dir, "security", job.task)
+            )
             job.state = JobState.VERIFYING
             return
 
@@ -338,8 +346,8 @@ class FactoryPipeline:
         return (
             f"Fixes #{job.task.identifier}\n\n"
             "## Factory execution\n\n"
-            "This pull request was planned, implemented, locally verified and independently "
-            "reviewed "
-            "by the bounded OpenHands factory. GitHub required checks remain authoritative.\n\n"
+            "This pull request was planned, implemented, security reviewed, locally verified and "
+            "independently reviewed by the bounded OpenHands factory. GitHub required checks remain "
+            "authoritative.\n\n"
             f"Reviewed head SHA: `{job.head_sha or 'pending'}`\n"
         )

@@ -33,6 +33,7 @@ class JobState(StrEnum):
     DISCOVERED = "discovered"
     LEASED = "leased"
     IMPLEMENTING = "implementing"
+    SECURITY_REVIEW = "security-review"
     VERIFYING = "verifying"
     PR_DRAFT = "pr-draft"
     REVIEWING = "reviewing"

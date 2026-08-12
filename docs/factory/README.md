@@ -18,6 +18,12 @@ The former Aider, DeepSeek, swarm watchdog, guardian, resolver and reviewer auto
 repair, review, health and merge responsibilities move into the factory and protected CI. New work enters through
 GitHub issues; the daemon does not invent duplicate planning issues.
 
+Every implementation runs a dedicated security review workflow before the branch is verified. A bounded agent
+conversation (`automation/prompts/security.md`) inspects the diff for hardcoded secrets, webhook signature
+weaknesses, client-controlled privileged state, authentication and authorisation gaps, injection and unsafe
+security configuration. It fixes confirmed findings with tests or leaves the worktree unchanged, and the normal
+verification gate then runs on the combined diff before the pull request is opened.
+
 ## Costs
 
 ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenHands Go is
