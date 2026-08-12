@@ -138,6 +138,7 @@ The logic enforced by NestJS to drive subscriptions across tiers and power the i
 ## Tech Stack
 
 - **Frontend:** Angular (Standalone Components, Signals, Tailwind CSS)
+  - *Note: For advanced frontend performance, state management (via SignalStore), and bundle optimization strategies, please refer to Section 5 of [`ui_architecture.md`](ui_architecture.md).*
 - **Backend:** NestJS, BullMQ
 - **Database:** Supabase (PostgreSQL with PostGIS for spatial queries, pg_trgm for full-text search)
 - **Real-Time Messaging:** Centrifugo + Redis
