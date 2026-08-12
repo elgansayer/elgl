@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -16,18 +17,22 @@ import { CloudflareCacheService } from '../cloudflare/cache.service';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
-const mockCreateRoom = jest.fn().mockResolvedValue({});
-const mockAddGrant = jest.fn();
-const mockToJwt = jest.fn().mockResolvedValue('mock-livekit-jwt');
+const mockCreateRoom = vi.fn().mockResolvedValue({});
+const mockAddGrant = vi.fn();
+const mockToJwt = vi.fn().mockResolvedValue('mock-livekit-jwt');
 
-jest.mock('livekit-server-sdk', () => ({
-  RoomServiceClient: jest.fn().mockImplementation(() => ({
-    createRoom: mockCreateRoom,
-  })),
-  AccessToken: jest.fn().mockImplementation(() => ({
-    addGrant: mockAddGrant,
-    toJwt: mockToJwt,
-  })),
+vi.mock('livekit-server-sdk', () => ({
+  RoomServiceClient: vi.fn().mockImplementation(function () {
+    return {
+      createRoom: mockCreateRoom,
+    };
+  }),
+  AccessToken: vi.fn().mockImplementation(function () {
+    return {
+      addGrant: mockAddGrant,
+      toJwt: mockToJwt,
+    };
+  }),
 }));
 
 describe('AudioRoomsService', () => {
@@ -36,31 +41,31 @@ describe('AudioRoomsService', () => {
   let centrifugoService: CentrifugoService;
   let mockSupabaseClient: any;
   let mockQueryBuilder: any;
-  let mockGenerateTranscriptFromAudioUrl: jest.Mock;
+  let mockGenerateTranscriptFromAudioUrl: Mock;
 
   beforeEach(async () => {
     mockCreateRoom.mockClear().mockResolvedValue({});
     mockAddGrant.mockClear();
     mockToJwt.mockClear().mockResolvedValue('mock-livekit-jwt');
-    mockGenerateTranscriptFromAudioUrl = jest.fn();
+    mockGenerateTranscriptFromAudioUrl = vi.fn();
     mockQueryBuilder = {
-      insert: jest.fn().mockReturnThis(),
-      upsert: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      or: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      range: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn(),
-      single: jest.fn(),
+      insert: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn(),
+      single: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -69,7 +74,7 @@ describe('AudioRoomsService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               if (key === 'LIVEKIT_URL') return 'https://test.livekit.cloud';
               if (key === 'LIVEKIT_API_KEY') return 'test-key';
               if (key === 'LIVEKIT_SECRET')
@@ -81,13 +86,13 @@ describe('AudioRoomsService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: UsersService,
           useValue: {
-            getProfile: jest.fn().mockResolvedValue({
+            getProfile: vi.fn().mockResolvedValue({
               id: 'host-1',
               display_name: 'Host User',
               avatar_url: 'avatar.png',
@@ -97,21 +102,21 @@ describe('AudioRoomsService', () => {
         {
           provide: CentrifugoService,
           useValue: {
-            publish: jest.fn().mockResolvedValue(true),
+            publish: vi.fn().mockResolvedValue(true),
           },
         },
         {
           provide: TranscriptEgressService,
           useValue: {
-            startEgress: jest.fn(),
-            stopEgress: jest.fn(),
+            startEgress: vi.fn(),
+            stopEgress: vi.fn(),
             generateTranscriptFromAudioUrl: mockGenerateTranscriptFromAudioUrl,
           },
         },
         {
           provide: NlpService,
           useValue: {
-            generateSessionSummary: jest.fn().mockResolvedValue({
+            generateSessionSummary: vi.fn().mockResolvedValue({
               summary: 'Key topics covered:\nTest summary sentence.',
               vocabulary: ['test', 'summary', 'vocabulary'],
             }),
@@ -120,13 +125,13 @@ describe('AudioRoomsService', () => {
         {
           provide: R2Service,
           useValue: {
-            generateUploadUrl: jest.fn(),
+            generateUploadUrl: vi.fn(),
           },
         },
         {
           provide: ChatLlmService,
           useValue: {
-            chatCompletion: jest.fn().mockResolvedValue(
+            chatCompletion: vi.fn().mockResolvedValue(
               JSON.stringify({
                 summary: 'Key topics:\n- Introductions\n- Travel experiences',
                 vocabulary: ['greetings', 'holiday', 'culture'],
@@ -137,7 +142,7 @@ describe('AudioRoomsService', () => {
         {
           provide: CloudflareCacheService,
           useValue: {
-            purgeByCacheTags: jest.fn().mockResolvedValue(true),
+            purgeByCacheTags: vi.fn().mockResolvedValue(true),
           },
         },
       ],
@@ -150,7 +155,7 @@ describe('AudioRoomsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -159,10 +164,12 @@ describe('AudioRoomsService', () => {
 
   describe('onModuleInit', () => {
     it('should initialise LiveKit RoomServiceClient and log warning if construction throws', () => {
-      (RoomServiceClient as unknown as jest.Mock).mockImplementationOnce(() => {
-        throw new Error('SDK init failure');
-      });
-      const warnSpy = jest
+      (RoomServiceClient as unknown as Mock).mockImplementationOnce(
+        function () {
+          throw new Error('SDK init failure');
+        },
+      );
+      const warnSpy = vi
         .spyOn((service as any).logger, 'warn')
         .mockImplementation(() => {});
 
@@ -283,7 +290,7 @@ describe('AudioRoomsService', () => {
 
     it('should log warning when LiveKit createRoom throws error but still create in database', async () => {
       mockCreateRoom.mockRejectedValueOnce(new Error('LiveKit unreachable'));
-      const warnSpy = jest
+      const warnSpy = vi
         .spyOn((service as any).logger, 'warn')
         .mockImplementation(() => {});
 
@@ -401,7 +408,7 @@ describe('AudioRoomsService', () => {
         data: roomRow,
         error: null,
       });
-      (usersService.getProfile as jest.Mock).mockResolvedValueOnce({
+      (usersService.getProfile as Mock).mockResolvedValueOnce({
         id: 'listener-1',
         display_name: 'Listener',
       });
@@ -979,7 +986,7 @@ describe('AudioRoomsService', () => {
       // The outgoing co-host's removal must be published before the incoming
       // co-host's invite so a late-arriving removal can never clobber the new
       // co-host assignment (regression test for the out-of-order event race).
-      const publishCalls = (centrifugoService.publish as jest.Mock).mock.calls;
+      const publishCalls = (centrifugoService.publish as Mock).mock.calls;
       expect(publishCalls).toHaveLength(2);
       expect(publishCalls[0]).toEqual([
         'room_room-1',
@@ -1018,7 +1025,7 @@ describe('AudioRoomsService', () => {
       const removedPending = new Promise<boolean>((resolve) => {
         releaseRemoved = () => resolve(true);
       });
-      const publishMock = centrifugoService.publish as jest.Mock;
+      const publishMock = centrifugoService.publish as Mock;
       publishMock.mockImplementationOnce(() => removedPending);
 
       const invitePromise = service.inviteCoHost('host-1', {

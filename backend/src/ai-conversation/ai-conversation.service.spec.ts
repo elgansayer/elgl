@@ -1,29 +1,30 @@
+import type { Mock } from 'vitest';
 import { AiConversationService } from './ai-conversation.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('AiConversationService', () => {
   let service: AiConversationService;
-  let llmProxy: { chatCompletion: jest.Mock };
+  let llmProxy: { chatCompletion: Mock };
   let supabaseService: {
-    isVipUser: jest.Mock;
-    getRedisClient: jest.Mock;
+    isVipUser: Mock;
+    getRedisClient: Mock;
   };
   let redisMock: {
-    incr: jest.Mock;
-    expire: jest.Mock;
+    incr: Mock;
+    expire: Mock;
   };
 
   beforeEach(() => {
     redisMock = {
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue('OK'),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue('OK'),
     };
 
-    llmProxy = { chatCompletion: jest.fn() };
+    llmProxy = { chatCompletion: vi.fn() };
     supabaseService = {
-      isVipUser: jest.fn().mockResolvedValue(false),
-      getRedisClient: jest.fn().mockReturnValue(redisMock),
+      isVipUser: vi.fn().mockResolvedValue(false),
+      getRedisClient: vi.fn().mockReturnValue(redisMock),
     };
 
     service = new AiConversationService(

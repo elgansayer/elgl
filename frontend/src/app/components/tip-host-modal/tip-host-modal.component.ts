@@ -17,11 +17,15 @@ import { EconomyStore } from '../../services/economy.store';
       (keydown.escape)="closed.emit()"
       (click)="onBackdropClick($event)"
     >
-      <div class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-4 sm:space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto">
+      <div
+        class="bg-surface-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-2xl border border-surface-100 space-y-4 sm:space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto"
+      >
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-surface-100 pb-3">
           <div>
-            <h3 [id]="titleId" class="text-xl font-black text-text-primary">{{ 'audioRoom.tipModalTitle' | t }}</h3>
+            <h3 [id]="titleId" class="text-xl font-black text-text-primary">
+              {{ 'audioRoom.tipModalTitle' | t }}
+            </h3>
             <p [id]="subtitleId" class="text-xs text-text-secondary">
               {{ 'audioRoom.tipModalSubtitle' | t }}
             </p>
@@ -36,16 +40,18 @@ import { EconomyStore } from '../../services/economy.store';
         </div>
 
         <!-- Balance -->
-        <div class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between">
+        <div
+          class="bg-vip/10 p-4 rounded-2xl border border-vip/30 flex items-center justify-between"
+        >
           <div class="flex items-center gap-2">
             <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
-              <span class="text-[10px] uppercase font-black text-amber-400 block">{{
+              <span class="text-[10px] uppercase font-black text-vip block">{{
                 'audioRoom.tipBalanceLabel' | t
               }}</span>
-              <span class="text-lg font-extrabold text-amber-950" aria-live="polite">{{
-                economyStore.coinsBalance()
-              }} 🪙</span>
+              <span class="text-lg font-extrabold text-vip" aria-live="polite"
+                >{{ economyStore.coinsBalance() }} 🪙</span
+              >
             </div>
           </div>
         </div>
@@ -60,10 +66,10 @@ import { EconomyStore } from '../../services/economy.store';
                 [class]="
                   'p-3 sm:p-4 rounded-2xl border-2 transition-all font-extrabold text-center text-sm sm:text-base ' +
                   (selectedAmount() === amount
-                    ? 'border-amber-500 bg-amber-500/20 text-amber-500'
-                    : 'border-surface-100 bg-surface-300 text-text-primary hover:border-amber-500/50')
+                    ? 'border-vip bg-vip/20 text-vip'
+                    : 'border-surface-100 bg-surface-300 text-text-primary hover:border-vip/50')
                 "
-                [attr.aria-label]="('audioRoom.tipAmountAria' | t: { amount: amount })"
+                [attr.aria-label]="'audioRoom.tipAmountAria' | t: { amount: amount }"
                 [attr.aria-pressed]="selectedAmount() === amount"
               >
                 {{ amount }} 🪙
@@ -74,7 +80,9 @@ import { EconomyStore } from '../../services/economy.store';
 
         <!-- Custom amount -->
         <div class="flex items-center gap-3">
-          <label [for]="customAmountId" class="sr-only">{{ 'audioRoom.tipCustomAmountLabel' | t }}</label>
+          <label [for]="customAmountId" class="sr-only">{{
+            'audioRoom.tipCustomAmountLabel' | t
+          }}</label>
           <input
             [id]="customAmountId"
             type="number"
@@ -82,13 +90,13 @@ import { EconomyStore } from '../../services/economy.store';
             (ngModelChange)="onCustomAmountChange($event)"
             [placeholder]="'audioRoom.tipCustomPlaceholder' | t"
             min="1"
-            class="flex-1 bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary text-sm font-bold focus:border-amber-500 focus:outline-none"
+            class="flex-1 bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary text-sm font-bold focus:border-vip focus:outline-none"
           />
           <button
             (click)="selectAmount(customAmount())"
             [disabled]="!customAmount() || customAmount() < 1"
             class="px-4 py-3 bg-surface-100 hover:bg-surface-100 rounded-xl font-bold text-xs text-text-secondary disabled:opacity-40"
-            [attr.aria-label]="('audioRoom.tipCustomAria' | t: { amount: customAmount() })"
+            [attr.aria-label]="'audioRoom.tipCustomAria' | t: { amount: customAmount() }"
           >
             {{ 'audioRoom.tipCustom' | t }}
           </button>
@@ -103,37 +111,42 @@ import { EconomyStore } from '../../services/economy.store';
             {{ 'audioRoom.tipCancelBtn' | t }}
           </button>
           <button
-            [disabled]="!selectedAmount() || selectedAmount()! < 1 || isSending() || selectedAmount()! > economyStore.coinsBalance()"
+            [disabled]="
+              !selectedAmount() ||
+              selectedAmount()! < 1 ||
+              isSending() ||
+              selectedAmount()! > economyStore.coinsBalance()
+            "
             (click)="confirmSend()"
-            class="px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
-            [attr.aria-label]="('audioRoom.tipSendAria' | t: { amount: selectedAmount() ?? 0 })"
+            class="px-6 py-2 bg-vip hover:bg-vip/90 disabled:opacity-50 text-on-fill rounded-xl font-extrabold text-xs shadow transition-all"
+            [attr.aria-label]="'audioRoom.tipSendAria' | t: { amount: selectedAmount() ?? 0 }"
           >
             {{
-              isSending()
-                ? '...'
-                : ('audioRoom.tipSendBtn' | t: { amount: selectedAmount() ?? 0 })
+              isSending() ? '...' : ('audioRoom.tipSendBtn' | t: { amount: selectedAmount() ?? 0 })
             }}
           </button>
         </div>
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border-width: 0;
-    }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+    `,
+  ],
 })
 export class TipHostModalComponent {
   roomId = input.required<string>();

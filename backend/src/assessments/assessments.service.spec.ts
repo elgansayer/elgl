@@ -1,14 +1,15 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AssessmentsService } from './assessments.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('AssessmentsService', () => {
   let service: AssessmentsService;
-  let supabaseService: { getClient: jest.Mock };
+  let supabaseService: { getClient: Mock };
 
   beforeEach(async () => {
     supabaseService = {
-      getClient: jest.fn(),
+      getClient: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -40,9 +41,9 @@ describe('AssessmentsService', () => {
         },
       ];
 
-      const mockSelect = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({
             data: mockQuestions,
             error: null,
           }),
@@ -50,7 +51,7 @@ describe('AssessmentsService', () => {
       });
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
           select: mockSelect,
         }),
       });
@@ -61,9 +62,9 @@ describe('AssessmentsService', () => {
     });
 
     it('should return fallback questions on Supabase error', async () => {
-      const mockSelect = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({
             data: null,
             error: { message: 'Database error' },
           }),
@@ -71,7 +72,7 @@ describe('AssessmentsService', () => {
       });
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
           select: mockSelect,
         }),
       });
@@ -82,9 +83,9 @@ describe('AssessmentsService', () => {
     });
 
     it('should return fallback questions when no data returned', async () => {
-      const mockSelect = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({
             data: [],
             error: null,
           }),
@@ -92,7 +93,7 @@ describe('AssessmentsService', () => {
       });
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
           select: mockSelect,
         }),
       });
@@ -102,9 +103,9 @@ describe('AssessmentsService', () => {
     });
 
     it('should default language to en', async () => {
-      const mockSelect = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({
             data: [],
             error: null,
           }),
@@ -112,7 +113,7 @@ describe('AssessmentsService', () => {
       });
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
           select: mockSelect,
         }),
       });
@@ -126,9 +127,9 @@ describe('AssessmentsService', () => {
 
   describe('getFallbackQuestions', () => {
     it('should return 10 fallback questions', async () => {
-      const mockSelect = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({
             data: [],
             error: null,
           }),
@@ -136,7 +137,7 @@ describe('AssessmentsService', () => {
       });
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
           select: mockSelect,
         }),
       });
@@ -155,9 +156,9 @@ describe('AssessmentsService', () => {
     });
 
     it('should have valid options with points for each fallback question', async () => {
-      const mockSelect = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({
+      const mockSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({
             data: [],
             error: null,
           }),
@@ -165,7 +166,7 @@ describe('AssessmentsService', () => {
       });
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
           select: mockSelect,
         }),
       });

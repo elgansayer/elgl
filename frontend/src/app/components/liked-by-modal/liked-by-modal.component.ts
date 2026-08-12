@@ -26,16 +26,16 @@ interface LikedUser {
         role="dialog"
         aria-modal="true"
         aria-labelledby="liked-by-title"
-        class="bg-[#121212] border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl"
+        class="bg-surface-200 border border-surface-100 w-full max-w-md rounded-2xl p-6 shadow-2xl"
         (click)="$event.stopPropagation()"
         (keydown.escape)="closeModal.emit()"
       >
         <div class="flex items-center justify-between mb-4">
-          <h2 id="liked-by-title" class="text-xl font-bold text-slate-100">
+          <h2 id="liked-by-title" class="text-xl font-bold text-text-primary">
             {{ 'moments.likedBy' | t }}
           </h2>
           <button
-            class="text-slate-400 hover:text-white transition-colours"
+            class="text-text-secondary hover:text-text-primary transition-colours"
             [attr.aria-label]="'common.close' | t"
             (click)="closeModal.emit()"
           >
@@ -52,7 +52,7 @@ interface LikedUser {
             ></div>
           </div>
         } @else if (likedUsers.error()) {
-          <div class="text-center text-slate-500 py-6 font-medium">
+          <div class="text-center text-text-muted py-6 font-medium">
             {{ 'common.loadError' | t }}
           </div>
         } @else {
@@ -60,23 +60,23 @@ interface LikedUser {
             @if (likedUsers.value(); as users) {
               @for (user of users; track user.id) {
                 <div
-                  class="flex items-center gap-3 p-3 hover:bg-slate-800/50 rounded-xl transition-colours cursor-pointer mb-1"
+                  class="flex items-center gap-3 p-3 hover:bg-surface-100/50 rounded-xl transition-colours cursor-pointer mb-1"
                 >
                   <img
                     [src]="user.avatar_url || 'assets/default-avatar.png'"
-                    class="w-12 h-12 rounded-full object-cover border border-slate-700"
+                    class="w-12 h-12 rounded-full object-cover border border-surface-100"
                     [alt]="user.display_name"
                   />
                   <div>
-                    <div class="font-bold text-slate-200">{{ user.display_name }}</div>
-                    <div class="text-xs font-medium text-slate-400 mt-0.5">
-                      {{ (user.native_languages?.[0] || '') | uppercase }} ➔
-                      {{ (user.target_languages[0] || '') | uppercase }}
+                    <div class="font-bold text-text-primary">{{ user.display_name }}</div>
+                    <div class="text-xs font-medium text-text-secondary mt-0.5">
+                      {{ user.native_languages?.[0] || '' | uppercase }} ➔
+                      {{ user.target_languages[0] || '' | uppercase }}
                     </div>
                   </div>
                 </div>
               } @empty {
-                <div class="text-center text-slate-500 py-6 font-medium">
+                <div class="text-center text-text-muted py-6 font-medium">
                   {{ 'moments.noLikesYet' | t }}
                 </div>
               }

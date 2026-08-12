@@ -32,6 +32,9 @@ def podman_run_arguments(
     cpu_limit: str = "2",
     resource_limits: bool = True,
     userns: str = "keep-id",
+    cgroup_manager: str | None = None,
+    pid_host: bool = False,
+    cgroups: str | None = None,
 ) -> list[str]:
     """Build the common constrained worker-container command line."""
     arguments = [
@@ -44,6 +47,12 @@ def podman_run_arguments(
         "--volume",
         f"{workspace}:/workspace:{workspace_access},Z",
     ]
+    if cgroup_manager:
+        arguments.insert(1, f"--cgroup-manager={cgroup_manager}")
+    if pid_host:
+        arguments.insert(1, "--pid=host")
+    if cgroups:
+        arguments.insert(1, f"--cgroups={cgroups}")
     if resource_limits:
         arguments[3:3] = [
             f"--pids-limit={pids_limit}",
@@ -120,6 +129,11 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
                 self.repository,
                 self.image,
                 action.command,
+                resource_limits=False,
+                userns="host",
+                cgroup_manager="cgroupfs",
+                pid_host=True,
+                cgroups="no-conmon",
             ),
         ]
         environment = {
@@ -128,9 +142,7 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
         }
         try:
             result = _run_podman(arguments, timeout, environment)
-            if result.returncode != 0 and resource_limit_error(
-                f"{result.stdout}\n{result.stderr}"
-            ):
+            if result.returncode != 0 and resource_limit_error(f"{result.stdout}\n{result.stderr}"):
                 fallback_arguments = [
                     str(self.podman_path),
                     *podman_run_arguments(
@@ -139,6 +151,26 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
                         self.image,
                         action.command,
                         resource_limits=False,
+                        userns="host",
+                        cgroup_manager="cgroupfs",
+                        pid_host=True,
+                        cgroups="no-conmon",
+                    ),
+                ]
+                result = _run_podman(fallback_arguments, timeout, environment)
+            if result.returncode != 0 and namespace_error(f"{result.stdout}\n{result.stderr}"):
+                fallback_arguments = [
+                    str(self.podman_path),
+                    *podman_run_arguments(
+                        self.workspace,
+                        self.repository,
+                        self.image,
+                        action.command,
+                        resource_limits=False,
+                        userns="host",
+                        cgroup_manager="cgroupfs",
+                        pid_host=True,
+                        cgroups="no-conmon",
                     ),
                 ]
                 result = _run_podman(fallback_arguments, timeout, environment)
@@ -187,6 +219,16 @@ def resource_limit_error(stderr: str) -> bool:
     lowered = stderr.lower()
     return "cgroup" in lowered and any(
         marker in lowered for marker in ("permission denied", "no such device", "not supported")
+    )
+
+
+def namespace_error(stderr: str) -> bool:
+    lowered = stderr.lower()
+    return (
+        "newuidmap" in lowered
+        or "cannot set up namespace" in lowered
+        or 'error mounting "proc"' in lowered
+        or ("operation not permitted" in lowered and "rootfs" in lowered)
     )
 
 

@@ -43,7 +43,7 @@ import { AuthService } from '../../services/auth.service';
             <button
               type="submit"
               [disabled]="emailForm.invalid || isSending()"
-              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-on-fill bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
             >
               {{ (isSending() ? 'forgot_password.sending' : 'forgot_password.send_button') | t }}
             </button>
@@ -74,7 +74,7 @@ import { AuthService } from '../../services/auth.service';
             <button
               type="submit"
               [disabled]="resetForm.invalid || isResetting()"
-              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-on-fill bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
             >
               {{
                 (isResetting() ? 'forgot_password.resetting' : 'forgot_password.reset_button') | t

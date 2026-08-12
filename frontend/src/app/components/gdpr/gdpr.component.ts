@@ -24,21 +24,23 @@ import { I18nService } from '../../services/i18n.service';
           <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
             {{ 'gdpr.archiveSection' | t }}
           </h2>
-          <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3">
+          <div
+            class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3"
+          >
             <p class="text-xs text-text-secondary">{{ 'gdpr.archiveInfo' | t }}</p>
             <button
               (click)="requestArchive()"
               [disabled]="loading()"
-              class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+              class="w-full bg-primary text-on-fill py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
               [attr.aria-label]="'gdpr.requestArchiveBtn' | t"
             >
               {{ loading() ? ('common.loading' | t) : ('gdpr.requestArchiveBtn' | t) }}
             </button>
             @if (archiveSuccess()) {
-              <p class="text-xs text-emerald-400">{{ 'gdpr.archiveSuccess' | t }}</p>
+              <p class="text-xs text-success">{{ 'gdpr.archiveSuccess' | t }}</p>
             }
             @if (archiveError()) {
-              <p class="text-xs text-red-400">{{ archiveError() }}</p>
+              <p class="text-xs text-danger">{{ archiveError() }}</p>
             }
           </div>
         </section>
@@ -47,30 +49,32 @@ import { I18nService } from '../../services/i18n.service';
           <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
             {{ 'gdpr.deleteSection' | t }}
           </h2>
-          <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3">
+          <div
+            class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm p-4 space-y-3"
+          >
             <p class="text-xs text-text-secondary">{{ 'gdpr.deleteInfo' | t }}</p>
             <label class="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 [checked]="confirmDelete()"
                 (change)="confirmDelete.set(!confirmDelete())"
-                class="h-5 w-5 rounded border-surface-300 text-red-500 focus:ring-red-500/30"
+                class="h-5 w-5 rounded border-surface-300 text-danger focus:ring-danger/30"
               />
               <span class="text-sm text-text-primary">{{ 'gdpr.deleteConfirmLabel' | t }}</span>
             </label>
             <button
               (click)="deleteAccount()"
               [disabled]="!confirmDelete() || deleting()"
-              class="w-full bg-red-600 text-white py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+              class="w-full bg-danger text-on-fill py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
               [attr.aria-label]="'gdpr.deleteAccountBtn' | t"
             >
               {{ deleting() ? ('common.loading' | t) : ('gdpr.deleteAccountBtn' | t) }}
             </button>
             @if (deleteSuccess()) {
-              <p class="text-xs text-emerald-400">{{ 'gdpr.deleteSuccess' | t }}</p>
+              <p class="text-xs text-success">{{ 'gdpr.deleteSuccess' | t }}</p>
             }
             @if (deleteError()) {
-              <p class="text-xs text-red-400">{{ deleteError() }}</p>
+              <p class="text-xs text-danger">{{ deleteError() }}</p>
             }
           </div>
         </section>
@@ -80,21 +84,21 @@ import { I18nService } from '../../services/i18n.service';
             <h2 class="text-sm font-bold uppercase text-text-secondary tracking-wider">
               {{ 'gdpr.cancelDeletionSection' | t }}
             </h2>
-            <div class="rounded-2xl bg-amber-500/10 border border-amber-500/30 shadow-sm p-4 space-y-3">
-              <p class="text-xs text-amber-400">{{ 'gdpr.cancelDeletionInfo' | t }}</p>
+            <div class="rounded-2xl bg-warning/10 border border-warning/30 shadow-sm p-4 space-y-3">
+              <p class="text-xs text-warning">{{ 'gdpr.cancelDeletionInfo' | t }}</p>
               <button
                 (click)="cancelDeletion()"
                 [disabled]="cancelling()"
-                class="w-full bg-amber-500 text-black py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                class="w-full bg-warning text-on-fill py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
                 [attr.aria-label]="'gdpr.cancelDeletionBtn' | t"
               >
                 {{ cancelling() ? ('common.loading' | t) : ('gdpr.cancelDeletionBtn' | t) }}
               </button>
               @if (cancelSuccess()) {
-                <p class="text-xs text-emerald-400">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
+                <p class="text-xs text-success">{{ 'gdpr.cancelDeletionSuccess' | t }}</p>
               }
               @if (cancelError()) {
-                <p class="text-xs text-red-400">{{ cancelError() }}</p>
+                <p class="text-xs text-danger">{{ cancelError() }}</p>
               }
             </div>
           </section>

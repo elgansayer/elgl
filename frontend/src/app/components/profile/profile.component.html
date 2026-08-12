@@ -34,7 +34,7 @@
       [currentCoverUrl]="profile()?.cover_photo_url || ''"
       (coverPhotoUploaded)="onCoverUploaded($event)"
     />
-    <div class="app-card app-padded">
+    <app-card customClass="app-padded">
       <div
         class="flex flex-wrap items-center justify-between gap-4 border-b border-surface-100 pb-4"
       >
@@ -110,13 +110,9 @@
           >
             {{ showVisitors() ? ('profile.visitorsHide' | t) : ('profile.visitorsLink' | t) }}
           </button>
-          <button
-            (click)="toggleEdit()"
-            class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs"
-            [attr.aria-label]="'profile.cancelBtn' | t"
-          >
+          <app-button-primary (clicked)="toggleEdit()" customClass="ps-3 pe-3 pt-2 pb-2 text-xs">
             {{ isEditing() ? ('profile.cancelBtn' | t) : ('profile.editBtn' | t) }}
-          </button>
+          </app-button-primary>
         </div>
       </div>
 
@@ -301,9 +297,9 @@
       </div>
 
       <div class="mt-3 flex flex-wrap gap-1.5">
-        <span class="app-chip">{{ 'profile.chipSafety' | t }}</span>
-        <span class="app-chip">{{ 'profile.chipPrivacy' | t }}</span>
-        <span class="app-chip">{{ 'profile.chipExchange' | t }}</span>
+        <app-chip>{{ 'profile.chipSafety' | t }}</app-chip>
+        <app-chip>{{ 'profile.chipPrivacy' | t }}</app-chip>
+        <app-chip>{{ 'profile.chipExchange' | t }}</app-chip>
       </div>
 
       @if (!profile()?.is_vip) {
@@ -423,41 +419,39 @@
         <!-- Block / Report buttons -->
         <div class="mt-4 flex gap-2">
           @if (isBlocked()) {
-            <button
-              (click)="unblockProfile()"
-              class="app-button-secondary text-xs"
-              [attr.aria-label]="'profile.unblockUser' | t"
+            <app-button-secondary
+              (clicked)="unblockProfile()"
+              customClass="text-xs"
+              [ariaLabel]="'profile.unblockUser' | t"
             >
               {{ 'profile.unblockUser' | t }}
-            </button>
+            </app-button-secondary>
           } @else {
-            <button
-              (click)="blockProfile()"
-              class="app-button-secondary text-xs text-danger"
-              [attr.aria-label]="'profile.blockUser' | t"
+            <app-button-secondary
+              (clicked)="blockProfile()"
+              customClass="text-xs text-danger"
+              [ariaLabel]="'profile.blockUser' | t"
             >
               {{ 'profile.blockUser' | t }}
-            </button>
+            </app-button-secondary>
           }
-          <button
-            (click)="reportUser()"
-            class="app-button-secondary text-xs"
-            [attr.aria-label]="'profile.reportUser' | t"
+          <app-button-secondary
+            (clicked)="reportUser()"
+            customClass="text-xs"
+            [ariaLabel]="'profile.reportUser' | t"
           >
             {{ 'profile.reportUser' | t }}
-          </button>
+          </app-button-secondary>
         </div>
       }
 
       @if (isEditing()) {
         <form (ngSubmit)="saveProfile()" class="mt-4 space-y-3 border-t border-surface-100 pt-4">
-          <input
+          <app-input
             type="text"
-            [(ngModel)]="displayName"
-            name="displayName"
-            [placeholder]="'profile.displayNamePlaceholder' | t"
-            class="app-input"
-            [attr.aria-label]="'text input'"
+            [value]="displayName"
+            (valueChange)="displayName = $event"
+            [placeholder]="'profile.displayNamePlaceholder'"
           />
           <div class="relative">
             <label class="block mb-1 text-xs font-semibold uppercase text-text-secondary">{{
@@ -476,14 +470,14 @@
                   >
                 }
               </div>
-              <button
+              <app-button-secondary
                 type="button"
-                (click)="onAvatarClick()"
-                class="app-button-secondary text-xs"
-                [attr.aria-label]="'profile.changePhoto' | t"
+                (clicked)="onAvatarClick()"
+                customClass="text-xs"
+                [ariaLabel]="'profile.changePhoto' | t"
               >
                 {{ 'profile.changePhoto' | t }}
-              </button>
+              </app-button-secondary>
             </div>
           </div>
 
@@ -565,14 +559,12 @@
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'profile.aboutStatusLabel' | t
             }}</label>
-            <textarea
-              [(ngModel)]="statusText"
-              name="aboutStatus"
-              rows="3"
+            <app-textarea
+              [value]="statusText"
+              (valueChange)="statusText = $event"
+              [rows]="3"
               [placeholder]="'profile.aboutStatusPlaceholder' | t"
-              class="app-textarea"
-              [attr.aria-label]="'aboutStatus'"
-            ></textarea>
+            />
           </div>
           <div class="mt-4">
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
@@ -709,7 +701,7 @@
                 <span class="flex items-center gap-2 text-sm font-medium text-text-primary">
                   {{ 'privacy.incognitoVisits' | t }}
                   @if (!profile()?.is_vip) {
-                    <span class="app-chip text-[10px]">{{ 'profile.vipBadge' | t }}</span>
+                    <app-chip customClass="text-[10px]">{{ 'profile.vipBadge' | t }}</app-chip>
                   }
                 </span>
                 <span id="incognito-visits-hint" class="mt-1 text-xs text-text-secondary">
@@ -747,53 +739,45 @@
               [attr.aria-label]="'text input'"
             />
           </div>
-          <textarea
-            [(ngModel)]="bioText"
-            name="bioText"
-            rows="4"
+          <app-textarea
+            [value]="bioText"
+            (valueChange)="bioText = $event"
+            [rows]="4"
             [placeholder]="'profile.bioPlaceholder' | t"
-            class="app-textarea"
-            [attr.aria-label]="'bioText'"
-          ></textarea>
+          />
 
           <div class="mt-4 grid gap-2 sm:grid-cols-2">
             <div>
               <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
                 'profile.businessName' | t
               }}</label>
-              <input
+              <app-input
                 type="text"
-                [(ngModel)]="businessName"
-                name="businessName"
-                [placeholder]="'profile.businessNamePlaceholder' | t"
-                class="app-input"
-                [attr.aria-label]="'text input'"
+                [value]="businessName"
+                (valueChange)="businessName = $event"
+                [placeholder]="'profile.businessNamePlaceholder'"
               />
             </div>
             <div>
               <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
                 'profile.businessHours' | t
               }}</label>
-              <input
+              <app-input
                 type="text"
-                [(ngModel)]="businessHours"
-                name="businessHours"
-                [placeholder]="'profile.businessHoursPlaceholder' | t"
-                class="app-input"
-                [attr.aria-label]="'text input'"
+                [value]="businessHours"
+                (valueChange)="businessHours = $event"
+                [placeholder]="'profile.businessHoursPlaceholder'"
               />
             </div>
             <div>
               <label class="block text-xs font-semibold uppercase text-text-secondary mb-1">{{
                 'profile.website' | t
               }}</label>
-              <input
+              <app-input
                 type="url"
-                [(ngModel)]="websiteUrl"
-                name="websiteUrl"
-                [placeholder]="'profile.websitePlaceholder' | t"
-                class="app-input"
-                [attr.aria-label]="'websiteUrl'"
+                [value]="websiteUrl"
+                (valueChange)="websiteUrl = $event"
+                [placeholder]="'profile.websitePlaceholder'"
               />
             </div>
           </div>
@@ -807,29 +791,23 @@
                 <div
                   class="rounded-card border border-surface-100 bg-surface-100 p-2 grid gap-1 sm:grid-cols-2"
                 >
-                  <input
+                  <app-input
                     type="text"
-                    [(ngModel)]="catalog[idx].name"
-                    name="catalog-name-{{ idx }}"
-                    [placeholder]="'profile.catalogNamePlaceholder' | t"
-                    class="app-input"
-                    [attr.aria-label]="'text input'"
+                    [value]="catalog[idx].name"
+                    (valueChange)="catalog[idx].name = $event"
+                    [placeholder]="'profile.catalogNamePlaceholder'"
                   />
-                  <input
+                  <app-input
                     type="text"
-                    [(ngModel)]="catalog[idx].description"
-                    name="catalog-desc-{{ idx }}"
-                    [placeholder]="'profile.catalogDescPlaceholder' | t"
-                    class="app-input"
-                    [attr.aria-label]="'text input'"
+                    [value]="catalog[idx].description"
+                    (valueChange)="catalog[idx].description = $event"
+                    [placeholder]="'profile.catalogDescPlaceholder'"
                   />
-                  <input
+                  <app-input
                     type="text"
-                    [(ngModel)]="catalog[idx].price"
-                    name="catalog-price-{{ idx }}"
-                    [placeholder]="'profile.catalogPricePlaceholder' | t"
-                    class="app-input"
-                    [attr.aria-label]="'text input'"
+                    [value]="catalog[idx].price"
+                    (valueChange)="catalog[idx].price = $event"
+                    [placeholder]="'profile.catalogPricePlaceholder'"
                   />
                   <select
                     [(ngModel)]="catalog[idx].currency"
@@ -844,57 +822,51 @@
                     <option value="AUD">AUD</option>
                     <option value="CAD">CAD</option>
                   </select>
-                  <input
+                  <app-input
                     type="url"
-                    [(ngModel)]="catalog[idx].image_url"
-                    name="catalog-image-{{ idx }}"
-                    [placeholder]="'profile.catalogImagePlaceholder' | t"
-                    class="app-input"
-                    [attr.aria-label]="'catalog-image-{{ idx }}'"
+                    [value]="catalog[idx].image_url"
+                    (valueChange)="catalog[idx].image_url = $event"
+                    [placeholder]="'profile.catalogImagePlaceholder'"
                   />
-                  <button
+                  <app-button-secondary
                     type="button"
-                    (click)="removeCatalogItem(idx)"
-                    class="app-button-secondary text-xs self-end"
-                    [attr.aria-label]="'profile.removeCatalogItem' | t"
+                    (clicked)="removeCatalogItem(idx)"
+                    customClass="text-xs self-end"
+                    [ariaLabel]="'profile.removeCatalogItem' | t"
                   >
                     {{ 'profile.removeCatalogItem' | t }}
-                  </button>
+                  </app-button-secondary>
                 </div>
               } @empty {
                 <p class="text-xs text-text-secondary">{{ 'profile.noCatalogItems' | t }}</p>
               }
             </div>
-            <button
+            <app-button-secondary
               type="button"
-              (click)="addCatalogItem()"
-              class="mt-2 app-button-secondary text-xs"
-              [attr.aria-label]="'profile.addCatalogItem' | t"
+              (clicked)="addCatalogItem()"
+              customClass="mt-2 text-xs"
+              [ariaLabel]="'profile.addCatalogItem' | t"
             >
               {{ 'profile.addCatalogItem' | t }}
-            </button>
+            </app-button-secondary>
           </div>
 
           <div class="flex justify-end gap-2 pt-1">
-            <button
+            <app-button-secondary
               type="button"
-              (click)="toggleEdit()"
-              class="app-button-secondary ps-4 pe-4 pt-2 pb-2 text-xs"
-              [attr.aria-label]="'profile.cancelBtn' | t"
+              (clicked)="toggleEdit()"
+              customClass="ps-4 pe-4 pt-2 pb-2 text-xs"
+              [ariaLabel]="'profile.cancelBtn' | t"
             >
               {{ 'profile.cancelBtn' | t }}
-            </button>
-            <button
-              type="submit"
-              class="app-button-primary ps-4 pe-4 pt-2 pb-2 text-xs"
-              [attr.aria-label]="'profile.saveChangesBtn' | t"
-            >
+            </app-button-secondary>
+            <app-button-primary type="submit" customClass="ps-4 pe-4 pt-2 pb-2 text-xs">
               {{ 'profile.saveChangesBtn' | t }}
-            </button>
+            </app-button-primary>
           </div>
         </form>
       }
-    </div>
+    </app-card>
   }
 
   @if (showConfetti()) {
