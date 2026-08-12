@@ -16,7 +16,8 @@
           {{ 'moments.correctSentenceTitle' | t }}
         </h2>
       </div>
-      <button aria-label="Close modal"
+      <button
+        aria-label="Close modal"
         (click)="closeModal()"
         class="p-1 rounded-full text-text-secondary hover:text-text-primary hover:bg-surface-300 transition-colors"
       >
@@ -32,7 +33,11 @@
           <label class="text-xs font-bold text-text-secondary uppercase tracking-wider">
             {{ 'moments.ghostOriginal' | t }}
           </label>
-          <button (click)="onOriginalClick()" class="text-[11px] text-neon-blue hover:underline" [attr.aria-label]="'moments.resetGhost' | t">
+          <button
+            (click)="onOriginalClick()"
+            class="text-[11px] text-neon-blue hover:underline"
+            [attr.aria-label]="'moments.resetGhost' | t"
+          >
             {{ 'moments.resetGhost' | t }}
           </button>
         </div>
@@ -41,7 +46,7 @@
         >
           <span class="opacity-70">"{{ originalText() }}"</span>
           <span
-            class="absolute top-2 end-2 text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full font-bold"
+            class="absolute top-2 end-2 text-[10px] text-warning bg-warning/10 px-2 py-0.5 rounded-full font-bold"
             >{{ 'correction.ghostTextLabel' | t }}</span
           >
         </div>
@@ -58,14 +63,15 @@
           rows="3"
           [placeholder]="'correction.editPlaceholder' | t"
           class="w-full bg-surface-300 border border-neon-blue/40 rounded-2xl p-3 text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-neon-blue resize-none"
-         [attr.aria-label]="'correction.editPlaceholder' | t">
+          [attr.aria-label]="'correction.editPlaceholder' | t"
+        >
         </textarea>
       </div>
 
       <!-- Live Diff Preview -->
       @if (correctedText().trim() && correctedText().trim() !== originalText().trim()) {
         <div>
-          <label class="block text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
+          <label class="block text-xs font-bold text-warning uppercase tracking-wider mb-1">
             {{ 'moments.liveDiffPreview' | t }}
           </label>
           <app-visual-diff [original]="originalText()" [corrected]="correctedText()">
@@ -84,7 +90,8 @@
           (ngModelChange)="explanation.set($event)"
           [placeholder]="'correction.explainPlaceholder' | t"
           class="w-full bg-surface-300 border border-surface-100 rounded-2xl px-4 py-2.5 text-xs text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-surface-100"
-         [attr.aria-label]="'correction.explainPlaceholder' | t"/>
+          [attr.aria-label]="'correction.explainPlaceholder' | t"
+        />
       </div>
     </div>
 
@@ -92,7 +99,8 @@
     <footer
       class="p-4 bg-surface-400 border-t border-surface-100 flex items-center justify-end gap-3"
     >
-      <button aria-label="Close modal"
+      <button
+        aria-label="Close modal"
         (click)="closeModal()"
         class="px-4 py-2 text-xs font-bold text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-300 transition-colors"
       >
@@ -101,8 +109,9 @@
       <button
         (click)="submitCorrection()"
         [disabled]="!correctedText().trim() || correctedText().trim() === originalText().trim()"
-        class="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-full hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"
-       [attr.aria-label]="'moments.sendCorrection' | t">
+        class="px-5 py-2 text-xs font-bold text-on-fill bg-gradient-to-r from-primary to-secondary rounded-full hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"
+        [attr.aria-label]="'moments.sendCorrection' | t"
+      >
         {{ 'moments.sendCorrection' | t }}
       </button>
     </footer>
