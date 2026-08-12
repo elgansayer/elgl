@@ -31,6 +31,20 @@ def test_reconcile_adds_new_tasks_without_dropping_old_jobs(tmp_path: Path) -> N
     assert set(jobs) == {"1", "2"}
 
 
+def test_reconcile_requeues_open_issue_marked_done_without_a_pr(tmp_path: Path) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    task = Task("9", "Retry issue", "", "github-issue", 0)
+    jobs = store.reconcile([task])
+    jobs["9"].state = JobState.DONE
+    jobs["9"].last_error = "Issue closed before pull request creation"
+    store.save(jobs)
+
+    restored = store.reconcile([task])
+
+    assert restored["9"].state is JobState.DISCOVERED
+    assert restored["9"].last_error is None
+
+
 def test_parallel_job_updates_do_not_lose_sibling_state(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs.json")
     tasks = [Task(str(identifier), "Task", "", "github-issue", 0) for identifier in range(6)]

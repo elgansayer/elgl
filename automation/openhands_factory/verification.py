@@ -61,9 +61,7 @@ def commands_for(repository: Path, changed_paths: set[Path]) -> list[Verificatio
         )
     for script in ("lint:check", "build", "test", "test:e2e"):
         commands.append(
-            VerificationCommand(
-                f"backend-{script}", ("npm", "run", script), repository / "backend"
-            )
+            VerificationCommand(f"backend-{script}", ("npm", "run", script), repository / "backend")
         )
     return commands
 
