@@ -2,6 +2,9 @@ import type { Mock } from 'vitest';
 import { AiConversationService } from './ai-conversation.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { UsersService } from '../users/users.service';
+import { FlashcardsService } from '../flashcards/flashcards.service';
+import { StudyStreakService } from '../study-streak/study-streak.service';
 
 describe('AiConversationService', () => {
   let service: AiConversationService;
@@ -10,6 +13,9 @@ describe('AiConversationService', () => {
     isVipUser: Mock;
     getRedisClient: Mock;
   };
+  let usersService: { getProfile: jest.Mock };
+  let flashcardsService: { getFlashcards: jest.Mock };
+  let studyStreakService: { getStreak: jest.Mock };
   let redisMock: {
     incr: Mock;
     expire: Mock;
@@ -26,10 +32,22 @@ describe('AiConversationService', () => {
       isVipUser: vi.fn().mockResolvedValue(false),
       getRedisClient: vi.fn().mockReturnValue(redisMock),
     };
+    usersService = {
+      getProfile: jest.fn().mockResolvedValue({ target_languages: ['Spanish'], interests: ['travel'], proficiency_level: 'intermediate' }),
+    };
+    flashcardsService = {
+      getFlashcards: jest.fn().mockResolvedValue([{ word_token: 'hola' }]),
+    };
+    studyStreakService = {
+      getStreak: jest.fn().mockResolvedValue(5),
+    };
 
     service = new AiConversationService(
       llmProxy as unknown as LlmProxyService,
       supabaseService as unknown as SupabaseService,
+      usersService as unknown as UsersService,
+      flashcardsService as unknown as FlashcardsService,
+      studyStreakService as unknown as StudyStreakService,
     );
   });
 
@@ -145,7 +163,7 @@ describe('AiConversationService', () => {
         'Would you like a latte or cappuccino?',
       );
 
-      const reply = await service.generateReply('Hi', 'ordering-coffee');
+      const reply = await service.generateReply('user-123', 'Hi', 'ordering-coffee');
 
       expect(llmProxy.chatCompletion).toHaveBeenCalledTimes(1);
       const messages = llmProxy.chatCompletion.mock.calls[0][0];
@@ -164,7 +182,7 @@ describe('AiConversationService', () => {
         { role: 'assistant' as const, content: 'Hi there!' },
       ];
 
-      await service.generateReply('I am doing well', 'small-talk', history);
+      await service.generateReply('user-123', 'I am doing well', 'small-talk', history);
 
       const messages = llmProxy.chatCompletion.mock.calls[0][0];
       expect(messages).toHaveLength(4); // system + 2 history + 1 user
@@ -175,17 +193,17 @@ describe('AiConversationService', () => {
     it('should use default system prompt when no scenarioId provided', async () => {
       llmProxy.chatCompletion.mockResolvedValue('Interesting!');
 
-      await service.generateReply('Tell me about yourself');
+      await service.generateReply('user-123', 'Tell me about yourself');
 
       const messages = llmProxy.chatCompletion.mock.calls[0][0];
       expect(messages[0].role).toBe('system');
-      expect(messages[0].content).toContain('AI language partner');
+      expect(messages[0].content).toContain('You are a personalized, expert language tutor');
     });
 
     it('should fallback to local replies when LLM fails', async () => {
       llmProxy.chatCompletion.mockRejectedValue(new Error('API down'));
 
-      const reply = await service.generateReply('Hi there!', 'ordering-coffee');
+      const reply = await service.generateReply('user-123', 'Hi there!', 'ordering-coffee');
 
       expect(reply).toBeTruthy();
       expect(typeof reply).toBe('string');
@@ -194,7 +212,7 @@ describe('AiConversationService', () => {
     it('should fallback to local replies when LLM returns empty string', async () => {
       llmProxy.chatCompletion.mockResolvedValue('');
 
-      const reply = await service.generateReply('Hello', 'job-interview');
+      const reply = await service.generateReply('user-123', 'Hello', 'job-interview');
 
       expect(reply).toBeTruthy();
       expect(typeof reply).toBe('string');
