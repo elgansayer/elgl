@@ -11,9 +11,7 @@ class Runner:
         self.results = results
         self.calls: list[tuple[str, ...]] = []
 
-    def __call__(
-        self, arguments: Sequence[str], cwd: Path, timeout: int = 300
-    ) -> ProcessResult:
+    def __call__(self, arguments: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
         self.calls.append(tuple(arguments))
         return self.results.pop(0)
 
@@ -75,9 +73,7 @@ def test_pull_request_creation_parses_number(tmp_path: Path) -> None:
 
 def test_pull_request_creation_uses_configured_base_branch(tmp_path: Path) -> None:
     runner = Runner([ProcessResult(0, "https://github.com/owner/repo/pull/42\n", "")])
-    client = GitHubClient(
-        "owner/repo", tmp_path, "secret", runner, base_branch="develop"
-    )
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner, base_branch="develop")
 
     client.create_pull_request("factory/12-fix", "Fix", "Body")
 

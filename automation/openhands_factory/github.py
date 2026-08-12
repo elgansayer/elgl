@@ -85,9 +85,7 @@ class GitHubClient:
         tasks: list[Task] = []
         for item in payload:
             labels = {
-                label.get("name", "")
-                for label in item.get("labels", [])
-                if isinstance(label, dict)
+                label.get("name", "") for label in item.get("labels", []) if isinstance(label, dict)
             }
             if labels.intersection(
                 {

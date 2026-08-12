@@ -229,9 +229,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
         PullRequestStatus(99, "MERGED", False, "UNKNOWN", "", "head", True, False),
     ]
 
-    def prepare(
-        workflow: GitWorkflow, worktree: Path, task_id: str, title: str
-    ) -> str:
+    def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
         worktree.mkdir(parents=True)
         (worktree / "AGENTS.md").write_text("Instructions", encoding="utf-8")
         return "factory/42-fix-build"

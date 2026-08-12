@@ -51,10 +51,7 @@ def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> 
 
 def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> None:
     unit = (
-        Path(__file__).parents[2]
-        / "config"
-        / "systemd"
-        / "hellotalk-factory-health.service"
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-health.service"
     ).read_text(encoding="utf-8")
 
     assert "NoNewPrivileges=true" not in unit
@@ -80,9 +77,7 @@ def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> N
 
 
 def test_backend_test_heap_fits_the_service_memory_limit() -> None:
-    package = (Path(__file__).parents[2] / "backend" / "package.json").read_text(
-        encoding="utf-8"
-    )
+    package = (Path(__file__).parents[2] / "backend" / "package.json").read_text(encoding="utf-8")
 
     assert "--max-old-space-size=3072" in package
 

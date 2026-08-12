@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AudioIntroService } from './audio-intro.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -7,15 +8,15 @@ describe('AudioIntroService', () => {
   let supabaseService: SupabaseService;
 
   const mockSupabaseClient = {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    single: jest.fn(),
-    update: jest.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn(),
+    update: vi.fn().mockReturnThis(),
     storage: {
-      from: jest.fn().mockReturnThis(),
-      createSignedUploadUrl: jest.fn(),
-      getPublicUrl: jest.fn(),
+      from: vi.fn().mockReturnThis(),
+      createSignedUploadUrl: vi.fn(),
+      getPublicUrl: vi.fn(),
     },
   };
 
@@ -26,7 +27,7 @@ describe('AudioIntroService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
       ],
@@ -37,7 +38,7 @@ describe('AudioIntroService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -126,11 +127,11 @@ describe('AudioIntroService', () => {
   });
 
   describe('getPresignedUploadUrl', () => {
-    let dateNowSpy: jest.SpyInstance;
+    let dateNowSpy: MockInstance;
 
     beforeEach(() => {
       // Mock Date.now() to return a consistent value (e.g. 1000)
-      dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000);
+      dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1000);
     });
 
     afterEach(() => {

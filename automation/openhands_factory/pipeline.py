@@ -31,6 +31,7 @@ PRE_PULL_REQUEST_STATES = {
     JobState.IMPLEMENTING,
     JobState.SECURITY_REVIEW,
     JobState.VERIFYING,
+    JobState.QUALITY_REPAIRING,
     JobState.PR_DRAFT,
     JobState.QUARANTINED,
 }
@@ -68,6 +69,11 @@ class FactoryPipeline:
         tasks = self.github.collect_open_issues()
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
+        # A daemon restart or an interrupted worker can leave a lease behind while the
+        # durable job is still discovered. Such jobs are safe to reclaim before scheduling.
+        for task_id, job in jobs.items():
+            if job.state is JobState.DISCOVERED:
+                self.tasks.release(task_id)
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
         for task_id, job in jobs.items():
@@ -159,9 +165,7 @@ class FactoryPipeline:
         if job.state is JobState.DISCOVERED:
             self.tasks.acquire(job.task, "factory")
             workflow = GitWorkflow(self.config.repository, self.config.base_branch)
-            job.branch = workflow.prepare_worktree(
-                worktree, job.task.identifier, job.task.title
-            )
+            job.branch = workflow.prepare_worktree(worktree, job.task.identifier, job.task.title)
             self.github.add_issue_labels(int(job.task.identifier), ("factory-active",))
             self.github.add_comment(
                 int(job.task.identifier),
@@ -207,6 +211,30 @@ class FactoryPipeline:
             workflow.push(job.branch)
             job.head_sha = workflow.head_sha()
             job.state = JobState.PR_DRAFT
+            return
+
+        if job.state is JobState.QUALITY_REPAIRING:
+            findings = check_quality_gate(workflow, self.config.base_branch)
+            if not findings:
+                job.state = JobState.VERIFYING
+                return
+
+            finding_text = "\n".join(
+                f"- {f.code} in {f.path}: {f.summary}\n  Evidence: {f.evidence}" for f in findings
+            )
+            extra = f"Quality gate findings:\n\n{finding_text}"
+
+            self.conversations.run(
+                job.task,
+                worktree,
+                build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
+            )
+
+            if not workflow.has_changes():
+                raise FactoryError("Quality repair produced no changes")
+
+            job.quality_repairs += 1
+            job.state = JobState.VERIFYING
             return
 
         if job.state is JobState.PR_DRAFT:
@@ -333,7 +361,7 @@ class FactoryPipeline:
                     (
                         "OpenHands factory repaired the branch after verification or CI "
                         "feedback. The branch is returning to review before merge."
-                    )
+                    ),
                 )
             job.state = JobState.REVIEWING
             return
