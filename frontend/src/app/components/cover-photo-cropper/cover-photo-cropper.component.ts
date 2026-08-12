@@ -15,13 +15,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
       role="button"
     >
       <div
-        class="bg-gray-900 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl"
+        class="bg-surface-200 rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl"
         (click)="$event.stopPropagation()"
         (keydown.enter)="$event.stopPropagation()"
         tabindex="0"
         role="button"
       >
-        <h3 class="text-lg font-semibold text-white mb-4">{{ 'coverPhoto.crop' | t }}</h3>
+        <h3 class="text-lg font-semibold text-text-primary mb-4">{{ 'coverPhoto.crop' | t }}</h3>
 
         <div class="relative max-h-64 overflow-hidden rounded-lg mb-4">
           <image-cropper
@@ -39,14 +39,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <div class="flex justify-end gap-3">
           <button
             (click)="cancelCrop.emit()"
-            class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-white bg-surface-200 hover:bg-surface-100 rounded-lg transition-colors"
+            class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary bg-surface-200 hover:bg-surface-100 rounded-lg transition-colors"
           >
             {{ 'common.cancel' | t }}
           </button>
           <button
             (click)="save()"
             [disabled]="!croppedBlob()"
-            class="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            class="px-4 py-2 text-sm font-medium text-on-fill bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             {{ 'coverPhoto.save' | t }}
           </button>

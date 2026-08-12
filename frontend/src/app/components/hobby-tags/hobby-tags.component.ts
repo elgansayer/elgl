@@ -20,7 +20,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
         <h2 class="text-xl font-bold text-text-primary">{{ 'hobby.title' | t }}</h2>
         <button
           (click)="showAddPanel.set(!showAddPanel())"
-          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition-colors"
+          class="px-4 py-2 bg-primary hover:bg-primary-dark text-on-fill rounded-lg text-sm font-semibold transition-colors"
         >
           {{ showAddPanel() ? ('common.cancel' | t) : ('hobby.add' | t) }}
         </button>
@@ -36,7 +36,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 type="text"
                 [(ngModel)]="searchQuery"
                 [placeholder]="'hobby.searchPlaceholder' | t"
-                class="w-full px-4 py-2 bg-surface-800 border border-slate-600 rounded-lg text-text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="w-full px-4 py-2 bg-surface-100 border border-surface-100 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -46,7 +46,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                   <button
                     (click)="addTag(tag.id)"
                     [attr.aria-label]="i18n.translate('hobby.addTagLabel', { name: tag.name })"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-200 hover:bg-indigo-600 text-slate-200 rounded-full text-sm transition-colors"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-200 hover:bg-primary text-text-secondary hover:text-on-fill rounded-full text-sm transition-colors"
                   >
                     <span aria-hidden="true">{{ tag.icon }}</span>
                     <span>{{ tag.name }}</span>
@@ -59,7 +59,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                   @if (searchQuery().trim()) {
                     <button
                       (click)="createGlobalTag(searchQuery().trim())"
-                      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
+                      class="px-4 py-2 bg-primary hover:bg-primary-dark text-on-fill rounded-lg text-sm font-medium transition-colors"
                     >
                       {{ i18n.translate('hobby.createTag', { name: searchQuery().trim() }) }}
                     </button>
@@ -77,7 +77,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
             <app-pill
               [colour]="getProficiencyColour(userTag.proficiency_level)"
               [size]="'md'"
-              [customClass]="'pe-8 cursor-pointer hover:ring-2 hover:ring-indigo-400'"
+              [customClass]="'pe-8 cursor-pointer hover:ring-2 hover:ring-primary'"
             >
               <span class="flex items-center gap-1.5">
                 <span aria-hidden="true">{{ userTag.hobby_tag?.icon }}</span>
@@ -89,7 +89,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
             </app-pill>
             <button
               (click)="removeTag(userTag.hobby_tag_id)"
-              class="absolute end-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all text-xs"
+              class="absolute end-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-danger hover:text-danger/80 transition-all text-xs"
               [attr.aria-label]="
                 i18n.translate('hobby.removeTagLabel', { name: userTag.hobby_tag?.name ?? '' })
               "
@@ -106,7 +106,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
       @if (selectedTagForProficiency()) {
         <app-card variant="outlined" customClass="p-4">
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">
+          <h3 class="text-sm font-semibold text-text-secondary mb-3">
             {{
               i18n.translate('hobby.proficiencyFor', {
                 name: getTagName(selectedTagForProficiency()!),
@@ -119,14 +119,12 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
                 (click)="updateProficiency(selectedTagForProficiency()!, level)"
                 [attr.aria-pressed]="getCurrentProficiency(selectedTagForProficiency()!) === level"
                 class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                [class.bg-indigo-600]="
-                  getCurrentProficiency(selectedTagForProficiency()!) === level
-                "
+                [class.bg-primary]="getCurrentProficiency(selectedTagForProficiency()!) === level"
                 [class.bg-surface-200]="
                   getCurrentProficiency(selectedTagForProficiency()!) !== level
                 "
-                [class.text-white]="getCurrentProficiency(selectedTagForProficiency()!) === level"
-                [class.text-slate-300]="
+                [class.text-on-fill]="getCurrentProficiency(selectedTagForProficiency()!) === level"
+                [class.text-text-secondary]="
                   getCurrentProficiency(selectedTagForProficiency()!) !== level
                 "
               >
@@ -139,7 +137,7 @@ import { AppPillComponent } from '../primitives/pill/pill.component';
 
       @if (userVocabulary().length > 0) {
         <div class="mt-6">
-          <h3 class="text-lg font-semibold text-slate-200 mb-3">
+          <h3 class="text-lg font-semibold text-text-primary mb-3">
             {{ 'hobby.vocabularyTitle' | t }}
           </h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
