@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SystemMessageService } from './system-message.service';
 import { CentrifugoService } from '../centrifugo.service';
@@ -5,14 +6,14 @@ import { SupabaseService } from '../../supabase/supabase.service';
 
 describe('SystemMessageService', () => {
   let service: SystemMessageService;
-  let centrifugoService: { publish: jest.Mock };
-  let supabaseService: { getClient: jest.Mock };
+  let centrifugoService: { publish: Mock };
+  let supabaseService: { getClient: Mock };
 
   const mockSupabaseClient = () => ({
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
   });
 
   beforeEach(async () => {
@@ -33,7 +34,7 @@ describe('SystemMessageService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -98,7 +99,7 @@ describe('SystemMessageService', () => {
     it('publishes system events to all rooms the user belongs to', async () => {
       const client = supabaseService.getClient();
       const selectChain = {
-        eq: jest.fn().mockResolvedValue({
+        eq: vi.fn().mockResolvedValue({
           data: [{ room_id: 'room-a' }, { room_id: 'room-b' }],
           error: null,
         }),
@@ -118,7 +119,7 @@ describe('SystemMessageService', () => {
     it('handles empty room list gracefully', async () => {
       const client = supabaseService.getClient();
       const selectChain = {
-        eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
       client.select.mockReturnValue(selectChain);
 
@@ -133,22 +134,22 @@ describe('SystemMessageService', () => {
 
       // First call: get rooms for userA
       const selectChainA = {
-        eq: jest.fn().mockResolvedValue({
+        eq: vi.fn().mockResolvedValue({
           data: [{ room_id: 'dm-1' }, { room_id: 'group-1' }],
           error: null,
         }),
       };
       // Second call: get mutual rooms for userB
       const selectChainB = {
-        eq: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({
           data: [{ room_id: 'dm-1' }, { room_id: 'group-1' }],
           error: null,
         }),
       };
       // Third call: count members for candidate room (2 = 1-on-1)
       const selectChainCount = {
-        eq: jest.fn().mockResolvedValue({ count: 2, error: null }),
+        eq: vi.fn().mockResolvedValue({ count: 2, error: null }),
       };
 
       let callIndex = 0;
@@ -173,14 +174,14 @@ describe('SystemMessageService', () => {
       const client = supabaseService.getClient();
 
       const selectChainA = {
-        eq: jest.fn().mockResolvedValue({
+        eq: vi.fn().mockResolvedValue({
           data: [{ room_id: 'dm-1' }],
           error: null,
         }),
       };
       const selectChainB = {
-        eq: jest.fn().mockReturnThis(),
-        in: jest.fn().mockResolvedValue({ data: [], error: null }),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
 
       let callIndex = 0;

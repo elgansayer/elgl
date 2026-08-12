@@ -126,12 +126,8 @@ describe('AppearanceSettingsComponent', () => {
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
   });
 
-  it('should change language from select event', () => {
-    const select = document.createElement('select');
-    select.value = 'es';
-    Object.defineProperty(select, 'value', { value: 'es' });
-    const event = { target: select } as unknown as Event;
-    component.onLanguageSelect(event);
+  it('should change language from the select value change', () => {
+    component.onLanguageValueChange('es');
     expect(i18nServiceMock.setLanguage).toHaveBeenCalledWith('es');
   });
 
@@ -147,7 +143,6 @@ describe('AppearanceSettingsComponent', () => {
     expect(component.primaryAccentColor()).toBe('#4f46e5');
   });
 
-<<<<<<< HEAD
   it('should update theme service accent colour when profile loads', async () => {
     expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#4f46e5');
   });
@@ -156,7 +151,8 @@ describe('AppearanceSettingsComponent', () => {
     component.primaryAccentColor.set('#e11d48');
     await component.saveSettings();
     expect(themeServiceMock.setPrimaryAccentColor).toHaveBeenCalledWith('#e11d48');
-=======
+  });
+
   it('should set custom colour from color input when VIP', () => {
     component.isVip.set(true);
     const input = document.createElement('input');
@@ -186,6 +182,5 @@ describe('AppearanceSettingsComponent', () => {
     const event = { target: input } as unknown as Event;
     component.onCustomColorChange(event);
     expect(component.primaryAccentColor()).toBe('#4f46e5');
->>>>>>> origin/main
   });
 });

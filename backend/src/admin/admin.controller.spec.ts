@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of, throwError } from 'rxjs';
@@ -9,10 +10,10 @@ import { CacheControlInterceptor } from '../common/cache.interceptor';
 
 function createMockContext(): {
   executionContext: ExecutionContext;
-  setHeader: jest.Mock;
+  setHeader: Mock;
   response: Record<string, unknown>;
 } {
-  const setHeader = jest.fn();
+  const setHeader = vi.fn();
   const response = { setHeader };
 
   const executionContext = {
@@ -24,7 +25,7 @@ function createMockContext(): {
   return { executionContext, setHeader, response };
 }
 
-function capturedHeaders(setHeader: jest.Mock): Record<string, string> {
+function capturedHeaders(setHeader: Mock): Record<string, string> {
   const headers: Record<string, string> = {};
   for (const call of setHeader.mock.calls) {
     headers[call[0]] = call[1];
@@ -43,19 +44,19 @@ describe('AdminController', () => {
         {
           provide: AdminService,
           useValue: {
-            listUsers: jest.fn(),
-            setVipStatus: jest.fn(),
-            getLoginHistory: jest.fn(),
-            listAllBlocks: jest.fn(),
-            removeBlock: jest.fn(),
+            listUsers: vi.fn(),
+            setVipStatus: vi.fn(),
+            getLoginHistory: vi.fn(),
+            listAllBlocks: vi.fn(),
+            removeBlock: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(AdminGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<AdminController>(AdminController);
@@ -63,7 +64,7 @@ describe('AdminController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -73,7 +74,7 @@ describe('AdminController', () => {
   describe('listUsers', () => {
     it('delegates to AdminService.listUsers with the query params', async () => {
       const response = { users: [], total: 0, page: 1, pageSize: 20 };
-      (adminService.listUsers as jest.Mock).mockResolvedValue(response);
+      (adminService.listUsers as Mock).mockResolvedValue(response);
 
       const result = await controller.listUsers({ page: 1, pageSize: 20 });
 
@@ -88,7 +89,7 @@ describe('AdminController', () => {
   describe('setVipStatus', () => {
     it('delegates to AdminService.setVipStatus', async () => {
       const response = { id: 'user-1', is_vip: true };
-      (adminService.setVipStatus as jest.Mock).mockResolvedValue(response);
+      (adminService.setVipStatus as Mock).mockResolvedValue(response);
 
       const result = await controller.setVipStatus('user-1', {
         is_vip: true,
@@ -104,7 +105,7 @@ describe('AdminController', () => {
   describe('getLoginHistory', () => {
     it('delegates to AdminService.getLoginHistory', async () => {
       const history = [{ id: 'log-1' }];
-      (adminService.getLoginHistory as jest.Mock).mockResolvedValue(history);
+      (adminService.getLoginHistory as Mock).mockResolvedValue(history);
 
       const result = await controller.getLoginHistory('user-1');
 
@@ -116,7 +117,7 @@ describe('AdminController', () => {
   describe('listAllBlocks', () => {
     it('delegates to AdminService.listAllBlocks with default page params', async () => {
       const response = { blocks: [], total: 0, page: 1, pageSize: 20 };
-      (adminService.listAllBlocks as jest.Mock).mockResolvedValue(response);
+      (adminService.listAllBlocks as Mock).mockResolvedValue(response);
 
       const result = await controller.listAllBlocks(undefined, undefined);
 
@@ -126,7 +127,7 @@ describe('AdminController', () => {
 
     it('parses page and pageSize query params', async () => {
       const response = { blocks: [], total: 0, page: 2, pageSize: 10 };
-      (adminService.listAllBlocks as jest.Mock).mockResolvedValue(response);
+      (adminService.listAllBlocks as Mock).mockResolvedValue(response);
 
       const result = await controller.listAllBlocks('2', '10');
 

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -28,18 +29,18 @@ function makeBuilder(response: unknown) {
 describe('HobbyTagsService', () => {
   let service: HobbyTagsService;
   let mockSupabaseClient: any;
-  let mockSupabaseService: { getClient: jest.Mock };
-  let mockConfigService: { get: jest.Mock };
+  let mockSupabaseService: { getClient: Mock };
+  let mockConfigService: { get: Mock };
 
   beforeEach(async () => {
     mockSupabaseClient = {
-      from: jest.fn(),
+      from: vi.fn(),
     };
     mockSupabaseService = {
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     };
     mockConfigService = {
-      get: jest.fn().mockReturnValue(null),
+      get: vi.fn().mockReturnValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -370,7 +371,7 @@ describe('HobbyTagsService', () => {
 
       mockConfigService.get.mockReturnValue('mock-deepl-key');
 
-      const fetchMock = jest.fn().mockResolvedValue({
+      const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
           Promise.resolve({

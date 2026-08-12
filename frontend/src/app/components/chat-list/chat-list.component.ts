@@ -11,6 +11,7 @@ import { UnreadCounterService } from '../../services/unread-counter.service';
 import { ScrollablePillsComponent } from '../primitives/scrollable-pills/scrollable-pills.component';
 import { AppEmptyStateComponent } from '../primitives/empty-state/empty-state.component';
 import { GroupsDiscoveryComponent } from '../groups-discovery/groups-discovery.component';
+import { GroupsService, ChatGroup } from '../../services/groups.service';
 
 interface ChatRoomPreview {
   id: string;
@@ -36,6 +37,7 @@ export class ChatListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly i18n = inject(I18nService);
   private readonly unreadCounter = inject(UnreadCounterService);
+  private readonly groupsService = inject(GroupsService);
 
   readonly isLoading = signal<boolean>(true);
   readonly labels = signal<string[]>([]);
@@ -45,10 +47,23 @@ export class ChatListComponent implements OnInit {
 
   /** Active tab: 'chats' | 'groups' */
   readonly activeTab = signal<'chats' | 'groups'>('chats');
+  readonly groups = signal<ChatGroup[]>([]);
 
   // ---------- Locked chat state ----------
   readonly lockedRoomIds = signal<string[]>([]);
   readonly showLocked = signal<boolean>(false);
+
+  switchTab(tab: 'chats' | 'groups'): void {
+    this.activeTab.set(tab);
+    if (tab === 'groups' && this.groups().length === 0) {
+      void this.groupsService.getDiscoverableGroups().then((groups) => this.groups.set(groups));
+    }
+  }
+
+  async handleJoinGroup(groupId: string): Promise<void> {
+    await this.groupsService.joinGroup(groupId);
+    this.groups.set(await this.groupsService.getDiscoverableGroups());
+  }
 
   // Computed previews after excluding locked rooms
   readonly regularAndPinnedPreviews = computed(() => {

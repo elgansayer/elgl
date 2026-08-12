@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from openhands_factory.models import Task
+from openhands_factory.state import atomic_write_json
 from openhands_factory.task_source import TaskStore
 
 
@@ -36,3 +37,32 @@ def test_parallel_acquisitions_preserve_every_lease(tmp_path: Path) -> None:
         list(workers.map(lambda task: store.acquire(task, "factory"), tasks))
 
     assert set(store.leases()) == {task.identifier for task in tasks}
+
+
+def test_prune_expired_leases_persists_only_active_leases(tmp_path: Path) -> None:
+    store = TaskStore(tmp_path, lease_minutes=1)
+    now = datetime.now(UTC)
+    active = Task("2", "Active", "body", "github", 0)
+    store.acquire(active, "current", now)
+    atomic_write_json(
+        store.lease_path,
+        {
+            "leases": [
+                {
+                    "task_id": "1",
+                    "owner": "old",
+                    "acquired_at": (now - timedelta(minutes=2)).isoformat(),
+                    "expires_at": (now - timedelta(minutes=1)).isoformat(),
+                },
+                {
+                    "task_id": "2",
+                    "owner": "current",
+                    "acquired_at": now.isoformat(),
+                    "expires_at": (now + timedelta(minutes=1)).isoformat(),
+                },
+            ]
+        },
+    )
+
+    assert store.prune_expired_leases(now) == ["1"]
+    assert set(store.leases(now)) == {"2"}

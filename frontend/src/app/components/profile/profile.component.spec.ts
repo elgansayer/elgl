@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { ProfileComponent } from './profile.component';
 import { UserService, UserProfile } from '../../services/user.service';
+import { I18nService } from '../../services/i18n.service';
 import { SafetyService } from '../../services/safety.service';
 
 describe('ProfileComponent', () => {
@@ -51,6 +52,7 @@ describe('ProfileComponent', () => {
         provideRouter([]),
         { provide: UserService, useValue: mockUserService },
         { provide: SafetyService, useValue: { blockedUserIdsSignal: signal(new Set()) } },
+        { provide: I18nService, useValue: { translate: vi.fn((key) => key) } },
       ],
     }).compileComponents();
 
@@ -114,5 +116,11 @@ describe('ProfileComponent', () => {
     expect(mockUserService.updatePrivacySettings).toHaveBeenCalledWith(
       expect.objectContaining({ incognito_visits: false }),
     );
+  });
+
+  it('should set errorMessage when loadProfile fails', async () => {
+    mockUserService.getMyProfile.mockRejectedValue(new Error('Network error'));
+    await fixture.componentInstance.loadProfile();
+    expect(fixture.componentInstance.errorMessage()).toBe('Network error');
   });
 });

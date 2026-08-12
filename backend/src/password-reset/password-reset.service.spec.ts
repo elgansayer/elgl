@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test } from '@nestjs/testing';
 import { PasswordResetService } from './password-reset.service';
 import { ConfigService } from '@nestjs/config';
@@ -15,15 +16,15 @@ describe('PasswordResetService', () => {
 
   beforeEach(async () => {
     mockEmailService = {
-      sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+      sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
     };
 
     mockSupabaseClient = {
-      from: jest.fn(),
+      from: vi.fn(),
       auth: {
         admin: {
-          listUsers: jest.fn(),
-          updateUserById: jest.fn(),
+          listUsers: vi.fn(),
+          updateUserById: vi.fn(),
         },
       },
     };
@@ -31,7 +32,7 @@ describe('PasswordResetService', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         PasswordResetService,
-        { provide: ConfigService, useValue: { get: jest.fn() } },
+        { provide: ConfigService, useValue: { get: vi.fn() } },
         {
           provide: SupabaseService,
           useValue: {
@@ -46,7 +47,7 @@ describe('PasswordResetService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('requestPasswordReset', () => {
@@ -70,7 +71,7 @@ describe('PasswordResetService', () => {
       });
 
       const insertChain = {
-        insert: jest.fn().mockResolvedValue({ data: null, error: null }),
+        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
       mockSupabaseClient.from.mockReturnValue(insertChain);
 
@@ -102,7 +103,7 @@ describe('PasswordResetService', () => {
       });
 
       const insertChain = {
-        insert: jest.fn().mockResolvedValue({ data: null, error: null }),
+        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
       mockSupabaseClient.from.mockReturnValue(insertChain);
 
@@ -142,9 +143,9 @@ describe('PasswordResetService', () => {
   describe('resetPassword', () => {
     it('should throw for invalid token', async () => {
       const selectChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'not found' },
         }),
@@ -163,9 +164,9 @@ describe('PasswordResetService', () => {
       const pastDate = new Date(Date.now() - 10000);
 
       const selectChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-1', expires_at: pastDate.toISOString() },
           error: null,
         }),
@@ -184,17 +185,17 @@ describe('PasswordResetService', () => {
       const futureDate = new Date(Date.now() + 3600000);
 
       const selectChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-abc', expires_at: futureDate.toISOString() },
           error: null,
         }),
       };
 
       const updateChain = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
 
       mockSupabaseClient.from
@@ -222,9 +223,9 @@ describe('PasswordResetService', () => {
       const future = new Date(Date.now() + 30 * 60 * 1000);
 
       const selectChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-abc', expires_at: future.toISOString() },
           error: null,
         }),

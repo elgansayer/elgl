@@ -16,9 +16,9 @@ import { showToast } from '../../services/toast.service';
         aria-label="{{ 'diagnosticQuiz.loading' | t }}"
       >
         <div
-          class="w-12 h-12 border-4 border-purple-500/30 border-t-purple-400 rounded-full animate-spin mb-4"
+          class="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"
         ></div>
-        <p class="text-purple-300/70 text-sm">{{ 'diagnosticQuiz.loading' | t }}</p>
+        <p class="text-text-secondary text-sm">{{ 'diagnosticQuiz.loading' | t }}</p>
       </div>
     }
 
@@ -26,14 +26,14 @@ import { showToast } from '../../services/toast.service';
     @if (error()) {
       <div class="text-center p-12" role="alert">
         <span class="text-5xl block mb-4">&#x26A0;&#xFE0F;</span>
-        <h3 class="text-xl font-semibold text-purple-200 mb-2">
+        <h3 class="text-xl font-semibold text-text-primary mb-2">
           {{ 'diagnosticQuiz.errorTitle' | t }}
         </h3>
-        <p class="text-purple-300/60 text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
+        <p class="text-text-muted text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
         <button
           type="button"
           (click)="reloadQuestions()"
-          class="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
+          class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-on-fill font-medium transition-colors"
         >
           {{ 'diagnosticQuiz.retry' | t }}
         </button>
@@ -43,19 +43,17 @@ import { showToast } from '../../services/toast.service';
     <!-- Quiz Content -->
     @if (!loading() && !error() && questions().length > 0) {
       <div
-        class="w-full max-w-3xl mx-auto bg-[#1a1a2e] rounded-[2rem] border border-purple-500/20 overflow-hidden"
+        class="w-full max-w-3xl mx-auto bg-surface-200 rounded-[2rem] border border-primary/20 overflow-hidden"
         role="region"
         aria-label="{{ 'diagnosticQuiz.title' | t }}"
       >
         <!-- Header & Progress -->
         <div class="ps-6 pe-6 pt-6 pb-4">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold text-purple-100 text-start">
+            <h2 class="text-xl font-bold text-text-primary text-start">
               {{ 'diagnosticQuiz.title' | t }}
             </h2>
-            <span
-              class="text-sm text-purple-300/50 bg-purple-500/10 px-3 py-1 rounded-full text-end"
-            >
+            <span class="text-sm text-text-muted bg-primary/10 px-3 py-1 rounded-full text-end">
               {{
                 'diagnosticQuiz.questionCounter'
                   | t: { current: currentQuestionNumber(), total: totalQuestions() }
@@ -63,16 +61,15 @@ import { showToast } from '../../services/toast.service';
             </span>
           </div>
           <div
-            class="w-full bg-[#0f0f23] rounded-full h-2 overflow-hidden"
+            class="w-full bg-surface-400 rounded-full h-2 overflow-hidden"
             role="progressbar"
             [attr.aria-valuenow]="progressPercentage()"
             aria-valuemin="0"
             aria-valuemax="100"
           >
             <div
-              class="h-2 rounded-full transition-all duration-500 ease-out"
+              class="h-2 rounded-full transition-all duration-500 ease-out bg-primary"
               [style.width.%]="progressPercentage()"
-              style="background: linear-gradient(90deg, #a855f7, #ec4899); box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);"
             ></div>
           </div>
         </div>
@@ -80,7 +77,7 @@ import { showToast } from '../../services/toast.service';
         <!-- Question Area -->
         <div class="ps-6 pe-6 pb-6 min-h-[220px]">
           @if (currentQuestion(); as q) {
-            <h3 class="text-lg font-medium text-purple-100 mb-6 text-start leading-relaxed">
+            <h3 class="text-lg font-medium text-text-primary mb-6 text-start leading-relaxed">
               {{ q.text }}
             </h3>
 
@@ -90,32 +87,29 @@ import { showToast } from '../../services/toast.service';
                 <button
                   type="button"
                   (click)="selectOption(q.id, option.points)"
-                  class="w-full text-start ps-5 pe-5 pt-4 pb-4 rounded-2xl border-2 transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a2e]"
-                  [class.border-purple-400]="isSelected"
-                  [class.border-purple-500/20]="!isSelected"
+                  class="w-full text-start ps-5 pe-5 pt-4 pb-4 rounded-2xl border-2 transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
+                  [class.border-primary]="isSelected"
+                  [class.border-primary/20]="!isSelected"
                   [class.shadow-lg]="isSelected"
-                  [class.shadow-purple-500/20]="isSelected"
+                  [class.shadow-primary/20]="isSelected"
+                  [class.bg-primary/10]="isSelected"
+                  [class.bg-surface-400]="!isSelected"
                   [attr.aria-pressed]="isSelected"
                   [attr.aria-label]="
                     'diagnosticQuiz.optionLabel' | t: { number: idx + 1, text: option.text }
                   "
-                  [style.background]="
-                    isSelected
-                      ? 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.1))'
-                      : 'rgba(15,15,35,0.6)'
-                  "
                 >
                   <span
                     class="text-base font-medium block"
-                    [class.text-purple-100]="isSelected"
-                    [class.text-purple-300/70]="!isSelected"
+                    [class.text-text-primary]="isSelected"
+                    [class.text-text-secondary]="!isSelected"
                   >
                     <span
                       class="inline-flex items-center justify-center w-7 h-7 rounded-full me-3 text-sm font-bold"
-                      [class.bg-purple-500]="isSelected"
-                      [class.text-white]="isSelected"
-                      [class.bg-purple-500/10]="!isSelected"
-                      [class.text-purple-300/60]="!isSelected"
+                      [class.bg-primary]="isSelected"
+                      [class.text-on-fill]="isSelected"
+                      [class.bg-primary/10]="!isSelected"
+                      [class.text-text-muted]="!isSelected"
                       >{{ idx + 1 }}</span
                     >
                     {{ option.text }}
@@ -128,13 +122,13 @@ import { showToast } from '../../services/toast.service';
 
         <!-- Navigation Actions -->
         <div
-          class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-[#0f0f23]/60 border-t border-purple-500/10"
+          class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-surface-400/60 border-t border-primary/10"
         >
           <button
             type="button"
             (click)="previous()"
             [disabled]="isFirstQuestion()"
-            class="px-6 py-3 text-sm font-medium text-purple-300/80 bg-purple-500/10 rounded-xl hover:bg-purple-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+            class="px-6 py-3 text-sm font-medium text-text-secondary bg-primary/10 rounded-xl hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
           >
             {{ 'diagnosticQuiz.previous' | t }}
           </button>
@@ -144,13 +138,12 @@ import { showToast } from '../../services/toast.service';
               type="button"
               (click)="next()"
               [disabled]="!canProceed() || isSubmitting()"
-              class="px-8 py-3 text-sm font-bold text-white rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a2e]"
-              style="background: linear-gradient(135deg, #a855f7, #ec4899); box-shadow: 0 4px 24px rgba(168, 85, 247, 0.3);"
+              class="px-8 py-3 text-sm font-bold text-on-fill bg-primary rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
               [style.opacity]="!canProceed() || isSubmitting() ? '0.5' : '1'"
             >
               @if (isSubmitting()) {
                 <span
-                  class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin me-2 align-middle"
+                  class="inline-block w-4 h-4 border-2 border-on-fill/30 border-t-on-fill rounded-full animate-spin me-2 align-middle"
                 ></span>
               }
               {{ 'diagnosticQuiz.submit' | t }}
@@ -160,7 +153,7 @@ import { showToast } from '../../services/toast.service';
               type="button"
               (click)="next()"
               [disabled]="!canProceed()"
-              class="px-6 py-3 text-sm font-medium text-purple-100 bg-purple-600 rounded-xl hover:bg-purple-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              class="px-6 py-3 text-sm font-medium text-on-fill bg-primary rounded-xl hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
             >
               {{ 'diagnosticQuiz.next' | t }}
             </button>
@@ -173,7 +166,7 @@ import { showToast } from '../../services/toast.service';
     @if (!loading() && !error() && questions().length === 0) {
       <div class="text-center p-12" role="status">
         <span class="text-5xl block mb-4">&#x1F4CB;</span>
-        <p class="text-purple-300/60 text-sm">{{ 'diagnosticQuiz.empty' | t }}</p>
+        <p class="text-text-muted text-sm">{{ 'diagnosticQuiz.empty' | t }}</p>
       </div>
     }
   `,

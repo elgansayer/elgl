@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountDeletionCron } from './account-deletion.cron';
 import { SupabaseService } from '../../supabase/supabase.service';
@@ -7,15 +8,15 @@ describe('AccountDeletionCron', () => {
   let cron: AccountDeletionCron;
   let supabaseService: SupabaseService;
   let usersService: UsersService;
-  const mockFrom = jest.fn();
-  const mockSelect = jest.fn();
-  const mockNot = jest.fn();
-  const mockLte = jest.fn();
-  const mockEq = jest.fn();
-  const mockReturns = jest.fn();
+  const mockFrom = vi.fn();
+  const mockSelect = vi.fn();
+  const mockNot = vi.fn();
+  const mockLte = vi.fn();
+  const mockEq = vi.fn();
+  const mockReturns = vi.fn();
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const mockSupabaseClient = {
       from: mockFrom,
@@ -30,7 +31,7 @@ describe('AccountDeletionCron', () => {
         },
         {
           provide: UsersService,
-          useValue: { permanentDeleteAccount: jest.fn() },
+          useValue: { permanentDeleteAccount: vi.fn() },
         },
       ],
     }).compile();
@@ -116,7 +117,7 @@ describe('AccountDeletionCron', () => {
         data: [{ id: 'user-1' }],
         error: null,
       });
-      (usersService.permanentDeleteAccount as jest.Mock).mockRejectedValue(
+      (usersService.permanentDeleteAccount as Mock).mockRejectedValue(
         new Error('Deletion failed'),
       );
       const errorSpy = jest.spyOn(

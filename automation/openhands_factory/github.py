@@ -39,9 +39,15 @@ class GitHubClient:
         workspace: Path,
         token: str,
         runner: GitHubRunner = run_process,
+        base_branch: str = "main",
+        require_ready_label: bool = True,
+        ready_label: str = "factory-ready",
     ) -> None:
         self.repository = repository
         self.workspace = workspace
+        self.base_branch = base_branch
+        self.require_ready_label = require_ready_label
+        self.ready_label = ready_label
         self.runner = runner
         self.environment = {"GH_TOKEN": token}
 
@@ -79,11 +85,23 @@ class GitHubClient:
         tasks: list[Task] = []
         for item in payload:
             labels = {
-                label.get("name", "")
-                for label in item.get("labels", [])
-                if isinstance(label, dict)
+                label.get("name", "") for label in item.get("labels", []) if isinstance(label, dict)
             }
-            if labels.intersection({"factory-skip", "duplicate", "needs-human"}):
+            if labels.intersection(
+                {
+                    "factory-skip",
+                    "duplicate",
+                    "needs-human",
+                    "factory-epic",
+                    "factory-planning",
+                    "factory-quality-blocked",
+                    "factory-quarantined",
+                }
+            ):
+                continue
+            if self.require_ready_label and not labels.intersection(
+                {self.ready_label, "factory-active", "guardian-alert"}
+            ):
                 continue
             priority = 0 if "guardian-alert" in labels else 10
             tasks.append(
@@ -99,6 +117,7 @@ class GitHubClient:
 
     def ensure_factory_labels(self) -> None:
         labels = {
+            "factory-ready": "1d76db",
             "factory-active": "0052cc",
             "factory-review": "5319e7",
             "factory-reviewed": "0e8a16",
@@ -134,6 +153,21 @@ class GitHubClient:
             arguments.extend(("--add-label", label))
         self._run(tuple(arguments))
 
+    def add_comment(self, number: int, body: str) -> None:
+        """Publish a bounded lifecycle update on an issue or pull request."""
+        self._run(
+            (
+                "gh",
+                "issue",
+                "comment",
+                str(number),
+                "--repo",
+                self.repository,
+                "--body",
+                body[:10_000],
+            )
+        )
+
     def create_pull_request(self, branch: str, title: str, body: str) -> int:
         output = self._run(
             (
@@ -143,7 +177,7 @@ class GitHubClient:
                 "--repo",
                 self.repository,
                 "--base",
-                "main",
+                self.base_branch,
                 "--head",
                 branch,
                 "--draft",

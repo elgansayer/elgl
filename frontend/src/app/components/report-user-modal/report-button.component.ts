@@ -11,8 +11,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
       type="button"
       (click)="openReportModal()"
       class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg
-                   text-red-400 hover:text-red-300 hover:bg-red-500/10
-                   border border-red-500/30 hover:border-red-500/50
+                   text-danger hover:text-danger/80 hover:bg-danger/10
+                   border border-danger/30 hover:border-danger/50
                    transition-all duration-200 text-sm font-medium"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

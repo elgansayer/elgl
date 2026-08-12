@@ -25,8 +25,15 @@ esac
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential ca-certificates curl git gh gnupg jq libgtk-3-0t64 logrotate passt podman \
+  build-essential ca-certificates curl git gh gnupg jq logrotate passt podman sudo \
   python-is-python3 python3 python3-pip python3-venv rsync shellcheck tmux uidmap
+
+if apt-cache show libgtk-3-0t64 >/dev/null 2>&1; then
+  gtk_package=libgtk-3-0t64
+else
+  gtk_package=libgtk-3-0
+fi
+DEBIAN_FRONTEND=noninteractive apt-get install -y "$gtk_package"
 
 install -d -m 0755 /etc/apt/keyrings
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key |
@@ -73,7 +80,7 @@ VIRTUAL_ENV="$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv-0.1.0/bin/uv" sync \
   --active --frozen --no-editable --extra development --project "$REPOSITORY_SOURCE/automation"
 ln -sfn "$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv"
 
-for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e"; do
+for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e" "$FACTORY_STATE/recovery"; do
   if [ -f "$directory/package-lock.json" ]; then
     sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
   fi

@@ -29,8 +29,7 @@ def select_batch(
     candidates = [
         job
         for job in jobs.values()
-        if job.task.identifier not in excluded
-        and job.state.value not in {"done", "quarantined"}
+        if job.task.identifier not in excluded and job.state.value not in {"done", "quarantined"}
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
     return candidates[:limit]
@@ -107,9 +106,7 @@ class FactoryDaemon:
         self._write_daemon_state("stopped", active)
         return 0
 
-    def _write_daemon_state(
-        self, status: str, active: dict[Future[Job | None], str]
-    ) -> None:
+    def _write_daemon_state(self, status: str, active: dict[Future[Job | None], str]) -> None:
         atomic_write_json(
             self.config.state_dir / "daemon.json",
             {

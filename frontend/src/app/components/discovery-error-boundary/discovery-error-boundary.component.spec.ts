@@ -4,8 +4,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DiscoveryErrorBoundaryComponent, DiscoveryErrorContext } from './discovery-error-boundary.component';
-import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
+import { By } from '@angular/platform-browser';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-test-discovery-host',
@@ -82,10 +83,11 @@ describe('DiscoveryErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     component.captureError(new Error('Discovery partners search failed'));
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h3')?.textContent).toContain('discoveryErrorBoundary.title');
+    expect(compiled.querySelector('h3')?.textContent).toContain('Discovery is unavailable');
     expect(compiled.textContent).toContain('Discovery partners search failed');
   });
 
@@ -95,6 +97,7 @@ describe('DiscoveryErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     component.captureError(new Error('Temporary error'));
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
     expect(component.hasError()).toBe(true);
 
     component.resetError();
@@ -110,7 +113,7 @@ describe('DiscoveryErrorBoundaryComponent', () => {
     const testError = new Error('Discovery rendering failure');
     component.captureError(testError);
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     expect(req.request.method).toBe('POST');
     const body = req.request.body as Record<string, unknown>;
     expect(body['message']).toContain('Discovery rendering failure');
@@ -122,9 +125,8 @@ describe('DiscoveryErrorBoundaryComponent', () => {
   });
 
   it('should include context metadata in crash report', () => {
-    const fixture = TestBed.createComponent(DiscoveryErrorBoundaryComponent);
-    const component = fixture.componentInstance;
-    fixture.componentRef.setInput('context', {
+    const hostFixture = TestBed.createComponent(TestDiscoveryHostComponent);
+    hostFixture.componentInstance.boundaryContext.set({
       component: 'partner-search',
       filterType: 'nearby',
       targetLanguage: 'FR',
@@ -132,11 +134,13 @@ describe('DiscoveryErrorBoundaryComponent', () => {
       sortMode: 'newest',
       radiusKm: 25,
     });
-    fixture.detectChanges();
+    hostFixture.detectChanges();
+    const component = hostFixture.debugElement.query(By.directive(DiscoveryErrorBoundaryComponent)).componentInstance;
 
     component.captureError(new Error('Filter collapse error'));
+    hostFixture.detectChanges();
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     const body = req.request.body as Record<string, unknown>;
     const metadata = body['metadata'] as Record<string, unknown>;
     expect(metadata['category']).toBe('discovery');
@@ -154,16 +158,17 @@ describe('DiscoveryErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     component.captureError(new Error('Test error'));
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
 
     component.reportCrash();
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     req.flush({ status: 'logged' });
+    fixture.detectChanges();
     expect(component.reportedMessage()).toBe(true);
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('discoveryErrorBoundary.reportedMessage');
+    expect(compiled.textContent).toContain('Error reported');
   });
 
   it('should emit retry when resetError is called', () => {
@@ -176,31 +181,31 @@ describe('DiscoveryErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     component.captureError(new Error('Test'));
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
 
     component.resetError();
     expect(retried).toBe(true);
   });
 
   it('should emit reportError context on manual report', () => {
-    const fixture = TestBed.createComponent(DiscoveryErrorBoundaryComponent);
-    const component = fixture.componentInstance;
-    fixture.componentRef.setInput('context', {
+    const hostFixture = TestBed.createComponent(TestDiscoveryHostComponent);
+    hostFixture.componentInstance.boundaryContext.set({
       component: 'discovery-partners',
       filterType: 'serious',
     });
-    fixture.detectChanges();
+    hostFixture.detectChanges();
+    const component = hostFixture.debugElement.query(By.directive(DiscoveryErrorBoundaryComponent)).componentInstance;
 
     component.captureError(new Error('Serious filter crash'));
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
 
     let reportedCtx: DiscoveryErrorContext | undefined;
-    component.reportError.subscribe((ctx) => {
+    component.reportError.subscribe((ctx: DiscoveryErrorContext) => {
       reportedCtx = ctx;
     });
 
     component.reportCrash();
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
 
     expect(reportedCtx).toBeDefined();
     expect(reportedCtx?.filterType).toBe('serious');
@@ -212,11 +217,11 @@ describe('DiscoveryErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     component.captureError(new Error('Error 1'));
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
     expect(component.errorCount()).toBe(1);
 
     component.captureError(new Error('Error 2'));
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
     expect(component.errorCount()).toBe(2);
 
     expect(component.errorDetailHint()).toContain('2');
@@ -228,9 +233,9 @@ describe('DiscoveryErrorBoundaryComponent', () => {
     fixture.detectChanges();
 
     component.captureError(new Error('Error 1'));
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
     component.captureError(new Error('Error 2'));
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
 
     component.resetError();
     expect(component.errorCount()).toBe(0);

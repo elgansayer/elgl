@@ -18,18 +18,20 @@ interface ChatMessage {
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   host: {
-    class: 'flex flex-col h-full bg-[#121212] text-white',
+    class: 'flex flex-col h-full bg-surface-500 text-text-primary',
   },
   template: `
     @if (!selectedScenario()) {
       <div class="flex-1 overflow-y-auto p-4 space-y-3">
         <h2 class="text-lg font-semibold mb-3">{{ 'aiConversation.chooseScenario' | t }}</h2>
-        <p class="text-neutral-400 text-sm mb-4">{{ 'aiConversation.chooseScenarioDesc' | t }}</p>
+        <p class="text-text-secondary text-sm mb-4">
+          {{ 'aiConversation.chooseScenarioDesc' | t }}
+        </p>
         @for (scenario of scenarioList(); track scenario.id) {
           <button
             type="button"
             (click)="startScenario(scenario)"
-            class="flex items-center gap-3 w-full text-start bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-white px-4 py-3 rounded-xl transition-colors"
+            class="flex items-center gap-3 w-full text-start bg-surface-200 hover:bg-surface-300 active:bg-surface-400 text-text-primary px-4 py-3 rounded-xl transition-colors"
           >
             <span class="text-xl" aria-hidden="true">{{ scenario.icon }}</span>
             <span>{{ scenario.name }}</span>
@@ -37,16 +39,25 @@ interface ChatMessage {
         }
       </div>
     } @else {
-      <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-surface-200">
         <div class="flex items-center gap-2">
           <button
             type="button"
             (click)="backToScenarios()"
-            class="text-neutral-400 hover:text-white p-1"
+            class="text-text-secondary hover:text-text-primary p-1"
             [attr.aria-label]="'aiConversation.backToScenarios' | t"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                clip-rule="evenodd"
+              />
             </svg>
           </button>
           <span class="text-sm">{{ selectedScenario()!.icon }}</span>
@@ -63,10 +74,10 @@ interface ChatMessage {
           >
             <div
               class="relative max-w-[75%] px-4 py-3 rounded-2xl shadow-sm"
-              [class.bg-green-600]="msg.from === 'user'"
-              [class.bg-neutral-800]="msg.from === 'ai'"
-              [class.text-white]="msg.from === 'user'"
-              [class.text-gray-200]="msg.from === 'ai'"
+              [class.bg-primary]="msg.from === 'user'"
+              [class.bg-surface-300]="msg.from === 'ai'"
+              [class.text-on-fill]="msg.from === 'user'"
+              [class.text-text-primary]="msg.from === 'ai'"
             >
               <span class="whitespace-pre-wrap break-words">{{ msg.text }}</span>
               @if (msg.from === 'user') {
@@ -74,14 +85,14 @@ interface ChatMessage {
                   class="absolute -end-1.5 bottom-2 w-0 h-0
                          border-t-[8px] border-t-transparent
                          border-b-[8px] border-b-transparent
-                         border-s-[10px] border-s-green-600"
+                         border-s-[10px] border-s-primary"
                 ></div>
               } @else {
                 <div
                   class="absolute -start-1.5 bottom-2 w-0 h-0
                          border-t-[8px] border-t-transparent
                          border-b-[8px] border-b-transparent
-                         border-e-[10px] border-e-neutral-800"
+                         border-e-[10px] border-e-surface-300"
                 ></div>
               }
             </div>
@@ -89,7 +100,7 @@ interface ChatMessage {
         }
         @if (isLoading()) {
           <div class="flex justify-start">
-            <div class="bg-neutral-800 text-slate-400 px-3 py-2 rounded-xl animate-pulse">
+            <div class="bg-surface-300 text-text-secondary px-3 py-2 rounded-xl animate-pulse">
               {{ 'aiConversation.typing' | t }}
             </div>
           </div>
@@ -97,10 +108,10 @@ interface ChatMessage {
       </div>
 
       <div class="ps-4 pe-4 pb-4">
-        <div class="flex items-center gap-2 bg-neutral-800 rounded-full ps-4 pe-2 py-2">
+        <div class="flex items-center gap-2 bg-surface-200 rounded-full ps-4 pe-2 py-2">
           <input
             type="text"
-            class="flex-1 bg-transparent text-white placeholder-neutral-400 outline-none ps-0 pe-0"
+            class="flex-1 bg-transparent text-text-primary placeholder-text-secondary outline-none ps-0 pe-0"
             [placeholder]="'aiConversation.typeMessage' | t"
             [ngModel]="inputText()"
             (ngModelChange)="inputText.set($event)"
@@ -111,7 +122,7 @@ interface ChatMessage {
             type="button"
             (click)="send()"
             [disabled]="isLoading() || !inputText().trim()"
-            class="ps-3 pe-3 py-2 rounded-full bg-green-600 text-white font-medium disabled:opacity-40"
+            class="ps-3 pe-3 py-2 rounded-full bg-primary text-on-fill font-medium disabled:opacity-40"
           >
             {{ 'aiConversation.send' | t }}
           </button>
@@ -124,10 +135,9 @@ interface ChatMessage {
 export class AiConversationComponent {
   private aiService = inject(AiConversationService);
 
-  readonly scenarioList = toSignal(
-    from(this.aiService.getScenarios()),
-    { initialValue: EMPTY_SCENARIO_LIST },
-  );
+  readonly scenarioList = toSignal(from(this.aiService.getScenarios()), {
+    initialValue: EMPTY_SCENARIO_LIST,
+  });
 
   readonly selectedScenario = signal<Scenario | null>(null);
   readonly messages = signal<ChatMessage[]>([]);

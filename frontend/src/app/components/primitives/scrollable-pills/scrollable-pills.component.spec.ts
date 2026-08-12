@@ -40,8 +40,8 @@ describe('ScrollablePillsComponent', () => {
     const buttons = fixture.nativeElement.querySelectorAll('button[role="radio"]');
     const group = fixture.nativeElement.querySelector('[role="radiogroup"]');
 
-    expect(buttons[0].classList.contains('bg-purple-600')).toBe(false);
-    expect(buttons[1].classList.contains('bg-purple-600')).toBe(true);
+    expect(buttons[0].classList.contains('bg-primary')).toBe(false);
+    expect(buttons[1].classList.contains('bg-primary')).toBe(true);
     expect(group.classList.contains('px-4')).toBe(true);
   });
 

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PinoLogger } from 'nestjs-pino';
@@ -6,32 +7,32 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { EconomyService } from './economy.service';
 
 type MockBuilder = {
-  upsert: jest.Mock;
-  update: jest.Mock;
-  eq: jest.Mock;
-  select: jest.Mock;
-  single: jest.Mock;
-  then: jest.Mock;
+  upsert: Mock;
+  update: Mock;
+  eq: Mock;
+  select: Mock;
+  single: Mock;
+  then: Mock;
 };
 
 type MockClient = {
-  from: jest.Mock;
+  from: Mock;
 };
 
 function createMockSupabase(): { client: MockClient; builder: MockBuilder } {
   const builder = {
-    upsert: jest.fn().mockResolvedValue({ error: null }),
-    update: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    single: jest.fn().mockResolvedValue({ data: null, error: null }),
-    then: jest.fn((onFulfilled: (value: { error: null }) => void) => {
+    upsert: vi.fn().mockResolvedValue({ error: null }),
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    then: vi.fn((onFulfilled: (value: { error: null }) => void) => {
       onFulfilled({ error: null });
     }),
   };
 
   const client = {
-    from: jest.fn().mockReturnValue(builder),
+    from: vi.fn().mockReturnValue(builder),
   };
 
   return { client, builder };
@@ -41,12 +42,12 @@ describe('AppleNotificationService', () => {
   let service: AppleNotificationService;
   let supabaseClient: MockClient;
   let builder: MockBuilder;
-  let pinoLoggerMock: Record<'info' | 'error' | 'warn' | 'debug', jest.Mock>;
+  let pinoLoggerMock: Record<'info' | 'error' | 'warn' | 'debug', Mock>;
 
-  const configServiceMock = { get: jest.fn() } as unknown as ConfigService;
+  const configServiceMock = { get: vi.fn() } as unknown as ConfigService;
   const httpServiceMock = {} as unknown as HttpService;
   const supabaseServiceMock = {
-    getClient: jest.fn(),
+    getClient: vi.fn(),
   } as unknown as SupabaseService;
   const economyServiceMock = {} as unknown as EconomyService;
 
@@ -55,16 +56,14 @@ describe('AppleNotificationService', () => {
     supabaseClient = mock.client;
     builder = mock.builder;
 
-    (supabaseServiceMock.getClient as jest.Mock).mockReturnValue(
-      supabaseClient,
-    );
-    (configServiceMock.get as jest.Mock).mockReturnValue('test');
+    (supabaseServiceMock.getClient as Mock).mockReturnValue(supabaseClient);
+    (configServiceMock.get as Mock).mockReturnValue('test');
 
     pinoLoggerMock = {
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
     };
 
     service = new AppleNotificationService(
@@ -77,8 +76,8 @@ describe('AppleNotificationService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
-    jest.clearAllMocks();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   const encodePayload = (payload: Record<string, unknown>): string => {

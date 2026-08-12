@@ -12,12 +12,29 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
+import { PresignedMediaUploadDto } from './dto/presigned-media-upload.dto';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AudioCompressionService } from './audio-compression.service';
 import { ImageCompressionService } from './image-compression.service';
 
 @Injectable()
 export class MediaService implements OnModuleInit {
+  private static readonly ALLOWED_IMAGE_CONTENT_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ];
+
+  private static readonly ALLOWED_AUDIO_CONTENT_TYPES = [
+    'audio/mpeg',
+    'audio/mp4',
+    'audio/webm',
+    'audio/ogg',
+    'audio/wav',
+    'audio/aac',
+    'audio/x-m4a',
+  ];
+
   private s3Client!: S3Client;
   private bucket!: string;
   private publicDomain!: string;
@@ -78,15 +95,56 @@ export class MediaService implements OnModuleInit {
     userId: string,
     dto: PresignedUrlDto,
   ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(dto.contentType)) {
-      throw new BadRequestException(
-        'Only JPEG, PNG, and WebP images are allowed',
-      );
-    }
+    this.assertAllowedContentType(
+      dto.contentType,
+      MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
+      'Only JPEG, PNG, and WebP images are allowed',
+    );
 
     const coverDto = { ...dto, folder: 'covers' };
     return this.generatePresignedUrl(userId, coverDto);
+  }
+
+  async generateAvatarPresignedUrl(
+    userId: string,
+    dto: PresignedMediaUploadDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    this.assertAllowedContentType(
+      dto.contentType,
+      MediaService.ALLOWED_IMAGE_CONTENT_TYPES,
+      'Only JPEG, PNG, and WebP images are allowed',
+    );
+    return this.generatePresignedUrl(userId, {
+      filename: dto.filename,
+      contentType: dto.contentType,
+      folder: 'avatars',
+    });
+  }
+
+  async generateAudioIntroPresignedUrl(
+    userId: string,
+    dto: PresignedMediaUploadDto,
+  ): Promise<{ uploadUrl: string; mediaUrl: string; objectKey: string }> {
+    this.assertAllowedContentType(
+      dto.contentType,
+      MediaService.ALLOWED_AUDIO_CONTENT_TYPES,
+      'Only MP3, M4A, WebM, OGG, WAV, and AAC audio files are allowed',
+    );
+    return this.generatePresignedUrl(userId, {
+      filename: dto.filename,
+      contentType: dto.contentType,
+      folder: 'audio-intros',
+    });
+  }
+
+  private assertAllowedContentType(
+    contentType: string,
+    allowedTypes: readonly string[],
+    message: string,
+  ): void {
+    if (!allowedTypes.includes(contentType)) {
+      throw new BadRequestException(message);
+    }
   }
 
   async uploadAndCompressVoiceNote(

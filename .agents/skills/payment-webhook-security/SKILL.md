@@ -40,7 +40,7 @@ Treat every rule below as mandatory whenever you touch `backend/src/monetisation
 - [ ] Remove or internally-gate `POST /monetisation/upgrade` so it can't unilaterally set `is_vip`.
 - [ ] Rework `EconomyService#purchaseCoins` to look up a verified purchase/receipt record for the coin amount instead of trusting `dto.amount`.
 - [ ] Implement Apple/Google webhook handlers with real signature verification (currently missing entirely).
-- [ ] Add Jest tests asserting: forged webhook signatures are rejected (`401`/`400`), and `upgrade`/`purchase-coins` cannot change state without a verified payment record.
+- [ ] Add Vitest tests asserting: forged webhook signatures are rejected (`401`/`400`), and `upgrade`/`purchase-coins` cannot change state without a verified payment record.
 
 ## Testing Guidance
 

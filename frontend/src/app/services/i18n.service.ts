@@ -93,7 +93,8 @@ export class I18nService {
 
     // Notification Settings page
     'notification_settings.title': 'Notification Settings',
-    'notification_settings.subtitle': 'Choose which notifications send push alerts and show app badges.',
+    'notification_settings.subtitle':
+      'Choose which notifications send push alerts and show app badges.',
     'notification_settings.section_title': 'Push Alerts & Badges',
     'notification_settings.section_description':
       'Choose which notifications send push alerts and show app badges.',
@@ -269,7 +270,16 @@ export class I18nService {
     'discovery.learningLanguagesLabel': 'Learning languages',
     'discovery.interestsLabel': 'Interests',
     'discovery.filterPillsLabel': 'Filter options',
-    'join_group_aria': 'Join group {{name}}',
+    join_group_aria: 'Join group {{name}}',
+    'settings.languageSelectAriaLabel': 'Select language',
+    'chatRoom.playVoiceMessage': 'Play voice message',
+    'chatRoom.deliveryStatusSent': 'Sent',
+    'chatRoom.deliveryStatusDelivered': 'Delivered',
+    'chatRoom.deliveryStatusRead': 'Read',
+    'messageContextMenu.ariaLabel': 'Message actions',
+    'messageContextMenu.copy': 'Copy',
+    'messageContextMenu.favourite': 'Favourite',
+    'messageContextMenu.report': 'Report',
     'nav.helloTalk': '💬 HelloTalk',
     'nav.connect': '🌍 Connect',
     'nav.liveRooms': '🎙️ Live Rooms',
@@ -343,7 +353,6 @@ export class I18nService {
     'discovery.partnerListLabel': 'Language partner search results',
     'discovery.partnerCardLabel': 'Language partner: {{name}}',
     'discovery.partnerAvatar': 'Avatar of {{name}}',
-    'discovery.sharedInterests': 'Shared interests: {{interests}}',
     'discovery.playAudioIntro': 'Play introduction',
     'discovery.pauseAudioIntro': 'Pause introduction',
     'discovery.startChat': 'Start chat',
@@ -513,6 +522,7 @@ export class I18nService {
     'moments.pinBtn': 'Pin',
     'moments.unpinBtn': 'Unpin',
     'moments.likeBtn': 'Like',
+    'moments.unlikeBtn': 'Unlike',
     'moments.commentBtn': 'Comment',
     'moments.replyBtn': 'Reply',
     'moments.correctBtn': 'Correct',
@@ -816,6 +826,12 @@ export class I18nService {
     'splitScreen.hostBadge': '(Host)',
     'splitScreen.coHostBadge': '(Co-Host)',
     'splitScreen.inviteCoHostBtn': 'Invite Co-Host',
+    'splitScreen.invitePlaceholder': 'Invite Co-Host',
+    'discoveryErrorBoundary.title': 'Discovery is unavailable',
+    'discoveryErrorBoundary.description': 'Something went wrong while loading discovery.',
+    'discoveryErrorBoundary.retryBtn': 'Retry',
+    'discoveryErrorBoundary.reportBtn': 'Report error',
+    'discoveryErrorBoundary.reportedMessage': 'Error reported',
 
     // Live Chat Overlay Component
     'liveChat.overlayAria': 'Live chat messages',
@@ -1092,17 +1108,19 @@ export class I18nService {
     'readingEngine.topic.culture': 'Culture',
     'readingEngine.topic.travel': 'Travel',
     'readingEngine.topic.technology': 'Technology',
-'readingEngine.offlineBanner': 'You are offline. Showing cached content.',
+    'readingEngine.offlineBanner': 'You are offline. Showing cached content.',
     'readingEngine.offlineCachedInfo': '{{count}} articles available offline',
     'readingEngine.vocabularyOfflineNote':
       'Vocabulary shown from local cache while offline. Some features may be limited.',
     'readingEngine.historyOfflineNote': 'History shown from locally stored reading activity.',
     'readingEngine.historyListAriaLabel': 'Reading history list',
     'readingEngineErrorBoundary.title': 'Reading Engine Interrupted',
-    'readingEngineErrorBoundary.description': 'Something went wrong with the reading engine. Your reading progress has been preserved.',
+    'readingEngineErrorBoundary.description':
+      'Something went wrong with the reading engine. Your reading progress has been preserved.',
     'readingEngineErrorBoundary.retryBtn': 'Try Again',
     'readingEngineErrorBoundary.reportBtn': 'Report Issue',
-    'readingEngineErrorBoundary.reportedMessage': 'Issue reported. Thank you for helping us improve!',
+    'readingEngineErrorBoundary.reportedMessage':
+      'Issue reported. Thank you for helping us improve!',
 
     'vocabDisplay.title': 'Vocabulary from your interests',
     'vocabDisplay.refresh': 'Refresh',
@@ -1202,11 +1220,14 @@ export class I18nService {
     'srsTour.doneBtn': 'Got it!',
     'srsTour.closeBtn': 'Close',
     'srsTour.vocabDashboardTitle': 'Vocabulary Studio',
-    'srsTour.vocabDashboardText': 'This is your flashcards home. Practise vocabulary with spaced repetition. Flip cards, rate your recall, and track progress.',
+    'srsTour.vocabDashboardText':
+      'This is your flashcards home. Practise vocabulary with spaced repetition. Flip cards, rate your recall, and track progress.',
     'srsTour.flashcardDecksTitle': 'Flashcard Decks',
-    'srsTour.flashcardDecksText': 'Organise saved words into custom decks. Create themed collections, colour-code them, and start focused review sessions.',
+    'srsTour.flashcardDecksText':
+      'Organise saved words into custom decks. Create themed collections, colour-code them, and start focused review sessions.',
     'srsTour.flashcardReviewTitle': 'Flashcard Review',
-    'srsTour.flashcardReviewText': 'Review cards using the SRS algorithm. Tap to flip, then rate your recall. Cards are automatically scheduled based on your performance.',
+    'srsTour.flashcardReviewText':
+      'Review cards using the SRS algorithm. Tap to flip, then rate your recall. Cards are automatically scheduled based on your performance.',
 
     'profile.playAudioIntro': 'Play Introduction',
 
@@ -1618,8 +1639,10 @@ export class I18nService {
     'economy.purchaseConfirmError':
       'Could not confirm coin purchase. Please contact support if you were charged.',
     'economy.dailyCheckInError': 'Could not claim daily reward. Please try again later.',
-    'economy.dailyCheckInAlreadyClaimed': 'You have already claimed your daily reward. Come back tomorrow!',
-    'economy.offlinePurchaseUnavailable': 'Purchase unavailable while offline. Please check your connection.',
+    'economy.dailyCheckInAlreadyClaimed':
+      'You have already claimed your daily reward. Come back tomorrow!',
+    'economy.offlinePurchaseUnavailable':
+      'Purchase unavailable while offline. Please check your connection.',
 
     // Coin Economy Dashboard
     'coinEconomy.title': 'Virtual Coin Economy',
@@ -1808,12 +1831,8 @@ export class I18nService {
     'admin.pageIndicator': 'Page {{page}} of {{totalPages}}',
     'admin.userBanned': 'User banned',
     'admin.banFailed': 'Ban failed',
-    'admin.banBtn': 'Ban',
-    'admin.warnBtn': 'Warn',
     'admin.banning': 'Banning...',
     'admin.warning': 'Warning...',
-    'admin.banUserAria': 'Ban {{name}}',
-    'admin.warnUserAria': 'Warn {{name}}',
     'admin.warningIssued': 'Warning issued',
     'admin.warningFailed': 'Warning failed',
     'admin.blocks.title': 'Block Management',
@@ -1867,7 +1886,8 @@ export class I18nService {
     'privacy.hub.title': 'Privacy Settings',
     'privacy.hub.subtitle': 'Manage your privacy, safety, and data preferences.',
     'privacy.hub.profileVisibility': 'Profile Visibility',
-    'privacy.hub.profileVisibilityDesc': 'Control who can see your profile and what information is shown.',
+    'privacy.hub.profileVisibilityDesc':
+      'Control who can see your profile and what information is shown.',
     'privacy.hub.blockedUsers': 'Blocked Users',
     'privacy.hub.blockedUsersDesc': 'View and manage your list of blocked users.',
     'privacy.hub.mutedWords': 'Muted Words',
@@ -2347,14 +2367,6 @@ export class I18nService {
     'gender.female': 'Female',
     'gender.non_binary': 'Non-binary',
     'gender.other': 'Other',
-    // Pill colour CSS class tokens (kept i18n so themes can override without recompiling templates)
-    'pill.colour_primary': 'bg-indigo-500 text-white hover:bg-indigo-600',
-    'pill.colour_success': 'bg-emerald-500 text-white hover:bg-emerald-600',
-    'pill.colour_warning': 'bg-amber-500 text-white hover:bg-amber-600',
-    'pill.colour_danger': 'bg-rose-500 text-white hover:bg-rose-600',
-    'pill.colour_info': 'bg-sky-500 text-white hover:bg-sky-600',
-    'pill.colour_neutral': 'bg-slate-200 text-slate-800 hover:bg-slate-300',
-    'card.base_classes': 'block rounded-2xl bg-surface-200 transition-all',
     'no_network_banner.message': 'No network connection. Please check your internet.',
 
     // Daily login modal

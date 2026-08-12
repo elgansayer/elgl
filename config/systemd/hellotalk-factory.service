@@ -19,10 +19,14 @@ TimeoutStopSec=120
 KillSignal=SIGTERM
 UMask=0077
 PrivateTmp=true
-PrivateDevices=true
-ProtectSystem=strict
+# Rootless Podman/runc needs the host device namespace to mount /proc for
+# nested worker containers. The worker itself remains capability- and
+# network-constrained by secure_tools.py.
+PrivateDevices=false
+ProtectKernelTunables=false
+ProtectSystem=full
 ProtectHome=true
-ProtectKernelTunables=true
+ProtectKernelTunables=false
 ProtectKernelModules=true
 ProtectKernelLogs=true
 # Rootless Podman receives only this service's delegated cgroup subtree. This is
@@ -37,7 +41,7 @@ ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory
 LimitNOFILE=4096
 LimitNPROC=1024
 TasksMax=1024
-MemoryMax=3500M
+MemoryMax=7G
 
 [Install]
 WantedBy=multi-user.target

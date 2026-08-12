@@ -11,34 +11,42 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
-    <section class="min-h-screen flex items-center justify-center p-4 bg-[#121212]">
-      <div class="w-full max-w-md bg-surface text-slate-100 rounded-2xl p-6 shadow-xl">
+    <section class="min-h-screen flex items-center justify-center p-4 bg-surface-500">
+      <div class="w-full max-w-md bg-surface text-text-primary rounded-2xl p-6 shadow-xl">
         <h1 class="text-2xl font-bold mb-6">{{ 'auth.resetPassword.title' | t }}</h1>
         <form [formGroup]="resetForm" (ngSubmit)="onSubmit()" class="space-y-4">
           <div>
-            <label class="block mb-1 text-sm" for="newPassword">{{ 'auth.resetPassword.newPassword' | t }}</label>
+            <label class="block mb-1 text-sm" for="newPassword">{{
+              'auth.resetPassword.newPassword' | t
+            }}</label>
             <input
               id="newPassword"
               type="password"
               formControlName="newPassword"
-              class="w-full p-3 bg-white/10 border border-white/20 rounded-lg"
+              class="w-full p-3 bg-surface-300 border border-surface-100 rounded-lg"
             />
           </div>
           <button
             type="submit"
             [disabled]="resetForm.invalid || submitting()"
-            class="w-full py-3 bg-primary hover:bg-primary-dark rounded-lg text-white font-semibold transition-colors"
+            class="w-full py-3 bg-primary hover:bg-primary-dark rounded-lg text-on-fill font-semibold transition-colors"
           >
             {{ (submitting() ? 'common.pleaseWait' : 'common.submit') | t }}
           </button>
         </form>
         @if (messageKey(); as msg) {
-          <p class="mt-4 text-sm text-center" [class.text-green-400]="!isError()" [class.text-red-400]="isError()">
+          <p
+            class="mt-4 text-sm text-center"
+            [class.text-success]="!isError()"
+            [class.text-danger]="isError()"
+          >
             {{ msg | t }}
           </p>
         }
         <div class="mt-4 text-center">
-          <a routerLink="/home" class="text-sm hover:underline">{{ 'auth.resetPassword.backToHome' | t }}</a>
+          <a routerLink="/home" class="text-sm hover:underline">{{
+            'auth.resetPassword.backToHome' | t
+          }}</a>
         </div>
       </div>
     </section>

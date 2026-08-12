@@ -1,10 +1,6 @@
 import { Component, inject, resource, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import {
-  MilestoneService,
-  Milestone,
-  MilestoneProgress,
-} from '../../services/milestone.service';
+import { MilestoneService, Milestone, MilestoneProgress } from '../../services/milestone.service';
 
 const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 0 };
 
@@ -51,10 +47,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
           />
         </div>
         <div>
-          <label
-            for="milestone-description"
-            class="block text-sm font-medium text-text-secondary"
-          >
+          <label for="milestone-description" class="block text-sm font-medium text-text-secondary">
             {{ 'milestones.descriptionLabel' | t }}
           </label>
           <input
@@ -69,7 +62,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
         <button
           type="submit"
           [disabled]="!newTitle().trim() || creating()"
-          class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+          class="px-4 py-2 bg-primary text-on-fill rounded-lg text-sm font-semibold disabled:opacity-50"
         >
           {{ 'milestones.addBtn' | t }}
         </button>
@@ -78,7 +71,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
       @if (milestonesData.isLoading()) {
         <p class="mt-4 text-text-secondary">{{ 'common.loading' | t }}</p>
       } @else if (milestonesData.error()) {
-        <p class="mt-4 text-red-500">{{ 'common.loadError' | t }}</p>
+        <p class="mt-4 text-danger">{{ 'common.loadError' | t }}</p>
       } @else {
         <div class="mt-4">
           @for (ms of milestones(); track ms.id) {
@@ -97,19 +90,19 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
                     type="button"
                     (click)="complete(ms.id)"
                     [attr.aria-label]="'milestones.completeBtn' | t"
-                    class="px-3 py-1 text-sm bg-primary text-white rounded-md"
+                    class="px-3 py-1 text-sm bg-primary text-on-fill rounded-md"
                   >
                     {{ 'milestones.completeBtn' | t }}
                   </button>
                 } @else {
-                  <span class="text-green-500" aria-hidden="true">&check;</span>
+                  <span class="text-success" aria-hidden="true">&check;</span>
                   <span class="sr-only">{{ 'milestones.completedStatus' | t }}</span>
                 }
                 <button
                   type="button"
                   (click)="remove(ms.id)"
                   [attr.aria-label]="'milestones.removeBtn' | t"
-                  class="px-3 py-1 text-sm text-red-500 hover:text-red-400"
+                  class="px-3 py-1 text-sm text-danger hover:text-danger/80"
                 >
                   {{ 'milestones.removeBtn' | t }}
                 </button>
@@ -150,10 +143,7 @@ export class MilestoneComponent {
 
     this.creating.set(true);
     try {
-      await this.milestoneService.createMilestone(
-        title,
-        this.newDescription().trim() || undefined,
-      );
+      await this.milestoneService.createMilestone(title, this.newDescription().trim() || undefined);
       this.newTitle.set('');
       this.newDescription.set('');
       this.milestonesData.reload();

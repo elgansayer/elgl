@@ -17,7 +17,7 @@ import {
       @if (dataResource.isLoading()) {
         <p class="mt-4 text-text-secondary">{{ 'common.loading' | t }}</p>
       } @else if (dataResource.error()) {
-        <p class="mt-4 text-red-500">{{ 'common.loadError' | t }}</p>
+        <p class="mt-4 text-danger">{{ 'common.loadError' | t }}</p>
       } @else {
         @if (incomingRequests().length) {
           <div class="mt-6">
@@ -25,7 +25,9 @@ import {
               {{ 'studyBuddy.incomingRequestsTitle' | t }}
             </h3>
             @for (req of incomingRequests(); track req.id) {
-              <div class="flex items-center justify-between gap-3 p-2 bg-surface-200 rounded-lg mb-2">
+              <div
+                class="flex items-center justify-between gap-3 p-2 bg-surface-200 rounded-lg mb-2"
+              >
                 <div class="flex items-center gap-3">
                   <img
                     [src]="req.requester?.avatar_url || ''"
@@ -41,14 +43,14 @@ import {
                   <button
                     type="button"
                     (click)="accept(req.id)"
-                    class="px-3 py-1 text-sm bg-primary text-white rounded-md"
+                    class="px-3 py-1 text-sm bg-primary text-on-fill rounded-md"
                   >
                     {{ 'studyBuddy.acceptBtn' | t }}
                   </button>
                   <button
                     type="button"
                     (click)="decline(req.id)"
-                    class="px-3 py-1 text-sm text-red-500 hover:text-red-400"
+                    class="px-3 py-1 text-sm text-danger hover:text-danger/80"
                   >
                     {{ 'studyBuddy.declineBtn' | t }}
                   </button>
@@ -77,7 +79,7 @@ import {
                 type="button"
                 [disabled]="requestedIds().has(user.id)"
                 (click)="requestBuddy(user.id)"
-                class="px-3 py-1 text-sm bg-primary text-white rounded-md disabled:opacity-50"
+                class="px-3 py-1 text-sm bg-primary text-on-fill rounded-md disabled:opacity-50"
               >
                 {{
                   requestedIds().has(user.id)

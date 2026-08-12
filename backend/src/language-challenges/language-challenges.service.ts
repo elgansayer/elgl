@@ -279,17 +279,31 @@ export class LanguageChallengesService {
       .returns<ChallengeParticipant[]>();
 
     const completerIds: string[] = [];
-    for (const p of allParticipants ?? []) {
-      const { data: uActs } = await supabase
-        .from('language_challenge_daily_activity')
-        .select('activity_date')
-        .eq('challenge_id', challengeId)
-        .eq('user_id', p.user_id)
-        .returns<DailyActivity[]>();
 
-      const uDays = new Set(uActs?.map((r) => r.activity_date) ?? []);
-      if (uDays.size >= challenge.duration_days) {
-        completerIds.push(p.user_id);
+    if (allParticipants && allParticipants.length > 0) {
+      const participantIds = allParticipants.map((p) => p.user_id);
+
+      const { data: allActs } = await supabase
+        .from('language_challenge_daily_activity')
+        .select('user_id, activity_date')
+        .eq('challenge_id', challengeId)
+        .in('user_id', participantIds)
+        .returns<(DailyActivity & { user_id: string })[]>();
+
+      const userDays = new Map<string, Set<string>>();
+
+      for (const act of allActs ?? []) {
+        if (!userDays.has(act.user_id)) {
+          userDays.set(act.user_id, new Set());
+        }
+        userDays.get(act.user_id)!.add(act.activity_date);
+      }
+
+      for (const pId of participantIds) {
+        const uDays = userDays.get(pId) ?? new Set();
+        if (uDays.size >= challenge.duration_days) {
+          completerIds.push(pId);
+        }
       }
     }
 

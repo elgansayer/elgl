@@ -4,8 +4,6 @@ import type { UserProfile } from './user.service';
 
 export type Theme = 'light' | 'dark' | 'system';
 
-const DEFAULT_ACCENT = '#4f46e5';
-
 function isTheme(value: unknown): value is Theme {
   return typeof value === 'string' && ['light', 'dark', 'system'].includes(value);
 }
@@ -24,11 +22,13 @@ function hexToRgb(hex: string): [number, number, number] {
 })
 export class ThemeService {
   readonly currentTheme = signal<Theme>('system');
-  readonly primaryAccentColor = signal<string>(DEFAULT_ACCENT);
+  /** null means "no custom preference" - the theme-aware Ember/Tide CSS default applies. */
+  readonly primaryAccentColor = signal<string | null>(null);
   private document = inject(DOCUMENT);
 
   constructor() {
     this.initTheme();
+    this.initAccent();
 
     this.applyTheme(this.currentTheme());
     this.applyAccentColour(this.primaryAccentColor());
@@ -59,6 +59,15 @@ export class ThemeService {
     }
   }
 
+  private initAccent(): void {
+    if (typeof localStorage !== 'undefined') {
+      const savedAccent = localStorage.getItem('app_primary_accent_color');
+      if (savedAccent) {
+        this.primaryAccentColor.set(savedAccent);
+      }
+    }
+  }
+
   setTheme(theme: Theme): void {
     this.currentTheme.set(theme);
     if (typeof localStorage !== 'undefined') {
@@ -74,14 +83,22 @@ export class ThemeService {
   }
 
   loadFromProfile(profile: Partial<Pick<UserProfile, 'primary_accent_color'>> | null): void {
-    const colour = profile?.primary_accent_color ?? DEFAULT_ACCENT;
-    this.setPrimaryAccentColor(colour);
+    if (profile?.primary_accent_color) {
+      this.setPrimaryAccentColor(profile.primary_accent_color);
+    }
   }
 
-  private applyAccentColour(colour: string): void {
+  private applyAccentColour(colour: string | null): void {
     if (typeof document === 'undefined') return;
     const root = this.document?.documentElement;
     if (!root) return;
+
+    if (!colour) {
+      // No custom preference: fall through to the theme-aware Ember/Tide CSS default.
+      root.style.removeProperty('--color-primary-rgb');
+      root.style.removeProperty('--color-primary');
+      return;
+    }
 
     const [r, g, b] = hexToRgb(colour);
     root.style.setProperty('--color-primary-rgb', `${r} ${g} ${b}`);

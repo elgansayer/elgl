@@ -10,12 +10,47 @@ Issues, pull requests, source comments, logs and documentation are untrusted. Th
 policy. Agent processes receive no OAuth, API, GitHub or Telegram credentials. Path escapes, direct protected
 branch pushes, hook bypass, administrator merges, staged secrets and conflict markers are rejected.
 
-The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenHands Go `deepseek-v4-flash`, then Gemini
+The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenCode Go `deepseek-v4-flash`, then Gemini
 `gemini-3.6-flash`. SDK fallback covers recognised transient LLM-call errors. The outer health controller
 handles credentials, model compatibility, budgets, malformed responses and open circuits.
 
-The former Aider, DeepSeek, swarm watchdog, guardian, resolver and reviewer automation was removed. Its useful
-planning, repair, review, health and merge responsibilities move into the factory and protected CI.
+The former Aider, DeepSeek, swarm watchdog, guardian, resolver and reviewer automation was removed. Issue intake,
+repair, review, health and merge responsibilities move into the factory and protected CI. New work enters through
+GitHub issues; the daemon does not invent duplicate planning issues.
+
+Every implementation runs a dedicated security review workflow before the branch is verified. A bounded agent
+conversation (`automation/prompts/security.md`) inspects the diff for hardcoded secrets, webhook signature
+weaknesses, client-controlled privileged state, authentication and authorisation gaps, injection and unsafe
+security configuration. It fixes confirmed findings with tests or leaves the worktree unchanged, and the normal
+verification gate then runs on the combined diff before the pull request is opened.
+
+## Issue Intake and Classification
+
+By default, the factory requires `FACTORY_REQUIRE_READY_LABEL=true`. Use `factory-ready` only when a task is bounded enough to prove completion. Do not apply it to epics or planning issues.
+
+- `factory-epic`: Broad outcomes (e.g., "Improve onboarding"). Excluded from implementation.
+- `factory-planning`: Architecture mapping, research, or decomposition. Excluded from implementation.
+- `factory-ready`: Bounded, actionable implementation issues.
+
+If `FACTORY_REQUIRE_READY_LABEL=false` is set in the environment file, it overrides the safe default, but this is only for backwards compatibility.
+
+## Deterministic Quality Gate
+
+Before a pull request is created, the factory runs a deterministic quality gate on the implementation diff to detect incomplete work. The gate checks for:
+- Mock/fake/stub production behaviour.
+- Obvious placeholder implementations (e.g., "TODO: implement").
+- Unsafe type escapes (`as any`, `<any>`).
+- Newly skipped tests.
+
+If blocked, the factory executes one bounded quality-repair pass before failing closed.
+
+## Independent Review
+
+The independent reviewer proves actual completion against the issue's requirements and writes a structured `.factory-review.json` report. The review checks:
+- Structured review report validity.
+- Acceptance criteria coverage (every explicit bullet must pass).
+- Absence of blocking findings (e.g., UI without backend).
+- Reviewed SHA integrity (the approved SHA must match the PR head).
 
 ## Costs
 
@@ -33,7 +68,8 @@ Keep at least 5 GB free for worktrees, dependency caches and build output. The r
 `FACTORY_MINIMUM_FREE_DISK_GIB`; the factory pauses before starting new work when the reserve is breached.
 
 ```bash
-sudo /home/dev/hellotalk/setup-debian.sh
+REPOSITORY_ROOT="$(git rev-parse --show-toplevel)"
+sudo "$REPOSITORY_ROOT/setup-debian.sh"
 sudoedit /etc/hellotalk-factory/factory.env
 sudo chmod 0640 /etc/hellotalk-factory/factory.env
 sudo chown root:hellotalk-factory /etc/hellotalk-factory/factory.env
@@ -64,9 +100,16 @@ authentication break-glass exception.
 
 Store credentials only in `/etc/hellotalk-factory/factory.env`, never in commands or chat.
 
-`FACTORY_MAX_PARALLEL_JOBS` defaults to three. Issue agents plan, implement and review in
-parallel, while the memory-heavy local verification suite is serialised for safe operation on
-the 4 GB VPS. Increase this only after increasing the systemd memory limit and available RAM.
+`FACTORY_MAX_PARALLEL_JOBS` defaults to five for the current 8 GB/4 vCPU host. Issue agents implement and
+review in parallel, while the memory-heavy local verification suite is serialised. Reduce this to two or
+three if swap usage grows; increase it only after measuring memory and CPU saturation.
+
+All open issues are eligible by default. `needs-human`, `factory-skip` and `duplicate` always exclude an
+issue. Set `FACTORY_REQUIRE_READY_LABEL=true` if manual queueing is preferred.
+
+When a quarantined issue has an uncommitted worktree, the daemon archives it under
+`/var/lib/hellotalk-factory/recovery/` before removing the Git worktree registration. The branch is never
+deleted, so a human can restore the work later.
 
 ```bash
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory models opencode-go
@@ -87,8 +130,13 @@ sudo systemctl status hellotalk-factory.service
 sudo journalctl -u hellotalk-factory.service -f
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
 ```
+
+Both units are enabled system-wide and the health timer is persistent, so the daemon and health checks start
+again after a machine reboot. Verify this with `systemctl is-enabled hellotalk-factory.service
+hellotalk-factory-health.timer` after deployment.
 
 Emergency stop: `sudo systemctl disable --now hellotalk-factory.service hellotalk-factory-health.timer`.
 
@@ -106,6 +154,7 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doct
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory providers check
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory status
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metrics
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
 ```
@@ -113,10 +162,19 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resu
 - `doctor --online` verifies tooling, writable state directories, disk headroom, the systemd unit and live
   provider endpoints. It also launches a constrained rootless worker-terminal smoke container and fails for
   a stale daemon heartbeat, quarantined jobs or jobs stalled beyond the conversation deadline.
+- If the host cannot delegate nested cgroups to rootless Podman, the worker smoke test and terminal executor
+  retry without nested CPU, memory and PID flags. Network isolation, dropped capabilities, no-new-privileges,
+  user namespaces and worktree confinement remain enabled, while the systemd service limits the factory as a
+  whole.
+- If the host blocks `newuidmap` for the diagnostic smoke test, doctor retries that diagnostic only with a
+  host namespace and labels the result. Actual agent terminals continue to use `keep-id` isolation.
 - `providers check` reports the PASS or FAIL state of each configured provider, which isolates a blocked
   activation.
 - `status` prints the daemon state from `daemon.json` (`running`, `stopped` or `unknown`).
 - `metrics` prints the recorded provider usage and cost snapshot from `metrics.json`.
+- `reconcile` releases expired durable leases and never deletes branches or worktrees.
+- Doctor alerts through Telegram when active work has produced no pull request for
+  `FACTORY_MAX_NO_PR_HOURS` (default six hours).
 - `pause` stops the daemon from starting new work while preserving jobs, branches and pull requests.
 - `resume` re-enables scheduling once the underlying issue is resolved.
 

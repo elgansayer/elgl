@@ -45,16 +45,13 @@ def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> 
 
     assert "Delegate=yes" in unit
     assert "ProtectControlGroups=false" in unit
-    assert "MemoryMax=3500M" in unit
+    assert "MemoryMax=7G" in unit
     assert "TasksMax=1024" in unit
 
 
 def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> None:
     unit = (
-        Path(__file__).parents[2]
-        / "config"
-        / "systemd"
-        / "hellotalk-factory-health.service"
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-health.service"
     ).read_text(encoding="utf-8")
 
     assert "NoNewPrivileges=true" not in unit
@@ -80,11 +77,10 @@ def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> N
 
 
 def test_backend_test_heap_fits_the_service_memory_limit() -> None:
-    package = (Path(__file__).parents[2] / "backend" / "package.json").read_text(
-        encoding="utf-8"
-    )
+    package = (Path(__file__).parents[2] / "backend" / "package.json").read_text(encoding="utf-8")
 
     assert "--max-old-space-size=3072" in package
+
 
 def environment(**overrides: str) -> dict[str, str]:
     values = {
@@ -122,7 +118,18 @@ def test_default_repository_is_production_clone() -> None:
     config = FactoryConfig.from_environment(environment())
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
-    assert config.max_parallel_jobs == 3
+    assert config.max_parallel_jobs == 5
+
+
+def test_factory_environment_template_contains_runtime_path_settings() -> None:
+    template = (Path(__file__).parents[2] / "config/systemd/factory.env.example").read_text(
+        encoding="utf-8"
+    )
+
+    assert "FACTORY_PODMAN_PATH=/usr/bin/podman" in template
+    assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
+    assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
+    assert "FACTORY_REQUIRE_READY_LABEL=true" in template
 
 
 def test_parallel_job_limit_must_be_positive() -> None:

@@ -59,7 +59,7 @@ export class AppChipComponent {
           : 'border border-surface-100 text-text-primary bg-surface-200';
         break;
       case 'primary':
-        variantClass = 'bg-primary text-white shadow-sm';
+        variantClass = 'bg-primary text-on-fill shadow-sm';
         break;
     }
 

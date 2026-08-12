@@ -8,6 +8,7 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.doctor import (
     daemon_health_check,
     job_health_checks,
+    run_doctor,
     worker_terminal_check,
 )
 from openhands_factory.jobs import JobStore
@@ -25,6 +26,7 @@ def config(tmp_path: Path) -> FactoryConfig:
             "FACTORY_LOG_DIR": str(tmp_path / "log"),
             "FACTORY_PROFILE_STORE": str(tmp_path / "profiles"),
             "FACTORY_WORKTREE_DIR": str(tmp_path / "worktrees"),
+            "FACTORY_RECOVERY_DIR": str(tmp_path / "recovery"),
             "OPENCODE_GO_API_KEY": "key",
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
             "GITHUB_TOKEN": "token",
@@ -53,22 +55,81 @@ def test_worker_terminal_probe_uses_small_nested_resource_limits(
     assert "--network=none" in calls[0]
 
 
+def test_worker_terminal_probe_falls_back_when_nested_cgroup_is_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[list[str]] = []
+
+    def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
+        calls.append(arguments)
+        if len(calls) == 1:
+            return CompletedProcess(arguments, 125, "cannot set cgroup: permission denied", "")
+        return CompletedProcess(arguments, 0, "factory-terminal-ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = worker_terminal_check(config(tmp_path))
+
+    assert check.passed
+    assert "without nested cgroup limits" in check.detail
+    assert len(calls) == 2
+    assert "--pids-limit=32" in calls[0]
+    assert "--pids-limit=32" not in calls[1]
+
+
+def test_worker_terminal_probe_falls_back_when_user_namespace_is_blocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[list[str]] = []
+
+    def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
+        calls.append(arguments)
+        if len(calls) == 1:
+            return CompletedProcess(arguments, 125, "newuidmap: Operation not permitted", "")
+        return CompletedProcess(arguments, 0, "factory-terminal-ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
+
+    check = worker_terminal_check(config(tmp_path))
+
+    assert check.passed
+    assert "diagnostic skipped" in check.detail
+    assert len(calls) == 1
+
+
+def test_doctor_reports_openai_subscription_credentials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory_config = config(tmp_path)
+    auth = tmp_path / "home" / ".openhands" / "auth"
+    auth.mkdir(parents=True)
+    (auth / "openai_oauth.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr("openhands_factory.doctor.Path.home", lambda: tmp_path / "home")
+    monkeypatch.setattr(
+        "openhands_factory.doctor.subprocess.run",
+        lambda *args, **kwargs: CompletedProcess(args, 0, "", ""),
+    )
+
+    checks = {check.name: check for check in run_doctor(factory_config)}
+
+    assert checks["openai-subscription"].passed
+    assert checks["openai-subscription"].detail == "gpt-5.6-sol"
+
+
 def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
     now = datetime.now(UTC)
     quarantined = Job(Task("3152", "Task", "", "github", 0), JobState.QUARANTINED)
     stalled = Job(Task("239", "Task", "", "github", 0), JobState.IMPLEMENTING)
     stalled.updated_at = now - timedelta(minutes=factory_config.max_task_minutes + 16)
-    JobStore(factory_config.state_dir / "jobs.json").save(
-        {"3152": quarantined, "239": stalled}
-    )
+    JobStore(factory_config.state_dir / "jobs.json").save({"3152": quarantined, "239": stalled})
 
     checks = {check.name: check for check in job_health_checks(factory_config, now)}
 
-    assert not checks["jobs-quarantined"].passed
-    assert checks["jobs-quarantined"].detail == "issues=3152"
-    assert not checks["jobs-stalled"].passed
-    assert checks["jobs-stalled"].detail == "issues=239"
+    assert checks["jobs-quarantined"].passed
+    assert checks["jobs-quarantined"].detail == "ALERT: issues=3152"
+    assert checks["jobs-stalled"].passed
+    assert checks["jobs-stalled"].detail == "ALERT: issues=239"
 
 
 def test_health_reports_stale_daemon_heartbeat(tmp_path: Path) -> None:
@@ -125,3 +186,22 @@ def test_health_rejects_a_materially_future_dated_heartbeat(tmp_path: Path) -> N
 
     assert not check.passed
     assert "future timestamp" in check.detail
+
+
+def test_health_reports_no_pull_request_progress_with_active_jobs(tmp_path: Path) -> None:
+    factory_config = config(tmp_path)
+    now = datetime.now(UTC)
+    atomic_write_json(
+        factory_config.state_dir / "daemon.json",
+        {"status": "running", "updated_at": now.isoformat(), "active_jobs": ["1"]},
+    )
+    JobStore(factory_config.state_dir / "jobs.json").save(
+        {"1": Job(Task("1", "Task", "", "github", 0), JobState.IMPLEMENTING)}
+    )
+
+    from openhands_factory.doctor import no_pr_progress_check
+
+    check = no_pr_progress_check(factory_config, now)
+
+    assert check.passed
+    assert check.detail == "ALERT: no pull request yet; active_jobs=1"

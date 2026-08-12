@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LinkedAccountsController } from './linked-accounts.controller';
 import { LinkedAccountsService } from './linked-accounts.service';
@@ -18,9 +19,9 @@ describe('LinkedAccountsController', () => {
 
   beforeEach(async () => {
     service = {
-      getLinkedAccounts: jest.fn(),
-      linkAccount: jest.fn(),
-      unlinkAccount: jest.fn(),
+      getLinkedAccounts: vi.fn(),
+      linkAccount: vi.fn(),
+      unlinkAccount: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -28,7 +29,7 @@ describe('LinkedAccountsController', () => {
       providers: [{ provide: LinkedAccountsService, useValue: service }],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<LinkedAccountsController>(LinkedAccountsController);

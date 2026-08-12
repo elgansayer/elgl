@@ -7,6 +7,7 @@ This project is a premium HelloTalk-inspired social language exchange platform i
 - [Overview](#overview)
 - [Wiki & Documentation](#wiki--documentation)
 - [Tech Stack](#tech-stack)
+- [Running with Docker Compose](#running-with-docker-compose)
 - [Advanced AI Factory Tooling](#advanced-ai-factory-tooling)
 
 ## Overview
@@ -142,6 +143,38 @@ The logic enforced by NestJS to drive subscriptions across tiers and power the i
 - **Real-Time Messaging:** Centrifugo + Redis
 - **Live Video/Audio Rooms:** LiveKit SFU
 - **Storage:** Cloudflare R2 (S3-compatible)
+
+## Running with Docker Compose
+
+The repository ships Docker Compose orchestration for the full platform. The base
+`docker-compose.yml` runs a production-style stack, `docker-compose.dev.yml` runs a
+development stack with source mounts and live reload, and `docker-compose.prod.yml`
+runs the production stack behind nginx with the Datadog agent.
+
+The base and development files orchestrate the same core services:
+
+- `api`: NestJS REST API (port 3000)
+- `web`: Angular frontend (port 80 in production, 4200 in development)
+- `cache`: Redis 7 (port 6379)
+- `websocket`: Centrifugo v5 (ports 8000 and 8001)
+- `sfu`: LiveKit v2 media server (ports 7880 and 7881)
+- plus `prometheus` and `grafana` for observability
+
+Start the production-style stack:
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+For development with hot reload:
+
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+The NestJS API applies a global `/api` prefix, so the compose health checks poll
+`http://localhost:3000/api/health`.
 
 ## Advanced AI Factory Tooling
 

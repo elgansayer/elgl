@@ -18,6 +18,7 @@ class GitHub:
         self.auto_merged: list[int] = []
         self.closed: list[int] = []
         self.reviewed: list[str] = []
+        self.comments: list[tuple[int, str]] = []
         self.tasks = [Task("42", "Fix build", "Broken build", "github-issue", 0)]
 
     def ensure_factory_labels(self) -> None:
@@ -28,6 +29,9 @@ class GitHub:
 
     def add_issue_labels(self, issue: int, labels: tuple[str, ...]) -> None:
         self.labels.append((issue, labels))
+
+    def add_comment(self, number: int, body: str) -> None:
+        self.comments.append((number, body))
 
     def create_pull_request(self, branch: str, title: str, body: str) -> int:
         return 99
@@ -54,6 +58,29 @@ class GitHub:
 
 class Conversations:
     def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
+        if "review instructions" in prompt:
+            import json
+
+            (workspace / ".factory-review.json").write_text(
+                json.dumps(
+                    {
+                        "approved": True,
+                        "summary": "OK",
+                        "acceptance_criteria": [],
+                        "blocking_findings": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+        return ConversationResult(task.identifier, 1, True)
+
+
+class SecurityReviewConversations:
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+
+    def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
+        self.prompts.append(prompt)
         return ConversationResult(task.identifier, 1, True)
 
 
@@ -67,7 +94,7 @@ def config(tmp_path: Path) -> FactoryConfig:
     repository.mkdir()
     prompt_dir = repository / "automation/prompts"
     prompt_dir.mkdir(parents=True)
-    for name in ("task", "review", "repair"):
+    for name in ("task", "review", "repair", "security"):
         (prompt_dir / f"{name}.md").write_text(f"{name} instructions", encoding="utf-8")
     return FactoryConfig.from_environment(
         {
@@ -76,6 +103,7 @@ def config(tmp_path: Path) -> FactoryConfig:
             "FACTORY_LOG_DIR": str(tmp_path / "log"),
             "FACTORY_PROFILE_STORE": str(tmp_path / "profiles"),
             "FACTORY_WORKTREE_DIR": str(tmp_path / "worktrees"),
+            "FACTORY_RECOVERY_DIR": str(tmp_path / "recovery"),
             "OPENCODE_GO_API_KEY": "key",
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
             "GITHUB_TOKEN": "token",
@@ -107,7 +135,7 @@ def test_refresh_releases_closed_issue_before_pull_request(
     worktree.mkdir(parents=True)
     removed: list[Path] = []
     monkeypatch.setattr(
-        GitWorkflow, "remove_worktree", lambda workflow, path: removed.append(path)
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.tasks = []
 
@@ -130,7 +158,7 @@ def test_refresh_does_not_remove_a_closed_issue_while_its_worker_is_active(
     worktree.mkdir(parents=True)
     removed: list[Path] = []
     monkeypatch.setattr(
-        GitWorkflow, "remove_worktree", lambda workflow, path: removed.append(path)
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
     )
     github.tasks = []
 
@@ -150,13 +178,36 @@ def test_refresh_releases_a_closed_quarantined_issue(
     pipeline.jobs.save({"42": job})
     worktree = pipeline.config.worktree_dir / "issue-42"
     worktree.mkdir(parents=True)
-    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path: None)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     github.tasks = []
 
     refreshed = pipeline.refresh()
 
     assert refreshed["42"].state is JobState.DONE
     assert refreshed["42"].last_error == "Issue closed before pull request creation"
+
+
+def test_refresh_releases_a_closed_issue_during_security_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    job.state = JobState.SECURITY_REVIEW
+    pipeline.jobs.save({"42": job})
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    removed: list[Path] = []
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
+    )
+    github.tasks = []
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["42"].state is JobState.DONE
+    assert refreshed["42"].last_error == "Issue closed before pull request creation"
+    assert removed == [worktree]
 
 
 def test_complete_pipeline_reaches_done_only_after_merge(
@@ -169,9 +220,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
         PullRequestStatus(99, "MERGED", False, "UNKNOWN", "", "head", True, False),
     ]
 
-    def prepare(
-        workflow: GitWorkflow, worktree: Path, task_id: str, title: str
-    ) -> str:
+    def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
         worktree.mkdir(parents=True)
         (worktree / "AGENTS.md").write_text("Instructions", encoding="utf-8")
         return "factory/42-fix-build"
@@ -183,8 +232,11 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: None)
     monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
     monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "head")
-    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path: None)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
     pipeline = FactoryPipeline(
         factory_config,
         github=github,  # type: ignore[arg-type]
@@ -192,13 +244,14 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     )
 
     states = []
-    for _ in range(8):
+    for _ in range(9):
         job = pipeline.run_once()
         assert job is not None
         states.append(job.state)
 
     assert states == [
         JobState.IMPLEMENTING,
+        JobState.SECURITY_REVIEW,
         JobState.VERIFYING,
         JobState.PR_DRAFT,
         JobState.REVIEWING,
@@ -210,6 +263,8 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     assert github.auto_merged == [99]
     assert github.closed == [42]
     assert github.reviewed == ["head"]
+    assert [number for number, _ in github.comments].count(42) == 1
+    assert [number for number, _ in github.comments].count(99) == 3
 
 
 def test_successful_transition_resets_previous_failures(
@@ -278,3 +333,53 @@ def test_conversation_timeout_retries_durably_then_quarantines(tmp_path: Path) -
     assert restored.attempts == 3
     assert restored.state is JobState.QUARANTINED
     assert (42, ("factory-quarantined", "needs-human")) in github.labels
+
+
+def test_security_review_runs_between_implementation_and_verification(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    conversations = SecurityReviewConversations()
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=github,  # type: ignore[arg-type]
+        conversations=conversations,  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    prompt_dir = pipeline.config.repository / "automation/prompts"
+    (prompt_dir / "security.md").write_text(
+        "Security Review Workflow instructions", encoding="utf-8"
+    )
+
+    first = pipeline.run_job("42")
+    second = pipeline.run_job("42")
+
+    assert first is not None and first.state is JobState.SECURITY_REVIEW
+    assert second is not None and second.state is JobState.VERIFYING
+    assert len(conversations.prompts) == 2
+    assert "Security Review Workflow" in conversations.prompts[1]
+
+
+def test_security_review_conversation_failure_retries_then_quarantines(
+    tmp_path: Path,
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=github,  # type: ignore[arg-type]
+        conversations=FailingConversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.SECURITY_REVIEW
+    pipeline.jobs.save({"42": job})
+
+    first = pipeline.run_job("42")
+    second = pipeline.run_job("42")
+    third = pipeline.run_job("42")
+
+    assert first is not None and first.attempts == 1
+    assert second is not None and second.attempts == 2
+    assert third is not None and third.state is JobState.QUARANTINED

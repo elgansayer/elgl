@@ -37,15 +37,15 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
 
         <div
-          class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
+          class="bg-vip/10 p-4 rounded-2xl border border-vip/30 flex items-center justify-between"
         >
           <div class="flex items-center gap-2">
             <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
-              <span class="text-[10px] uppercase font-black text-amber-400 block">{{
+              <span class="text-[10px] uppercase font-black text-vip block">{{
                 'giftModal.balanceLabel' | t
               }}</span>
-              <span class="text-lg font-extrabold text-amber-950" aria-live="polite">{{
+              <span class="text-lg font-extrabold text-vip" aria-live="polite">{{
                 'giftModal.coinsValue' | t: { coins: effectiveBalance() }
               }}</span>
             </div>
@@ -53,7 +53,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
           <button
             (click)="toggleCoinPackages()"
-            class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow"
+            class="px-3.5 py-1.5 bg-vip hover:bg-vip/90 text-on-fill rounded-xl text-xs font-bold shadow"
           >
             {{ (showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
           </button>
@@ -83,8 +83,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   </div>
                   <button
                     (click)="buyCoins(pkg.id)"
-                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
-                    [attr.aria-label]="('giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name })"
+                    class="px-4 py-2 bg-success hover:bg-success/90 text-on-fill font-extrabold rounded-xl text-xs shadow"
+                    [attr.aria-label]="
+                      'giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name }
+                    "
                   >
                     {{ 'giftModal.priceLabel' | t: { ukp: pkg.price_ukp, usd: pkg.price_usd } }}
                   </button>
@@ -99,7 +101,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <span class="text-xs font-bold text-text-primary block">{{
               'giftModal.selectPrompt' | t: { name: receiverName() }
             }}</span>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" role="radiogroup" [attr.aria-label]="'giftModal.giftListAria' | t">
+            <div
+              class="grid grid-cols-2 sm:grid-cols-3 gap-3"
+              role="radiogroup"
+              [attr.aria-label]="'giftModal.giftListAria' | t"
+            >
               @for (gift of economyStore.catalog(); track gift.id) {
                 <button
                   type="button"
@@ -107,7 +113,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   (click)="selectGift(gift)"
                   [disabled]="gift.cost_coins > effectiveBalance()"
                   [attr.aria-checked]="selectedGift()?.id === gift.id"
-                  [attr.aria-label]="('giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins })"
+                  [attr.aria-label]="
+                    'giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins }
+                  "
                   [class]="
                     'w-full p-3 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1.5 ' +
                     (selectedGift()?.id === gift.id
@@ -121,7 +129,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
                   <span class="font-bold text-xs text-text-primary block truncate w-full">{{
                     gift.name
                   }}</span>
-                  <span class="text-[11px] font-extrabold text-amber-600">{{
+                  <span class="text-[11px] font-extrabold text-vip">{{
                     'giftModal.giftCost' | t: { cost: gift.cost_coins }
                   }}</span>
                 </button>
@@ -142,8 +150,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
               <button
                 [disabled]="isSending()"
                 (click)="confirmSend()"
-                class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
-                [attr.aria-label]="('giftModal.sendAria' | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() })"
+                class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-on-fill rounded-xl font-extrabold text-xs shadow transition-all"
+                [attr.aria-label]="
+                  'giftModal.sendAria'
+                    | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() }
+                "
               >
                 {{
                   isSending()
@@ -154,7 +165,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             } @else {
               <button
                 disabled
-                class="px-6 py-2 bg-primary opacity-50 text-white rounded-xl font-extrabold text-xs shadow"
+                class="px-6 py-2 bg-primary opacity-50 text-on-fill rounded-xl font-extrabold text-xs shadow"
               >
                 {{ 'giftModal.selectGift' | t }}
               </button>
@@ -164,11 +175,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class VirtualGiftModalComponent {
   receiverId = input.required<string>();
@@ -219,11 +232,7 @@ export class VirtualGiftModalComponent {
     if (!gift) return;
     this.isSending.set(true);
     try {
-      const ok = await this.economyStore.sendGift(
-        this.receiverId(),
-        gift.id,
-        this.roomId(),
-      );
+      const ok = await this.economyStore.sendGift(this.receiverId(), gift.id, this.roomId());
       if (ok) {
         this.economyStore.triggerGiftAnimation({
           gift,

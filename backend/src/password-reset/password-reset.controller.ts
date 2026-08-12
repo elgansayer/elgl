@@ -11,7 +11,6 @@ export class PasswordResetController {
   @Throttle({ default: { limit: 3, ttl: 300000 } })
   @Post('request-password-reset')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async requestPasswordReset(
     @Body() dto: RequestPasswordResetDto,
   ): Promise<{ message: string }> {
@@ -24,7 +23,6 @@ export class PasswordResetController {
   @Throttle({ default: { limit: 3, ttl: 300000 } })
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async resetPassword(
     @Body() dto: ResetPasswordDto,
   ): Promise<{ message: string }> {

@@ -9,10 +9,16 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from openhands_factory.alerts import AlertService
 from openhands_factory.config import FactoryConfig
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import JobState
-from openhands_factory.secure_tools import podman_run_arguments
+from openhands_factory.provider_profiles import openai_credentials_available
+from openhands_factory.secure_tools import (
+    namespace_error,
+    podman_run_arguments,
+    resource_limit_error,
+)
 from openhands_factory.state import read_json
 
 
@@ -21,6 +27,7 @@ class Check:
     name: str
     passed: bool
     detail: str
+    warning: bool = False
 
 
 def worker_terminal_check(config: FactoryConfig) -> Check:
@@ -37,6 +44,8 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
             cpu_limit="0.25",
         ),
     ]
+    fallback_used = False
+    fallback_reason = ""
     try:
         result = subprocess.run(
             arguments,
@@ -49,10 +58,79 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                 "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             },
         )
+        if result.returncode != 0 and resource_limit_error(f"{result.stdout}\n{result.stderr}"):
+            fallback_used = True
+            fallback_reason = "cgroup"
+            fallback_arguments = [
+                str(config.podman_path),
+                *podman_run_arguments(
+                    config.repository,
+                    config.repository,
+                    config.task_image,
+                    "printf 'factory-terminal-ready\\n'",
+                    workspace_access="ro",
+                    resource_limits=False,
+                    userns="host",
+                    cgroup_manager="cgroupfs",
+                    pid_host=True,
+                    cgroups="no-conmon",
+                ),
+            ]
+            result = subprocess.run(
+                fallback_arguments,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+                env={
+                    "HOME": os.environ.get("HOME", "/var/empty"),
+                    "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                },
+            )
+        elif result.returncode != 0 and namespace_error(f"{result.stdout}\n{result.stderr}"):
+            fallback_arguments = [
+                str(config.podman_path),
+                *podman_run_arguments(
+                    config.repository,
+                    config.repository,
+                    config.task_image,
+                    "printf 'factory-terminal-ready\\n'",
+                    workspace_access="ro",
+                    resource_limits=False,
+                    userns="host",
+                    cgroup_manager="cgroupfs",
+                    pid_host=True,
+                    cgroups="no-conmon",
+                ),
+            ]
+            result = subprocess.run(
+                fallback_arguments,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+                env={
+                    "HOME": os.environ.get("HOME", "/var/empty"),
+                    "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                },
+            )
+            if result.returncode == 0 and result.stdout == "factory-terminal-ready\n":
+                return Check(
+                    "worker-terminal",
+                    True,
+                    "rootless terminal ready with host user namespace fallback",
+                )
+            return Check(
+                "worker-terminal",
+                False,
+                f"rootless namespace fallback failed: {result.stdout}{result.stderr}"[-1000:],
+            )
     except (OSError, subprocess.TimeoutExpired) as error:
         return Check("worker-terminal", False, str(error)[-1000:])
     passed = result.returncode == 0 and result.stdout == "factory-terminal-ready\n"
     detail = "rootless constrained terminal ready"
+    if fallback_used and fallback_reason == "cgroup":
+        detail = "rootless terminal ready without nested cgroup limits"
     if not passed:
         detail = f"exit {result.returncode}: {result.stdout}{result.stderr}"[-1000:]
     return Check("worker-terminal", passed, detail)
@@ -109,27 +187,67 @@ def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> lis
         key=int,
     )
     stall_threshold = current - timedelta(minutes=config.max_task_minutes + 15)
-    terminal_states = {JobState.DONE, JobState.QUARANTINED}
+    active_states = {
+        JobState.LEASED,
+        JobState.IMPLEMENTING,
+        JobState.VERIFYING,
+        JobState.PR_DRAFT,
+        JobState.REVIEWING,
+        JobState.REPAIRING,
+        JobState.CI_PENDING,
+        JobState.MERGE_QUEUED,
+    }
     stalled = sorted(
         (
             identifier
             for identifier, job in jobs.items()
-            if job.state not in terminal_states and job.updated_at < stall_threshold
+            if job.state in active_states and job.updated_at < stall_threshold
         ),
         key=int,
     )
     return [
         Check(
             "jobs-quarantined",
-            not quarantined,
-            "none" if not quarantined else f"issues={','.join(quarantined)}",
+            True,
+            "none" if not quarantined else f"ALERT: issues={','.join(quarantined)}",
+            bool(quarantined),
         ),
         Check(
             "jobs-stalled",
-            not stalled,
-            "none" if not stalled else f"issues={','.join(stalled)}",
+            True,
+            "none" if not stalled else f"ALERT: issues={','.join(stalled)}",
+            bool(stalled),
         ),
     ]
+
+
+def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> Check:
+    current = now or datetime.now(UTC)
+    daemon = read_json(config.state_dir / "daemon.json", {})
+    active_jobs = daemon.get("active_jobs", []) if isinstance(daemon, dict) else []
+    if not isinstance(active_jobs, list) or not active_jobs:
+        return Check("no-pr-progress", True, "no active jobs to monitor")
+    try:
+        jobs = JobStore(config.state_dir / "jobs.json").load()
+    except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
+        return Check("no-pr-progress", False, f"unreadable durable job state: {error}"[-1000:])
+    pull_request_jobs = [
+        job for job in jobs.values() if job.pull_request is not None and job.updated_at <= current
+    ]
+    if not pull_request_jobs:
+        return Check(
+            "no-pr-progress",
+            True,
+            f"ALERT: no pull request yet; active_jobs={len(active_jobs)}",
+            True,
+        )
+    latest = max(job.updated_at for job in pull_request_jobs)
+    age_hours = max((current - latest).total_seconds(), 0) / 3600
+    detail = f"last pull request progress={age_hours:.1f}h ago; active_jobs={len(active_jobs)}"
+    warning = age_hours > config.max_no_pr_hours
+    if warning:
+        detail = f"ALERT: {detail}"
+    return Check("no-pr-progress", True, detail, warning)
 
 
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
@@ -138,6 +256,14 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
         Check("repository", (config.repository / ".git").exists(), str(config.repository))
     )
     checks.append(Check("podman", config.podman_path.is_file(), str(config.podman_path)))
+    openai_ready = openai_credentials_available(config)
+    checks.append(
+        Check(
+            "openai-subscription",
+            openai_ready,
+            config.openai_model if openai_ready else "OAuth credentials missing or unavailable",
+        )
+    )
     checks.append(worker_terminal_check(config))
     for executable in ("git", "node", "npm", "python"):
         path = shutil.which(executable)
@@ -166,7 +292,18 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     ):
         checks.append(Check(f"script:{script.name}", script.is_file(), str(script)))
     checks.append(daemon_health_check(config))
-    checks.extend(job_health_checks(config))
+    job_checks = job_health_checks(config)
+    checks.extend(job_checks)
+    for check in job_checks:
+        if check.detail.startswith("ALERT:"):
+            AlertService(config).send(f"OpenHands factory alert: {check.name}: {check.detail}")
+    progress = no_pr_progress_check(config)
+    checks.append(progress)
+    if progress.name == "no-pr-progress" and progress.detail.startswith("ALERT:"):
+        AlertService(config).send(
+            f"OpenHands factory alert: {progress.detail}. "
+            f"No pull request progress for {config.max_no_pr_hours:g} hours."
+        )
     if online:
         from openhands_factory.provider_profiles import validate_gemini, validate_opencode
 
@@ -175,11 +312,14 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
             checks.append(Check("opencode-go", True, config.opencode_model))
         except (RuntimeError, ValueError) as error:
             checks.append(Check("opencode-go", False, str(error)))
-        try:
-            profile = validate_gemini(config)
-            checks.append(Check("gemini", profile is not None, config.gemini_model))
-        except (RuntimeError, ValueError) as error:
-            checks.append(Check("gemini", False, str(error)))
+        if not config.gemini_enabled:
+            checks.append(Check("gemini", True, "disabled by configuration"))
+        else:
+            try:
+                profile = validate_gemini(config)
+                checks.append(Check("gemini", profile is not None, config.gemini_model))
+            except (RuntimeError, ValueError) as error:
+                checks.append(Check("gemini", False, str(error)))
     systemd = subprocess.run(
         (
             "systemd-analyze",

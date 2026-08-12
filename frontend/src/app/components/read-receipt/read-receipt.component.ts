@@ -19,6 +19,8 @@ import { TranslatePipe } from '../../services/translate.pipe';
       (mouseenter)="showDetail.set(true)"
       (mouseleave)="showDetail.set(false)"
       (click)="toggleDetail()"
+      (keydown.enter)="toggleDetail()"
+      (keydown.space)="toggleDetail()"
     >
       <!-- Sending: grey clock icon -->
       @if (displayStatus() === 'sending') {

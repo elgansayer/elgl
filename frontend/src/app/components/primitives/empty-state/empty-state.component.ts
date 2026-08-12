@@ -6,12 +6,7 @@ import { Component, input, output, computed } from '@angular/core';
     <div [class]="containerClasses()" class="empty-state-fade-in">
       @if (illustration()) {
         <div class="mb-4" aria-hidden="true">
-          <img
-            [src]="illustration()"
-            alt=""
-            class="w-48 h-auto mx-auto"
-            loading="lazy"
-          />
+          <img [src]="illustration()" alt="" class="w-48 h-auto mx-auto" loading="lazy" />
         </div>
       } @else {
         <div class="text-4xl mb-3 empty-state-icon" aria-hidden="true">{{ icon() }}</div>
@@ -26,7 +21,7 @@ import { Component, input, output, computed } from '@angular/core';
         <button
           type="button"
           (click)="onAction()"
-          class="inline-flex items-center justify-center font-bold text-xs bg-primary text-white ps-4 pe-4 pt-2 pb-2 rounded-xl hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          class="inline-flex items-center justify-center font-bold text-xs bg-primary text-on-fill ps-4 pe-4 pt-2 pb-2 rounded-app hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
         >
           {{ actionLabel() }}
         </button>
@@ -56,7 +51,7 @@ export class AppEmptyStateComponent {
 
   readonly containerClasses = computed(() => {
     const base =
-      'flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-surface-300 border border-dashed border-surface-100';
+      'flex flex-col items-center justify-center text-center p-6 rounded-card bg-surface-300 border border-dashed border-surface-100';
     const extra = this.customClass();
     return `${base}${extra ? ' ' + extra : ''}`.trim();
   });

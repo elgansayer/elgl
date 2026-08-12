@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { DiscoveryErrorHandlerService } from './discovery-error-handler.service';
 import { AuthService } from './auth.service';
 import { signal } from '@angular/core';
+import { environment } from '../../environments/environment';
 
 describe('DiscoveryErrorHandlerService', () => {
   let service: DiscoveryErrorHandlerService;
@@ -43,7 +44,7 @@ describe('DiscoveryErrorHandlerService', () => {
       sortMode: 'nearest',
     });
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     expect(req.request.method).toBe('POST');
 
     const body = req.request.body as Record<string, unknown>;
@@ -62,7 +63,7 @@ describe('DiscoveryErrorHandlerService', () => {
     const error = new Error('Search filter crash');
     service.reportDiscoveryCrash(error, { action: 'searchPartners' });
 
-    httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+    httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
 
     expect(service.recentCrashes().length).toBe(1);
     expect(service.recentCrashes()[0].message).toBe('Search filter crash');
@@ -72,7 +73,7 @@ describe('DiscoveryErrorHandlerService', () => {
   it('should trim recentCrashes to MAX_RECENT_CRASHES', () => {
     for (let i = 0; i < 12; i++) {
       service.reportDiscoveryCrash(new Error(`Crash ${i}`));
-      httpTesting.expectOne('/api/analytics/client-error').flush({ status: 'logged' });
+      httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`).flush({ status: 'logged' });
     }
 
     expect(service.recentCrashes().length).toBe(10);
@@ -86,7 +87,7 @@ describe('DiscoveryErrorHandlerService', () => {
 
     expect(result).toBeNull();
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     const body = req.request.body as Record<string, unknown>;
     expect(body['message']).toBe('string error');
     req.flush({ status: 'logged' });
@@ -104,7 +105,7 @@ describe('DiscoveryErrorHandlerService', () => {
 
     service.reportDiscoveryCrash(new Error('Test'));
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     req.flush(null, { status: 500, statusText: 'ISE' });
 
     // Should not throw
@@ -115,7 +116,7 @@ describe('DiscoveryErrorHandlerService', () => {
   it('should include default values when context is empty', () => {
     service.reportDiscoveryCrash(new Error('Bare crash'));
 
-    const req = httpTesting.expectOne('/api/analytics/client-error');
+    const req = httpTesting.expectOne(`${environment.apiUrl}/analytics/client-error`);
     const body = req.request.body as Record<string, unknown>;
     const metadata = body['metadata'] as Record<string, unknown>;
     expect(metadata['category']).toBe('discovery');

@@ -7,10 +7,12 @@ import {
 
 const LOGGER_CONTEXTS = [
   'AdminService',
+  'AudioRoomsController',
   'AppleNotificationController',
   'AppleNotificationService',
   'AppleReceiptValidatorService',
   'CentrifugoService',
+  'CallsController',
   'CloudflareCacheService',
   'CrashReportService',
   'DecksService',
@@ -25,6 +27,7 @@ const LOGGER_CONTEXTS = [
   'GooglePlayNotificationController',
   'GooglePlayNotificationService',
   'ModerationService',
+  'ModerationMetricsAggregator',
   'MonetisationService',
   'NlpRateLimiterGuard',
   'PronunciationService',
@@ -34,9 +37,13 @@ const LOGGER_CONTEXTS = [
   'SrsMetricsAggregator',
   'SrsRateLimiterGuard',
   'StripeService',
+  'StudyBuddiesRateLimiterGuard',
   'SuggestFlashcardsService',
+  'TranscriptEgressService',
   'TranslationService',
   'TrustSafetyMetricsAggregator',
+  'VideoCallsRateLimiterGuard',
+  'VideoClassroomMetricsAggregator',
 ];
 
 const CONTEXT_LOGGER_TOKENS = LOGGER_CONTEXTS.map((context) =>

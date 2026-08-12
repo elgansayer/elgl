@@ -723,7 +723,7 @@ export class ChatPageComponent implements OnInit {
       }));
 
     const userMsg: AiChatMessage = {
-      id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `user-${crypto.randomUUID()}`,
       role: 'user',
       text,
       created_at: new Date(),
@@ -741,7 +741,7 @@ export class ChatPageComponent implements OnInit {
         conversationHistory,
       );
       const aiMsg: AiChatMessage = {
-        id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: `ai-${crypto.randomUUID()}`,
         role: 'ai',
         text: response,
         created_at: new Date(),

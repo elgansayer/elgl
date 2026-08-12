@@ -18,13 +18,13 @@ describe('CorrectorScoreService', () => {
         Promise.resolve({ data: selectData, error: selectError }),
       );
 
-    const mockSelect = jest.fn().mockReturnValue({ eq: mockEq });
+    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
 
     const mockUpsert = jest
       .fn()
       .mockReturnValue(Promise.resolve({ error: upsertError }));
 
-    const mockFrom = jest.fn().mockReturnValue({
+    const mockFrom = vi.fn().mockReturnValue({
       select: mockSelect,
       upsert: mockUpsert,
     });
@@ -42,7 +42,7 @@ describe('CorrectorScoreService', () => {
         CorrectorScoreService,
         {
           provide: SupabaseService,
-          useValue: { getClient: jest.fn().mockReturnValue(mockClient) },
+          useValue: { getClient: vi.fn().mockReturnValue(mockClient) },
         },
       ],
     }).compile();

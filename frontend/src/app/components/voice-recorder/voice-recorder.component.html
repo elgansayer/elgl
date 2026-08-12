@@ -1,16 +1,20 @@
-<div class="app-card p-6 max-w-md mx-auto text-center space-y-4">
+<app-card customClass="p-6 max-w-md mx-auto text-center space-y-4">
   <div class="flex items-center justify-between border-b border-surface-100 pb-3">
     <h3 class="app-section-title flex items-center gap-2">
       <span>{{ 'voiceRecorder.title' | t }}</span>
     </h3>
-    <button aria-label="Cancel recording" (click)="cancel()" class="text-text-muted hover:text-text-secondary font-bold">
+    <button
+      aria-label="Cancel recording"
+      (click)="cancel()"
+      class="text-text-muted hover:text-text-secondary font-bold"
+    >
       ✕
     </button>
   </div>
 
   <div class="flex justify-center gap-1.5">
-    <span class="app-chip">{{ 'voiceRecorder.chipSpeak' | t }}</span>
-    <span class="app-chip">{{ 'voiceRecorder.chipSend' | t }}</span>
+    <app-chip>{{ 'voiceRecorder.chipSpeak' | t }}</app-chip>
+    <app-chip>{{ 'voiceRecorder.chipSend' | t }}</app-chip>
   </div>
 
   <div class="py-6 flex flex-col items-center justify-center">
@@ -46,7 +50,8 @@
       <button
         (click)="startRecording()"
         class="px-6 py-3 rounded-app bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
-       [attr.aria-label]="'voiceRecorder.startBtn' | t">
+        [attr.aria-label]="'voiceRecorder.startBtn' | t"
+      >
         <span>{{ 'voiceRecorder.startBtn' | t }}</span>
       </button>
     }
@@ -55,27 +60,29 @@
       <button
         (click)="stopRecording()"
         class="px-6 py-3 rounded-app bg-surface-800 hover:bg-surface-800 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
-       [attr.aria-label]="'voiceRecorder.stopBtn' | t">
+        [attr.aria-label]="'voiceRecorder.stopBtn' | t"
+      >
         <span>{{ 'voiceRecorder.stopBtn' | t }}</span>
       </button>
     }
 
     @if (audioPreviewUrl() && !isUploading()) {
-      <button
-        (click)="uploadAndSend()"
-        class="app-button-primary px-6 py-3 text-sm flex items-center gap-2"
-       [attr.aria-label]="'voiceRecorder.sendBtn' | t">
+      <app-button-primary
+        (clicked)="uploadAndSend()"
+        customClass="px-6 py-3 flex items-center gap-2"
+      >
         <span>{{ 'voiceRecorder.sendBtn' | t }}</span>
-      </button>
+      </app-button-primary>
     }
 
     @if (isUploading()) {
       <button
         disabled
         class="px-6 py-3 bg-surface-100 text-white rounded-app font-bold text-sm flex items-center gap-2 cursor-not-allowed"
-       [attr.aria-label]="'voiceRecorder.uploadingBtn' | t">
+        [attr.aria-label]="'voiceRecorder.uploadingBtn' | t"
+      >
         <span>{{ 'voiceRecorder.uploadingBtn' | t }}</span>
       </button>
     }
   </div>
-</div>
+</app-card>

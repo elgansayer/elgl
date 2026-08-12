@@ -25,9 +25,16 @@ import { TextToSpeechService } from '../../services/text-to-speech.service';
 import { CulturalTipComponent } from '../cultural-tip/cultural-tip.component';
 import { ReplyPreviewComponent } from '../../chat/threaded-reply/threaded-reply.component';
 import { LinkPreviewCardComponent } from '../link-preview-card/link-preview-card.component';
-import { GroupParticipantDrawerComponent, GroupParticipant } from '../group-participant-drawer/group-participant-drawer.component';
+import {
+  GroupParticipantDrawerComponent,
+  GroupParticipant,
+} from '../group-participant-drawer/group-participant-drawer.component';
 import { ChatSearchComponent } from '../chat-search/chat-search.component';
 import { DraftService } from '../../services/draft.service';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppInputComponent } from '../primitives/input/input.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-chat-room',
@@ -49,6 +56,10 @@ import { DraftService } from '../../services/draft.service';
     LinkPreviewCardComponent,
     GroupParticipantDrawerComponent,
     ChatSearchComponent,
+    AppCardComponent,
+    AppInputComponent,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
   ],
   templateUrl: './chat-room.component.html',
   styleUrls: ['./chat-room.component.scss'],
@@ -170,14 +181,8 @@ export class ChatRoomComponent implements OnDestroy {
 
   private subscription: { unsubscribe: () => void } | null = null;
 
-  private isChatEventPayload(
-    value: unknown,
-  ): value is { message?: ChatMessage; typing?: boolean } {
-    return (
-      !!value &&
-      typeof value === 'object' &&
-      ('message' in value || 'typing' in value)
-    );
+  private isChatEventPayload(value: unknown): value is { message?: ChatMessage; typing?: boolean } {
+    return !!value && typeof value === 'object' && ('message' in value || 'typing' in value);
   }
 
   private async initializeRoom(): Promise<void> {

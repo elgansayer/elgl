@@ -7,6 +7,7 @@ OPERATOR_RECOVERY_COMMANDS = (
     "providers check",
     "status",
     "metrics",
+    "reconcile",
     "pause",
     "resume",
 )
