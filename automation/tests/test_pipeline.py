@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import PullRequestStatus
 from openhands_factory.models import JobState, Task
 from openhands_factory.pipeline import FactoryPipeline
+from openhands_factory.review_report import REVIEW_REPORT_FILENAME
 
 
 class GitHub:
@@ -58,6 +60,18 @@ class GitHub:
 
 class Conversations:
     def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
+        if prompt.startswith("review instructions"):
+            (workspace / REVIEW_REPORT_FILENAME).write_text(
+                json.dumps(
+                    {
+                        "approved": True,
+                        "summary": "Review passed",
+                        "acceptance_criteria": [],
+                        "blocking_findings": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
         return ConversationResult(task.identifier, 1, True)
 
 
@@ -80,7 +94,7 @@ def config(tmp_path: Path) -> FactoryConfig:
     repository.mkdir()
     prompt_dir = repository / "automation/prompts"
     prompt_dir.mkdir(parents=True)
-    for name in ("task", "review", "repair", "security"):
+    for name in ("task", "review", "repair", "security", "quality"):
         (prompt_dir / f"{name}.md").write_text(f"{name} instructions", encoding="utf-8")
     return FactoryConfig.from_environment(
         {
@@ -128,7 +142,10 @@ def test_refresh_releases_closed_issue_before_pull_request(
     refreshed = pipeline.refresh()
 
     assert refreshed["42"].state is JobState.DONE
-    assert refreshed["42"].last_error == "Issue closed before pull request creation"
+    assert (
+        refreshed["42"].last_error
+        == "Issue closed or removed from factory-ready intake before PR creation"
+    )
     assert removed == [worktree]
 
 
@@ -170,7 +187,10 @@ def test_refresh_releases_a_closed_quarantined_issue(
     refreshed = pipeline.refresh()
 
     assert refreshed["42"].state is JobState.DONE
-    assert refreshed["42"].last_error == "Issue closed before pull request creation"
+    assert (
+        refreshed["42"].last_error
+        == "Issue closed or removed from factory-ready intake before PR creation"
+    )
 
 
 def test_refresh_releases_a_closed_issue_during_security_review(
@@ -192,7 +212,10 @@ def test_refresh_releases_a_closed_issue_during_security_review(
     refreshed = pipeline.refresh()
 
     assert refreshed["42"].state is JobState.DONE
-    assert refreshed["42"].last_error == "Issue closed before pull request creation"
+    assert (
+        refreshed["42"].last_error
+        == "Issue closed or removed from factory-ready intake before PR creation"
+    )
     assert removed == [worktree]
 
 
@@ -222,6 +245,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "head")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr("openhands_factory.pipeline.inspect_repository", lambda repository, base: [])
     pipeline = FactoryPipeline(
         factory_config,
         github=github,  # type: ignore[arg-type]
