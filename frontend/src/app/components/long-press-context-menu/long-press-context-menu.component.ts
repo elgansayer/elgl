@@ -1,4 +1,5 @@
-import {Component, input, output, signal} from '@angular/core';import { TranslatePipe } from '../../services/translate.pipe';
+import { Component, input, output, signal } from '@angular/core';
+import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-long-press-context-menu',
@@ -26,20 +27,20 @@ import {Component, input, output, signal} from '@angular/core';import { Translat
         aria-modal="true"
       >
         <div
-          class="bg-surface-800 rounded-2xl shadow-2xl px-6 py-4 space-y-2"
+          class="bg-surface-300 rounded-2xl shadow-2xl px-6 py-4 space-y-2"
           tabindex="0"
           (keydown.enter)="$event.preventDefault(); $event.stopPropagation()"
           (click)="$event.stopPropagation()"
         >
           <button
-            class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
             (click)="doReply()"
           >
             {{ 'context_menu.reply' | t }}
           </button>
 
           <button
-            class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
             (click)="doCopy()"
           >
             {{ 'context_menu.copy' | t }}
@@ -47,35 +48,35 @@ import {Component, input, output, signal} from '@angular/core';import { Translat
 
           @if (messageType() === 'text') {
             <button
-              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
               (click)="doTranslate()"
             >
               {{ 'context_menu.translate' | t }}
             </button>
 
             <button
-              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
               (click)="doTransliterate()"
             >
               {{ 'context_menu.transliterate' | t }}
             </button>
 
             <button
-              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
               (click)="doSpeak()"
             >
               {{ 'context_menu.speak' | t }}
             </button>
 
             <button
-              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
               (click)="doCorrect()"
             >
               {{ 'context_menu.correct' | t }}
             </button>
 
             <button
-              class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
               (click)="doRequestCorrection()"
             >
               {{ 'context_menu.requestCorrection' | t }}
@@ -83,28 +84,28 @@ import {Component, input, output, signal} from '@angular/core';import { Translat
           }
 
           <button
-            class="w-full text-start text-white font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
             (click)="doFavourite()"
           >
             {{ 'context_menu.favourite' | t }}
           </button>
 
           <button
-            class="w-full text-start text-red-400 font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+            class="w-full text-start text-danger font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
             (click)="doReport()"
           >
             {{ 'context_menu.report' | t }}
           </button>
 
           <button
-            class="w-full text-start text-red-400 font-medium py-2 px-3 rounded-lg hover:bg-white/10"
+            class="w-full text-start text-danger font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
             (click)="doBlockToggle()"
           >
             {{ (isBlocked() ? 'context_menu.unblock' : 'context_menu.block') | t }}
           </button>
 
           <button
-            class="w-full text-center text-neutral-400 py-2 px-3 rounded-lg hover:bg-white/10 mt-1"
+            class="w-full text-center text-text-secondary py-2 px-3 rounded-lg hover:bg-surface-200 mt-1"
             (click)="closeMenu()"
           >
             {{ 'context_menu.cancel' | t }}

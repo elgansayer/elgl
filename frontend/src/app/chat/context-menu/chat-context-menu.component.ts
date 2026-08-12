@@ -23,17 +23,19 @@ export interface ChatContextMenuAction {
         (keyup.space)="close()"
       >
         <div
-          class="fixed bottom-0 start-0 end-0 bg-neutral-900 rounded-t-2xl p-4 shadow-2xl"
+          class="fixed bottom-0 start-0 end-0 bg-surface-300 rounded-t-2xl p-4 shadow-2xl"
           tabindex="0"
           (click)="$event.stopPropagation()"
           (keyup.enter)="$event.stopPropagation()"
           (keyup.space)="$event.stopPropagation()"
         >
           <div class="flex items-center justify-between mb-2 ps-1 pe-1">
-            <span class="text-lg font-semibold text-neutral-100">{{ 'chat.contextMenu.title' | t }}</span>
+            <span class="text-lg font-semibold text-text-primary">{{
+              'chat.contextMenu.title' | t
+            }}</span>
             <button
               type="button"
-              class="p-2 rounded-lg text-neutral-400 hover:text-neutral-100 focus:outline-none"
+              class="p-2 rounded-lg text-text-secondary hover:text-text-primary focus:outline-none"
               (click)="close()"
               [attr.aria-label]="'common.close' | t"
             >
@@ -41,13 +43,13 @@ export interface ChatContextMenuAction {
             </button>
           </div>
 
-          <div class="divide-y divide-neutral-700/50">
+          <div class="divide-y divide-surface-100">
             @for (action of actions(); track action.id) {
               <button
                 type="button"
-                class="w-full flex items-center gap-3 px-2 py-3 rounded-xl transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-400"
-                [class.text-red-400]="action.role === 'danger'"
-                [class.text-neutral-200]="action.role !== 'danger'"
+                class="w-full flex items-center gap-3 px-2 py-3 rounded-xl transition-colors hover:bg-surface-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                [class.text-danger]="action.role === 'danger'"
+                [class.text-text-primary]="action.role !== 'danger'"
                 (click)="handleAction(action.id)"
               >
                 <span class="flex-1 text-start">{{ action.labelKey | t }}</span>

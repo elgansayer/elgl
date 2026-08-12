@@ -1415,7 +1415,7 @@ const EMOJI_CATEGORIES = [
           type="text"
           [(ngModel)]="searchQuery"
           placeholder="Search emoji..."
-          class="w-full bg-surface-100 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
+          class="w-full bg-surface-100 text-text-primary text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary placeholder-text-muted"
         />
       </div>
 
@@ -1426,8 +1426,8 @@ const EMOJI_CATEGORIES = [
             (click)="selectedCategory.set(cat.name)"
             [class]="
               selectedCategory() === cat.name
-                ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-blue-600 text-white'
-                : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-gray-600'
+                ? 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-primary text-on-fill'
+                : 'px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors bg-surface-100 text-text-secondary hover:bg-surface-300'
             "
           >
             {{ cat.name }}

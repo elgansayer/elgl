@@ -18,7 +18,7 @@ import { EconomyStore } from '../../services/economy.store';
 
     <!-- Drawer -->
     <div
-      class="fixed bottom-0 start-0 end-0 z-50 flex flex-col bg-white dark:bg-slate-800 rounded-t-2xl shadow-xl transition-transform duration-300 ease-in-out transform"
+      class="fixed bottom-0 start-0 end-0 z-50 flex flex-col bg-surface-200 rounded-t-2xl shadow-xl transition-transform duration-300 ease-in-out transform"
       style="max-height: 50vh;"
     >
       <!-- Handle -->
@@ -29,26 +29,28 @@ import { EconomyStore } from '../../services/economy.store';
         tabindex="0"
         role="button"
       >
-        <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
+        <div class="w-12 h-1.5 bg-surface-100 rounded-full"></div>
       </div>
 
       <!-- Header -->
-      <div
-        class="px-4 pb-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center"
-      >
-        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">{{ 'chatRoom.stickersDrawerTitle' | t }}</h3>
+      <div class="px-4 pb-2 border-b border-surface-100 flex justify-between items-center">
+        <h3 class="text-sm font-semibold text-text-primary">
+          {{ 'chatRoom.stickersDrawerTitle' | t }}
+        </h3>
       </div>
 
       <!-- Sticker Packs (tab-style) -->
       <div class="flex-1 overflow-y-auto p-4">
         <!-- Default free stickers -->
         <div class="mb-4">
-          <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">{{ 'stickerStore.defaultStickers' | t }}</h4>
+          <h4 class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">
+            {{ 'stickerStore.defaultStickers' | t }}
+          </h4>
           <div class="grid grid-cols-4 gap-3">
             @for (sticker of defaultStickers; track sticker.id) {
               <button
                 (click)="onSelectSticker(sticker.url)"
-                class="aspect-square p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center focus:outline-none"
+                class="aspect-square p-2 rounded-xl hover:bg-surface-100 transition-colors flex items-center justify-center focus:outline-none"
                 [title]="sticker.name"
               >
                 <img
@@ -66,16 +68,20 @@ import { EconomyStore } from '../../services/economy.store';
           @for (pack of unlockedPacks(); track pack.id) {
             <div class="mb-4">
               <div class="flex items-center gap-2 mb-2">
-                <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{{ pack.name }}</h4>
+                <h4 class="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                  {{ pack.name }}
+                </h4>
                 @if (pack.is_animated) {
-                  <span class="rounded-full bg-fuchsia-500 px-2 py-0.5 text-xs font-bold text-white">{{ 'stickerStore.animatedBadge' | t }}</span>
+                  <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-on-fill">{{
+                    'stickerStore.animatedBadge' | t
+                  }}</span>
                 }
               </div>
               <div class="grid grid-cols-4 gap-3">
                 @for (sticker of getPackStickers(pack); track sticker.id) {
                   <button
                     (click)="onSelectSticker(sticker.url)"
-                    class="aspect-square p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center focus:outline-none"
+                    class="aspect-square p-2 rounded-xl hover:bg-surface-100 transition-colors flex items-center justify-center focus:outline-none"
                     [title]="sticker.url.split('/').pop() ?? ''"
                   >
                     @if (sticker.is_animated) {
@@ -117,16 +123,31 @@ export class StickerPickerComponent {
     { id: 'default_happy', url: 'assets/stickers/happy.png', name: 'Happy', is_animated: false },
     { id: 'default_laugh', url: 'assets/stickers/laugh.png', name: 'Laugh', is_animated: false },
     { id: 'default_love', url: 'assets/stickers/love.png', name: 'Love', is_animated: false },
-    { id: 'default_thumbs', url: 'assets/stickers/thumbs-up.png', name: 'Thumbs Up', is_animated: false },
+    {
+      id: 'default_thumbs',
+      url: 'assets/stickers/thumbs-up.png',
+      name: 'Thumbs Up',
+      is_animated: false,
+    },
     { id: 'default_sad', url: 'assets/stickers/sad.png', name: 'Sad', is_animated: false },
-    { id: 'default_confused', url: 'assets/stickers/confused.png', name: 'Confused', is_animated: false },
+    {
+      id: 'default_confused',
+      url: 'assets/stickers/confused.png',
+      name: 'Confused',
+      is_animated: false,
+    },
     { id: 'default_sleepy', url: 'assets/stickers/sleepy.png', name: 'Sleepy', is_animated: false },
     { id: 'default_angry', url: 'assets/stickers/angry.png', name: 'Angry', is_animated: false },
   ];
 
   readonly unlockedPacks = computed(() => this.economyStore.unlockedStickerPacks());
 
-  getPackStickers(pack: { id: string; name: string; sticker_urls?: string[]; is_animated?: boolean }): { id: string; url: string; is_animated: boolean }[] {
+  getPackStickers(pack: {
+    id: string;
+    name: string;
+    sticker_urls?: string[];
+    is_animated?: boolean;
+  }): { id: string; url: string; is_animated: boolean }[] {
     if (!pack.sticker_urls || pack.sticker_urls.length === 0) {
       return [];
     }

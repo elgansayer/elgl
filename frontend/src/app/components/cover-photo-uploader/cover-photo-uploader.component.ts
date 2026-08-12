@@ -30,9 +30,13 @@ interface CropBox {
       @if (!imageSource()) {
         <div class="relative w-full h-48 md:h-64 rounded-xl overflow-hidden group">
           @if (currentCoverUrl()) {
-            <img [src]="currentCoverUrl()" alt="{{ 'coverPhoto.previewAlt' | t }}" class="w-full h-full object-cover" />
+            <img
+              [src]="currentCoverUrl()"
+              alt="{{ 'coverPhoto.previewAlt' | t }}"
+              class="w-full h-full object-cover"
+            />
           } @else {
-            <div class="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900"></div>
+            <div class="w-full h-full bg-gradient-to-br from-surface-300 to-surface-500"></div>
           }
           <div
             class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
@@ -140,20 +144,20 @@ interface CropBox {
             @if (!isCropping()) {
               <button
                 (click)="startCropping()"
-                class="px-4 py-2 bg-surface-200 text-white rounded-lg hover:bg-surface-100 transition-colors text-sm"
+                class="px-4 py-2 bg-surface-200 text-text-primary rounded-lg hover:bg-surface-100 transition-colors text-sm"
               >
                 {{ 'common.crop' | t }}
               </button>
             } @else {
               <button
                 (click)="applyCrop()"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm"
+                class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary-dark transition-colors text-sm"
               >
                 {{ 'common.applyCrop' | t }}
               </button>
               <button
                 (click)="cancelCrop()"
-                class="px-4 py-2 bg-surface-100 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm"
+                class="px-4 py-2 bg-surface-100 text-text-primary rounded-lg hover:bg-surface-200 transition-colors text-sm"
               >
                 {{ 'common.cancel' | t }}
               </button>
@@ -161,13 +165,13 @@ interface CropBox {
             <button
               (click)="uploadCropped()"
               [disabled]="isUploading()"
-              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50"
+              class="px-4 py-2 bg-success text-on-fill rounded-lg hover:bg-success/90 transition-colors text-sm disabled:opacity-50"
             >
               {{ isUploading() ? ('common.uploading' | t) : ('common.upload' | t) }}
             </button>
             <button
               (click)="reset()"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors text-sm"
+              class="px-4 py-2 bg-danger text-on-fill rounded-lg hover:bg-danger/90 transition-colors text-sm"
             >
               {{ 'common.cancel' | t }}
             </button>

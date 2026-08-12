@@ -11,16 +11,16 @@
     </div>
     <div class="flex items-center gap-2 self-start sm:self-auto">
       @if (isVip()) {
-        <app-chip customClass="bg-amber-500/20 text-amber-400 font-bold text-2xs sm:text-xs">{{
+        <app-chip customClass="bg-vip/20 text-vip font-bold text-2xs sm:text-xs">{{
           'common.vipStdLabel' | t
         }}</app-chip>
       }
       <button
         (click)="togglePlay()"
-        [class.bg-emerald-600]="!isPlaying()"
-        [class.text-white]="!isPlaying()"
-        [class.bg-amber-600]="isPlaying()"
-        [class.text-white]="isPlaying()"
+        [class.bg-success]="!isPlaying()"
+        [class.text-on-fill]="!isPlaying()"
+        [class.bg-warning]="isPlaying()"
+        [class.text-on-fill]="isPlaying()"
         class="rounded-app ps-3 pe-3 sm:ps-4 sm:pe-4 pt-1.5 pb-1.5 sm:pt-2 sm:pb-2 text-2xs sm:text-xs font-black transition-colors shadow-sm flex items-center gap-1 sm:gap-1.5 min-h-[40px] sm:min-h-0"
         [attr.aria-label]="
           (isPlaying() ? 'audioSync.pauseImmersionAudio' : 'audioSync.playAudioLesson') | t
@@ -55,9 +55,9 @@
               : null
         "
         [class.ring-2]="isTokenActive(token)"
-        [class.ring-emerald-500]="isTokenActive(token)"
-        [class.bg-emerald-200]="isTokenActive(token)"
-        [class.text-emerald-950]="isTokenActive(token)"
+        [class.ring-success]="isTokenActive(token)"
+        [class.bg-success/20]="isTokenActive(token)"
+        [class.text-success]="isTokenActive(token)"
         [class.font-black]="isTokenActive(token)"
         [class.scale-105]="isTokenActive(token)"
         [class]="getWordClass(token)"

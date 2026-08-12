@@ -9,9 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div
-        class="max-w-md w-full rounded-2xl bg-surface-dark p-6 shadow-xl"
-      >
+      <div class="max-w-md w-full rounded-2xl bg-surface-200 p-6 shadow-xl">
         <h2 class="mb-4 text-start text-lg font-semibold">
           {{ 'events.createEvent' | t }}
         </h2>
@@ -27,7 +25,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               formControlName="title"
               type="text"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
               [placeholder]="'events.titlePlaceholder' | t"
             />
           </div>
@@ -42,7 +40,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               formControlName="date_time"
               type="datetime-local"
               required
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
             />
           </div>
 
@@ -54,7 +52,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <select
               id="langPairInput"
               formControlName="language_pair"
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
             >
               <option value="">
                 {{ 'events.noLanguagePair' | t }}
@@ -80,7 +78,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <select
               id="categoryInput"
               formControlName="category"
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
             >
               <option value="audio_room">
                 {{ 'events.categoryAudioRoom' | t }}
@@ -106,7 +104,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               id="locationInput"
               formControlName="location"
               type="text"
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
               [placeholder]="'events.wherePlaceholder' | t"
             />
           </div>
@@ -122,7 +120,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               type="number"
               min="1"
               max="100"
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
               [placeholder]="'events.maxParticipantsPlaceholder' | t"
             />
           </div>
@@ -136,7 +134,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               id="descriptionInput"
               formControlName="description"
               rows="3"
-              class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
               [placeholder]="'events.descriptionPlaceholder' | t"
             ></textarea>
           </div>
@@ -146,14 +144,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <button
               type="button"
               (click)="dismiss.emit()"
-              class="rounded-lg bg-gray-700 px-4 py-2 text-sm"
+              class="rounded-lg bg-surface-400 text-text-primary px-4 py-2 text-sm"
             >
               {{ 'events.cancel' | t }}
             </button>
             <button
               type="submit"
               [disabled]="eventForm.invalid"
-              class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              class="rounded-lg bg-accent text-on-fill px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
               {{ 'events.create' | t }}
             </button>

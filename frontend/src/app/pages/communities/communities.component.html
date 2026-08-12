@@ -14,7 +14,9 @@
       />
     </div>
     <div class="mt-2">
-      <label for="communityDescription" class="block ps-1">{{ 'communities.descriptionLabel' | t }}</label>
+      <label for="communityDescription" class="block ps-1">{{
+        'communities.descriptionLabel' | t
+      }}</label>
       <textarea
         id="communityDescription"
         [ngModel]="communityDescription()"
@@ -22,7 +24,11 @@
         class="w-full p-2 border rounded"
       ></textarea>
     </div>
-    <button type="submit" class="mt-3 px-4 py-2 bg-indigo-600 text-white rounded" [attr.aria-label]="'communities.create' | t">
+    <button
+      type="submit"
+      class="mt-3 px-4 py-2 bg-primary text-on-fill rounded"
+      [attr.aria-label]="'communities.create' | t"
+    >
       {{ 'communities.create' | t }}
     </button>
   </form>
@@ -31,7 +37,7 @@
     @for (community of communities() ?? []; track community.id) {
       <div
         class="p-4 border rounded cursor-pointer"
-        [class.border-indigo-500]="selectedCommunityId() === community.id"
+        [class.border-primary]="selectedCommunityId() === community.id"
         (click)="selectCommunity(community.id)"
       >
         <h2 class="font-semibold">{{ community.name }}</h2>

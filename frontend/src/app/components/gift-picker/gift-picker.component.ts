@@ -40,15 +40,15 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
 
         <!-- Coin balance bar -->
         <div
-          class="bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 flex items-center justify-between"
+          class="bg-vip/10 p-4 rounded-2xl border border-vip/30 flex items-center justify-between"
         >
           <div class="flex items-center gap-2">
             <span class="text-2xl" aria-hidden="true">💰</span>
             <div>
-              <span class="text-[10px] uppercase font-black text-amber-400 block">{{
+              <span class="text-[10px] uppercase font-black text-vip block">{{
                 'giftModal.balanceLabel' | t
               }}</span>
-              <span class="text-lg font-extrabold text-amber-950" aria-live="polite">{{
+              <span class="text-lg font-extrabold text-vip" aria-live="polite">{{
                 'giftModal.coinsValue' | t: { coins: effectiveBalance() }
               }}</span>
             </div>
@@ -56,7 +56,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
 
           <button
             (click)="toggleCoinPackages()"
-            class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow"
+            class="px-3.5 py-1.5 bg-vip hover:bg-vip/90 text-on-fill rounded-xl text-xs font-bold shadow"
           >
             {{ (showCoinPackages() ? 'giftModal.backToGiftsBtn' : 'giftModal.buyCoinsBtn') | t }}
           </button>
@@ -86,8 +86,10 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                   </div>
                   <button
                     (click)="buyCoins(pkg.id)"
-                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow"
-                    [attr.aria-label]="('giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name })"
+                    class="px-4 py-2 bg-success hover:bg-success/90 text-on-fill font-extrabold rounded-xl text-xs shadow"
+                    [attr.aria-label]="
+                      'giftModal.purchaseAria' | t: { coins: pkg.coins, name: pkg.name }
+                    "
                   >
                     {{ 'giftModal.priceLabel' | t: { ukp: pkg.price_ukp, usd: pkg.price_usd } }}
                   </button>
@@ -105,7 +107,9 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
               }}</span>
             }
             @if (selectedGift(); as gift) {
-              <div class="flex items-center gap-3 p-3 bg-primary/5 rounded-2xl border border-primary/20">
+              <div
+                class="flex items-center gap-3 p-3 bg-primary/5 rounded-2xl border border-primary/20"
+              >
                 <span class="text-3xl" aria-hidden="true">{{ gift.icon }}</span>
                 <div class="flex-1">
                   <span class="font-bold text-sm text-text-primary block">{{ gift.name }}</span>
@@ -116,14 +120,18 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                 <button
                   (click)="selectedGift.set(null); deductedAmount.set(0)"
                   class="text-text-muted hover:text-text-secondary text-sm"
-                  [attr.aria-label]="('giftModal.deselectAria' | t: { name: gift.name })"
+                  [attr.aria-label]="'giftModal.deselectAria' | t: { name: gift.name }"
                 >
                   ✕
                 </button>
               </div>
             }
             @if (!selectedGift()) {
-              <div class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto" role="radiogroup" [attr.aria-label]="'giftModal.giftListAria' | t">
+              <div
+                class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto"
+                role="radiogroup"
+                [attr.aria-label]="'giftModal.giftListAria' | t"
+              >
                 @for (gift of economyStore.catalog(); track gift.id) {
                   <button
                     type="button"
@@ -131,7 +139,9 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                     (click)="selectGift(gift)"
                     [disabled]="gift.cost_coins > effectiveBalance()"
                     [attr.aria-checked]="selectedGift()?.id === gift.id"
-                    [attr.aria-label]="('giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins })"
+                    [attr.aria-label]="
+                      'giftModal.giftAria' | t: { name: gift.name, cost: gift.cost_coins }
+                    "
                     [class]="
                       'w-full p-2.5 rounded-2xl border-2 transition-all flex flex-col items-center text-center space-y-1 ' +
                       (gift.cost_coins > effectiveBalance()
@@ -143,7 +153,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
                     <span class="font-bold text-[10px] text-text-primary block truncate w-full">{{
                       gift.name
                     }}</span>
-                    <span class="text-[10px] font-extrabold text-amber-600">{{
+                    <span class="text-[10px] font-extrabold text-vip">{{
                       'giftModal.giftCost' | t: { cost: gift.cost_coins }
                     }}</span>
                   </button>
@@ -165,8 +175,11 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
               <button
                 [disabled]="isSending()"
                 (click)="confirmSend()"
-                class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-xl font-extrabold text-xs shadow transition-all"
-                [attr.aria-label]="('giftModal.sendAria' | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() })"
+                class="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-on-fill rounded-xl font-extrabold text-xs shadow transition-all"
+                [attr.aria-label]="
+                  'giftModal.sendAria'
+                    | t: { name: gift.name, cost: gift.cost_coins, receiver: receiverName() }
+                "
               >
                 {{
                   isSending()
@@ -177,7 +190,7 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
             } @else {
               <button
                 disabled
-                class="px-6 py-2 bg-primary opacity-50 text-white rounded-xl font-extrabold text-xs shadow"
+                class="px-6 py-2 bg-primary opacity-50 text-on-fill rounded-xl font-extrabold text-xs shadow"
               >
                 {{ 'giftModal.selectGift' | t }}
               </button>
@@ -187,11 +200,13 @@ import { EconomyStore, VirtualGift } from '../../services/economy.store';
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class GiftPickerComponent {
   receiverId = input.required<string>();
@@ -209,7 +224,9 @@ export class GiftPickerComponent {
   readonly titleId = 'gift-picker-title-' + Math.random().toString(36).substring(2, 9);
   readonly subtitleId = 'gift-picker-subtitle-' + Math.random().toString(36).substring(2, 9);
 
-  readonly effectiveBalance = computed(() => this.economyStore.coinsBalance() - this.deductedAmount());
+  readonly effectiveBalance = computed(
+    () => this.economyStore.coinsBalance() - this.deductedAmount(),
+  );
 
   toggleCoinPackages(): void {
     this.showCoinPackages.update((v) => !v);
@@ -233,11 +250,7 @@ export class GiftPickerComponent {
     if (!gift) return;
     this.isSending.set(true);
     try {
-      const ok = await this.economyStore.sendGift(
-        this.receiverId(),
-        gift.id,
-        this.roomId(),
-      );
+      const ok = await this.economyStore.sendGift(this.receiverId(), gift.id, this.roomId());
       if (ok) {
         this.economyStore.triggerGiftAnimation({
           gift,
