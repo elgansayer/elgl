@@ -79,6 +79,12 @@ grep -rlE "class=\"[^\"]*\bapp-(card|input|textarea|button-primary|button-second
 
 Baseline count at audit time: ~60+ files (see exploration report; exact rebaseline recommended at Phase 3 kickoff since concurrent agent commits shift this).
 
+**Rebaselined 2026-08-12 (post Phase-4 completion): down to 30 files.** All the Phase 4 feature-area
+retint passes incidentally migrated a lot of the raw `.app-*` class usage onto the real primitives
+as they touched each template. Remaining 30 are a genuine Phase 3 backlog, not touched by any Phase
+4 pass. Per explicit user direction this session ("I have no obligation to any UI framework or
+styles or system") this is being finished as a real cleanup, not treated as optional debt.
+
 ## 5. Full feature inventory (for Claude Design full-coverage sync, Phase 4)
 
 **Routes** (`frontend/src/app/app.routes.ts`, ~97 entries) grouped by feature area - sync order in Phase 4 should follow this grouping:
@@ -97,6 +103,17 @@ Baseline count at audit time: ~60+ files (see exploration report; exact rebaseli
 - **Misc**: stats, ai-conversation, quests, lessons
 
 **Component folders**: 165 under `components/`, 25 under `pages/` (full alphabetical list captured in the exploration transcript this audit is based on - not duplicated here to keep this doc scannable; re-run `find frontend/src/app/components -maxdepth 1 -mindepth 1 -type d` / same for `pages` if a fresh list is needed).
+
+**Coverage audit, 2026-08-12:** checked the live "HelloTalk Design System" Claude Design project's
+`screens/` folder (10 files: shell, profile, discovery, chat, calls, settings, monetisation,
+moderation, home, onboarding) against the feature-area grouping above. **Two entire groups were
+never retinted or synced: Vocabulary/study and Social** - both still had raw hardcoded Tailwind
+stock colours in their real components, confirmed via the standard grep. **A third gap found in
+Legal/support/Misc**: `ai-conversation`, `help-centre`, `my-stats`, `gdpr`, `lessons`, `help-about`
+also still hardcoded. Dispatched to background agents this session to retint + build
+`screens/vocabulary.html`, `screens/social.html`, `screens/more.html` - check their outcome before
+considering full-coverage sync complete. Once those land and are pushed to Claude Design, all
+grouped feature areas in this doc will have at least one synced representative screen.
 
 **Sync coverage target**: every route above gets at least one synced screen preview; every modal in §3 gets one; every primitive in §2 gets one. Track completion as each Phase 4 feature-folder PR merges - update this doc's checkboxes (add `- [ ]`/`- [x]` per group above) as sync work actually happens, rather than leaving this as a static snapshot.
 
