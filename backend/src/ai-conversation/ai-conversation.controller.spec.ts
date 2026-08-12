@@ -91,6 +91,7 @@ describe('AiConversationController', () => {
       });
 
       expect(service.generateReply).toHaveBeenCalledWith(
+        'user-123',
         'I would like a coffee please.',
         'ordering-coffee',
         history,
@@ -107,6 +108,7 @@ describe('AiConversationController', () => {
       });
 
       expect(service.generateReply).toHaveBeenCalledWith(
+        'user-123',
         'help',
         undefined,
         undefined,
