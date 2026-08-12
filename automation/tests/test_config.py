@@ -86,6 +86,7 @@ def test_backend_test_heap_fits_the_service_memory_limit() -> None:
 
     assert "--max-old-space-size=3072" in package
 
+
 def environment(**overrides: str) -> dict[str, str]:
     values = {
         "OPENCODE_GO_API_KEY": "not-a-real-key",
@@ -123,6 +124,7 @@ def test_default_repository_is_production_clone() -> None:
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
     assert config.max_parallel_jobs == 5
+    assert config.require_ready_label is True
 
 
 def test_factory_environment_template_contains_runtime_path_settings() -> None:
@@ -133,7 +135,7 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_PODMAN_PATH=/usr/bin/podman" in template
     assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
     assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
-    assert "FACTORY_REQUIRE_READY_LABEL=false" in template
+    assert "FACTORY_REQUIRE_READY_LABEL=true" in template
 
 
 def test_parallel_job_limit_must_be_positive() -> None:
