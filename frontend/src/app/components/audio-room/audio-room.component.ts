@@ -13,6 +13,10 @@ import { RoomChatComponent } from '../room-chat/room-chat.component';
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { VideoRoomComponent } from '../video-room/video-room.component';
 import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { VirtualGiftModalComponent } from '../virtual-gift-modal/virtual-gift-modal.component';
 import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-modal.component';
 import {
@@ -45,6 +49,10 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     PrivatePartyCreateModalComponent,
     ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
+    AppCardComponent,
+    AppChipComponent,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
     QuickPollFormComponent,
     QuickPollDisplayComponent,
     LiveChatOverlayComponent,
