@@ -12,3 +12,8 @@
 **Vulnerability:** Found a hardcoded fallback string for `LIVEKIT_SECRET` and `LIVEKIT_API_KEY` in `backend/src/audio-rooms/audio-rooms.module.ts`.
 **Learning:** Default fallback configs in module files can easily expose hardcoded secrets. Missing secrets should fail fast instead of providing a fallback value that an attacker might try to use.
 **Prevention:** Avoid providing hardcoded string fallbacks for secrets. Throw an error on initialization if a required API key or secret is missing.
+## 2026-08-12 - Strict Environment Secret Validation
+
+**Vulnerability:** A hardcoded dev fallback string (`device-transfer-secret-dev-only`) was used in `TransferService` for `TRANSFER_SECRET` if the environment variable was omitted, risking weak signatures in production if misconfigured.
+**Learning:** Hardcoded default secrets represent a critical vulnerability in production as they allow silent fallback to insecure states.
+**Prevention:** Always validate that environment secrets are explicitly configured on initialization (fail-fast) and actively reject any known dev/test default strings.
