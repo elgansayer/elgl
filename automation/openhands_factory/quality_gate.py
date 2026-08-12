@@ -23,7 +23,7 @@ _PRODUCTION_PREFIXES = (
     "backend/src/",
     "automation/openhands_factory/",
 )
-_SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".mjs", ".cjs", ".py"}
+_SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".html"}
 _PRODUCTION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     (
         "production-mock",
@@ -53,12 +53,15 @@ def _is_test_path(path: Path) -> bool:
     lowered = path.as_posix().lower()
     name = path.name.lower()
     return (
-        "/tests/" in f"/{lowered}"
+        lowered.startswith("e2e/")
+        or "/e2e/" in f"/{lowered}"
+        or "/tests/" in f"/{lowered}"
         or "/test/" in f"/{lowered}"
         or "/mocks/" in f"/{lowered}"
         or "/fixtures/" in f"/{lowered}"
         or ".spec." in name
         or ".test." in name
+        or ".cy." in name
         or name.startswith("test_")
         or name.endswith("_test.py")
         or "mock-data" in name
