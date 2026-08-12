@@ -6,6 +6,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from openhands_factory.exceptions import RepositorySafetyError
+from openhands_factory.repository_guard import run_process
+
 
 @dataclass(frozen=True)
 class QualityFinding:
@@ -124,6 +127,15 @@ def inspect_diff(diff_text: str) -> list[QualityFinding]:
                 )
             )
     return findings
+
+
+def inspect_repository(repository: Path, base_branch: str) -> list[QualityFinding]:
+    result = run_process(
+        ("git", "diff", "--unified=0", f"origin/{base_branch}", "--"), repository
+    )
+    if result.returncode != 0:
+        raise RepositorySafetyError(f"Could not inspect quality-gate diff: {result.stderr}")
+    return inspect_diff(result.stdout)
 
 
 def format_findings(findings: list[QualityFinding], *, limit: int = 20) -> str:
