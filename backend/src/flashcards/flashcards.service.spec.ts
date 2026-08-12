@@ -336,6 +336,65 @@ describe('FlashcardsService', () => {
       expect(result.interval_days).toBe(1);
     });
 
+    it('should schedule a failed card (quality 2) for review the next day', async () => {
+      const currentCard = {
+        easiness_factor: 2.5,
+        repetitions: 2,
+        interval_days: 6,
+      };
+      const updatedCard = {
+        id: 'card-1',
+        srs_level: 0,
+        easiness_factor: 2.18,
+        repetitions: 0,
+        interval_days: 1,
+        next_review_at: '2026-07-23T12:00:00.000Z',
+      };
+
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: currentCard, error: null })
+        .mockResolvedValueOnce({ data: updatedCard, error: null });
+
+      const result = await service.updateSrsLevel('user-1', 'card-1', {
+        quality: 2,
+      });
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith({
+        srs_level: 0,
+        easiness_factor: 2.18,
+        repetitions: 0,
+        interval_days: 1,
+        next_review_at: '2026-07-23T12:00:00.000Z',
+      });
+      expect(result).toEqual(updatedCard);
+    });
+
+    it('should return degraded level 0 card when a failed review cannot be persisted', async () => {
+      const currentCard = {
+        easiness_factor: 2.5,
+        repetitions: 2,
+        interval_days: 6,
+      };
+      mockQueryBuilder.single
+        .mockResolvedValueOnce({ data: currentCard, error: null })
+        .mockResolvedValueOnce({
+          data: null,
+          error: { message: 'network error' },
+        });
+
+      const result = await service.updateSrsLevel('user-1', 'card-1', {
+        quality: 2,
+      });
+
+      expect(result.degraded).toBe(true);
+      expect(result.srs_level).toBe(0);
+      expect(result.repetitions).toBe(0);
+      expect(result.interval_days).toBe(1);
+      expect(result.easiness_factor).toBe(2.18);
+      expect(result.next_review_at).toBe('2026-07-23T12:00:00.000Z');
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
     it('should clamp minimum easiness_factor to 1.3', async () => {
       const currentCard = {
         easiness_factor: 1.35,
