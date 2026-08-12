@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { TranslatePipe } from '../services/translate.pipe';
+import { AppCardComponent } from '../components/primitives/card/card.component';
 
 interface FullAchievementDto {
   code: string;
@@ -15,9 +16,9 @@ interface FullAchievementDto {
 
 @Component({
   selector: 'app-achievements',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppCardComponent],
   template: `
-    <section class="app-card app-padded" aria-labelledby="achievements-heading">
+    <app-card customClass="app-padded" aria-labelledby="achievements-heading">
       <h2 id="achievements-heading" class="app-section-title">{{ 'achievements.title' | t }}</h2>
 
       <div class="mt-3" role="status" aria-live="polite">
@@ -65,7 +66,10 @@ interface FullAchievementDto {
                       ></div>
                     </div>
                     <span class="mt-1 block text-xs text-text-secondary">
-                      {{ 'achievements.progressLabel' | t: { current: ach.current, required: ach.required } }}
+                      {{
+                        'achievements.progressLabel'
+                          | t: { current: ach.current, required: ach.required }
+                      }}
                     </span>
                   </div>
                 </div>
@@ -74,7 +78,7 @@ interface FullAchievementDto {
           </ul>
         }
       </div>
-    </section>
+    </app-card>
   `,
 })
 export class AchievementsComponent {

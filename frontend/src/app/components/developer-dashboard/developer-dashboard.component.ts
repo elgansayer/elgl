@@ -7,10 +7,24 @@ import { DiscoveryService, SearchFilterParams } from '../../services/discovery.s
 import { CentrifugeService } from '../../services/centrifuge.service';
 import { UserProfile } from '../../services/user.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppInputComponent } from '../primitives/input/input.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-developer-dashboard',
-  imports: [FormsModule, TranslatePipe, UpperCasePipe],
+  imports: [
+    FormsModule,
+    TranslatePipe,
+    UpperCasePipe,
+    AppCardComponent,
+    AppChipComponent,
+    AppInputComponent,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
+  ],
   templateUrl: './developer-dashboard.component.html',
   styleUrls: ['./developer-dashboard.component.scss'],
 })

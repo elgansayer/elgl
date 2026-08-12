@@ -8,11 +8,18 @@ import { I18nService } from '../../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
 import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
 import { AppSelectComponent } from '../../../components/primitives/select/select.component';
+import { AppButtonPrimaryComponent } from '../../../components/primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [TranslatePipe, FormsModule, FontScaleSliderComponent, AppSelectComponent],
+  imports: [
+    TranslatePipe,
+    FormsModule,
+    FontScaleSliderComponent,
+    AppSelectComponent,
+    AppButtonPrimaryComponent,
+  ],
   templateUrl: './appearance-settings.component.html',
 })
 export class AppearanceSettingsComponent {

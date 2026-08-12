@@ -56,14 +56,14 @@
                 {{ 'settings.linkedAccounts.unlink' | t }}
               </button>
             } @else {
-              <button
-                (click)="link(provider.id)"
-                class="app-button-secondary text-xs py-1 px-3 rounded-lg disabled:opacity-40"
+              <app-button-secondary
+                (clicked)="link(provider.id)"
+                customClass="text-xs py-1 px-3 rounded-lg disabled:opacity-40"
                 [disabled]="loading()"
-                [attr.aria-label]="provider.labelKey | t"
+                [ariaLabel]="provider.labelKey | t"
               >
                 {{ 'settings.linkBtn' | t }}
-              </button>
+              </app-button-secondary>
             }
           </div>
         }

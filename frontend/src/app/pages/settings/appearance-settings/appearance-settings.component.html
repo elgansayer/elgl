@@ -170,10 +170,10 @@
 
       <!-- Save Button -->
       <div class="pt-4">
-        <button
-          (click)="saveSettings()"
+        <app-button-primary
+          (clicked)="saveSettings()"
           [disabled]="isSaving()"
-          class="w-full app-button-primary py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+          customClass="w-full py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
           [attr.aria-label]="'common.loading' | t"
         >
           @if (isSaving()) {
@@ -181,7 +181,7 @@
           } @else {
             {{ 'settings.saveBtn' | t }}
           }
-        </button>
+        </app-button-primary>
       </div>
     }
   </main>
