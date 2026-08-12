@@ -245,7 +245,9 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "head")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
-    monkeypatch.setattr("openhands_factory.pipeline.inspect_repository", lambda repository, base: [])
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.inspect_repository", lambda repository, base: []
+    )
     pipeline = FactoryPipeline(
         factory_config,
         github=github,  # type: ignore[arg-type]
