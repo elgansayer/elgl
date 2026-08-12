@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -5,37 +6,39 @@ import { NlpService } from './nlp.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 
-const mockGuess = jest.fn();
+const mockGuess = vi.fn();
 
-jest.mock('node-nlp', () => ({
-  Language: jest.fn().mockImplementation(() => ({
-    guess: mockGuess,
-  })),
+vi.mock('node-nlp', () => ({
+  Language: vi.fn().mockImplementation(function () {
+    return {
+      guess: mockGuess,
+    };
+  }),
 }));
 
 describe('NlpService', () => {
   let service: NlpService;
   let mockRedisClient: {
-    get: jest.Mock;
-    incr: jest.Mock;
-    expire: jest.Mock;
-    set: jest.Mock;
+    get: Mock;
+    incr: Mock;
+    expire: Mock;
+    set: Mock;
   };
 
-  let mockConfigService: { get: jest.Mock };
-  let mockLlmProxyService: { proxyMessage: jest.Mock };
+  let mockConfigService: { get: Mock };
+  let mockLlmProxyService: { proxyMessage: Mock };
 
   beforeEach(async () => {
     mockGuess.mockClear();
     mockRedisClient = {
-      get: jest.fn().mockResolvedValue(null),
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue(1),
-      set: jest.fn().mockResolvedValue('OK'),
+      get: vi.fn().mockResolvedValue(null),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+      set: vi.fn().mockResolvedValue('OK'),
     };
 
     mockConfigService = {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         if (key === 'DEEPL_API_KEY') return 'mock-deepl-key';
         if (key === 'AZURE_TRANSLATOR_KEY') return 'mock-azure-key';
         if (key === 'AZURE_SPEECH_REGION') return 'mock-region';
@@ -45,7 +48,7 @@ describe('NlpService', () => {
     };
 
     mockLlmProxyService = {
-      proxyMessage: jest.fn(),
+      proxyMessage: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -58,7 +61,7 @@ describe('NlpService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
         },
         {
@@ -70,12 +73,12 @@ describe('NlpService', () => {
 
     service = module.get<NlpService>(NlpService);
 
-    global.fetch = jest.fn();
+    global.fetch = vi.fn();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
-    (global.fetch as jest.Mock).mockClear();
+    vi.clearAllMocks();
+    (global.fetch as Mock).mockClear();
   });
 
   it('should be defined', () => {
@@ -144,7 +147,7 @@ describe('NlpService', () => {
 
   describe('translate', () => {
     it('should use custom dictionary translation when exact match exists (es -> en)', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
@@ -175,7 +178,7 @@ describe('NlpService', () => {
     });
 
     it('should use simulated format when dictionary match is not found', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
@@ -208,7 +211,7 @@ describe('NlpService', () => {
 
   describe('grammarCheck', () => {
     it('should correct known phrase go to store yesterday', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([{ language: 'en' }]),
@@ -235,7 +238,7 @@ describe('NlpService', () => {
     });
 
     it('should report 0 errors for properly terminated sentence', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([{ language: 'en' }]),
@@ -260,7 +263,7 @@ describe('NlpService', () => {
     });
 
     it('should append period and report 1 error if sentence lacks ending punctuation', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([{ language: 'en' }]),
@@ -286,7 +289,7 @@ describe('NlpService', () => {
 
   describe('pronunciationScore', () => {
     it('should score words with phonetic breakdown and return positive feedback for high scores', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           arrayBuffer: () => Promise.resolve(Buffer.from('audio')),
@@ -363,7 +366,7 @@ describe('NlpService', () => {
     });
 
     it('should handle empty target_text gracefully returning 90 default overall score', async () => {
-      (global.fetch as jest.Mock)
+      (global.fetch as Mock)
         .mockResolvedValueOnce({
           ok: true,
           arrayBuffer: () => Promise.resolve(Buffer.from('audio')),
@@ -446,7 +449,7 @@ describe('NlpService', () => {
 
     it('should call DeepL and save the result to Redis when not cached', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => ({
           translations: [{ text: 'App de Prueba' }],
@@ -480,7 +483,7 @@ describe('NlpService', () => {
 
     it('should translate dictionaries for any target language dynamically (de)', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => ({
           translations: [{ text: 'Willkommen' }, { text: 'Startseite' }],
@@ -520,7 +523,7 @@ describe('NlpService', () => {
 
     it('should throw BadRequestException when DeepL API call fails', async () => {
       mockRedisClient.get.mockResolvedValueOnce(null);
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
         text: () => 'Internal Server Error',
@@ -539,7 +542,7 @@ describe('NlpService', () => {
     it('should catch Redis errors during get and set gracefully without crashing', async () => {
       mockRedisClient.get.mockRejectedValueOnce(new Error('Redis get fail'));
       mockRedisClient.set.mockRejectedValueOnce(new Error('Redis set fail'));
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => ({
           translations: [{ text: 'Clon de HelloTalk' }],

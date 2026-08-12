@@ -23,8 +23,8 @@ describe('MetricsController', () => {
 
   it('should return metrics with proper content type', async () => {
     const mockResponse = {
-      set: jest.fn(),
-      send: jest.fn(),
+      set: vi.fn(),
+      send: vi.fn(),
     };
 
     await controller.getMetrics(mockResponse as unknown as Response);

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoveryController } from './discovery.controller';
 import { DiscoveryService } from './discovery.service';
@@ -7,7 +8,7 @@ import { UsersService } from '../users/users.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { DiscoveryRateLimiterGuard } from './discovery-rate-limiter.guard';
 
-jest.mock('./sanitise-discovery.helper', () => ({
+vi.mock('./sanitise-discovery.helper', () => ({
   sanitiseDiscoveryData: (x: unknown) => x,
 }));
 
@@ -23,7 +24,7 @@ describe('DiscoveryController', () => {
         {
           provide: DiscoveryService,
           useValue: {
-            searchPartnersWithDegradation: jest.fn().mockResolvedValue({
+            searchPartnersWithDegradation: vi.fn().mockResolvedValue({
               data: [],
               marker: { degraded: false, fallbackSource: 'none' as const },
             }),
@@ -32,26 +33,26 @@ describe('DiscoveryController', () => {
         {
           provide: DiscoveryDegradationService,
           useValue: {
-            getAllBreakerStates: jest.fn().mockReturnValue(new Map()),
-            getRecentDegradationEvents: jest.fn().mockResolvedValue([]),
+            getAllBreakerStates: vi.fn().mockReturnValue(new Map()),
+            getRecentDegradationEvents: vi.fn().mockResolvedValue([]),
           },
         },
         {
           provide: UsersService,
           useValue: {
-            getProfile: jest.fn(),
+            getProfile: vi.fn(),
           },
         },
         {
           provide: DiscoveryRateLimiterGuard,
-          useValue: { canActivate: jest.fn().mockReturnValue(true) },
+          useValue: { canActivate: vi.fn().mockReturnValue(true) },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(DiscoveryRateLimiterGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<DiscoveryController>(DiscoveryController);
@@ -60,7 +61,7 @@ describe('DiscoveryController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -82,9 +83,9 @@ describe('DiscoveryController', () => {
       const mockPartners: any[] = [{ id: 'partner-1' }];
       const query: any = { native_languages: ['JA'] };
 
-      (usersService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (usersService.getProfile as Mock).mockResolvedValue(mockProfile);
       (
-        discoveryService.searchPartnersWithDegradation as jest.Mock
+        discoveryService.searchPartnersWithDegradation as Mock
       ).mockResolvedValue({
         data: mockPartners,
         marker: { degraded: false, fallbackSource: 'none' },

@@ -4,7 +4,7 @@ import { LeaderboardService, Corrector } from './leaderboard.service';
 
 describe('LeaderboardController', () => {
   let controller: LeaderboardController;
-  const mockGetTopCorrectors = jest.fn();
+  const mockGetTopCorrectors = vi.fn();
 
   const mockCorrectors: Corrector[] = [
     {
@@ -50,7 +50,7 @@ describe('LeaderboardController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

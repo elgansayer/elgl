@@ -24,6 +24,34 @@ weaknesses, client-controlled privileged state, authentication and authorisation
 security configuration. It fixes confirmed findings with tests or leaves the worktree unchanged, and the normal
 verification gate then runs on the combined diff before the pull request is opened.
 
+## Issue Intake and Classification
+
+By default, the factory requires `FACTORY_REQUIRE_READY_LABEL=true`. Use `factory-ready` only when a task is bounded enough to prove completion. Do not apply it to epics or planning issues.
+
+- `factory-epic`: Broad outcomes (e.g., "Improve onboarding"). Excluded from implementation.
+- `factory-planning`: Architecture mapping, research, or decomposition. Excluded from implementation.
+- `factory-ready`: Bounded, actionable implementation issues.
+
+If `FACTORY_REQUIRE_READY_LABEL=false` is set in the environment file, it overrides the safe default, but this is only for backwards compatibility.
+
+## Deterministic Quality Gate
+
+Before a pull request is created, the factory runs a deterministic quality gate on the implementation diff to detect incomplete work. The gate checks for:
+- Mock/fake/stub production behaviour.
+- Obvious placeholder implementations (e.g., "TODO: implement").
+- Unsafe type escapes (`as any`, `<any>`).
+- Newly skipped tests.
+
+If blocked, the factory executes one bounded quality-repair pass before failing closed.
+
+## Independent Review
+
+The independent reviewer proves actual completion against the issue's requirements and writes a structured `.factory-review.json` report. The review checks:
+- Structured review report validity.
+- Acceptance criteria coverage (every explicit bullet must pass).
+- Absence of blocking findings (e.g., UI without backend).
+- Reviewed SHA integrity (the approved SHA must match the PR head).
+
 ## Costs
 
 ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenHands Go is

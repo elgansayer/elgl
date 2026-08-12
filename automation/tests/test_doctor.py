@@ -122,9 +122,7 @@ def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
     quarantined = Job(Task("3152", "Task", "", "github", 0), JobState.QUARANTINED)
     stalled = Job(Task("239", "Task", "", "github", 0), JobState.IMPLEMENTING)
     stalled.updated_at = now - timedelta(minutes=factory_config.max_task_minutes + 16)
-    JobStore(factory_config.state_dir / "jobs.json").save(
-        {"3152": quarantined, "239": stalled}
-    )
+    JobStore(factory_config.state_dir / "jobs.json").save({"3152": quarantined, "239": stalled})
 
     checks = {check.name: check for check in job_health_checks(factory_config, now)}
 
