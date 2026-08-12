@@ -27,6 +27,7 @@ describe('AudioRoomsController', () => {
             createRoom: jest.fn(),
             generateToken: jest.fn(),
             listActiveRooms: jest.fn(),
+            listActiveRoomsByLanguage: jest.fn(),
             getDistinctTopics: jest.fn(),
             getDistinctLevels: jest.fn(),
             getInvitedPrivateRooms: jest.fn(),
