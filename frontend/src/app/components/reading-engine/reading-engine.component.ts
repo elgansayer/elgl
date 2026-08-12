@@ -1,5 +1,7 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { VocabularyDashboardComponent } from '../vocabulary-dashboard/vocabulary-dashboard.component';
+
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
@@ -42,6 +44,7 @@ type TabId = (typeof TAB_IDS)[number];
     AppCardComponent,
     AppChipComponent,
     AppButtonSecondaryComponent,
+    VocabularyDashboardComponent,
   ],
   template: `<div
     class="reading-engine mx-auto max-w-4xl space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 pb-16 sm:pb-20 pt-4"
@@ -376,11 +379,9 @@ type TabId = (typeof TAB_IDS)[number];
           >
           </app-empty-state>
         } @else {
-          <app-card customClass="app-padded space-y-2">
-            <p class="text-sm font-bold text-text-primary">
-              {{ 'readingEngine.vocabularyPlaceholder' | t }}
-            </p>
-          </app-card>
+          <div class="mt-4">
+            <app-vocabulary-dashboard [deckInput]="vocabCards()"></app-vocabulary-dashboard>
+          </div>
         }
       </section>
     }
@@ -472,6 +473,16 @@ export class ReadingEngineComponent {
 
   readonly isOffline = computed(() => !this.networkStatus.isOnline());
   readonly vocabularyCount = computed(() => this.vocabStore.allFlashcards().length);
+
+  readonly vocabCards = computed(() =>
+    this.vocabStore.allFlashcards().map((f) => ({
+      id: f.id,
+      term: f.word_token,
+      definition: f.definition || f.translation,
+      example: f.original_context,
+      level: f.srs_level,
+    })),
+  );
 
   setTab(tabId: TabId): void {
     this.activeTab.set(tabId);
