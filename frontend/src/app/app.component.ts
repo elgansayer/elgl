@@ -8,7 +8,6 @@ import {
   afterNextRender,
   effect,
   DestroyRef,
-  PLATFORM_ID,
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
@@ -17,8 +16,6 @@ import { CentrifugeService } from './services/centrifuge.service';
 import { FcmService } from './services/fcm.service';
 import { SafetyService } from './services/safety.service';
 import { TranslatePipe } from './services/translate.pipe';
-import { routeAnimations } from './animations/route.animations';
-import { DOCUMENT, isPlatformServer } from '@angular/common';
 import {
   IncomingCallModalComponent,
   IncomingCallData,
@@ -75,7 +72,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
     '[class.app-locked]': 'appLockService.appLocked()',
   },
   styleUrls: ['./app.component.scss'],
-  animations: [routeAnimations],
 })
 export class AppComponent implements OnInit {
   title = 'HelloTalk Clone';
@@ -94,27 +90,13 @@ export class AppComponent implements OnInit {
   readonly versionCheckService = inject(VersionCheckService);
   private fontScaleService = inject(FontScaleService);
   readonly i18n = inject(I18nService);
-  private document = inject(DOCUMENT);
   private destroyRef = inject(DestroyRef);
   readonly appLockService = inject(AppLockService);
   private readonly router = inject(Router);
-  private platformId = inject(PLATFORM_ID);
   private notificationService = inject(NotificationService);
   private chatService = inject(ChatService);
 
   private routerOutlet = viewChild.required(RouterOutlet);
-
-  protected prepareRoute(): string {
-    if (isPlatformServer(this.platformId)) {
-      return 'default';
-    }
-    const outlet = this.routerOutlet();
-    if (!outlet?.isActivated) {
-      return 'default';
-    }
-    const url = outlet.activatedRoute.snapshot.url.join('/');
-    return url || 'root';
-  }
 
   // Incoming call state
   readonly incomingCallData = signal<IncomingCallData | null>(null);
@@ -142,15 +124,14 @@ export class AppComponent implements OnInit {
 
     // Lock when app goes to background
     effect(() => {
-      const doc = this.document;
       const handleVisibility = (): void => {
-        if (doc.hidden && this.authService.isAuthenticated()) {
+        if (document.hidden && this.authService.isAuthenticated()) {
           this.appLockService.lockNow();
         }
       };
-      doc.addEventListener('visibilitychange', handleVisibility);
+      document.addEventListener('visibilitychange', handleVisibility);
       this.destroyRef.onDestroy(() =>
-        doc.removeEventListener('visibilitychange', handleVisibility),
+        document.removeEventListener('visibilitychange', handleVisibility),
       );
     });
 
@@ -271,9 +252,7 @@ export class AppComponent implements OnInit {
 
   private async loadInitialUnreadCounts(): Promise<void> {
     try {
-      const [notificationCount] = await Promise.all([
-        this.notificationService.getUnreadCount(),
-      ]);
+      const [notificationCount] = await Promise.all([this.notificationService.getUnreadCount()]);
       this.unreadCounter.setNotificationUnread(notificationCount);
     } catch {
       // Silently ignore - real-time events will update counts

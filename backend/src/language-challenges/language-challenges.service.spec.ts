@@ -26,19 +26,19 @@ describe('LanguageChallengesService', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      insert: jest.fn().mockResolvedValue({ error: null }),
-      select: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      returns: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-      maybeSingle: jest.fn(),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+      select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      returns: vi.fn().mockReturnThis(),
+      single: vi.fn(),
+      maybeSingle: vi.fn(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -47,14 +47,14 @@ describe('LanguageChallengesService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: MonetisationService,
           useValue: {
-            deductCoins: jest.fn().mockResolvedValue(0),
-            addCoins: jest.fn().mockResolvedValue(0),
+            deductCoins: vi.fn().mockResolvedValue(0),
+            addCoins: vi.fn().mockResolvedValue(0),
           },
         },
       ],
@@ -65,7 +65,7 @@ describe('LanguageChallengesService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

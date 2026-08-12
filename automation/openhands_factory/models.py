@@ -38,6 +38,7 @@ class JobState(StrEnum):
     PR_DRAFT = "pr-draft"
     REVIEWING = "reviewing"
     REPAIRING = "repairing"
+    QUALITY_REPAIRING = "quality-repairing"
     CI_PENDING = "ci-pending"
     READY_TO_MERGE = "ready-to-merge"
     MERGE_QUEUED = "merge-queued"
@@ -64,6 +65,7 @@ class Job:
     head_sha: str | None = None
     attempts: int = 0
     repair_attempts: int = 0
+    quality_repairs: int = 0
     last_error: str | None = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 

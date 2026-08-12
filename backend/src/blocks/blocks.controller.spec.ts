@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { BlocksController } from './blocks.controller';
@@ -15,14 +16,14 @@ describe('BlocksController', () => {
         {
           provide: BlocksService,
           useValue: {
-            getBlockedUsers: jest.fn(),
-            unblockUser: jest.fn(),
+            getBlockedUsers: vi.fn(),
+            unblockUser: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<BlocksController>(BlocksController);
@@ -30,7 +31,7 @@ describe('BlocksController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -42,9 +43,7 @@ describe('BlocksController', () => {
       const blockedUsers = [
         { id: 'b1', display_name: 'Blocked', avatar_url: null },
       ];
-      (blocksService.getBlockedUsers as jest.Mock).mockResolvedValue(
-        blockedUsers,
-      );
+      (blocksService.getBlockedUsers as Mock).mockResolvedValue(blockedUsers);
 
       const user = { id: 'user-1' } as any;
       const result = await controller.getBlockedUsers(user);
@@ -62,7 +61,7 @@ describe('BlocksController', () => {
 
   describe('unblockUser', () => {
     it('should call service unblockUser when user is authenticated', async () => {
-      (blocksService.unblockUser as jest.Mock).mockResolvedValue({
+      (blocksService.unblockUser as Mock).mockResolvedValue({
         success: true,
       });
 

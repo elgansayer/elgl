@@ -1,16 +1,17 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus, ArgumentsHost } from '@nestjs/common';
 import { EconomyExceptionFilter } from './economy-exception.filter';
 
 describe('EconomyExceptionFilter', () => {
   let filter: EconomyExceptionFilter;
-  let mockLogger: { error: jest.Mock; warn: jest.Mock; info: jest.Mock };
+  let mockLogger: { error: Mock; warn: Mock; info: Mock };
 
   beforeEach(async () => {
     mockLogger = {
-      error: jest.fn(),
-      warn: jest.fn(),
-      info: jest.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -31,8 +32,8 @@ describe('EconomyExceptionFilter', () => {
     method: string,
     headers?: Record<string, string>,
   ): ArgumentsHost {
-    const jsonMock = jest.fn();
-    const statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    const jsonMock = vi.fn();
+    const statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     return {
       switchToHttp: () => ({
@@ -128,8 +129,8 @@ describe('EconomyExceptionFilter', () => {
 
   it('should return structured JSON response', () => {
     const exception = new HttpException('Not found', HttpStatus.NOT_FOUND);
-    const jsonMock = jest.fn();
-    const statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    const jsonMock = vi.fn();
+    const statusMock = vi.fn().mockReturnValue({ json: jsonMock });
     const host: ArgumentsHost = {
       switchToHttp: () => ({
         getResponse: () => ({ status: statusMock }),

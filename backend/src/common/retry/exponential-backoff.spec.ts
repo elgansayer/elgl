@@ -1,19 +1,20 @@
+import type { Mock } from 'vitest';
 import { fetchWithExponentialBackoff } from './exponential-backoff';
 
 const originalFetch = global.fetch;
 
 describe('fetchWithExponentialBackoff', () => {
-  let mockFetch: jest.Mock;
+  let mockFetch: Mock;
 
   beforeEach(() => {
-    mockFetch = jest.fn();
+    mockFetch = vi.fn();
     global.fetch = mockFetch;
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('should return immediately on a successful 200 response', async () => {
@@ -51,7 +52,7 @@ describe('fetchWithExponentialBackoff', () => {
       { maxRetries: 3, baseDelayMs: 1000 },
     );
 
-    await jest.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(5000);
     const response = await promise;
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -71,7 +72,7 @@ describe('fetchWithExponentialBackoff', () => {
       { maxRetries: 2, baseDelayMs: 100 },
     );
 
-    await jest.advanceTimersByTimeAsync(10000);
+    await vi.advanceTimersByTimeAsync(10000);
     const response = await promise;
 
     expect(mockFetch).toHaveBeenCalledTimes(3);
@@ -99,7 +100,7 @@ describe('fetchWithExponentialBackoff', () => {
       { maxRetries: 3, baseDelayMs: 1000 },
     );
 
-    await jest.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(3000);
     const response = await promise;
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -124,7 +125,7 @@ describe('fetchWithExponentialBackoff', () => {
       { maxRetries: 2, baseDelayMs: 100, retryableStatuses: [429, 503] },
     );
 
-    await jest.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(5000);
     const response = await promise;
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -159,7 +160,7 @@ describe('fetchWithExponentialBackoff', () => {
       { maxRetries: 3, baseDelayMs: 1000, maxDelayMs: 60000 },
     );
 
-    await jest.advanceTimersByTimeAsync(20000);
+    await vi.advanceTimersByTimeAsync(20000);
     await promise;
 
     expect(mockFetch).toHaveBeenCalledTimes(4);
@@ -178,7 +179,7 @@ describe('fetchWithExponentialBackoff', () => {
       { maxRetries: 5, baseDelayMs: 32000, maxDelayMs: 60000 },
     );
 
-    await jest.advanceTimersByTimeAsync(400000);
+    await vi.advanceTimersByTimeAsync(400000);
     await promise;
 
     expect(mockFetch).toHaveBeenCalledTimes(6);

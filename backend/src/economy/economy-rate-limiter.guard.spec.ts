@@ -1,21 +1,24 @@
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+import type { Mock, Mocked } from 'vitest';
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: { createElement: vi.fn(), createDocumentFragment: vi.fn() },
+        Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
+      },
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty.replace(/<[^>]*>/g, '');
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 
@@ -33,10 +36,10 @@ import { ExecutionContext } from '@nestjs/common';
 
 describe('EconomyRateLimiterGuard', () => {
   let guard: EconomyRateLimiterGuard;
-  let redisMock: { incr: jest.Mock; expire: jest.Mock };
-  let supabaseService: jest.Mocked<Pick<SupabaseService, 'getRedisClient'>>;
-  let reflector: jest.Mocked<Pick<Reflector, 'get'>>;
-  let logger: jest.Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
+  let redisMock: { incr: Mock; expire: Mock };
+  let supabaseService: Mocked<Pick<SupabaseService, 'getRedisClient'>>;
+  let reflector: Mocked<Pick<Reflector, 'get'>>;
+  let logger: Mocked<Pick<PinoLogger, 'warn' | 'error'>>;
 
   function createMockExecutionContext(
     userId: string | undefined,
@@ -50,8 +53,8 @@ describe('EconomyRateLimiterGuard', () => {
         getRequest: () => ({
           user: userId ? { id: userId } : undefined,
         }),
-        getResponse: jest.fn(),
-        getNext: jest.fn(),
+        getResponse: vi.fn(),
+        getNext: vi.fn(),
       }),
       getType: () => 'http',
     } as unknown as ExecutionContext;
@@ -59,21 +62,21 @@ describe('EconomyRateLimiterGuard', () => {
 
   beforeEach(() => {
     redisMock = {
-      incr: jest.fn().mockResolvedValue(1),
-      expire: jest.fn().mockResolvedValue(1),
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
     };
 
     supabaseService = {
-      getRedisClient: jest.fn().mockReturnValue(redisMock),
+      getRedisClient: vi.fn().mockReturnValue(redisMock),
     };
 
     reflector = {
-      get: jest.fn().mockReturnValue(undefined),
+      get: vi.fn().mockReturnValue(undefined),
     };
 
     logger = {
-      warn: jest.fn(),
-      error: jest.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     };
 
     guard = new EconomyRateLimiterGuard(
@@ -113,7 +116,7 @@ describe('EconomyRateLimiterGuard', () => {
     class TestController {}
 
     beforeEach(() => {
-      (reflector.get as jest.Mock).mockImplementation((key: string) => {
+      (reflector.get as Mock).mockImplementation((key: string) => {
         if (key === ECONOMY_RATE_LIMIT_KEY) return options;
         return undefined;
       });
