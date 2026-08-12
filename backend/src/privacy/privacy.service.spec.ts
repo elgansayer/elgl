@@ -124,10 +124,22 @@ describe('PrivacyService', () => {
       },
     };
 
-    mockFrom.mockReturnValue({
-      select: mockSelect,
-      insert: mockInsert,
-      update: mockUpdate,
+    mockFrom.mockImplementation((table: string) => {
+      const defaultChain = {
+        eq: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: {}, error: null }),
+          order: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+        in: jest.fn().mockReturnValue({
+          order: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      };
+
+      return {
+        select: jest.fn().mockReturnValue(defaultChain),
+        insert: mockInsert,
+        update: mockUpdate,
+      };
     });
 
     mockInsert.mockReturnValue({ eq: mockEq });
@@ -314,17 +326,6 @@ describe('PrivacyService', () => {
 
   describe('requestArchive', () => {
     it('should handle archive creation', async () => {
-      // Set up mock chains for collectUserData
-      // Each data fetch returns empty data
-      mockSelect.mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({ data: {}, error: null }),
-          order: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-        }),
-      });
-
       mockUpload.mockResolvedValue({ error: null });
       mockGetPublicUrl.mockReturnValue({
         data: { publicUrl: 'https://example.com/archive.json' },
@@ -345,24 +346,16 @@ describe('PrivacyService', () => {
     it('should include escrow transactions in the archive', async () => {
       // Override escrow_transactions mock to return data
       mockFrom.mockImplementation((table: string) => {
-        if (table === 'coin_purchases') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'gift_transactions') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
+        const defaultChain = {
+          eq: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: {}, error: null }),
+            order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+          in: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+
         if (table === 'escrow_transactions') {
           return {
             select: jest.fn().mockReturnValue({
@@ -383,19 +376,13 @@ describe('PrivacyService', () => {
                 }),
               }),
             }),
+            insert: mockInsert,
+            update: mockUpdate,
           };
         }
-        if (table === 'user_sticker_packs') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
+
         return {
-          select: mockSelect,
+          select: jest.fn().mockReturnValue(defaultChain),
           insert: mockInsert,
           update: mockUpdate,
         };
@@ -436,6 +423,16 @@ describe('PrivacyService', () => {
     it('should include scrubbed coin purchases in the archive', async () => {
       // Override the coin_purchases mock to return sensitive data
       mockFrom.mockImplementation((table: string) => {
+        const defaultChain = {
+          eq: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: {}, error: null }),
+            order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+          in: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+
         if (table === 'coin_purchases') {
           return {
             select: jest.fn().mockReturnValue({
@@ -455,37 +452,13 @@ describe('PrivacyService', () => {
                 }),
               }),
             }),
+            insert: mockInsert,
+            update: mockUpdate,
           };
         }
-        if (table === 'gift_transactions') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'escrow_transactions') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
-        if (table === 'user_sticker_packs') {
-          return {
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                order: jest.fn().mockResolvedValue({ data: [], error: null }),
-              }),
-            }),
-          };
-        }
+
         return {
-          select: mockSelect,
+          select: jest.fn().mockReturnValue(defaultChain),
           insert: mockInsert,
           update: mockUpdate,
         };
@@ -527,15 +500,6 @@ describe('PrivacyService', () => {
     });
 
     it('should throw BadRequestException on upload error', async () => {
-      mockSelect.mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({ data: {}, error: null }),
-          order: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ data: [], error: null }),
-          }),
-        }),
-      });
-
       mockUpload.mockResolvedValue({ error: { message: 'Upload failed' } });
 
       await expect(
