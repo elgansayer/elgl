@@ -6,13 +6,14 @@ import { UsersModule } from '../users/users.module';
 import { NlpModule } from '../nlp/nlp.module';
 import { CloudflareModule } from '../cloudflare/cloudflare.module';
 import { AudioRoomsController } from './audio-rooms.controller';
+import { AudioRoomsPreviewController } from './audio-rooms-preview.controller';
 import { AudioRoomsService } from './audio-rooms.service';
 import { TranscriptEgressService } from './transcript-egress.service';
 import { R2Service } from '../cloudflare-r2/r2.service';
 
 @Module({
   imports: [UsersModule, ChatModule, NlpModule, CloudflareModule],
-  controllers: [AudioRoomsController],
+  controllers: [AudioRoomsController, AudioRoomsPreviewController],
   providers: [
     AudioRoomsService,
     TranscriptEgressService,
@@ -24,10 +25,15 @@ import { R2Service } from '../cloudflare-r2/r2.service';
         const livekitUrl =
           configService.get<string>('LIVEKIT_URL') ||
           'https://mock.livekit.cloud';
-        const apiKey = configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
-        const secretKey =
-          configService.get<string>('LIVEKIT_SECRET') ||
-          'secretkey012345678901234567890123456789';
+        const apiKey = configService.get<string>('LIVEKIT_API_KEY');
+        const secretKey = configService.get<string>('LIVEKIT_SECRET');
+
+        if (!apiKey || !secretKey) {
+          throw new Error(
+            'LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured',
+          );
+        }
+
         return new RoomServiceClient(livekitUrl, apiKey, secretKey);
       },
       inject: [ConfigService],

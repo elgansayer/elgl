@@ -54,7 +54,8 @@ timestamped backup, preserves provider credentials, and repairs service-user
 ownership:
 
 ```bash
-sudo /home/dev/hellotalk/scripts/repair-factory-host.sh
+REPOSITORY_ROOT="$(git rev-parse --show-toplevel)"
+sudo "$REPOSITORY_ROOT/scripts/repair-factory-host.sh"
 ```
 
 Rotate any credential exposed in terminal output before adding the replacement

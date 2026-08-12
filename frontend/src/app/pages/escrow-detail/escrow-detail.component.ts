@@ -65,9 +65,9 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
 
       <!-- Error State -->
       @if (!loading() && error()) {
-        <app-card variant="outlined" customClass="border-red-500/40 bg-red-500/10">
+        <app-card variant="outlined" customClass="border-danger/40 bg-danger/10">
           <div class="flex flex-col items-start gap-3">
-            <p class="text-sm text-red-400">{{ 'escrow.detailLoadError' | t }}</p>
+            <p class="text-sm text-danger">{{ 'escrow.detailLoadError' | t }}</p>
             <app-button-secondary size="sm" (clicked)="reload()">
               {{ 'escrow.retry' | t }}
             </app-button-secondary>
@@ -78,7 +78,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
       <!-- Action Error -->
       @if (actionError()) {
         <div
-          class="rounded-app border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400"
+          class="rounded-app border border-danger/40 bg-danger/10 p-3 text-sm text-danger"
           role="alert"
         >
           {{ actionError() }}
@@ -88,7 +88,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
       <!-- Action Success -->
       @if (actionSuccess()) {
         <div
-          class="rounded-app border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-400"
+          class="rounded-app border border-success/40 bg-success/10 p-3 text-sm text-success"
           role="status"
         >
           {{ actionSuccess() }}
@@ -116,7 +116,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
                 {{ detail.description }}
               </h2>
               <app-pill
-                [label]="('escrow.status.' + detail.status) | t"
+                [label]="'escrow.status.' + detail.status | t"
                 [colour]="statusColour(detail.status)"
                 size="sm"
               />
@@ -131,20 +131,30 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
             <!-- Details -->
             <div class="space-y-2 pt-1">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-text-secondary">{{ 'escrow.detailId' | t }}</span>
+                <span class="text-xs font-semibold text-text-secondary">{{
+                  'escrow.detailId' | t
+                }}</span>
                 <span class="text-xs text-text-primary font-mono">{{ detail.id }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-text-secondary">{{ 'escrow.detailServiceType' | t }}</span>
-                <span class="text-xs text-text-primary">{{ ('escrow.serviceType.' + detail.service_type) | t }}</span>
+                <span class="text-xs font-semibold text-text-secondary">{{
+                  'escrow.detailServiceType' | t
+                }}</span>
+                <span class="text-xs text-text-primary">{{
+                  'escrow.serviceType.' + detail.service_type | t
+                }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-text-secondary">{{ 'escrow.detailCreatedAt' | t }}</span>
+                <span class="text-xs font-semibold text-text-secondary">{{
+                  'escrow.detailCreatedAt' | t
+                }}</span>
                 <span class="text-xs text-text-primary">{{ formatDate(detail.created_at) }}</span>
               </div>
               @if (detail.updated_at !== detail.created_at) {
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-semibold text-text-secondary">{{ 'escrow.detailUpdatedAt' | t }}</span>
+                  <span class="text-xs font-semibold text-text-secondary">{{
+                    'escrow.detailUpdatedAt' | t
+                  }}</span>
                   <span class="text-xs text-text-primary">{{ formatDate(detail.updated_at) }}</span>
                 </div>
               }
@@ -152,9 +162,11 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
 
             <!-- Dispute Info -->
             @if (detail.dispute_reason) {
-              <div class="rounded-app border border-red-500/30 bg-red-500/5 p-3">
-                <p class="text-xs font-semibold text-red-400 mb-1">{{ 'escrow.disputeReason' | t }}</p>
-                <p class="text-xs text-red-300">{{ detail.dispute_reason }}</p>
+              <div class="rounded-app border border-danger/30 bg-danger/5 p-3">
+                <p class="text-xs font-semibold text-danger mb-1">
+                  {{ 'escrow.disputeReason' | t }}
+                </p>
+                <p class="text-xs text-danger/80">{{ detail.dispute_reason }}</p>
                 @if (detail.dispute_evidence) {
                   <p class="text-xs text-text-secondary mt-1">
                     {{ 'escrow.disputeEvidence' | t }}: {{ detail.dispute_evidence }}
@@ -165,9 +177,9 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
 
             <!-- Admin Note -->
             @if (detail.admin_note) {
-              <div class="rounded-app border border-amber-500/30 bg-amber-500/5 p-3">
-                <p class="text-xs font-semibold text-amber-400 mb-1">{{ 'escrow.adminNote' | t }}</p>
-                <p class="text-xs text-amber-300">{{ detail.admin_note }}</p>
+              <div class="rounded-app border border-warning/30 bg-warning/5 p-3">
+                <p class="text-xs font-semibold text-warning mb-1">{{ 'escrow.adminNote' | t }}</p>
+                <p class="text-xs text-warning/80">{{ detail.admin_note }}</p>
               </div>
             }
 
@@ -175,10 +187,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
             @if (detail.status === 'pending' || detail.status === 'disputed') {
               <div class="flex flex-wrap gap-3 pt-2">
                 @if (detail.status === 'pending') {
-                  <app-button-primary
-                    [disabled]="isReleasing()"
-                    (clicked)="onRelease(detail.id)"
-                  >
+                  <app-button-primary [disabled]="isReleasing()" (clicked)="onRelease(detail.id)">
                     @if (isReleasing()) {
                       {{ 'escrow.releasing' | t }}
                     } @else {
@@ -186,10 +195,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
                     }
                   </app-button-primary>
 
-                  <app-button-secondary
-                    [disabled]="isRefunding()"
-                    (clicked)="onRefund(detail.id)"
-                  >
+                  <app-button-secondary [disabled]="isRefunding()" (clicked)="onRefund(detail.id)">
                     @if (isRefunding()) {
                       {{ 'escrow.refunding' | t }}
                     } @else {
@@ -199,7 +205,7 @@ import { AppButtonSecondaryComponent } from '../../components/primitives/button-
 
                   <app-button-secondary
                     [disabled]="isDisputing()"
-                    customClass="text-red-400 border-red-500/40 hover:bg-red-500/10"
+                    customClass="text-danger border-danger/40 hover:bg-danger/10"
                     (clicked)="onDispute(detail.id)"
                   >
                     @if (isDisputing()) {
@@ -243,7 +249,7 @@ export class EscrowDetailComponent {
       this.loading.set(true);
       this.error.set(false);
       try {
-        return await this.escrowService.getEscrow(id) ?? null;
+        return (await this.escrowService.getEscrow(id)) ?? null;
       } catch {
         this.error.set(true);
         return null;

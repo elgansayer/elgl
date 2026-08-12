@@ -26,7 +26,7 @@ Total open issues: 935
 - **#2206**: Task: Design empty states and skeleton loaders for Live Audio Rooms [swarm-active]
 - **#2205**: Task: Set up Datadog monitoring alerts for Live Audio Rooms [swarm-active]
 - **#2204**: Task: Implement Redis cache invalidation rules for Live Audio Rooms [swarm-active]
-- **#2203**: Task: Write Jest unit tests (NestJS) for Live Audio Rooms [swarm-active]
+- **#2203**: Task: Write Vitest unit tests (NestJS) for Live Audio Rooms [swarm-active]
 - **#2202**: Task: Write Cypress E2E test flows for Live Audio Rooms [swarm-active]
 - **#2201**: Task: Review and optimise Cloudflare edge caching for Group Chat [swarm-active]
 - **#2200**: Task: Implement graceful degradation fallbacks for Group Chat
@@ -51,7 +51,7 @@ Total open issues: 935
 - **#2181**: Task: Design empty states and skeleton loaders for Group Chat
 - **#2180**: Task: Set up Datadog monitoring alerts for Group Chat
 - **#2179**: Task: Implement Redis cache invalidation rules for Group Chat
-- **#2178**: Task: Write Jest unit tests (NestJS) for Group Chat
+- **#2178**: Task: Write Vitest unit tests (NestJS) for Group Chat
 - **#2177**: Task: Write Cypress E2E test flows for Group Chat
 - **#2176**: Task: Review and optimise Cloudflare edge caching for 1-on-1 Chat
 - **#2175**: Task: Implement graceful degradation fallbacks for 1-on-1 Chat
@@ -76,7 +76,7 @@ Total open issues: 935
 - **#2156**: Task: Design empty states and skeleton loaders for 1-on-1 Chat
 - **#2155**: Task: Set up Datadog monitoring alerts for 1-on-1 Chat
 - **#2154**: Task: Implement Redis cache invalidation rules for 1-on-1 Chat
-- **#2153**: Task: Write Jest unit tests (NestJS) for 1-on-1 Chat
+- **#2153**: Task: Write Vitest unit tests (NestJS) for 1-on-1 Chat
 - **#2152**: Task: Write Cypress E2E test flows for 1-on-1 Chat
 - **#2151**: Task: Review and optimise Cloudflare edge caching for Moments Feed
 - **#2150**: Task: Implement graceful degradation fallbacks for Moments Feed
@@ -101,7 +101,7 @@ Total open issues: 935
 - **#2131**: Task: Design empty states and skeleton loaders for Moments Feed
 - **#2130**: Task: Set up Datadog monitoring alerts for Moments Feed
 - **#2129**: Task: Implement Redis cache invalidation rules for Moments Feed
-- **#2128**: Task: Write Jest unit tests (NestJS) for Moments Feed
+- **#2128**: Task: Write Vitest unit tests (NestJS) for Moments Feed
 - **#2127**: Task: Write Cypress E2E test flows for Moments Feed
 - **#2126**: Task: Review and optimise Cloudflare edge caching for User Profiles
 - **#2125**: Task: Implement graceful degradation fallbacks for User Profiles
@@ -126,62 +126,62 @@ Total open issues: 935
 - **#2106**: Task: Design empty states and skeleton loaders for User Profiles
 - **#2105**: Task: Set up Datadog monitoring alerts for User Profiles
 - **#2104**: Task: Implement Redis cache invalidation rules for User Profiles
-- **#2103**: Task: Write Jest unit tests (NestJS) for User Profiles
+- **#2103**: Task: Write Vitest unit tests (NestJS) for User Profiles
 - **#2102**: Task: Write Cypress E2E test flows for User Profiles
 - **#2101**: Task: Conduct load testing (Artillery) for User Settings
 - **#2100**: Task: Design empty states and skeleton loaders for User Settings
 - **#2099**: Task: Set up Datadog/Prometheus monitoring alerts for User Settings
 - **#2098**: Task: Implement Redis cache invalidation rules for User Settings
-- **#2097**: Task: Write Jest unit tests (NestJS) for User Settings
+- **#2097**: Task: Write Vitest unit tests (NestJS) for User Settings
 - **#2096**: Task: Audit accessibility (ARIA) and screen reader support for User Settings
 - **#2095**: Task: Write Cypress E2E test flows for User Settings
 - **#2094**: Task: Conduct load testing (Artillery) for Tutor Profiles
 - **#2093**: Task: Design empty states and skeleton loaders for Tutor Profiles
 - **#2092**: Task: Set up Datadog/Prometheus monitoring alerts for Tutor Profiles
 - **#2091**: Task: Implement Redis cache invalidation rules for Tutor Profiles
-- **#2090**: Task: Write Jest unit tests (NestJS) for Tutor Profiles
+- **#2090**: Task: Write Vitest unit tests (NestJS) for Tutor Profiles
 - **#2089**: Task: Audit accessibility (ARIA) and screen reader support for Tutor Profiles
 - **#2088**: Task: Write Cypress E2E test flows for Tutor Profiles
 - **#2087**: Task: Conduct load testing (Artillery) for Discovery
 - **#2086**: Task: Design empty states and skeleton loaders for Discovery
 - **#2085**: Task: Set up Datadog/Prometheus monitoring alerts for Discovery
 - **#2084**: Task: Implement Redis cache invalidation rules for Discovery
-- **#2083**: Task: Write Jest unit tests (NestJS) for Discovery
+- **#2083**: Task: Write Vitest unit tests (NestJS) for Discovery
 - **#2082**: Task: Audit accessibility (ARIA) and screen reader support for Discovery
 - **#2081**: Task: Write Cypress E2E test flows for Discovery
 - **#2080**: Task: Conduct load testing (Artillery) for LingQ Engine
 - **#2079**: Task: Design empty states and skeleton loaders for LingQ Engine
 - **#2078**: Task: Set up Datadog/Prometheus monitoring alerts for LingQ Engine
 - **#2077**: Task: Implement Redis cache invalidation rules for LingQ Engine
-- **#2076**: Task: Write Jest unit tests (NestJS) for LingQ Engine
+- **#2076**: Task: Write Vitest unit tests (NestJS) for LingQ Engine
 - **#2075**: Task: Audit accessibility (ARIA) and screen reader support for LingQ Engine
 - **#2074**: Task: Write Cypress E2E test flows for LingQ Engine
 - **#2073**: Task: Conduct load testing (Artillery) for Classrooms
 - **#2072**: Task: Design empty states and skeleton loaders for Classrooms
 - **#2071**: Task: Set up Datadog/Prometheus monitoring alerts for Classrooms
 - **#2070**: Task: Implement Redis cache invalidation rules for Classrooms
-- **#2069**: Task: Write Jest unit tests (NestJS) for Classrooms
+- **#2069**: Task: Write Vitest unit tests (NestJS) for Classrooms
 - **#2068**: Task: Audit accessibility (ARIA) and screen reader support for Classrooms
 - **#2067**: Task: Write Cypress E2E test flows for Classrooms
 - **#2066**: Task: Conduct load testing (Artillery) for Live Rooms
 - **#2065**: Task: Design empty states and skeleton loaders for Live Rooms
 - **#2064**: Task: Set up Datadog/Prometheus monitoring alerts for Live Rooms
 - **#2063**: Task: Implement Redis cache invalidation rules for Live Rooms
-- **#2062**: Task: Write Jest unit tests (NestJS) for Live Rooms
+- **#2062**: Task: Write Vitest unit tests (NestJS) for Live Rooms
 - **#2061**: Task: Audit accessibility (ARIA) and screen reader support for Live Rooms
 - **#2060**: Task: Write Cypress E2E test flows for Live Rooms
 - **#2059**: Task: Conduct load testing (Artillery) for Chat
 - **#2057**: Task: Design empty states and skeleton loaders for Chat
 - **#2056**: Task: Set up Datadog/Prometheus monitoring alerts for Chat
 - **#2055**: Task: Implement Redis cache invalidation rules for Chat
-- **#2054**: Task: Write Jest unit tests (NestJS) for Chat
+- **#2054**: Task: Write Vitest unit tests (NestJS) for Chat
 - **#2053**: Task: Audit accessibility (ARIA) and screen reader support for Chat
 - **#2052**: Task: Write Cypress E2E test flows for Chat
 - **#2051**: Task: Conduct load testing (Artillery) for Moments
 - **#2050**: Task: Design empty states and skeleton loaders for Moments
 - **#2049**: Task: Set up Datadog/Prometheus monitoring alerts for Moments
 - **#2048**: Task: Implement Redis cache invalidation rules for Moments
-- **#2047**: Task: Write Jest unit tests (NestJS) for Moments
+- **#2047**: Task: Write Vitest unit tests (NestJS) for Moments
 - **#2046**: Task: Audit accessibility (ARIA) and screen reader support for Moments
 - **#2045**: Task: Write Cypress E2E test flows for Moments
 - **#2044**: Epic: Compliance: Implement COPPA age-gating and an automated DMCA takedown request flow
@@ -361,7 +361,7 @@ Total open issues: 935
 - **#1765**: Implement Has Audio Intro required filter. [swarm-active]
 - **#1764**: Implement AI-powered Conversation Starter suggestions in new chat windows based on
 - **#1763**: Implement the actual background job (the provided diff was for audio-room co-hosts, not partner recommendations).
-- **#1762**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the *recurrence* was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in
+- **#1762**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the _recurrence_ was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in
 - **#1761**: Configure NestJS `@nestjs/throttler` on sensitive authentication endpoints.
 - **#1760**: Build Favourites bookmarking functionality: `POST /chat/favourites` in NestJS and `FavouritesComponent` in Angular to review saved messages and corrections. [swarm-active]
 - **#1759**: Implement Host Moderation controls (Mute speaker, kick off stage).
@@ -776,7 +776,7 @@ Total open issues: 935
 - **#934**: Fix QA test failure: `Error: Timed out waiting 300000ms from config.webServer.` (from `e2e/playwright.config.ts`, whose `webServer.command` runs `cd ../frontend && npm run start`). Root cause per `qa_errors.log`: the Angular dev server never reaches a successful compile because of a real TypeScript build error, `TS4111: Property status comes from an index signature, so it must be accessed with [status]` at `frontend/src/app/services/moderation.service.ts:41` (`params.status = status;`, where `params` is typed `Record<string, string>`). Because `ng serve` keeps failing/restarting, [swarm-active]
 - **#896**: Fix QA test failure: `TS2307: Cannot find module ../../../environments/environment or its corresponding type declarations.` in `frontend/src/app/services/faq.service.ts:4` and `frontend/src/app/services/moderation.service.ts:5` (per `qa_errors.log`). Both files sit at `frontend/src/app/services/` but use a 3-level-up relative import (`../../../environments/environment`), whereas every sibling service in that same directory (e.g. `notification.service.ts`, `user.service.ts`, `chat.service.ts`) correctly uses 2 levels up (`../../environments/environment`) to reach `frontend/src/environments/environment.ts`. Fix: correct both imports to `../../environments/environment`. [swarm-active]
 - **#878**: Implement Dynamic Font Size slider adjusting base `rem` CSS rules. (Added `FontScaleService` (`frontend/src/app/services/font-scale.service.ts`), which persists a 80-150% scale to `localStorage` and sets `document.documentElement.style.fontSize` so every Tailwind `rem` utility across the app scales together. Wired a slider into `SettingsComponent` under a new Accessibility section, and injected the service in `AppComponent` so the persisted scale applies on boot. Verified: `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json` are clean, and `ng test --no-watch` passes 115/119 (28/28 spec files, 4 pre-existing skips) including the new `font-scale.service.spec.ts`. Follow-up review found `font-scale.service.ts` and `font-scale.service.spec.ts` were left untracked by git (`??`), so they were invisible to `git diff HEAD` and would have been silently dropped from the next commit even though `SettingsComponent`/`AppComponent` already depend on them; `git add`ed both to fix.) [swarm-active]
-- **#875**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the *recurrence* was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in [swarm-active]
+- **#875**: Fix QA test failure: `ReferenceError: describe is not defined` (recurred again during latest QA run). Root cause of the _recurrence_ was not the original bug reappearing: `qa-loop.sh` already correctly runs `(cd e2e && npx playwright test)`, verified clean (`npx playwright test --list` finds 100 tests across 14 files, no describe/vitest errors). The real bug was in [swarm-active]
 - **#871**: Fix QA test failure: `ReferenceError: describe is not defined` in test suites. [swarm-active]
 - **#857**: Integrate events with the Language Parties system, allowing scheduled audio rooms to automatically spin up at the designated time. [swarm-active]
 - **#855**: Implement RSVP functionality allowing users to mark Attending or Interested. [swarm-active]

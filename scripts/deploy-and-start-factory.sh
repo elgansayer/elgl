@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPOSITORY=${FACTORY_SOURCE_REPOSITORY:-/home/dev/hellotalk}
-BRANCH=factory/update-dynamic-tasks
+SCRIPT_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPOSITORY=${FACTORY_SOURCE_REPOSITORY:-"$(cd -- "$SCRIPT_DIRECTORY/.." && pwd)"}
+DEPLOY_REF=${FACTORY_DEPLOY_REF:-main}
 WORKTREE=''
 USE_EXISTING_CREDENTIALS=false
 SOURCE_REF=HEAD
@@ -11,8 +12,13 @@ usage() {
   cat <<'EOF'
 Usage: deploy-and-start-factory.sh --use-existing-credentials
 
-Deploys the current OpenHands factory, repairs canonical host paths, runs the
-online doctor, and starts the daemon. It never prints provider credentials.
+Deploys the OpenHands factory from the configured repository ref, repairs
+canonical host paths, runs the online doctor, and starts the daemon. It never
+prints provider credentials.
+
+The repository defaults to the checkout containing this script and the ref
+defaults to main. Override them with FACTORY_SOURCE_REPOSITORY and
+FACTORY_DEPLOY_REF when required.
 
 The flag is intentionally required because credentials already present on the
 host may have been exposed and should normally be rotated first.
@@ -48,10 +54,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if git -C "$REPOSITORY" fetch origin "$BRANCH" >/dev/null 2>&1; then
-  SOURCE_REF="origin/$BRANCH"
+if git -C "$REPOSITORY" fetch origin "$DEPLOY_REF" >/dev/null 2>&1; then
+  SOURCE_REF="origin/$DEPLOY_REF"
 else
-  echo 'Remote fetch unavailable. Using the current checked-out factory commit.' >&2
+  echo "Remote ref unavailable: $DEPLOY_REF. Using the current checked-out commit." >&2
 fi
 WORKTREE=$(mktemp -d /tmp/hellotalk-factory-deploy.XXXXXX)
 git -C "$REPOSITORY" worktree add --detach "$WORKTREE" "$SOURCE_REF" >/dev/null

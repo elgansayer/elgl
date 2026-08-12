@@ -68,6 +68,26 @@ class TaskStore:
             leases.pop(task_id, None)
             self._write_leases(leases)
 
+    def prune_expired_leases(self, now: datetime | None = None) -> list[str]:
+        current = now or datetime.now(UTC)
+        with self._lease_lock:
+            payload = read_json(self.lease_path, {"leases": []})
+            active: dict[str, Lease] = {}
+            expired: list[str] = []
+            for item in payload.get("leases", []):
+                expires = datetime.fromisoformat(item["expires_at"])
+                if expires > current:
+                    active[item["task_id"]] = Lease(
+                        task_id=item["task_id"],
+                        owner=item["owner"],
+                        acquired_at=datetime.fromisoformat(item["acquired_at"]),
+                        expires_at=expires,
+                    )
+                else:
+                    expired.append(item["task_id"])
+            self._write_leases(active)
+            return sorted(expired, key=lambda identifier: (not identifier.isdigit(), identifier))
+
     def _write_leases(self, leases: dict[str, Lease]) -> None:
         atomic_write_json(
             self.lease_path,

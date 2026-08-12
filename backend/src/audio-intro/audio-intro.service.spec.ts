@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AudioIntroService } from './audio-intro.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -7,15 +8,15 @@ describe('AudioIntroService', () => {
   let supabaseService: SupabaseService;
 
   const mockSupabaseClient = {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    single: jest.fn(),
-    update: jest.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn(),
+    update: vi.fn().mockReturnThis(),
     storage: {
-      from: jest.fn().mockReturnThis(),
-      createSignedUploadUrl: jest.fn(),
-      getPublicUrl: jest.fn(),
+      from: vi.fn().mockReturnThis(),
+      createSignedUploadUrl: vi.fn(),
+      getPublicUrl: vi.fn(),
     },
   };
 
@@ -26,7 +27,7 @@ describe('AudioIntroService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
       ],
@@ -37,13 +38,12 @@ describe('AudioIntroService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
-
 
   describe('getAudioIntro', () => {
     it('should return audio_url when data is present', async () => {
@@ -87,10 +87,11 @@ describe('AudioIntroService', () => {
         error: mockError,
       });
 
-      await expect(service.getAudioIntro(mockUserId)).rejects.toThrow('Database error');
+      await expect(service.getAudioIntro(mockUserId)).rejects.toThrow(
+        'Database error',
+      );
     });
   });
-
 
   describe('updateAudioIntro', () => {
     it('should successfully update the audio intro url', async () => {
@@ -104,7 +105,9 @@ describe('AudioIntroService', () => {
       await service.updateAudioIntro(mockUserId, mockAudioUrl);
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('users');
-      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ audio_intro_url: mockAudioUrl });
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({
+        audio_intro_url: mockAudioUrl,
+      });
       expect(mockSupabaseClient.eq).toHaveBeenCalledWith('id', mockUserId);
     });
 
@@ -117,17 +120,18 @@ describe('AudioIntroService', () => {
         error: mockError,
       });
 
-      await expect(service.updateAudioIntro(mockUserId, mockAudioUrl)).rejects.toThrow('Database error');
+      await expect(
+        service.updateAudioIntro(mockUserId, mockAudioUrl),
+      ).rejects.toThrow('Database error');
     });
   });
 
-
   describe('getPresignedUploadUrl', () => {
-    let dateNowSpy: jest.SpyInstance;
+    let dateNowSpy: MockInstance;
 
     beforeEach(() => {
       // Mock Date.now() to return a consistent value (e.g. 1000)
-      dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000);
+      dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1000);
     });
 
     afterEach(() => {
@@ -153,10 +157,17 @@ describe('AudioIntroService', () => {
       const result = await service.getPresignedUploadUrl(filename, contentType);
 
       expect(mockSupabaseClient.storage.from).toHaveBeenCalledWith('audio');
-      expect(mockSupabaseClient.storage.createSignedUploadUrl).toHaveBeenCalledWith('audio-intros/1000_test-audio.mp3');
-      expect(mockSupabaseClient.storage.getPublicUrl).toHaveBeenCalledWith('audio-intros/1000_test-audio.mp3');
+      expect(
+        mockSupabaseClient.storage.createSignedUploadUrl,
+      ).toHaveBeenCalledWith('audio-intros/1000_test-audio.mp3');
+      expect(mockSupabaseClient.storage.getPublicUrl).toHaveBeenCalledWith(
+        'audio-intros/1000_test-audio.mp3',
+      );
 
-      expect(result).toEqual({ uploadUrl: mockSignedUrl, mediaUrl: mockPublicUrl });
+      expect(result).toEqual({
+        uploadUrl: mockSignedUrl,
+        mediaUrl: mockPublicUrl,
+      });
     });
 
     it('should fall back to empty string if public URL data is missing', async () => {
@@ -189,7 +200,9 @@ describe('AudioIntroService', () => {
         error: mockError,
       });
 
-      await expect(service.getPresignedUploadUrl(filename, contentType)).rejects.toThrow('Storage error');
+      await expect(
+        service.getPresignedUploadUrl(filename, contentType),
+      ).rejects.toThrow('Storage error');
     });
   });
 });

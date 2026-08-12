@@ -446,4 +446,33 @@ export class HobbyTagsService {
 
     return results;
   }
+
+  async getUserVocabulary(
+    userId: string,
+    language: string,
+  ): Promise<VocabularyResultItem[]> {
+    return this.getVocabularyForUser(userId, language || 'en');
+  }
+
+  async getVocabularyForTag(
+    tagId: string,
+    language: string,
+  ): Promise<VocabularyResultItem[]> {
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase
+      .from('hobby_tags')
+      .select('*')
+      .eq('id', tagId)
+      .single();
+    if (!data) return [];
+    return this.getBaseVocabulary(data.name).map((item, index) => ({
+      id: `${tagId}-${index}`,
+      word: item.word,
+      translation: item.word,
+      language: language || 'en',
+      hobbyTagName: data.name,
+      difficulty: 'beginner',
+      hobby_tag: { icon: data.icon ?? '✨', name: data.name },
+    }));
+  }
 }

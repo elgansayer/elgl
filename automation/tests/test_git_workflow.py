@@ -43,3 +43,29 @@ def test_remove_worktree_rejects_path_outside_factory_root(tmp_path: Path) -> No
 
     with pytest.raises(RepositorySafetyError):
         workflow.remove_worktree(tmp_path / "outside")
+
+
+def test_remove_worktree_can_force_retirement_after_archive(tmp_path: Path) -> None:
+    repository = tmp_path / "state" / "repository"
+    repository.mkdir(parents=True)
+    workflow = GitWorkflow(repository, "main", Runner([ProcessResult(0, "", "")]))
+
+    workflow.remove_worktree(tmp_path / "state" / "worktrees" / "issue-12", force=True)
+
+    assert "--force" in workflow.runner.calls[0]
+
+
+def test_archive_worktree_preserves_dirty_files(tmp_path: Path) -> None:
+    repository = tmp_path / "state" / "repository"
+    repository.mkdir(parents=True)
+    worktree = tmp_path / "state" / "worktrees" / "issue-12"
+    worktree.mkdir(parents=True)
+    (worktree / "changed.ts").write_text("uncommitted", encoding="utf-8")
+    recovery = tmp_path / "state" / "recovery" / "issue-12-archive"
+    workflow = GitWorkflow(repository, "main", Runner([]))
+
+    archived = workflow.archive_worktree(worktree, recovery)
+
+    assert archived == recovery
+    assert (recovery / "changed.ts").read_text(encoding="utf-8") == "uncommitted"
+    assert (recovery / "RECOVERY.txt").is_file()

@@ -13,6 +13,10 @@ import { RoomChatComponent } from '../room-chat/room-chat.component';
 import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { VideoRoomComponent } from '../video-room/video-room.component';
 import { AudioEqualizerComponent } from '../primitives/audio-equalizer/audio-equalizer.component';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppChipComponent } from '../primitives/chip/chip.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 import { VirtualGiftModalComponent } from '../virtual-gift-modal/virtual-gift-modal.component';
 import { TrustSafetyModalComponent } from '../trust-safety-modal/trust-safety-modal.component';
 import {
@@ -28,7 +32,6 @@ import { QuickPollDisplayComponent } from './quick-poll-display.component';
 import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
-import { VoiceroomNotesComponent } from '../voiceroom-notes/voiceroom-notes.component';
 import { SoundboardComponent } from '../soundboard/soundboard.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 
@@ -46,11 +49,14 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     PrivatePartyCreateModalComponent,
     ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
+    AppCardComponent,
+    AppChipComponent,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
     QuickPollFormComponent,
     QuickPollDisplayComponent,
     LiveChatOverlayComponent,
     TipHostModalComponent,
-    VoiceroomNotesComponent,
     SoundboardComponent,
   ],
   templateUrl: './audio-room.component.html',
@@ -70,6 +76,7 @@ export class AudioRoomComponent implements OnInit {
   readonly showApprovalModal = signal<boolean>(false);
   readonly showPollFormModal = signal<boolean>(false);
   readonly showPollResultsModal = signal<boolean>(false);
+  readonly showNotesPanel = signal<boolean>(false);
   readonly currentPollId = signal<string | null>(null);
   readonly sidebarTab = signal<'chat' | 'notes'>('chat');
 
@@ -86,7 +93,7 @@ export class AudioRoomComponent implements OnInit {
 
   readonly httpClient = inject(HttpClient);
 
-  readonly exclusiveEmojis = signal<{emojiId:string;name:string;animationUrl:string}[]>([]);
+  readonly exclusiveEmojis = signal<{ emojiId: string; name: string; animationUrl: string }[]>([]);
   readonly showExclusivePicker = signal<boolean>(false);
 
   /** Toggle between flat list view and language-grouped view */
@@ -96,9 +103,7 @@ export class AudioRoomComponent implements OnInit {
   readonly displayedRooms = computed(() => {
     const selected = this.store.selectedLanguageGroup();
     if (selected) {
-      const group = this.store
-        .roomsByLanguage()
-        .find((g) => g.language_pair === selected);
+      const group = this.store.roomsByLanguage().find((g) => g.language_pair === selected);
       return group?.rooms ?? [];
     }
     return this.store.activeRooms();
@@ -112,7 +117,9 @@ export class AudioRoomComponent implements OnInit {
     ]);
     try {
       const result = await firstValueFrom(
-        this.httpClient.get<{emojiId:string;name:string;animationUrl:string}[]>('/audio-rooms/exclusive-emojis')
+        this.httpClient.get<{ emojiId: string; name: string; animationUrl: string }[]>(
+          '/audio-rooms/exclusive-emojis',
+        ),
       );
       this.exclusiveEmojis.set(result);
     } catch {
@@ -238,9 +245,7 @@ export class AudioRoomComponent implements OnInit {
     const room = this.store.currentRoom();
     if (!room) return;
     try {
-      await firstValueFrom(
-        this.httpClient.post(`/audio-rooms/${room.id}/reactions`, { emojiId }),
-      );
+      await firstValueFrom(this.httpClient.post(`/audio-rooms/${room.id}/reactions`, { emojiId }));
       showToast(this.i18n.translate('audioRoom.reactionSent'));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : this.i18n.translate('common.error');

@@ -121,7 +121,7 @@ type AudioRoomNoteRow = {
   id: string;
   room_id: string;
   author_id: string;
-  author_name: string;
+  author_name: string | null;
   content: string;
   vocabulary?: string | null;
   created_at: string;
@@ -701,6 +701,28 @@ export interface Database {
         Row: UsersRow;
         Insert: Partial<UsersRow>;
         Update: Partial<UsersRow>;
+        Relationships: [];
+      };
+      reading_engine_crash_reports: {
+        Row: {
+          id: string;
+          operation: string;
+          user_id: string | null;
+          resource_id: string | null;
+          error_type: string;
+          error_message: string;
+          stack_trace: string | null;
+          context: Record<string, unknown> | null;
+          created_at: string;
+          acknowledged: boolean;
+          resolved_at: string | null;
+        };
+        Insert: Partial<
+          Database['public']['Tables']['reading_engine_crash_reports']['Row']
+        >;
+        Update: Partial<
+          Database['public']['Tables']['reading_engine_crash_reports']['Row']
+        >;
         Relationships: [];
       };
       events: {

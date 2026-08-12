@@ -1,10 +1,4 @@
-import {
-  Component,
-  inject,
-  input,
-  signal,
-  ErrorHandler,
-} from '@angular/core';
+import { Component, inject, input, signal, ErrorHandler } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -17,7 +11,7 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
   template: `
     @if (hasError()) {
       <div
-        class="flex flex-col items-center justify-center p-6 rounded-lg bg-surface-2 border border-rose-600/30 max-w-lg mx-auto mt-8"
+        class="flex flex-col items-center justify-center p-6 rounded-lg bg-surface-2 border border-danger/30 max-w-lg mx-auto mt-8"
         role="alert"
         aria-live="assertive"
       >
@@ -29,19 +23,19 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
           {{ 'admin.errorBoundary.description' | t }}
         </p>
         @if (errorMessage()) {
-          <p class="text-xs text-rose-400 mt-2 mb-3 font-mono break-all text-center max-w-full">
+          <p class="text-xs text-danger mt-2 mb-3 font-mono break-all text-center max-w-full">
             {{ errorMessage() }}
           </p>
         }
         @if (pendingCount() > 0) {
-          <p class="text-xs text-amber-400 mt-2 mb-3">
+          <p class="text-xs text-warning mt-2 mb-3">
             {{ 'admin.errorBoundary.pendingReports' | t: { count: pendingCount() } }}
           </p>
         }
         <div class="flex gap-3 mt-3">
           <button
             type="button"
-            class="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors"
+            class="px-4 py-2 bg-primary text-on-fill rounded-lg text-sm hover:bg-primary/90 transition-colors"
             (click)="retry()"
             [attr.aria-label]="'admin.errorBoundary.retryAria' | t"
           >
@@ -61,7 +55,12 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
             (click)="toggleDetails()"
             [attr.aria-label]="'admin.errorBoundary.toggleDetailsAria' | t"
           >
-            {{ (showDetails() ? 'admin.errorBoundary.hideDetails' : 'admin.errorBoundary.showDetails') | t }}
+            {{
+              (showDetails()
+                ? 'admin.errorBoundary.hideDetails'
+                : 'admin.errorBoundary.showDetails'
+              ) | t
+            }}
           </button>
         </div>
         @if (showDetails()) {
@@ -78,7 +77,8 @@ import { OfflineAdminStorageService } from '../../services/offline-admin-storage
                   {{ 'admin.errorBoundary.component' | t }}: {{ crashContext()?.component }}
                 </p>
                 <p class="text-xs text-text-secondary">
-                  {{ 'admin.errorBoundary.offline' | t }}: {{ crashContext()?.offline ? ('common.yes' | t) : ('common.no' | t) }}
+                  {{ 'admin.errorBoundary.offline' | t }}:
+                  {{ crashContext()?.offline ? ('common.yes' | t) : ('common.no' | t) }}
                 </p>
               </div>
             }

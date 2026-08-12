@@ -45,7 +45,7 @@ def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> 
 
     assert "Delegate=yes" in unit
     assert "ProtectControlGroups=false" in unit
-    assert "MemoryMax=3500M" in unit
+    assert "MemoryMax=7G" in unit
     assert "TasksMax=1024" in unit
 
 
@@ -122,7 +122,7 @@ def test_default_repository_is_production_clone() -> None:
     config = FactoryConfig.from_environment(environment())
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
-    assert config.max_parallel_jobs == 3
+    assert config.max_parallel_jobs == 5
 
 
 def test_factory_environment_template_contains_runtime_path_settings() -> None:
@@ -132,6 +132,8 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
 
     assert "FACTORY_PODMAN_PATH=/usr/bin/podman" in template
     assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
+    assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
+    assert "FACTORY_REQUIRE_READY_LABEL=false" in template
 
 
 def test_parallel_job_limit_must_be_positive() -> None:

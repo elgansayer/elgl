@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateFlashcardDto, UpdateSrsDto } from './dto/flashcard.dto';
@@ -490,7 +491,7 @@ export class FlashcardsService {
     }
 
     const card: Flashcard = {
-      id: `degraded-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      id: `degraded-${Date.now()}-${randomUUID()}`,
       user_id: userId,
       word_token: cleanToken,
       original_context: dto.original_context ?? null,

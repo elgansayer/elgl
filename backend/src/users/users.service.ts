@@ -416,7 +416,6 @@ export class UsersService {
       privacy_hide_online_status: false,
       privacy_hide_vip_status: false,
       silence_unknown_callers: false,
-      auto_play_voice_notes: false,
       auto_download_media: false,
       auto_download_wifi_only: false,
       auto_download_preference: 'wifi',
@@ -462,7 +461,15 @@ export class UsersService {
       }
     }
 
-    if (dto.mock_location && !isVip) {
+    // Location spoofing is a consumer VIP benefit. A free user must not be
+    // able to set spoofed coordinates, city, country, or enable the spoofing
+    // toggle itself. Disabling the toggle (false) stays allowed for everyone.
+    const setsSpoofedLocation =
+      dto.mock_location !== undefined ||
+      dto.mock_country !== undefined ||
+      dto.mock_city !== undefined ||
+      dto.enable_location_spoofing === true;
+    if (setsSpoofedLocation && !isVip) {
       throw new BadRequestException(
         'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
       );

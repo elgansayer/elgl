@@ -43,9 +43,9 @@ describe('SplitScreenVideoComponent', () => {
     expect(component.hasCoHost()).toBe(false);
   });
 
-  it('should render a single video element by default (host only)', () => {
+  it('should render the host placeholder by default', () => {
     const videos = fixture.nativeElement.querySelectorAll('video');
-    expect(videos.length).toBe(1);
+    expect(videos.length).toBe(0);
   });
 
   it('should render the invite button when coHostVideoUrl is empty', () => {

@@ -82,12 +82,29 @@ export class GiftAnimationService {
   readonly elapsed = signal<number>(0);
   readonly hasAnimation = computed(() => this.currentAnimation() !== null);
 
+  private generateSecureId(): string {
+    // Check for a complete lack of the crypto API, which should be very rare in modern browsers
+    if (typeof crypto === 'undefined') {
+      console.warn('Crypto API not available, using fallback PRNG');
+      // Use a slightly less terrible fallback if crypto is completely unavailable, but avoid Math.random() as the primary fallback
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+
+    if (crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback using cryptographically secure random values
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
   playAnimation(overlay: GiftAnimationOverlay): void {
     this.cleanup();
 
     this.currentAnimation.set({
       ...overlay,
-      id: crypto.randomUUID?.() || Math.random().toString(36).slice(2),
+      id: this.generateSecureId(),
     });
     this.isVisible.set(true);
 

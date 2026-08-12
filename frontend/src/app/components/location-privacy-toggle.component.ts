@@ -43,7 +43,7 @@ export class LocationPrivacyToggleComponent {
       await this.userService.updatePrivacySettings({
         privacy_hide_exact_location: value === 'region',
       });
-    } catch (error) {
+    } catch {
       this.locationPrivacy.set(previousValue);
     }
   }

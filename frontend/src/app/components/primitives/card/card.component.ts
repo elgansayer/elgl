@@ -1,5 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, computed, inject } from '@angular/core';
-import { I18nService } from '../../../services/i18n.service';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -12,7 +11,6 @@ import { I18nService } from '../../../services/i18n.service';
   },
 })
 export class AppCardComponent {
-  private readonly i18nService = inject(I18nService);
   readonly padding = input<'none' | 'sm' | 'md' | 'lg'>('md');
   readonly variant = input<'default' | 'elevated' | 'outlined' | 'interactive'>('default');
   readonly customClass = input<string>('');
@@ -26,7 +24,11 @@ export class AppCardComponent {
   });
 
   readonly hostClasses = computed(() => {
-    const base = this.i18nService.translate('card.base_classes');
+    // Was previously fetched via I18nService.translate('card.base_classes') -
+    // a CSS class string smuggled into the translation dictionary, and out
+    // of sync with the equivalent .app-card SCSS utility class (rounded-sheet
+    // vs this component's rounded-2xl). Both now converge on rounded-card.
+    const base = 'block rounded-card bg-surface-200 transition-all';
 
     let paddingClass = '';
     switch (this.padding()) {

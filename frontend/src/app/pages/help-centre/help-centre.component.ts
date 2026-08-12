@@ -48,7 +48,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
       @if (articles.isLoading()) {
         <div class="text-center py-8">{{ 'common.loading' | t }}</div>
       } @else if (articles.error()) {
-        <div class="text-red-500 text-center py-4">{{ 'common.error_occurred' | t }}</div>
+        <div class="text-danger text-center py-4">{{ 'common.error_occurred' | t }}</div>
       } @else if ((articles.value()?.items?.length ?? 0) > 0) {
         @for (faq of articles.value()!.items; track faq.id) {
           <div class="bg-surface shadow-sm rounded-lg p-4 mb-3 border border-outline">

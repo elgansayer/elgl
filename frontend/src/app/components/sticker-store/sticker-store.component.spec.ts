@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Pipe, PipeTransform, Component, input, output, signal } from '@angular/core';
+import { Pipe, PipeTransform, Component, input } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StickerStoreComponent } from './sticker-store.component';

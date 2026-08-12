@@ -7,6 +7,10 @@ export interface ChatGroup {
   id: string;
   name: string;
   created_at: string;
+  owner_id?: string;
+  max_members?: number;
+  member_count?: number;
+  is_member?: boolean;
 }
 
 export interface ChatAnnouncement {

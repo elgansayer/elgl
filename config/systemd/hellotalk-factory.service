@@ -37,7 +37,7 @@ ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory
 LimitNOFILE=4096
 LimitNPROC=1024
 TasksMax=1024
-MemoryMax=3500M
+MemoryMax=7G
 
 [Install]
 WantedBy=multi-user.target

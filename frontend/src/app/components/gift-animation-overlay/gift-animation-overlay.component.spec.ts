@@ -1,5 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { GiftAnimationOverlayComponent } from './gift-animation-overlay.component';
 import { GiftAnimationService, GiftAnimationOverlay } from '../../services/gift-animation.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -153,9 +152,6 @@ describe('GiftAnimationOverlayComponent', () => {
   it('should show Lottie container when switching to a new animation', () => {
     animationService.playAnimation(mockOverlay);
     fixture.detectChanges();
-
-    const firstFloatId = fixture.nativeElement.querySelector('.float-particle')?.closest('g')
-      ?.querySelector('text')?.textContent;
 
     animationService.playAnimation({ ...mockOverlay, giftName: 'Heart' });
     fixture.detectChanges();

@@ -341,34 +341,78 @@ export class DataRetentionService {
   private async wipeUserData(userId: string): Promise<void> {
     const supabase = this.supabaseService.getClient();
 
-    // Chat / social content
-    await supabase.from('chat_messages').delete().eq('sender_id', userId);
-    await supabase.from('moments').delete().eq('author_id', userId);
-    await supabase.from('moment_comments').delete().eq('author_id', userId);
+    const tasks = [
+      // Chat / social content
+      supabase.from('chat_messages').delete().eq('sender_id', userId),
+      supabase.from('moments').delete().eq('author_id', userId),
+      supabase.from('moment_comments').delete().eq('author_id', userId),
 
-    // Flashcards / decks
-    await supabase.from('flashcards').delete().eq('user_id', userId);
-    await supabase.from('decks').delete().eq('user_id', userId);
+      // Flashcards / decks
+      supabase.from('flashcards').delete().eq('user_id', userId),
+      supabase.from('decks').delete().eq('user_id', userId),
 
-    // Favourites
-    await supabase.from('favourites').delete().eq('user_id', userId);
+      // Favourites
+      supabase.from('favourites').delete().eq('user_id', userId),
 
-    // Blocks (both directions)
-    await supabase.from('blocks').delete().eq('blocker_id', userId);
-    await supabase.from('blocks').delete().eq('blocked_id', userId);
+      // Blocks (both directions)
+      supabase.from('blocks').delete().eq('blocker_id', userId),
+      supabase.from('blocks').delete().eq('blocked_id', userId),
 
-    // Login history
-    await supabase.from('login_history').delete().eq('user_id', userId);
+      // Login history
+      supabase.from('login_history').delete().eq('user_id', userId),
 
-    // Reports
-    await supabase.from('reports').delete().eq('reporter_id', userId);
+      // Reports
+      supabase.from('reports').delete().eq('reporter_id', userId),
 
-    // Notifications
-    await supabase.from('notifications').delete().eq('recipient_id', userId);
+      // Notifications
+      supabase.from('notifications').delete().eq('recipient_id', userId),
 
-    // LingQ Reading Engine: reading progress and authored resources
-    await supabase.from('reading_progress').delete().eq('user_id', userId);
-    await supabase.from('reading_resources').delete().eq('created_by', userId);
+      // LingQ Reading Engine: reading progress and authored resources
+      supabase.from('reading_progress').delete().eq('user_id', userId),
+      supabase.from('reading_resources').delete().eq('created_by', userId),
+
+      // --- Virtual Coin Economy ---
+      supabase.from('coin_purchases').delete().eq('user_id', userId),
+      supabase.from('gift_transactions').delete().eq('sender_id', userId),
+      supabase.from('gift_transactions').delete().eq('receiver_id', userId),
+      supabase.from('escrow_transactions').delete().eq('payer_id', userId),
+      supabase.from('escrow_transactions').delete().eq('payee_id', userId),
+      supabase.from('user_sticker_packs').delete().eq('user_id', userId),
+      supabase.from('user_statistics').delete().eq('user_id', userId),
+
+      // --- Video / Audio Classroom data ---
+      supabase.from('call_logs').delete().eq('caller_id', userId),
+      supabase.from('call_logs').delete().eq('receiver_id', userId),
+      supabase.from('audio_room_captions').delete().eq('speaker_id', userId),
+      supabase.from('audio_room_notes').delete().eq('author_id', userId),
+      supabase.from('audio_room_tips').delete().eq('sender_user_id', userId),
+      supabase.from('audio_room_tips').delete().eq('receiver_user_id', userId),
+
+      // Anonymise remaining PII in captions/notes
+      supabase
+        .from('audio_room_captions')
+        .update({ speaker_name: null })
+        .eq('speaker_id', userId),
+      supabase
+        .from('audio_room_notes')
+        .update({ author_name: undefined })
+        .eq('author_id', userId),
+    ];
+
+    const results = await Promise.allSettled(tasks);
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Promise rejected at task index ${index} for user ${userId}`,
+          result.reason,
+        );
+      } else if (result.status === 'fulfilled' && result.value.error) {
+        this.logger.error(
+          `Supabase error at task index ${index} for user ${userId}: ${result.value.error.message}`,
+        );
+      }
+    });
 
     // Invalidate reading-engine Redis caches for this user
     try {
@@ -377,29 +421,7 @@ export class DataRetentionService {
       // Non-critical: cache invalidation failure should not block deletion
     }
 
-    // --- Virtual Coin Economy ---
-    // Coin purchases (receipt tokens, transaction IDs -- PII under GDPR)
-    await supabase.from('coin_purchases').delete().eq('user_id', userId);
-
-    // Gift transactions (both sent and received)
-    await supabase.from('gift_transactions').delete().eq('sender_id', userId);
-    await supabase.from('gift_transactions').delete().eq('receiver_id', userId);
-
-    // Escrow transactions (payer_id and payee_id link to users; reason and
-    // metadata may contain PII under GDPR)
-    await supabase.from('escrow_transactions').delete().eq('payer_id', userId);
-    await supabase.from('escrow_transactions').delete().eq('payee_id', userId);
-
-    // Sticker pack ownership
-    await supabase.from('user_sticker_packs').delete().eq('user_id', userId);
-
-    // User statistics (may contain coin-related aggregated data)
-    await supabase.from('user_statistics').delete().eq('user_id', userId);
-
     // Purge recommendation cache (GDPR "right to erasure")
-    // The Redis cache contains PII (display names, avatar URLs) and must be
-    // purged immediately.  Other users' caches containing this user will
-    // expire naturally within 24 hours (DAILY_REDIS_TTL).
     try {
       const redis = this.supabaseService.getRedisClient();
       const ownKey = `recommendations:daily:${userId}`;
@@ -411,56 +433,6 @@ export class DataRetentionService {
       this.logger.error(
         `Failed to purge recommendation cache for user ${userId}`,
         err,
-      );
-    }
-
-    // --- Video / Audio Classroom data ---
-    // Call logs (both caller and receiver)
-    await supabase.from('call_logs').delete().eq('caller_id', userId);
-    await supabase.from('call_logs').delete().eq('receiver_id', userId);
-
-    // Audio room captions (speech transcripts containing the user's voice)
-    await supabase
-      .from('audio_room_captions')
-      .delete()
-      .eq('speaker_id', userId);
-
-    // Audio room notes (vocabulary notes authored by the user)
-    await supabase.from('audio_room_notes').delete().eq('author_id', userId);
-
-    // Audio room tips (both sent and received)
-    await supabase
-      .from('audio_room_tips')
-      .delete()
-      .eq('sender_user_id', userId);
-    await supabase
-      .from('audio_room_tips')
-      .delete()
-      .eq('receiver_user_id', userId);
-
-    // Anonymise the user's speaker_name in any remaining audio-room captions
-    // (rows where speaker_id was NOT the user but the name was captured).
-    // Use a bulk nullification to avoid leaving PII in remnant caption rows.
-    const { error: captionNameError } = await supabase
-      .from('audio_room_captions')
-      .update({ speaker_name: null })
-      .eq('speaker_id', userId);
-
-    if (captionNameError) {
-      this.logger.error(
-        `Failed to anonymise speaker_name in audio_room_captions for user ${userId}: ${captionNameError.message}`,
-      );
-    }
-
-    // Anonymise the user's author_name in any remaining audio-room notes
-    const { error: noteNameError } = await supabase
-      .from('audio_room_notes')
-      .update({ author_name: null })
-      .eq('author_id', userId);
-
-    if (noteNameError) {
-      this.logger.error(
-        `Failed to anonymise author_name in audio_room_notes for user ${userId}: ${noteNameError.message}`,
       );
     }
 

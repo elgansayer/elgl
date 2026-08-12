@@ -1,16 +1,17 @@
+import type { Mock } from 'vitest';
 import { PasswordResetController } from './password-reset.controller';
 
 describe('PasswordResetController (unit)', () => {
   let controller: PasswordResetController;
   let resetService: {
-    requestPasswordReset: jest.Mock;
-    resetPassword: jest.Mock;
+    requestPasswordReset: Mock;
+    resetPassword: Mock;
   };
 
   beforeEach(() => {
     resetService = {
-      requestPasswordReset: jest.fn(),
-      resetPassword: jest.fn(),
+      requestPasswordReset: vi.fn(),
+      resetPassword: vi.fn(),
     };
     controller = new (PasswordResetController as any)(
       resetService,
@@ -60,5 +61,30 @@ describe('PasswordResetController (unit)', () => {
         message: 'Password has been successfully reset.',
       });
     });
+  });
+
+  describe('throttle configuration for password reset endpoints', () => {
+    // Metadata keys used by @nestjs/throttler for the default named throttler.
+    const throttleLimitKey = 'THROTTLER:LIMITdefault';
+    const throttleTtlKey = 'THROTTLER:TTLdefault';
+
+    const throttledEndpoints: Array<{
+      method: keyof PasswordResetController;
+      limit: number;
+      ttl: number;
+    }> = [
+      { method: 'requestPasswordReset', limit: 3, ttl: 300000 },
+      { method: 'resetPassword', limit: 3, ttl: 300000 },
+    ];
+
+    it.each(throttledEndpoints)(
+      'should limit $method to $limit requests per $ttl ms window',
+      ({ method, limit, ttl }) => {
+        const handler = PasswordResetController.prototype[method];
+
+        expect(Reflect.getMetadata(throttleLimitKey, handler)).toBe(limit);
+        expect(Reflect.getMetadata(throttleTtlKey, handler)).toBe(ttl);
+      },
+    );
   });
 });

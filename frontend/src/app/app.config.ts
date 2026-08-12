@@ -65,6 +65,5 @@ export const appConfig: ApplicationConfig = {
       useFactory: initialiseDeepLinks,
       multi: true,
     },
-    importProvidersFrom(JoyrideModule.forRoot()),
   ],
 };

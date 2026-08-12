@@ -80,7 +80,7 @@ VIRTUAL_ENV="$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv-0.1.0/bin/uv" sync \
   --active --frozen --no-editable --extra development --project "$REPOSITORY_SOURCE/automation"
 ln -sfn "$FACTORY_ROOT/venv-0.1.0" "$FACTORY_ROOT/venv"
 
-for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e"; do
+for directory in "$FACTORY_STATE/repository" "$FACTORY_STATE/repository/frontend" "$FACTORY_STATE/repository/backend" "$FACTORY_STATE/repository/e2e" "$FACTORY_STATE/recovery"; do
   if [ -f "$directory/package-lock.json" ]; then
     sudo -u "$FACTORY_USER" npm ci --prefix "$directory" --ignore-scripts --legacy-peer-deps
   fi

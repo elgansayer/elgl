@@ -1,7 +1,8 @@
 import { Component, input, output, signal, inject, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { DiscoveryErrorHandlerService, DiscoveryCrashContext } from '../../services/discovery-error-handler.service';
+import { DiscoveryErrorHandlerService } from '../../services/discovery-error-handler.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 export interface DiscoveryErrorContext {
   component: string;
@@ -25,7 +26,12 @@ interface DiscoveryCrashPayload {
   timestamp: string;
   url: string;
   userAgent: string;
-  stackFrames?: { fileName?: string; functionName?: string; lineNumber?: number; columnNumber?: number }[];
+  stackFrames?: {
+    fileName?: string;
+    functionName?: string;
+    lineNumber?: number;
+    columnNumber?: number;
+  }[];
 }
 
 class DiscoveryContextError extends Error {
@@ -66,13 +72,15 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
 @Component({
   selector: 'app-discovery-error-boundary',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppButtonPrimaryComponent],
   template: `
     @if (!hasError()) {
       <ng-content />
     } @else {
       <div class="mx-auto max-w-md space-y-4 pt-8 pb-16" role="alert">
-        <section class="rounded-sheet border border-rose-500/30 bg-rose-500/10 p-6 text-center space-y-4">
+        <section
+          class="rounded-sheet border border-rose-500/30 bg-rose-500/10 p-6 text-center space-y-4"
+        >
           <p class="text-4xl" aria-hidden="true">&#128269;</p>
           <h3 class="text-lg font-black text-rose-400">{{ 'discoveryErrorBoundary.title' | t }}</h3>
           <p class="text-sm text-text-secondary">{{ 'discoveryErrorBoundary.description' | t }}</p>
@@ -87,13 +95,9 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
             </p>
           }
           <div class="flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              (click)="resetError()"
-              class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold"
-            >
+            <app-button-primary (clicked)="resetError()" customClass="text-xs">
               {{ 'discoveryErrorBoundary.retryBtn' | t }}
-            </button>
+            </app-button-primary>
             @if (showReportButton()) {
               <button
                 type="button"
@@ -105,7 +109,9 @@ function parseStackFrames(stack: string): DiscoveryCrashPayload['stackFrames'] {
             }
           </div>
           @if (reportedMessage()) {
-            <p class="text-xs text-emerald-400 font-bold">{{ 'discoveryErrorBoundary.reportedMessage' | t }}</p>
+            <p class="text-xs text-emerald-400 font-bold">
+              {{ 'discoveryErrorBoundary.reportedMessage' | t }}
+            </p>
           }
         </section>
       </div>
@@ -214,10 +220,7 @@ export class DiscoveryErrorBoundaryComponent {
   /**
    * Build a structured crash payload for dashboard/diagnostic use.
    */
-  static buildCrashPayload(
-    error: Error,
-    context: DiscoveryErrorContext,
-  ): DiscoveryCrashPayload {
+  static buildCrashPayload(error: Error, context: DiscoveryErrorContext): DiscoveryCrashPayload {
     return {
       errorName: error.name || 'UnknownError',
       errorMessage: error.message || 'No message',

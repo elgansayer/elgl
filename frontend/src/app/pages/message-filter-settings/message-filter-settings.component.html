@@ -17,14 +17,12 @@
       <div class="app-empty-state">{{ 'common.loading' | t }}</div>
     } @else {
       @if (error()) {
-        <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           {{ error() }}
         </div>
       }
       @if (saved()) {
-        <div
-          class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400"
-        >
+        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success">
           {{ 'settings.messageFilter.saved' | t }}
         </div>
       }
@@ -43,7 +41,7 @@
             @if (ageMin() != null || ageMax() != null) {
               <button
                 (click)="clearAgeFilters()"
-                class="text-xs text-primary-400 hover:text-primary-300 transition-colors"
+                class="text-xs text-primary hover:text-primary/80 transition-colors"
               >
                 {{ 'settings.messageFilter.clear' | t }}
               </button>
@@ -57,7 +55,7 @@
               placeholder="0"
               min="0"
               max="150"
-              class="w-24 rounded-lg bg-surface-200 border border-surface-300 px-3 py-2 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-400"
+              class="w-24 rounded-lg bg-surface-200 border border-surface-300 px-3 py-2 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/50"
               [attr.aria-label]="'settings.messageFilter.ageMin' | t"
             />
             <span class="text-text-secondary text-sm">{{ 'settings.messageFilter.to' | t }}</span>
@@ -68,7 +66,7 @@
               placeholder="150"
               min="0"
               max="150"
-              class="w-24 rounded-lg bg-surface-200 border border-surface-300 px-3 py-2 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-400"
+              class="w-24 rounded-lg bg-surface-200 border border-surface-300 px-3 py-2 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/50"
               [attr.aria-label]="'settings.messageFilter.ageMax' | t"
             />
           </div>
@@ -83,8 +81,8 @@
             @for (gender of genderOptions; track gender.value) {
               <button
                 (click)="toggleGender(gender.value)"
-                [class.bg-primary-500]="allowedGenders().includes(gender.value)"
-                [class.text-white]="allowedGenders().includes(gender.value)"
+                [class.bg-primary]="allowedGenders().includes(gender.value)"
+                [class.text-on-fill]="allowedGenders().includes(gender.value)"
                 [class.bg-surface-200]="!allowedGenders().includes(gender.value)"
                 [class.text-text-secondary]="!allowedGenders().includes(gender.value)"
                 class="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:opacity-80"
@@ -104,8 +102,8 @@
             @for (lang of commonLanguages; track lang.code) {
               <button
                 (click)="toggleNativeLanguage(lang.code)"
-                [class.bg-primary-500]="allowedNativeLanguages().includes(lang.code)"
-                [class.text-white]="allowedNativeLanguages().includes(lang.code)"
+                [class.bg-primary]="allowedNativeLanguages().includes(lang.code)"
+                [class.text-on-fill]="allowedNativeLanguages().includes(lang.code)"
                 [class.bg-surface-200]="!allowedNativeLanguages().includes(lang.code)"
                 [class.text-text-secondary]="!allowedNativeLanguages().includes(lang.code)"
                 class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors hover:opacity-80"
@@ -122,7 +120,7 @@
         <button
           (click)="saveFilters()"
           [disabled]="saving()"
-          class="w-full py-3 rounded-xl bg-primary-500 text-white font-semibold text-sm hover:bg-primary-400 disabled:opacity-50 transition-colors"
+          class="w-full py-3 rounded-xl bg-primary text-on-fill font-semibold text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
           @if (saving()) {
             {{ 'common.loading' | t }}

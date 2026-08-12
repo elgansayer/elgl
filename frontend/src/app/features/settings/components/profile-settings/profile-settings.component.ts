@@ -113,7 +113,7 @@ export class ProfileSettingsComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(() => {
       if (this.profileForm.valid) {
-        this.persist();
+        this.save();
       }
     });
   }
@@ -126,12 +126,12 @@ export class ProfileSettingsComponent implements OnInit {
         jlptLevel: ['None'],
       }),
     );
-    this.persist();
+    this.save();
   }
 
   removeTargetLanguage(index: number) {
     this.targetLanguages.removeAt(index);
-    this.persist();
+    this.save();
   }
 
   onDistanceChange(event: Event) {
@@ -139,11 +139,11 @@ export class ProfileSettingsComponent implements OnInit {
     if (isHTMLInputElement(input)) {
       const value = parseInt(input.value, 10);
       this.distanceRadius.set(value);
-      this.persist();
+      this.save();
     }
   }
 
-  private persist() {
+  save(): void {
     if (this.profileForm.invalid) return;
 
     const formValue = this.profileForm.value;

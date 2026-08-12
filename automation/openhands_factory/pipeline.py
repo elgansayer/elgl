@@ -9,7 +9,7 @@ from threading import Semaphore
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
-from openhands_factory.exceptions import FactoryError
+from openhands_factory.exceptions import FactoryError, RepositorySafetyError
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestStatus
 from openhands_factory.jobs import JobStore
@@ -23,6 +23,7 @@ TERMINAL_STATES = {JobState.DONE, JobState.QUARANTINED}
 PRE_PULL_REQUEST_STATES = {
     JobState.DISCOVERED,
     JobState.IMPLEMENTING,
+    JobState.SECURITY_REVIEW,
     JobState.VERIFYING,
     JobState.PR_DRAFT,
     JobState.QUARANTINED,
@@ -43,6 +44,8 @@ class FactoryPipeline:
             config.repository,
             config.github_token.get_secret_value(),
             base_branch=config.base_branch,
+            require_ready_label=config.require_ready_label,
+            ready_label=config.ready_label,
         )
         self.jobs = JobStore(config.state_dir / "jobs.json")
         self.tasks = TaskStore(config.state_dir)
@@ -71,7 +74,18 @@ class FactoryPipeline:
             worktree = self.config.worktree_dir / f"issue-{task_id}"
             if worktree.exists():
                 workflow = GitWorkflow(self.config.repository, self.config.base_branch)
-                workflow.remove_worktree(worktree)
+                inspection = GitWorkflow(worktree, self.config.base_branch)
+                try:
+                    dirty = inspection.has_changes()
+                except RepositorySafetyError:
+                    # A damaged or partially-created worktree is not safe to delete silently.
+                    dirty = True
+                if dirty:
+                    recovery = self.config.recovery_dir / (
+                        f"issue-{task_id}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+                    )
+                    workflow.archive_worktree(worktree, recovery)
+                workflow.remove_worktree(worktree, force=dirty)
             self.tasks.release(task_id)
             job.state = JobState.DONE
             job.last_error = "Issue closed before pull request creation"
@@ -160,6 +174,13 @@ class FactoryPipeline:
             self.conversations.run(job.task, worktree, prompt)
             if not workflow.has_changes():
                 raise FactoryError("Implementation produced no repository changes")
+            job.state = JobState.SECURITY_REVIEW
+            return
+
+        if job.state is JobState.SECURITY_REVIEW:
+            self.conversations.run(
+                job.task, worktree, build_phase_prompt(prompt_dir, "security", job.task)
+            )
             job.state = JobState.VERIFYING
             return
 
@@ -325,8 +346,8 @@ class FactoryPipeline:
         return (
             f"Fixes #{job.task.identifier}\n\n"
             "## Factory execution\n\n"
-            "This pull request was planned, implemented, locally verified and independently "
-            "reviewed "
-            "by the bounded OpenHands factory. GitHub required checks remain authoritative.\n\n"
+            "This pull request was planned, implemented, security reviewed, locally verified and "
+            "independently reviewed by the bounded OpenHands factory. GitHub required checks remain "
+            "authoritative.\n\n"
             f"Reviewed head SHA: `{job.head_sha or 'pending'}`\n"
         )

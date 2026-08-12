@@ -12,8 +12,8 @@ import { Component, input, output } from '@angular/core';
         <button
           (click)="pillPicked.emit(pill.id)"
           class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200"
-          [class.bg-purple-600]="selected() === pill.id"
-          [class.text-white]="selected() === pill.id"
+          [class.bg-primary]="selected() === pill.id"
+          [class.text-on-fill]="selected() === pill.id"
           [class.bg-surface-300]="selected() !== pill.id"
           [class.text-text-secondary]="selected() !== pill.id"
           [class.border]="selected() !== pill.id"
