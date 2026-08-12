@@ -24,6 +24,15 @@ weaknesses, client-controlled privileged state, authentication and authorisation
 security configuration. It fixes confirmed findings with tests or leaves the worktree unchanged, and the normal
 verification gate then runs on the combined diff before the pull request is opened.
 
+The factory also enforces a production-quality gate. Before PR creation it rejects obvious production mocks,
+fakes, stubs, knowingly unimplemented simulations, new `as any` escapes and newly skipped tests. One bounded
+quality-repair conversation may correct deterministic findings; unresolved findings fail closed. After PR
+creation, the independent reviewer must write a structured `.factory-review.json` assessing every issue
+acceptance criterion with evidence. Missing/malformed reports, failed criteria and unresolved blockers cannot be
+published as an approved `factory/independent-review` status.
+
+See `automation/FACTORY_QUALITY_GATE.md` for the issue classes and detailed definition of done.
+
 ## Costs
 
 ChatGPT Plus is approximately USD 20 monthly and does not include ordinary OpenAI API usage. OpenHands Go is
@@ -76,8 +85,15 @@ Store credentials only in `/etc/hellotalk-factory/factory.env`, never in command
 review in parallel, while the memory-heavy local verification suite is serialised. Reduce this to two or
 three if swap usage grows; increase it only after measuring memory and CPU saturation.
 
-All open issues are eligible by default. `needs-human`, `factory-skip` and `duplicate` always exclude an
-issue. Set `FACTORY_REQUIRE_READY_LABEL=true` if manual queueing is preferred.
+Issue intake is allow-listed by default: `FACTORY_REQUIRE_READY_LABEL=true`. New work must carry
+`factory-ready` before it is eligible. `factory-active` keeps already-leased work eligible and `guardian-alert`
+retains emergency priority. `needs-human`, `factory-skip`, `duplicate`, `factory-epic`, `factory-planning` and
+`factory-quality-blocked` exclude new intake. Broad audits and architecture objectives should be labelled
+`factory-epic` or `factory-planning`, decomposed into bounded child issues, then only those children should
+receive `factory-ready`.
+
+Existing installations may still have an explicit `FACTORY_REQUIRE_READY_LABEL=false` in
+`/etc/hellotalk-factory/factory.env`; change it to `true` when deploying this policy.
 
 When a quarantined issue has an uncommitted worktree, the daemon archives it under
 `/var/lib/hellotalk-factory/recovery/` before removing the Git worktree registration. The branch is never
