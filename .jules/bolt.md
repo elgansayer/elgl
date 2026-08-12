@@ -19,3 +19,7 @@
 ## 2026-08-12 - [Supabase N+1 batching within Promise.all]
 **Learning:** For NestJS/Supabase queries that must fetch relations iteratively inside a \`Promise.all\`, we can batch a sequential N+1 bottleneck. If the parent dataset is already mapped, we can extract the IDs, fetch all relations with an \`.in()\` batch query upfront, and then stitch the dataset in the \`map\` step. If the relational table is too large for \`.in()\` counts or groups, retaining the \`Promise.all\` exclusively for the reduced query surface (e.g., fetching counts) and batching everything else cuts database latency significantly.
 **Action:** When inspecting sequential queries, look for \`Promise.all\` blocks executing multiple queries per item. Split the batchable queries to run before the \`Promise.all\`, retaining parallel execution only for the queries that fundamentally require it (like exact aggregations).
+
+## 2026-08-12 - [Social Learning Integration]
+**Learning:** Implemented a new SocialLearningService to mock generating discussion questions, vocabulary challenges (from user flashcards), and conversation starters, integrated gracefully with Angular signals in the Reading Engine component.
+**Action:** Always ensure UI template updates correspond exactly with newly added component logic methods and signals.
