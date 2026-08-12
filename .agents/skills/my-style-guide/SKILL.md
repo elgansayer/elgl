@@ -12,8 +12,7 @@ This skill enforces universal coding and project management best practices acros
 - **Clarity over Cleverness:** Write code that is easy to read and understand.
 - **DRY & SOLID principles:** Ensure code is modular, reusable, and follows single-responsibility principles.
 - **Strong Typing:** Always use strong static typing where available (e.g., TypeScript over JS).
-
-## 2. Documentation
+- **No Deprecated Packages:** You must never pick npm packages that are deprecated, but still feel free to pick any tools or packages widely in use. Always verify dependencies before adding them.
 
 - **Self-Documenting Code:** Use descriptive variable and function names.
 - **Inline Comments:** Only use comments to explain _why_ something is done, not _what_ is done (the code should explain the what).

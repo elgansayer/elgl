@@ -14,11 +14,11 @@
     "start:prod": "node dist/main",
     "lint": "sh -c 'eslint \"{src,apps,libs,test}/**/*.ts\" --fix'",
     "lint:check": "sh -c 'eslint \"{src,apps,libs,test}/**/*.ts\"'",
-    "test": "NODE_OPTIONS=\"--experimental-vm-modules --max-old-space-size=3072\" jest --config jest.config.js",
-    "test:watch": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --config jest.config.js --watch",
-    "test:cov": "NODE_OPTIONS=\"--experimental-vm-modules\" jest --config jest.config.js --coverage",
-    "test:debug": "NODE_OPTIONS=\"--experimental-vm-modules\" node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --config jest.config.js --runInBand",
-    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest --config ./test/jest-e2e.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "test:debug": "vitest --inspect-brk --no-file-parallelism",
+    "test:e2e": "vitest run --config vitest.e2e.config.mts",
     "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
     "verify": "ts-node -r tsconfig-paths/register src/database/verify.ts",
     "tunnel": "ngrok http 3000"
@@ -77,11 +77,8 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
-    "@types/dompurify": "^3.2.0",
+    "@swc/core": "^1.15.47",
     "@types/express": "^5.0.0",
-    "@types/ioredis": "^4.28.10",
-    "@types/jest": "^30.0.0",
-    "@types/joi": "^17.2.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^26.1.2",
@@ -89,46 +86,21 @@
     "@types/qrcode": "^1.5.6",
     "@types/speakeasy": "^2.0.10",
     "@types/supertest": "^7.0.0",
-    "@types/uuid": "^10.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^17.0.0",
-    "jest": "^30.0.0",
     "ngrok": "^5.0.0-beta.2",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
-    "ts-jest": "^29.4.12",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transformIgnorePatterns": [
-      "/node_modules/(?!(uuid|@supabase|@aws-sdk)/)"
-    ],
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "moduleNameMapper": {
-      "^jwks-rsa$": "<rootDir>/../test/mocks/jwks-rsa-mock.js",
-      "^jsdom$": "<rootDir>/../test/mocks/jsdom-mock.js",
-      "^dompurify$": "<rootDir>/../test/mocks/dompurify-mock.js"
-    }
+    "typescript-eslint": "^8.20.0",
+    "unplugin-swc": "^1.5.10",
+    "vitest": "^4.1.10"
   }
 }

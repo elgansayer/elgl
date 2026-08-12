@@ -13,9 +13,7 @@ class Runner:
         self.results = results
         self.calls: list[tuple[str, ...]] = []
 
-    def __call__(
-        self, arguments: Sequence[str], cwd: Path, timeout: int = 300
-    ) -> ProcessResult:
+    def __call__(self, arguments: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
         self.calls.append(tuple(arguments))
         return self.results.pop(0)
 

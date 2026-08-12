@@ -1,0 +1,64 @@
+from pathlib import Path
+from unittest.mock import Mock
+
+from openhands_factory.quality_gate import check_quality_gate, is_test_path
+
+
+def test_is_test_path() -> None:
+    assert is_test_path(Path("frontend/src/app/example.spec.ts"))
+    assert is_test_path(Path("backend/test/app.e2e-spec.ts"))
+    assert is_test_path(Path("tests/test_foo.py"))
+    assert not is_test_path(Path("frontend/src/app/example.ts"))
+    assert not is_test_path(Path("backend/src/app.controller.ts"))
+
+
+def test_check_quality_gate_blocks_production_mock() -> None:
+    workflow = Mock()
+    # Provide a mock diff output
+    workflow.runner.return_value = Mock(
+        stdout="""+++ b/backend/src/app.service.ts
+@@ -1 +1,2 @@
++    // TODO: implement
+"""
+    )
+    findings = check_quality_gate(workflow, "main")
+    assert len(findings) == 1
+    assert findings[0].code == "production-mock"
+
+
+def test_check_quality_gate_allows_test_mock() -> None:
+    workflow = Mock()
+    workflow.runner.return_value = Mock(
+        stdout="""+++ b/backend/test/app.e2e-spec.ts
+@@ -1 +1,2 @@
++    // TODO: implement
+"""
+    )
+    findings = check_quality_gate(workflow, "main")
+    assert len(findings) == 0
+
+
+def test_check_quality_gate_blocks_type_escapes() -> None:
+    workflow = Mock()
+    workflow.runner.return_value = Mock(
+        stdout="""+++ b/frontend/src/app.ts
+@@ -1 +1,2 @@
++    const x = y as any;
+"""
+    )
+    findings = check_quality_gate(workflow, "main")
+    assert len(findings) == 1
+    assert findings[0].code == "unsafe-type-escape"
+
+
+def test_check_quality_gate_blocks_skipped_tests() -> None:
+    workflow = Mock()
+    workflow.runner.return_value = Mock(
+        stdout="""+++ b/frontend/src/app.spec.ts
+@@ -1 +1,2 @@
++    it.skip("test", () => {});
+"""
+    )
+    findings = check_quality_gate(workflow, "main")
+    assert len(findings) == 1
+    assert findings[0].code == "skipped-test"
