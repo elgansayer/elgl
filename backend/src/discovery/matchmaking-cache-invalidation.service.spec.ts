@@ -1,4 +1,5 @@
-/// <reference types="jest" />
+import type { Mock } from 'vitest';
+/// <reference types="vi" />
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { MatchmakingCacheInvalidationService } from './matchmaking-cache-invalidation.service';
@@ -6,15 +7,15 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('MatchmakingCacheInvalidationService', () => {
   let service: MatchmakingCacheInvalidationService;
-  let mockRedis: Record<string, jest.Mock>;
+  let mockRedis: Record<string, Mock>;
 
   beforeEach(async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
 
     mockRedis = {
-      del: jest.fn(),
-      scan: jest.fn(),
+      del: vi.fn(),
+      scan: vi.fn(),
     };
     mockRedis.del.mockResolvedValue(0);
     mockRedis.scan.mockResolvedValue(['0', []]);
@@ -25,7 +26,7 @@ describe('MatchmakingCacheInvalidationService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getRedisClient: jest.fn().mockReturnValue(mockRedis),
+            getRedisClient: vi.fn().mockReturnValue(mockRedis),
           },
         },
       ],
@@ -37,7 +38,7 @@ describe('MatchmakingCacheInvalidationService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -57,7 +58,7 @@ describe('MatchmakingCacheInvalidationService', () => {
     });
 
     it('should log when keys are deleted', async () => {
-      const logSpy = jest.spyOn(Logger.prototype, 'log');
+      const logSpy = vi.spyOn(Logger.prototype, 'log');
       mockRedis.del.mockResolvedValue(2);
 
       await service.invalidateUserMatchmakingCaches('user-1');
@@ -68,7 +69,7 @@ describe('MatchmakingCacheInvalidationService', () => {
     });
 
     it('should not log when no keys are deleted', async () => {
-      const logSpy = jest.spyOn(Logger.prototype, 'log');
+      const logSpy = vi.spyOn(Logger.prototype, 'log');
       mockRedis.del.mockResolvedValue(0);
 
       await service.invalidateUserMatchmakingCaches('user-1');

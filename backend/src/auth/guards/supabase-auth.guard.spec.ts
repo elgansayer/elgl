@@ -1,22 +1,23 @@
+import type { Mocked } from 'vitest';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 describe('SupabaseAuthGuard', () => {
   let guard: SupabaseAuthGuard;
-  let supabaseService: jest.Mocked<SupabaseService>;
+  let supabaseService: Mocked<SupabaseService>;
 
   beforeEach(() => {
     supabaseService = {
-      getClient: jest.fn(),
+      getClient: vi.fn(),
     } as any;
     guard = new SupabaseAuthGuard(supabaseService);
   });
 
   const mockExecutionContext = (headers: any = {}): ExecutionContext => {
     return {
-      switchToHttp: jest.fn().mockReturnValue({
-        getRequest: jest.fn().mockReturnValue({ headers }),
+      switchToHttp: vi.fn().mockReturnValue({
+        getRequest: vi.fn().mockReturnValue({ headers }),
       }),
     } as any;
   };
@@ -33,7 +34,7 @@ describe('SupabaseAuthGuard', () => {
     const context = mockExecutionContext({ authorization: ['Bearer token'] });
 
     const mockAuth = {
-      getUser: jest.fn().mockResolvedValue({ data: { user: null } }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
     };
     supabaseService.getClient.mockReturnValue({ auth: mockAuth } as any);
 
@@ -49,7 +50,7 @@ describe('SupabaseAuthGuard', () => {
     });
 
     const mockAuth = {
-      getUser: jest.fn().mockResolvedValue({ data: { user: null } }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
     };
 
     supabaseService.getClient.mockReturnValue({ auth: mockAuth } as any);
@@ -66,7 +67,7 @@ describe('SupabaseAuthGuard', () => {
     });
 
     const mockAuth = {
-      getUser: jest.fn().mockRejectedValue(new Error('Some error')),
+      getUser: vi.fn().mockRejectedValue(new Error('Some error')),
     };
 
     supabaseService.getClient.mockReturnValue({ auth: mockAuth } as any);
@@ -80,13 +81,13 @@ describe('SupabaseAuthGuard', () => {
   it('should set request.user and return true if token is valid', async () => {
     const request = { headers: { authorization: 'Bearer valid-token' } };
     const context = {
-      switchToHttp: jest.fn().mockReturnValue({
-        getRequest: jest.fn().mockReturnValue(request),
+      switchToHttp: vi.fn().mockReturnValue({
+        getRequest: vi.fn().mockReturnValue(request),
       }),
     } as any;
 
     const mockAuth = {
-      getUser: jest.fn().mockResolvedValue({
+      getUser: vi.fn().mockResolvedValue({
         data: { user: { id: 'user-123', email: 'test@example.com' } },
       }),
     };

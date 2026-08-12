@@ -1,24 +1,26 @@
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: {
-        createElement: jest.fn(),
-        createDocumentFragment: jest.fn(),
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: {
+          createElement: vi.fn(),
+          createDocumentFragment: vi.fn(),
+        },
+        Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
+        NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
       },
-      Node: { ELEMENT_NODE: 1, TEXT_NODE: 3, DOCUMENT_FRAGMENT_NODE: 11 },
-      NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4 },
-    },
-  })),
+    };
+  }),
 }));
 
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
+  default: vi.fn(() => ({
     sanitize: (dirty: string): string => {
       if (typeof dirty !== 'string') return dirty;
       return dirty.replace(/<[^>]*>/g, '');
     },
-    setConfig: jest.fn(),
+    setConfig: vi.fn(),
   })),
 }));
 
@@ -50,15 +52,15 @@ describe('GooglePlayNotificationService', () => {
 
   function createQueryBuilder(overrides: Record<string, any> = {}) {
     return {
-      select: jest.fn().mockReturnThis(),
-      upsert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({
+      select: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
         data: { user_id: 'user-1' },
         error: null,
       }),
-      then: jest.fn(function (this: any, resolve: any) {
+      then: vi.fn(function (this: any, resolve: any) {
         return resolve({ error: null, data: null });
       }),
       ...overrides,
@@ -67,7 +69,7 @@ describe('GooglePlayNotificationService', () => {
 
   beforeEach(async () => {
     mockSupabaseClient = createQueryBuilder();
-    mockSupabaseClient.from = jest.fn().mockImplementation((_table: string) => {
+    mockSupabaseClient.from = vi.fn().mockImplementation((_table: string) => {
       return createQueryBuilder();
     });
 
@@ -77,31 +79,31 @@ describe('GooglePlayNotificationService', () => {
         {
           provide: 'PinoLogger:GooglePlayNotificationService',
           useValue: {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
+            info: vi.fn(),
+            error: vi.fn(),
+            warn: vi.fn(),
+            debug: vi.fn(),
           },
         },
         {
           provide: ConfigService,
-          useValue: { get: jest.fn().mockReturnValue(null) },
+          useValue: { get: vi.fn().mockReturnValue(null) },
         },
         {
           provide: HttpService,
-          useValue: { get: jest.fn(), post: jest.fn() },
+          useValue: { get: vi.fn(), post: vi.fn() },
         },
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         {
           provide: EconomyService,
           useValue: {
-            getBalance: jest.fn(),
-            purchaseCoins: jest.fn(),
+            getBalance: vi.fn(),
+            purchaseCoins: vi.fn(),
           },
         },
       ],
@@ -113,7 +115,7 @@ describe('GooglePlayNotificationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -122,7 +124,7 @@ describe('GooglePlayNotificationService', () => {
 
   describe('handleNotification', () => {
     it('should warn and return when message data is missing', () => {
-      const warnSpy = jest.spyOn(service['logger'], 'warn');
+      const warnSpy = vi.spyOn(service['logger'], 'warn');
 
       service.handleNotification({});
 
@@ -132,7 +134,7 @@ describe('GooglePlayNotificationService', () => {
     });
 
     it('should warn and return when subscriptionNotification is missing', () => {
-      const warnSpy = jest.spyOn(service['logger'], 'warn');
+      const warnSpy = vi.spyOn(service['logger'], 'warn');
       const msg = createPubSubMessage({
         packageName: 'com.example',
       });
@@ -147,12 +149,12 @@ describe('GooglePlayNotificationService', () => {
     it('should handle SUBSCRIPTION_RECOVERED (type 1)', async () => {
       const singleton = {
         ...mockSupabaseClient,
-        single: jest.fn().mockResolvedValue({
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-1' },
           error: null,
         }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(singleton);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(singleton);
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -174,12 +176,12 @@ describe('GooglePlayNotificationService', () => {
     it('should handle SUBSCRIPTION_RENEWED (type 2)', async () => {
       const singleton = {
         ...mockSupabaseClient,
-        single: jest.fn().mockResolvedValue({
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-2' },
           error: null,
         }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(singleton);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(singleton);
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -199,12 +201,12 @@ describe('GooglePlayNotificationService', () => {
     it('should handle SUBSCRIPTION_CANCELED (type 3)', async () => {
       const singleton = {
         ...mockSupabaseClient,
-        single: jest.fn().mockResolvedValue({
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-3' },
           error: null,
         }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(singleton);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(singleton);
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -224,12 +226,12 @@ describe('GooglePlayNotificationService', () => {
     it('should handle SUBSCRIPTION_PURCHASED (type 4)', async () => {
       const singleton = {
         ...mockSupabaseClient,
-        single: jest.fn().mockResolvedValue({
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-new' },
           error: null,
         }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(singleton);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(singleton);
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -249,12 +251,12 @@ describe('GooglePlayNotificationService', () => {
     it('should handle SUBSCRIPTION_ON_HOLD (type 5)', async () => {
       const singleton = {
         ...mockSupabaseClient,
-        single: jest.fn().mockResolvedValue({
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-hold' },
           error: null,
         }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(singleton);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(singleton);
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -272,12 +274,12 @@ describe('GooglePlayNotificationService', () => {
     it('should handle SUBSCRIPTION_REVOKED (type 12) and revoke VIP benefits', async () => {
       const singleton = {
         ...mockSupabaseClient,
-        single: jest.fn().mockResolvedValue({
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-bad' },
           error: null,
         }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(singleton);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(singleton);
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -299,12 +301,12 @@ describe('GooglePlayNotificationService', () => {
     it('should handle SUBSCRIPTION_EXPIRED (type 13) and revoke VIP benefits', async () => {
       const singleton = {
         ...mockSupabaseClient,
-        single: jest.fn().mockResolvedValue({
+        single: vi.fn().mockResolvedValue({
           data: { user_id: 'user-expired' },
           error: null,
         }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(singleton);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(singleton);
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -322,7 +324,7 @@ describe('GooglePlayNotificationService', () => {
     });
 
     it('should warn on unhandled notification type', () => {
-      const warnSpy = jest.spyOn(service['logger'], 'warn');
+      const warnSpy = vi.spyOn(service['logger'], 'warn');
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -341,16 +343,16 @@ describe('GooglePlayNotificationService', () => {
     });
 
     it('should warn when user_id cannot be found for a purchase token', async () => {
-      const warnSpy = jest.spyOn(service['logger'], 'warn');
+      const warnSpy = vi.spyOn(service['logger'], 'warn');
 
       const singleton = {
         ...mockSupabaseClient,
-        single: jest.fn().mockResolvedValue({
+        single: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'not found' },
         }),
       };
-      mockSupabaseClient.from = jest.fn().mockReturnValue(singleton);
+      mockSupabaseClient.from = vi.fn().mockReturnValue(singleton);
 
       const msg = createPubSubMessage({
         subscriptionNotification: {
@@ -370,7 +372,7 @@ describe('GooglePlayNotificationService', () => {
     });
 
     it('should log error on unexpected exceptions during processing', () => {
-      const errorSpy = jest.spyOn(service['logger'], 'error');
+      const errorSpy = vi.spyOn(service['logger'], 'error');
 
       // A message that will cause JSON.parse to fail due to invalid base64
       const msg: Record<string, unknown> = {

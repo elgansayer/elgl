@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { SupabaseAuthGuard } from './supabase-auth.guard';
@@ -5,10 +6,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('SupabaseAuthGuard', () => {
   let guard: SupabaseAuthGuard;
-  let mockAuthGetUser: jest.Mock;
+  let mockAuthGetUser: Mock;
 
   beforeEach(async () => {
-    mockAuthGetUser = jest.fn();
+    mockAuthGetUser = vi.fn();
     const mockSupabaseClient = {
       auth: {
         getUser: mockAuthGetUser,
@@ -21,7 +22,7 @@ describe('SupabaseAuthGuard', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
           },
         },
       ],
@@ -31,7 +32,7 @@ describe('SupabaseAuthGuard', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const createMockExecutionContext = (
@@ -39,12 +40,12 @@ describe('SupabaseAuthGuard', () => {
     reqOrClient: any,
   ): ExecutionContext => {
     return {
-      getType: jest.fn().mockReturnValue(type),
-      switchToHttp: jest.fn().mockReturnValue({
-        getRequest: jest.fn().mockReturnValue(reqOrClient),
+      getType: vi.fn().mockReturnValue(type),
+      switchToHttp: vi.fn().mockReturnValue({
+        getRequest: vi.fn().mockReturnValue(reqOrClient),
       }),
-      switchToWs: jest.fn().mockReturnValue({
-        getClient: jest.fn().mockReturnValue(reqOrClient),
+      switchToWs: vi.fn().mockReturnValue({
+        getClient: vi.fn().mockReturnValue(reqOrClient),
       }),
     } as unknown as ExecutionContext;
   };

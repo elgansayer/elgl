@@ -10,24 +10,24 @@ describe('TimelineWorker', () => {
 
   beforeEach(async () => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
     };
 
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const mockPipeline = {
-      lpush: jest.fn().mockReturnThis(),
-      ltrim: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue([]),
+      lpush: vi.fn().mockReturnThis(),
+      ltrim: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue([]),
     };
 
     mockRedisClient = {
-      lpush: jest.fn().mockResolvedValue(1),
-      ltrim: jest.fn().mockResolvedValue('OK'),
-      pipeline: jest.fn().mockReturnValue(mockPipeline),
+      lpush: vi.fn().mockResolvedValue(1),
+      ltrim: vi.fn().mockResolvedValue('OK'),
+      pipeline: vi.fn().mockReturnValue(mockPipeline),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -36,8 +36,8 @@ describe('TimelineWorker', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
-            getRedisClient: jest.fn().mockReturnValue(mockRedisClient),
+            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+            getRedisClient: vi.fn().mockReturnValue(mockRedisClient),
           },
         },
       ],
@@ -47,7 +47,7 @@ describe('TimelineWorker', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -65,7 +65,7 @@ describe('TimelineWorker', () => {
         error: null,
       });
 
-      const logSpy = jest
+      const logSpy = vi
         .spyOn((worker as any).logger, 'log')
         .mockImplementation(() => {});
 
@@ -121,7 +121,7 @@ describe('TimelineWorker', () => {
 
     it('should catch error during execution and log error', async () => {
       mockQueryBuilder.eq.mockRejectedValue(new Error('Redis crash'));
-      const errorSpy = jest
+      const errorSpy = vi
         .spyOn((worker as any).logger, 'error')
         .mockImplementation(() => {});
 
