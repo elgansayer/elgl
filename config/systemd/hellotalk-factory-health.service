@@ -11,10 +11,13 @@ Environment=HOME=/var/lib/hellotalk-factory/home
 ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory doctor
 UMask=0077
 PrivateTmp=true
-PrivateDevices=true
-ProtectSystem=strict
+# Rootless Podman/runc needs the host device namespace to mount /proc for
+# the worker-terminal health probe.
+PrivateDevices=false
+ProtectKernelTunables=false
+ProtectSystem=full
 ProtectHome=true
-ProtectKernelTunables=true
+ProtectKernelTunables=false
 ProtectKernelModules=true
 ProtectKernelLogs=true
 Delegate=yes

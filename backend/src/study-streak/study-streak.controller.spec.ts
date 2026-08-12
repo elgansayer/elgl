@@ -14,14 +14,14 @@ describe('StudyStreakController', () => {
         {
           provide: StudyStreakService,
           useValue: {
-            getStreak: jest.fn().mockResolvedValue(5),
-            updateStreak: jest.fn().mockResolvedValue(6),
+            getStreak: vi.fn().mockResolvedValue(5),
+            updateStreak: vi.fn().mockResolvedValue(6),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<StudyStreakController>(StudyStreakController);

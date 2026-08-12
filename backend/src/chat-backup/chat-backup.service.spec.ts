@@ -1,14 +1,15 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatBackupService } from './chat-backup.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('ChatBackupService', () => {
   let service: ChatBackupService;
-  let supabaseService: { getClient: jest.Mock };
+  let supabaseService: { getClient: Mock };
 
   beforeEach(async () => {
     supabaseService = {
-      getClient: jest.fn(),
+      getClient: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -20,11 +21,11 @@ describe('ChatBackupService', () => {
 
     service = module.get<ChatBackupService>(ChatBackupService);
     // Mock the logger to prevent console spam
-    jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+    vi.spyOn(service['logger'], 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -38,12 +39,12 @@ describe('ChatBackupService', () => {
         { created_at: '2023-01-02', sender: 'Alice', content: 'World' },
       ];
 
-      const mockOrder = jest
+      const mockOrder = vi
         .fn()
         .mockResolvedValue({ data: mockData, error: null });
-      const mockEq = jest.fn().mockReturnValue({ order: mockOrder });
-      const mockSelect = jest.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = jest.fn().mockReturnValue({ select: mockSelect });
+      const mockEq = vi.fn().mockReturnValue({ order: mockOrder });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
 
       supabaseService.getClient.mockReturnValue({ from: mockFrom });
 
@@ -55,13 +56,11 @@ describe('ChatBackupService', () => {
     });
 
     it('should return empty string if no data', async () => {
-      const mockOrder = jest
-        .fn()
-        .mockResolvedValue({ data: null, error: null });
+      const mockOrder = vi.fn().mockResolvedValue({ data: null, error: null });
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({ order: mockOrder }),
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({ order: mockOrder }),
           }),
         }),
       });
@@ -72,13 +71,13 @@ describe('ChatBackupService', () => {
 
     it('should throw and log if error occurs', async () => {
       const mockError = { message: 'DB Error' };
-      const mockOrder = jest
+      const mockOrder = vi
         .fn()
         .mockResolvedValue({ data: null, error: mockError });
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({ order: mockOrder }),
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({ order: mockOrder }),
           }),
         }),
       });
@@ -100,12 +99,12 @@ describe('ChatBackupService', () => {
         { id: 'msg-2', content: 'world' },
       ];
 
-      const mockOrder = jest
+      const mockOrder = vi
         .fn()
         .mockResolvedValue({ data: mockMessages, error: null });
-      const mockEq = jest.fn().mockReturnValue({ order: mockOrder });
-      const mockSelect = jest.fn().mockReturnValue({ eq: mockEq });
-      const mockFrom = jest.fn().mockReturnValue({ select: mockSelect });
+      const mockEq = vi.fn().mockReturnValue({ order: mockOrder });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+      const mockFrom = vi.fn().mockReturnValue({ select: mockSelect });
 
       supabaseService.getClient.mockReturnValue({ from: mockFrom });
 
@@ -119,13 +118,11 @@ describe('ChatBackupService', () => {
     });
 
     it('should return empty array if data is null', async () => {
-      const mockOrder = jest
-        .fn()
-        .mockResolvedValue({ data: null, error: null });
+      const mockOrder = vi.fn().mockResolvedValue({ data: null, error: null });
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
               order: mockOrder,
             }),
           }),
@@ -138,13 +135,13 @@ describe('ChatBackupService', () => {
 
     it('should throw an error and log if export fails', async () => {
       const mockError = { message: 'Export error' };
-      const mockOrder = jest
+      const mockOrder = vi
         .fn()
         .mockResolvedValue({ data: null, error: mockError });
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
               order: mockOrder,
             }),
           }),
@@ -168,12 +165,12 @@ describe('ChatBackupService', () => {
         { id: '2', content: 'b', sender: 'y' },
       ];
 
-      const mockSelect = jest.fn().mockResolvedValue({
+      const mockSelect = vi.fn().mockResolvedValue({
         data: [{ id: 'new-1' }, { id: 'new-2' }],
         error: null,
       });
-      const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
-      const mockFrom = jest.fn().mockReturnValue({ insert: mockInsert });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
+      const mockFrom = vi.fn().mockReturnValue({ insert: mockInsert });
 
       supabaseService.getClient.mockReturnValue({ from: mockFrom });
 
@@ -198,7 +195,7 @@ describe('ChatBackupService', () => {
         val: i,
       }));
 
-      const mockSelect = jest
+      const mockSelect = vi
         .fn()
         .mockResolvedValueOnce({
           data: Array(500).fill({ id: 'new' }),
@@ -213,8 +210,8 @@ describe('ChatBackupService', () => {
           error: null,
         });
 
-      const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
-      const mockFrom = jest.fn().mockReturnValue({ insert: mockInsert });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
+      const mockFrom = vi.fn().mockReturnValue({ insert: mockInsert });
 
       supabaseService.getClient.mockReturnValue({ from: mockFrom });
 
@@ -242,7 +239,7 @@ describe('ChatBackupService', () => {
       }));
       const mockError = { message: 'Insert failed' };
 
-      const mockSelect = jest
+      const mockSelect = vi
         .fn()
         .mockResolvedValueOnce({
           data: Array(500).fill({ id: 'new' }),
@@ -250,9 +247,9 @@ describe('ChatBackupService', () => {
         })
         .mockResolvedValueOnce({ data: null, error: mockError });
 
-      const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({ insert: mockInsert }),
+        from: vi.fn().mockReturnValue({ insert: mockInsert }),
       });
 
       await expect(
@@ -266,12 +263,10 @@ describe('ChatBackupService', () => {
     });
 
     it('should add up correctly when data is null but error is null', async () => {
-      const mockSelect = jest
-        .fn()
-        .mockResolvedValue({ data: null, error: null });
-      const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
+      const mockSelect = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({ insert: mockInsert }),
+        from: vi.fn().mockReturnValue({ insert: mockInsert }),
       });
 
       const result = await service.importChannelBackup('channel-123', [

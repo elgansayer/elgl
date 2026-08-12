@@ -67,8 +67,8 @@ describe('CacheControlInterceptor', () => {
     it('should set cache headers from the directive on a successful response', async () => {
       const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
@@ -96,8 +96,8 @@ describe('CacheControlInterceptor', () => {
     it('should set CACHE_NO_STORE headers for mutation endpoints', async () => {
       const interceptor = new CacheControlInterceptor(CACHE_NO_STORE);
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
@@ -122,8 +122,8 @@ describe('CacheControlInterceptor', () => {
     it('should set CACHE_EDGE_MEDIUM headers for SRS deck reads', async () => {
       const interceptor = new CacheControlInterceptor(CACHE_EDGE_MEDIUM);
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
@@ -149,8 +149,8 @@ describe('CacheControlInterceptor', () => {
     it('should override cache headers to private/no-store on error', async () => {
       const interceptor = new CacheControlInterceptor(CACHE_PUBLIC_LONG);
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
@@ -182,8 +182,8 @@ describe('CacheControlInterceptor', () => {
 
       const interceptor = new CacheControlInterceptor(customDirective);
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),

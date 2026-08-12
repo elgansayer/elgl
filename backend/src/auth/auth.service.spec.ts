@@ -1,24 +1,25 @@
+import type { Mock } from 'vitest';
 import { AuthService } from './auth.service';
 import { EmailService } from '../email/email.service';
 
 describe('AuthService (unit)', () => {
   let service: AuthService;
-  let supabaseService: { getClient: jest.Mock };
+  let supabaseService: { getClient: Mock };
   let twoFactorService: {
-    generateSecret: jest.Mock;
-    verifyToken: jest.Mock;
-    disable: jest.Mock;
+    generateSecret: Mock;
+    verifyToken: Mock;
+    disable: Mock;
   };
-  let emailService: { sendPasswordResetEmail: jest.Mock };
+  let emailService: { sendPasswordResetEmail: Mock };
 
   beforeEach(() => {
-    supabaseService = { getClient: jest.fn() };
+    supabaseService = { getClient: vi.fn() };
     twoFactorService = {
-      generateSecret: jest.fn(),
-      verifyToken: jest.fn(),
-      disable: jest.fn(),
+      generateSecret: vi.fn(),
+      verifyToken: vi.fn(),
+      disable: vi.fn(),
     };
-    emailService = { sendPasswordResetEmail: jest.fn() };
+    emailService = { sendPasswordResetEmail: vi.fn() };
 
     service = new (AuthService as any)(
       supabaseService,
@@ -32,7 +33,7 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            generateLink: jest.fn().mockResolvedValue({
+            generateLink: vi.fn().mockResolvedValue({
               error: null,
               data: {
                 properties: {
@@ -63,7 +64,7 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            generateLink: jest.fn().mockResolvedValue({
+            generateLink: vi.fn().mockResolvedValue({
               error: { message: 'User not found' },
               data: null,
             }),
@@ -81,7 +82,7 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            generateLink: jest.fn().mockResolvedValue({
+            generateLink: vi.fn().mockResolvedValue({
               error: null,
               data: { properties: {} },
             }),
@@ -99,9 +100,7 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            generateLink: jest
-              .fn()
-              .mockRejectedValue(new Error('Network error')),
+            generateLink: vi.fn().mockRejectedValue(new Error('Network error')),
           },
         },
       };
@@ -117,12 +116,12 @@ describe('AuthService (unit)', () => {
     it('should reset password using a valid token', async () => {
       const mockClient = {
         auth: {
-          getUser: jest.fn().mockResolvedValue({
+          getUser: vi.fn().mockResolvedValue({
             error: null,
             data: { user: { id: 'user-123' } },
           }),
           admin: {
-            updateUserById: jest.fn().mockResolvedValue({ error: null }),
+            updateUserById: vi.fn().mockResolvedValue({ error: null }),
           },
         },
       };
@@ -140,7 +139,7 @@ describe('AuthService (unit)', () => {
     it('should throw BadRequestException for an invalid token', async () => {
       const mockClient = {
         auth: {
-          getUser: jest.fn().mockResolvedValue({
+          getUser: vi.fn().mockResolvedValue({
             error: { message: 'Invalid token' },
             data: null,
           }),
@@ -156,7 +155,7 @@ describe('AuthService (unit)', () => {
     it('should throw BadRequestException when user ID is missing', async () => {
       const mockClient = {
         auth: {
-          getUser: jest.fn().mockResolvedValue({
+          getUser: vi.fn().mockResolvedValue({
             error: null,
             data: { user: {} },
           }),
@@ -172,12 +171,12 @@ describe('AuthService (unit)', () => {
     it('should throw BadRequestException when password update fails', async () => {
       const mockClient = {
         auth: {
-          getUser: jest.fn().mockResolvedValue({
+          getUser: vi.fn().mockResolvedValue({
             error: null,
             data: { user: { id: 'user-123' } },
           }),
           admin: {
-            updateUserById: jest
+            updateUserById: vi
               .fn()
               .mockResolvedValue({ error: { message: 'Password too weak' } }),
           },
@@ -196,13 +195,13 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            getUserById: jest.fn().mockResolvedValue({
+            getUserById: vi.fn().mockResolvedValue({
               error: null,
               data: { user: { email: 'user@example.com' } },
             }),
-            updateUserById: jest.fn().mockResolvedValue({ error: null }),
+            updateUserById: vi.fn().mockResolvedValue({ error: null }),
           },
-          signInWithPassword: jest.fn().mockResolvedValue({ error: null }),
+          signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
         },
       };
       supabaseService.getClient.mockReturnValue(mockClient);
@@ -229,13 +228,13 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            getUserById: jest.fn().mockResolvedValue({
+            getUserById: vi.fn().mockResolvedValue({
               error: { message: 'Not found' },
               data: null,
             }),
-            updateUserById: jest.fn(),
+            updateUserById: vi.fn(),
           },
-          signInWithPassword: jest.fn(),
+          signInWithPassword: vi.fn(),
         },
       };
       supabaseService.getClient.mockReturnValue(mockClient);
@@ -252,13 +251,13 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            getUserById: jest.fn().mockResolvedValue({
+            getUserById: vi.fn().mockResolvedValue({
               error: null,
               data: { user: { email: 'user@example.com' } },
             }),
-            updateUserById: jest.fn(),
+            updateUserById: vi.fn(),
           },
-          signInWithPassword: jest
+          signInWithPassword: vi
             .fn()
             .mockResolvedValue({ error: { message: 'Invalid password' } }),
         },

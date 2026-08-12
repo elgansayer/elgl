@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { NlpController } from './nlp.controller';
@@ -18,27 +19,27 @@ describe('NlpController', () => {
         {
           provide: NlpService,
           useValue: {
-            detectLanguage: jest.fn(),
-            translate: jest.fn(),
-            translateUi: jest.fn(),
-            grammarCheck: jest.fn(),
-            pronunciationScore: jest.fn(),
+            detectLanguage: vi.fn(),
+            translate: vi.fn(),
+            translateUi: vi.fn(),
+            grammarCheck: vi.fn(),
+            pronunciationScore: vi.fn(),
           },
         },
         {
           provide: UsersService,
           useValue: {
-            getProfile: jest.fn(),
+            getProfile: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(NlpRateLimiterGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .overrideGuard(ThrottlerGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<NlpController>(NlpController);
@@ -47,7 +48,7 @@ describe('NlpController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -57,7 +58,7 @@ describe('NlpController', () => {
   describe('detectLanguage', () => {
     it('should call service detectLanguage with body text or empty string', () => {
       const response = { language: 'fr', confidence: 0.99 };
-      (nlpService.detectLanguage as jest.Mock).mockReturnValue(response);
+      (nlpService.detectLanguage as Mock).mockReturnValue(response);
 
       expect(controller.detectLanguage({ text: 'Bonjour' })).toEqual(response);
       expect(nlpService.detectLanguage).toHaveBeenCalledWith('Bonjour');
@@ -79,8 +80,8 @@ describe('NlpController', () => {
       const profile: any = { id: 'user-1', is_vip: true };
       const response: any = { translated_text: 'Hello' };
 
-      (usersService.getProfile as jest.Mock).mockResolvedValue(profile);
-      (nlpService.translate as jest.Mock).mockResolvedValue(response);
+      (usersService.getProfile as Mock).mockResolvedValue(profile);
+      (nlpService.translate as Mock).mockResolvedValue(response);
 
       const result = await controller.translate({ id: 'user-1' } as any, dto);
       expect(usersService.getProfile).toHaveBeenCalledWith('user-1');
@@ -89,8 +90,8 @@ describe('NlpController', () => {
     });
 
     it('should fallback to false for isVip when user profile returns undefined is_vip', async () => {
-      (usersService.getProfile as jest.Mock).mockResolvedValue({});
-      (nlpService.translate as jest.Mock).mockResolvedValue({});
+      (usersService.getProfile as Mock).mockResolvedValue({});
+      (nlpService.translate as Mock).mockResolvedValue({});
 
       await controller.translate({ id: 'user-1' } as any, {} as any);
       expect(nlpService.translate).toHaveBeenCalledWith(
@@ -105,7 +106,7 @@ describe('NlpController', () => {
     it('should pass DTO to service and return UI translations', async () => {
       const dto: any = { target_language: 'es', dictionary: {} };
       const response: any = { target_language: 'es', cached: false };
-      (nlpService.translateUi as jest.Mock).mockResolvedValue(response);
+      (nlpService.translateUi as Mock).mockResolvedValue(response);
 
       const result = await controller.translateUi(dto);
       expect(nlpService.translateUi).toHaveBeenCalledWith(dto);
@@ -125,8 +126,8 @@ describe('NlpController', () => {
       const profile: any = { id: 'user-1', is_vip: false };
       const response: any = { corrected: 'Check me.' };
 
-      (usersService.getProfile as jest.Mock).mockResolvedValue(profile);
-      (nlpService.grammarCheck as jest.Mock).mockResolvedValue(response);
+      (usersService.getProfile as Mock).mockResolvedValue(profile);
+      (nlpService.grammarCheck as Mock).mockResolvedValue(response);
 
       const result = await controller.grammarCheck(
         { id: 'user-1' } as any,
@@ -153,8 +154,8 @@ describe('NlpController', () => {
       const profile: any = { id: 'user-1', is_vip: true };
       const response: any = { overall_score: 95 };
 
-      (usersService.getProfile as jest.Mock).mockResolvedValue(profile);
-      (nlpService.pronunciationScore as jest.Mock).mockResolvedValue(response);
+      (usersService.getProfile as Mock).mockResolvedValue(profile);
+      (nlpService.pronunciationScore as Mock).mockResolvedValue(response);
 
       const result = await controller.pronunciationScore(
         { id: 'user-1' } as any,

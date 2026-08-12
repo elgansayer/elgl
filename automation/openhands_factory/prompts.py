@@ -40,12 +40,13 @@ def build_task_prompt(
     return "\n\n".join(sections)
 
 
-def build_phase_prompt(prompt_dir: Path, phase: str, task: Task) -> str:
-    if phase not in {"review", "repair", "security"}:
+def build_phase_prompt(prompt_dir: Path, phase: str, task: Task, extra: str = "") -> str:
+    if phase not in {"review", "repair", "security", "quality_repair"}:
         raise ValueError(f"Unsupported factory phase: {phase}")
     instructions = (prompt_dir / f"{phase}.md").read_text(encoding="utf-8")
     return (
-        f"{instructions}\n\nTask ID: {task.identifier}\nTitle: {task.title}\n\n{task.body}\n\n"
+        f"{instructions}\n\nTask ID: {task.identifier}\nTitle: {task.title}\n"
+        f"\n{task.body}\n\n{extra}\n\n"
         "Inspect AGENTS.md and the associated production and test files. Work only in the assigned "
         "worktree. If defects are found, correct them and update tests. If no defects are found, "
         "leave "

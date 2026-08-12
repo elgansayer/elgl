@@ -47,8 +47,8 @@ describe('EscrowCacheInterceptor', () => {
         ESCROW_CACHE_PRIVATE_SHORT,
       );
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
@@ -84,8 +84,8 @@ describe('EscrowCacheInterceptor', () => {
         ESCROW_CACHE_PRIVATE_NO_STORE,
       );
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
@@ -116,8 +116,8 @@ describe('EscrowCacheInterceptor', () => {
         ESCROW_CACHE_PRIVATE_SHORT,
       );
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),
@@ -150,8 +150,8 @@ describe('EscrowCacheInterceptor', () => {
         ESCROW_CACHE_PRIVATE_SHORT,
       );
 
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const mockResponse = { setHeader, removeHeader };
       const context = {
         switchToHttp: () => ({ getResponse: () => mockResponse }),

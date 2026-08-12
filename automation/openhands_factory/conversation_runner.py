@@ -175,19 +175,19 @@ class ConversationRunner:
             detail = outcome.get("error") if isinstance(outcome, dict) else None
             if not isinstance(detail, str):
                 detail = f"conversation process exited with status {exit_code}"
-                
+
             kind = classify_failure(status_code, detail)
             for b in breakers:
                 if b.provider == primary_provider:
                     b.record_failure(kind)
             store.save(breakers)
             raise FactoryError(detail)
-            
+
         for b in breakers:
             if b.provider == primary_provider:
                 b.record_success()
         store.save(breakers)
-            
+
         return ConversationResult(task.identifier, elapsed, True)
 
 

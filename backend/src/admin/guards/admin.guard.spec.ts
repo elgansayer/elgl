@@ -20,16 +20,16 @@ describe('AdminGuard', () => {
 
   beforeEach(() => {
     mockQueryBuilder = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn(),
     };
     mockSupabaseClient = {
-      from: jest.fn().mockReturnValue(mockQueryBuilder),
+      from: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     guard = new AdminGuard({
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient),
     } as unknown as SupabaseService);
   });
 
