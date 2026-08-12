@@ -2,6 +2,7 @@ import { Component, input, output, signal, inject, computed } from '@angular/cor
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ReadingEngineCrashReportingService } from '../../services/reading-engine-crash-reporting.service';
 import { GlobalErrorHandler } from '../../services/error-handler.service';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 
 export interface ReadingEngineErrorContext {
   component: string;
@@ -44,9 +45,7 @@ class ReadingEngineContextError extends Error {
 const STACK_FRAME_RE =
   /^\s*at\s+(?:(?<functionName>[^\s(]+)\s*\(?\s*(?<source>[^)]+)?\)?|(?<sourceOnly>[^\s(]+))$/;
 
-function parseStackFrames(
-  stack: string,
-): ReadingEngineCrashPayload['stackFrames'] {
+function parseStackFrames(stack: string): ReadingEngineCrashPayload['stackFrames'] {
   return stack
     .split('\n')
     .slice(1)
@@ -70,16 +69,22 @@ function parseStackFrames(
 @Component({
   selector: 'app-reading-engine-error-boundary',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppButtonPrimaryComponent],
   template: `
     @if (!hasError()) {
       <ng-content />
     } @else {
       <div class="mx-auto max-w-md space-y-4 pt-8 pb-16" role="alert">
-        <section class="rounded-sheet border border-rose-500/30 bg-rose-500/10 p-6 text-center space-y-4">
+        <section
+          class="rounded-sheet border border-rose-500/30 bg-rose-500/10 p-6 text-center space-y-4"
+        >
           <p class="text-4xl" aria-hidden="true">&#128214;</p>
-          <h3 class="text-lg font-black text-rose-400">{{ 'readingEngineErrorBoundary.title' | t }}</h3>
-          <p class="text-sm text-text-secondary">{{ 'readingEngineErrorBoundary.description' | t }}</p>
+          <h3 class="text-lg font-black text-rose-400">
+            {{ 'readingEngineErrorBoundary.title' | t }}
+          </h3>
+          <p class="text-sm text-text-secondary">
+            {{ 'readingEngineErrorBoundary.description' | t }}
+          </p>
           @if (errorMessage()) {
             <p class="rounded-app bg-surface-200 p-3 text-xs font-mono text-rose-300 break-all">
               {{ errorMessage() }}
@@ -91,13 +96,9 @@ function parseStackFrames(
             </p>
           }
           <div class="flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              (click)="resetError()"
-              class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-xs font-bold"
-            >
+            <app-button-primary (clicked)="resetError()" customClass="text-xs">
               {{ 'readingEngineErrorBoundary.retryBtn' | t }}
-            </button>
+            </app-button-primary>
             @if (showReportButton()) {
               <button
                 type="button"
@@ -109,7 +110,9 @@ function parseStackFrames(
             }
           </div>
           @if (reportedMessage()) {
-            <p class="text-xs text-emerald-400 font-bold">{{ 'readingEngineErrorBoundary.reportedMessage' | t }}</p>
+            <p class="text-xs text-emerald-400 font-bold">
+              {{ 'readingEngineErrorBoundary.reportedMessage' | t }}
+            </p>
           }
         </section>
       </div>
