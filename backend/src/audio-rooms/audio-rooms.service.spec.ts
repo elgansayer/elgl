@@ -976,13 +976,80 @@ describe('AudioRoomsService', () => {
         speakers: ['host-1', 'user-3'],
         raised_hands: [],
       });
-      expect(centrifugoService.publish).toHaveBeenCalledWith('room_room-1', {
+      // The outgoing co-host's removal must be published before the incoming
+      // co-host's invite so a late-arriving removal can never clobber the new
+      // co-host assignment (regression test for the out-of-order event race).
+      const publishCalls = (centrifugoService.publish as jest.Mock).mock.calls;
+      expect(publishCalls).toHaveLength(2);
+      expect(publishCalls[0]).toEqual([
+        'room_room-1',
+        {
+          type: 'co_host_removed',
+          target_user_id: 'user-2',
+          room_id: 'room-1',
+        },
+      ]);
+      expect(publishCalls[1]).toEqual([
+        'room_room-1',
+        {
+          type: 'co_host_changed',
+          target_user_id: 'user-3',
+          previous_co_host_id: 'user-2',
+          room_id: 'room-1',
+        },
+      ]);
+      expect(result.id).toBe('room-1');
+    });
+
+    it('should await the co_host_removed publish before publishing co_host_changed', async () => {
+      const roomRow: any = {
+        id: 'room-1',
+        host_id: 'host-1',
+        co_host_id: 'user-2',
+        speakers: ['host-1', 'user-2'],
+        raised_hands: [],
+      };
+      mockQueryBuilder.single.mockResolvedValue({
+        data: roomRow,
+        error: null,
+      });
+
+      let releaseRemoved = (): void => {};
+      const removedPending = new Promise<boolean>((resolve) => {
+        releaseRemoved = () => resolve(true);
+      });
+      const publishMock = centrifugoService.publish as jest.Mock;
+      publishMock.mockImplementationOnce(() => removedPending);
+
+      const invitePromise = service.inviteCoHost('host-1', {
+        room_id: 'room-1',
+        target_user_id: 'user-3',
+      });
+
+      // Flush microtasks so the room lookup and DB update settle and the first
+      // publish (co_host_removed) has been initiated but not yet completed.
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(publishMock).toHaveBeenCalledTimes(1);
+      expect(publishMock).toHaveBeenCalledWith('room_room-1', {
+        type: 'co_host_removed',
+        target_user_id: 'user-2',
+        room_id: 'room-1',
+      });
+
+      // The invite must not be published until the removal completes.
+      releaseRemoved();
+      await invitePromise;
+
+      expect(publishMock).toHaveBeenCalledTimes(2);
+      expect(publishMock).toHaveBeenLastCalledWith('room_room-1', {
         type: 'co_host_changed',
         target_user_id: 'user-3',
         previous_co_host_id: 'user-2',
         room_id: 'room-1',
       });
-      expect(result.id).toBe('room-1');
     });
 
     it('should not publish a demotion event when re-inviting the same co-host', async () => {
