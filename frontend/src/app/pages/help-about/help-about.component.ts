@@ -24,7 +24,7 @@ import { APP_VERSION, BUILD_NUMBER } from '../../version.constants';
         @for (licence of licences(); track licence.name) {
           <li>
             <span class="font-medium">{{ licence.name }}</span>
-            <span class="text-slate-400 ms-2">{{ licence.licence }}</span>
+            <span class="text-text-secondary ms-2">{{ licence.licence }}</span>
           </li>
         }
       </ul>

@@ -11,7 +11,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
   standalone: true,
   imports: [TranslatePipe, RouterLink, AppEmptyStateComponent, AppCardComponent],
   template: `
-    <div class="min-h-screen bg-[#121212] text-white p-4">
+    <div class="min-h-screen bg-surface-500 text-text-primary p-4">
       <div class="max-w-2xl mx-auto">
         <!-- Header -->
         <h1 class="text-2xl font-bold mb-6">{{ 'events.calendar.title' | t }}</h1>
@@ -19,14 +19,14 @@ import { AppCardComponent } from '../primitives/card/card.component';
         <!-- Month Navigation -->
         <div class="flex items-center justify-between mb-6">
           <button
-            class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-sm font-medium"
+            class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
             (click)="previousMonth()"
           >
             &lsaquo; {{ 'events.calendar.prev' | t }}
           </button>
           <span class="text-lg font-semibold">{{ monthLabel() }}</span>
           <button
-            class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-sm font-medium"
+            class="px-4 py-2 rounded-lg bg-surface-300 hover:bg-surface-200 transition-colors text-sm font-medium"
             (click)="nextMonth()"
           >
             {{ 'events.calendar.next' | t }} &rsaquo;
@@ -36,48 +36,52 @@ import { AppCardComponent } from '../primitives/card/card.component';
         <!-- Day names -->
         <div class="grid grid-cols-7 mb-2">
           @for (name of dayNames(); track $index) {
-            <div class="text-center text-xs font-medium text-gray-400 uppercase tracking-wider py-2">
+            <div
+              class="text-center text-xs font-medium text-text-muted uppercase tracking-wider py-2"
+            >
               {{ name }}
             </div>
           }
         </div>
 
         <!-- Calendar grid -->
-        <div class="grid grid-cols-7 gap-px bg-gray-800 rounded-lg overflow-hidden">
+        <div class="grid grid-cols-7 gap-px bg-surface-400 rounded-lg overflow-hidden">
           @for (day of days(); track $index) {
             <div
-              class="flex flex-col items-center min-h-[72px] p-1.5 bg-[#1a1a2e] transition-colors cursor-pointer"
+              class="flex flex-col items-center min-h-[72px] p-1.5 bg-surface-300 transition-colors cursor-pointer"
               role="button"
               [attr.tabindex]="day ? 0 : null"
               [attr.aria-label]="day ? ('events.calendar.selectDate' | t: { date: day }) : null"
               [attr.aria-disabled]="!day"
               [class.opacity-30]="!day"
-              [class.hover:bg-[#16213e]]="!!day"
-              [class.bg-[#0f3460]/40]="!!day && isToday(day)"
+              [class.hover:bg-surface-200]="!!day"
+              [class.bg-primary/15]="!!day && isToday(day)"
               [class.ring-1]="!!day && isToday(day)"
-              [class.ring-blue-500/50]="!!day && isToday(day)"
+              [class.ring-primary/50]="!!day && isToday(day)"
               (click)="day && selectDate(day)"
               (keydown.enter)="day && selectDate(day)"
               (keydown.space)="day && selectDate(day)"
             >
               @if (day) {
-                <span
-                  class="text-sm font-medium mb-1"
-                  [class.text-blue-400]="isToday(day)"
-                >{{ day }}</span>
+                <span class="text-sm font-medium mb-1" [class.text-primary]="isToday(day)">{{
+                  day
+                }}</span>
                 @if (eventsByDate().has(day)) {
                   <div class="w-full space-y-0.5">
                     @for (ev of eventsByDate().get(day)!.slice(0, 2); track ev.id) {
                       <div
-                        class="text-[10px] leading-tight truncate bg-indigo-600/60 text-indigo-200 px-1 py-0.5 rounded-sm w-full"
+                        class="text-[10px] leading-tight truncate bg-primary/60 text-on-fill px-1 py-0.5 rounded-sm w-full"
                         [title]="ev.title"
                       >
                         {{ ev.title }}
                       </div>
                     }
                     @if (eventsByDate().get(day)!.length > 2) {
-                      <span class="text-[10px] text-gray-400 block text-center">
-                        {{ 'events.calendar.moreEvents' | t: { count: eventsByDate().get(day)!.length - 2 } }}
+                      <span class="text-[10px] text-text-muted block text-center">
+                        {{
+                          'events.calendar.moreEvents'
+                            | t: { count: eventsByDate().get(day)!.length - 2 }
+                        }}
                       </span>
                     }
                   </div>
@@ -94,26 +98,24 @@ import { AppCardComponent } from '../primitives/card/card.component';
               {{ selectedDateLabel() }}
             </h2>
             @if (selectedDateEvents().length === 0) {
-              <app-empty-state
-                [description]="'events.calendar.noEvents' | t"
-              />
+              <app-empty-state [description]="'events.calendar.noEvents' | t" />
             }
             <div class="space-y-3">
               @for (ev of selectedDateEvents(); track ev.id) {
                 <app-card>
                   <div class="p-4">
                     <div class="flex items-start justify-between mb-2">
-                      <h3 class="font-semibold text-white">{{ ev.title }}</h3>
+                      <h3 class="font-semibold text-text-primary">{{ ev.title }}</h3>
                       @if (ev.category) {
-                        <span class="text-xs bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded-full">
+                        <span class="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
                           {{ ev.category }}
                         </span>
                       }
                     </div>
                     @if (ev.description) {
-                      <p class="text-sm text-gray-400 mb-2">{{ ev.description }}</p>
+                      <p class="text-sm text-text-secondary mb-2">{{ ev.description }}</p>
                     }
-                    <div class="flex items-center justify-between text-xs text-gray-500">
+                    <div class="flex items-center justify-between text-xs text-text-muted">
                       <span>{{ formatEventTime(ev.date_time) }}</span>
                       @if (ev.location) {
                         <span>{{ ev.location }}</span>
@@ -121,7 +123,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
                     </div>
                     <a
                       [routerLink]="['/events', ev.id]"
-                      class="inline-block mt-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+                      class="inline-block mt-2 text-sm text-primary hover:text-primary/80 transition-colors"
                     >
                       {{ 'events.calendar.viewDetails' | t }} &rarr;
                     </a>
@@ -189,9 +191,7 @@ export class EventsCalendarComponent {
   private eventsResource = resource<Event[], { status: string }>({
     params: () => ({ status: 'upcoming' }),
     loader: async ({ params }) => {
-      const events = await firstValueFrom(
-        this.eventsService.getMyEvents(params.status),
-      );
+      const events = await firstValueFrom(this.eventsService.getMyEvents(params.status));
       return events ?? [];
     },
   });
@@ -261,16 +261,16 @@ export class EventsCalendarComponent {
 
   selectDate(day: number | null): void {
     if (!day) return;
-    this.selectedDay.update(current => (current === day ? null : day));
+    this.selectedDay.update((current) => (current === day ? null : day));
   }
 
   previousMonth(): void {
     this.selectedDay.set(null);
-    this.monthOffset.update(o => o - 1);
+    this.monthOffset.update((o) => o - 1);
   }
 
   nextMonth(): void {
     this.selectedDay.set(null);
-    this.monthOffset.update(o => o + 1);
+    this.monthOffset.update((o) => o + 1);
   }
 }

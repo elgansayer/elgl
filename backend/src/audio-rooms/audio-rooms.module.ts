@@ -25,10 +25,15 @@ import { R2Service } from '../cloudflare-r2/r2.service';
         const livekitUrl =
           configService.get<string>('LIVEKIT_URL') ||
           'https://mock.livekit.cloud';
-        const apiKey = configService.get<string>('LIVEKIT_API_KEY') || 'devkey';
-        const secretKey =
-          configService.get<string>('LIVEKIT_SECRET') ||
-          'secretkey012345678901234567890123456789';
+        const apiKey = configService.get<string>('LIVEKIT_API_KEY');
+        const secretKey = configService.get<string>('LIVEKIT_SECRET');
+
+        if (!apiKey || !secretKey) {
+          throw new Error(
+            'LIVEKIT_API_KEY and LIVEKIT_SECRET must be configured',
+          );
+        }
+
         return new RoomServiceClient(livekitUrl, apiKey, secretKey);
       },
       inject: [ConfigService],

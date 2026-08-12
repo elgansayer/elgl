@@ -1,4 +1,4 @@
-<div class="app-card p-6 max-w-2xl mx-auto shadow-lift">
+<app-card customClass="p-6 max-w-2xl mx-auto shadow-lift">
   <div class="flex items-center justify-between border-b border-surface-100 pb-3 mb-4">
     <h3 class="app-section-title flex items-center gap-2">
       <span>{{ 'doodle.title' | t }}</span>
@@ -72,29 +72,28 @@
   </div>
 
   <div class="flex justify-between items-center mt-6">
-    <button
-      (click)="clearCanvas()"
-      class="app-button-secondary bg-red-500/20 text-red-400 px-4 py-2 text-sm hover:bg-red-500/30"
-      [attr.aria-label]="'doodle.clearBtn' | t"
+    <app-button-secondary
+      (clicked)="clearCanvas()"
+      [ariaLabel]="'doodle.clearBtn' | t"
+      customClass="bg-red-500/20 text-red-400 px-4 py-2 text-sm hover:bg-red-500/30"
     >
       {{ 'doodle.clearBtn' | t }}
-    </button>
+    </app-button-secondary>
 
     <div class="flex gap-3">
-      <button
-        (click)="cancel()"
-        class="app-button-secondary px-5 py-2 text-sm"
-        [attr.aria-label]="'doodle.cancelBtn' | t"
+      <app-button-secondary
+        (clicked)="cancel()"
+        [ariaLabel]="'doodle.cancelBtn' | t"
+        customClass="px-5 py-2 text-sm"
       >
         {{ 'doodle.cancelBtn' | t }}
-      </button>
-      <button
-        (click)="save()"
-        class="app-button-primary px-6 py-2 text-sm flex items-center gap-2"
-        [attr.aria-label]="'doodle.sendBtn' | t"
+      </app-button-secondary>
+      <app-button-primary
+        (clicked)="save()"
+        customClass="px-6 py-2 text-sm flex items-center gap-2"
       >
         <span>{{ 'doodle.sendBtn' | t }}</span>
-      </button>
+      </app-button-primary>
     </div>
   </div>
-</div>
+</app-card>

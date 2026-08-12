@@ -8,13 +8,18 @@ import { I18nService } from '../../../services/i18n.service';
 import { FormsModule } from '@angular/forms';
 import { FontScaleSliderComponent } from '../../../components/font-scale-slider/font-scale-slider.component';
 import { AppSelectComponent } from '../../../components/primitives/select/select.component';
-
-const DEFAULT_ACCENT = '#4f46e5';
+import { AppButtonPrimaryComponent } from '../../../components/primitives/button-primary/button-primary.component';
 
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [TranslatePipe, FormsModule, FontScaleSliderComponent, AppSelectComponent],
+  imports: [
+    TranslatePipe,
+    FormsModule,
+    FontScaleSliderComponent,
+    AppSelectComponent,
+    AppButtonPrimaryComponent,
+  ],
   templateUrl: './appearance-settings.component.html',
 })
 export class AppearanceSettingsComponent {
@@ -34,10 +39,18 @@ export class AppearanceSettingsComponent {
 
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
 
-  readonly primaryAccentColor = signal(DEFAULT_ACCENT);
+  readonly primaryAccentColor = signal<string | null>(null);
   readonly isVip = signal(false);
 
-  readonly availableColors = ['#4f46e5', '#e11d48', '#16a34a', '#d97706', '#9333ea', '#0891b2'];
+  /** Relay-coherent alternatives to the default Ember accent - see DESIGN.md's token table. */
+  readonly availableColors = [
+    '#C65230', // Ember (default primary)
+    '#1A8478', // Tide (secondary)
+    '#996F10', // vip gold
+    '#CC483C', // accent raspberry-ember
+    '#8B6CF0', // neon violet
+    '#2FC6D9', // neon cyan
+  ];
 
   private profileResource = resource<UserProfile | null, void>({
     loader: async () => {
@@ -45,9 +58,11 @@ export class AppearanceSettingsComponent {
         const profile = await this.userService.getMyProfile();
         if (profile) {
           this.isVip.set(Boolean(profile.is_vip));
-          const accent = profile.primary_accent_color ?? DEFAULT_ACCENT;
+          const accent = profile.primary_accent_color ?? null;
           this.primaryAccentColor.set(accent);
-          this.themeService.setPrimaryAccentColor(accent);
+          if (accent) {
+            this.themeService.setPrimaryAccentColor(accent);
+          }
         }
         return profile;
       } catch {
@@ -81,10 +96,13 @@ export class AppearanceSettingsComponent {
     this.isSaving.set(true);
 
     try {
+      const accent = this.primaryAccentColor();
       await this.userService.updateMyProfile({
-        primary_accent_color: this.primaryAccentColor(),
+        primary_accent_color: accent ?? undefined,
       });
-      this.themeService.setPrimaryAccentColor(this.primaryAccentColor());
+      if (accent) {
+        this.themeService.setPrimaryAccentColor(accent);
+      }
       this.successMessage.set('settings.saved');
     } catch {
       this.errorMessage.set('Failed to save settings');

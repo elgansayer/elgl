@@ -1,10 +1,12 @@
 import { Component, input, inject, signal } from '@angular/core';
 import { ChatBackupService } from '../../services/chat-backup.service';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-chat-backup',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   template: `
     <div class="flex flex-col gap-4 p-4">
       <h2 class="text-lg font-bold">{{ 'chat_backup.title' | t }}</h2>
@@ -17,13 +19,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p class="text-primary">{{ 'chat_backup.importing' | t }}</p>
       }
 
-      <button
-        class="app-button-primary ps-4 pe-4 pt-2.5 pb-2.5 text-sm"
-        (click)="onExport()"
-        [disabled]="exporting()"
-      >
+      <app-button-primary (clicked)="onExport()" [disabled]="exporting()">
         {{ 'chat_backup.export_button' | t }}
-      </button>
+      </app-button-primary>
 
       <input
         type="file"
@@ -32,13 +30,9 @@ import { TranslatePipe } from '../../services/translate.pipe';
         style="display: none"
         (change)="onFileSelected($event)"
       />
-      <button
-        class="app-button-secondary ps-4 pe-4 pt-2.5 pb-2.5 text-sm"
-        (click)="fileInput.click()"
-        [disabled]="importing()"
-      >
+      <app-button-secondary (clicked)="fileInput.click()" [disabled]="importing()">
         {{ 'chat_backup.import_button' | t }}
-      </button>
+      </app-button-secondary>
 
       @if (exportError()) {
         <p class="text-danger">{{ 'chat_backup.export_error' | t }}</p>

@@ -279,6 +279,94 @@ describe('UsersService', () => {
       );
     });
 
+    it('should throw BadRequestException when non-VIP tries to set mock country', async () => {
+      const dto = { mock_country: 'France' };
+
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        new BadRequestException(
+          'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
+        ),
+      );
+    });
+
+    it('should throw BadRequestException when non-VIP tries to set mock city', async () => {
+      const dto = { mock_city: 'Paris' };
+
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        new BadRequestException(
+          'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
+        ),
+      );
+    });
+
+    it('should throw BadRequestException when non-VIP tries to enable location spoofing', async () => {
+      const dto = { enable_location_spoofing: true };
+
+      await expect(service.updateProfile('user-1', dto, false)).rejects.toThrow(
+        new BadRequestException(
+          'Location spoofing requires a VIP subscription (8 UKP / $10 USD per month).',
+        ),
+      );
+    });
+
+    it('should allow a non-VIP user to disable location spoofing', async () => {
+      const dto = { enable_location_spoofing: false };
+
+      const updateBuilder = {
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
+      const fromBuilder = { update: jest.fn().mockReturnValue(updateBuilder) };
+      mockSupabaseClient.from.mockReturnValue(fromBuilder as any);
+      jest
+        .spyOn(service, 'getProfile')
+        .mockResolvedValue({ id: 'user-1' } as any);
+
+      const result = await service.updateProfile('user-1', dto, false);
+
+      expect(fromBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({ enable_location_spoofing: false }),
+      );
+      expect(result).toEqual(
+        expect.objectContaining({ enable_location_spoofing: false }),
+      );
+    });
+
+    it('should allow a VIP user to set spoofed location fields', async () => {
+      const dto = {
+        mock_country: 'France',
+        mock_city: 'Paris',
+        mock_location: { latitude: 48.8566, longitude: 2.3522 },
+        enable_location_spoofing: true,
+      };
+
+      const updateBuilder = {
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      };
+      const fromBuilder = { update: jest.fn().mockReturnValue(updateBuilder) };
+      mockSupabaseClient.from.mockReturnValue(fromBuilder as any);
+      jest
+        .spyOn(service, 'getProfile')
+        .mockResolvedValue({ id: 'user-1' } as any);
+
+      const result = await service.updateProfile('user-1', dto, true);
+
+      expect(fromBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mock_country: 'France',
+          mock_city: 'Paris',
+          mock_location: 'POINT(2.3522 48.8566)',
+          enable_location_spoofing: true,
+        }),
+      );
+      expect(result).toEqual(
+        expect.objectContaining({
+          mock_country: 'France',
+          mock_city: 'Paris',
+          enable_location_spoofing: true,
+        }),
+      );
+    });
+
     it('should throw BadRequestException when non-VIP tries to set custom primary accent colour', async () => {
       const dto = { primary_accent_color: '#ff0000' };
 

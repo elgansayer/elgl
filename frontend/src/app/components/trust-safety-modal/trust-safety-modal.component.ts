@@ -1,4 +1,12 @@
-import { Component, inject, input, output, signal, afterNextRender, ElementRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  input,
+  output,
+  signal,
+  afterNextRender,
+  ElementRef,
+} from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
 import { FormsModule } from '@angular/forms';
@@ -42,7 +50,11 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
           </button>
         </div>
 
-        <div class="flex rounded-2xl bg-surface-100 p-1 gap-1" role="tablist" [attr.aria-label]="'safety.tabListLabel' | t">
+        <div
+          class="flex rounded-2xl bg-surface-100 p-1 gap-1"
+          role="tablist"
+          [attr.aria-label]="'safety.tabListLabel' | t"
+        >
           <button
             id="trust-safety-tab-report"
             role="tab"
@@ -68,7 +80,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
             (keydown)="onTabKeydown($event, 'block')"
             [class]="
               'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ' +
-              (mode === 'block' ? 'bg-red-600 text-white shadow-sm' : 'text-text-secondary')
+              (mode === 'block' ? 'bg-danger text-on-fill shadow-sm' : 'text-text-secondary')
             "
           >
             {{ 'safety.tabBlock' | t }}
@@ -83,32 +95,40 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
             aria-labelledby="trust-safety-tab-report"
             class="space-y-3 text-xs"
           >
-          @if (categoriesLoading()) {
-            <div class="space-y-2" aria-busy="true" [attr.aria-label]="'safety.categoriesLoading' | t">
-              <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
-              <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
-            </div>
-          } @else {
+            @if (categoriesLoading()) {
+              <div
+                class="space-y-2"
+                aria-busy="true"
+                [attr.aria-label]="'safety.categoriesLoading' | t"
+              >
+                <app-skeleton-loader [height]="'12px'" [width]="'60%'" [variant]="'text'" />
+                <app-skeleton-loader [height]="'36px'" [width]="'100%'" [borderRadius]="'12px'" />
+              </div>
+            } @else {
+              <div>
+                <label
+                  for="report-reason-select"
+                  class="font-bold text-text-primary block mb-1 ps-1"
+                  >{{ 'safety.reasonLabel' | t }}</label
+                >
+                <select
+                  id="report-reason-select"
+                  [(ngModel)]="reportReason"
+                  aria-required="true"
+                  class="w-full px-3 py-2 border rounded-xl bg-surface-300 font-medium"
+                >
+                  @for (cat of reportCategories(); track cat.value) {
+                    <option [value]="cat.value">{{ cat.label }}</option>
+                  }
+                </select>
+              </div>
+            }
             <div>
-              <label for="report-reason-select" class="font-bold text-text-primary block mb-1 ps-1"
-                >{{ 'safety.reasonLabel' | t }}</label
+              <label
+                for="report-details-textarea"
+                class="font-bold text-text-primary block mb-1 ps-1"
+                >{{ 'safety.detailsLabel' | t }}</label
               >
-              <select
-                id="report-reason-select"
-                [(ngModel)]="reportReason"
-                aria-required="true"
-                class="w-full px-3 py-2 border rounded-xl bg-surface-300 font-medium"
-              >
-                @for (cat of reportCategories(); track cat.value) {
-                  <option [value]="cat.value">{{ cat.label }}</option>
-                }
-              </select>
-            </div>
-          }
-          <div>
-            <label for="report-details-textarea" class="font-bold text-text-primary block mb-1 ps-1"
-              >{{ 'safety.detailsLabel' | t }}</label
-            >
               <textarea
                 id="report-details-textarea"
                 [(ngModel)]="reportDetails"
@@ -127,16 +147,19 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
             tabindex="0"
             aria-labelledby="trust-safety-tab-block"
           >
-            <div class="bg-red-500/10 p-4 rounded-2xl border border-red-500/30 space-y-2 text-xs" role="alert">
-            <span class="font-bold text-red-900 block"
-              >{{ 'safety.blockWarning' | t: { name: targetName() } }}</span
+            <div
+              class="bg-danger/10 p-4 rounded-2xl border border-danger/30 space-y-2 text-xs"
+              role="alert"
             >
-            <ul class="list-disc list-inside space-y-1 text-text-primary">
-              <li>{{ 'safety.blockList1' | t }}</li>
-              <li>{{ 'safety.blockList2' | t }}</li>
-              <li>{{ 'safety.blockList3' | t }}</li>
-            </ul>
-          </div>
+              <span class="font-bold text-danger block">{{
+                'safety.blockWarning' | t: { name: targetName() }
+              }}</span>
+              <ul class="list-disc list-inside space-y-1 text-text-primary">
+                <li>{{ 'safety.blockList1' | t }}</li>
+                <li>{{ 'safety.blockList2' | t }}</li>
+                <li>{{ 'safety.blockList3' | t }}</li>
+              </ul>
+            </div>
           </div>
         }
 
@@ -150,7 +173,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
           @if (mode === 'report') {
             <button
               (click)="submitReport()"
-              class="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-extrabold text-xs shadow"
+              class="px-6 py-2 bg-primary hover:bg-primary-dark text-on-fill rounded-xl font-extrabold text-xs shadow"
               [attr.aria-label]="'safety.submitReportAria' | t: { name: targetName() }"
             >
               {{ 'safety.submitReportBtn' | t }}
@@ -159,7 +182,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
           @if (mode === 'block') {
             <button
               (click)="confirmBlock()"
-              class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-extrabold text-xs shadow"
+              class="px-6 py-2 bg-danger hover:bg-danger/90 text-on-fill rounded-xl font-extrabold text-xs shadow"
               [attr.aria-label]="'safety.confirmBlockAria' | t: { name: targetName() }"
             >
               {{ 'safety.confirmBlockBtn' | t }}
