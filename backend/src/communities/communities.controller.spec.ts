@@ -5,18 +5,18 @@ import { UpdateCommunityDto } from './dto/update-community.dto';
 describe('CommunitiesController', () => {
   let controller: CommunitiesController;
   const service = {
-    create: jest.fn(),
-    findById: jest.fn(),
-    listByOwner: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    addGroup: jest.fn(),
-    removeGroup: jest.fn(),
-    getGroups: jest.fn(),
+    create: vi.fn(),
+    findById: vi.fn(),
+    listByOwner: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    addGroup: vi.fn(),
+    removeGroup: vi.fn(),
+    getGroups: vi.fn(),
   } as any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     controller = new CommunitiesController(service);
   });
 

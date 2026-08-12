@@ -6,18 +6,18 @@ import { AccessToken } from 'livekit-server-sdk';
 import { VideoCallsDegradationService } from './video-calls-degradation.service';
 import { MetricsService } from '../metrics/metrics.service';
 
-const mockCreateRoom = jest.fn();
-const mockAddGrant = jest.fn();
-const mockToJwt = jest.fn();
+const mockCreateRoom = vi.fn();
+const mockAddGrant = vi.fn();
+const mockToJwt = vi.fn();
 
-jest.mock('livekit-server-sdk', () => {
+vi.mock('livekit-server-sdk', () => {
   return {
-    RoomServiceClient: jest.fn().mockImplementation(() => {
+    RoomServiceClient: vi.fn().mockImplementation(function () {
       return {
         createRoom: mockCreateRoom,
       };
     }),
-    AccessToken: jest.fn().mockImplementation(() => {
+    AccessToken: vi.fn().mockImplementation(function () {
       return {
         addGrant: mockAddGrant,
         toJwt: mockToJwt,
@@ -27,7 +27,7 @@ jest.mock('livekit-server-sdk', () => {
 });
 
 let counter = 0;
-jest.mock('crypto', () => ({
+vi.mock('crypto', () => ({
   randomUUID: () => `mock-uuid-${counter++}`,
 }));
 
@@ -37,15 +37,15 @@ describe('VideoCallsService', () => {
   let metrics: MetricsService;
 
   const mockMetricsService = {
-    recordVideoClassroomCreated: jest.fn(),
-    recordVideoClassroomCreationFailed: jest.fn(),
-    recordVideoClassroomJoined: jest.fn(),
-    recordVideoClassroomJoinFailed: jest.fn(),
-    recordVideoClassroomTokenGenerationDuration: jest.fn(),
+    recordVideoClassroomCreated: vi.fn(),
+    recordVideoClassroomCreationFailed: vi.fn(),
+    recordVideoClassroomJoined: vi.fn(),
+    recordVideoClassroomJoinFailed: vi.fn(),
+    recordVideoClassroomTokenGenerationDuration: vi.fn(),
   };
 
   const mockDegradationService = {
-    executeWithBreaker: jest
+    executeWithBreaker: vi
       .fn()
       .mockImplementation(
         async (
@@ -64,12 +64,12 @@ describe('VideoCallsService', () => {
           }
         },
       ),
-    cacheToken: jest.fn(),
-    getCachedToken: jest.fn().mockReturnValue(null),
-    recordDegradationEvent: jest.fn().mockResolvedValue(undefined),
-    isAvailable: jest.fn().mockReturnValue(true),
-    recordSuccess: jest.fn(),
-    recordFailure: jest.fn(),
+    cacheToken: vi.fn(),
+    getCachedToken: vi.fn().mockReturnValue(null),
+    recordDegradationEvent: vi.fn().mockResolvedValue(undefined),
+    isAvailable: vi.fn().mockReturnValue(true),
+    recordSuccess: vi.fn(),
+    recordFailure: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -91,7 +91,7 @@ describe('VideoCallsService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               if (key === 'LIVEKIT_URL') return 'https://test.livekit.cloud';
               if (key === 'LIVEKIT_API_KEY') return 'test-api-key';
               if (key === 'LIVEKIT_SECRET') return 'test-secret';
@@ -105,7 +105,7 @@ describe('VideoCallsService', () => {
         },
         {
           provide: LivekitService,
-          useValue: { buildIceServers: jest.fn().mockReturnValue([]) },
+          useValue: { buildIceServers: vi.fn().mockReturnValue([]) },
         },
         {
           provide: MetricsService,
@@ -122,7 +122,7 @@ describe('VideoCallsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

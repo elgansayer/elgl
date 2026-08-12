@@ -5,7 +5,7 @@ import { LinkPreviewService } from './link-preview.service';
 
 describe('LinkPreviewController', () => {
   let controller: LinkPreviewController;
-  const mockGetPreview = jest.fn();
+  const mockGetPreview = vi.fn();
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -21,7 +21,7 @@ describe('LinkPreviewController', () => {
     controller = moduleRef.get<LinkPreviewController>(LinkPreviewController);
   });
 
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
   it('should be defined', () => {
     expect(controller).toBeDefined();

@@ -1,3 +1,4 @@
+import type { Mock, Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -6,22 +7,22 @@ import { AudioRoomsService } from '../audio-rooms/audio-rooms.service';
 
 describe('EventsService', () => {
   let service: EventsService;
-  let supabaseService: { getClient: jest.Mock };
-  let notificationsService: jest.Mocked<NotificationsService>;
-  let audioRoomsService: jest.Mocked<AudioRoomsService>;
+  let supabaseService: { getClient: Mock };
+  let notificationsService: Mocked<NotificationsService>;
+  let audioRoomsService: Mocked<AudioRoomsService>;
 
   beforeEach(async () => {
     supabaseService = {
-      getClient: jest.fn(),
+      getClient: vi.fn(),
     };
 
     notificationsService = {
-      sendPushNotification: jest.fn(),
-    } as unknown as jest.Mocked<NotificationsService>;
+      sendPushNotification: vi.fn(),
+    } as unknown as Mocked<NotificationsService>;
 
     audioRoomsService = {
-      createRoom: jest.fn(),
-    } as unknown as jest.Mocked<AudioRoomsService>;
+      createRoom: vi.fn(),
+    } as unknown as Mocked<AudioRoomsService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -50,10 +51,10 @@ describe('EventsService', () => {
       const mockResponse = { id: 'event123', ...mockEvent };
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: mockResponse }),
+        from: vi.fn().mockReturnValue({
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: mockResponse }),
             }),
           }),
         }),
@@ -73,11 +74,11 @@ describe('EventsService', () => {
       ];
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            gte: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: jest.fn().mockResolvedValue({ data: mockEvents }),
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            gte: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                range: vi.fn().mockResolvedValue({ data: mockEvents }),
               }),
             }),
           }),
@@ -108,15 +109,15 @@ describe('EventsService', () => {
       };
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          delete: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null }),
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
             }),
           }),
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: mockRsvp }),
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: mockRsvp }),
             }),
           }),
         }),
@@ -130,10 +131,10 @@ describe('EventsService', () => {
   describe('removeRsvp', () => {
     it('should remove an RSVP successfully', async () => {
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          delete: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null }),
+        from: vi.fn().mockReturnValue({
+          delete: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
             }),
           }),
         }),
@@ -153,11 +154,11 @@ describe('EventsService', () => {
       };
 
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                maybeSingle: jest.fn().mockResolvedValue({ data: mockRsvp }),
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: mockRsvp }),
               }),
             }),
           }),
@@ -170,11 +171,11 @@ describe('EventsService', () => {
 
     it('should return null if no RSVP found', async () => {
       supabaseService.getClient.mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                maybeSingle: jest.fn().mockResolvedValue({ data: null }),
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null }),
               }),
             }),
           }),
@@ -196,20 +197,20 @@ describe('EventsService', () => {
       };
 
       const createCountQuery = (result: { count: number }) => ({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ count: result.count }),
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ count: result.count }),
           }),
         }),
       });
 
       const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
+        from: vi.fn().mockImplementation((table: string) => {
           if (table === 'events') {
             return {
-              select: jest.fn().mockReturnValue({
-                eq: jest.fn().mockReturnValue({
-                  single: jest
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi
                     .fn()
                     .mockResolvedValue({ data: mockEvent, error: null }),
                 }),
@@ -219,9 +220,9 @@ describe('EventsService', () => {
           if (table === 'event_rsvps') {
             let callCount = 0;
             return {
-              select: jest.fn().mockReturnValue({
-                eq: jest.fn().mockReturnValue({
-                  eq: jest.fn().mockImplementation(() => {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockImplementation(() => {
                     callCount++;
                     if (callCount === 1) {
                       return Promise.resolve({ count: 5 });
@@ -232,7 +233,7 @@ describe('EventsService', () => {
               }),
             };
           }
-          return { select: jest.fn() };
+          return { select: vi.fn() };
         }),
       };
 
