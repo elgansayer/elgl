@@ -2,7 +2,7 @@
 <!-- Describe what this PR does -->
 
 ## Related Issue
-Fixes #<!-- Issue number - required for project board automation -->
+Fixes #<!-- Issue number — required for project board automation -->
 
 ## Changes
 <!-- List the key changes made -->
