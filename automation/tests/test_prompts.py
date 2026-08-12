@@ -3,7 +3,13 @@ from pathlib import Path
 import pytest
 
 from openhands_factory.models import Task
-from openhands_factory.prompts import build_phase_prompt, build_system_prompt, build_task_prompt
+from openhands_factory.prompts import (
+    build_phase_prompt,
+    build_quality_prompt,
+    build_system_prompt,
+    build_task_prompt,
+)
+from openhands_factory.quality_gate import QualityFinding
 
 
 def task() -> Task:
@@ -40,6 +46,22 @@ def test_build_phase_prompt_supports_security_review(tmp_path: Path) -> None:
     assert "security instructions" in prompt
     assert "Task ID: 42" in prompt
     assert "Work only in the assigned" in prompt
+
+
+def test_build_quality_prompt_includes_blocking_findings(tmp_path: Path) -> None:
+    (tmp_path / "quality.md").write_text("quality instructions", encoding="utf-8")
+    finding = QualityFinding(
+        "production-mock",
+        Path("frontend/src/app/example.ts"),
+        12,
+        "new production code contains mock behaviour",
+    )
+
+    prompt = build_quality_prompt(tmp_path, task(), [finding])
+
+    assert "quality instructions" in prompt
+    assert "production-mock" in prompt
+    assert "frontend/src/app/example.ts:12" in prompt
 
 
 def test_build_phase_prompt_rejects_unknown_phase(tmp_path: Path) -> None:
