@@ -127,8 +127,8 @@ describe('DiscoveryCacheInterceptor', () => {
 
   describe('intercept', () => {
     function createCallContext(
-      setHeader = jest.fn(),
-      removeHeader = jest.fn(),
+      setHeader = vi.fn(),
+      removeHeader = vi.fn(),
     ): Parameters<typeof DiscoveryCacheInterceptor.prototype.intercept>[0] {
       const mockResponse = { setHeader, removeHeader };
       return {
@@ -139,7 +139,7 @@ describe('DiscoveryCacheInterceptor', () => {
     }
 
     it('should set all directive headers on success', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new DiscoveryCacheInterceptor(
         DISCOVERY_CACHE_PUBLIC_LONG,
@@ -161,7 +161,7 @@ describe('DiscoveryCacheInterceptor', () => {
     });
 
     it('should set EDGE_MEDIUM headers with Vary for user-specific routes', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new DiscoveryCacheInterceptor(
         DISCOVERY_CACHE_EDGE_MEDIUM,
@@ -184,7 +184,7 @@ describe('DiscoveryCacheInterceptor', () => {
     });
 
     it('should set Cache-Tag header when cacheTags provided', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new DiscoveryCacheInterceptor(
         DISCOVERY_CACHE_EDGE_MEDIUM,
@@ -200,7 +200,7 @@ describe('DiscoveryCacheInterceptor', () => {
     });
 
     it('should set multiple Cache-Tag headers comma-separated', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new DiscoveryCacheInterceptor(
         DISCOVERY_CACHE_PUBLIC_SHORT,
@@ -219,7 +219,7 @@ describe('DiscoveryCacheInterceptor', () => {
     });
 
     it('should not set Cache-Tag when no tags provided', async () => {
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new DiscoveryCacheInterceptor(
         DISCOVERY_CACHE_PUBLIC_LONG,
@@ -237,8 +237,8 @@ describe('DiscoveryCacheInterceptor', () => {
     });
 
     it('should override to no-store on error and remove Cache-Tag', async () => {
-      const setHeader = jest.fn();
-      const removeHeader = jest.fn();
+      const setHeader = vi.fn();
+      const removeHeader = vi.fn();
       const context = createCallContext(setHeader, removeHeader);
       const interceptor = new DiscoveryCacheInterceptor(
         DISCOVERY_CACHE_PUBLIC_LONG,
@@ -268,7 +268,7 @@ describe('DiscoveryCacheInterceptor', () => {
         'X-Cache-Strategy': 'discovery-experimental',
       };
 
-      const setHeader = jest.fn();
+      const setHeader = vi.fn();
       const context = createCallContext(setHeader);
       const interceptor = new DiscoveryCacheInterceptor(customDirective);
       const next = {

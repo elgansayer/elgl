@@ -5,19 +5,21 @@ import { LivekitService } from './livekit.service';
 import { AccessToken } from 'livekit-server-sdk';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
-const mockToJwt = jest.fn().mockResolvedValue('mock-livekit-jwt');
-const mockAddGrant = jest.fn();
+const mockToJwt = vi.fn().mockResolvedValue('mock-livekit-jwt');
+const mockAddGrant = vi.fn();
 
-jest.mock('livekit-server-sdk', () => ({
-  AccessToken: jest.fn().mockImplementation(() => ({
-    addGrant: mockAddGrant,
-    toJwt: mockToJwt,
-  })),
+vi.mock('livekit-server-sdk', () => ({
+  AccessToken: vi.fn().mockImplementation(function () {
+    return {
+      addGrant: mockAddGrant,
+      toJwt: mockToJwt,
+    };
+  }),
 }));
 
 // Mock the auth guard so we can focus on the controller logic
 const mockAuthGuard = {
-  canActivate: jest.fn().mockReturnValue(true),
+  canActivate: vi.fn().mockReturnValue(true),
 };
 
 describe('LivekitController', () => {
@@ -34,7 +36,7 @@ describe('LivekitController', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               switch (key) {
                 case 'LIVEKIT_API_KEY':
                   return 'test-api-key';
@@ -70,7 +72,7 @@ describe('LivekitController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -132,7 +134,7 @@ describe('LivekitController', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn((key: string) => {
+              get: vi.fn((key: string) => {
                 switch (key) {
                   case 'LIVEKIT_API_KEY':
                     return 'test-api-key';

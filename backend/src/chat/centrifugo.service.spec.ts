@@ -1,48 +1,53 @@
+import type { Mock, MockInstance } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { CentrifugoService } from './centrifugo.service';
 import { PinoLogger } from 'nestjs-pino';
 import * as jwt from 'jsonwebtoken';
 
-jest.mock('jsonwebtoken', () => ({
-  sign: jest.fn(),
+vi.mock('jsonwebtoken', () => ({
+  sign: vi.fn(),
 }));
 
 const LUA_SHA_SEED = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
 
-// The single shared mock object. jest.mock is hoisted so its factory captures
+// The single shared mock object. vi.mock is hoisted so its factory captures
 // the *variable reference*, meaning we can mutate this object in beforeEach and
 // the mock constructor will return the updated object.
-const mockRedis: Record<string, jest.Mock> = {};
+const mockRedis: Record<string, Mock> = {};
 
-jest.mock('ioredis', () => ({
+vi.mock('ioredis', () => ({
   __esModule: true,
-  default: jest.fn(() => mockRedis),
-  Redis: jest.fn(() => mockRedis),
+  default: vi.fn(function () {
+    return mockRedis;
+  }),
+  Redis: vi.fn(function () {
+    return mockRedis;
+  }),
 }));
 
 describe('CentrifugoService', () => {
   let service: CentrifugoService;
   let configService: ConfigService;
   let mockLogger: {
-    error: jest.Mock;
-    warn: jest.Mock;
-    info: jest.Mock;
-    debug: jest.Mock;
+    error: Mock;
+    warn: Mock;
+    info: Mock;
+    debug: Mock;
   };
 
   beforeEach(async () => {
     // Rebuild the mock's properties without touching its identity.
-    // This keeps jest.fn(() => mockRedis) intact while giving fresh jest
+    // This keeps vi.fn(() => mockRedis) intact while giving fresh vi
     // functions for call tracking every test.
-    const entries: Array<[string, jest.Mock]> = [
-      ['multi', jest.fn()],
-      ['connect', jest.fn().mockResolvedValue(undefined)],
-      ['disconnect', jest.fn()],
-      ['script', jest.fn().mockResolvedValue(LUA_SHA_SEED)],
-      ['evalsha', jest.fn()],
-      ['zadd', jest.fn()],
-      ['expire', jest.fn()],
+    const entries: Array<[string, Mock]> = [
+      ['multi', vi.fn()],
+      ['connect', vi.fn().mockResolvedValue(undefined)],
+      ['disconnect', vi.fn()],
+      ['script', vi.fn().mockResolvedValue(LUA_SHA_SEED)],
+      ['evalsha', vi.fn()],
+      ['zadd', vi.fn()],
+      ['expire', vi.fn()],
     ];
     // Remove stale keys
     Object.keys(mockRedis).forEach((k) => {
@@ -62,10 +67,10 @@ describe('CentrifugoService', () => {
     });
 
     mockLogger = {
-      error: jest.fn(),
-      warn: jest.fn(),
-      info: jest.fn(),
-      debug: jest.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -74,7 +79,7 @@ describe('CentrifugoService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               if (key === 'CENTRIFUGO_URL') return 'http://localhost:8000';
               if (key === 'CENTRIFUGO_API_KEY') return 'test-api-key';
               if (key === 'CENTRIFUGO_SECRET') return 'test-secret';
@@ -139,9 +144,9 @@ describe('CentrifugoService', () => {
         service as unknown as { slidingWindowLuaSha: string | null }
       ).slidingWindowLuaSha = null;
       const mockMulti = {
-        zremrangebyscore: jest.fn().mockReturnThis(),
-        zcard: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([
+        zremrangebyscore: vi.fn().mockReturnThis(),
+        zcard: vi.fn().mockReturnThis(),
+        exec: vi.fn().mockResolvedValue([
           [null, 1],
           [null, 2],
         ]),
@@ -159,9 +164,9 @@ describe('CentrifugoService', () => {
         service as unknown as { slidingWindowLuaSha: string | null }
       ).slidingWindowLuaSha = null;
       const mockMulti = {
-        zremrangebyscore: jest.fn().mockReturnThis(),
-        zcard: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([
+        zremrangebyscore: vi.fn().mockReturnThis(),
+        zcard: vi.fn().mockReturnThis(),
+        exec: vi.fn().mockResolvedValue([
           [null, 1],
           [null, 5],
         ]),
@@ -206,7 +211,7 @@ describe('CentrifugoService', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn((key: string) => {
+              get: vi.fn((key: string) => {
                 if (key === 'CENTRIFUGO_URL') return 'http://localhost:8000';
                 if (key === 'CENTRIFUGO_API_KEY') return 'test-api-key';
                 if (key === 'CENTRIFUGO_SECRET') return 'test-secret';
@@ -231,7 +236,7 @@ describe('CentrifugoService', () => {
 
   describe('generateConnectionToken', () => {
     it('should generate a JWT connection token using secret', () => {
-      (jwt.sign as jest.Mock).mockReturnValue('mock-jwt-token');
+      (jwt.sign as Mock).mockReturnValue('mock-jwt-token');
       const result = service.generateConnectionToken('user-123');
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({ sub: 'user-123', exp: expect.any(Number) }),
@@ -242,7 +247,7 @@ describe('CentrifugoService', () => {
 
     it('should set expiry to 24 hours in the future', () => {
       const now = Math.floor(Date.now() / 1000);
-      const signMock = jwt.sign as jest.Mock;
+      const signMock = jwt.sign as Mock;
       signMock.mockClear();
       signMock.mockReturnValue('token');
       service.generateConnectionToken('user-abc');
@@ -254,10 +259,10 @@ describe('CentrifugoService', () => {
   });
 
   describe('publish', () => {
-    let fetchSpy: jest.SpyInstance;
+    let fetchSpy: MockInstance;
 
     beforeEach(() => {
-      fetchSpy = jest.spyOn(global, 'fetch');
+      fetchSpy = vi.spyOn(global, 'fetch');
     });
 
     afterEach(() => {
@@ -299,10 +304,10 @@ describe('CentrifugoService', () => {
   });
 
   describe('publishTranslated', () => {
-    let publishSpy: jest.SpyInstance;
+    let publishSpy: MockInstance;
 
     beforeEach(() => {
-      publishSpy = jest.spyOn(service, 'publish').mockResolvedValue(true);
+      publishSpy = vi.spyOn(service, 'publish').mockResolvedValue(true);
     });
 
     afterEach(() => {

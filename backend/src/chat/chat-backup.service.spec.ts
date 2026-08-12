@@ -1,16 +1,19 @@
-// Mock jsdom and dompurify to avoid ESM import failures in Jest (transitively imported through chat -> link-preview)
-jest.mock('jsdom', () => ({
-  JSDOM: jest.fn().mockImplementation(() => ({
-    window: {
-      document: { createElement: jest.fn(), createDocumentFragment: jest.fn() },
-    },
-  })),
+import type { Mock } from 'vitest';
+// Mock jsdom and dompurify to avoid ESM import failures in Vitest (transitively imported through chat -> link-preview)
+vi.mock('jsdom', () => ({
+  JSDOM: vi.fn().mockImplementation(function () {
+    return {
+      window: {
+        document: { createElement: vi.fn(), createDocumentFragment: vi.fn() },
+      },
+    };
+  }),
 }));
-jest.mock('dompurify', () => ({
+vi.mock('dompurify', () => ({
   __esModule: true,
-  default: jest.fn(() => ({
-    sanitize: jest.fn((d: string) => d.replace(/<[^>]*>/g, '')),
-    setConfig: jest.fn(),
+  default: vi.fn(() => ({
+    sanitize: vi.fn((d: string) => d.replace(/<[^>]*>/g, '')),
+    setConfig: vi.fn(),
   })),
 }));
 
@@ -21,21 +24,21 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 describe('ChatBackupService', () => {
   let service: ChatBackupService;
-  let chatServiceMock: { exportChatHistory: jest.Mock };
-  let supabaseServiceMock: { getClient: jest.Mock };
-  let mockFrom: jest.Mock;
+  let chatServiceMock: { exportChatHistory: Mock };
+  let supabaseServiceMock: { getClient: Mock };
+  let mockFrom: Mock;
 
   const userId = 'test-user-id';
   const channelId = 'test-channel-id';
 
   beforeEach(async () => {
     chatServiceMock = {
-      exportChatHistory: jest.fn(),
+      exportChatHistory: vi.fn(),
     };
     supabaseServiceMock = {
-      getClient: jest.fn(),
+      getClient: vi.fn(),
     };
-    mockFrom = jest.fn();
+    mockFrom = vi.fn();
     supabaseServiceMock.getClient.mockReturnValue({ from: mockFrom });
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -50,7 +53,7 @@ describe('ChatBackupService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -75,9 +78,9 @@ describe('ChatBackupService', () => {
   describe('importChannel', () => {
     it('should reject with ForbiddenException if user is not a member', async () => {
       mockFrom.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       });
 
       await expect(
@@ -87,12 +90,12 @@ describe('ChatBackupService', () => {
 
     it('should return 0 when input contains no valid messages', async () => {
       const membershipChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi
           .fn()
           .mockResolvedValue({ data: { user_id: userId }, error: null }),
-        insert: jest.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
       };
       mockFrom.mockReturnValue(membershipChain);
 
@@ -109,18 +112,16 @@ describe('ChatBackupService', () => {
 
     it('should insert valid messages and return the inserted count', async () => {
       const membershipChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi
           .fn()
           .mockResolvedValue({ data: { user_id: userId }, error: null }),
       };
       const insertedRows = [{ id: 'm1' }, { id: 'm2' }];
       const insertChain = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest
-          .fn()
-          .mockResolvedValue({ data: insertedRows, error: null }),
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: insertedRows, error: null }),
       };
       mockFrom
         .mockReturnValueOnce(membershipChain)
@@ -162,15 +163,15 @@ describe('ChatBackupService', () => {
 
     it('should throw BadRequestException when supabase insert fails', async () => {
       const membershipChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi
           .fn()
           .mockResolvedValue({ data: { user_id: userId }, error: null }),
       };
       const insertChain = {
-        insert: jest.fn().mockReturnThis(),
-        select: jest
+        insert: vi.fn().mockReturnThis(),
+        select: vi
           .fn()
           .mockResolvedValue({ data: null, error: new Error('DB down') }),
       };
