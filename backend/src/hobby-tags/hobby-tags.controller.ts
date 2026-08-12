@@ -126,21 +126,4 @@ export class HobbyTagsController {
       language,
     );
   }
-
-  async getUserVocabulary(
-    @Req() req: { user?: { id: string } },
-    @Query('language') language: string,
-  ): Promise<VocabularyResultItem[]> {
-    return this.hobbyTagsService.getUserVocabulary(
-      req.user?.id ?? '',
-      language || 'en',
-    );
-  }
-
-  async getTagVocabulary(
-    @Param('tagId') tagId: string,
-    @Query('language') language: string,
-  ): Promise<VocabularyResultItem[]> {
-    return this.hobbyTagsService.getVocabularyForTag(tagId, language || 'en');
-  }
 }

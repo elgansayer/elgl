@@ -17,7 +17,7 @@ function makeBuilder(response: unknown) {
     'update',
     'in',
   ]) {
-    builder[method] = vi.fn().mockReturnValue(builder);
+    builder[method] = jest.fn().mockReturnValue(builder);
   }
   builder.then = (
     resolve: (value: unknown) => void,

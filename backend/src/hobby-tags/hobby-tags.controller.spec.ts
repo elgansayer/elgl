@@ -102,7 +102,7 @@ describe('HobbyTagsController', () => {
 
   describe('getUserVocabulary', () => {
     it('should return vocabulary for user tags', async () => {
-      (service.getUserVocabulary as Mock).mockResolvedValue([
+      (service.getUserVocabulary as jest.Mock).mockResolvedValue([
         mockVocabularyItem,
       ]);
       const result = await controller.getUserVocabulary(

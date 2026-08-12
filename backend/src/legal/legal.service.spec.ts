@@ -48,7 +48,7 @@ describe('LegalService', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: vi.fn((key: string) =>
+              get: jest.fn((key: string) =>
                 key === 'TOS_EFFECTIVE_DATE' ? '2026-09-01' : null,
               ),
             },
@@ -85,7 +85,7 @@ describe('LegalService', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: vi.fn((key: string) =>
+              get: jest.fn((key: string) =>
                 key === 'PRIVACY_EFFECTIVE_DATE' ? '2026-08-15' : null,
               ),
             },
