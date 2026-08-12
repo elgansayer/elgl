@@ -45,11 +45,11 @@ type ReviewGrade = 'again' | 'good' | 'known';
         <!-- Graceful degradation banner -->
         @if (isDegraded()) {
           <div
-            class="rounded-sheet border border-amber-500/30 bg-amber-500/10 p-3 text-center"
+            class="rounded-sheet border border-warning/30 bg-warning/10 p-3 text-center"
             role="status"
             aria-live="polite"
           >
-            <p class="text-xs font-bold text-amber-400">{{ 'review.degradedBanner' | t }}</p>
+            <p class="text-xs font-bold text-warning">{{ 'review.degradedBanner' | t }}</p>
             @if (degradedReason()) {
               <p class="mt-1 text-[11px] text-text-muted">{{ degradedReason() }}</p>
             }
@@ -125,13 +125,13 @@ type ReviewGrade = 'again' | 'good' | 'known';
             </div>
             <!-- Session stats -->
             <div class="flex gap-3 text-xs" aria-live="polite" aria-atomic="true">
-              <span class="rounded-app bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-400">
+              <span class="rounded-app bg-success/20 px-2 py-0.5 font-bold text-success">
                 {{ 'review.knownCount' | t: { count: sessionStats().known } }}
               </span>
-              <span class="rounded-app bg-amber-500/20 px-2 py-0.5 font-bold text-amber-400">
+              <span class="rounded-app bg-warning/20 px-2 py-0.5 font-bold text-warning">
                 {{ 'review.goodCount' | t: { count: sessionStats().good } }}
               </span>
-              <span class="rounded-app bg-rose-500/20 px-2 py-0.5 font-bold text-rose-400">
+              <span class="rounded-app bg-danger/20 px-2 py-0.5 font-bold text-danger">
                 {{ 'review.againCount' | t: { count: sessionStats().again } }}
               </span>
             </div>
@@ -148,13 +148,13 @@ type ReviewGrade = 'again' | 'good' | 'known';
               <h3 class="text-xl font-black text-text-primary">{{ 'review.completeTitle' | t }}</h3>
               <p class="text-sm text-text-secondary">{{ 'review.completeDesc' | t }}</p>
               <div class="flex flex-wrap justify-center gap-3 text-xs">
-                <span class="rounded-app bg-emerald-500/20 px-3 py-1 font-bold text-emerald-400">
+                <span class="rounded-app bg-success/20 px-3 py-1 font-bold text-success">
                   {{ 'review.knownCount' | t: { count: sessionStats().known } }}
                 </span>
-                <span class="rounded-app bg-amber-500/20 px-3 py-1 font-bold text-amber-400">
+                <span class="rounded-app bg-warning/20 px-3 py-1 font-bold text-warning">
                   {{ 'review.goodCount' | t: { count: sessionStats().good } }}
                 </span>
-                <span class="rounded-app bg-rose-500/20 px-3 py-1 font-bold text-rose-400">
+                <span class="rounded-app bg-danger/20 px-3 py-1 font-bold text-danger">
                   {{ 'review.againCount' | t: { count: sessionStats().again } }}
                 </span>
               </div>
@@ -209,11 +209,11 @@ type ReviewGrade = 'again' | 'good' | 'known';
                     <!-- Back -->
                     <div class="flip-card-face flip-card-back" [attr.id]="'card-back-' + card.id">
                       <div class="mb-3 flex items-center justify-between text-xs font-bold">
-                        <span class="rounded-app bg-emerald-500/20 px-2 py-0.5 text-emerald-400">
+                        <span class="rounded-app bg-success/20 px-2 py-0.5 text-success">
                           {{ 'review.answerLabel' | t }}
                         </span>
                       </div>
-                      <h3 class="text-2xl font-black text-emerald-400">{{ card.translation }}</h3>
+                      <h3 class="text-2xl font-black text-success">{{ card.translation }}</h3>
                       @if (card.definition) {
                         <p class="mt-3 text-sm text-text-primary">{{ card.definition }}</p>
                       }
@@ -317,19 +317,19 @@ type ReviewGrade = 'again' | 'good' | 'known';
         justify-content: center;
         align-items: center;
         text-align: center;
-        background-color: #1e1e2e;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background-color: rgb(var(--surface-800-rgb));
+        border: 1px solid rgb(var(--surface-100-rgb));
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
       }
 
       .flip-card-back {
         transform: rotateY(180deg);
-        background-color: #1a2a1a;
-        border-color: rgba(16, 185, 129, 0.2);
+        background-color: rgb(var(--surface-700-rgb));
+        border-color: rgb(var(--color-success-rgb) / 0.2);
       }
 
       .flip-card-front {
-        border-color: rgba(99, 102, 241, 0.2);
+        border-color: rgb(var(--color-primary-rgb) / 0.2);
       }
 
       /* Grading buttons */
@@ -354,30 +354,30 @@ type ReviewGrade = 'again' | 'good' | 'known';
       }
 
       .btn-grade-again {
-        background-color: #f43f5e;
-        color: white;
+        background-color: rgb(var(--color-danger-rgb));
+        color: rgb(var(--on-fill-rgb));
       }
 
       .btn-grade-again:hover {
-        background-color: #e11d48;
+        background-color: rgb(var(--color-danger-rgb) / 0.85);
       }
 
       .btn-grade-good {
-        background-color: #f59e0b;
-        color: #1a1a2e;
+        background-color: rgb(var(--color-warning-rgb));
+        color: rgb(var(--on-fill-rgb));
       }
 
       .btn-grade-good:hover {
-        background-color: #d97706;
+        background-color: rgb(var(--color-warning-rgb) / 0.85);
       }
 
       .btn-grade-known {
-        background-color: #10b981;
-        color: white;
+        background-color: rgb(var(--color-success-rgb));
+        color: rgb(var(--on-fill-rgb));
       }
 
       .btn-grade-known:hover {
-        background-color: #059669;
+        background-color: rgb(var(--color-success-rgb) / 0.85);
       }
 
       @keyframes fadeIn {

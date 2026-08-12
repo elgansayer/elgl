@@ -133,7 +133,7 @@ const DECK_ICONS = [
                           class="h-6 w-6 rounded-full border-2 transition-transform"
                           [style.background-color]="c"
                           [class.scale-125]="newDeckColour() === c"
-                          [class.border-white]="newDeckColour() === c"
+                          [class.border-on-fill]="newDeckColour() === c"
                           [class.border-transparent]="newDeckColour() !== c"
                           [attr.aria-label]="'deck.colourAriaLabel' | t: { colour: c }"
                         >
@@ -153,7 +153,7 @@ const DECK_ICONS = [
                           (click)="newDeckIcon.set(ic)"
                           class="flex h-7 w-7 items-center justify-center rounded-full border text-sm transition-transform"
                           [class.scale-125]="newDeckIcon() === ic"
-                          [class.border-white]="newDeckIcon() === ic"
+                          [class.border-on-fill]="newDeckIcon() === ic"
                           [class.border-transparent]="newDeckIcon() !== ic"
                           [attr.aria-label]="ic"
                         >
@@ -217,7 +217,7 @@ const DECK_ICONS = [
                       <button
                         type="button"
                         (click)="deleteDeckById(deck.id, $event)"
-                        class="rounded-app p-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500/20 hover:text-rose-400"
+                        class="rounded-app p-1 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger/20 hover:text-danger"
                         [attr.aria-label]="'deck.deleteAriaLabel' | t: { name: deck.name }"
                       >
                         <svg
@@ -334,7 +334,7 @@ const DECK_ICONS = [
                             class="h-6 w-6 rounded-full border-2 transition-transform"
                             [style.background-color]="c"
                             [class.scale-125]="editDeckColour() === c"
-                            [class.border-white]="editDeckColour() === c"
+                            [class.border-on-fill]="editDeckColour() === c"
                             [class.border-transparent]="editDeckColour() !== c"
                             [attr.aria-label]="'deck.colourAriaLabel' | t: { colour: c }"
                           >
@@ -354,7 +354,7 @@ const DECK_ICONS = [
                             (click)="editDeckIcon.set(ic)"
                             class="flex h-7 w-7 items-center justify-center rounded-full border text-sm transition-transform"
                             [class.scale-125]="editDeckIcon() === ic"
-                            [class.border-white]="editDeckIcon() === ic"
+                            [class.border-on-fill]="editDeckIcon() === ic"
                             [class.border-transparent]="editDeckIcon() !== ic"
                             [attr.aria-label]="ic"
                           >
@@ -400,12 +400,12 @@ const DECK_ICONS = [
                             <span class="text-sm font-bold text-text-primary truncate">{{
                               fc.word_token
                             }}</span>
-                            <span class="ms-2 text-xs text-emerald-400">{{ fc.translation }}</span>
+                            <span class="ms-2 text-xs text-success">{{ fc.translation }}</span>
                           </div>
                           <button
                             type="button"
                             (click)="addCardToDeck(fc.id)"
-                            class="rounded-app ms-2 bg-primary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-bold text-white hover:opacity-90 flex-shrink-0"
+                            class="rounded-app ms-2 bg-primary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-bold text-on-fill hover:opacity-90 flex-shrink-0"
                           >
                             {{ 'deck.addBtn' | t }}
                           </button>
@@ -434,13 +434,13 @@ const DECK_ICONS = [
                             <span class="text-sm font-bold text-text-primary truncate">{{
                               fc.word_token
                             }}</span>
-                            <span class="ms-2 text-xs text-emerald-400">{{ fc.translation }}</span>
+                            <span class="ms-2 text-xs text-success">{{ fc.translation }}</span>
                             <app-chip customClass="ms-2">L{{ fc.srs_level }}</app-chip>
                           </div>
                           <button
                             type="button"
                             (click)="removeCardFromDeck(fc.id)"
-                            class="rounded-app ms-2 p-1 text-text-muted hover:bg-rose-500/20 hover:text-rose-400 flex-shrink-0"
+                            class="rounded-app ms-2 p-1 text-text-muted hover:bg-danger/20 hover:text-danger flex-shrink-0"
                             [attr.aria-label]="'deck.removeAriaLabel' | t: { word: fc.word_token }"
                           >
                             <svg

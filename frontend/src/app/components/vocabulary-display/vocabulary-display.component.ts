@@ -63,7 +63,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
                     </div>
                     <button
                       (click)="addToFlashcards(item)"
-                      class="rounded-app ms-2 bg-primary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-bold text-white hover:opacity-90 flex-shrink-0"
+                      class="rounded-app ms-2 bg-primary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-bold text-on-fill hover:opacity-90 flex-shrink-0"
                       [attr.aria-label]="'vocabDisplay.addToSrsAriaLabel' | t: { word: item.word }"
                     >
                       {{ 'vocabDisplay.addToSrs' | t }}

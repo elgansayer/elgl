@@ -76,17 +76,17 @@ function parseStackFrames(stack: string): ReadingEngineCrashPayload['stackFrames
     } @else {
       <div class="mx-auto max-w-md space-y-4 pt-8 pb-16" role="alert">
         <section
-          class="rounded-sheet border border-rose-500/30 bg-rose-500/10 p-6 text-center space-y-4"
+          class="rounded-sheet border border-danger/30 bg-danger/10 p-6 text-center space-y-4"
         >
           <p class="text-4xl" aria-hidden="true">&#128214;</p>
-          <h3 class="text-lg font-black text-rose-400">
+          <h3 class="text-lg font-black text-danger">
             {{ 'readingEngineErrorBoundary.title' | t }}
           </h3>
           <p class="text-sm text-text-secondary">
             {{ 'readingEngineErrorBoundary.description' | t }}
           </p>
           @if (errorMessage()) {
-            <p class="rounded-app bg-surface-200 p-3 text-xs font-mono text-rose-300 break-all">
+            <p class="rounded-app bg-surface-200 p-3 text-xs font-mono text-danger break-all">
               {{ errorMessage() }}
             </p>
           }
@@ -110,7 +110,7 @@ function parseStackFrames(stack: string): ReadingEngineCrashPayload['stackFrames
             }
           </div>
           @if (reportedMessage()) {
-            <p class="text-xs text-emerald-400 font-bold">
+            <p class="text-xs text-success font-bold">
               {{ 'readingEngineErrorBoundary.reportedMessage' | t }}
             </p>
           }
