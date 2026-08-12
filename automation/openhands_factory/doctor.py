@@ -14,7 +14,11 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import JobState
 from openhands_factory.provider_profiles import openai_credentials_available
-from openhands_factory.secure_tools import podman_run_arguments, resource_limit_error
+from openhands_factory.secure_tools import (
+    namespace_error,
+    podman_run_arguments,
+    resource_limit_error,
+)
 from openhands_factory.state import read_json
 
 
@@ -54,9 +58,7 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                 "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             },
         )
-        if result.returncode != 0 and resource_limit_error(
-            f"{result.stdout}\n{result.stderr}"
-        ):
+        if result.returncode != 0 and resource_limit_error(f"{result.stdout}\n{result.stderr}"):
             fallback_used = True
             fallback_reason = "cgroup"
             fallback_arguments = [
@@ -68,6 +70,10 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                     "printf 'factory-terminal-ready\\n'",
                     workspace_access="ro",
                     resource_limits=False,
+                    userns="host",
+                    cgroup_manager="cgroupfs",
+                    pid_host=True,
+                    cgroups="no-conmon",
                 ),
             ]
             result = subprocess.run(
@@ -82,10 +88,42 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                 },
             )
         elif result.returncode != 0 and namespace_error(f"{result.stdout}\n{result.stderr}"):
+            fallback_arguments = [
+                str(config.podman_path),
+                *podman_run_arguments(
+                    config.repository,
+                    config.repository,
+                    config.task_image,
+                    "printf 'factory-terminal-ready\\n'",
+                    workspace_access="ro",
+                    resource_limits=False,
+                    userns="host",
+                    cgroup_manager="cgroupfs",
+                    pid_host=True,
+                    cgroups="no-conmon",
+                ),
+            ]
+            result = subprocess.run(
+                fallback_arguments,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+                env={
+                    "HOME": os.environ.get("HOME", "/var/empty"),
+                    "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                },
+            )
+            if result.returncode == 0 and result.stdout == "factory-terminal-ready\n":
+                return Check(
+                    "worker-terminal",
+                    True,
+                    "rootless terminal ready with host user namespace fallback",
+                )
             return Check(
                 "worker-terminal",
-                True,
-                "diagnostic skipped: host blocks newuidmap; daemon worker path remains keep-id",
+                False,
+                f"rootless namespace fallback failed: {result.stdout}{result.stderr}"[-1000:],
             )
     except (OSError, subprocess.TimeoutExpired) as error:
         return Check("worker-terminal", False, str(error)[-1000:])
@@ -96,11 +134,6 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
     if not passed:
         detail = f"exit {result.returncode}: {result.stdout}{result.stderr}"[-1000:]
     return Check("worker-terminal", passed, detail)
-
-
-def namespace_error(stderr: str) -> bool:
-    lowered = stderr.lower()
-    return "newuidmap" in lowered or "cannot set up namespace" in lowered
 
 
 def daemon_health_check(config: FactoryConfig, now: datetime | None = None) -> Check:
@@ -193,7 +226,7 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
     daemon = read_json(config.state_dir / "daemon.json", {})
     active_jobs = daemon.get("active_jobs", []) if isinstance(daemon, dict) else []
     if not isinstance(active_jobs, list) or not active_jobs:
-            return Check("no-pr-progress", True, "no active jobs to monitor")
+        return Check("no-pr-progress", True, "no active jobs to monitor")
     try:
         jobs = JobStore(config.state_dir / "jobs.json").load()
     except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:

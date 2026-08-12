@@ -9,19 +9,19 @@ describe('TranslationService', () => {
   let logger: PinoLogger;
 
   const mockConfigService = {
-    get: jest.fn((key: string) => {
+    get: vi.fn((key: string) => {
       if (key === 'DEEPL_API_KEY') return 'test-api-key';
       return null;
     }),
   };
 
   const mockLogger = {
-    warn: jest.fn(),
+    warn: vi.fn(),
   };
 
   beforeEach(async () => {
     // Clear mocks before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,7 +38,7 @@ describe('TranslationService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -61,7 +61,7 @@ describe('TranslationService', () => {
 
     it('should return cached language if available', async () => {
       // First call to populate cache
-      global.fetch = jest.fn().mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           translations: [{ detected_source_language: 'es' }],
@@ -71,7 +71,7 @@ describe('TranslationService', () => {
       await service.detectLanguage('Hola');
 
       // Second call, should not trigger fetch
-      global.fetch = jest.fn();
+      global.fetch = vi.fn();
       const result = await service.detectLanguage('Hola');
 
       expect(result).toBe('es');
@@ -79,7 +79,7 @@ describe('TranslationService', () => {
     });
 
     it('should detect language via fetch and cache the result', async () => {
-      global.fetch = jest.fn().mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           translations: [{ detected_source_language: 'fr' }],
@@ -92,7 +92,7 @@ describe('TranslationService', () => {
     });
 
     it('should fallback to "en" and log warn if fetch fails (!ok)', async () => {
-      global.fetch = jest.fn().mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValueOnce({
         ok: false,
         status: 403,
       });
@@ -103,7 +103,7 @@ describe('TranslationService', () => {
     });
 
     it('should fallback to "en" if translations array is missing or empty', async () => {
-      global.fetch = jest.fn().mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ translations: [] }),
       });
@@ -113,9 +113,7 @@ describe('TranslationService', () => {
     });
 
     it('should fallback to "en" and log warn if fetch throws error', async () => {
-      global.fetch = jest
-        .fn()
-        .mockRejectedValueOnce(new Error('Network error'));
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
 
       const result = await service.detectLanguage('Bonjour');
       expect(result).toBe('en');
@@ -134,7 +132,7 @@ describe('TranslationService', () => {
 
     it('should return cached translation if available', async () => {
       // First call to populate cache
-      global.fetch = jest.fn().mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           translations: [{ text: 'Hola' }],
@@ -144,7 +142,7 @@ describe('TranslationService', () => {
       await service.translate('Hello', 'en', 'es');
 
       // Second call, should not trigger fetch
-      global.fetch = jest.fn();
+      global.fetch = vi.fn();
       const result = await service.translate('Hello', 'en', 'es');
 
       expect(result).toBe('Hola');
@@ -152,7 +150,7 @@ describe('TranslationService', () => {
     });
 
     it('should translate text via fetch and cache the result', async () => {
-      global.fetch = jest.fn().mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           translations: [{ text: 'Bonjour' }],
@@ -165,7 +163,7 @@ describe('TranslationService', () => {
     });
 
     it('should return original text and log warn if fetch fails (!ok)', async () => {
-      global.fetch = jest.fn().mockResolvedValueOnce({
+      global.fetch = vi.fn().mockResolvedValueOnce({
         ok: false,
         status: 500,
       });
@@ -176,7 +174,7 @@ describe('TranslationService', () => {
     });
 
     it('should return original text and log warn if fetch throws error', async () => {
-      global.fetch = jest.fn().mockRejectedValueOnce(new Error('API error'));
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error('API error'));
 
       const result = await service.translate('Hello', 'en', 'fr');
       expect(result).toBe('Hello');
@@ -186,8 +184,8 @@ describe('TranslationService', () => {
 
   describe('translateWithDetection', () => {
     it('should detect language and translate text', async () => {
-      jest.spyOn(service, 'detectLanguage').mockResolvedValueOnce('en');
-      jest.spyOn(service, 'translate').mockResolvedValueOnce('Hola');
+      vi.spyOn(service, 'detectLanguage').mockResolvedValueOnce('en');
+      vi.spyOn(service, 'translate').mockResolvedValueOnce('Hola');
 
       const result = await service.translateWithDetection('Hello', 'es');
 
@@ -202,8 +200,7 @@ describe('TranslationService', () => {
 
   describe('translateWithExplanations', () => {
     it('should return primary translation, alternatives and context explanation', async () => {
-      jest
-        .spyOn(service, 'translate')
+      vi.spyOn(service, 'translate')
         .mockResolvedValueOnce('Hola') // Primary translation
         .mockResolvedValueOnce('Hello'); // Reverse translation
 

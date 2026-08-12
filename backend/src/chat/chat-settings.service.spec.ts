@@ -1,18 +1,19 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatSettingsService } from './chat-settings.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 describe('ChatSettingsService', () => {
   let service: ChatSettingsService;
-  let supabaseServiceMock: { getClient: jest.Mock };
-  let mockFrom: jest.Mock;
+  let supabaseServiceMock: { getClient: Mock };
+  let mockFrom: Mock;
   const userId = 'test-user-id';
 
   beforeEach(async () => {
     supabaseServiceMock = {
-      getClient: jest.fn(),
+      getClient: vi.fn(),
     };
-    mockFrom = jest.fn();
+    mockFrom = vi.fn();
     supabaseServiceMock.getClient.mockReturnValue({ from: mockFrom });
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -26,7 +27,7 @@ describe('ChatSettingsService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -36,9 +37,9 @@ describe('ChatSettingsService', () => {
   describe('getSettings', () => {
     it('should return default settings when no preferences exist', async () => {
       const chain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi
           .fn()
           .mockResolvedValue({ data: { chat_preferences: null }, error: null }),
       };
@@ -55,9 +56,9 @@ describe('ChatSettingsService', () => {
 
     it('should return default settings on error', async () => {
       const chain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi
           .fn()
           .mockResolvedValue({ data: null, error: new Error('DB error') }),
       };
@@ -74,9 +75,9 @@ describe('ChatSettingsService', () => {
 
     it('should return merged settings from stored preferences', async () => {
       const chain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: {
             chat_preferences: {
               autoTranslate: true,
@@ -101,9 +102,9 @@ describe('ChatSettingsService', () => {
   describe('updateSettings', () => {
     it('should merge with current settings and update the database', async () => {
       const getChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: {
             chat_preferences: {
               autoTranslate: true,
@@ -115,8 +116,8 @@ describe('ChatSettingsService', () => {
         }),
       };
       const updateChain = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
       };
       mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
 
@@ -137,9 +138,9 @@ describe('ChatSettingsService', () => {
 
     it('should throw an error if the database update fails', async () => {
       const getChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: {
             chat_preferences: {
               autoTranslate: false,
@@ -151,8 +152,8 @@ describe('ChatSettingsService', () => {
         }),
       };
       const updateChain = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ error: new Error('DB write error') }),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: new Error('DB write error') }),
       };
       mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
 
@@ -163,9 +164,9 @@ describe('ChatSettingsService', () => {
 
     it('should allow partial updates and preserve other settings', async () => {
       const getChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
           data: {
             chat_preferences: {
               autoTranslate: true,
@@ -177,8 +178,8 @@ describe('ChatSettingsService', () => {
         }),
       };
       const updateChain = {
-        update: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
       };
       mockFrom.mockReturnValueOnce(getChain).mockReturnValueOnce(updateChain);
 
