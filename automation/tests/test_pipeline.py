@@ -58,6 +58,20 @@ class GitHub:
 
 class Conversations:
     def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
+        if "review instructions" in prompt:
+            import json
+
+            (workspace / ".factory-review.json").write_text(
+                json.dumps(
+                    {
+                        "approved": True,
+                        "summary": "OK",
+                        "acceptance_criteria": [],
+                        "blocking_findings": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
         return ConversationResult(task.identifier, 1, True)
 
 
@@ -206,9 +220,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
         PullRequestStatus(99, "MERGED", False, "UNKNOWN", "", "head", True, False),
     ]
 
-    def prepare(
-        workflow: GitWorkflow, worktree: Path, task_id: str, title: str
-    ) -> str:
+    def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
         worktree.mkdir(parents=True)
         (worktree / "AGENTS.md").write_text("Instructions", encoding="utf-8")
         return "factory/42-fix-build"
@@ -222,6 +234,9 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "head")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.check_quality_gate", lambda workflow, base_branch: []
+    )
     pipeline = FactoryPipeline(
         factory_config,
         github=github,  # type: ignore[arg-type]
