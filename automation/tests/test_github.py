@@ -18,7 +18,7 @@ class Runner:
         return self.results.pop(0)
 
 
-def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> None:
+def test_collect_prioritises_guardian_and_skips_non_factory_work(tmp_path: Path) -> None:
     payload = [
         {
             "number": 10,
@@ -37,6 +37,18 @@ def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> N
             "title": "Human decision",
             "body": "Blocked",
             "labels": [{"name": "needs-human"}],
+        },
+        {
+            "number": 13,
+            "title": "Broad architecture epic",
+            "body": "Decompose this first",
+            "labels": [{"name": "factory-ready"}, {"name": "factory-epic"}],
+        },
+        {
+            "number": 14,
+            "title": "Untriaged",
+            "body": "Not ready yet",
+            "labels": [],
         },
     ]
     runner = Runner([ProcessResult(0, json.dumps(payload), "")])
