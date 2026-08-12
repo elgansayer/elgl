@@ -1,10 +1,18 @@
 import { Component, ElementRef, output, viewChild, afterNextRender } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
+import { AppCardComponent } from '../primitives/card/card.component';
+import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-doodle-pad',
-  imports: [TranslatePipe],
+  imports: [
+    TranslatePipe,
+    AppCardComponent,
+    AppButtonPrimaryComponent,
+    AppButtonSecondaryComponent,
+  ],
   templateUrl: './doodle-pad.component.html',
   styleUrls: ['./doodle-pad.component.scss'],
 })

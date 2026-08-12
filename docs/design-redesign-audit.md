@@ -79,6 +79,42 @@ grep -rlE "class=\"[^\"]*\bapp-(card|input|textarea|button-primary|button-second
 
 Baseline count at audit time: ~60+ files (see exploration report; exact rebaseline recommended at Phase 3 kickoff since concurrent agent commits shift this).
 
+**Rebaselined 2026-08-12 (post Phase-4 completion): down to 30 files.** All the Phase 4 feature-area
+retint passes incidentally migrated a lot of the raw `.app-*` class usage onto the real primitives
+as they touched each template. Remaining 30 are a genuine Phase 3 backlog, not touched by any Phase
+4 pass. Per explicit user direction this session ("I have no obligation to any UI framework or
+styles or system") this is being finished as a real cleanup, not treated as optional debt.
+
+**Phase 3 complete, 2026-08-12: down to 5 files, all deliberately-skipped edge cases.** All 30
+backlog files were migrated onto the real `app-card`/`app-input`/`app-textarea`/`app-button-primary`/
+`app-button-secondary`/`app-chip`/`app-pill` components. The 5 remaining raw-class hits are
+intentional, not oversights:
+
+- `admin-portal.component.html` (6 `app-pill` on interactive `<button>`s - `app-pill` is a
+  non-interactive `<span>` with no `disabled`/click support; converting would break disabled-state
+  guarding and form-submit/keyboard behaviour. `app-chip` is a better-shaped primitive for this
+  interactive-pill-button pattern if someone wants to pick it up.)
+- `audio-player.component.html` (root element needs a static `role="group"`, which `app-card`'s host
+  always overwrites with its own computed `region`/`button` role.)
+- `profile.component.html` (7 `app-pill` on interactive `<button>`/`<a routerLink>` elements, same
+  reasoning as admin-portal; plus 1 `<input type="file">` and 6 `<select>` elements carrying
+  `class="app-input"` - the primitive only renders a native `<input>`, not `<select>`/file inputs;
+  plus 1 text input with `maxlength="200"`, which `app-input` has no passthrough for.)
+- `chat-room.component.html` (1 `app-input` on the mention-autocomplete composer field, which carries
+  a full ARIA combobox pattern - `role="combobox"`, `aria-controls`, `aria-expanded`,
+  `aria-activedescendant` - that must live on the actually-focused native `<input>`; `app-input`'s
+  host wrapper doesn't forward those.)
+- `settings.component.html` (1 `app-button-primary` candidate blocked only on a companion-file import
+  addition to `settings.component.ts`, which was left untouched this pass since that file has a
+  documented history of checked-in git conflict markers, see §6a - worth a five-minute follow-up
+  once that file's state is confirmed clean.)
+
+Also worth noting: `app-input`/`app-textarea`/`app-card` etc. don't forward arbitrary native
+attributes (`maxlength`, `step`, `aria-label` on `app-button-primary`) - a couple of migrated call
+sites (`developer-dashboard`'s lat/lng `step="0.0001"` fields) lost a minor attribute as a result.
+Primitive components themselves were treated as out of scope to modify this pass; a follow-up could
+add `customAttrs`-style passthrough if this keeps recurring.
+
 ## 5. Full feature inventory (for Claude Design full-coverage sync, Phase 4)
 
 **Routes** (`frontend/src/app/app.routes.ts`, ~97 entries) grouped by feature area - sync order in Phase 4 should follow this grouping:
@@ -97,6 +133,17 @@ Baseline count at audit time: ~60+ files (see exploration report; exact rebaseli
 - **Misc**: stats, ai-conversation, quests, lessons
 
 **Component folders**: 165 under `components/`, 25 under `pages/` (full alphabetical list captured in the exploration transcript this audit is based on - not duplicated here to keep this doc scannable; re-run `find frontend/src/app/components -maxdepth 1 -mindepth 1 -type d` / same for `pages` if a fresh list is needed).
+
+**Coverage audit, 2026-08-12:** checked the live "HelloTalk Design System" Claude Design project's
+`screens/` folder (10 files: shell, profile, discovery, chat, calls, settings, monetisation,
+moderation, home, onboarding) against the feature-area grouping above. **Two entire groups were
+never retinted or synced: Vocabulary/study and Social** - both still had raw hardcoded Tailwind
+stock colours in their real components, confirmed via the standard grep. **A third gap found in
+Legal/support/Misc**: `ai-conversation`, `help-centre`, `my-stats`, `gdpr`, `lessons`, `help-about`
+also still hardcoded. Dispatched to background agents this session to retint + build
+`screens/vocabulary.html`, `screens/social.html`, `screens/more.html` - check their outcome before
+considering full-coverage sync complete. Once those land and are pushed to Claude Design, all
+grouped feature areas in this doc will have at least one synced representative screen.
 
 **Sync coverage target**: every route above gets at least one synced screen preview; every modal in §3 gets one; every primitive in §2 gets one. Track completion as each Phase 4 feature-folder PR merges - update this doc's checkboxes (add `- [ ]`/`- [x]` per group above) as sync work actually happens, rather than leaving this as a static snapshot.
 

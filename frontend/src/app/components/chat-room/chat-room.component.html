@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-3xl app-card app-padded h-[78vh] flex flex-col relative">
+<app-card customClass="mx-auto max-w-3xl app-padded h-[78vh] flex flex-col relative">
   <div class="flex items-center justify-between gap-2 border-b border-surface-100 pb-2.5">
     <div class="flex items-center gap-3">
       <div
@@ -26,32 +26,32 @@
     </div>
     <div class="flex items-center gap-2">
       @if (isAdmin) {
-        <button
-          (click)="showAdminPanel.set(!showAdminPanel())"
-          class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-          [attr.aria-label]="'chatRoom.adminBtn' | t"
+        <app-button-secondary
+          (clicked)="showAdminPanel.set(!showAdminPanel())"
+          customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
+          [ariaLabel]="'chatRoom.adminBtn' | t"
         >
           {{ 'chatRoom.adminBtn' | t }}
-        </button>
+        </app-button-secondary>
       }
-      <button
+      <app-button-secondary
         type="button"
-        (click)="toggleLock()"
-        class="app-button-secondary p-2 text-xs"
-        [attr.aria-label]="(isLocked() ? 'chatRoom.unlockChat' : 'chatRoom.lockChat') | t"
+        (clicked)="toggleLock()"
+        customClass="p-2 text-xs"
+        [ariaLabel]="(isLocked() ? 'chatRoom.unlockChat' : 'chatRoom.lockChat') | t"
         [attr.title]="(isLocked() ? 'chatRoom.unlockChat' : 'chatRoom.lockChat') | t"
       >
         <span class="text-sm leading-none">{{ isLocked() ? '🔒' : '🔓' }}</span>
-      </button>
-      <button
+      </app-button-secondary>
+      <app-button-secondary
         type="button"
-        (click)="showSearchPanel.update((v) => !v)"
-        class="app-button-secondary p-2 text-xs"
-        [attr.aria-label]="'chatRoom.searchBtn' | t"
+        (clicked)="showSearchPanel.update((v) => !v)"
+        customClass="p-2 text-xs"
+        [ariaLabel]="'chatRoom.searchBtn' | t"
         [attr.title]="'chatRoom.searchBtn' | t"
       >
         <span class="text-sm leading-none">🔍</span>
-      </button>
+      </app-button-secondary>
     </div>
   </div>
 
@@ -60,13 +60,9 @@
       <span class="text-4xl" aria-hidden="true">🔒</span>
       <p class="text-base font-bold text-text-primary">{{ 'chatRoom.lockedTitle' | t }}</p>
       <p class="text-sm text-text-secondary max-w-xs">{{ 'chatRoom.lockedMessage' | t }}</p>
-      <button
-        (click)="unlockRoom()"
-        class="app-button-primary ps-6 pe-6 pt-2.5 pb-2.5 text-sm"
-        [attr.aria-label]="'chatRoom.unlockBtn' | t"
-      >
+      <app-button-primary (clicked)="unlockRoom()" customClass="ps-6 pe-6 pt-2.5 pb-2.5 text-sm">
         {{ 'chatRoom.unlockBtn' | t }}
-      </button>
+      </app-button-primary>
     </div>
   } @else {
     <!-- Search Panel -->
@@ -84,52 +80,44 @@
       >
         <h3 class="text-sm font-bold text-text-primary">{{ 'chatRoom.adminPanelTitle' | t }}</h3>
         <div class="flex gap-2">
-          <input
+          <app-input
             type="text"
-            [(ngModel)]="newGroupName"
-            [placeholder]="'chatRoom.newGroupPlaceholder' | t"
-            class="app-input flex-1 pt-2 pb-2 text-xs"
-            [attr.aria-label]="'chatRoom.newGroupPlaceholder' | t"
+            [value]="newGroupName"
+            (valueChange)="newGroupName = $event"
+            [placeholder]="'chatRoom.newGroupPlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
           />
-          <button
-            (click)="renameGroup()"
-            class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs"
-            [attr.aria-label]="'chatRoom.renameBtn' | t"
-          >
+          <app-button-primary (clicked)="renameGroup()" customClass="ps-3 pe-3 pt-2 pb-2 text-xs">
             {{ 'chatRoom.renameBtn' | t }}
-          </button>
+          </app-button-primary>
         </div>
         <div class="flex gap-2">
-          <input
+          <app-input
             type="text"
-            [(ngModel)]="newMemberId"
-            [placeholder]="'chatRoom.userIdAddPlaceholder' | t"
-            class="app-input flex-1 pt-2 pb-2 text-xs"
-            [attr.aria-label]="'chatRoom.userIdAddPlaceholder' | t"
+            [value]="newMemberId"
+            (valueChange)="newMemberId = $event"
+            [placeholder]="'chatRoom.userIdAddPlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
           />
-          <button
-            (click)="addMember()"
-            class="app-button-primary ps-3 pe-3 pt-2 pb-2 text-xs"
-            [attr.aria-label]="'chatRoom.addMemberBtn' | t"
-          >
+          <app-button-primary (clicked)="addMember()" customClass="ps-3 pe-3 pt-2 pb-2 text-xs">
             {{ 'chatRoom.addMemberBtn' | t }}
-          </button>
+          </app-button-primary>
         </div>
         <div class="flex gap-2">
-          <input
+          <app-input
             type="text"
-            [(ngModel)]="memberToRemoveId"
-            [placeholder]="'chatRoom.userIdRemovePlaceholder' | t"
-            class="app-input flex-1 pt-2 pb-2 text-xs"
-            [attr.aria-label]="'chatRoom.userIdRemovePlaceholder' | t"
+            [value]="memberToRemoveId"
+            (valueChange)="memberToRemoveId = $event"
+            [placeholder]="'chatRoom.userIdRemovePlaceholder'"
+            customClass="flex-1 pt-2 pb-2 text-xs"
           />
-          <button
-            (click)="removeMember()"
-            class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs text-danger"
-            [attr.aria-label]="'chatRoom.removeMemberBtn' | t"
+          <app-button-secondary
+            (clicked)="removeMember()"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs text-danger"
+            [ariaLabel]="'chatRoom.removeMemberBtn' | t"
           >
             {{ 'chatRoom.removeMemberBtn' | t }}
-          </button>
+          </app-button-secondary>
         </div>
       </div>
     }
@@ -466,35 +454,35 @@
       <div
         class="mt-2 rounded-card border border-warning/30 bg-warning/10 ps-3 pe-3 pt-3 pb-3 space-y-2"
       >
-        <input
+        <app-input
           type="text"
-          [(ngModel)]="originalText"
-          [placeholder]="'chatRoom.originalSentence' | t"
-          class="app-input w-full bg-surface-200 border-warning/30 pt-2 pb-2"
-          [attr.aria-label]="'chatRoom.originalSentence' | t"
+          [value]="originalText"
+          (valueChange)="originalText = $event"
+          [placeholder]="'chatRoom.originalSentence'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
         />
-        <input
+        <app-input
           type="text"
-          [(ngModel)]="correctedText"
-          [placeholder]="'chatRoom.correctedSentence' | t"
-          class="app-input w-full bg-surface-200 border-warning/30 pt-2 pb-2"
-          [attr.aria-label]="'chatRoom.correctedSentence' | t"
+          [value]="correctedText"
+          (valueChange)="correctedText = $event"
+          [placeholder]="'chatRoom.correctedSentence'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
         />
-        <input
+        <app-input
           type="text"
-          [(ngModel)]="explanationText"
-          [placeholder]="'chatRoom.explanation' | t"
-          class="app-input w-full bg-surface-200 border-warning/30 pt-2 pb-2"
-          [attr.aria-label]="'chatRoom.explanation' | t"
+          [value]="explanationText"
+          (valueChange)="explanationText = $event"
+          [placeholder]="'chatRoom.explanation'"
+          customClass="w-full bg-surface-200 border-warning/30 pt-2 pb-2"
         />
         <div class="flex gap-2">
-          <button
-            (click)="showCorrectionForm.set(false)"
-            class="app-button-secondary ps-3 pe-3 pt-2 pb-2 text-xs"
-            [attr.aria-label]="'chatRoom.cancelBtn' | t"
+          <app-button-secondary
+            (clicked)="showCorrectionForm.set(false)"
+            customClass="ps-3 pe-3 pt-2 pb-2 text-xs"
+            [ariaLabel]="'chatRoom.cancelBtn' | t"
           >
             {{ 'chatRoom.cancelBtn' | t }}
-          </button>
+          </app-button-secondary>
           <button
             (click)="sendCorrection()"
             class="rounded-app bg-success ps-3 pe-3 pt-2 pb-2 text-xs font-bold text-on-fill"
@@ -515,34 +503,34 @@
         ></app-reply-preview>
       }
       <div class="mb-2 flex items-center gap-2">
-        <button
-          (click)="showCorrectionForm.set(!showCorrectionForm())"
-          class="app-button-secondary bg-warning/20 text-warning ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-          [attr.aria-label]="'chatRoom.correctBtn' | t"
+        <app-button-secondary
+          (clicked)="showCorrectionForm.set(!showCorrectionForm())"
+          customClass="bg-warning/20 text-warning ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.correctBtn' | t"
         >
           {{ 'chatRoom.correctBtn' | t }}
-        </button>
-        <button
-          (click)="showDoodleModal.set(true)"
-          class="app-button-secondary bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-          [attr.aria-label]="'chatRoom.doodleBtn' | t"
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showDoodleModal.set(true)"
+          customClass="bg-secondary/20 text-secondary ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.doodleBtn' | t"
         >
           {{ 'chatRoom.doodleBtn' | t }}
-        </button>
-        <button
-          (click)="showVoiceModal.set(true)"
-          class="app-button-secondary bg-accent/20 text-accent ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-          [attr.aria-label]="'chatRoom.voiceBtn' | t"
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showVoiceModal.set(true)"
+          customClass="bg-accent/20 text-accent ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.voiceBtn' | t"
         >
           {{ 'chatRoom.voiceBtn' | t }}
-        </button>
-        <button
-          (click)="showStickerDrawer.set(!showStickerDrawer())"
-          class="app-button-secondary bg-neon-violet/20 text-neon-violet ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
-          [attr.aria-label]="'chatRoom.stickerBtn' | t"
+        </app-button-secondary>
+        <app-button-secondary
+          (clicked)="showStickerDrawer.set(!showStickerDrawer())"
+          customClass="bg-neon-violet/20 text-neon-violet ps-3 pe-3 pt-1.5 pb-1.5 text-xs"
+          [ariaLabel]="'chatRoom.stickerBtn' | t"
         >
           {{ 'chatRoom.stickerBtn' | t }}
-        </button>
+        </app-button-secondary>
       </div>
 
       @if (showStickerDrawer()) {
@@ -598,14 +586,13 @@
             mentionSuggestions().length > 0 ? 'mention-option-' + mentionActiveIndex() : null
           "
         />
-        <button
-          (click)="sendTextMessage()"
-          [attr.aria-label]="'chatRoom.sendBtn' | t"
+        <app-button-primary
+          (clicked)="sendTextMessage()"
           data-testid="send-button"
-          class="app-button-primary ps-5 pe-5 pt-3 pb-3 text-sm"
+          customClass="ps-5 pe-5 pt-3 pb-3 text-sm"
         >
           {{ 'chatRoom.sendBtn' | t }}
-        </button>
+        </app-button-primary>
       </div>
     </div>
   }
@@ -615,7 +602,7 @@
     [participants]="groupParticipants()"
     (closed)="showParticipantDrawer.set(false)"
   ></app-group-participant-drawer>
-</div>
+</app-card>
 
 <app-group-participant-drawer
   [isOpen]="showParticipantDrawer()"

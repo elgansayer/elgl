@@ -1,4 +1,5 @@
-import {Component, inject, OnInit, signal} from '@angular/core';import { CommonModule, DatePipe } from '@angular/common';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
 import { EventsService, Event } from '../../services/events.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { firstValueFrom } from 'rxjs';
@@ -14,20 +15,24 @@ import { firstValueFrom } from 'rxjs';
       <button
         class="px-3 py-1 rounded-full text-sm"
         [class.bg-primary]="status() === 'upcoming'"
-        [class.text-white]="status() === 'upcoming'"
+        [class.text-on-fill]="status() === 'upcoming'"
         (click)="onStatusChange('upcoming')"
-      >{{ 'events.filter_upcoming' | t }}</button>
+      >
+        {{ 'events.filter_upcoming' | t }}
+      </button>
       <button
         class="px-3 py-1 rounded-full text-sm"
         [class.bg-primary]="status() === 'past'"
-        [class.text-white]="status() === 'past'"
+        [class.text-on-fill]="status() === 'past'"
         (click)="onStatusChange('past')"
-      >{{ 'events.filter_past' | t }}</button>
+      >
+        {{ 'events.filter_past' | t }}
+      </button>
 
       <select
         [value]="languagePair() ?? ''"
         (change)="onLanguageChange($any($event.target).value)"
-        class="bg-surface border border-border rounded px-2 py-1 text-sm"
+        class="bg-surface-300 border border-surface-100 text-text-primary rounded px-2 py-1 text-sm"
       >
         <option value="">{{ 'events.all_languages' | t }}</option>
         <option value="en-es">English ↔ Spanish</option>
@@ -49,17 +54,17 @@ import { firstValueFrom } from 'rxjs';
     } @else {
       <div class="space-y-3">
         @for (event of events(); track event.id) {
-          <div class="p-4 bg-surface rounded-lg shadow">
+          <div class="p-4 bg-surface-300 rounded-lg shadow">
             <h2 class="font-semibold text-lg">{{ event.title }}</h2>
             <p class="text-sm text-text-secondary">
-              {{ event.date_time | date:'medium' }}
+              {{ event.date_time | date: 'medium' }}
             </p>
             @if (event.location) {
               <p class="text-xs">{{ event.location }}</p>
             }
             @if (event.host_name) {
               <p class="text-xs">
-                {{ 'events.hosted_by' | t : { name: event.host_name } }}
+                {{ 'events.hosted_by' | t: { name: event.host_name } }}
               </p>
             }
           </div>
@@ -67,7 +72,7 @@ import { firstValueFrom } from 'rxjs';
       </div>
       @if (hasMore()) {
         <button
-          class="mt-4 w-full py-2 bg-surface border border-border rounded text-sm font-medium disabled:opacity-50"
+          class="mt-4 w-full py-2 bg-surface-300 border border-surface-100 text-text-primary rounded text-sm font-medium disabled:opacity-50"
           [disabled]="isLoading()"
           (click)="loadMore()"
         >
