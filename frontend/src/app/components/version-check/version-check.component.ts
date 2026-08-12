@@ -10,7 +10,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
     <div class="p-4">
       <h2>{{ 'appVersion' | t }}</h2>
       @if (versionError()) {
-        <p class="text-red-500">{{ versionError() }}</p>
+        <p class="text-danger">{{ versionError() }}</p>
       }
       @if (!versionLoaded()) {
         <p>{{ 'loading' | t }}</p>
@@ -18,13 +18,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p>{{ 'currentVersion' | t }}: {{ version().current }}</p>
         <p>{{ 'latestVersion' | t }}: {{ version().latest }}</p>
         @if (updateAvailable()) {
-          <p class="text-green-500">{{ 'updateAvailable' | t }}</p>
+          <p class="text-success">{{ 'updateAvailable' | t }}</p>
           @if (version().updateUrl) {
             <a
               [href]="version().updateUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-block mt-2 rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              class="inline-block mt-2 rounded bg-primary px-4 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90"
             >
               {{ 'downloadUpdate' | t }}
             </a>
