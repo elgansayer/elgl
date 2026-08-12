@@ -61,6 +61,6 @@ def build_quality_prompt(
         f"{instructions}\n\nTask ID: {task.identifier}\nTitle: {task.title}\n\n{task.body}\n\n"
         "Blocking deterministic findings:\n"
         f"{format_findings(findings)}\n\n"
-        "Correct the underlying implementation, then inspect the complete diff and run the applicable "
-        "verification commands before finishing."
+        "Correct the underlying implementation, then inspect the complete diff and run the "
+        "applicable verification commands before finishing."
     )
