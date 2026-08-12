@@ -89,7 +89,16 @@ class GitHubClient:
                 for label in item.get("labels", [])
                 if isinstance(label, dict)
             }
-            if labels.intersection({"factory-skip", "duplicate", "needs-human"}):
+            if labels.intersection(
+                {
+                    "factory-skip",
+                    "duplicate",
+                    "needs-human",
+                    "factory-epic",
+                    "factory-planning",
+                    "factory-quality-blocked",
+                }
+            ):
                 continue
             if self.require_ready_label and not labels.intersection(
                 {self.ready_label, "factory-active", "guardian-alert"}
@@ -114,6 +123,9 @@ class GitHubClient:
             "factory-review": "5319e7",
             "factory-reviewed": "0e8a16",
             "factory-quarantined": "b60205",
+            "factory-quality-blocked": "d73a4a",
+            "factory-epic": "6f42c1",
+            "factory-planning": "8b5cf6",
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
         }
