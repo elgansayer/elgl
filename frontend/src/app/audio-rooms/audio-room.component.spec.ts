@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting,
-} from '@angular/platform-browser-dynamic/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { AudioRoomComponent, AudioRoomParticipant } from './audio-room.component';
 import { I18nService } from '../services/i18n.service';
 
@@ -40,7 +37,7 @@ describe('AudioRoomComponent', () => {
 
   beforeEach(async () => {
     try {
-      TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+      TestBed.initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
     } catch {
       // Ignore if already initialized
     }

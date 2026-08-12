@@ -1,16 +1,17 @@
+import type { Mock } from 'vitest';
 import { PasswordResetController } from './password-reset.controller';
 
 describe('PasswordResetController (unit)', () => {
   let controller: PasswordResetController;
   let resetService: {
-    requestPasswordReset: jest.Mock;
-    resetPassword: jest.Mock;
+    requestPasswordReset: Mock;
+    resetPassword: Mock;
   };
 
   beforeEach(() => {
     resetService = {
-      requestPasswordReset: jest.fn(),
-      resetPassword: jest.fn(),
+      requestPasswordReset: vi.fn(),
+      resetPassword: vi.fn(),
     };
     controller = new (PasswordResetController as any)(
       resetService,

@@ -1,33 +1,34 @@
+import type { Mock } from 'vitest';
 import { AuthController } from './auth.controller';
 
 describe('AuthController (unit)', () => {
   let controller: AuthController;
   let authService: {
-    changePassword: jest.Mock;
-    enableTwoFactor: jest.Mock;
-    verifyTwoFactor: jest.Mock;
-    disableTwoFactor: jest.Mock;
-    checkTwoFactorStatus: jest.Mock;
+    changePassword: Mock;
+    enableTwoFactor: Mock;
+    verifyTwoFactor: Mock;
+    disableTwoFactor: Mock;
+    checkTwoFactorStatus: Mock;
   };
 
   let _transferService: {
-    generateTransferToken: jest.Mock;
-    consumeTransferToken: jest.Mock;
-    swapTokenForSession: jest.Mock;
+    generateTransferToken: Mock;
+    consumeTransferToken: Mock;
+    swapTokenForSession: Mock;
   };
 
   beforeEach(() => {
     authService = {
-      changePassword: jest.fn(),
-      enableTwoFactor: jest.fn(),
-      verifyTwoFactor: jest.fn(),
-      disableTwoFactor: jest.fn(),
-      checkTwoFactorStatus: jest.fn(),
+      changePassword: vi.fn(),
+      enableTwoFactor: vi.fn(),
+      verifyTwoFactor: vi.fn(),
+      disableTwoFactor: vi.fn(),
+      checkTwoFactorStatus: vi.fn(),
     };
     _transferService = {
-      generateTransferToken: jest.fn(),
-      consumeTransferToken: jest.fn(),
-      swapTokenForSession: jest.fn(),
+      generateTransferToken: vi.fn(),
+      consumeTransferToken: vi.fn(),
+      swapTokenForSession: vi.fn(),
     };
 
     controller = new (AuthController as any)(authService) as AuthController;

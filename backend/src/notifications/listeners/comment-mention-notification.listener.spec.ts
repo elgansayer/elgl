@@ -16,13 +16,13 @@ describe('CommentMentionNotificationListener', () => {
         {
           provide: NotificationsService,
           useValue: {
-            createNotification: jest.fn().mockResolvedValue(undefined),
+            createNotification: vi.fn().mockResolvedValue(undefined),
           },
         },
         {
           provide: NotificationPreferencesService,
           useValue: {
-            shouldSendNotification: jest.fn().mockResolvedValue(true),
+            shouldSendNotification: vi.fn().mockResolvedValue(true),
           },
         },
       ],
@@ -103,9 +103,10 @@ describe('CommentMentionNotificationListener', () => {
   });
 
   it('should skip notification when preferences disable push', async () => {
-    jest
-      .spyOn(notificationPreferencesService, 'shouldSendNotification')
-      .mockResolvedValue(false);
+    vi.spyOn(
+      notificationPreferencesService,
+      'shouldSendNotification',
+    ).mockResolvedValue(false);
 
     const payload = new MomentCommentEvent(
       'moment-1',
@@ -123,9 +124,10 @@ describe('CommentMentionNotificationListener', () => {
   });
 
   it('should still send notification if preference check fails', async () => {
-    jest
-      .spyOn(notificationPreferencesService, 'shouldSendNotification')
-      .mockRejectedValue(new Error('DB error'));
+    vi.spyOn(
+      notificationPreferencesService,
+      'shouldSendNotification',
+    ).mockRejectedValue(new Error('DB error'));
 
     const payload = new MomentCommentEvent(
       'moment-1',

@@ -7,11 +7,11 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 describe('CorrectorScoreController', () => {
   let controller: CorrectorScoreController;
 
-  const mockSubmitRating = jest.fn();
-  const mockGetCorrectorScore = jest.fn();
+  const mockSubmitRating = vi.fn();
+  const mockGetCorrectorScore = vi.fn();
 
   const mockAuthGuard: CanActivate = {
-    canActivate: jest.fn(() => true),
+    canActivate: vi.fn(() => true),
   };
 
   beforeEach(async () => {
@@ -37,7 +37,7 @@ describe('CorrectorScoreController', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
