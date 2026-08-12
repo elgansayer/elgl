@@ -134,51 +134,142 @@ export class PrivacyService {
   ): Promise<Record<string, unknown>> {
     const supabase = this.supabaseService.getClient();
 
-    // 1) Basic profile (includes location data for GDPR right to access)
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select(
-        'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, privacy_hide_from_search, privacy_hide_location, is_deletion_pending, created_at',
-      )
-      .eq('id', userId)
-      .single();
+    // Run independent database queries concurrently using Promise.allSettled
+    // to avoid N+1-like sequential execution latency.
+    const promises = [
+      // 0) Basic profile
+      supabase
+        .from('users')
+        .select(
+          'id, display_name, native_language, target_languages, bio_text, avatar_url, audio_intro_url, location, mock_location, is_vip, vip_tier, coins_balance, study_streak_days, correction_ratio, is_serious_learner, privacy_hide_from_search, privacy_hide_location, is_deletion_pending, created_at',
+        )
+        .eq('id', userId)
+        .single(),
+      // 1) Moments
+      supabase
+        .from('moments')
+        .select('*')
+        .eq('author_id', userId)
+        .order('created_at', { ascending: false }),
+      // 2) Moment comments
+      supabase
+        .from('moment_comments')
+        .select('*')
+        .eq('author_id', userId)
+        .order('created_at', { ascending: false }),
+      // 3) Chat messages
+      supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('sender_id', userId)
+        .order('created_at', { ascending: false }),
+      // 4) Flashcards
+      supabase
+        .from('flashcards')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      // 5) Decks (must fetch these first to fetch junction records)
+      supabase
+        .from('decks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      // 6) Favourites
+      supabase
+        .from('favourites')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      // 7) Coin purchases
+      supabase
+        .from('coin_purchases')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      // 8) Escrow as payer
+      supabase
+        .from('escrow_transactions')
+        .select('*')
+        .eq('payer_id', userId)
+        .order('created_at', { ascending: false }),
+      // 9) Escrow as payee
+      supabase
+        .from('escrow_transactions')
+        .select('*')
+        .eq('payee_id', userId)
+        .order('created_at', { ascending: false }),
+      // 10) Sent gifts
+      supabase
+        .from('gift_transactions')
+        .select('*')
+        .eq('sender_id', userId)
+        .order('created_at', { ascending: false }),
+      // 11) Received gifts
+      supabase
+        .from('gift_transactions')
+        .select('*')
+        .eq('receiver_id', userId)
+        .order('created_at', { ascending: false }),
+      // 12) Sticker pack ownership
+      supabase
+        .from('user_sticker_packs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('unlocked_at', { ascending: false }),
+      // 13) Reading progress
+      supabase
+        .from('reading_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .single(),
+      // 14) Reading resources
+      supabase
+        .from('reading_resources')
+        .select('*')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false }),
+    ];
 
-    // 2) Moments authored by the user
-    const { data: userMoments } = await supabase
-      .from('moments')
-      .select('*')
-      .eq('author_id', userId)
-      .order('created_at', { ascending: false });
+    const results = await Promise.allSettled(promises);
 
-    // 3) Moment comments authored by the user
-    const { data: userMomentComments } = await supabase
-      .from('moment_comments')
-      .select('*')
-      .eq('author_id', userId)
-      .order('created_at', { ascending: false });
+    // Helper to safely extract data from fulfilled promises
+    const getData = (index: number) => {
+      const res = results[index];
+      if (res.status === 'fulfilled' && res.value && res.value.data) {
+        return res.value.data;
+      }
+      if (res.status === 'rejected') {
+        this.logger.error(
+          `Data collection query at index ${index} failed`,
+          res.reason,
+        );
+      } else if (res.status === 'fulfilled' && res.value.error) {
+        this.logger.error(
+          `Data collection query at index ${index} failed with Supabase error`,
+          res.value.error,
+        );
+      }
+      return null;
+    };
 
-    // 4) Chat messages sent by the user
-    const { data: userChatMessages } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('sender_id', userId)
-      .order('created_at', { ascending: false });
+    const userProfile = getData(0);
+    const userMoments = getData(1);
+    const userMomentComments = getData(2);
+    const userChatMessages = getData(3);
+    const userFlashcards = getData(4);
+    const userDecks = getData(5) as any[];
+    const userFavourites = getData(6);
+    const coinPurchases = getData(7);
+    const escrowAsPayer = getData(8) as any[];
+    const escrowAsPayee = getData(9) as any[];
+    const sentGifts = getData(10) as any[];
+    const receivedGifts = getData(11) as any[];
+    const userStickerPacks = getData(12);
+    const readingProgress = getData(13);
+    const readingResources = getData(14);
 
-    // 5) Flashcards saved by the user
-    const { data: userFlashcards } = await supabase
-      .from('flashcards')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    // 5b) Decks created by the user (SRS organisation)
-    const { data: userDecks } = await supabase
-      .from('decks')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    // 5c) Deck-flashcard junction records for the user's decks
+    // Fetch deck-flashcard junction records based on the fetched decks
     let userDeckFlashcards: unknown[] = [];
     if (userDecks && userDecks.length > 0) {
       const deckIds = userDecks.map((d: { id: string }) => d.id);
@@ -189,33 +280,6 @@ export class PrivacyService {
         .order('added_at', { ascending: false });
       userDeckFlashcards = junctionData ?? [];
     }
-
-    // 6) Favourites bookmarked by the user
-    const { data: userFavourites } = await supabase
-      .from('favourites')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    // 7) Coin purchases (GDPR: receipt tokens + transaction IDs scrubbed)
-    const { data: coinPurchases } = await supabase
-      .from('coin_purchases')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    // 7b) Escrow transactions (payer and payee)
-    const { data: escrowAsPayer } = await supabase
-      .from('escrow_transactions')
-      .select('*')
-      .eq('payer_id', userId)
-      .order('created_at', { ascending: false });
-
-    const { data: escrowAsPayee } = await supabase
-      .from('escrow_transactions')
-      .select('*')
-      .eq('payee_id', userId)
-      .order('created_at', { ascending: false });
 
     const escrowTransactions = [
       ...(escrowAsPayer ?? []).map((e: Record<string, unknown>) => ({
@@ -228,19 +292,6 @@ export class PrivacyService {
       })),
     ];
 
-    // 8) Gift transactions (sent and received)
-    const { data: sentGifts } = await supabase
-      .from('gift_transactions')
-      .select('*')
-      .eq('sender_id', userId)
-      .order('created_at', { ascending: false });
-
-    const { data: receivedGifts } = await supabase
-      .from('gift_transactions')
-      .select('*')
-      .eq('receiver_id', userId)
-      .order('created_at', { ascending: false });
-
     const giftTransactions = [
       ...(sentGifts ?? []).map((g: Record<string, unknown>) => ({
         ...g,
@@ -251,27 +302,6 @@ export class PrivacyService {
         direction: 'received',
       })),
     ];
-
-    // 10) Sticker pack ownership
-    const { data: userStickerPacks } = await supabase
-      .from('user_sticker_packs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('unlocked_at', { ascending: false });
-
-    // 11) LingQ Reading Engine: reading progress
-    const { data: readingProgress } = await supabase
-      .from('reading_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    // 12) LingQ Reading Engine: resources authored by the user
-    const { data: readingResources } = await supabase
-      .from('reading_resources')
-      .select('*')
-      .eq('created_by', userId)
-      .order('created_at', { ascending: false });
 
     return {
       export_generated_at: new Date().toISOString(),
