@@ -29,17 +29,17 @@ interface SelectOption {
       aria-modal="true"
     >
       <div
-        class="w-full max-w-md bg-[#121212] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        class="w-full max-w-md bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         (click)="$event.stopPropagation()"
         (keydown)="$event.stopPropagation()"
         role="document"
       >
         <!-- Header -->
-        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
-          <h2 class="text-xl font-bold text-slate-100">{{ 'languageParty.modalTitle' | t }}</h2>
+        <div class="px-6 py-4 border-b border-surface-100 flex justify-between items-center">
+          <h2 class="text-xl font-bold text-text-primary">{{ 'languageParty.modalTitle' | t }}</h2>
           <button
             (click)="closeModal()"
-            class="text-slate-400 hover:text-slate-200 transition-colors p-2 rounded-full hover:bg-slate-800"
+            class="text-text-muted hover:text-text-primary transition-colors p-2 rounded-full hover:bg-surface-100"
             [attr.aria-label]="'languageParty.cancelBtn' | t"
           >
             ✕
@@ -48,11 +48,11 @@ interface SelectOption {
 
         <!-- Body -->
         <div class="p-6 flex flex-col gap-5 overflow-y-auto">
-          <p class="text-sm text-slate-400 mb-2">{{ 'languageParty.modalSubtitle' | t }}</p>
+          <p class="text-sm text-text-secondary mb-2">{{ 'languageParty.modalSubtitle' | t }}</p>
 
           <!-- Title Input -->
           <div class="flex flex-col gap-2">
-            <label for="partyTitle" class="text-sm font-medium text-slate-300">
+            <label for="partyTitle" class="text-sm font-medium text-text-secondary">
               {{ 'languageParty.roomTitleLabel' | t }}
             </label>
             <input
@@ -60,20 +60,20 @@ interface SelectOption {
               type="text"
               [(ngModel)]="title"
               [placeholder]="'languageParty.roomTitlePlaceholder' | t"
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
               maxlength="100"
             />
           </div>
 
           <!-- Language Pair Select -->
           <div class="flex flex-col gap-2">
-            <label for="langPair" class="text-sm font-medium text-slate-300">
+            <label for="langPair" class="text-sm font-medium text-text-secondary">
               {{ 'languageParty.languagePairLabel' | t }}
             </label>
             <select
               id="langPair"
               [(ngModel)]="languagePair"
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all appearance-none"
+              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
               @for (option of languagePairOptions(); track option.value) {
                 <option [value]="option.value">
@@ -85,13 +85,13 @@ interface SelectOption {
 
           <!-- Topic Select -->
           <div class="flex flex-col gap-2">
-            <label for="topicTag" class="text-sm font-medium text-slate-300">
+            <label for="topicTag" class="text-sm font-medium text-text-secondary">
               {{ 'languageParty.topicLabel' | t }}
             </label>
             <select
               id="topicTag"
               [(ngModel)]="topicTag"
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all appearance-none"
+              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
               @for (option of topicOptions(); track option.value) {
                 <option [value]="option.value">
@@ -103,13 +103,13 @@ interface SelectOption {
 
           <!-- Level Select -->
           <div class="flex flex-col gap-2">
-            <label for="levelSelect" class="text-sm font-medium text-slate-300">
+            <label for="levelSelect" class="text-sm font-medium text-text-secondary">
               {{ 'languageParty.levelLabel' | t }}
             </label>
             <select
               id="levelSelect"
               [(ngModel)]="level"
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all appearance-none"
+              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
               @for (option of levelOptions(); track option.value) {
                 <option [value]="option.value">
@@ -122,30 +122,30 @@ interface SelectOption {
           <!-- Video Stream Toggle -->
           <label
             for="isVideoStream"
-            class="flex items-center gap-3 text-sm font-medium text-slate-300"
+            class="flex items-center gap-3 text-sm font-medium text-text-secondary"
           >
             <input
               id="isVideoStream"
               type="checkbox"
               [(ngModel)]="isVideoStream"
-              class="h-4 w-4 rounded border-slate-700 bg-slate-900 text-purple-600 focus:ring-purple-500"
+              class="h-4 w-4 rounded border-surface-100 bg-surface-300 text-primary focus:ring-primary"
             />
             {{ 'languageParty.videoStreamLabel' | t }}
           </label>
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-900/50">
+        <div class="px-6 py-4 border-t border-surface-100 flex justify-end gap-3 bg-surface-100/50">
           <button
             (click)="closeModal()"
-            class="px-5 py-2.5 rounded-xl font-bold text-slate-300 hover:bg-slate-800 transition-colors"
+            class="px-5 py-2.5 rounded-xl font-bold text-text-secondary hover:bg-surface-100 transition-colors"
           >
             {{ 'languageParty.cancelBtn' | t }}
           </button>
           <button
             (click)="submit()"
             [disabled]="!isValid()"
-            class="px-5 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-purple-500/20"
+            class="px-5 py-2.5 rounded-xl font-bold text-on-fill bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20"
           >
             {{ 'languageParty.launchBtn' | t }}
           </button>
@@ -213,11 +213,12 @@ export class LanguagePartyCreateModalComponent {
   level = signal<string>('all');
   isVideoStream = signal<boolean>(false);
 
-  readonly isValid = computed(() =>
-    this.title().trim().length > 0
-    && this.languagePair().length > 0
-    && this.topicTag().length > 0
-    && this.level().length > 0,
+  readonly isValid = computed(
+    () =>
+      this.title().trim().length > 0 &&
+      this.languagePair().length > 0 &&
+      this.topicTag().length > 0 &&
+      this.level().length > 0,
   );
 
   closeModal(): void {
