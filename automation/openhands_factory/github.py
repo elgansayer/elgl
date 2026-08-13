@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -52,18 +53,24 @@ class GitHubClient:
         self.environment = {"GH_TOKEN": token}
 
     def _run(self, arguments: Sequence[str], timeout: int = 300) -> str:
-        previous = os.environ.get("GH_TOKEN")
-        os.environ["GH_TOKEN"] = self.environment["GH_TOKEN"]
-        try:
-            result = self.runner(arguments, self.workspace, timeout)
-        finally:
-            if previous is None:
-                os.environ.pop("GH_TOKEN", None)
-            else:
-                os.environ["GH_TOKEN"] = previous
-        if result.returncode != 0:
-            raise FactoryError(f"GitHub command failed: {result.stderr[-2000:]}")
-        return result.stdout
+        for attempt in range(3):
+            previous = os.environ.get("GH_TOKEN")
+            os.environ["GH_TOKEN"] = self.environment["GH_TOKEN"]
+            try:
+                result = self.runner(arguments, self.workspace, timeout)
+            finally:
+                if previous is None:
+                    os.environ.pop("GH_TOKEN", None)
+                else:
+                    os.environ["GH_TOKEN"] = previous
+            if result.returncode == 0:
+                return result.stdout
+            failure = result.stderr[-2000:]
+            transient = any(marker in failure for marker in ("HTTP 5", "502", "503", "504"))
+            if not transient or attempt == 2:
+                raise FactoryError(f"GitHub command failed: {failure}")
+            time.sleep(2**attempt)
+        raise FactoryError("GitHub command failed without a result")
 
     def collect_open_issues(self, limit: int = 10_000) -> list[Task]:
         output = self._run(
@@ -82,6 +89,18 @@ class GitHubClient:
             )
         )
         payload = json.loads(output)
+
+        # Several issues can share an identical title (bulk-generated in the same batch).
+        # Only the lowest-numbered copy is eligible; the rest are marked duplicates so they
+        # are never attempted in parallel with their canonical sibling.
+        canonical_by_title: dict[str, int] = {}
+        for item in payload:
+            normalized_title = " ".join(str(item["title"]).split()).lower()
+            number = int(item["number"])
+            existing = canonical_by_title.get(normalized_title)
+            if existing is None or number < existing:
+                canonical_by_title[normalized_title] = number
+
         tasks: list[Task] = []
         for item in payload:
             labels = {
@@ -96,8 +115,16 @@ class GitHubClient:
                     "factory-planning",
                     "factory-quality-blocked",
                     "factory-quarantined",
+                    # The separate GitHub Actions "AI Swarm" pipeline claims this label while
+                    # it works an issue. Skip it to avoid two systems implementing it at once.
+                    "swarm-active",
                 }
             ):
+                continue
+            number = int(item["number"])
+            normalized_title = " ".join(str(item["title"]).split()).lower()
+            if canonical_by_title.get(normalized_title) != number:
+                self.add_issue_labels(number, ("duplicate",))
                 continue
             if self.require_ready_label and not labels.intersection(
                 {self.ready_label, "factory-active", "guardian-alert"}
@@ -106,7 +133,7 @@ class GitHubClient:
             priority = 0 if "guardian-alert" in labels else 10
             tasks.append(
                 Task(
-                    identifier=str(item["number"]),
+                    identifier=str(number),
                     title=str(item["title"]),
                     body=str(item.get("body") or ""),
                     source="github-issue",

@@ -64,6 +64,10 @@ class FactoryDaemon:
         except Timeout:
             LOGGER.error("Another factory daemon owns the repository lock")
             return 2
+        except Exception as error:
+            LOGGER.exception("Factory daemon reached an ultimate failure")
+            self.alerts.send(f"OpenHands factory ultimate failure: daemon stopped: {error}")
+            return 1
 
     def _loop(self) -> int:
         active: dict[Future[Job | None], str] = {}

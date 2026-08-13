@@ -20,7 +20,7 @@ describe('SystemMessageService', () => {
     centrifugoService = { publish: vi.fn().mockResolvedValue(true) };
     supabaseService = {
       getClient: vi.fn().mockReturnValue(mockSupabaseClient()),
-    } as any;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

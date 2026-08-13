@@ -10,6 +10,7 @@ The JSON report must strictly follow this schema:
 ```json
 {
   "approved": true,
+  "reviewed_sha": "the exact current worktree HEAD SHA",
   "summary": "Implementation satisfies the issue and no blocking defects remain.",
   "acceptance_criteria": [
     {
@@ -27,3 +28,6 @@ The JSON report must strictly follow this schema:
   ]
 }
 ```
+
+Before writing the report, run `git rev-parse HEAD` and copy that exact SHA into `reviewed_sha`.
+If you change the worktree, the orchestrator will require a fresh review after the change is committed.

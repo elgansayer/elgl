@@ -32,6 +32,16 @@ class GitWorkflow:
             raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
         if worktree.exists():
             raise RepositorySafetyError(f"Task worktree already exists: {worktree}")
+        existing_branch = self.runner(
+            ("git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"),
+            self.repository,
+        )
+        if existing_branch.returncode == 0:
+            remove_branch = self.runner(("git", "branch", "-D", branch), self.repository)
+            if remove_branch.returncode != 0:
+                raise RepositorySafetyError(
+                    f"Could not reclaim stale local branch {branch}: {remove_branch.stderr}"
+                )
         result = self.runner(
             (
                 "git",

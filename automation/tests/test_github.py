@@ -2,6 +2,8 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.github import GitHubClient
 from openhands_factory.repository_guard import ProcessResult
 
@@ -47,6 +49,41 @@ def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> N
     assert tasks[1].priority == 0
     assert "10000" in runner.calls[0]
     assert "secret" not in repr(runner.calls)
+
+
+def test_collect_skips_swarm_claimed_and_dedupes_titles(tmp_path: Path) -> None:
+    payload = [
+        {
+            "number": 20,
+            "title": "Build Widget",
+            "body": "Body",
+            "labels": [],
+        },
+        {
+            "number": 21,
+            "title": "Build Widget",
+            "body": "Duplicate copy",
+            "labels": [],
+        },
+        {
+            "number": 22,
+            "title": "Claimed by swarm",
+            "body": "Body",
+            "labels": [{"name": "swarm-active"}],
+        },
+    ]
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps(payload), ""),
+            ProcessResult(0, "", ""),  # label the duplicate issue #21
+        ]
+    )
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    tasks = client.collect_open_issues()
+
+    assert [task.identifier for task in tasks] == ["20"]
+    assert any("21" in call and "duplicate" in call for call in runner.calls[1:])
 
 
 def test_pull_request_creation_parses_number(tmp_path: Path) -> None:
@@ -122,3 +159,19 @@ def test_review_status_is_anchored_to_head_sha(tmp_path: Path) -> None:
     assert "repos/owner/repo/statuses/abc123" in call
     assert "context=factory/independent-review" in call
     assert "state=success" in call
+
+
+def test_transient_github_failure_is_retried(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runner = Runner(
+        [
+            ProcessResult(1, "", "HTTP 503: Service Unavailable"),
+            ProcessResult(0, "[]", ""),
+        ]
+    )
+    monkeypatch.setattr("openhands_factory.github.time.sleep", lambda _seconds: None)
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    assert client.collect_open_issues() == []
+    assert len(runner.calls) == 2

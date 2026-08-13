@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from threading import Semaphore
 
+from openhands_factory.alerts import AlertService
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
 from openhands_factory.exceptions import FactoryError, RepositorySafetyError
@@ -29,7 +30,6 @@ PRE_PULL_REQUEST_STATES = {
     JobState.VERIFYING,
     JobState.QUALITY_REPAIRING,
     JobState.PR_DRAFT,
-    JobState.QUARANTINED,
 }
 
 
@@ -113,13 +113,7 @@ class FactoryPipeline:
         except Exception as error:
             job.attempts += 1
             job.last_error = str(error)[-2000:]
-            LOGGER.exception("Factory job %s failed", job.task.identifier)
-            if job.attempts >= self.config.max_consecutive_failures:
-                job.state = JobState.QUARANTINED
-                self.tasks.release(job.task.identifier)
-                self.github.add_issue_labels(
-                    int(job.task.identifier), ("factory-quarantined", "needs-human")
-                )
+            self._record_failure(job)
         job.updated_at = datetime.now(UTC)
         jobs[job.task.identifier] = job
         self.jobs.save(jobs)
@@ -137,21 +131,62 @@ class FactoryPipeline:
         except Exception as error:
             job.attempts += 1
             job.last_error = str(error)[-2000:]
-            LOGGER.exception("Factory job %s failed", job.task.identifier)
-            if job.attempts >= self.config.max_consecutive_failures:
-                job.state = JobState.QUARANTINED
-                self.tasks.release(job.task.identifier)
-                self.github.add_issue_labels(
-                    int(job.task.identifier), ("factory-quarantined", "needs-human")
-                )
+            self._record_failure(job)
         job.updated_at = datetime.now(UTC)
         self.jobs.save_job(job)
         return job
+
+    def _record_failure(self, job: Job) -> None:
+        LOGGER.exception("Factory job %s failed", job.task.identifier)
+        self.tasks.release(job.task.identifier)
+        if job.attempts < self.config.max_consecutive_failures:
+            return
+        if job.state is JobState.QUARANTINED:
+            return
+        if job.last_error and "no repository changes" in job.last_error:
+            # Every attempt produced an empty diff. That almost always means the work
+            # was already implemented (often by another pipeline racing on the same
+            # issue), not that the task is impossible. Close it instead of leaving it
+            # stuck behind a needs-human label forever.
+            self._close_as_already_satisfied(job)
+            return
+        job.state = JobState.QUARANTINED
+        self.github.add_issue_labels(
+            int(job.task.identifier), ("factory-quarantined", "needs-human")
+        )
+        AlertService(self.config).send(
+            "OpenHands factory ultimate failure: "
+            f"issue #{job.task.identifier} ({job.task.title}) failed "
+            f"{job.attempts} times and was quarantined. Last error: {job.last_error}"
+        )
+
+    def _close_as_already_satisfied(self, job: Job) -> None:
+        worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
+        self.github.add_comment(
+            int(job.task.identifier),
+            (
+                "OpenHands factory made repeated implementation attempts and produced no "
+                "repository changes each time. This usually means the work was already "
+                "completed by another pipeline. Closing as already satisfied — reopen if "
+                "this is incorrect."
+            ),
+        )
+        self.github.close_issue(int(job.task.identifier))
+        GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
+        job.state = JobState.DONE
 
     def _advance(self, job: Job) -> None:
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
         prompt_dir = self.config.repository / "automation/prompts"
         if job.state is JobState.DISCOVERED:
+            if worktree.exists():
+                stale_workflow = GitWorkflow(self.config.repository, self.config.base_branch)
+                if GitWorkflow(worktree, self.config.base_branch).has_changes():
+                    recovery = self.config.recovery_dir / (
+                        f"issue-{job.task.identifier}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+                    )
+                    stale_workflow.archive_worktree(worktree, recovery)
+                stale_workflow.remove_worktree(worktree, force=True)
             self.tasks.acquire(job.task, "factory")
             workflow = GitWorkflow(self.config.repository, self.config.base_branch)
             job.branch = workflow.prepare_worktree(worktree, job.task.identifier, job.task.title)
@@ -194,7 +229,7 @@ class FactoryPipeline:
             self._verify(workflow)
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
-                if getattr(job, "quality_repairs", 0) >= 1:
+                if job.quality_repairs >= 2:
                     raise FactoryError(f"Quality gate blocked: {findings[0].code}")
                 job.state = JobState.QUALITY_REPAIRING
                 return
@@ -251,10 +286,11 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
+            reviewed_head = job.head_sha or workflow.head_sha()
             self.conversations.run(
                 job.task, worktree, build_phase_prompt(prompt_dir, "review", job.task)
             )
-            report = validate_review_report(worktree, job.task.body)
+            report = validate_review_report(worktree, job.task.body, reviewed_head)
             if workflow.has_changes():
                 self._verify(workflow)
                 workflow.stage_all()
@@ -264,10 +300,16 @@ class FactoryPipeline:
                 workflow.push(job.branch)
                 job.head_sha = workflow.head_sha()
                 job.repair_attempts += 1
+                if job.repair_attempts > 5:
+                    raise FactoryError("Review repair limit exceeded")
+                job.state = JobState.REVIEWING
+                return
             if job.pull_request is None:
                 raise FactoryError("Pull request number is missing")
             if job.head_sha is None:
                 job.head_sha = workflow.head_sha()
+            if job.head_sha != reviewed_head:
+                raise FactoryError("Review report head differs from the final reviewed SHA")
             self.github.publish_review_status(
                 job.head_sha,
                 approved=True,

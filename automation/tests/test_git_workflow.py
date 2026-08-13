@@ -23,15 +23,37 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     repository.mkdir()
     (repository / "frontend/node_modules").mkdir(parents=True)
     worktree = tmp_path / "worktrees" / "issue-12"
-    runner = Runner([ProcessResult(0, "", ""), ProcessResult(0, "", "")])
+    runner = Runner(
+        [ProcessResult(0, "", ""), ProcessResult(1, "", ""), ProcessResult(0, "", "")]
+    )
     workflow = GitWorkflow(repository, "main", runner)
 
     branch = workflow.prepare_worktree(worktree, "12", "Fix build")
 
     assert branch == "factory/12-fix-build"
     assert runner.calls[0] == ("git", "fetch", "origin", "main")
-    assert runner.calls[1][-1] == "origin/main"
+    assert runner.calls[2][-1] == "origin/main"
     assert (worktree / "frontend/node_modules").is_symlink()
+
+
+def test_prepare_worktree_reclaims_stale_local_branch(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    worktree = tmp_path / "worktrees" / "issue-12"
+    runner = Runner(
+        [
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    branch = workflow.prepare_worktree(worktree, "12", "Fix build")
+
+    assert branch == "factory/12-fix-build"
+    assert ("git", "branch", "-D", branch) in runner.calls
 
 
 def test_remove_worktree_rejects_path_outside_factory_root(tmp_path: Path) -> None:

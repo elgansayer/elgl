@@ -30,6 +30,7 @@ class JobStore:
                 head_sha=item.get("head_sha"),
                 attempts=int(item.get("attempts", 0)),
                 repair_attempts=int(item.get("repair_attempts", 0)),
+                quality_repairs=int(item.get("quality_repairs", 0)),
                 last_error=item.get("last_error"),
                 updated_at=datetime.fromisoformat(item["updated_at"]),
             )
