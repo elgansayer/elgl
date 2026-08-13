@@ -1,22 +1,15 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { OnboardingService } from '../../services/onboarding.service';
 import { I18nService } from '../../services/i18n.service';
-import { DiagnosticQuizComponent } from '../diagnostic-quiz/diagnostic-quiz.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
 @Component({
   selector: 'app-onboarding-wizard',
-  imports: [
-    CommonModule,
-    TranslatePipe,
-    DiagnosticQuizComponent,
-    AppButtonPrimaryComponent,
-    AppButtonSecondaryComponent,
-  ],
+  imports: [CommonModule, TranslatePipe, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   template: `
     <div class="onboarding-wizard bg-surface-500 text-text-primary ps-4 pe-4 pt-6 pb-6">
       <h1 class="text-xl font-bold">{{ 'onboarding.title' | t }}</h1>
@@ -78,18 +71,8 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
         </div>
       }
 
-      <!-- step 2: diagnostic quiz -->
+      <!-- step 2: display name -->
       @if (onboardingService.currentStep() === 2) {
-        <div class="mt-4">
-          <app-diagnostic-quiz
-            [targetLanguage]="firstTargetLanguage()"
-            (quizCompleted)="onQuizComplete($event)"
-          />
-        </div>
-      }
-
-      <!-- step 3: display name -->
-      @if (onboardingService.currentStep() === 3) {
         <div class="mt-4">
           <label class="block text-sm mb-1" for="display-name">{{
             'onboarding.step4.label' | t
@@ -129,15 +112,6 @@ export class OnboardingWizardComponent {
   readonly onboardingService = inject(OnboardingService);
   readonly i18n = inject(I18nService);
 
-  /** First selected target language code, used for the diagnostic quiz. */
-  readonly firstTargetLanguage = computed(() => {
-    const targets = this.onboardingService.targetLanguages();
-    if (targets.size > 0) {
-      return [...targets][0];
-    }
-    return 'en';
-  });
-
   onNativeLanguageChange(event: Event): void {
     if (!(event.target instanceof HTMLSelectElement)) {
       return;
@@ -152,19 +126,10 @@ export class OnboardingWizardComponent {
     this.onboardingService.setDisplayName(event.target.value);
   }
 
-  onQuizComplete(result: { score: number; suggestedLevel: string; maxScore: number }): void {
-    this.onboardingService.setQuizResult({
-      score: result.score,
-      suggestedCefr: result.suggestedLevel,
-      percentage: result.maxScore > 0 ? Math.round((result.score / result.maxScore) * 100) : 0,
-      skillBreakdown: {},
-    });
-  }
-
   handleNext(): void {
     this.onboardingService.nextStep();
     if (this.onboardingService.isOnboardingComplete()) {
-      this.router.navigate(['/diagnostic-quiz']);
+      this.router.navigate(['/discovery']);
     }
   }
 }

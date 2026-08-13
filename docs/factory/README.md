@@ -26,13 +26,57 @@ verification gate then runs on the combined diff before the pull request is open
 
 ## Issue Intake and Classification
 
-By default, the factory requires `FACTORY_REQUIRE_READY_LABEL=true`. Use `factory-ready` only when a task is bounded enough to prove completion. Do not apply it to epics or planning issues.
+For unattended operation, the factory operates with `FACTORY_REQUIRE_READY_LABEL=false`, meaning no human `factory-ready` labelling step is required. Open issues not specifically excluded are picked up automatically. Setting it to `true` is an optional manual-queueing mode and is not used by the autonomous deployment.
 
-- `factory-epic`: Broad outcomes (e.g., "Improve onboarding"). Excluded from implementation.
-- `factory-planning`: Architecture mapping, research, or decomposition. Excluded from implementation.
-- `factory-ready`: Bounded, actionable implementation issues.
+Excluded from implementation:
+- `factory-epic`: Broad outcomes (e.g., "Improve onboarding").
+- `factory-planning`: Architecture mapping, research, or decomposition.
+- `factory-quality-blocked`: Issues held back by a quality decision.
+- `factory-quarantined`, `needs-human`: Legacy failure markers. The factory no longer adds these labels
+  itself (see below); they only matter for issues a human has labelled that way on purpose, or for issues
+  quarantined before this behaviour changed.
+- `swarm-active`: Claimed by the separate GitHub Actions Swarm pipeline, to avoid two systems working the
+  same issue at once.
+- `duplicate`: Issues sharing an identical title with a lower-numbered issue are closed and labelled
+  automatically on every backlog refresh, so the factory never implements the same work twice.
 
-If `FACTORY_REQUIRE_READY_LABEL=false` is set in the environment file, it overrides the safe default, but this is only for backwards compatibility.
+There is no permanent give-up state. A task that keeps failing is retried indefinitely with exponential
+backoff (5 minutes, doubling up to a 24-hour cap) instead of being quarantined - see "Failure handling"
+below. Telegram is paged (batched, see "Costs" below) but nothing requires a human to unblock it.
+
+## Pull Request Intake
+
+The factory also independently reviews, fixes and merges pull requests it did not create itself (from
+other bots or humans), not just the ones it opens from issues. `collect_open_pull_requests` picks up every
+open, non-draft pull request except:
+- Its own, identified by a `factory/*` head branch (those are already tracked by the issue that opened
+  them).
+- Anything already labelled `factory-reviewed` or `factory-skip`.
+
+A picked-up pull request skips straight to the review phase - there is no re-implementation step - and then
+reuses the same review, CI-repair and merge state machine as an issue-driven job, including the same
+`factory-merge.yml` gate. The only structural difference is that repair commits push back to the pull
+request's own existing branch instead of a new `factory/*` one; `ensure_push_target` allows this only for
+the exact branch a job is assigned to review; this is still trusted-code-directed, not open to indirect LLM
+influence, and pushing to `main`/`master`/the base branch stays forbidden unconditionally.
+
+## Weekly Gap Analysis (Architect)
+
+Once per `FACTORY_ARCHITECT_INTERVAL_HOURS` (default 168, i.e. weekly), the daemon runs one bounded
+conversation - not modelled as a durable retried job, since it isn't blocking any specific piece of work -
+that compares `AGENTS.md`, `FEATURES_SPEC.md`, `README.md` and `ROADMAP.md` against the actual codebase:
+- If it updates `ROADMAP.md`/`SPEC.md`, that goes through a normal pull request and the same independent
+  review and `factory-merge.yml` gate as everything else. It is not a direct edit to `main`.
+- New gaps it identifies are written to a structured `.factory-architect.json` file, not created on GitHub
+  directly - the worker has no network access and could not run `gh issue create` even if it tried. Trusted
+  code reads that file, drops any proposal whose (normalised) title matches an already-open issue
+  regardless of that issue's labels, caps the rest at `FACTORY_ARCHITECT_MAX_NEW_ISSUES` (default 8), and
+  only then creates them, labelled `architect-proposed`.
+
+That dedup step is not optional: an earlier, unchecked version of this idea (the retired GitHub Actions "AI
+Architect Planner") is what produced the bulk-duplicate-issue floods this factory has had to recover from
+more than once. If a cycle finds nothing worth proposing, it does nothing - that is a normal outcome, not a
+failure.
 
 ## Deterministic Quality Gate
 
@@ -42,7 +86,10 @@ Before a pull request is created, the factory runs a deterministic quality gate 
 - Unsafe type escapes (`as any`, `<any>`).
 - Newly skipped tests.
 
-If blocked, the factory executes one bounded quality-repair pass before failing closed.
+The gate inspects only newly added diff lines in production paths. Test fixtures and test-only mocks remain allowed.
+
+If blocked, the factory executes up to two bounded quality-repair passes before treating it as a normal
+failure (see "Failure handling").
 
 ## Independent Review
 
@@ -51,6 +98,25 @@ The independent reviewer proves actual completion against the issue's requiremen
 - Acceptance criteria coverage (every explicit bullet must pass).
 - Absence of blocking findings (e.g., UI without backend).
 - Reviewed SHA integrity (the approved SHA must match the PR head).
+
+The reviewer report must contain the exact current head SHA, non-empty evidence for every criterion, and no
+unrequested criteria. Reviewer edits trigger verification and a fresh review before approval is published.
+
+## Failure handling
+
+There is no quarantine terminal state. When a job fails (a conversation error, a verification failure, a
+blocked quality gate), it stays in its current phase and is retried later rather than being marked done,
+failed, or handed off to a human:
+- Backoff is exponential per job: 5 minutes after the first failure, doubling on each subsequent one, capped
+  at 24 hours. `select_batch` in `daemon.py` skips a job until its `next_attempt_at` has passed.
+- One exception: if implementation repeatedly produces an empty diff (`"no repository changes"`), that is
+  treated as the work already being done, usually by another pipeline racing on the same issue, and the
+  issue is closed instead of retried forever for no reason.
+- Once `FACTORY_MAX_CONSECUTIVE_FAILURES` (default 3) is reached, an alert fires. This is informational, not
+  a call to action - the factory keeps retrying on its own. Alerts are batched (see "Operator recovery").
+- If a systemic bug caused a wave of failures and you fixed it, issues already in backoff resume on their
+  own schedule with no extra step. Only GitHub-side `needs-human`/`factory-quarantined` labels from before
+  this behaviour changed, or added manually, need `backlog requeue-quarantined` to clear.
 
 ## Costs
 
@@ -157,6 +223,7 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metr
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory backlog requeue-quarantined
 ```
 
 - `doctor --online` verifies tooling, writable state directories, disk headroom, the systemd unit and live
@@ -177,10 +244,22 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resu
   `FACTORY_MAX_NO_PR_HOURS` (default six hours).
 - `pause` stops the daemon from starting new work while preserving jobs, branches and pull requests.
 - `resume` re-enables scheduling once the underlying issue is resolved.
+- `backlog requeue-quarantined` clears `factory-quarantined`, `needs-human`, `swarm-active` and
+  `factory-active` from every currently quarantined issue and comments to explain why. This is only needed
+  for issues carrying those labels from before quarantine stopped being a terminal state, or ones a human
+  labelled that way by hand - see "Failure handling" for how ordinary retries now recover on their own.
 
 Typical recovery flow: run `doctor --online` to confirm the failure, `providers check` to isolate the provider,
 `status` and `metrics` to review daemon health and recent fallbacks, `pause` before touching credentials or
-state, then `resume` after the fix.
+state, fix the root cause, `backlog requeue-quarantined` if any issues carry legacy quarantine labels, then
+`resume`.
+
+Duplicate issues (identical titles, usually from a bulk-generation run) are now detected and closed
+automatically on every backlog refresh, not just during manual recovery.
+
+Alerts are batched: repeated alerts of the same kind within a 30-minute window collapse into the first
+message, with the suppressed count reported on the next alert that actually sends. A burst of failures
+sends one Telegram message, not one per issue.
 
 ## Wiki, upgrades and recovery
 

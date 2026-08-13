@@ -1,13 +1,23 @@
-import { ApplicationConfig, ErrorHandler, inject, isDevMode, APP_INITIALIZER, importProvidersFrom } from '@angular/core';
+import {
+  APP_INITIALIZER,
+  ApplicationConfig,
+  ErrorHandler,
+  inject,
+  importProvidersFrom,
+  isDevMode,
+  PLATFORM_ID,
+} from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors, HttpClient } from '@angular/common/http';
 import { provideClientHydration } from '@angular/platform-browser';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, isPlatformServer } from '@angular/common';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { JoyrideModule } from 'ngx-joyride';
+
+import { ConfigurationService } from './core/config/configuration.service';
 import { routes } from './app.routes';
 import { GlobalErrorHandler } from './services/error-handler.service';
 import { DeepLinkService } from './services/deep-link.service';
@@ -15,6 +25,14 @@ import { retryInterceptor } from './interceptors/retry.interceptor';
 
 export function createTranslateLoader(http: HttpClient): TranslateHttpLoader {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
+}
+
+export function initConfig(
+  configService: ConfigurationService,
+  platformId: object,
+): () => Promise<void> {
+  return () =>
+    isPlatformServer(platformId) ? Promise.resolve() : configService.loadConfiguration();
 }
 
 function initialiseDeepLinks(): () => void {
@@ -60,6 +78,13 @@ export const appConfig: ApplicationConfig = {
     }).providers ?? []),
     importProvidersFrom(JoyrideModule.forRoot()),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
+
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initConfig,
+      deps: [ConfigurationService, PLATFORM_ID],
+      multi: true,
+    },
     {
       provide: APP_INITIALIZER,
       useFactory: initialiseDeepLinks,

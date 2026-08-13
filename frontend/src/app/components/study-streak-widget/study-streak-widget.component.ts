@@ -8,31 +8,31 @@ import { TranslatePipe } from '../../services/translate.pipe';
   imports: [TranslatePipe],
   template: `
     <div
-      class="study-streak-widget bg-[#121212] rounded-xl ps-4 pe-4 pt-4 pb-4 flex items-center gap-3"
+      class="study-streak-widget bg-surface-300 rounded-xl ps-4 pe-4 pt-4 pb-4 flex items-center gap-3"
     >
       <span class="text-2xl" aria-hidden="true">🔥</span>
       <div class="flex flex-col" aria-live="polite">
-        <span class="text-xs text-gray-400">{{ 'studyStreak.daily' | t }}</span>
+        <span class="text-xs text-text-muted">{{ 'studyStreak.daily' | t }}</span>
         @if (streakLoading()) {
-          <span class="text-2xl font-bold text-gray-500">{{ 'common.loading' | t }}</span>
+          <span class="text-2xl font-bold text-text-muted">{{ 'common.loading' | t }}</span>
         } @else if (streakError()) {
           @if (fallbackStreak() > 0) {
-            <span class="text-2xl font-bold text-red-400"
+            <span class="text-2xl font-bold text-danger"
               >{{ fallbackStreak() }}
               {{ (fallbackStreak() === 1 ? 'studyStreak.day' : 'studyStreak.days') | t }}</span
             >
           } @else {
-            <span class="text-2xl font-bold text-red-400">{{ 'common.error' | t }}</span>
+            <span class="text-2xl font-bold text-danger">{{ 'common.error' | t }}</span>
           }
         } @else {
-          <span class="streak-value text-2xl font-bold text-yellow-400"
+          <span class="streak-value text-2xl font-bold text-accent"
             >{{ streakValue() }} {{ dayLabel() | t }}</span
           >
         }
       </div>
       <button
         (click)="checkIn()"
-        class="ms-auto bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-white font-semibold py-2 ps-4 pe-4 rounded-full text-sm transition-all duration-200 shadow-lg"
+        class="ms-auto bg-gradient-to-r from-accent to-neon-orange hover:opacity-90 text-on-fill font-semibold py-2 ps-4 pe-4 rounded-full text-sm transition-all duration-200 shadow-lg"
       >
         {{ 'studyStreak.checkin' | t }}
       </button>

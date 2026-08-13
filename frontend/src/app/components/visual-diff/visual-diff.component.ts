@@ -13,16 +13,13 @@ interface DiffSegment {
       @for (segment of segments(); track segment.index) {
         @switch (segment.type) {
           @case ('added') {
-            <span
-              class="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 rounded ps-0.5 pe-0.5"
-              data-type="added"
-            >
+            <span class="bg-success/15 text-success rounded ps-0.5 pe-0.5" data-type="added">
               {{ segment.text }}
             </span>
           }
           @case ('removed') {
             <span
-              class="bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200 line-through rounded ps-0.5 pe-0.5"
+              class="bg-danger/15 text-danger line-through rounded ps-0.5 pe-0.5"
               data-type="removed"
             >
               {{ segment.text }}

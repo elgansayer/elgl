@@ -46,8 +46,7 @@ describe('HobbyTagsController', () => {
       addUserTag: vi.fn(),
       removeUserTag: vi.fn(),
       updateProficiency: vi.fn(),
-      getVocabularyForTag: vi.fn(),
-      getUserVocabulary: vi.fn(),
+      getVocabularyForUser: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -100,33 +99,23 @@ describe('HobbyTagsController', () => {
     });
   });
 
-  describe('getUserVocabulary', () => {
+  describe('getVocabulary', () => {
     it('should return vocabulary for user tags', async () => {
-      (service.getUserVocabulary as Mock).mockResolvedValue([
+      (service.getVocabularyForUser as Mock).mockResolvedValue([
         mockVocabularyItem,
       ]);
-      const result = await controller.getUserVocabulary(
+      const result = await controller.getVocabulary(
         { user: { id: 'user-1' } },
         'es',
       );
       expect(result).toEqual([mockVocabularyItem]);
-      expect(service.getUserVocabulary).toHaveBeenCalledWith('user-1', 'es');
+      expect(service.getVocabularyForUser).toHaveBeenCalledWith('user-1', 'es');
     });
 
-    it('should default language to en', async () => {
-      (service.getUserVocabulary as Mock).mockResolvedValue([]);
-      await controller.getUserVocabulary({ user: { id: 'user-1' } }, '');
-      expect(service.getUserVocabulary).toHaveBeenCalledWith('user-1', 'en');
-    });
-  });
-
-  describe('getTagVocabulary', () => {
-    it('should return vocabulary for a specific tag', async () => {
-      const vocab = [{ word: 'camera', translation: 'cámara', language: 'es' }];
-      (service.getVocabularyForTag as Mock).mockResolvedValue(vocab);
-      const result = await controller.getTagVocabulary('tag-1', 'es');
-      expect(result).toEqual(vocab);
-      expect(service.getVocabularyForTag).toHaveBeenCalledWith('tag-1', 'es');
+    it('should pass language query param to service', async () => {
+      (service.getVocabularyForUser as Mock).mockResolvedValue([]);
+      await controller.getVocabulary({ user: { id: 'user-1' } }, 'fr');
+      expect(service.getVocabularyForUser).toHaveBeenCalledWith('user-1', 'fr');
     });
   });
 

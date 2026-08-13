@@ -1,11 +1,4 @@
-import {
-  Component,
-  inject,
-  input,
-  output,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, inject, input, output, signal, viewChild } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { CoverPhotoService } from '../../services/cover-photo.service';
 
@@ -25,7 +18,7 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
       @if (!previewUrl()) {
         <label
           for="cover-file-input"
-          class="flex flex-col items-center justify-center h-48 cursor-pointer border-dashed border-2 border-slate-600 hover:border-accent transition-colors rounded-xl"
+          class="flex flex-col items-center justify-center h-48 cursor-pointer border-dashed border-2 border-surface-100 hover:border-accent transition-colors rounded-xl"
         >
           <span class="text-lg text-muted">{{ 'coverPhoto.uploadLabel' | t }}</span>
           <span class="text-sm text-muted mt-1">{{ 'coverPhoto.supportedFormats' | t }}</span>
@@ -41,11 +34,7 @@ import { CoverPhotoService } from '../../services/cover-photo.service';
       />
       @if (previewUrl()) {
         <div class="flex gap-2 mt-4 justify-end">
-          <button
-            type="button"
-            class="btn-secondary px-4 py-2 rounded-lg"
-            (click)="cancel()"
-          >
+          <button type="button" class="btn-secondary px-4 py-2 rounded-lg" (click)="cancel()">
             {{ 'coverPhoto.cancel' | t }}
           </button>
           <button

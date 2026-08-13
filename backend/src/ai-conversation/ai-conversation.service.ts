@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmProxyService } from '../llm-proxy/llm-proxy.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { UsersService } from '../users/users.service';
+import { FlashcardsService } from '../flashcards/flashcards.service';
+import { StudyStreakService } from '../study-streak/study-streak.service';
+import { UserProfile } from '../users/interfaces/user-profile.interface';
+import { Flashcard } from '../flashcards/interfaces/flashcard.interface';
 
 export interface Scenario {
   id: string;
@@ -182,6 +187,9 @@ The user's role: Someone practising casual English.
   constructor(
     private readonly llmProxy: LlmProxyService,
     private readonly supabaseService: SupabaseService,
+    private readonly usersService: UsersService,
+    private readonly flashcardsService: FlashcardsService,
+    private readonly studyStreakService: StudyStreakService,
   ) {}
 
   getScenarios(): Omit<Scenario, 'systemPrompt'>[] {
@@ -224,13 +232,24 @@ The user's role: Someone practising casual English.
   }
 
   async generateReply(
+    userId: string,
     userMessage: string,
     scenarioId?: string,
     conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<string> {
     const scenario = this.scenarios.find((s) => s.id === scenarioId);
-    const systemPrompt =
-      scenario?.systemPrompt ?? this.getDefaultSystemPrompt();
+    let systemPrompt = scenario?.systemPrompt;
+
+    if (!systemPrompt) {
+      const [profile, flashcards, streak] = await Promise.all([
+        this.usersService.getProfile(userId).catch(() => null),
+        this.flashcardsService
+          .getFlashcards(userId, undefined, 10)
+          .catch(() => []),
+        this.studyStreakService.getStreak(userId).catch(() => 0),
+      ]);
+      systemPrompt = this.getDefaultSystemPrompt(profile, flashcards, streak);
+    }
     const scenarioName = scenario?.name ?? 'free conversation';
 
     const messages: {
@@ -254,13 +273,40 @@ The user's role: Someone practising casual English.
     }
   }
 
-  private getDefaultSystemPrompt(): string {
-    return `You are a friendly AI language partner helping someone practise English. Stay in character.
+  private getDefaultSystemPrompt(
+    profile: UserProfile | null,
+    flashcards: Flashcard[],
+    streak: number,
+  ): string {
+    const targetLanguages = profile?.target_languages?.join(', ') || 'English';
+    const interests = profile?.interests?.join(', ') || 'various topics';
+    const level = profile?.proficiency_level || 'beginner/intermediate';
 
+    let flashcardContext = '';
+    if (flashcards && flashcards.length > 0) {
+      const words = flashcards.map((f) => f.word_token).join(', ');
+      flashcardContext = `\n- The user has recently been studying these words/phrases: ${words}. Try to naturally incorporate some of these into the conversation to help them practice.`;
+    }
+
+    let streakContext = '';
+    if (streak > 3) {
+      streakContext = `\n- The user is on a ${streak}-day study streak! Acknowledge their dedication if appropriate.`;
+    }
+
+    return `You are a personalized, expert language tutor helping a learner practice ${targetLanguages}. Stay in character as a supportive and knowledgeable tutor.
+
+The user's profile:
+- Target language(s): ${targetLanguages}
+- Proficiency level: ${level}
+- Interests: ${interests}${streakContext}${flashcardContext}
+
+Your instructions:
 - Be encouraging, warm, and supportive.
-- Ask follow-up questions.
-- Use natural, conversational English.
-- Gently model correct grammar without being a teacher.
+- Ask follow-up questions related to their interests to keep the conversation engaging.
+- Use natural, conversational language appropriate for their ${level} level.
+- Deliberately reuse recently learned material (vocabulary listed above) to reinforce learning.
+- Progressively increase difficulty slightly to challenge them, but avoid becoming unnatural or overwhelming.
+- Gently model correct grammar.
 - Keep replies 1-3 sentences.`;
   }
 

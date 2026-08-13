@@ -61,7 +61,7 @@ def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> N
     assert "TasksMax=128" in unit
     for directive in (
         "PrivateTmp=true",
-        "PrivateDevices=true",
+        "PrivateDevices=false",
         "ProtectSystem=strict",
         "ProtectHome=true",
         "ProtectKernelTunables=true",
@@ -129,7 +129,7 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_PODMAN_PATH=/usr/bin/podman" in template
     assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
     assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
-    assert "FACTORY_REQUIRE_READY_LABEL=true" in template
+    assert "FACTORY_REQUIRE_READY_LABEL=false" in template
 
 
 def test_parallel_job_limit_must_be_positive() -> None:

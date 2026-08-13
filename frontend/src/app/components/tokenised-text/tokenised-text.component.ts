@@ -36,7 +36,7 @@ interface ParsedTokens {
         </span>
       }
       @if (transliteration()) {
-        <div class="transliteration mt-1 text-xs leading-snug text-slate-500" dir="ltr">
+        <div class="transliteration mt-1 text-xs leading-snug text-text-muted" dir="ltr">
           {{ transliteration() }}
         </div>
       }
@@ -47,7 +47,7 @@ interface ParsedTokens {
       margin-block-start: 0.25rem;
       font-size: 0.75rem;
       line-height: 1.25rem;
-      color: #64748b;
+      color: rgb(var(--text-muted-rgb));
     }
   `,
 })

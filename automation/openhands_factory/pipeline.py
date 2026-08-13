@@ -3,20 +3,22 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Semaphore
 
+from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
 from openhands_factory.exceptions import FactoryError, RepositorySafetyError
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestStatus
 from openhands_factory.jobs import JobStore
-from openhands_factory.models import Job, JobState
+from openhands_factory.models import Job, JobState, Task
 from openhands_factory.prompts import build_phase_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
+from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 from openhands_factory.verification import commands_for, run_verification
 
@@ -29,7 +31,6 @@ PRE_PULL_REQUEST_STATES = {
     JobState.VERIFYING,
     JobState.QUALITY_REPAIRING,
     JobState.PR_DRAFT,
-    JobState.QUARANTINED,
 }
 
 
@@ -62,7 +63,7 @@ class FactoryPipeline:
         if not self.labels_ready:
             self.github.ensure_factory_labels()
             self.labels_ready = True
-        tasks = self.github.collect_open_issues()
+        tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
         # A daemon restart or an interrupted worker can leave a lease behind while the
@@ -110,16 +111,11 @@ class FactoryPipeline:
             self._advance(job)
             job.attempts = 0
             job.last_error = None
+            job.next_attempt_at = None
         except Exception as error:
             job.attempts += 1
             job.last_error = str(error)[-2000:]
-            LOGGER.exception("Factory job %s failed", job.task.identifier)
-            if job.attempts >= self.config.max_consecutive_failures:
-                job.state = JobState.QUARANTINED
-                self.tasks.release(job.task.identifier)
-                self.github.add_issue_labels(
-                    int(job.task.identifier), ("factory-quarantined", "needs-human")
-                )
+            self._record_failure(job)
         job.updated_at = datetime.now(UTC)
         jobs[job.task.identifier] = job
         self.jobs.save(jobs)
@@ -134,24 +130,71 @@ class FactoryPipeline:
             self._advance(job)
             job.attempts = 0
             job.last_error = None
+            job.next_attempt_at = None
         except Exception as error:
             job.attempts += 1
             job.last_error = str(error)[-2000:]
-            LOGGER.exception("Factory job %s failed", job.task.identifier)
-            if job.attempts >= self.config.max_consecutive_failures:
-                job.state = JobState.QUARANTINED
-                self.tasks.release(job.task.identifier)
-                self.github.add_issue_labels(
-                    int(job.task.identifier), ("factory-quarantined", "needs-human")
-                )
+            self._record_failure(job)
         job.updated_at = datetime.now(UTC)
         self.jobs.save_job(job)
         return job
+
+    def _record_failure(self, job: Job) -> None:
+        LOGGER.exception("Factory job %s failed", job.task.identifier)
+        self.tasks.release(job.task.identifier)
+        if job.attempts < self.config.max_consecutive_failures:
+            job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
+            return
+        if job.last_error and "no repository changes" in job.last_error:
+            # Every attempt produced an empty diff. That almost always means the work
+            # was already implemented (often by another pipeline racing on the same
+            # issue), not that the task is impossible. Close it instead of retrying
+            # forever for no reason.
+            self._close_as_already_satisfied(job)
+            return
+        # There is no permanent give-up state. A persistently broken task keeps being
+        # retried, with exponential backoff so it does not burn worker capacity or
+        # budget while it fails. This is routine, expected self-correction, not an
+        # incident: it is not paged. Genuinely exceptional conditions (the daemon
+        # crashing, budget exhaustion, no pull request progress for hours) still alert
+        # through doctor.py and daemon.py.
+        job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
+
+    @staticmethod
+    def _backoff_for(attempts: int) -> timedelta:
+        minutes = min(5 * 2 ** max(attempts - 1, 0), 24 * 60)
+        return timedelta(minutes=minutes)
+
+    def _close_as_already_satisfied(self, job: Job) -> None:
+        worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
+        self.github.add_comment(
+            int(job.task.identifier),
+            (
+                "OpenHands factory made repeated implementation attempts and produced no "
+                "repository changes each time. This usually means the work was already "
+                "completed by another pipeline. Closing as already satisfied — reopen if "
+                "this is incorrect."
+            ),
+        )
+        self.github.close_issue(int(job.task.identifier))
+        GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
+        job.state = JobState.DONE
 
     def _advance(self, job: Job) -> None:
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
         prompt_dir = self.config.repository / "automation/prompts"
         if job.state is JobState.DISCOVERED:
+            if job.task.source == "github-pull-request":
+                self._discover_pull_request(job, worktree)
+                return
+            if worktree.exists():
+                stale_workflow = GitWorkflow(self.config.repository, self.config.base_branch)
+                if GitWorkflow(worktree, self.config.base_branch).has_changes():
+                    recovery = self.config.recovery_dir / (
+                        f"issue-{job.task.identifier}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+                    )
+                    stale_workflow.archive_worktree(worktree, recovery)
+                stale_workflow.remove_worktree(worktree, force=True)
             self.tasks.acquire(job.task, "factory")
             workflow = GitWorkflow(self.config.repository, self.config.base_branch)
             job.branch = workflow.prepare_worktree(worktree, job.task.identifier, job.task.title)
@@ -167,7 +210,11 @@ class FactoryPipeline:
             job.state = JobState.IMPLEMENTING
             return
 
-        workflow = GitWorkflow(worktree, self.config.base_branch)
+        workflow = GitWorkflow(
+            worktree,
+            self.config.base_branch,
+            external_branch=job.branch if job.task.source == "github-pull-request" else None,
+        )
         if job.state is JobState.IMPLEMENTING:
             context_files = self._context_files(worktree)
             prompt = build_task_prompt(
@@ -194,7 +241,7 @@ class FactoryPipeline:
             self._verify(workflow)
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
-                if getattr(job, "quality_repairs", 0) >= 1:
+                if job.quality_repairs >= 2:
                     raise FactoryError(f"Quality gate blocked: {findings[0].code}")
                 job.state = JobState.QUALITY_REPAIRING
                 return
@@ -251,23 +298,31 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
+            reviewed_head = job.head_sha or workflow.head_sha()
             self.conversations.run(
                 job.task, worktree, build_phase_prompt(prompt_dir, "review", job.task)
             )
-            report = validate_review_report(worktree, job.task.body)
+            report = validate_review_report(worktree, job.task.body, reviewed_head)
             if workflow.has_changes():
                 self._verify(workflow)
                 workflow.stage_all()
-                workflow.commit(f"fix: address review for issue {job.task.identifier}")
+                subject = self._subject(job)
+                workflow.commit(f"fix: address review for {subject} {job.task.identifier}")
                 if job.branch is None:
                     raise FactoryError("Job branch is missing")
                 workflow.push(job.branch)
                 job.head_sha = workflow.head_sha()
                 job.repair_attempts += 1
+                if job.repair_attempts > 5:
+                    raise FactoryError("Review repair limit exceeded")
+                job.state = JobState.REVIEWING
+                return
             if job.pull_request is None:
                 raise FactoryError("Pull request number is missing")
             if job.head_sha is None:
                 job.head_sha = workflow.head_sha()
+            if job.head_sha != reviewed_head:
+                raise FactoryError("Review report head differs from the final reviewed SHA")
             self.github.publish_review_status(
                 job.head_sha,
                 approved=True,
@@ -312,7 +367,7 @@ class FactoryPipeline:
                 raise FactoryError("Repair conversation produced no changes")
             self._verify(workflow)
             workflow.stage_all()
-            workflow.commit(f"fix: repair CI for issue {job.task.identifier}")
+            workflow.commit(f"fix: repair CI for {self._subject(job)} {job.task.identifier}")
             if job.branch is None:
                 raise FactoryError("Job branch is missing")
             workflow.push(job.branch)
@@ -341,10 +396,48 @@ class FactoryPipeline:
                     job.pull_request,
                     "OpenHands factory confirmed that GitHub merged this pull request.",
                 )
-            self.github.close_issue(int(job.task.identifier))
+            if job.task.source == "github-issue":
+                self.github.close_issue(int(job.task.identifier))
             GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
             self.tasks.release(job.task.identifier)
             job.state = JobState.DONE
+
+    def _discover_pull_request(self, job: Job, worktree: Path) -> None:
+        """Start independently reviewing a pull request the factory did not create.
+
+        Skips straight to REVIEWING and reuses the rest of the state machine
+        (verification, repair, CI polling, merge) unchanged - the only difference
+        from an issue-driven job is that the branch and pull request already exist.
+        """
+        if job.task.pr_branch is None:
+            raise FactoryError("Pull request branch is missing")
+        if worktree.exists():
+            stale_workflow = GitWorkflow(self.config.repository, self.config.base_branch)
+            if GitWorkflow(worktree, self.config.base_branch).has_changes():
+                recovery = self.config.recovery_dir / (
+                    f"issue-{job.task.identifier}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+                )
+                stale_workflow.archive_worktree(worktree, recovery)
+            stale_workflow.remove_worktree(worktree, force=True)
+        self.tasks.acquire(job.task, "factory")
+        workflow = GitWorkflow(self.config.repository, self.config.base_branch)
+        workflow.prepare_pull_request_worktree(worktree, job.task.pr_branch)
+        job.branch = job.task.pr_branch
+        job.pull_request = int(job.task.identifier)
+        job.head_sha = GitWorkflow(worktree, self.config.base_branch).head_sha()
+        self.github.add_comment(
+            job.pull_request,
+            (
+                "OpenHands factory is independently reviewing this pull request. It will "
+                "run verification, repair failures if needed, and merge once its checks "
+                "pass and the reviewed commit is still current."
+            ),
+        )
+        job.state = JobState.REVIEWING
+
+    @staticmethod
+    def _subject(job: Job) -> str:
+        return "pull request" if job.task.source == "github-pull-request" else "issue"
 
     def _status(self, job: Job) -> PullRequestStatus:
         if job.pull_request is None:
@@ -388,3 +481,108 @@ class FactoryPipeline:
             "remain authoritative.\n\n"
             f"Reviewed head SHA: `{job.head_sha or 'pending'}`\n"
         )
+
+    def architect_due(self) -> bool:
+        """Whether enough time has passed to run another weekly gap-analysis cycle."""
+        state = read_json(self._architect_state_path(), {})
+        last_run_at = state.get("last_run_at")
+        if last_run_at is None:
+            return True
+        elapsed = datetime.now(UTC) - datetime.fromisoformat(last_run_at)
+        return elapsed.total_seconds() / 3600 >= self.config.architect_interval_hours
+
+    def run_architect_cycle(self) -> None:
+        """Best-effort weekly gap analysis: propose new issues and roadmap updates.
+
+        Unlike issue and pull request work, this is not modeled as a durable retried
+        Job - a single bounded conversation either finds something worth proposing or
+        it does not. If it fails or times out, the cooldown already recorded below
+        means it simply tries again next interval rather than hot-looping.
+        """
+        atomic_write_json(
+            self._architect_state_path(), {"last_run_at": datetime.now(UTC).isoformat()}
+        )
+        worktree = self.config.worktree_dir / "architect"
+        prompt_dir = self.config.repository / "automation/prompts"
+        if worktree.exists():
+            GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(
+                worktree, force=True
+            )
+        date_id = datetime.now(UTC).strftime("%G-W%V")
+        workflow = GitWorkflow(self.config.repository, self.config.base_branch)
+        branch = workflow.prepare_worktree(worktree, f"architect-{date_id}", "weekly gap analysis")
+        task = Task(
+            identifier=f"architect-{date_id}",
+            title="Weekly gap analysis",
+            body=(
+                "Compare AGENTS.md, FEATURES_SPEC.md, README.md and ROADMAP.md against the "
+                "current codebase."
+            ),
+            source="github-architect",
+            priority=10,
+        )
+        self.conversations.run(task, worktree, build_phase_prompt(prompt_dir, "architect", task))
+        review_workflow = GitWorkflow(worktree, self.config.base_branch)
+        proposals = load_architect_report(worktree)
+        if proposals:
+            self._create_deduplicated_issues(proposals)
+        if review_workflow.has_changes():
+            self._verify(review_workflow)
+            review_workflow.stage_all()
+            review_workflow.commit(f"docs: weekly architect gap analysis ({date_id})")
+            review_workflow.push(branch)
+            pull_request = self.github.create_pull_request(
+                branch,
+                f"docs: weekly gap analysis ({date_id})",
+                "Automated ROADMAP/spec update from the weekly architect cycle. Independently "
+                "reviewed like any other pull request before merging.",
+            )
+            self.github.add_comment(
+                pull_request,
+                (
+                    "OpenHands factory architect opened this pull request from its weekly gap "
+                    "analysis. It will be independently reviewed like any other pull request "
+                    "before merging."
+                ),
+            )
+            self.jobs.save_job(
+                Job(
+                    task=Task(
+                        identifier=str(pull_request),
+                        title=f"docs: weekly gap analysis ({date_id})",
+                        body="Automated ROADMAP/spec update from the weekly architect cycle.",
+                        source="github-pull-request",
+                        priority=10,
+                        pr_branch=branch,
+                    )
+                )
+            )
+            GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
+        else:
+            GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
+
+    def _create_deduplicated_issues(self, proposals: list[ArchitectProposal]) -> list[int]:
+        """Create proposed issues, skipping anything that already exists.
+
+        This check is deliberately not delegated to the LLM: bulk-created near-
+        duplicate issues from an earlier, unchecked version of this idea are what
+        caused the swarm/factory collision quarantine spike this factory recovered
+        from, so the dedup is enforced here in trusted code.
+        """
+        existing = {
+            " ".join(title.split()).lower() for title in self.github.list_all_open_issue_titles()
+        }
+        created: list[int] = []
+        for proposal in proposals[: self.config.architect_max_new_issues]:
+            normalized = " ".join(proposal.title.split()).lower()
+            if normalized in existing:
+                continue
+            number = self.github.create_issue(
+                proposal.title, proposal.body, ("architect-proposed",)
+            )
+            created.append(number)
+            existing.add(normalized)
+        return created
+
+    def _architect_state_path(self) -> Path:
+        return self.config.state_dir / "architect_state.json"

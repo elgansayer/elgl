@@ -134,10 +134,8 @@ export class PrivacyService {
   ): Promise<Record<string, unknown>> {
     const supabase = this.supabaseService.getClient();
 
-    // Run independent database queries concurrently using Promise.allSettled
-    // to avoid N+1-like sequential execution latency.
-    const promises = [
-      // 0) Basic profile
+    // 1) Basic profile (includes location data for GDPR right to access)
+    const queries = [
       supabase
         .from('users')
         .select(
@@ -145,85 +143,71 @@ export class PrivacyService {
         )
         .eq('id', userId)
         .single(),
-      // 1) Moments
       supabase
         .from('moments')
         .select('*')
         .eq('author_id', userId)
         .order('created_at', { ascending: false }),
-      // 2) Moment comments
       supabase
         .from('moment_comments')
         .select('*')
         .eq('author_id', userId)
         .order('created_at', { ascending: false }),
-      // 3) Chat messages
       supabase
         .from('chat_messages')
         .select('*')
         .eq('sender_id', userId)
         .order('created_at', { ascending: false }),
-      // 4) Flashcards
       supabase
         .from('flashcards')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
-      // 5) Decks (must fetch these first to fetch junction records)
       supabase
         .from('decks')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
-      // 6) Favourites
       supabase
         .from('favourites')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
-      // 7) Coin purchases
       supabase
         .from('coin_purchases')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false }),
-      // 8) Escrow as payer
       supabase
         .from('escrow_transactions')
         .select('*')
         .eq('payer_id', userId)
         .order('created_at', { ascending: false }),
-      // 9) Escrow as payee
       supabase
         .from('escrow_transactions')
         .select('*')
         .eq('payee_id', userId)
         .order('created_at', { ascending: false }),
-      // 10) Sent gifts
       supabase
         .from('gift_transactions')
         .select('*')
         .eq('sender_id', userId)
         .order('created_at', { ascending: false }),
-      // 11) Received gifts
       supabase
         .from('gift_transactions')
         .select('*')
         .eq('receiver_id', userId)
         .order('created_at', { ascending: false }),
-      // 12) Sticker pack ownership
       supabase
         .from('user_sticker_packs')
         .select('*')
         .eq('user_id', userId)
         .order('unlocked_at', { ascending: false }),
-      // 13) Reading progress
       supabase
         .from('reading_progress')
         .select('*')
         .eq('user_id', userId)
         .single(),
-      // 14) Reading resources
       supabase
         .from('reading_resources')
         .select('*')
@@ -231,45 +215,37 @@ export class PrivacyService {
         .order('created_at', { ascending: false }),
     ];
 
-    const results = await Promise.allSettled(promises);
+    const results = await Promise.allSettled(queries);
 
-    // Helper to safely extract data from fulfilled promises
-    const getData = (index: number) => {
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `Promise rejected at task index ${index} for user ${userId} when fetching user data for GDPR archive export`,
+          result.reason,
+        );
+      } else if (result.status === 'fulfilled' && result.value.error) {
+        this.logger.error(
+          `Supabase error at task index ${index} for user ${userId} when fetching user data for GDPR archive export: ${result.value.error.message}`,
+        );
+      }
+    });
+
+    const getValue = (index: number) => {
       const res = results[index];
       if (res.status === 'fulfilled' && res.value && res.value.data) {
         return res.value.data;
       }
-      if (res.status === 'rejected') {
-        this.logger.error(
-          `Data collection query at index ${index} failed`,
-          res.reason,
-        );
-      } else if (res.status === 'fulfilled' && res.value.error) {
-        this.logger.error(
-          `Data collection query at index ${index} failed with Supabase error`,
-          res.value.error,
-        );
-      }
       return null;
     };
 
-    const userProfile = getData(0);
-    const userMoments = getData(1);
-    const userMomentComments = getData(2);
-    const userChatMessages = getData(3);
-    const userFlashcards = getData(4);
-    const userDecks = getData(5) as any[];
-    const userFavourites = getData(6);
-    const coinPurchases = getData(7);
-    const escrowAsPayer = getData(8) as any[];
-    const escrowAsPayee = getData(9) as any[];
-    const sentGifts = getData(10) as any[];
-    const receivedGifts = getData(11) as any[];
-    const userStickerPacks = getData(12);
-    const readingProgress = getData(13);
-    const readingResources = getData(14);
+    const userProfile = getValue(0);
+    const userMoments = getValue(1);
+    const userMomentComments = getValue(2);
+    const userChatMessages = getValue(3);
+    const userFlashcards = getValue(4);
+    const userDecks = getValue(5) as any[];
 
-    // Fetch deck-flashcard junction records based on the fetched decks
+    // 5c) Deck-flashcard junction records for the user's decks
     let userDeckFlashcards: unknown[] = [];
     if (userDecks && userDecks.length > 0) {
       const deckIds = userDecks.map((d: { id: string }) => d.id);
@@ -280,6 +256,11 @@ export class PrivacyService {
         .order('added_at', { ascending: false });
       userDeckFlashcards = junctionData ?? [];
     }
+
+    const userFavourites = getValue(6);
+    const coinPurchases = getValue(7) as any[];
+    const escrowAsPayer = getValue(8) as any[];
+    const escrowAsPayee = getValue(9) as any[];
 
     const escrowTransactions = [
       ...(escrowAsPayer ?? []).map((e: Record<string, unknown>) => ({
@@ -292,6 +273,9 @@ export class PrivacyService {
       })),
     ];
 
+    const sentGifts = getValue(10) as any[];
+    const receivedGifts = getValue(11) as any[];
+
     const giftTransactions = [
       ...(sentGifts ?? []).map((g: Record<string, unknown>) => ({
         ...g,
@@ -302,6 +286,10 @@ export class PrivacyService {
         direction: 'received',
       })),
     ];
+
+    const userStickerPacks = getValue(12);
+    const readingProgress = getValue(13);
+    const readingResources = getValue(14);
 
     return {
       export_generated_at: new Date().toISOString(),
