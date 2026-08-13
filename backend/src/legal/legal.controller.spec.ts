@@ -19,27 +19,23 @@ describe('LegalController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getDocument', () => {
-    it('should return terms of service for type=tos', () => {
-      const doc = controller.getDocument('tos');
+  describe('getTerms', () => {
+    it('should return terms of service', () => {
+      const doc = controller.getTerms();
       expect(doc).toBeDefined();
       expect(doc.title).toBe('Terms of Service');
       expect(doc.sections.length).toBeGreaterThan(0);
       expect(doc.lastUpdated).toBeDefined();
     });
+  });
 
-    it('should return privacy policy for type=privacy', () => {
-      const doc = controller.getDocument('privacy');
+  describe('getPrivacy', () => {
+    it('should return privacy policy', () => {
+      const doc = controller.getPrivacy();
       expect(doc).toBeDefined();
       expect(doc.title).toBe('Privacy Policy');
       expect(doc.sections.length).toBeGreaterThan(0);
       expect(doc.lastUpdated).toBeDefined();
-    });
-
-    it('should throw NotFoundException for invalid type', () => {
-      expect(() => controller.getDocument('invalid')).toThrow(
-        NotFoundException,
-      );
     });
   });
 });

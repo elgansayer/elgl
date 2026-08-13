@@ -54,7 +54,7 @@ describe('AccountDeletionCron', () => {
   describe('handleAccountDeletions', () => {
     it('should log when no accounts are pending', async () => {
       mockReturns.mockResolvedValue({ data: [], error: null });
-      const logSpy = jest.spyOn(
+      const logSpy = vi.spyOn(
         (cron as Record<string, unknown>).logger as {
           log: (msg: string) => void;
         },
@@ -72,7 +72,7 @@ describe('AccountDeletionCron', () => {
     it('should log error when fetch fails', async () => {
       const fetchError = { message: 'DB error' };
       mockReturns.mockResolvedValue({ data: null, error: fetchError });
-      const errorSpy = jest.spyOn(
+      const errorSpy = vi.spyOn(
         (cron as Record<string, unknown>).logger as {
           error: (msg: string) => void;
         },
@@ -89,10 +89,10 @@ describe('AccountDeletionCron', () => {
         data: [{ id: 'user-1' }, { id: 'user-2' }],
         error: null,
       });
-      (usersService.permanentDeleteAccount as jest.Mock).mockResolvedValue(
+      (usersService.permanentDeleteAccount as Mock).mockResolvedValue(
         undefined,
       );
-      const logSpy = jest.spyOn(
+      const logSpy = vi.spyOn(
         (cron as Record<string, unknown>).logger as {
           log: (msg: string) => void;
         },
@@ -120,7 +120,7 @@ describe('AccountDeletionCron', () => {
       (usersService.permanentDeleteAccount as Mock).mockRejectedValue(
         new Error('Deletion failed'),
       );
-      const errorSpy = jest.spyOn(
+      const errorSpy = vi.spyOn(
         (cron as Record<string, unknown>).logger as {
           error: (msg: string) => void;
         },
@@ -136,7 +136,7 @@ describe('AccountDeletionCron', () => {
       mockFrom.mockImplementation(() => {
         throw new Error('Unexpected error');
       });
-      const errorSpy = jest.spyOn(
+      const errorSpy = vi.spyOn(
         (cron as Record<string, unknown>).logger as {
           error: (msg: string) => void;
         },

@@ -2,8 +2,10 @@
 
 The canonical autonomous development system is the OpenHands SDK factory under
 `automation/openhands_factory`. GitHub Actions provide repository CI and the
-final merge gate. There must not be a second issue resolver or PR reviewer
-implementation in GitHub Actions.
+final merge gate. There must not be a second issue resolver, PR reviewer, or
+gap-analysis/planning implementation in GitHub Actions - all of that lives in
+the daemon so there is exactly one system deciding what gets worked on and
+what gets merged.
 
 ## End-to-end flow
 
@@ -37,6 +39,8 @@ RAM, or reduce it to `1` when diagnosing a provider or repository problem.
 | `automation/openhands_factory/conversation_runner.py` | Bounded OpenHands SDK process execution |
 | `automation/openhands_factory/provider_profiles.py` | OpenAI subscription, OpenCode Go and Gemini fallback chain |
 | `automation/openhands_factory/github.py` | Credential-safe GitHub issue, PR, comment, label and status operations |
+| `automation/openhands_factory/architect_report.py` | Parses the weekly gap-analysis proposal report |
+| `automation/prompts/architect.md` | Weekly gap-analysis conversation instructions |
 | `.github/workflows/ci.yml` | Application and factory verification on pushes and pull requests |
 | `.github/workflows/factory-merge.yml` | Merge gate for factory-reviewed pull requests |
 | `config/systemd/hellotalk-factory.service` | Always-on daemon |

@@ -39,7 +39,9 @@ describe('DiscoveryRateLimiterGuard', () => {
         getRequest: () => ({
           user: userId ? { id: userId } : undefined,
         }),
-        getResponse: vi.fn(),
+        getResponse: () => ({
+          setHeader: vi.fn(),
+        }),
         getNext: vi.fn(),
       }),
       getType: () => 'http',
