@@ -44,6 +44,22 @@ There is no permanent give-up state. A task that keeps failing is retried indefi
 backoff (5 minutes, doubling up to a 24-hour cap) instead of being quarantined - see "Failure handling"
 below. Telegram is paged (batched, see "Costs" below) but nothing requires a human to unblock it.
 
+## Pull Request Intake
+
+The factory also independently reviews, fixes and merges pull requests it did not create itself (from
+other bots or humans), not just the ones it opens from issues. `collect_open_pull_requests` picks up every
+open, non-draft pull request except:
+- Its own, identified by a `factory/*` head branch (those are already tracked by the issue that opened
+  them).
+- Anything already labelled `factory-reviewed` or `factory-skip`.
+
+A picked-up pull request skips straight to the review phase - there is no re-implementation step - and then
+reuses the same review, CI-repair and merge state machine as an issue-driven job, including the same
+`factory-merge.yml` gate. The only structural difference is that repair commits push back to the pull
+request's own existing branch instead of a new `factory/*` one; `ensure_push_target` allows this only for
+the exact branch a job is assigned to review; this is still trusted-code-directed, not open to indirect LLM
+influence, and pushing to `main`/`master`/the base branch stays forbidden unconditionally.
+
 ## Deterministic Quality Gate
 
 Before a pull request is created, the factory runs a deterministic quality gate on the implementation diff to detect incomplete work. The gate checks for:

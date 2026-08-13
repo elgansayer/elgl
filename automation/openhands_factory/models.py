@@ -54,6 +54,9 @@ class Task:
     body: str
     source: str
     priority: int
+    # Set only when source is "github-pull-request": the existing branch to review,
+    # as opposed to a factory/* branch the factory creates for an issue it implements.
+    pr_branch: str | None = None
 
 
 @dataclass

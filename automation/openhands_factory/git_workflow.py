@@ -18,11 +18,20 @@ from openhands_factory.repository_guard import (
 
 class GitWorkflow:
     def __init__(
-        self, repository: Path, base_branch: str, runner: ProcessRunner = run_process
+        self,
+        repository: Path,
+        base_branch: str,
+        runner: ProcessRunner = run_process,
+        *,
+        external_branch: str | None = None,
     ) -> None:
         self.repository = repository
         self.base_branch = base_branch
         self.runner = runner
+        # Set only for a job independently reviewing a pull request it did not create.
+        # Allows push() to target that pull request's own branch instead of a fresh
+        # factory/* one. See ensure_push_target for why this is safe.
+        self.external_branch = external_branch
 
     def prepare_worktree(self, worktree: Path, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
@@ -30,6 +39,22 @@ class GitWorkflow:
         fetch = self.runner(("git", "fetch", "origin", self.base_branch), self.repository)
         if fetch.returncode != 0:
             raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        self._add_worktree(worktree, branch, f"origin/{self.base_branch}")
+        return branch
+
+    def prepare_pull_request_worktree(self, worktree: Path, branch: str) -> None:
+        """Check out an existing pull request branch for independent review.
+
+        Unlike prepare_worktree, this tracks a branch the factory did not create and
+        does not own the naming of - it exists to review and, if necessary, repair
+        someone else's pull request in place.
+        """
+        fetch = self.runner(("git", "fetch", "origin", branch), self.repository)
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch pull request branch: {fetch.stderr}")
+        self._add_worktree(worktree, branch, f"origin/{branch}")
+
+    def _add_worktree(self, worktree: Path, branch: str, start_point: str) -> None:
         if worktree.exists():
             raise RepositorySafetyError(f"Task worktree already exists: {worktree}")
         existing_branch = self.runner(
@@ -43,15 +68,7 @@ class GitWorkflow:
                     f"Could not reclaim stale local branch {branch}: {remove_branch.stderr}"
                 )
         result = self.runner(
-            (
-                "git",
-                "worktree",
-                "add",
-                "-b",
-                branch,
-                str(worktree),
-                f"origin/{self.base_branch}",
-            ),
+            ("git", "worktree", "add", "-b", branch, str(worktree), start_point),
             self.repository,
         )
         if result.returncode != 0:
@@ -67,7 +84,6 @@ class GitWorkflow:
             if source.is_dir() and not destination.exists():
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 os.symlink(source, destination, target_is_directory=True)
-        return branch
 
     def create_branch(self, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
@@ -110,7 +126,7 @@ class GitWorkflow:
         return bool(result.stdout.strip())
 
     def push(self, branch: str) -> None:
-        ensure_push_target(branch, self.base_branch)
+        ensure_push_target(branch, self.base_branch, extra_allowed=self.external_branch)
         result = self.runner(("git", "push", "--set-upstream", "origin", branch), self.repository)
         if result.returncode != 0:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")

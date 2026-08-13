@@ -115,6 +115,53 @@ def test_requeue_quarantined_issues_clears_stale_labels(tmp_path: Path) -> None:
     )
 
 
+def test_collect_open_pull_requests_excludes_drafts_and_own_and_reviewed(
+    tmp_path: Path,
+) -> None:
+    payload = [
+        {
+            "number": 40,
+            "title": "Optimize quests",
+            "body": "Body",
+            "headRefName": "bolt/optimize-quests",
+            "isDraft": False,
+            "labels": [],
+        },
+        {
+            "number": 41,
+            "title": "Still drafting",
+            "body": "Body",
+            "headRefName": "someone/wip",
+            "isDraft": True,
+            "labels": [],
+        },
+        {
+            "number": 42,
+            "title": "Fixes #10: something",
+            "body": "Body",
+            "headRefName": "factory/10-something",
+            "isDraft": False,
+            "labels": [],
+        },
+        {
+            "number": 43,
+            "title": "Already reviewed",
+            "body": "Body",
+            "headRefName": "sentinel/fix-thing",
+            "isDraft": False,
+            "labels": [{"name": "factory-reviewed"}],
+        },
+    ]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    tasks = client.collect_open_pull_requests()
+
+    assert [task.identifier for task in tasks] == ["40"]
+    assert tasks[0].source == "github-pull-request"
+    assert tasks[0].pr_branch == "bolt/optimize-quests"
+
+
 def test_pull_request_creation_parses_number(tmp_path: Path) -> None:
     runner = Runner([ProcessResult(0, "https://github.com/owner/repo/pull/42\n", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
