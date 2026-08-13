@@ -123,7 +123,15 @@ class GitHubClient:
                 continue
             number = int(item["number"])
             normalized_title = " ".join(str(item["title"]).split()).lower()
-            if canonical_by_title.get(normalized_title) != number:
+            canonical = canonical_by_title.get(normalized_title)
+            if canonical != number:
+                self.add_comment(
+                    number,
+                    f"Closing as a duplicate of #{canonical}. Both share an identical "
+                    "title, and implementing them separately would waste factory capacity "
+                    "on the same work. Reopen if this issue actually covers distinct scope.",
+                )
+                self.close_issue(number)
                 self.add_issue_labels(number, ("duplicate",))
                 continue
             if self.require_ready_label and not labels.intersection(
@@ -179,6 +187,63 @@ class GitHubClient:
         for label in labels:
             arguments.extend(("--add-label", label))
         self._run(tuple(arguments))
+
+    def remove_issue_labels(self, issue: int, labels: Sequence[str]) -> None:
+        arguments = [
+            "gh",
+            "issue",
+            "edit",
+            str(issue),
+            "--repo",
+            self.repository,
+        ]
+        for label in labels:
+            arguments.extend(("--remove-label", label))
+        self._run(tuple(arguments))
+
+    def list_quarantined_issues(self, limit: int = 10_000) -> list[int]:
+        output = self._run(
+            (
+                "gh",
+                "issue",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "open",
+                "--label",
+                "factory-quarantined",
+                "--limit",
+                str(limit),
+                "--json",
+                "number",
+            )
+        )
+        return sorted(int(item["number"]) for item in json.loads(output))
+
+    def requeue_quarantined_issues(self) -> list[int]:
+        """Clear a resolved-cause quarantine so an issue is eligible for a clean retry.
+
+        Quarantine is a circuit breaker: it exists so a genuinely broken task cannot
+        loop forever, not to permanently withhold work. Once the operator has fixed the
+        systemic cause (a bug, a stale collision with another pipeline), the affected
+        issues need to be moved back into the pool by hand, since only a human can judge
+        that the cause is actually resolved.
+        """
+        requeued: list[int] = []
+        for issue in self.list_quarantined_issues():
+            self.remove_issue_labels(
+                issue,
+                ("factory-quarantined", "needs-human", "swarm-active", "factory-active"),
+            )
+            self.add_comment(
+                issue,
+                "Clearing the quarantine labels on this issue after an operator "
+                "confirmed the underlying cause is resolved. It is eligible for a "
+                "clean retry.",
+            )
+            requeued.append(issue)
+        return requeued
 
     def add_comment(self, number: int, body: str) -> None:
         """Publish a bounded lifecycle update on an issue or pull request."""
