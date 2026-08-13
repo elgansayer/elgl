@@ -198,9 +198,7 @@ export class QuestsService {
     const results = await Promise.allSettled(updatePromises);
 
     // Log any errors that occurred during the concurrent execution
-    const rejected = results.filter(
-      (r) => r.status === 'rejected',
-    ) as PromiseRejectedResult[];
+    const rejected = results.filter((r) => r.status === 'rejected');
     if (rejected.length > 0) {
       rejected.forEach((r) => {
         console.error('Failed to increment quest progress:', r.reason);
