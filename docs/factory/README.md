@@ -32,10 +32,17 @@ Excluded from implementation:
 - `factory-epic`: Broad outcomes (e.g., "Improve onboarding").
 - `factory-planning`: Architecture mapping, research, or decomposition.
 - `factory-quality-blocked`: Issues held back by a quality decision.
-- `factory-quarantined`: Issues whose bounded retry budget was exhausted.
-- `needs-human`: Explicitly withheld work.
+- `factory-quarantined`, `needs-human`: Legacy failure markers. The factory no longer adds these labels
+  itself (see below); they only matter for issues a human has labelled that way on purpose, or for issues
+  quarantined before this behaviour changed.
+- `swarm-active`: Claimed by the separate GitHub Actions Swarm pipeline, to avoid two systems working the
+  same issue at once.
+- `duplicate`: Issues sharing an identical title with a lower-numbered issue are closed and labelled
+  automatically on every backlog refresh, so the factory never implements the same work twice.
 
-The autonomous mode does not add `factory-ready` or `needs-human` as an intake requirement. `needs-human` is only added as a visible failure marker when an issue is quarantined after repeated failure, and Telegram receives the ultimate-failure alert. Quarantined work remains excluded so the factory cannot loop indefinitely or silently ship uncertain code.
+There is no permanent give-up state. A task that keeps failing is retried indefinitely with exponential
+backoff (5 minutes, doubling up to a 24-hour cap) instead of being quarantined - see "Failure handling"
+below. Telegram is paged (batched, see "Costs" below) but nothing requires a human to unblock it.
 
 ## Deterministic Quality Gate
 
@@ -47,7 +54,8 @@ Before a pull request is created, the factory runs a deterministic quality gate 
 
 The gate inspects only newly added diff lines in production paths. Test fixtures and test-only mocks remain allowed.
 
-If blocked, the factory executes one bounded quality-repair pass before failing closed.
+If blocked, the factory executes up to two bounded quality-repair passes before treating it as a normal
+failure (see "Failure handling").
 
 ## Independent Review
 
@@ -59,6 +67,22 @@ The independent reviewer proves actual completion against the issue's requiremen
 
 The reviewer report must contain the exact current head SHA, non-empty evidence for every criterion, and no
 unrequested criteria. Reviewer edits trigger verification and a fresh review before approval is published.
+
+## Failure handling
+
+There is no quarantine terminal state. When a job fails (a conversation error, a verification failure, a
+blocked quality gate), it stays in its current phase and is retried later rather than being marked done,
+failed, or handed off to a human:
+- Backoff is exponential per job: 5 minutes after the first failure, doubling on each subsequent one, capped
+  at 24 hours. `select_batch` in `daemon.py` skips a job until its `next_attempt_at` has passed.
+- One exception: if implementation repeatedly produces an empty diff (`"no repository changes"`), that is
+  treated as the work already being done, usually by another pipeline racing on the same issue, and the
+  issue is closed instead of retried forever for no reason.
+- Once `FACTORY_MAX_CONSECUTIVE_FAILURES` (default 3) is reached, an alert fires. This is informational, not
+  a call to action - the factory keeps retrying on its own. Alerts are batched (see "Operator recovery").
+- If a systemic bug caused a wave of failures and you fixed it, issues already in backoff resume on their
+  own schedule with no extra step. Only GitHub-side `needs-human`/`factory-quarantined` labels from before
+  this behaviour changed, or added manually, need `backlog requeue-quarantined` to clear.
 
 ## Costs
 
@@ -187,14 +211,14 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory back
 - `pause` stops the daemon from starting new work while preserving jobs, branches and pull requests.
 - `resume` re-enables scheduling once the underlying issue is resolved.
 - `backlog requeue-quarantined` clears `factory-quarantined`, `needs-human`, `swarm-active` and
-  `factory-active` from every currently quarantined issue and comments to explain why. Quarantine is a
-  circuit breaker, not a permanent state: once an operator has fixed the systemic cause (a bug, a stale
-  collision with another pipeline), run this to move the affected issues back into the pool. It never
-  requeues automatically, since only a human can judge that the cause is actually resolved.
+  `factory-active` from every currently quarantined issue and comments to explain why. This is only needed
+  for issues carrying those labels from before quarantine stopped being a terminal state, or ones a human
+  labelled that way by hand - see "Failure handling" for how ordinary retries now recover on their own.
 
 Typical recovery flow: run `doctor --online` to confirm the failure, `providers check` to isolate the provider,
 `status` and `metrics` to review daemon health and recent fallbacks, `pause` before touching credentials or
-state, fix the root cause, `backlog requeue-quarantined` if issues were quarantined by it, then `resume`.
+state, fix the root cause, `backlog requeue-quarantined` if any issues carry legacy quarantine labels, then
+`resume`.
 
 Duplicate issues (identical titles, usually from a bulk-generation run) are now detected and closed
 automatically on every backlog refresh, not just during manual recovery.

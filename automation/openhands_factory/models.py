@@ -67,6 +67,7 @@ class Job:
     repair_attempts: int = 0
     quality_repairs: int = 0
     last_error: str | None = None
+    next_attempt_at: datetime | None = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

@@ -32,6 +32,9 @@ class JobStore:
                 repair_attempts=int(item.get("repair_attempts", 0)),
                 quality_repairs=int(item.get("quality_repairs", 0)),
                 last_error=item.get("last_error"),
+                next_attempt_at=datetime.fromisoformat(item["next_attempt_at"])
+                if item.get("next_attempt_at")
+                else None,
                 updated_at=datetime.fromisoformat(item["updated_at"]),
             )
         return jobs
@@ -42,6 +45,9 @@ class JobStore:
             item = asdict(job)
             item["state"] = job.state.value
             item["updated_at"] = job.updated_at.isoformat()
+            item["next_attempt_at"] = (
+                job.next_attempt_at.isoformat() if job.next_attempt_at else None
+            )
             serialised.append(item)
         atomic_write_json(self.path, {"jobs": serialised})
 
@@ -65,10 +71,16 @@ class JobStore:
                     existing.state is JobState.DONE
                     and existing.pull_request is None
                     and existing.last_error == "Issue closed before pull request creation"
-                ):
+                ) or existing.state is JobState.QUARANTINED:
+                    # Quarantine is no longer a terminal state: the factory retries with
+                    # backoff instead of giving up. Any job still carrying an old
+                    # quarantine record (from before that change, or from an issue whose
+                    # quarantine labels an operator has since cleared) restarts clean.
                     existing.state = JobState.DISCOVERED
                     existing.attempts = 0
                     existing.repair_attempts = 0
+                    existing.quality_repairs = 0
+                    existing.next_attempt_at = None
                     existing.last_error = None
                     existing.updated_at = datetime.now(UTC)
             self.save(jobs)

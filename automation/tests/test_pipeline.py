@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -346,7 +347,9 @@ def test_run_job_advances_only_the_selected_durable_job(
     assert restored["42"].state is JobState.DISCOVERED
 
 
-def test_conversation_timeout_retries_durably_then_quarantines(tmp_path: Path) -> None:
+def test_conversation_timeout_retries_durably_with_backoff_and_never_quarantines(
+    tmp_path: Path,
+) -> None:
     github = GitHub()
     pipeline = FactoryPipeline(
         config(tmp_path),
@@ -360,14 +363,21 @@ def test_conversation_timeout_retries_durably_then_quarantines(tmp_path: Path) -
     first = pipeline.run_job("42")
     second = pipeline.run_job("42")
     third = pipeline.run_job("42")
+    fourth = pipeline.run_job("42")
 
     assert first is not None and first.attempts == 1
     assert second is not None and second.attempts == 2
-    assert third is not None and third.state is JobState.QUARANTINED
+    assert third is not None and third.attempts == 3
+    assert fourth is not None and fourth.attempts == 4
+    assert fourth.state is JobState.IMPLEMENTING
+    assert fourth.next_attempt_at is not None
+    assert fourth.next_attempt_at > datetime.now(UTC)
     restored = pipeline.jobs.load()["42"]
-    assert restored.attempts == 3
-    assert restored.state is JobState.QUARANTINED
-    assert (42, ("factory-quarantined", "needs-human")) in github.labels
+    assert restored.state is JobState.IMPLEMENTING
+    assert restored.next_attempt_at is not None
+    # There is no permanent give-up state and no needs-human label: the factory
+    # keeps retrying this issue forever, just with a growing delay between tries.
+    assert not github.labels
 
 
 def test_no_changes_after_repeated_attempts_closes_issue_as_already_done(
@@ -395,7 +405,7 @@ def test_no_changes_after_repeated_attempts_closes_issue_as_already_done(
     assert any("already satisfied" in body for _, body in github.comments)
 
 
-def test_refresh_does_not_reclassify_quarantined_jobs_as_closed(
+def test_refresh_preserves_a_retrying_job_whose_issue_is_still_open(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     github = GitHub()
@@ -407,16 +417,16 @@ def test_refresh_does_not_reclassify_quarantined_jobs_as_closed(
     job = pipeline.refresh()["42"]
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
-    monkeypatch.setattr("openhands_factory.pipeline.AlertService.send", lambda *_args: True)
+    monkeypatch.setattr("openhands_factory.pipeline.AlertService.send", lambda *_args, **_kw: True)
 
-    for _ in range(3):
+    for _ in range(4):
         pipeline.run_job("42")
 
-    github.tasks = []
     refreshed = pipeline.refresh()
 
-    assert refreshed["42"].state is JobState.QUARANTINED
+    assert refreshed["42"].state is JobState.IMPLEMENTING
     assert refreshed["42"].last_error == "Conversation exceeded the maximum task duration"
+    assert refreshed["42"].next_attempt_at is not None
 
 
 def test_security_review_runs_between_implementation_and_verification(
@@ -447,7 +457,7 @@ def test_security_review_runs_between_implementation_and_verification(
     assert "Security Review Workflow" in conversations.prompts[1]
 
 
-def test_security_review_conversation_failure_retries_then_quarantines(
+def test_security_review_conversation_failure_retries_with_backoff(
     tmp_path: Path,
 ) -> None:
     github = GitHub()
@@ -466,4 +476,6 @@ def test_security_review_conversation_failure_retries_then_quarantines(
 
     assert first is not None and first.attempts == 1
     assert second is not None and second.attempts == 2
-    assert third is not None and third.state is JobState.QUARANTINED
+    assert third is not None and third.attempts == 3
+    assert third.state is JobState.SECURITY_REVIEW
+    assert third.next_attempt_at is not None

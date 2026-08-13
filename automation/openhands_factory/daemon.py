@@ -23,13 +23,19 @@ LOGGER = logging.getLogger(__name__)
 
 
 def select_batch(
-    jobs: dict[str, Job], limit: int, excluded_task_ids: set[str] | None = None
+    jobs: dict[str, Job],
+    limit: int,
+    excluded_task_ids: set[str] | None = None,
+    now: datetime | None = None,
 ) -> list[Job]:
     excluded = excluded_task_ids or set()
+    current = now or datetime.now(UTC)
     candidates = [
         job
         for job in jobs.values()
-        if job.task.identifier not in excluded and job.state.value not in {"done", "quarantined"}
+        if job.task.identifier not in excluded
+        and job.state.value not in {"done", "quarantined"}
+        and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
     return candidates[:limit]
