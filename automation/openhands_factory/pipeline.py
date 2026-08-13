@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Semaphore
 
@@ -110,6 +110,7 @@ class FactoryPipeline:
             self._advance(job)
             job.attempts = 0
             job.last_error = None
+            job.next_attempt_at = None
         except Exception as error:
             job.attempts += 1
             job.last_error = str(error)[-2000:]
@@ -128,6 +129,7 @@ class FactoryPipeline:
             self._advance(job)
             job.attempts = 0
             job.last_error = None
+            job.next_attempt_at = None
         except Exception as error:
             job.attempts += 1
             job.last_error = str(error)[-2000:]
@@ -140,25 +142,31 @@ class FactoryPipeline:
         LOGGER.exception("Factory job %s failed", job.task.identifier)
         self.tasks.release(job.task.identifier)
         if job.attempts < self.config.max_consecutive_failures:
-            return
-        if job.state is JobState.QUARANTINED:
+            job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
             return
         if job.last_error and "no repository changes" in job.last_error:
             # Every attempt produced an empty diff. That almost always means the work
             # was already implemented (often by another pipeline racing on the same
-            # issue), not that the task is impossible. Close it instead of leaving it
-            # stuck behind a needs-human label forever.
+            # issue), not that the task is impossible. Close it instead of retrying
+            # forever for no reason.
             self._close_as_already_satisfied(job)
             return
-        job.state = JobState.QUARANTINED
-        self.github.add_issue_labels(
-            int(job.task.identifier), ("factory-quarantined", "needs-human")
-        )
+        # There is no permanent give-up state. A persistently broken task keeps being
+        # retried, with exponential backoff so it does not burn worker capacity or
+        # budget while it fails. An operator is paged (batched, see AlertService) but
+        # never has to unblock anything by hand.
+        job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
         AlertService(self.config).send(
-            "OpenHands factory ultimate failure: "
-            f"issue #{job.task.identifier} ({job.task.title}) failed "
-            f"{job.attempts} times and was quarantined. Last error: {job.last_error}"
+            "OpenHands factory retrying after repeated failure: "
+            f"issue #{job.task.identifier} ({job.task.title}) has failed "
+            f"{job.attempts} times in a row. Not stuck: retrying automatically, next "
+            f"attempt at {job.next_attempt_at.isoformat()}. Last error: {job.last_error}"
         )
+
+    @staticmethod
+    def _backoff_for(attempts: int) -> timedelta:
+        minutes = min(5 * 2 ** max(attempts - 1, 0), 24 * 60)
+        return timedelta(minutes=minutes)
 
     def _close_as_already_satisfied(self, job: Job) -> None:
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
