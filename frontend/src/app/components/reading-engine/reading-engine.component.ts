@@ -159,7 +159,7 @@ type TabId = (typeof TAB_IDS)[number];
               @if (generatedQuestions().length > 0) {
                 <div class="mt-4 space-y-2 p-3 bg-surface-100 rounded-app">
                   <h4 class="text-sm font-bold text-text-primary">{{ 'readingEngine.discussionQuestions' | t }}</h4>
-                  <ul class="list-disc pl-5 space-y-1">
+                  <ul class="list-disc ps-5 space-y-1">
                     @for (q of generatedQuestions(); track q) {
                       <li class="text-xs text-text-secondary">{{ q }}</li>
                     }
@@ -182,7 +182,7 @@ type TabId = (typeof TAB_IDS)[number];
               @if (conversationStarters().length > 0) {
                 <div class="mt-4 space-y-2 p-3 bg-surface-100 rounded-app">
                   <h4 class="text-sm font-bold text-text-primary">{{ 'readingEngine.conversationStarters' | t }}</h4>
-                  <ul class="list-disc pl-5 space-y-1">
+                  <ul class="list-disc ps-5 space-y-1">
                     @for (s of conversationStarters(); track s) {
                       <li class="text-xs text-text-secondary">{{ s }}</li>
                     }
@@ -192,7 +192,7 @@ type TabId = (typeof TAB_IDS)[number];
 
               @if (activeDiscussion() !== null) {
                 <div class="mt-4 p-4 border border-secondary/30 bg-secondary/5 rounded-app relative">
-                  <button (click)="closeDiscussion()" class="absolute top-2 right-2 text-text-muted hover:text-text-primary" [attr.aria-label]="'readingEngine.closeDiscussion' | t">✕</button>
+                  <button (click)="closeDiscussion()" class="absolute top-2 end-2 text-text-muted hover:text-text-primary" [attr.aria-label]="'readingEngine.closeDiscussion' | t">✕</button>
                   <h4 class="text-sm font-bold text-secondary mb-2">{{ 'readingEngine.discussionTitle' | t: { type: activeDiscussion() } }}</h4>
                   <p class="text-xs text-text-secondary italic">{{ 'readingEngine.mockDiscussionBody' | t: { type: activeDiscussion() } }}</p>
                 </div>

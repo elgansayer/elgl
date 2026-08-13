@@ -12,7 +12,7 @@ export interface VocabularyChallenge {
 export class SocialLearningService {
   private vocabStore = inject(VocabularyStore);
 
-  async generateQuestions(articleContent: string): Promise<string[]> {
+  async generateQuestions(_articleContent: string): Promise<string[]> {
     return [
       "What was the main theme of this article?",
       "How does the author support their main argument?",
@@ -32,8 +32,8 @@ export class SocialLearningService {
     const selectedCards = [...flashcards].sort(() => 0.5 - Math.random()).slice(0, 3);
 
     return selectedCards.map(card => ({
-      word: card.term,
-      challenge: `Try using "${card.term}" in a sentence explaining the article.`
+      word: card.word_token,
+      challenge: `Try using "${card.word_token}" in a sentence explaining the article.`
     }));
   }
 
