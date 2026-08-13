@@ -115,11 +115,7 @@ To maintain a fast, responsive mobile-first experience, the Angular architecture
 - **Route-Level Lazy Loading**: Continue utilizing standalone components and the `loadComponent` / `loadChildren` syntax in the router to ensure each route is chunked independently, preventing the initial bundle from bloating.
 
 ### 5.2. State Management
-- **Adoption of SignalStore**: Transition complex, globally shared state (e.g., the real-time chat engine, LiveKit room states, and user authentication) to `@ngrx/signals` (SignalStore).
-- **Benefits**:
-  - Provides strict, unidirectional data flow, avoiding "spaghetti state" from ad-hoc RxJS `BehaviorSubject` architectures.
-  - Granular reactivity integrates perfectly with Angular's native Signals, minimizing change detection cycles.
-- **Optimistic UI Updates**: SignalStore allows for robust optimistic updates. For instance, when a user sends a message or updates a setting, the local signal state should update immediately. If the Supabase API or Centrifugo broadcast fails, the state can be cleanly rolled back.
+- **Optimistic UI Updates**: For instance, when a user sends a message or updates a setting, the local signal state should update immediately. If the Supabase API or Centrifugo broadcast fails, the state can be cleanly rolled back.
 
 ### 5.3. Bundle Size Reduction
 - **Image Optimization**: Replace standard `<img>` tags with the `NgOptimizedImage` directive (`ngSrc`). This enforces automated lazy loading, automatic generation of `srcset` for responsive images, and preconnect hints, dramatically reducing the LCP (Largest Contentful Paint).
