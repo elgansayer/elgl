@@ -7,9 +7,9 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 describe('LinkedAccountsController', () => {
   let controller: LinkedAccountsController;
   let service: {
-    getLinkedAccounts: jest.Mock;
-    linkAccount: jest.Mock;
-    unlinkAccount: jest.Mock;
+    getLinkedAccounts: Mock;
+    linkAccount: Mock;
+    unlinkAccount: Mock;
   };
 
   const mockRequest = (userId = 'user-1') =>
