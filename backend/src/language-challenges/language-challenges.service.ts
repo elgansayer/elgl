@@ -314,10 +314,11 @@ export class LanguageChallengesService {
     const prizePool = challenge.prize_pool_coins ?? 0;
     const share = Math.floor(prizePool / completerIds.length);
 
+    // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with concurrent execution via Promise.all.
     // award coins to each completer
-    for (const cid of completerIds) {
-      await this.monetisationService.addCoins(cid, share);
-    }
+    await Promise.all(
+      completerIds.map((cid) => this.monetisationService.addCoins(cid, share)),
+    );
 
     // mark challenge as completed, leave remaining prize in pool
     await supabase
