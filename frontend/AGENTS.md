@@ -1,68 +1,64 @@
-You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
+You are an expert in TypeScript, Angular, and scalable web app development.
 
 ## TypeScript Best Practices
 
-- Use strict type checking
-- Prefer type inference when the type is obvious
-- **NEVER use the `any` type** -- this is a hard ban. Use `unknown` when type is uncertain.
-- **NEVER use type assertions (casting) via `as`** -- this is a hard ban in production code. Use proper type narrowing, type guards, or Zod/schema validation instead. Casting is only permitted in test files (`*.spec.ts`) for mock setup.
-- **NEVER use `console.log`** -- this is a hard ban. Use a proper logging service or error reporting mechanism. `console.error` and `console.warn` are permitted for critical error reporting only.
+- Use strict type checking.
+- Prefer type inference.
+- **NEVER use `any`**. Use `unknown`.
+- **NEVER use `as` assertions in production**. Use type narrowing/Zod. Valid in tests.
+- **NEVER use `console.log`**. Use logging service. `console.error`/`warn` only for critical errors.
 
 ## Angular Best Practices
 
-- Always use standalone components over NgModules
-- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
-- Do NOT set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly. `OnPush` is the default in Angular v22+.
-- Use signals for state management
-- Implement lazy loading for feature routes
-- Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead
-- Use `NgOptimizedImage` for all static images.
-  - `NgOptimizedImage` does not work for inline base64 images.
+- Always use standalone components.
+- Do NOT set `standalone: true`. It is default.
+- Do NOT set `changeDetection: OnPush`. It is default.
+- Use signals for state.
+- Lazy load feature routes.
+- Do NOT use `@HostBinding`/`@HostListener`. Use `host` object in decorator.
+- Use `NgOptimizedImage` for static images (not inline base64).
 
-## Accessibility Requirements
+## Accessibility
 
-- It MUST pass all AXE checks.
-- It MUST follow all WCAG AA minimums, including focus management, colour contrast, and ARIA attributes.
+- MUST pass AXE checks.
+- MUST follow WCAG AA minimums (focus, colour contrast, ARIA).
 
 ### Components
 
-- Keep components small and focused on a single responsibility
-- Use `input()` and `output()` functions instead of decorators
-- Use `computed()` for derived state
-- Prefer inline templates for small components
-- Prefer Signal Forms (`@angular/forms/signals`) for new forms. They are stable in Angular v22+ and provide signal-based state, type-safe field access, and schema-based validation
-- When not using Signal Forms, prefer Reactive forms instead of Template-driven ones
-- Do NOT use `ngClass`, use `class` bindings instead
-- Do NOT use `ngStyle`, use `style` bindings instead
-- When using external templates/styles, use paths relative to the component TS file.
+- Keep components small.
+- Use `input()` and `output()` functions.
+- Use `computed()` for derived state.
+- Prefer inline templates for small components.
+- Prefer Signal Forms (`@angular/forms/signals`) or Reactive Forms. Do NOT use Template-driven.
+- Use `class` bindings, NOT `ngClass`.
+- Use `style` bindings, NOT `ngStyle`.
+- Use relative paths for external templates/styles.
 
 ## State Management
 
-- Use signals for local component state
-- Use `computed()` for derived state
-- Keep state transformations pure and predictable
-- Do NOT use `mutate` on signals, use `update` or `set` instead
+- Use signals for local state.
+- Use `computed()` for derived state.
+- Keep transformations pure.
+- Use `update` or `set`, NOT `mutate`.
 
 ## Templates
 
-- Keep templates simple and avoid complex logic
-- Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
-- Use the async pipe to handle observables
-- Do not assume globals like (`new Date()`) are available.
+- Keep templates simple.
+- Use native control flow (`@if`, `@for`, `@switch`).
+- Use async pipe for observables.
+- Do not assume globals (`new Date()`).
 
 ## Services
 
-- Design services around a single responsibility
-- Use the `providedIn: 'root'` option for singleton services
-- Prefer the `@Service` decorator over `@Injectable({providedIn: 'root'})` for new singleton services (Angular v22+)
-- Use the `inject()` function instead of constructor injection
+- Single responsibility.
+- Use `providedIn: 'root'`.
+- Prefer `@Service` over `@Injectable` (Angular v22+).
+- Use `inject()`, NOT constructor injection.
 
-## Engineering Constitution & Project Mandates
+## Project Mandates (`/home/elgan/dev/hellotalk/AGENTS.md`)
 
-In addition to the Angular and TypeScript best practices above, you must adhere to the global Engineering Constitution located at `/home/elgan/dev/hellotalk/AGENTS.md` (or parent directory `../AGENTS.md`):
-
-- **British English:** Always use British English spelling (`colour`, `favourite`, `monetisation`, `tokenise`, etc.).
-- **Banned Punctuation:** Never use an em dash in code, comments, or documentation. Use standard hyphens or colons instead.
-- **Globalisation, RTL & Zero Hard-Coded Strings:** Support ANY language with 0 hard-coded UI strings. Never write raw hard-coded text inside Angular templates (`*.html`) or component code (`*.ts`). Always pipe UI text through `TranslatePipe` (`{{ 'key' | t }}`) and use `I18nService.translate('key', params)` inside code (`src/app/services/i18n.service.ts`). Use native `Intl.Segmenter` for word tokenisation and strictly use Tailwind logical properties (`ps-4`, `me-2`, `border-s`) for RTL layout compatibility.
-- **API First:** Never connect Angular directly to the database; every request must route through NestJS REST API or Centrifugo WebSockets.
-- **Verification & Test Visiting:** Always run `npm run lint` and `npm test -- --watch=false` and verify no compiler errors or test failures exist before marking tasks complete. Whenever inspecting, adding, or modifying frontend code or components, you must ALWAYS simultaneously open, review, and update/add the associated `.spec.ts` test files. Every UI primitive and feature component must have exhaustive unit tests verifying Signal reactivity, host class bindings, and accessibility.
+- **British English:** Always use British spelling (`colour`, `favourite`).
+- **No Em Dashes:** Use standard hyphens or colons.
+- **RTL & Zero Hard-Coded Strings:** Support ANY language. Use `TranslatePipe` (`{{ 'key' | t }}`) and `I18nService.translate('key', params)`. Use native `Intl.Segmenter` for tokens. Use Tailwind logical properties (`ps-4`).
+- **API First:** Route DB requests via NestJS REST API or Centrifugo.
+- **Testing:** Run `npm run lint` and `npm test`. Open and update `.spec.ts` when touching components. Exhaustive unit tests required.

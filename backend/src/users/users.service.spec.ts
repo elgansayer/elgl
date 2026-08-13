@@ -313,9 +313,9 @@ describe('UsersService', () => {
       };
       const fromBuilder = { update: vi.fn().mockReturnValue(updateBuilder) };
       mockSupabaseClient.from.mockReturnValue(fromBuilder as any);
-      vi
-        .spyOn(service, 'getProfile')
-        .mockResolvedValue({ id: 'user-1' } as any);
+      vi.spyOn(service, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+      } as any);
 
       const result = await service.updateProfile('user-1', dto, false);
 
@@ -340,9 +340,9 @@ describe('UsersService', () => {
       };
       const fromBuilder = { update: vi.fn().mockReturnValue(updateBuilder) };
       mockSupabaseClient.from.mockReturnValue(fromBuilder as any);
-      vi
-        .spyOn(service, 'getProfile')
-        .mockResolvedValue({ id: 'user-1' } as any);
+      vi.spyOn(service, 'getProfile').mockResolvedValue({
+        id: 'user-1',
+      } as any);
 
       const result = await service.updateProfile('user-1', dto, true);
 

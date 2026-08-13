@@ -53,11 +53,21 @@ def branch_name(task_identifier: str, title: str) -> str:
     return f"factory/{identifier}-{slug}" if slug else f"factory/{identifier}"
 
 
-def ensure_push_target(branch: str, base_branch: str) -> None:
+def ensure_push_target(branch: str, base_branch: str, *, extra_allowed: str | None = None) -> None:
     if branch in {base_branch, "main", "master"}:
         raise RepositorySafetyError(f"Direct push to protected branch {branch} is forbidden")
-    if not branch.startswith("factory/"):
-        raise RepositorySafetyError("Factory may push only factory/* branches")
+    if branch.startswith("factory/"):
+        return
+    # A job independently reviewing a pull request it did not create pushes repair
+    # commits back to that pull request's own branch. extra_allowed is set by trusted
+    # code from the tracked pull request's branch name, never from LLM output inside
+    # the network-isolated worker, so this does not weaken the protected-branch check
+    # above.
+    if extra_allowed is not None and branch == extra_allowed:
+        return
+    raise RepositorySafetyError(
+        "Factory may push only factory/* branches or its assigned pull request branch"
+    )
 
 
 def find_conflict_markers(root: Path) -> list[Path]:
