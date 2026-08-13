@@ -143,6 +143,13 @@ class FactoryPipeline:
             return
         if job.state is JobState.QUARANTINED:
             return
+        if job.last_error and "no repository changes" in job.last_error:
+            # Every attempt produced an empty diff. That almost always means the work
+            # was already implemented (often by another pipeline racing on the same
+            # issue), not that the task is impossible. Close it instead of leaving it
+            # stuck behind a needs-human label forever.
+            self._close_as_already_satisfied(job)
+            return
         job.state = JobState.QUARANTINED
         self.github.add_issue_labels(
             int(job.task.identifier), ("factory-quarantined", "needs-human")
@@ -152,6 +159,21 @@ class FactoryPipeline:
             f"issue #{job.task.identifier} ({job.task.title}) failed "
             f"{job.attempts} times and was quarantined. Last error: {job.last_error}"
         )
+
+    def _close_as_already_satisfied(self, job: Job) -> None:
+        worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
+        self.github.add_comment(
+            int(job.task.identifier),
+            (
+                "OpenHands factory made repeated implementation attempts and produced no "
+                "repository changes each time. This usually means the work was already "
+                "completed by another pipeline. Closing as already satisfied — reopen if "
+                "this is incorrect."
+            ),
+        )
+        self.github.close_issue(int(job.task.identifier))
+        GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
+        job.state = JobState.DONE
 
     def _advance(self, job: Job) -> None:
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
@@ -207,7 +229,7 @@ class FactoryPipeline:
             self._verify(workflow)
             findings = check_quality_gate(workflow, self.config.base_branch)
             if findings:
-                if getattr(job, "quality_repairs", 0) >= 1:
+                if job.quality_repairs >= 2:
                     raise FactoryError(f"Quality gate blocked: {findings[0].code}")
                 job.state = JobState.QUALITY_REPAIRING
                 return

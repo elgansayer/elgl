@@ -89,6 +89,18 @@ class GitHubClient:
             )
         )
         payload = json.loads(output)
+
+        # Several issues can share an identical title (bulk-generated in the same batch).
+        # Only the lowest-numbered copy is eligible; the rest are marked duplicates so they
+        # are never attempted in parallel with their canonical sibling.
+        canonical_by_title: dict[str, int] = {}
+        for item in payload:
+            normalized_title = " ".join(str(item["title"]).split()).lower()
+            number = int(item["number"])
+            existing = canonical_by_title.get(normalized_title)
+            if existing is None or number < existing:
+                canonical_by_title[normalized_title] = number
+
         tasks: list[Task] = []
         for item in payload:
             labels = {
@@ -103,8 +115,16 @@ class GitHubClient:
                     "factory-planning",
                     "factory-quality-blocked",
                     "factory-quarantined",
+                    # The separate GitHub Actions "AI Swarm" pipeline claims this label while
+                    # it works an issue. Skip it to avoid two systems implementing it at once.
+                    "swarm-active",
                 }
             ):
+                continue
+            number = int(item["number"])
+            normalized_title = " ".join(str(item["title"]).split()).lower()
+            if canonical_by_title.get(normalized_title) != number:
+                self.add_issue_labels(number, ("duplicate",))
                 continue
             if self.require_ready_label and not labels.intersection(
                 {self.ready_label, "factory-active", "guardian-alert"}
@@ -113,7 +133,7 @@ class GitHubClient:
             priority = 0 if "guardian-alert" in labels else 10
             tasks.append(
                 Task(
-                    identifier=str(item["number"]),
+                    identifier=str(number),
                     title=str(item["title"]),
                     body=str(item.get("body") or ""),
                     source="github-issue",

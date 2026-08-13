@@ -51,6 +51,41 @@ def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> N
     assert "secret" not in repr(runner.calls)
 
 
+def test_collect_skips_swarm_claimed_and_dedupes_titles(tmp_path: Path) -> None:
+    payload = [
+        {
+            "number": 20,
+            "title": "Build Widget",
+            "body": "Body",
+            "labels": [],
+        },
+        {
+            "number": 21,
+            "title": "Build Widget",
+            "body": "Duplicate copy",
+            "labels": [],
+        },
+        {
+            "number": 22,
+            "title": "Claimed by swarm",
+            "body": "Body",
+            "labels": [{"name": "swarm-active"}],
+        },
+    ]
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps(payload), ""),
+            ProcessResult(0, "", ""),  # label the duplicate issue #21
+        ]
+    )
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    tasks = client.collect_open_issues()
+
+    assert [task.identifier for task in tasks] == ["20"]
+    assert any("21" in call and "duplicate" in call for call in runner.calls[1:])
+
+
 def test_pull_request_creation_parses_number(tmp_path: Path) -> None:
     runner = Runner([ProcessResult(0, "https://github.com/owner/repo/pull/42\n", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)

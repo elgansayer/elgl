@@ -370,6 +370,31 @@ def test_conversation_timeout_retries_durably_then_quarantines(tmp_path: Path) -
     assert (42, ("factory-quarantined", "needs-human")) in github.labels
 
 
+def test_no_changes_after_repeated_attempts_closes_issue_as_already_done(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=github,  # type: ignore[arg-type]
+        conversations=Conversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
+
+    result = None
+    for _ in range(3):
+        result = pipeline.run_job("42")
+
+    assert result is not None and result.state is JobState.DONE
+    assert github.closed == [42]
+    assert not any(labels == ("factory-quarantined", "needs-human") for _, labels in github.labels)
+    assert any("already satisfied" in body for _, body in github.comments)
+
+
 def test_refresh_does_not_reclassify_quarantined_jobs_as_closed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
