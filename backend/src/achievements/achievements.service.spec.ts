@@ -368,7 +368,16 @@ describe('AchievementsService', () => {
         error: null,
       });
 
-      builders['user_achievements'] = makeBuilder({ data: [ { achievements: { code: 'first_message' } }, { achievements: { code: '100_messages' } }, { achievements: { code: '500_messages' } }, { achievements: { code: '7_day_streak' } }, { achievements: { code: '30_day_streak' } } ], error: null });
+      builders['user_achievements'] = makeBuilder({
+        data: [
+          { achievements: { code: 'first_message' } },
+          { achievements: { code: '100_messages' } },
+          { achievements: { code: '500_messages' } },
+          { achievements: { code: '7_day_streak' } },
+          { achievements: { code: '30_day_streak' } },
+        ],
+        error: null,
+      });
       const awardSpy = vi
         .spyOn(service, 'awardAchievement')
         .mockResolvedValue(undefined);

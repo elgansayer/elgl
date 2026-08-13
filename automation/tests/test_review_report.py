@@ -21,8 +21,11 @@ def test_extract_acceptance_criteria() -> None:
 def test_validate_review_report_success(tmp_path: Path) -> None:
     report = {
         "approved": True,
+        "reviewed_sha": "abcdef1234567",
         "summary": "LGTM",
-        "acceptance_criteria": [{"criterion": "User can login", "passed": True}],
+        "acceptance_criteria": [
+            {"criterion": "User can login", "passed": True, "evidence": ["test"]}
+        ],
         "blocking_findings": [],
     }
     (tmp_path / ".factory-review.json").write_text(json.dumps(report))
@@ -40,6 +43,7 @@ def test_validate_review_report_missing_file(tmp_path: Path) -> None:
 def test_validate_review_report_missing_criterion(tmp_path: Path) -> None:
     report = {
         "approved": True,
+        "reviewed_sha": "abcdef1234567",
         "summary": "LGTM",
         "acceptance_criteria": [],
         "blocking_findings": [],
@@ -54,8 +58,11 @@ def test_validate_review_report_missing_criterion(tmp_path: Path) -> None:
 def test_validate_review_report_failed_criterion(tmp_path: Path) -> None:
     report = {
         "approved": True,
+        "reviewed_sha": "abcdef1234567",
         "summary": "LGTM",
-        "acceptance_criteria": [{"criterion": "User can login", "passed": False}],
+        "acceptance_criteria": [
+            {"criterion": "User can login", "passed": False, "evidence": ["test"]}
+        ],
         "blocking_findings": [],
     }
     (tmp_path / ".factory-review.json").write_text(json.dumps(report))
@@ -68,9 +75,12 @@ def test_validate_review_report_failed_criterion(tmp_path: Path) -> None:
 def test_validate_review_report_blocking_findings(tmp_path: Path) -> None:
     report = {
         "approved": True,
+        "reviewed_sha": "abcdef1234567",
         "summary": "LGTM",
         "acceptance_criteria": [],
-        "blocking_findings": [{"severity": "blocking"}],
+        "blocking_findings": [
+            {"severity": "blocking", "summary": "Problem", "evidence": ["file"]}
+        ],
     }
     (tmp_path / ".factory-review.json").write_text(json.dumps(report))
 
@@ -81,6 +91,7 @@ def test_validate_review_report_blocking_findings(tmp_path: Path) -> None:
 def test_validate_review_report_not_approved(tmp_path: Path) -> None:
     report = {
         "approved": False,
+        "reviewed_sha": "abcdef1234567",
         "summary": "Not good",
         "acceptance_criteria": [],
         "blocking_findings": [],
@@ -89,3 +100,17 @@ def test_validate_review_report_not_approved(tmp_path: Path) -> None:
 
     with pytest.raises(FactoryError, match="not approved"):
         validate_review_report(tmp_path, "")
+
+
+def test_validate_review_report_rejects_wrong_sha(tmp_path: Path) -> None:
+    report = {
+        "approved": True,
+        "reviewed_sha": "abcdef1234567",
+        "summary": "LGTM",
+        "acceptance_criteria": [],
+        "blocking_findings": [],
+    }
+    (tmp_path / ".factory-review.json").write_text(json.dumps(report))
+
+    with pytest.raises(FactoryError, match="does not match expected head"):
+        validate_review_report(tmp_path, "", expected_head_sha="1234567890abc")

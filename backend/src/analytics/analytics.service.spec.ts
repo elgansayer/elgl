@@ -15,7 +15,7 @@ describe('AnalyticsService', () => {
     vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     insertBuilder = {
-      insert: jest.fn().mockReturnValue(Promise.resolve({ error: null })),
+      insert: vi.fn().mockReturnValue(Promise.resolve({ error: null })),
     };
 
     mockSupabaseClient = {
