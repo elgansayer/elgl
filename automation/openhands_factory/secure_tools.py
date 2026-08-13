@@ -129,11 +129,6 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
                 self.repository,
                 self.image,
                 action.command,
-                resource_limits=False,
-                userns="host",
-                cgroup_manager="cgroupfs",
-                pid_host=True,
-                cgroups="no-conmon",
             ),
         ]
         environment = {
@@ -142,23 +137,10 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
         }
         try:
             result = _run_podman(arguments, timeout, environment)
-            if result.returncode != 0 and resource_limit_error(f"{result.stdout}\n{result.stderr}"):
-                fallback_arguments = [
-                    str(self.podman_path),
-                    *podman_run_arguments(
-                        self.workspace,
-                        self.repository,
-                        self.image,
-                        action.command,
-                        resource_limits=False,
-                        userns="host",
-                        cgroup_manager="cgroupfs",
-                        pid_host=True,
-                        cgroups="no-conmon",
-                    ),
-                ]
-                result = _run_podman(fallback_arguments, timeout, environment)
-            if result.returncode != 0 and namespace_error(f"{result.stdout}\n{result.stderr}"):
+            fallback_reason = f"{result.stdout}\n{result.stderr}"
+            if result.returncode != 0 and (
+                resource_limit_error(fallback_reason) or namespace_error(fallback_reason)
+            ):
                 fallback_arguments = [
                     str(self.podman_path),
                     *podman_run_arguments(

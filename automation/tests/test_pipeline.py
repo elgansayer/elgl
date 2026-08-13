@@ -65,6 +65,7 @@ class Conversations:
                 json.dumps(
                     {
                         "approved": True,
+                        "reviewed_sha": "abcdef1234567",
                         "summary": "OK",
                         "acceptance_criteria": [],
                         "blocking_findings": [],
@@ -168,7 +169,7 @@ def test_refresh_does_not_remove_a_closed_issue_while_its_worker_is_active(
     assert removed == []
 
 
-def test_refresh_releases_a_closed_quarantined_issue(
+def test_refresh_preserves_a_quarantined_issue_until_human_recovery(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     github = GitHub()
@@ -183,8 +184,8 @@ def test_refresh_releases_a_closed_quarantined_issue(
 
     refreshed = pipeline.refresh()
 
-    assert refreshed["42"].state is JobState.DONE
-    assert refreshed["42"].last_error == "Issue closed before pull request creation"
+    assert refreshed["42"].state is JobState.QUARANTINED
+    assert refreshed["42"].last_error is None
 
 
 def test_refresh_releases_a_closed_issue_during_security_review(
@@ -216,8 +217,12 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     factory_config = config(tmp_path)
     github = GitHub()
     github.statuses = [
-        PullRequestStatus(99, "OPEN", False, "MERGEABLE", "", "head", True, False),
-        PullRequestStatus(99, "MERGED", False, "UNKNOWN", "", "head", True, False),
+        PullRequestStatus(
+            99, "OPEN", False, "MERGEABLE", "", "abcdef1234567", True, False
+        ),
+        PullRequestStatus(
+            99, "MERGED", False, "UNKNOWN", "", "abcdef1234567", True, False
+        ),
     ]
 
     def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
@@ -226,12 +231,13 @@ def test_complete_pipeline_reaches_done_only_after_merge(
         return "factory/42-fix-build"
 
     monkeypatch.setattr(GitWorkflow, "prepare_worktree", prepare)
-    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    has_changes = iter((True, False))
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: next(has_changes))
     monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("README.md")})
     monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
     monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: None)
     monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
-    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "head")
+    monkeypatch.setattr(GitWorkflow, "head_sha", lambda workflow: "abcdef1234567")
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
     monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
     monkeypatch.setattr(
@@ -262,7 +268,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     ]
     assert github.auto_merged == [99]
     assert github.closed == [42]
-    assert github.reviewed == ["head"]
+    assert github.reviewed == ["abcdef1234567"]
     assert [number for number, _ in github.comments].count(42) == 1
     assert [number for number, _ in github.comments].count(99) == 3
 
@@ -288,6 +294,35 @@ def test_successful_transition_resets_previous_failures(
     assert advanced.state is JobState.IMPLEMENTING
     assert advanced.attempts == 0
     assert advanced.last_error is None
+
+
+def test_discovery_retry_releases_lease_and_retires_stale_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["42"]
+    worktree = pipeline.config.worktree_dir / "issue-42"
+    worktree.mkdir(parents=True)
+    removed: list[Path] = []
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(
+        GitWorkflow,
+        "remove_worktree",
+        lambda workflow, path, **kwargs: removed.append(path),
+    )
+    monkeypatch.setattr(
+        GitWorkflow,
+        "prepare_worktree",
+        lambda workflow, path, task_id, title: "factory/42-fix-build",
+    )
+
+    advanced = pipeline.run_job(job.task.identifier)
+
+    assert advanced is not None
+    assert advanced.state is JobState.IMPLEMENTING
+    assert removed == [worktree]
+    assert pipeline.tasks.leases()["42"].owner == "factory"
 
 
 def test_run_job_advances_only_the_selected_durable_job(
@@ -333,6 +368,30 @@ def test_conversation_timeout_retries_durably_then_quarantines(tmp_path: Path) -
     assert restored.attempts == 3
     assert restored.state is JobState.QUARANTINED
     assert (42, ("factory-quarantined", "needs-human")) in github.labels
+
+
+def test_refresh_does_not_reclassify_quarantined_jobs_as_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=github,  # type: ignore[arg-type]
+        conversations=FailingConversations(),  # type: ignore[arg-type]
+    )
+    job = pipeline.refresh()["42"]
+    job.state = JobState.IMPLEMENTING
+    pipeline.jobs.save({"42": job})
+    monkeypatch.setattr("openhands_factory.pipeline.AlertService.send", lambda *_args: True)
+
+    for _ in range(3):
+        pipeline.run_job("42")
+
+    github.tasks = []
+    refreshed = pipeline.refresh()
+
+    assert refreshed["42"].state is JobState.QUARANTINED
+    assert refreshed["42"].last_error == "Conversation exceeded the maximum task duration"
 
 
 def test_security_review_runs_between_implementation_and_verification(

@@ -26,11 +26,16 @@ verification gate then runs on the combined diff before the pull request is open
 
 ## Issue Intake and Classification
 
-By default, the factory operates with `FACTORY_REQUIRE_READY_LABEL=false`, meaning all open issues not specifically excluded are picked up. Use `factory-ready` only if you enable `FACTORY_REQUIRE_READY_LABEL=true` for manual queueing.
+For unattended operation, the factory operates with `FACTORY_REQUIRE_READY_LABEL=false`, meaning no human `factory-ready` labelling step is required. Open issues not specifically excluded are picked up automatically. Setting it to `true` is an optional manual-queueing mode and is not used by the autonomous deployment.
 
 Excluded from implementation:
 - `factory-epic`: Broad outcomes (e.g., "Improve onboarding").
 - `factory-planning`: Architecture mapping, research, or decomposition.
+- `factory-quality-blocked`: Issues held back by a quality decision.
+- `factory-quarantined`: Issues whose bounded retry budget was exhausted.
+- `needs-human`: Explicitly withheld work.
+
+The autonomous mode does not add `factory-ready` or `needs-human` as an intake requirement. `needs-human` is only added as a visible failure marker when an issue is quarantined after repeated failure, and Telegram receives the ultimate-failure alert. Quarantined work remains excluded so the factory cannot loop indefinitely or silently ship uncertain code.
 
 ## Deterministic Quality Gate
 
@@ -39,6 +44,8 @@ Before a pull request is created, the factory runs a deterministic quality gate 
 - Obvious placeholder implementations (e.g., "TODO: implement").
 - Unsafe type escapes (`as any`, `<any>`).
 - Newly skipped tests.
+
+The gate inspects only newly added diff lines in production paths. Test fixtures and test-only mocks remain allowed.
 
 If blocked, the factory executes one bounded quality-repair pass before failing closed.
 
@@ -49,6 +56,9 @@ The independent reviewer proves actual completion against the issue's requiremen
 - Acceptance criteria coverage (every explicit bullet must pass).
 - Absence of blocking findings (e.g., UI without backend).
 - Reviewed SHA integrity (the approved SHA must match the PR head).
+
+The reviewer report must contain the exact current head SHA, non-empty evidence for every criterion, and no
+unrequested criteria. Reviewer edits trigger verification and a fresh review before approval is published.
 
 ## Costs
 

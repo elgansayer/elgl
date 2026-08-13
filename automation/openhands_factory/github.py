@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -52,18 +53,24 @@ class GitHubClient:
         self.environment = {"GH_TOKEN": token}
 
     def _run(self, arguments: Sequence[str], timeout: int = 300) -> str:
-        previous = os.environ.get("GH_TOKEN")
-        os.environ["GH_TOKEN"] = self.environment["GH_TOKEN"]
-        try:
-            result = self.runner(arguments, self.workspace, timeout)
-        finally:
-            if previous is None:
-                os.environ.pop("GH_TOKEN", None)
-            else:
-                os.environ["GH_TOKEN"] = previous
-        if result.returncode != 0:
-            raise FactoryError(f"GitHub command failed: {result.stderr[-2000:]}")
-        return result.stdout
+        for attempt in range(3):
+            previous = os.environ.get("GH_TOKEN")
+            os.environ["GH_TOKEN"] = self.environment["GH_TOKEN"]
+            try:
+                result = self.runner(arguments, self.workspace, timeout)
+            finally:
+                if previous is None:
+                    os.environ.pop("GH_TOKEN", None)
+                else:
+                    os.environ["GH_TOKEN"] = previous
+            if result.returncode == 0:
+                return result.stdout
+            failure = result.stderr[-2000:]
+            transient = any(marker in failure for marker in ("HTTP 5", "502", "503", "504"))
+            if not transient or attempt == 2:
+                raise FactoryError(f"GitHub command failed: {failure}")
+            time.sleep(2**attempt)
+        raise FactoryError("GitHub command failed without a result")
 
     def collect_open_issues(self, limit: int = 10_000) -> list[Task]:
         output = self._run(

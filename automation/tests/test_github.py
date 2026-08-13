@@ -2,6 +2,8 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.github import GitHubClient
 from openhands_factory.repository_guard import ProcessResult
 
@@ -122,3 +124,19 @@ def test_review_status_is_anchored_to_head_sha(tmp_path: Path) -> None:
     assert "repos/owner/repo/statuses/abc123" in call
     assert "context=factory/independent-review" in call
     assert "state=success" in call
+
+
+def test_transient_github_failure_is_retried(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runner = Runner(
+        [
+            ProcessResult(1, "", "HTTP 503: Service Unavailable"),
+            ProcessResult(0, "[]", ""),
+        ]
+    )
+    monkeypatch.setattr("openhands_factory.github.time.sleep", lambda _seconds: None)
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    assert client.collect_open_issues() == []
+    assert len(runner.calls) == 2
