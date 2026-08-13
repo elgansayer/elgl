@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
+import { SocialLearningService, VocabularyChallenge } from '../../services/social-learning.service';
 import { VocabularyDashboardComponent } from '../vocabulary-dashboard/vocabulary-dashboard.component';
-
 import { I18nService } from '../../services/i18n.service';
 import { VocabularyStore } from '../../services/vocabulary.store';
 import { NetworkStatusService } from '../../services/network-status.service';
@@ -154,6 +154,99 @@ type TabId = (typeof TAB_IDS)[number];
                 {{ 'readingEngine.nextArticle' | t }}
               </app-button-secondary>
             </div>
+
+            <!-- Dynamic Content Rendering -->
+              @if (generatedQuestions().length > 0) {
+                <div class="mt-4 space-y-2 p-3 bg-surface-100 rounded-app">
+                  <h4 class="text-sm font-bold text-text-primary">{{ 'readingEngine.discussionQuestions' | t }}</h4>
+                  <ul class="list-disc ps-5 space-y-1">
+                    @for (q of generatedQuestions(); track q) {
+                      <li class="text-xs text-text-secondary">{{ q }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+
+              @if (generatedChallenges().length > 0) {
+                <div class="mt-4 space-y-2 p-3 bg-surface-100 rounded-app">
+                  <h4 class="text-sm font-bold text-text-primary">{{ 'readingEngine.vocabularyChallengesTitle' | t }}</h4>
+                  <ul class="space-y-2">
+                    @for (c of generatedChallenges(); track c.word) {
+                      <li class="text-xs text-text-secondary">
+                        <span class="font-bold text-primary">{{ c.word }}:</span> {{ c.challenge }}
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+              @if (conversationStarters().length > 0) {
+                <div class="mt-4 space-y-2 p-3 bg-surface-100 rounded-app">
+                  <h4 class="text-sm font-bold text-text-primary">{{ 'readingEngine.conversationStarters' | t }}</h4>
+                  <ul class="list-disc ps-5 space-y-1">
+                    @for (s of conversationStarters(); track s) {
+                      <li class="text-xs text-text-secondary">{{ s }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+
+              @if (activeDiscussion() !== null) {
+                <div class="mt-4 p-4 border border-secondary/30 bg-secondary/5 rounded-app relative">
+                  <button (click)="closeDiscussion()" class="absolute top-2 end-2 text-text-muted hover:text-text-primary" [attr.aria-label]="'readingEngine.closeDiscussion' | t">✕</button>
+                  <h4 class="text-sm font-bold text-secondary mb-2">{{ 'readingEngine.discussionTitle' | t: { type: activeDiscussion() } }}</h4>
+                  <p class="text-xs text-text-secondary italic">{{ 'readingEngine.mockDiscussionBody' | t: { type: activeDiscussion() } }}</p>
+                </div>
+              }
+
+            <!-- Social Learning Section -->
+            <app-card customClass="app-padded space-y-3 mt-4 border-t border-surface-200">
+              <div class="flex flex-wrap gap-2">
+                <app-button-secondary
+                  (clicked)="onGenerateQuestions()"
+                  [ariaLabel]="'readingEngine.generateQuestions' | t"
+                  customClass="text-[11px] sm:text-xs font-bold py-2.5 sm:py-2 px-3 sm:px-4 min-h-[44px] sm:min-h-0 bg-primary/10 text-primary border-primary/20"
+                >
+                  {{ 'readingEngine.generateQuestions' | t }}
+                </app-button-secondary>
+                <app-button-secondary
+                  (clicked)="onVocabularyChallenges()"
+                  [ariaLabel]="'readingEngine.vocabularyChallenges' | t"
+                  customClass="text-[11px] sm:text-xs font-bold py-2.5 sm:py-2 px-3 sm:px-4 min-h-[44px] sm:min-h-0 bg-primary/10 text-primary border-primary/20"
+                >
+                  {{ 'readingEngine.vocabularyChallenges' | t }}
+                </app-button-secondary>
+                <app-button-secondary
+                  (clicked)="onConversationStarters()"
+                  [ariaLabel]="'readingEngine.conversationStarters' | t"
+                  customClass="text-[11px] sm:text-xs font-bold py-2.5 sm:py-2 px-3 sm:px-4 min-h-[44px] sm:min-h-0 bg-primary/10 text-primary border-primary/20"
+                >
+                  {{ 'readingEngine.conversationStarters' | t }}
+                </app-button-secondary>
+              </div>
+              <div class="flex flex-wrap gap-2 mt-2">
+                <app-button-secondary
+                  (clicked)="onDiscuss('ai')"
+                  [ariaLabel]="'readingEngine.discuss' | t"
+                  customClass="text-[11px] sm:text-xs font-bold py-2.5 sm:py-2 px-3 sm:px-4 min-h-[44px] sm:min-h-0 bg-secondary/10 text-secondary border-secondary/20"
+                >
+                  {{ 'readingEngine.discuss' | t }}
+                </app-button-secondary>
+                <app-button-secondary
+                  (clicked)="onDiscuss('partner')"
+                  [ariaLabel]="'readingEngine.discussPartner' | t"
+                  customClass="text-[11px] sm:text-xs font-bold py-2.5 sm:py-2 px-3 sm:px-4 min-h-[44px] sm:min-h-0 bg-secondary/10 text-secondary border-secondary/20"
+                >
+                  {{ 'readingEngine.discussPartner' | t }}
+                </app-button-secondary>
+                <app-button-secondary
+                  (clicked)="onDiscuss('room')"
+                  [ariaLabel]="'readingEngine.discussRoom' | t"
+                  customClass="text-[11px] sm:text-xs font-bold py-2.5 sm:py-2 px-3 sm:px-4 min-h-[44px] sm:min-h-0 bg-secondary/10 text-secondary border-secondary/20"
+                >
+                  {{ 'readingEngine.discussRoom' | t }}
+                </app-button-secondary>
+              </div>
+            </app-card>
           </div>
         } @else {
           <!-- Loading skeleton state -->
@@ -428,6 +521,7 @@ export class ReadingEngineComponent {
   private vocabStore = inject(VocabularyStore);
   private networkStatus = inject(NetworkStatusService);
   private offlineReading = inject(OfflineReadingService);
+  private socialLearning = inject(SocialLearningService);
 
   readonly tabIds = TAB_IDS;
 
@@ -438,6 +532,10 @@ export class ReadingEngineComponent {
 
   readonly fetchError = signal<string | null>(null);
   readonly readingHistory = signal<ReadingHistoryEntry[]>([]);
+  readonly generatedQuestions = signal<string[]>([]);
+  readonly generatedChallenges = signal<VocabularyChallenge[]>([]);
+  readonly conversationStarters = signal<string[]>([]);
+  readonly activeDiscussion = signal<'ai' | 'partner' | 'room' | null>(null);
 
   readonly articlesResource = resource<ReadingArticle[], unknown>({
     loader: async () => this.fetchArticles(),
@@ -539,6 +637,31 @@ export class ReadingEngineComponent {
   retryLoad(): void {
     this.fetchError.set(null);
     this.articlesResource.reload();
+  }
+
+  async onGenerateQuestions(): Promise<void> {
+    const article = this.selectedArticle();
+    if (!article) return;
+    const questions = await this.socialLearning.generateQuestions(article.content);
+    this.generatedQuestions.set(questions);
+  }
+
+  async onVocabularyChallenges(): Promise<void> {
+    const challenges = await this.socialLearning.generateVocabularyChallenges();
+    this.generatedChallenges.set(challenges);
+  }
+
+  async onConversationStarters(): Promise<void> {
+    const starters = await this.socialLearning.generateConversationStarters();
+    this.conversationStarters.set(starters);
+  }
+
+  onDiscuss(type: 'ai' | 'partner' | 'room'): void {
+    this.activeDiscussion.set(type);
+  }
+
+  closeDiscussion(): void {
+    this.activeDiscussion.set(null);
   }
 
   async loadReadingHistory(): Promise<void> {
