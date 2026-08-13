@@ -150,6 +150,53 @@ class GitHubClient:
             )
         return tasks
 
+    def collect_open_pull_requests(self, limit: int = 10_000) -> list[Task]:
+        """List externally-created pull requests eligible for independent review.
+
+        Excludes the factory's own pull requests (identified by their factory/*
+        branch, since those are already tracked by the issue that created them),
+        drafts, and anything already reviewed or explicitly skipped.
+        """
+        output = self._run(
+            (
+                "gh",
+                "pr",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "open",
+                "--limit",
+                str(limit),
+                "--json",
+                "number,title,body,headRefName,isDraft,labels",
+            )
+        )
+        payload = json.loads(output)
+        tasks: list[Task] = []
+        for item in payload:
+            if item.get("isDraft"):
+                continue
+            head_ref = str(item.get("headRefName") or "")
+            if not head_ref or head_ref.startswith("factory/"):
+                continue
+            labels = {
+                label.get("name", "") for label in item.get("labels", []) if isinstance(label, dict)
+            }
+            if labels.intersection({"factory-reviewed", "factory-skip"}):
+                continue
+            tasks.append(
+                Task(
+                    identifier=str(int(item["number"])),
+                    title=str(item["title"]),
+                    body=str(item.get("body") or ""),
+                    source="github-pull-request",
+                    priority=10,
+                    pr_branch=head_ref,
+                )
+            )
+        return tasks
+
     def ensure_factory_labels(self) -> None:
         labels = {
             "factory-ready": "1d76db",
