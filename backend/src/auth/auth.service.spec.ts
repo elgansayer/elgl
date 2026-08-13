@@ -100,9 +100,10 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            generateLink: vi
-              .fn()
-              .mockResolvedValue({ error: new Error('Network error'), data: null }),
+            generateLink: vi.fn().mockResolvedValue({
+              error: new Error('Network error'),
+              data: null,
+            }),
           },
         },
       };
