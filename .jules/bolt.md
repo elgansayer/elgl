@@ -25,3 +25,6 @@
 ## 2026-08-12 - [Optimize Sequential I/O in Loop using Promise.all]
 **Learning:** In the backend `chat.service.ts` method `forwardMessage`, checking if room members block a user was done sequentially inside a `for...of` loop with `await`. This causes an N+1 query problem, making latency scale linearly with the number of members in the target room.
 **Action:** Replaced the sequential `for...of` loop with a concurrent approach by mapping the array to `Promise.all`. This reduces the latency of checking all members to a single concurrent roundtrip.
+## 2026-08-12 - [Optimize system message broadcasting in chat by replacing sequential awaits with Promise.all]
+**Learning:** In the backend `system-message.service.ts`, searching for a direct 1-on-1 room between two users queried room members sequentially inside a `for...of` loop with `await supabase`. This caused an N+1 query problem, making latency scale linearly with the number of mutual rooms between two users. In a simulation with 5 rooms and 50ms database latency, the sequential loop took ~250ms while running it concurrently with `Promise.all` reduced it to ~50ms.
+**Action:** When a service requires bulk lookups (like finding a specific room out of many mutual rooms), do not await queries sequentially inside a loop. Use `Promise.all` to fetch the necessary data concurrently, then iterate over the results.

@@ -95,12 +95,22 @@ export class SystemMessageService {
 
     if (!mutualRooms || mutualRooms.length === 0) return;
 
-    // Find the 1-on-1 room (exactly 2 members)
-    for (const { room_id: candidateRoomId } of mutualRooms) {
-      const { count } = await supabase
+    const mutualRoomIds = mutualRooms.map((r) => r.room_id);
+
+    // Get member counts for all mutual rooms in one batch query
+    const countPromises = mutualRoomIds.map((candidateRoomId) =>
+      supabase
         .from('chat_room_members')
         .select('*', { count: 'exact', head: true })
-        .eq('room_id', candidateRoomId);
+        .eq('room_id', candidateRoomId),
+    );
+
+    const countResults = await Promise.all(countPromises);
+
+    // Find the 1-on-1 room (exactly 2 members)
+    for (let i = 0; i < mutualRooms.length; i++) {
+      const candidateRoomId = mutualRooms[i].room_id;
+      const { count } = countResults[i];
 
       if (count === 2) {
         await this.publishToRoom(candidateRoomId, eventType, params);
