@@ -8,11 +8,11 @@ describe('App routes', () => {
     expect(routes.length).toBeGreaterThan(0);
   });
 
-  it('should include the root redirect to home', () => {
+  it('should include the root redirect to onboarding', () => {
     const root = routes.find((r) => r.path === '');
     expect(root).toBeDefined();
     if (root) {
-      expect(root.redirectTo).toBe('home');
+      expect(root.redirectTo).toBe('onboarding');
       expect(root.pathMatch).toBe('full');
     }
   });
