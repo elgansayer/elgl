@@ -197,6 +197,50 @@ class GitHubClient:
             )
         return tasks
 
+    def list_all_open_issue_titles(self, limit: int = 10_000) -> set[str]:
+        """List every open issue title, regardless of label, for duplicate checking.
+
+        Unlike collect_open_issues, nothing is excluded here - a proposed issue must
+        not duplicate a quarantined or blocked one either, not just an eligible one.
+        """
+        output = self._run(
+            (
+                "gh",
+                "issue",
+                "list",
+                "--repo",
+                self.repository,
+                "--state",
+                "open",
+                "--limit",
+                str(limit),
+                "--json",
+                "title",
+            )
+        )
+        return {str(item["title"]) for item in json.loads(output)}
+
+    def create_issue(self, title: str, body: str, labels: Sequence[str] = ()) -> int:
+        arguments = [
+            "gh",
+            "issue",
+            "create",
+            "--repo",
+            self.repository,
+            "--title",
+            title,
+            "--body",
+            body,
+        ]
+        for label in labels:
+            arguments.extend(("--label", label))
+        output = self._run(tuple(arguments))
+        url = output.strip().rstrip("/")
+        try:
+            return int(url.rsplit("/", 1)[-1])
+        except ValueError as error:
+            raise FactoryError(f"Could not parse issue URL: {url}") from error
+
     def ensure_factory_labels(self) -> None:
         labels = {
             "factory-ready": "1d76db",
@@ -206,6 +250,7 @@ class GitHubClient:
             "factory-quarantined": "b60205",
             "factory-skip": "cfd3d7",
             "needs-human": "d93f0b",
+            "architect-proposed": "5319e7",
         }
         for name, colour in labels.items():
             self._run(

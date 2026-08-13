@@ -78,10 +78,14 @@ class FactoryDaemon:
     def _loop(self) -> int:
         active: dict[Future[Job | None], str] = {}
         next_refresh_at = 0.0
-        with ThreadPoolExecutor(
-            max_workers=self.config.max_parallel_jobs,
-            thread_name_prefix="factory-worker",
-        ) as workers:
+        architect_future: Future[None] | None = None
+        with (
+            ThreadPoolExecutor(
+                max_workers=self.config.max_parallel_jobs,
+                thread_name_prefix="factory-worker",
+            ) as workers,
+            ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-architect") as architect,
+        ):
             while not self.stopping:
                 for future, task_id in list(active.items()):
                     if not future.done():
@@ -111,6 +115,16 @@ class FactoryDaemon:
                         future = workers.submit(worker.run_job, job.task.identifier)
                         active[future] = job.task.identifier
                         LOGGER.info("Scheduled task %s", job.task.identifier)
+                if not self.paused() and (architect_future is None or architect_future.done()):
+                    if architect_future is not None:
+                        try:
+                            architect_future.result()
+                        except Exception:
+                            LOGGER.exception("Architect cycle crashed")
+                    if self.pipeline.architect_due():
+                        LOGGER.info("Scheduling weekly architect cycle")
+                        architect_worker = FactoryPipeline(self.config)
+                        architect_future = architect.submit(architect_worker.run_architect_cycle)
                 self._write_daemon_state("running", active)
                 time.sleep(min(self.config.cooldown_seconds, 10))
         self._write_daemon_state("stopped", active)

@@ -7,16 +7,18 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Semaphore
 
+from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
 from openhands_factory.exceptions import FactoryError, RepositorySafetyError
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestStatus
 from openhands_factory.jobs import JobStore
-from openhands_factory.models import Job, JobState
+from openhands_factory.models import Job, JobState, Task
 from openhands_factory.prompts import build_phase_prompt, build_task_prompt
 from openhands_factory.quality_gate import check_quality_gate
 from openhands_factory.review_report import validate_review_report
+from openhands_factory.state import atomic_write_json, read_json
 from openhands_factory.task_source import TaskStore
 from openhands_factory.verification import commands_for, run_verification
 
@@ -479,3 +481,108 @@ class FactoryPipeline:
             "remain authoritative.\n\n"
             f"Reviewed head SHA: `{job.head_sha or 'pending'}`\n"
         )
+
+    def architect_due(self) -> bool:
+        """Whether enough time has passed to run another weekly gap-analysis cycle."""
+        state = read_json(self._architect_state_path(), {})
+        last_run_at = state.get("last_run_at")
+        if last_run_at is None:
+            return True
+        elapsed = datetime.now(UTC) - datetime.fromisoformat(last_run_at)
+        return elapsed.total_seconds() / 3600 >= self.config.architect_interval_hours
+
+    def run_architect_cycle(self) -> None:
+        """Best-effort weekly gap analysis: propose new issues and roadmap updates.
+
+        Unlike issue and pull request work, this is not modeled as a durable retried
+        Job - a single bounded conversation either finds something worth proposing or
+        it does not. If it fails or times out, the cooldown already recorded below
+        means it simply tries again next interval rather than hot-looping.
+        """
+        atomic_write_json(
+            self._architect_state_path(), {"last_run_at": datetime.now(UTC).isoformat()}
+        )
+        worktree = self.config.worktree_dir / "architect"
+        prompt_dir = self.config.repository / "automation/prompts"
+        if worktree.exists():
+            GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(
+                worktree, force=True
+            )
+        date_id = datetime.now(UTC).strftime("%G-W%V")
+        workflow = GitWorkflow(self.config.repository, self.config.base_branch)
+        branch = workflow.prepare_worktree(worktree, f"architect-{date_id}", "weekly gap analysis")
+        task = Task(
+            identifier=f"architect-{date_id}",
+            title="Weekly gap analysis",
+            body=(
+                "Compare AGENTS.md, FEATURES_SPEC.md, README.md and ROADMAP.md against the "
+                "current codebase."
+            ),
+            source="github-architect",
+            priority=10,
+        )
+        self.conversations.run(task, worktree, build_phase_prompt(prompt_dir, "architect", task))
+        review_workflow = GitWorkflow(worktree, self.config.base_branch)
+        proposals = load_architect_report(worktree)
+        if proposals:
+            self._create_deduplicated_issues(proposals)
+        if review_workflow.has_changes():
+            self._verify(review_workflow)
+            review_workflow.stage_all()
+            review_workflow.commit(f"docs: weekly architect gap analysis ({date_id})")
+            review_workflow.push(branch)
+            pull_request = self.github.create_pull_request(
+                branch,
+                f"docs: weekly gap analysis ({date_id})",
+                "Automated ROADMAP/spec update from the weekly architect cycle. Independently "
+                "reviewed like any other pull request before merging.",
+            )
+            self.github.add_comment(
+                pull_request,
+                (
+                    "OpenHands factory architect opened this pull request from its weekly gap "
+                    "analysis. It will be independently reviewed like any other pull request "
+                    "before merging."
+                ),
+            )
+            self.jobs.save_job(
+                Job(
+                    task=Task(
+                        identifier=str(pull_request),
+                        title=f"docs: weekly gap analysis ({date_id})",
+                        body="Automated ROADMAP/spec update from the weekly architect cycle.",
+                        source="github-pull-request",
+                        priority=10,
+                        pr_branch=branch,
+                    )
+                )
+            )
+            GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
+        else:
+            GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
+
+    def _create_deduplicated_issues(self, proposals: list[ArchitectProposal]) -> list[int]:
+        """Create proposed issues, skipping anything that already exists.
+
+        This check is deliberately not delegated to the LLM: bulk-created near-
+        duplicate issues from an earlier, unchecked version of this idea are what
+        caused the swarm/factory collision quarantine spike this factory recovered
+        from, so the dedup is enforced here in trusted code.
+        """
+        existing = {
+            " ".join(title.split()).lower() for title in self.github.list_all_open_issue_titles()
+        }
+        created: list[int] = []
+        for proposal in proposals[: self.config.architect_max_new_issues]:
+            normalized = " ".join(proposal.title.split()).lower()
+            if normalized in existing:
+                continue
+            number = self.github.create_issue(
+                proposal.title, proposal.body, ("architect-proposed",)
+            )
+            created.append(number)
+            existing.add(normalized)
+        return created
+
+    def _architect_state_path(self) -> Path:
+        return self.config.state_dir / "architect_state.json"
