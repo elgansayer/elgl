@@ -60,6 +60,24 @@ request's own existing branch instead of a new `factory/*` one; `ensure_push_tar
 the exact branch a job is assigned to review; this is still trusted-code-directed, not open to indirect LLM
 influence, and pushing to `main`/`master`/the base branch stays forbidden unconditionally.
 
+## Weekly Gap Analysis (Architect)
+
+Once per `FACTORY_ARCHITECT_INTERVAL_HOURS` (default 168, i.e. weekly), the daemon runs one bounded
+conversation - not modelled as a durable retried job, since it isn't blocking any specific piece of work -
+that compares `AGENTS.md`, `FEATURES_SPEC.md`, `README.md` and `ROADMAP.md` against the actual codebase:
+- If it updates `ROADMAP.md`/`SPEC.md`, that goes through a normal pull request and the same independent
+  review and `factory-merge.yml` gate as everything else. It is not a direct edit to `main`.
+- New gaps it identifies are written to a structured `.factory-architect.json` file, not created on GitHub
+  directly - the worker has no network access and could not run `gh issue create` even if it tried. Trusted
+  code reads that file, drops any proposal whose (normalised) title matches an already-open issue
+  regardless of that issue's labels, caps the rest at `FACTORY_ARCHITECT_MAX_NEW_ISSUES` (default 8), and
+  only then creates them, labelled `architect-proposed`.
+
+That dedup step is not optional: an earlier, unchecked version of this idea (the retired GitHub Actions "AI
+Architect Planner") is what produced the bulk-duplicate-issue floods this factory has had to recover from
+more than once. If a cycle finds nothing worth proposing, it does nothing - that is a normal outcome, not a
+failure.
+
 ## Deterministic Quality Gate
 
 Before a pull request is created, the factory runs a deterministic quality gate on the implementation diff to detect incomplete work. The gate checks for:

@@ -162,6 +162,26 @@ def test_collect_open_pull_requests_excludes_drafts_and_own_and_reviewed(
     assert tasks[0].pr_branch == "bolt/optimize-quests"
 
 
+def test_list_all_open_issue_titles_ignores_labels(tmp_path: Path) -> None:
+    payload = [{"title": "Blocked one"}, {"title": "Normal one"}]
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    titles = client.list_all_open_issue_titles()
+
+    assert titles == {"Blocked one", "Normal one"}
+
+
+def test_create_issue_parses_number_and_applies_labels(tmp_path: Path) -> None:
+    runner = Runner([ProcessResult(0, "https://github.com/owner/repo/issues/55\n", "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    number = client.create_issue("Title", "Body", ("architect-proposed",))
+
+    assert number == 55
+    assert "--label" in runner.calls[0] and "architect-proposed" in runner.calls[0]
+
+
 def test_pull_request_creation_parses_number(tmp_path: Path) -> None:
     runner = Runner([ProcessResult(0, "https://github.com/owner/repo/pull/42\n", "")])
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)

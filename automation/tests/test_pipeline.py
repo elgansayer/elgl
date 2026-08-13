@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from openhands_factory.architect_report import ArchitectProposal
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationResult
 from openhands_factory.exceptions import FactoryError
@@ -11,6 +12,7 @@ from openhands_factory.github import PullRequestStatus
 from openhands_factory.models import Job, JobState, Task
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.repository_guard import ensure_push_target
+from openhands_factory.state import atomic_write_json
 
 
 class GitHub:
@@ -23,6 +25,9 @@ class GitHub:
         self.comments: list[tuple[int, str]] = []
         self.tasks = [Task("42", "Fix build", "Broken build", "github-issue", 0)]
         self.pull_requests: list[Task] = []
+        self.open_issue_titles: set[str] = set()
+        self.created_issues: list[tuple[str, str, tuple[str, ...]]] = []
+        self._next_issue_number = 200
 
     def ensure_factory_labels(self) -> None:
         return None
@@ -32,6 +37,14 @@ class GitHub:
 
     def collect_open_pull_requests(self, limit: int = 100) -> list[Task]:
         return self.pull_requests
+
+    def list_all_open_issue_titles(self, limit: int = 100) -> set[str]:
+        return self.open_issue_titles
+
+    def create_issue(self, title: str, body: str, labels: tuple[str, ...] = ()) -> int:
+        self.created_issues.append((title, body, labels))
+        self._next_issue_number += 1
+        return self._next_issue_number
 
     def add_issue_labels(self, issue: int, labels: tuple[str, ...]) -> None:
         self.labels.append((issue, labels))
@@ -82,6 +95,33 @@ class Conversations:
         return ConversationResult(task.identifier, 1, True)
 
 
+class ArchitectConversations:
+    def __init__(self, *, propose_issues: bool = False, edit_roadmap: bool = False) -> None:
+        self.propose_issues = propose_issues
+        self.edit_roadmap = edit_roadmap
+
+    def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
+        if "architect instructions" not in prompt:
+            return ConversationResult(task.identifier, 1, True)
+        if self.propose_issues:
+            import json
+
+            (workspace / ".factory-architect.json").write_text(
+                json.dumps(
+                    {
+                        "new_issues": [
+                            {"title": "Add rate limiting to /auth/login", "body": "Detail."},
+                            {"title": "Existing gap already tracked", "body": "Detail."},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+        if self.edit_roadmap:
+            (workspace / "ROADMAP.md").write_text("Updated roadmap", encoding="utf-8")
+        return ConversationResult(task.identifier, 1, True)
+
+
 class SecurityReviewConversations:
     def __init__(self) -> None:
         self.prompts: list[str] = []
@@ -101,7 +141,7 @@ def config(tmp_path: Path) -> FactoryConfig:
     repository.mkdir()
     prompt_dir = repository / "automation/prompts"
     prompt_dir.mkdir(parents=True)
-    for name in ("task", "review", "repair", "security"):
+    for name in ("task", "review", "repair", "security", "architect"):
         (prompt_dir / f"{name}.md").write_text(f"{name} instructions", encoding="utf-8")
     return FactoryConfig.from_environment(
         {
@@ -589,3 +629,110 @@ def test_security_review_conversation_failure_retries_with_backoff(
     assert third is not None and third.attempts == 3
     assert third.state is JobState.SECURITY_REVIEW
     assert third.next_attempt_at is not None
+
+
+def test_architect_due_defaults_true_and_respects_cooldown(tmp_path: Path) -> None:
+    pipeline = FactoryPipeline(config(tmp_path), github=GitHub())  # type: ignore[arg-type]
+
+    assert pipeline.architect_due() is True
+
+    atomic_write_json(
+        pipeline._architect_state_path(), {"last_run_at": datetime.now(UTC).isoformat()}
+    )
+
+    assert pipeline.architect_due() is False
+
+
+def test_create_deduplicated_issues_skips_titles_that_already_exist(tmp_path: Path) -> None:
+    github = GitHub()
+    github.open_issue_titles = {"Existing gap already tracked"}
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    proposals = [
+        ArchitectProposal(title="Add rate limiting to /auth/login", body="Detail."),
+        ArchitectProposal(title="Existing gap already tracked", body="Detail."),
+    ]
+
+    created = pipeline._create_deduplicated_issues(proposals)
+
+    assert len(created) == 1
+    assert github.created_issues[0][0] == "Add rate limiting to /auth/login"
+
+
+def test_create_deduplicated_issues_respects_the_configured_cap(tmp_path: Path) -> None:
+    github = GitHub()
+    factory_config = config(tmp_path).model_copy(update={"architect_max_new_issues": 1})
+    pipeline = FactoryPipeline(factory_config, github=github)  # type: ignore[arg-type]
+    proposals = [
+        ArchitectProposal(title="A", body="Detail."),
+        ArchitectProposal(title="B", body="Detail."),
+    ]
+
+    created = pipeline._create_deduplicated_issues(proposals)
+
+    assert len(created) == 1
+
+
+def test_architect_cycle_opens_a_pull_request_when_docs_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    github.open_issue_titles = {"Existing gap already tracked"}
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=github,  # type: ignore[arg-type]
+        conversations=ArchitectConversations(  # type: ignore[arg-type]
+            propose_issues=True, edit_roadmap=True
+        ),
+    )
+
+    def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
+        worktree.mkdir(parents=True)
+        return f"factory/{task_id}-weekly-gap-analysis"
+
+    monkeypatch.setattr(GitWorkflow, "prepare_worktree", prepare)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("ROADMAP.md")})
+    monkeypatch.setattr(GitWorkflow, "stage_all", lambda workflow: None)
+    monkeypatch.setattr(GitWorkflow, "commit", lambda workflow, message: None)
+    monkeypatch.setattr(GitWorkflow, "push", lambda workflow, branch: None)
+    monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", lambda commands: None)
+
+    pipeline.run_architect_cycle()
+
+    assert len(github.created_issues) == 1
+    assert github.created_issues[0][0] == "Add rate limiting to /auth/login"
+    jobs = pipeline.jobs.load()
+    assert len(jobs) == 1
+    saved_job = next(iter(jobs.values()))
+    assert saved_job.task.source == "github-pull-request"
+    assert saved_job.task.identifier == "99"
+    assert saved_job.state == JobState.DISCOVERED
+
+
+def test_architect_cycle_does_nothing_when_no_proposals_or_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    github = GitHub()
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=github,  # type: ignore[arg-type]
+        conversations=ArchitectConversations(),  # type: ignore[arg-type]
+    )
+    removed: list[Path] = []
+
+    def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
+        worktree.mkdir(parents=True)
+        return f"factory/{task_id}-weekly-gap-analysis"
+
+    monkeypatch.setattr(GitWorkflow, "prepare_worktree", prepare)
+    monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
+    )
+
+    pipeline.run_architect_cycle()
+
+    assert github.created_issues == []
+    assert pipeline.jobs.load() == {}
+    assert removed == [pipeline.config.worktree_dir / "architect"]
