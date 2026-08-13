@@ -75,6 +75,8 @@ def test_collect_skips_swarm_claimed_and_dedupes_titles(tmp_path: Path) -> None:
     runner = Runner(
         [
             ProcessResult(0, json.dumps(payload), ""),
+            ProcessResult(0, "", ""),  # comment on the duplicate issue #21
+            ProcessResult(0, "", ""),  # close the duplicate issue #21
             ProcessResult(0, "", ""),  # label the duplicate issue #21
         ]
     )
@@ -83,7 +85,34 @@ def test_collect_skips_swarm_claimed_and_dedupes_titles(tmp_path: Path) -> None:
     tasks = client.collect_open_issues()
 
     assert [task.identifier for task in tasks] == ["20"]
+    assert any("21" in call and "close" in call for call in runner.calls[1:])
     assert any("21" in call and "duplicate" in call for call in runner.calls[1:])
+
+
+def test_requeue_quarantined_issues_clears_stale_labels(tmp_path: Path) -> None:
+    payload = [{"number": 30}, {"number": 31}]
+    runner = Runner(
+        [
+            ProcessResult(0, json.dumps(payload), ""),  # list quarantined
+            ProcessResult(0, "", ""),  # remove labels from #30
+            ProcessResult(0, "", ""),  # comment on #30
+            ProcessResult(0, "", ""),  # remove labels from #31
+            ProcessResult(0, "", ""),  # comment on #31
+        ]
+    )
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    requeued = client.requeue_quarantined_issues()
+
+    assert requeued == [30, 31]
+    assert any(
+        "30" in call and "--remove-label" in call and "factory-quarantined" in call
+        for call in runner.calls
+    )
+    assert any(
+        "31" in call and "--remove-label" in call and "swarm-active" in call
+        for call in runner.calls
+    )
 
 
 def test_pull_request_creation_parses_number(tmp_path: Path) -> None:

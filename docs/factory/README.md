@@ -165,6 +165,7 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory metr
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory reconcile
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory pause
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resume
+sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory backlog requeue-quarantined
 ```
 
 - `doctor --online` verifies tooling, writable state directories, disk headroom, the systemd unit and live
@@ -185,10 +186,22 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resu
   `FACTORY_MAX_NO_PR_HOURS` (default six hours).
 - `pause` stops the daemon from starting new work while preserving jobs, branches and pull requests.
 - `resume` re-enables scheduling once the underlying issue is resolved.
+- `backlog requeue-quarantined` clears `factory-quarantined`, `needs-human`, `swarm-active` and
+  `factory-active` from every currently quarantined issue and comments to explain why. Quarantine is a
+  circuit breaker, not a permanent state: once an operator has fixed the systemic cause (a bug, a stale
+  collision with another pipeline), run this to move the affected issues back into the pool. It never
+  requeues automatically, since only a human can judge that the cause is actually resolved.
 
 Typical recovery flow: run `doctor --online` to confirm the failure, `providers check` to isolate the provider,
 `status` and `metrics` to review daemon health and recent fallbacks, `pause` before touching credentials or
-state, then `resume` after the fix.
+state, fix the root cause, `backlog requeue-quarantined` if issues were quarantined by it, then `resume`.
+
+Duplicate issues (identical titles, usually from a bulk-generation run) are now detected and closed
+automatically on every backlog refresh, not just during manual recovery.
+
+Alerts are batched: repeated alerts of the same kind within a 30-minute window collapse into the first
+message, with the suppressed count reported on the next alert that actually sends. A burst of failures
+sends one Telegram message, not one per issue.
 
 ## Wiki, upgrades and recovery
 
