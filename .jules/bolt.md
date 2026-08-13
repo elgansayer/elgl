@@ -25,3 +25,7 @@
 ## 2026-08-12 - [Optimize Sequential I/O in Loop using Promise.all]
 **Learning:** In the backend `chat.service.ts` method `forwardMessage`, checking if room members block a user was done sequentially inside a `for...of` loop with `await`. This causes an N+1 query problem, making latency scale linearly with the number of members in the target room.
 **Action:** Replaced the sequential `for...of` loop with a concurrent approach by mapping the array to `Promise.all`. This reduces the latency of checking all members to a single concurrent roundtrip.
+
+## 2026-08-13 - [Optimize challenge prize distribution using Promise.allSettled]
+**Learning:** In the backend `language-challenges.service.ts`, awarding prizes (`addCoins`) to challenge completers sequentially loops through database updates using `await`. Running them concurrently with `Promise.allSettled` eliminates sequential network roundtrips, completing faster. Furthermore, using a type predicate in `.filter((result): result is PromiseRejectedResult => result.status === 'rejected')` is necessary to safely cast `.reason` as an `Error` and satisfy the TypeScript compiler without breaking the build.
+**Action:** When replacing sequential `await` operations in a loop with `Promise.allSettled`, ensure you use a type predicate when filtering for rejected promises to satisfy strict TypeScript typings, and maintain the original exception semantics (e.g., throwing a generic `Error` for a 500 status rather than a 400 Bad Request for a server-side failure).
