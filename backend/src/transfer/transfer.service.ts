@@ -10,6 +10,15 @@ export class TransferService {
   constructor(private readonly supabaseService: SupabaseService) {
     this.secret =
       process.env.TRANSFER_SECRET ?? 'device-transfer-secret-dev-only';
+
+    if (
+      process.env.NODE_ENV === 'production' &&
+      this.secret === 'device-transfer-secret-dev-only'
+    ) {
+      throw new Error(
+        'CRITICAL: TRANSFER_SECRET is missing or using default in production',
+      );
+    }
   }
 
   /**

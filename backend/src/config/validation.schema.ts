@@ -229,7 +229,11 @@ export const validationSchema = Joi.object({
   SPAM_SIMILARITY_THRESHOLD: Joi.number().default(0.75),
 
   // -- Transfer --
-  TRANSFER_SECRET: Joi.string().default('device-transfer-secret-dev-only'),
+  TRANSFER_SECRET: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.required(),
+    otherwise: Joi.string().default('device-transfer-secret-dev-only'),
+  }),
 
   // -- Privacy & Legal --
   PRIVACY_EFFECTIVE_DATE: Joi.string().optional().allow(''),
