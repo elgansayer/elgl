@@ -162,7 +162,9 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
             result = _run_podman(arguments, timeout, environment)
             fallback_reason = f"{result.stdout}\n{result.stderr}"
             if result.returncode != 0 and (
-                resource_limit_error(fallback_reason) or namespace_error(fallback_reason)
+                resource_limit_error(fallback_reason)
+                or namespace_error(fallback_reason)
+                or podman_configuration_error(fallback_reason)
             ):
                 fallback_arguments = [
                     str(self.podman_path),
@@ -178,7 +180,15 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
                         cgroups="no-conmon",
                     ),
                 ]
-                result = _run_podman(fallback_arguments, timeout, environment)
+                # This fallback never needs XDG_RUNTIME_DIR: cgroup_manager=cgroupfs and
+                # userns=host both sidestep the systemd user session it points at, which
+                # is also the thing intermittently failing with "Failed to obtain podman
+                # configuration: lstat /run/user/<uid>: permission denied" on the primary
+                # attempt (a pre-existing host flakiness, not caused by this fallback).
+                fallback_environment = {
+                    key: value for key, value in environment.items() if key != "XDG_RUNTIME_DIR"
+                }
+                result = _run_podman(fallback_arguments, timeout, fallback_environment)
         except subprocess.TimeoutExpired as error:
             stdout = (
                 error.stdout.decode(errors="replace")
@@ -218,6 +228,10 @@ def _run_podman(
         check=False,
         env=environment,
     )
+
+
+def podman_configuration_error(stderr: str) -> bool:
+    return "failed to obtain podman configuration" in stderr.lower()
 
 
 def resource_limit_error(stderr: str) -> bool:

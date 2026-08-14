@@ -16,6 +16,7 @@ from openhands_factory.models import JobState
 from openhands_factory.provider_profiles import openai_credentials_available
 from openhands_factory.secure_tools import (
     namespace_error,
+    podman_configuration_error,
     podman_run_arguments,
     resource_limit_error,
 )
@@ -28,6 +29,16 @@ class Check:
     passed: bool
     detail: str
     warning: bool = False
+
+
+def _podman_environment(*, include_runtime_dir: bool) -> dict[str, str]:
+    environment = {
+        "HOME": os.environ.get("HOME", "/var/empty"),
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+    }
+    if include_runtime_dir and "XDG_RUNTIME_DIR" in os.environ:
+        environment["XDG_RUNTIME_DIR"] = os.environ["XDG_RUNTIME_DIR"]
+    return environment
 
 
 def worker_terminal_check(config: FactoryConfig) -> Check:
@@ -44,8 +55,6 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
             cpu_limit="0.25",
         ),
     ]
-    fallback_used = False
-    fallback_reason = ""
     try:
         result = subprocess.run(
             arguments,
@@ -53,19 +62,14 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
             text=True,
             timeout=60,
             check=False,
-            env={
-                "HOME": os.environ.get("HOME", "/var/empty"),
-                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-                **(
-                    {"XDG_RUNTIME_DIR": os.environ["XDG_RUNTIME_DIR"]}
-                    if "XDG_RUNTIME_DIR" in os.environ
-                    else {}
-                ),
-            },
+            env=_podman_environment(include_runtime_dir=True),
         )
-        if result.returncode != 0 and resource_limit_error(f"{result.stdout}\n{result.stderr}"):
-            fallback_used = True
-            fallback_reason = "cgroup"
+        combined = f"{result.stdout}\n{result.stderr}"
+        used_namespace_fallback = result.returncode != 0 and namespace_error(combined)
+        used_resource_fallback = result.returncode != 0 and (
+            resource_limit_error(combined) or podman_configuration_error(combined)
+        )
+        if result.returncode != 0 and (used_namespace_fallback or used_resource_fallback):
             fallback_arguments = [
                 str(config.podman_path),
                 *podman_run_arguments(
@@ -81,70 +85,36 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                     cgroups="no-conmon",
                 ),
             ]
+            # This fallback needs no systemd user session (cgroup_manager=cgroupfs and
+            # userns=host both sidestep it), which is also the thing intermittently
+            # failing with "Failed to obtain podman configuration" on the primary
+            # attempt - so leave XDG_RUNTIME_DIR out here rather than retry the same
+            # flaky lookup.
             result = subprocess.run(
                 fallback_arguments,
                 capture_output=True,
                 text=True,
                 timeout=60,
                 check=False,
-                env={
-                    "HOME": os.environ.get("HOME", "/var/empty"),
-                    "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-                    **(
-                        {"XDG_RUNTIME_DIR": os.environ["XDG_RUNTIME_DIR"]}
-                        if "XDG_RUNTIME_DIR" in os.environ
-                        else {}
-                    ),
-                },
+                env=_podman_environment(include_runtime_dir=False),
             )
-        elif result.returncode != 0 and namespace_error(f"{result.stdout}\n{result.stderr}"):
-            fallback_arguments = [
-                str(config.podman_path),
-                *podman_run_arguments(
-                    config.repository,
-                    config.repository,
-                    config.task_image,
-                    "printf 'factory-terminal-ready\\n'",
-                    workspace_access="ro",
-                    resource_limits=False,
-                    userns="host",
-                    cgroup_manager="cgroupfs",
-                    pid_host=True,
-                    cgroups="no-conmon",
-                ),
-            ]
-            result = subprocess.run(
-                fallback_arguments,
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
-                env={
-                    "HOME": os.environ.get("HOME", "/var/empty"),
-                    "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-                    **(
-                        {"XDG_RUNTIME_DIR": os.environ["XDG_RUNTIME_DIR"]}
-                        if "XDG_RUNTIME_DIR" in os.environ
-                        else {}
-                    ),
-                },
-            )
-            if result.returncode == 0 and result.stdout == "factory-terminal-ready\n":
+            if used_namespace_fallback:
+                if result.returncode == 0 and result.stdout == "factory-terminal-ready\n":
+                    return Check(
+                        "worker-terminal",
+                        True,
+                        "rootless terminal ready with host user namespace fallback",
+                    )
                 return Check(
                     "worker-terminal",
-                    True,
-                    "rootless terminal ready with host user namespace fallback",
+                    False,
+                    f"rootless namespace fallback failed: {result.stdout}{result.stderr}"[-1000:],
                 )
-            return Check(
-                "worker-terminal",
-                False,
-                f"rootless namespace fallback failed: {result.stdout}{result.stderr}"[-1000:],
-            )
     except (OSError, subprocess.TimeoutExpired) as error:
         return Check("worker-terminal", False, str(error)[-1000:])
     passed = result.returncode == 0 and result.stdout == "factory-terminal-ready\n"
     detail = "rootless constrained terminal ready"
-    if fallback_used and fallback_reason == "cgroup":
+    if passed and used_resource_fallback:
         detail = "rootless terminal ready without nested cgroup limits"
     if not passed:
         detail = f"exit {result.returncode}: {result.stdout}{result.stderr}"[-1000:]
