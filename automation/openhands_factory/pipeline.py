@@ -302,6 +302,13 @@ class FactoryPipeline:
 
         if job.state is JobState.REVIEWING:
             reviewed_head = job.head_sha or workflow.head_sha()
+            # The worktree persists across retries of this state, so a review report
+            # left behind by an earlier failed attempt (crashed conversation, hit its
+            # turn budget, etc.) must not be re-validated as if it were fresh: remove
+            # it before running the conversation, so a conversation that fails to
+            # (re)write a valid report is reported as missing one, not judged against
+            # someone else's stale output.
+            (worktree / ".factory-review.json").unlink(missing_ok=True)
             self.conversations.run(
                 job.task, worktree, build_phase_prompt(prompt_dir, "review", job.task)
             )
