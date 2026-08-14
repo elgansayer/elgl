@@ -36,6 +36,30 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     assert (worktree / "frontend/node_modules").is_symlink()
 
 
+def test_changed_paths_includes_untracked_files(tmp_path: Path) -> None:
+    """has_changes() (git status) counts a new untracked file as a change, so
+    changed_paths() (git diff, which never reports untracked files on its own)
+    must too - otherwise a task whose only output is a new file passes the
+    implementing-phase gate but then fails verification with a confusing
+    "no changed paths" error instead of being judged on the file it added.
+    """
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    runner = Runner(
+        [
+            ProcessResult(0, "src/existing.py\n", ""),
+            ProcessResult(0, "src/new_file.py\n", ""),
+        ]
+    )
+    workflow = GitWorkflow(repository, "main", runner)
+
+    paths = workflow.changed_paths()
+
+    assert paths == {Path("src/existing.py"), Path("src/new_file.py")}
+    assert runner.calls[0] == ("git", "diff", "--name-only", "origin/main")
+    assert runner.calls[1] == ("git", "ls-files", "--others", "--exclude-standard")
+
+
 def test_prepare_worktree_reclaims_stale_local_branch(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()

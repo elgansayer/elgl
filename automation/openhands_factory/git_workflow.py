@@ -106,7 +106,21 @@ class GitWorkflow:
         )
         if result.returncode != 0:
             raise RepositorySafetyError(f"Could not inspect changes: {result.stderr}")
-        return {Path(line) for line in result.stdout.splitlines() if line.strip()}
+        paths = {Path(line) for line in result.stdout.splitlines() if line.strip()}
+        # `git diff` never reports untracked files, only modifications to tracked
+        # ones - but has_changes() (git status --porcelain) counts a new untracked
+        # file as a change too. Without this, a task whose only output is a new
+        # file would pass the has_changes() gate right after implementation, burn a
+        # full security-review cycle, and only then fail verification with a
+        # confusing "no changed paths" error instead of being judged - correctly -
+        # on the file it actually added.
+        untracked = self.runner(
+            ("git", "ls-files", "--others", "--exclude-standard"), self.repository
+        )
+        if untracked.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect changes: {untracked.stderr}")
+        paths.update(Path(line) for line in untracked.stdout.splitlines() if line.strip())
+        return paths
 
     def stage_all(self) -> None:
         result = self.runner(("git", "add", "--all"), self.repository)
