@@ -182,7 +182,10 @@ class FactoryPipeline:
 
     def _advance(self, job: Job) -> None:
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
-        prompt_dir = self.config.repository / "automation/prompts"
+        # Read from the task's own worktree, not the shared base checkout: the worktree
+        # is always freshly created from origin/main, while the base checkout's working
+        # tree is only ever fetched (refs updated), never reset, and can drift stale.
+        prompt_dir = worktree / "automation/prompts"
         if job.state is JobState.DISCOVERED:
             if job.task.source == "github-pull-request":
                 self._discover_pull_request(job, worktree)
@@ -503,7 +506,9 @@ class FactoryPipeline:
             self._architect_state_path(), {"last_run_at": datetime.now(UTC).isoformat()}
         )
         worktree = self.config.worktree_dir / "architect"
-        prompt_dir = self.config.repository / "automation/prompts"
+        # See the matching comment in _advance(): read from the worktree, not the
+        # shared base checkout, so this always uses the current prompt on origin/main.
+        prompt_dir = worktree / "automation/prompts"
         if worktree.exists():
             GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(
                 worktree, force=True

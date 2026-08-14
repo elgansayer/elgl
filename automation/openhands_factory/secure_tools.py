@@ -135,6 +135,8 @@ class PodmanTerminalExecutor(ToolExecutor[TerminalAction, TerminalObservation]):
             "HOME": os.environ.get("HOME", "/var/empty"),
             "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         }
+        if "XDG_RUNTIME_DIR" in os.environ:
+            environment["XDG_RUNTIME_DIR"] = os.environ["XDG_RUNTIME_DIR"]
         try:
             result = _run_podman(arguments, timeout, environment)
             fallback_reason = f"{result.stdout}\n{result.stderr}"

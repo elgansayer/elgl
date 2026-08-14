@@ -56,6 +56,11 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
             env={
                 "HOME": os.environ.get("HOME", "/var/empty"),
                 "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                **(
+                    {"XDG_RUNTIME_DIR": os.environ["XDG_RUNTIME_DIR"]}
+                    if "XDG_RUNTIME_DIR" in os.environ
+                    else {}
+                ),
             },
         )
         if result.returncode != 0 and resource_limit_error(f"{result.stdout}\n{result.stderr}"):
@@ -85,6 +90,11 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                 env={
                     "HOME": os.environ.get("HOME", "/var/empty"),
                     "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                    **(
+                        {"XDG_RUNTIME_DIR": os.environ["XDG_RUNTIME_DIR"]}
+                        if "XDG_RUNTIME_DIR" in os.environ
+                        else {}
+                    ),
                 },
             )
         elif result.returncode != 0 and namespace_error(f"{result.stdout}\n{result.stderr}"):
@@ -112,6 +122,11 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                 env={
                     "HOME": os.environ.get("HOME", "/var/empty"),
                     "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                    **(
+                        {"XDG_RUNTIME_DIR": os.environ["XDG_RUNTIME_DIR"]}
+                        if "XDG_RUNTIME_DIR" in os.environ
+                        else {}
+                    ),
                 },
             )
             if result.returncode == 0 and result.stdout == "factory-terminal-ready\n":

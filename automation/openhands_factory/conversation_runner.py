@@ -205,7 +205,7 @@ class SdkConversationFactory:
         agent = Agent(
             llm=build_llm(self.config),
             tools=[Tool(name=SecureTerminalTool.name), Tool(name=SecureFileEditorTool.name)],
-            system_prompt=build_system_prompt(self.config.repository / "automation/prompts"),
+            system_prompt=build_system_prompt(workspace / "automation/prompts"),
         )
         return Conversation(  # type: ignore[return-value]
             agent=agent,
