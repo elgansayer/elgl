@@ -12,3 +12,8 @@
 **Vulnerability:** Found a hardcoded fallback string for `LIVEKIT_SECRET` and `LIVEKIT_API_KEY` in `backend/src/audio-rooms/audio-rooms.module.ts`.
 **Learning:** Default fallback configs in module files can easily expose hardcoded secrets. Missing secrets should fail fast instead of providing a fallback value that an attacker might try to use.
 **Prevention:** Avoid providing hardcoded string fallbacks for secrets. Throw an error on initialization if a required API key or secret is missing.
+
+## 2026-08-12 - [Strictly enforce secrets in production]
+**Vulnerability:** Missing check to enforce that `TRANSFER_SECRET` is defined in production, falling back to a dev-only hardcoded secret.
+**Learning:** Default fallbacks for secrets intended for local development can accidentally slip into production if not strictly validated against `NODE_ENV`.
+**Prevention:** Explicitly assert `process.env.NODE_ENV === 'production'` and throw an error if a secret is absent rather than falling back to a default value.
