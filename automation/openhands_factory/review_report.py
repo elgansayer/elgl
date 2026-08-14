@@ -45,9 +45,17 @@ def extract_acceptance_criteria(body: str) -> list[str]:
     return criteria
 
 
-def validate_review_report(
-    worktree: Path, task_body: str, expected_head_sha: str | None = None
-) -> ReviewReport:
+def validate_review_report(worktree: Path, task_body: str) -> ReviewReport:
+    """Validate a review report.
+
+    Which commit was reviewed is deliberately not read from the report: the caller
+    already knows it via `git rev-parse HEAD`, run on the host before the
+    conversation even started, which is the only trusted source for it anyway.
+    Asking the model to correctly copy a 40-character hash into the report added a
+    frequent, needless point of failure (a forgotten field, or a placeholder, would
+    fail an otherwise-valid review) without adding any real integrity guarantee
+    over the host-read value.
+    """
     report_path = worktree / ".factory-review.json"
     if not report_path.exists():
         raise FactoryError("Structured review report missing")
@@ -59,7 +67,6 @@ def validate_review_report(
 
     approved = data.get("approved")
     summary = data.get("summary")
-    reviewed_sha = data.get("reviewed_sha")
     criteria = data.get("acceptance_criteria", [])
     blockers = data.get("blocking_findings", [])
 
@@ -67,13 +74,6 @@ def validate_review_report(
         raise FactoryError("Structured review report missing 'approved' boolean")
     if not isinstance(summary, str) or not summary.strip():
         raise FactoryError("Structured review report missing non-empty 'summary'")
-    if not isinstance(reviewed_sha, str) or not re.fullmatch(r"[0-9a-fA-F]{7,64}", reviewed_sha):
-        raise FactoryError("Structured review report missing valid 'reviewed_sha'")
-    if expected_head_sha is not None and reviewed_sha != expected_head_sha:
-        raise FactoryError(
-            f"Structured review report SHA {reviewed_sha} does not match expected head "
-            f"{expected_head_sha}"
-        )
 
     if not isinstance(criteria, list):
         raise FactoryError("Structured review report 'acceptance_criteria' must be a list")
