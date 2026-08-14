@@ -25,7 +25,13 @@ def test_every_change_runs_full_frontend_backend_and_factory_gate(tmp_path: Path
     frontend_commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
     frontend_e2e = next(command for command in frontend_commands if command.name == "frontend-e2e")
     assert frontend_e2e.arguments[:2] == ("bash", "-lc")
-    assert "npm start" in frontend_e2e.arguments[2]
+    script = frontend_e2e.arguments[2]
+    assert "npm start" in script
+    # A crashed dev server must fail fast with its own log, not silently burn
+    # the whole wait window and then fail a second, more confusing time inside
+    # npm run e2e against a server that was never coming up.
+    assert "kill -0" in script
+    assert "factory-angular-e2e.log" in script
 
 
 def test_empty_diff_cannot_claim_verification(tmp_path: Path) -> None:
