@@ -37,6 +37,14 @@ def podman_run_arguments(
     cgroups: str | None = None,
 ) -> list[str]:
     """Build the common constrained worker-container command line."""
+    # The image's default user ("worker") is an arbitrary numeric uid unrelated to
+    # the host - --userns=keep-id only maps host uid <-> container uid values, it
+    # does not change which uid the container's process actually runs as. Without
+    # --user pinning it to the daemon's own uid, every worktree file and the shared
+    # .git metadata (created with a restrictive 0600/0700 umask) is unreadable from
+    # inside the container even though it's bind-mounted read-write.
+    uid = os.getuid()
+    gid = os.getgid()
     arguments = [
         "run",
         "--rm",
@@ -44,6 +52,7 @@ def podman_run_arguments(
         "--security-opt=no-new-privileges",
         "--cap-drop=all",
         f"--userns={userns}",
+        f"--user={uid}:{gid}",
         "--volume",
         f"{workspace}:/workspace:{workspace_access},Z",
     ]
@@ -59,6 +68,18 @@ def podman_run_arguments(
             f"--memory={memory_limit}",
             f"--cpus={cpu_limit}",
         ]
+    # A task worktree's .git is a file pointing at an absolute host path under the
+    # shared base checkout (repository/.git/worktrees/<name>), since git worktrees
+    # keep their real git-dir there rather than inside the worktree itself. Without
+    # this mounted at that same absolute path, every git command the agent runs
+    # inside the container - status, diff, log, rev-parse - fails outright with
+    # "fatal: not a git repository". Read-only: the agent can edit /workspace
+    # freely, but the daemon (outside the container) owns every actual git mutation
+    # (add/commit/push), so the object database and refs never need write access
+    # from inside the sandbox.
+    git_dir = repository / ".git"
+    if git_dir.is_dir():
+        arguments.extend(("--volume", f"{git_dir}:{git_dir}:ro,Z"))
     for relative in (
         "node_modules",
         "frontend/node_modules",
