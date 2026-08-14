@@ -19,6 +19,7 @@ from openhands_factory.provider_health import (
     CircuitBreaker,
     ProviderHealthStore,
     classify_failure,
+    extract_retry_after_seconds,
 )
 from openhands_factory.provider_profiles import select_primary_provider
 
@@ -173,9 +174,10 @@ class ConversationRunner:
                 detail = f"conversation process exited with status {exit_code}"
 
             kind = classify_failure(status_code, detail)
+            retry_after = extract_retry_after_seconds(detail)
             for b in breakers:
                 if b.provider == primary_provider:
-                    b.record_failure(kind)
+                    b.record_failure(kind, retry_after_seconds=retry_after)
             store.save(breakers)
             raise FactoryError(detail)
 
