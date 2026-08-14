@@ -61,7 +61,7 @@ def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> N
     assert "TasksMax=128" in unit
     for directive in (
         "PrivateTmp=true",
-        "PrivateDevices=false",
+        "PrivateDevices=true",
         "ProtectSystem=strict",
         "ProtectHome=true",
         "ProtectKernelTunables=true",

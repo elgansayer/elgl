@@ -42,8 +42,6 @@ class FactoryConfig(BaseModel):
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
     max_no_pr_hours: float = 6
-    architect_interval_hours: float = 168
-    architect_max_new_issues: int = 8
     github_token: SecretStr
     github_repository: str = "elgansayer/elgl"
     require_ready_label: bool = False
@@ -68,7 +66,6 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
-        "architect_max_new_issues",
     )
     @classmethod
     def positive_limits(cls, value: int) -> int:
@@ -157,8 +154,6 @@ class FactoryConfig(BaseModel):
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
-                architect_interval_hours=float(env.get("FACTORY_ARCHITECT_INTERVAL_HOURS", "168")),
-                architect_max_new_issues=int(env.get("FACTORY_ARCHITECT_MAX_NEW_ISSUES", "8")),
                 github_token=SecretStr(required("GITHUB_TOKEN")),
                 github_repository=env.get("GITHUB_REPOSITORY", "elgansayer/elgl"),
                 require_ready_label=boolean("FACTORY_REQUIRE_READY_LABEL", False),

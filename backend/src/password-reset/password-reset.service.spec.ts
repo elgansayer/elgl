@@ -9,10 +9,10 @@ import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
   let mockSupabaseClient: {
-    from: Mock;
-    auth: { admin: { listUsers: Mock; updateUserById: Mock } };
+    from: jest.Mock;
+    auth: { admin: { listUsers: jest.Mock; updateUserById: jest.Mock } };
   };
-  let mockEmailService: { sendPasswordResetEmail: Mock };
+  let mockEmailService: { sendPasswordResetEmail: jest.Mock };
 
   beforeEach(async () => {
     mockEmailService = {
@@ -36,7 +36,7 @@ describe('PasswordResetService', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: vi.fn().mockReturnValue(mockSupabaseClient),
+            getClient: jest.fn().mockReturnValue(mockSupabaseClient),
           },
         },
         { provide: EmailService, useValue: mockEmailService },
@@ -128,7 +128,7 @@ describe('PasswordResetService', () => {
       });
 
       const insertChain = {
-        insert: vi
+        insert: jest
           .fn()
           .mockResolvedValue({ error: new Error('insert failed') }),
       };

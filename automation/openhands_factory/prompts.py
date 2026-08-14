@@ -41,19 +41,14 @@ def build_task_prompt(
 
 
 def build_phase_prompt(prompt_dir: Path, phase: str, task: Task, extra: str = "") -> str:
-    if phase not in {"review", "repair", "security", "quality_repair", "architect"}:
+    if phase not in {"review", "repair", "security", "quality_repair"}:
         raise ValueError(f"Unsupported factory phase: {phase}")
     instructions = (prompt_dir / f"{phase}.md").read_text(encoding="utf-8")
-    if phase == "architect":
-        closing = "Work only in the assigned worktree."
-    else:
-        closing = (
-            "Inspect AGENTS.md and the associated production and test files. Work only in the "
-            "assigned worktree. If defects are found, correct them and update tests. If no defects "
-            "are found, leave the worktree unchanged. Run the applicable verification commands "
-            "before finishing."
-        )
     return (
         f"{instructions}\n\nTask ID: {task.identifier}\nTitle: {task.title}\n"
-        f"\n{task.body}\n\n{extra}\n\n{closing}"
+        f"\n{task.body}\n\n{extra}\n\n"
+        "Inspect AGENTS.md and the associated production and test files. Work only in the assigned "
+        "worktree. If defects are found, correct them and update tests. If no defects are found, "
+        "leave "
+        "the worktree unchanged. Run the applicable verification commands before finishing."
     )

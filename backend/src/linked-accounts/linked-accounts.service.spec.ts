@@ -90,13 +90,13 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should return empty array on supabase error', async () => {
-      const select = vi.fn().mockReturnThis();
-      const eq = vi.fn().mockReturnThis();
-      const order = vi
+      const select = jest.fn().mockReturnThis();
+      const eq = jest.fn().mockReturnThis();
+      const order = jest
         .fn()
         .mockResolvedValue({ data: null, error: { message: 'DB error' } });
-      (supabaseService.getClient as Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ select, eq, order }),
+      (supabaseService.getClient as jest.Mock).mockReturnValue({
+        from: jest.fn().mockReturnValue({ select, eq, order }),
       });
 
       const result = await service.getLinkedAccounts('user-1');
@@ -117,11 +117,11 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should throw on error', async () => {
-      const upsert = vi
+      const upsert = jest
         .fn()
         .mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ upsert }),
+      (supabaseService.getClient as jest.Mock).mockReturnValue({
+        from: jest.fn().mockReturnValue({ upsert }),
       });
 
       await expect(service.linkAccount('user-1', 'google')).rejects.toThrow(
@@ -144,12 +144,12 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should throw on error', async () => {
-      const deleteFn = vi.fn().mockReturnThis();
-      const match = vi
+      const deleteFn = jest.fn().mockReturnThis();
+      const match = jest
         .fn()
         .mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as Mock).mockReturnValue({
-        from: vi.fn().mockReturnValue({ delete: deleteFn, match }),
+      (supabaseService.getClient as jest.Mock).mockReturnValue({
+        from: jest.fn().mockReturnValue({ delete: deleteFn, match }),
       });
 
       await expect(service.unlinkAccount('user-1', 'google')).rejects.toThrow(

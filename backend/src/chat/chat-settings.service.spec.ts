@@ -37,9 +37,9 @@ describe('ChatSettingsService', () => {
   describe('getSettings', () => {
     it('should return default settings when no preferences exist', async () => {
       const chain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest
           .fn()
           .mockResolvedValue({ data: { chat_preferences: null }, error: null }),
       };
@@ -56,9 +56,9 @@ describe('ChatSettingsService', () => {
 
     it('should return default settings on error', async () => {
       const chain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest
           .fn()
           .mockResolvedValue({ data: null, error: new Error('DB error') }),
       };

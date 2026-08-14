@@ -11,7 +11,6 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import FactoryDaemon, set_paused
 from openhands_factory.doctor import run_doctor
 from openhands_factory.exceptions import FactoryError
-from openhands_factory.github import GitHubClient
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.provider_profiles import discover_gemini_models, discover_opencode_models
 from openhands_factory.state import read_json
@@ -40,8 +39,6 @@ def parser() -> argparse.ArgumentParser:
     subcommands.add_parser("resume")
     subcommands.add_parser("metrics")
     subcommands.add_parser("reconcile")
-    backlog = subcommands.add_parser("backlog")
-    backlog.add_argument("action", choices=("requeue-quarantined",))
     return result
 
 
@@ -108,16 +105,6 @@ def main(arguments: list[str] | None = None) -> int:
         if args.command == "reconcile":
             expired = TaskStore(config.state_dir).prune_expired_leases()
             print(json.dumps({"expired_leases_released": expired}, indent=2))
-            return 0
-        if args.command == "backlog":
-            github = GitHubClient(
-                config.github_repository,
-                config.repository,
-                config.github_token.get_secret_value(),
-                base_branch=config.base_branch,
-            )
-            requeued = github.requeue_quarantined_issues()
-            print(json.dumps({"requeued": requeued}, indent=2))
             return 0
     except FactoryError as error:
         print(f"Factory error: {error}", file=sys.stderr)

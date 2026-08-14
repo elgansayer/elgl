@@ -1,16 +1,8 @@
-import {
-  APP_INITIALIZER,
-  ApplicationConfig,
-  ErrorHandler,
-  inject,
-  importProvidersFrom,
-  isDevMode,
-  PLATFORM_ID,
-} from '@angular/core';
+import { ApplicationConfig, ErrorHandler, inject, isDevMode, APP_INITIALIZER, importProvidersFrom } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors, HttpClient } from '@angular/common/http';
 import { provideClientHydration } from '@angular/platform-browser';
-import { DOCUMENT, isPlatformServer } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
@@ -27,13 +19,10 @@ export function createTranslateLoader(http: HttpClient): TranslateHttpLoader {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
 }
 
-export function initConfig(
-  configService: ConfigurationService,
-  platformId: object,
-): () => Promise<void> {
-  return () =>
-    isPlatformServer(platformId) ? Promise.resolve() : configService.loadConfiguration();
+export function initConfig(configService: ConfigurationService): () => Promise<void> {
+  return () => configService.loadConfiguration();
 }
+
 
 function initialiseDeepLinks(): () => void {
   const deepLinkService = inject(DeepLinkService);
@@ -82,7 +71,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: APP_INITIALIZER,
       useFactory: initConfig,
-      deps: [ConfigurationService, PLATFORM_ID],
+      deps: [ConfigurationService],
       multi: true,
     },
     {

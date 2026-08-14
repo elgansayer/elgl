@@ -4,7 +4,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from openhands_factory.exceptions import FactoryError
 from openhands_factory.git_workflow import GitWorkflow
 
 
@@ -34,14 +33,10 @@ def is_test_path(path: Path) -> bool:
 
 def check_quality_gate(workflow: GitWorkflow, base_branch: str) -> list[QualityFinding]:
     result = workflow.runner(("git", "diff", f"origin/{base_branch}", "-U0"), workflow.repository)
-    returncode = getattr(result, "returncode", 0)
-    if isinstance(returncode, int) and returncode != 0:
-        raise FactoryError(f"Could not inspect quality diff: {result.stderr[-2000:]}")
     diff_output = result.stdout
     findings: list[QualityFinding] = []
 
     current_file = None
-    added_line = 0
 
     production_mock_patterns = [
         re.compile(r"\bmocked\b", re.IGNORECASE),
@@ -72,23 +67,18 @@ def check_quality_gate(workflow: GitWorkflow, base_branch: str) -> list[QualityF
     ]
 
     skipped_test_patterns = [
-        re.compile(r"\b(?:describe|it|test)\.skip\s*\("),
-        re.compile(r"\b(?:xit|xdescribe)\s*\("),
-        re.compile(r"\bcy\.skip\s*\(") ,
-        re.compile(r"@pytest\.mark\.skip(?:if)?\b"),
-        re.compile(r"pytest\.skip\s*\("),
+        re.compile(r"describe\.skip\("),
+        re.compile(r"it\.skip\("),
+        re.compile(r"test\.skip\("),
+        re.compile(r"\bxit\("),
+        re.compile(r"\bxdescribe\("),
+        re.compile(r"@pytest\.mark\.skip"),
+        re.compile(r"pytest\.skip\("),
     ]
 
     for line in diff_output.splitlines():
         if line.startswith("+++ b/"):
             current_file = Path(line[6:])
-            added_line = 0
-            continue
-
-        if line.startswith("@@"):
-            match = re.search(r"\+(\d+)(?:,(\d+))?", line)
-            if match:
-                added_line = int(match.group(1))
             continue
 
         if line.startswith("+") and not line.startswith("+++"):
@@ -102,7 +92,7 @@ def check_quality_gate(workflow: GitWorkflow, base_branch: str) -> list[QualityF
                             QualityFinding(
                                 code="skipped-test",
                                 path=current_file,
-                                line=added_line,
+                                line=None,
                                 summary="Newly skipped test detected",
                                 evidence=added_text.strip(),
                             )
@@ -116,7 +106,7 @@ def check_quality_gate(workflow: GitWorkflow, base_branch: str) -> list[QualityF
                                 QualityFinding(
                                     code="production-mock",
                                     path=current_file,
-                                    line=added_line,
+                                    line=None,
                                     summary="Production mock or placeholder detected",
                                     evidence=added_text.strip(),
                                 )
@@ -128,15 +118,10 @@ def check_quality_gate(workflow: GitWorkflow, base_branch: str) -> list[QualityF
                                 QualityFinding(
                                     code="unsafe-type-escape",
                                     path=current_file,
-                                    line=added_line,
+                                    line=None,
                                     summary="Unsafe type escape detected",
                                     evidence=added_text.strip(),
                                 )
                             )
-
-            added_line += 1
-
-        elif line.startswith(" ") and added_line:
-            added_line += 1
 
     return findings

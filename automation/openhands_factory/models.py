@@ -54,9 +54,6 @@ class Task:
     body: str
     source: str
     priority: int
-    # Set only when source is "github-pull-request": the existing branch to review,
-    # as opposed to a factory/* branch the factory creates for an issue it implements.
-    pr_branch: str | None = None
 
 
 @dataclass
@@ -70,7 +67,6 @@ class Job:
     repair_attempts: int = 0
     quality_repairs: int = 0
     last_error: str | None = None
-    next_attempt_at: datetime | None = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

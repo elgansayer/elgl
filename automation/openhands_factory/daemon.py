@@ -23,19 +23,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 def select_batch(
-    jobs: dict[str, Job],
-    limit: int,
-    excluded_task_ids: set[str] | None = None,
-    now: datetime | None = None,
+    jobs: dict[str, Job], limit: int, excluded_task_ids: set[str] | None = None
 ) -> list[Job]:
     excluded = excluded_task_ids or set()
-    current = now or datetime.now(UTC)
     candidates = [
         job
         for job in jobs.values()
-        if job.task.identifier not in excluded
-        and job.state.value not in {"done", "quarantined"}
-        and (job.next_attempt_at is None or job.next_attempt_at <= current)
+        if job.task.identifier not in excluded and job.state.value not in {"done", "quarantined"}
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
     return candidates[:limit]
@@ -70,22 +64,14 @@ class FactoryDaemon:
         except Timeout:
             LOGGER.error("Another factory daemon owns the repository lock")
             return 2
-        except Exception as error:
-            LOGGER.exception("Factory daemon reached an ultimate failure")
-            self.alerts.send(f"OpenHands factory ultimate failure: daemon stopped: {error}")
-            return 1
 
     def _loop(self) -> int:
         active: dict[Future[Job | None], str] = {}
         next_refresh_at = 0.0
-        architect_future: Future[None] | None = None
-        with (
-            ThreadPoolExecutor(
-                max_workers=self.config.max_parallel_jobs,
-                thread_name_prefix="factory-worker",
-            ) as workers,
-            ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-architect") as architect,
-        ):
+        with ThreadPoolExecutor(
+            max_workers=self.config.max_parallel_jobs,
+            thread_name_prefix="factory-worker",
+        ) as workers:
             while not self.stopping:
                 for future, task_id in list(active.items()):
                     if not future.done():
@@ -115,16 +101,6 @@ class FactoryDaemon:
                         future = workers.submit(worker.run_job, job.task.identifier)
                         active[future] = job.task.identifier
                         LOGGER.info("Scheduled task %s", job.task.identifier)
-                if not self.paused() and (architect_future is None or architect_future.done()):
-                    if architect_future is not None:
-                        try:
-                            architect_future.result()
-                        except Exception:
-                            LOGGER.exception("Architect cycle crashed")
-                    if self.pipeline.architect_due():
-                        LOGGER.info("Scheduling weekly architect cycle")
-                        architect_worker = FactoryPipeline(self.config)
-                        architect_future = architect.submit(architect_worker.run_architect_cycle)
                 self._write_daemon_state("running", active)
                 time.sleep(min(self.config.cooldown_seconds, 10))
         self._write_daemon_state("stopped", active)
