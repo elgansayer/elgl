@@ -20,7 +20,7 @@ from openhands_factory.provider_health import (
     ProviderHealthStore,
     classify_failure,
 )
-from openhands_factory.provider_profiles import openai_credentials_available
+from openhands_factory.provider_profiles import select_primary_provider
 
 
 class ConversationProtocol(Protocol):
@@ -164,11 +164,7 @@ class ConversationRunner:
                 ),
             ]
 
-        primary_provider = (
-            ProviderName.OPENAI_SUBSCRIPTION
-            if openai_credentials_available(self.config)
-            else ProviderName.OPENCODE_GO
-        )
+        primary_provider = select_primary_provider(self.config)
 
         if not isinstance(outcome, dict) or outcome.get("completed") is not True:
             status_code = outcome.get("status_code") if isinstance(outcome, dict) else None
