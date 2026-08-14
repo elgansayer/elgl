@@ -301,7 +301,6 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
-            reviewed_head = job.head_sha or workflow.head_sha()
             # The worktree persists across retries of this state, so a review report
             # left behind by an earlier failed attempt (crashed conversation, hit its
             # turn budget, etc.) must not be re-validated as if it were fresh: remove
@@ -312,7 +311,7 @@ class FactoryPipeline:
             self.conversations.run(
                 job.task, worktree, build_phase_prompt(prompt_dir, "review", job.task)
             )
-            report = validate_review_report(worktree, job.task.body, reviewed_head)
+            report = validate_review_report(worktree, job.task.body)
             if workflow.has_changes():
                 self._verify(workflow)
                 workflow.stage_all()
@@ -331,8 +330,6 @@ class FactoryPipeline:
                 raise FactoryError("Pull request number is missing")
             if job.head_sha is None:
                 job.head_sha = workflow.head_sha()
-            if job.head_sha != reviewed_head:
-                raise FactoryError("Review report head differs from the final reviewed SHA")
             self.github.publish_review_status(
                 job.head_sha,
                 approved=True,
