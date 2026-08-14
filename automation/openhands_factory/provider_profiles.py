@@ -214,4 +214,14 @@ def build_llm(config: FactoryConfig) -> LLM:
         api_key=config.opencode_api_key,
         base_url=config.opencode_base_url,
         usage_id=config.opencode_profile_name,
+        # deepseek-v4-flash's thinking mode hits a well-documented, still-open
+        # litellm bug class: reasoning_content from one turn isn't correctly
+        # forwarded on the next, so the provider (Console Go) rejects the
+        # follow-up turn outright with "reasoning_content ... must be passed
+        # back to the API" - killing the whole conversation.
+        # reasoning_effort="none" disables thinking mode for this tier,
+        # sidestepping the bug rather than chasing a moving target of fixes.
+        # See e.g. https://github.com/BerriAI/litellm/issues/26395 and
+        # https://github.com/BerriAI/litellm/pull/28080 (both DeepSeek V4).
+        reasoning_effort="none",
     )
