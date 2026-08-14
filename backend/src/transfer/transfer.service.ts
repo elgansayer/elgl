@@ -10,6 +10,17 @@ export class TransferService {
   constructor(private readonly supabaseService: SupabaseService) {
     this.secret =
       process.env.TRANSFER_SECRET ?? 'device-transfer-secret-dev-only';
+
+    // Fail-fast security check: DO NOT allow the application to run in
+    // production using the default/insecure transfer secret.
+    if (
+      process.env.NODE_ENV === 'production' &&
+      this.secret === 'device-transfer-secret-dev-only'
+    ) {
+      throw new Error(
+        'CRITICAL SECURITY ERROR: TRANSFER_SECRET must be explicitly set in production environments to prevent authorization bypass.',
+      );
+    }
   }
 
   /**
