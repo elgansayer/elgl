@@ -36,8 +36,14 @@ export class AdminAuditQueryService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    if (query.startTime && query.endTime && Date.parse(query.startTime) > Date.parse(query.endTime)) {
-      throw new BadRequestException('startTime must be before or equal to endTime');
+    if (
+      query.startTime &&
+      query.endTime &&
+      Date.parse(query.startTime) > Date.parse(query.endTime)
+    ) {
+      throw new BadRequestException(
+        'startTime must be before or equal to endTime',
+      );
     }
 
     let request = this.supabaseService
@@ -47,8 +53,10 @@ export class AdminAuditQueryService {
 
     if (query.action) request = request.eq('action', query.action);
     if (query.outcome) request = request.eq('outcome', query.outcome);
-    if (query.capabilityKey) request = request.eq('capability_key', query.capabilityKey);
-    if (query.actorUserId) request = request.eq('actor_user_id', query.actorUserId);
+    if (query.capabilityKey)
+      request = request.eq('capability_key', query.capabilityKey);
+    if (query.actorUserId)
+      request = request.eq('actor_user_id', query.actorUserId);
     if (query.targetType) request = request.eq('target_type', query.targetType);
     if (query.targetId) request = request.eq('target_id', query.targetId);
     if (query.correlationId) {
@@ -64,7 +72,7 @@ export class AdminAuditQueryService {
     if (error) throw error;
 
     return {
-      events: (data ?? []) as AdminAuditEventSummary[],
+      events: data ?? [],
       total: count ?? 0,
       page,
       pageSize,

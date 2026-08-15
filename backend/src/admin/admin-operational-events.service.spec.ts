@@ -42,7 +42,9 @@ describe('AdminOperationalEventsService', () => {
   });
 
   it('returns bounded newest-first operational events with exact and time filters', async () => {
-    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const range = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
     const lte = vi.fn().mockReturnValue({ order });
     const gte = vi.fn().mockReturnValue({ lte });

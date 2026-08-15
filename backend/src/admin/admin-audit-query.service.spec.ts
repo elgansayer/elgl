@@ -40,7 +40,9 @@ describe('AdminAuditQueryService', () => {
   });
 
   it('filters audit events by exact outcome', async () => {
-    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const range = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
     const eq = vi.fn().mockReturnValue({ order });
     const select = vi.fn().mockReturnValue({ eq, order });
@@ -55,7 +57,9 @@ describe('AdminAuditQueryService', () => {
   });
 
   it('filters audit events by exact capability key', async () => {
-    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const range = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
     const eq = vi.fn().mockReturnValue({ order });
     const select = vi.fn().mockReturnValue({ eq, order });
