@@ -6,6 +6,7 @@ import { AdminController } from './admin.controller';
 import { AdminV1Controller } from './admin-v1.controller';
 import { AdminService } from './admin.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
+import { AdminUserDetailService } from './admin-user-detail.service';
 import { AdminGuard } from './guards/admin.guard';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 
@@ -15,6 +16,7 @@ import { AdminCapabilityGuard } from './guards/admin-capability.guard';
   providers: [
     AdminService,
     AdminAuthorizationService,
+    AdminUserDetailService,
     AdminGuard,
     AdminCapabilityGuard,
   ],
