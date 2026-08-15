@@ -5,10 +5,6 @@ import { environment } from '../../environments/environment';
 import { ImageCompressionService } from './image-compression.service';
 import { SupabaseService } from './supabase.service';
 
-export interface AvatarUploadResponse {
-  avatarUrl: string;
-}
-
 export interface VoiceNoteUploadResponse {
   url: string;
 }
@@ -21,17 +17,6 @@ export class MediaService {
   private readonly imageCompression = inject(ImageCompressionService);
   private readonly supabaseService = inject(SupabaseService);
   private readonly baseUrl = `${environment.apiUrl}/media`;
-
-  async uploadAvatar(file: File): Promise<AvatarUploadResponse> {
-    // Compress image client-side before uploading
-    const compressed = await this.imageCompression.compressImage(file);
-    const formData = new FormData();
-    formData.append('file', compressed, compressed.name);
-
-    return firstValueFrom(
-      this.http.post<AvatarUploadResponse>(`${this.baseUrl}/avatar/upload`, formData),
-    );
-  }
 
   async uploadVoiceNote(
     blob: Blob,

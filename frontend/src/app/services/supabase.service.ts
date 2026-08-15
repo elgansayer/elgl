@@ -260,26 +260,6 @@ export class SupabaseService {
     return { fileUrl: publicUrlData.publicUrl };
   }
 
-  async uploadAvatar(file: File): Promise<string> {
-    const fileName = `avatars/${Date.now()}-${file.name}`;
-    const uploadResponse = await this.supabase.storage
-      .from('avatars')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (uploadResponse.error) {
-      throw new Error(`Failed to upload avatar: ${uploadResponse.error.message}`);
-    }
-
-    const { data: publicUrlData } = this.supabase.storage.from('avatars').getPublicUrl(fileName);
-    if (!publicUrlData?.publicUrl) {
-      throw new Error('Failed to retrieve avatar public URL');
-    }
-    return publicUrlData.publicUrl;
-  }
-
   async listFiles(folder: string): Promise<string[]> {
     const { data, error } = await this.supabase.storage.from('documents').list(folder);
 

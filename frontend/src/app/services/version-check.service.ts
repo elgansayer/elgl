@@ -1,5 +1,14 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { APP_VERSION, MIN_SUPPORTED_VERSION } from '../version.constants';
+import { environment } from '../../environments/environment';
+
+export interface VersionInfo {
+  current: string;
+  latest: string;
+  updateUrl?: string;
+}
 
 /**
  * Checks whether the installed app version is deprecated and
@@ -8,8 +17,14 @@ import { APP_VERSION, MIN_SUPPORTED_VERSION } from '../version.constants';
  */
 @Injectable({ providedIn: 'root' })
 export class VersionCheckService {
+  private http = inject(HttpClient);
+
   /** True when the current app version is below the minimum supported version */
   readonly isDeprecated = signal(false);
+
+  getVersion(): Observable<VersionInfo> {
+    return this.http.get<VersionInfo>(`${environment.apiUrl}/version`);
+  }
 
   /** Parse and compare version strings */
   private isVersionLower(installed: string, minimum: string): boolean {

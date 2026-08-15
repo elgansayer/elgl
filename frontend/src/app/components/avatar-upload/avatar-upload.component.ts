@@ -1,6 +1,6 @@
 import { Component, inject, signal, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { SupabaseService } from '../../services/supabase.service';
+import { UserService } from '../../services/user.service';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
 import { AppButtonSecondaryComponent } from '../primitives/button-secondary/button-secondary.component';
 
@@ -11,7 +11,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
   styleUrls: ['./avatar-upload.component.scss'],
 })
 export class AvatarUploadComponent {
-  private readonly supabaseService = inject(SupabaseService);
+  private readonly userService = inject(UserService);
 
   readonly avatarUrl = output<string>();
 
@@ -163,8 +163,8 @@ export class AvatarUploadComponent {
         type: 'image/png',
       });
 
-      // 5. Upload via Supabase service
-      const url = await this.supabaseService.uploadAvatar(croppedFile);
+      // 5. Upload via User service
+      const url = await this.userService.uploadAvatar(croppedFile);
 
       // 6. Emit the resulting URL
       if (url) {

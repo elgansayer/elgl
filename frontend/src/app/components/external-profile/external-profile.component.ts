@@ -2,7 +2,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
-import { StudyBuddiesService } from '../../services/study-buddies.service';
+import { StudyBuddyService } from '../../services/study-buddy.service';
 import { I18nService } from '../../services/i18n.service';
 import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 
@@ -42,7 +42,7 @@ import { HapticFeedbackService } from '../../services/haptic-feedback.service';
 export class ExternalProfileComponent {
   readonly userId = input.required<string>();
 
-  private readonly studyBuddiesService = inject(StudyBuddiesService);
+  private readonly studyBuddyService = inject(StudyBuddyService);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
   private readonly hapticFeedback = inject(HapticFeedbackService);
@@ -52,7 +52,7 @@ export class ExternalProfileComponent {
   async follow(): Promise<void> {
     this.hapticFeedback.tap();
     try {
-      await this.studyBuddiesService.follow(this.userId());
+      await this.studyBuddyService.follow(this.userId());
       this.isFollowing.set(true);
     } catch (error) {
       console.error('Follow failed:', error);
@@ -62,7 +62,7 @@ export class ExternalProfileComponent {
   async unfollow(): Promise<void> {
     this.hapticFeedback.tap();
     try {
-      await this.studyBuddiesService.unfollow(this.userId());
+      await this.studyBuddyService.unfollow(this.userId());
       this.isFollowing.set(false);
     } catch (error) {
       console.error('Unfollow failed:', error);
@@ -71,7 +71,7 @@ export class ExternalProfileComponent {
 
   async sendMessage(): Promise<void> {
     try {
-      const { channel } = await this.studyBuddiesService.getOrCreateChannel(this.userId());
+      const { channel } = await this.studyBuddyService.getOrCreateChannel(this.userId());
       void this.router.navigate(['/chat', 'room', channel]);
     } catch (error) {
       console.error('Failed to open chat:', error);

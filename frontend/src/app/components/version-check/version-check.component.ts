@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { VersionService, VersionInfo } from '../../services/version.service';
+import { VersionCheckService, VersionInfo } from '../../services/version-check.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -38,7 +38,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
   `,
 })
 export class VersionCheckComponent implements OnInit {
-  private versionService = inject(VersionService);
+  private versionService = inject(VersionCheckService);
 
   readonly version = signal<VersionInfo>({ current: '', latest: '' });
   readonly versionLoaded = signal(false);
