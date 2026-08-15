@@ -1,0 +1,10 @@
+# CI, workflow and test-framework ownership
+/.github/workflows/ @elgansayer
+/.github/dependabot.yml @elgansayer
+/.github/PULL_REQUEST_TEMPLATE.md @elgansayer
+/docs/CI.md @elgansayer
+/backend/jest.config.* @elgansayer
+/backend/test/ @elgansayer
+/frontend/cypress/ @elgansayer
+/admin-portal/ @elgansayer
+/automation/ @elgansayer
