@@ -16,6 +16,10 @@ interface RoleRow {
   name: string;
 }
 
+interface RoleIdRow {
+  id: string;
+}
+
 export interface AdminRoleAssignmentSummary {
   userId: string;
   roleId: string;
@@ -52,7 +56,8 @@ export class AdminRoleAssignmentsService {
       .select('user_id, role_id, granted_by, granted_at, expires_at', {
         count: 'exact',
       });
-    if (query.userId) assignmentQuery = assignmentQuery.eq('user_id', query.userId);
+    if (query.userId)
+      assignmentQuery = assignmentQuery.eq('user_id', query.userId);
 
     let roleIdsForKey: string[] | null = null;
     if (query.roleKey) {
@@ -61,7 +66,9 @@ export class AdminRoleAssignmentsService {
         .select('id')
         .eq('key', query.roleKey);
       if (matchingRolesError) throw matchingRolesError;
-      roleIdsForKey = (matchingRoles ?? []).map((role) => String(role.id));
+      roleIdsForKey = ((matchingRoles ?? []) as RoleIdRow[]).map((role) =>
+        String(role.id),
+      );
       if (roleIdsForKey.length === 0) {
         return { assignments: [], total: 0, page, pageSize };
       }
