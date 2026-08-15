@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   AdminActionReasonCode,
@@ -38,21 +39,23 @@ export class AdminAuditService {
     const correlationId = input.correlationId?.trim() || randomUUID();
     const metadata = this.sanitizeMetadata(input.metadata ?? {});
     const operatorNote = normalizeAdminOperatorNote(input.operatorNote);
-    const { error } = await this.supabaseService
-      .getClient()
-      .from('admin_audit_events')
-      .insert({
-        actor_user_id: input.actorUserId,
-        action: input.action,
-        capability_key: input.capabilityKey ?? null,
-        target_type: input.targetType ?? null,
-        target_id: input.targetId ?? null,
-        reason_code: input.reasonCode ?? null,
-        operator_note: operatorNote,
-        outcome: input.outcome,
-        correlation_id: correlationId,
-        metadata,
-      });
+
+    // The handwritten Database type currently lags newly-added admin tables.
+    // Keep this escape hatch local to the audit insert until generated Supabase
+    // database types replace the manual schema definition.
+    const client = this.supabaseService.getClient() as unknown as SupabaseClient;
+    const { error } = await client.from('admin_audit_events').insert({
+      actor_user_id: input.actorUserId,
+      action: input.action,
+      capability_key: input.capabilityKey ?? null,
+      target_type: input.targetType ?? null,
+      target_id: input.targetId ?? null,
+      reason_code: input.reasonCode ?? null,
+      operator_note: operatorNote,
+      outcome: input.outcome,
+      correlation_id: correlationId,
+      metadata,
+    });
 
     if (error) {
       throw error;

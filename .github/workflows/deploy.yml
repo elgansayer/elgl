@@ -18,11 +18,13 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         include:
           - directory: backend
-            node-version: 20
+            node-version: 22
           - directory: frontend
             node-version: 22
     steps:
@@ -41,12 +43,12 @@ jobs:
 
       - name: Lint (frontend)
         if: matrix.directory == 'frontend'
-        run: npm run lint
+        run: npm run lint:check
         working-directory: ${{ matrix.directory }}
 
       - name: Lint (backend)
         if: matrix.directory == 'backend'
-        run: npm run lint --if-present
+        run: npm run lint:check
         working-directory: ${{ matrix.directory }}
 
       - name: Build (frontend)
@@ -69,9 +71,15 @@ jobs:
         run: npm test
         working-directory: ${{ matrix.directory }}
 
+      - name: E2E test (backend)
+        if: matrix.directory == 'backend'
+        run: npm run test:e2e
+        working-directory: ${{ matrix.directory }}
+
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
