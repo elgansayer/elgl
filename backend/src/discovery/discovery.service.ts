@@ -300,20 +300,19 @@ export class DiscoveryService {
             (m) => m.id,
           );
 
-          // Cache the same match list for every user in this pair bucket
-
           // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
-          // Promise.all batch map to drastically reduce network latency during blocked IDs fetching.
+          // Promise.all batch map to drastically reduce network latency during recommendation generation.
           // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
-          const blockedIdsArray = await Promise.all(
+          const blockedIdsList = await Promise.all(
             userEntries.map((entry) =>
               this.safetyService.getBlockedAndBlockerIds(entry.userId),
             ),
           );
 
-          for (let index = 0; index < userEntries.length; index++) {
-            const entry = userEntries[index];
-            const blockedIds = blockedIdsArray[index];
+          // Cache the same match list for every user in this pair bucket
+          for (let entryIdx = 0; entryIdx < userEntries.length; entryIdx++) {
+            const entry = userEntries[entryIdx];
+            const blockedIds = blockedIdsList[entryIdx];
             let filtered = matchIds.filter((id) => id !== entry.userId);
             if (blockedIds.length > 0) {
               filtered = filtered.filter((id) => !blockedIds.includes(id));
