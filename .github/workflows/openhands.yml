@@ -52,7 +52,7 @@ jobs:
         id: check_claude
         if: github.event.issue.number != ''
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
           REPOSITORY: ${{ github.repository }}
         run: |
