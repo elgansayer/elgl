@@ -1,0 +1,72 @@
+name: Temporary update quarantine migration test
+
+on:
+  push:
+    branches:
+      - ci/restore-main-green-current-20260815
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ci/restore-main-green-current-20260815
+      - name: Replace obsolete quarantine expectation exactly
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('automation/tests/test_pipeline.py')
+          text = path.read_text()
+          old = '''def test_refresh_preserves_a_quarantined_issue_until_human_recovery(
+              tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+          ) -> None:
+              github = GitHub()
+              pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+              job = pipeline.refresh()["42"]
+              job.state = JobState.QUARANTINED
+              pipeline.jobs.save({"42": job})
+              worktree = pipeline.config.worktree_dir / "issue-42"
+              worktree.mkdir(parents=True)
+              monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
+              github.tasks = []
+
+              refreshed = pipeline.refresh()
+
+              assert refreshed["42"].state is JobState.QUARANTINED
+              assert refreshed["42"].last_error is None
+          '''
+          new = '''def test_refresh_migrates_a_quarantined_closed_issue_into_normal_completion(
+              tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+          ) -> None:
+              github = GitHub()
+              pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+              job = pipeline.refresh()["42"]
+              job.state = JobState.QUARANTINED
+              pipeline.jobs.save({"42": job})
+              worktree = pipeline.config.worktree_dir / "issue-42"
+              worktree.mkdir(parents=True)
+              monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
+              github.tasks = []
+
+              refreshed = pipeline.refresh()
+
+              assert refreshed["42"].state is JobState.DONE
+              assert refreshed["42"].last_error == "Issue closed before pull request creation"
+          '''
+          if text.count(old) != 1:
+              raise SystemExit('expected quarantine test block exactly once')
+          path.write_text(text.replace(old, new))
+          PY
+      - name: Commit exact test update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add automation/tests/test_pipeline.py
+          git commit -m "test(factory): align quarantine refresh with retry migration"
+          git push origin HEAD:ci/restore-main-green-current-20260815
