@@ -54,15 +54,17 @@ jobs:
         id: check_claude
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          STATE=$(gh pr view ${{ github.event.pull_request.number }} \
-            --repo ${{ github.repository }} --json state -q '.state' 2>/dev/null || echo "OPEN")
+          STATE=$(gh pr view "$PR_NUMBER" \
+            --repo "$REPOSITORY" --json state -q '.state' 2>/dev/null || echo "OPEN")
           echo "pr_state=$STATE"
           if [ "$STATE" = "MERGED" ]; then
-            echo "merged=true" >> $GITHUB_OUTPUT
+            echo "merged=true" >> "$GITHUB_OUTPUT"
             echo "PR already merged by Claude."
           else
-            echo "merged=false" >> $GITHUB_OUTPUT
+            echo "merged=false" >> "$GITHUB_OUTPUT"
             echo "PR not merged — falling through to Tier 2."
           fi
 
