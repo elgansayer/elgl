@@ -25,6 +25,7 @@ export interface AdminOperationalEventsQuery {
   pageSize?: number;
   severity?: string;
   category?: string;
+  source?: string;
   correlationId?: string;
 }
 
@@ -42,6 +43,7 @@ export class AdminOperationalEventsService {
       .set('pageSize', String(query.pageSize ?? 25));
     if (query.severity) params = params.set('severity', query.severity);
     if (query.category?.trim()) params = params.set('category', query.category.trim());
+    if (query.source?.trim()) params = params.set('source', query.source.trim());
     if (query.correlationId?.trim()) params = params.set('correlationId', query.correlationId.trim());
 
     return from(this.login.apiBaseUrl()).pipe(
