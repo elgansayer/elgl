@@ -90,3 +90,18 @@ The current `CommunitiesComponent` handles data fetching via Angular signals/res
 - bug
 - tech-debt
 - ui
+
+## Issue 6: Fix Angular Resource Reactivity Bug in CommunitiesComponent
+
+**Description**
+In `CommunitiesComponent`, the `groupsResource` uses the `resource` API but incorrectly reads the `selectedCommunityId()` signal directly inside the `loader` function. In Angular's `resource` API, the `loader` function executes in an untracked context. Therefore, when the selected community changes, the resource is not re-evaluated, and the UI fails to update with the new groups.
+
+**Acceptance Criteria**
+- Refactor `groupsResource` to use the `request` property to track the `selectedCommunityId` signal.
+- Update the `loader` function to accept the unwrapped `request` value instead of reading the signal directly.
+- Verify that selecting a different community correctly triggers a network request and updates the group list in the UI.
+
+**Suggested Labels**
+- bug
+- angular
+- reactivity
