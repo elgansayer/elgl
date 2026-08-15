@@ -160,6 +160,10 @@ def test_collect_open_pull_requests_excludes_drafts_and_own_and_reviewed(
     assert [task.identifier for task in tasks] == ["40"]
     assert tasks[0].source == "github-pull-request"
     assert tasks[0].pr_branch == "bolt/optimize-quests"
+    # Above ordinary issue work (10) so a review-only task doesn't sit behind
+    # a long backlog of fresh issue implementations at equal priority, but
+    # below guardian-alert issues (0), which stay most urgent.
+    assert tasks[0].priority == 5
 
 
 def test_list_all_open_issue_titles_ignores_labels(tmp_path: Path) -> None:

@@ -1,7 +1,8 @@
 [Unit]
 Description=HelloTalk OpenHands Autonomous Development Factory
-After=network-online.target
+After=network-online.target user@988.service
 Wants=network-online.target
+Requires=user@988.service
 StartLimitIntervalSec=900
 StartLimitBurst=5
 
@@ -12,6 +13,14 @@ Group=hellotalk-factory
 WorkingDirectory=/var/lib/hellotalk-factory/repository
 EnvironmentFile=/etc/hellotalk-factory/factory.env
 Environment=HOME=/var/lib/hellotalk-factory/home
+# Rootless Podman needs a real systemd user session to delegate cgroups
+# through (loginctl enable-linger hellotalk-factory creates user@<uid>.service).
+# Without this, Podman falls back to a cgroupfs mode that races and fails
+# under concurrent container starts. See docs/factory/README.md.
+# 988 is the hellotalk-factory uid on the current host (check with
+# `id -u hellotalk-factory`); update this and the unit name above if a
+# fresh install assigns a different uid.
+Environment=XDG_RUNTIME_DIR=/run/user/988
 ExecStart=/opt/hellotalk-factory/venv/bin/hellotalk-factory daemon
 Restart=on-failure
 RestartSec=30

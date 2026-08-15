@@ -9,10 +9,10 @@ import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
   let mockSupabaseClient: {
-    from: Mock;
-    auth: { admin: { listUsers: Mock; updateUserById: Mock } };
+    from: vi.Mock;
+    auth: { admin: { listUsers: vi.Mock; updateUserById: vi.Mock } };
   };
-  let mockEmailService: { sendPasswordResetEmail: Mock };
+  let mockEmailService: { sendPasswordResetEmail: vi.Mock };
 
   beforeEach(async () => {
     mockEmailService = {

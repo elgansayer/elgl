@@ -24,7 +24,7 @@ import {
   VoiceroomCreatePayload,
 } from '../voiceroom-create-modal/voiceroom-create-modal.component';
 import {
-  PrivatePartyCreateModalComponent,
+  
   PrivatePartyCreatePayload,
 } from '../private-party-create-modal/private-party-create-modal.component';
 import { QuickPollFormComponent } from './quick-poll-form.component';
@@ -32,7 +32,6 @@ import { QuickPollDisplayComponent } from './quick-poll-display.component';
 import { ApproveSpeakerModalComponent } from './approve-speaker-modal.component';
 import { LiveChatOverlayComponent } from '../live-chat-overlay/live-chat-overlay.component';
 import { TipHostModalComponent } from '../tip-host-modal/tip-host-modal.component';
-import { SoundboardComponent } from '../soundboard/soundboard.component';
 import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-boundary/video-classroom-error-boundary.component';
 
 @Component({
@@ -46,7 +45,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     VirtualGiftModalComponent,
     TrustSafetyModalComponent,
     VoiceroomCreateModalComponent,
-    PrivatePartyCreateModalComponent,
+    
     ApproveSpeakerModalComponent,
     AudioEqualizerComponent,
     AppCardComponent,
@@ -57,7 +56,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
     QuickPollDisplayComponent,
     LiveChatOverlayComponent,
     TipHostModalComponent,
-    SoundboardComponent,
+    
   ],
   templateUrl: './audio-room.component.html',
   styleUrls: ['./audio-room.component.scss'],
