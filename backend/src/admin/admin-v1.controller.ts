@@ -24,6 +24,10 @@ import {
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminService } from './admin.service';
+import {
+  AdminSystemHealthService,
+  AdminSystemHealthSnapshot,
+} from './admin-system-health.service';
 import { AdminUserDetailService } from './admin-user-detail.service';
 import { RequireAdminCapabilities } from './decorators/require-admin-capabilities.decorator';
 import { AdminAuditQueryDto } from './dto/admin-audit-query.dto';
@@ -53,6 +57,7 @@ export class AdminV1Controller {
     private readonly userDetailService: AdminUserDetailService,
     private readonly audit: AdminAuditService,
     private readonly auditQuery: AdminAuditQueryService,
+    private readonly systemHealth: AdminSystemHealthService,
   ) {}
 
   @Get('me')
@@ -75,6 +80,19 @@ export class AdminV1Controller {
       capabilities,
       authorizationModel: 'rbac-v1',
     };
+  }
+
+  @Get('system/health')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('system.health.read')
+  @ApiOperation({
+    summary: 'Read a bounded administrative dependency-health snapshot',
+    description:
+      'Reports only healthy/degraded state for core database and Redis dependencies. It intentionally excludes hosts, credentials, connection strings and raw exception details.',
+  })
+  @ApiOkResponse({ description: 'Bounded system health snapshot' })
+  getSystemHealth(): Promise<AdminSystemHealthSnapshot> {
+    return this.systemHealth.getSnapshot();
   }
 
   @Get('audit')
