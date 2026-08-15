@@ -44,14 +44,15 @@ jobs:
         id: check_claude
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          COUNT=$(gh issue list --repo ${{ github.repository }} --label "ai-agent-task" \
+          COUNT=$(gh issue list --repo "$REPOSITORY" --label "ai-agent-task" \
             --state open --limit 1 --json number -q 'length' 2>/dev/null || echo "0")
           if [ "$COUNT" -gt 0 ]; then
-            echo "has_issues=true" >> $GITHUB_OUTPUT
+            echo "has_issues=true" >> "$GITHUB_OUTPUT"
             echo "Claude created issues successfully."
           else
-            echo "has_issues=false" >> $GITHUB_OUTPUT
+            echo "has_issues=false" >> "$GITHUB_OUTPUT"
             echo "Claude did not create issues — falling through to Tier 2."
           fi
 
