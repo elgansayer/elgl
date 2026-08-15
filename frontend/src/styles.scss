@@ -7,6 +7,25 @@
 
 @config '../tailwind.config.js';
 
+/* Every Spartan Dialog is a mobile bottom sheet, centred on larger screens -
+   matches the retired AppDialogComponent's default. CdkDialog's
+   GlobalPositionStrategy sets align-items/justify-content as an INLINE
+   style at runtime, so only an unlayered !important rule can win here (same
+   trick the Spartan preset itself uses on .cdk-overlay-backdrop, see
+   node_modules/@spartan-ng/brain/hlm-tailwind-preset.css - unlayered beats
+   any layer including Tailwind's own, and !important is required regardless
+   of layer to beat the inline style). Kept unlayered/global rather than
+   scoped, since this is meant to be every dialog's default, not one
+   component's override. */
+.cdk-global-overlay-wrapper {
+  align-items: flex-end !important;
+}
+@media (min-width: 640px) {
+  .cdk-global-overlay-wrapper {
+    align-items: center !important;
+  }
+}
+
 /*
 * "Relay" design system tokens - see docs/design-redesign-audit.md for the
 * full rationale. Light and dark are each independently designed (not one
