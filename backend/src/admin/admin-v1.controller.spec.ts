@@ -12,6 +12,7 @@ describe('AdminV1Controller', () => {
     };
     const adminService = {
       listUsers: vi.fn(),
+      getLoginHistory: vi.fn(),
     };
     const userDetailService = {
       getUser: vi.fn(),
@@ -60,6 +61,25 @@ describe('AdminV1Controller', () => {
 
     await expect(controller.listUsers(query)).resolves.toEqual(expected);
     expect(adminService.listUsers).toHaveBeenCalledWith(query);
+  });
+
+  it('delegates privacy-scrubbed login history to AdminService', async () => {
+    const { controller, adminService } = buildController();
+    const expected = [
+      {
+        id: 'history-1',
+        user_id: 'user-1',
+        ip_address: '203.0.113.0',
+        user_agent: 'Browser',
+        created_at: '2026-08-15T20:00:00.000Z',
+      },
+    ];
+    adminService.getLoginHistory.mockResolvedValue(expected);
+
+    await expect(controller.getUserLoginHistory('user-1')).resolves.toEqual(
+      expected,
+    );
+    expect(adminService.getLoginHistory).toHaveBeenCalledWith('user-1');
   });
 
   it('delegates bounded user inspection to AdminUserDetailService', async () => {
