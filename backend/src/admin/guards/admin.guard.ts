@@ -25,7 +25,9 @@ export class AdminGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    const capabilities = await this.authorization.getEffectiveCapabilities(user.id);
+    const capabilities = await this.authorization.getEffectiveCapabilities(
+      user.id,
+    );
     if (capabilities.length === 0) {
       throw new ForbiddenException('Admin privileges required');
     }
