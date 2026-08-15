@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - '.github/workflows/**'
+      - 'scripts/audit-workflows.mjs'
   push:
     branches: [main]
     paths:
       - '.github/workflows/**'
+      - 'scripts/audit-workflows.mjs'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +26,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Inventory workflow dependencies and enforce trigger policy
+        run: node scripts/audit-workflows.mjs
 
       - name: Install actionlint
         env:
