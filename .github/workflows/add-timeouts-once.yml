@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ci/add-missing-timeouts-20260815
+          token: ${{ secrets.PAT_TOKEN }}
       - name: Add explicit job timeouts
         run: |
           python3 - <<'PY'
