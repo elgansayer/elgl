@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Pipe, PipeTransform } from '@angular/core';
 import { VoiceRecorderComponent } from './voice-recorder.component';
-import { MediaService } from '../../services/media.service';
 import { AppCardComponent } from '../primitives/card/card.component';
 import { AppChipComponent } from '../primitives/chip/chip.component';
 import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-primary.component';
+
+import { MediaService } from '../../services/media.service';
 
 @Pipe({ name: 't' })
 class MockTranslatePipe implements PipeTransform {
@@ -60,17 +61,12 @@ describe('VoiceRecorderComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [VoiceRecorderComponent],
-      providers: [{ provide: MediaService, useClass: MockMediaService }],
+      providers: [
+        { provide: MediaService, useClass: MockMediaService },
+      ],
     })
       .overrideComponent(VoiceRecorderComponent, {
-        set: {
-          imports: [
-            MockTranslatePipe,
-            AppCardComponent,
-            AppChipComponent,
-            AppButtonPrimaryComponent,
-          ],
-        },
+        set: { imports: [MockTranslatePipe, AppCardComponent, AppChipComponent, AppButtonPrimaryComponent] },
       })
       .compileComponents();
 

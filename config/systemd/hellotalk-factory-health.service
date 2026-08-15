@@ -14,8 +14,8 @@ PrivateTmp=true
 # Rootless Podman/runc needs the host device namespace to mount /proc for
 # the worker-terminal health probe.
 PrivateDevices=false
-ProtectKernelTunables=true
-ProtectSystem=strict
+ProtectKernelTunables=false
+ProtectSystem=full
 ProtectHome=true
 ProtectKernelTunables=false
 ProtectKernelModules=true
