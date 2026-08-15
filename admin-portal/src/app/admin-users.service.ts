@@ -59,4 +59,22 @@ export class AdminUsersService {
       ),
     );
   }
+
+  getUser(userId: string): Observable<AdminUserSummary> {
+    const token = this.login.accessToken();
+    if (!token) {
+      return throwError(() => new Error('Admin authentication required'));
+    }
+
+    return from(this.login.apiBaseUrl()).pipe(
+      switchMap((apiBaseUrl) =>
+        this.http.get<AdminUserSummary>(
+          `${apiBaseUrl}/admin/v1/users/${encodeURIComponent(userId)}`,
+          {
+            headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
+          },
+        ),
+      ),
+    );
+  }
 }
