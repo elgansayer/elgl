@@ -58,9 +58,31 @@ class JobStore:
             jobs[job.task.identifier] = job
             self.save(jobs)
 
+    @staticmethod
+    def _reset_legacy_quarantine(job: Job, now: datetime) -> None:
+        """Migrate the removed terminal quarantine state back into the retry pipeline."""
+        job.state = JobState.DISCOVERED
+        job.attempts = 0
+        job.repair_attempts = 0
+        job.quality_repairs = 0
+        job.next_attempt_at = None
+        job.last_error = None
+        job.updated_at = now
+
     def reconcile(self, tasks: list[Task]) -> dict[str, Job]:
         with self._process_lock:
             jobs = self.load()
+            now = datetime.now(UTC)
+
+            # QUARANTINED used to be terminal, but the pipeline now retries indefinitely
+            # with bounded backoff. Migrate every persisted legacy record, not only jobs
+            # that still appear in today's open-issue/open-PR task set. Otherwise closed
+            # or otherwise inactive historical jobs remain quarantined forever and the
+            # production doctor repeatedly pages an ever-growing stale backlog.
+            for existing in jobs.values():
+                if existing.state is JobState.QUARANTINED:
+                    self._reset_legacy_quarantine(existing, now)
+
             for task in tasks:
                 existing = jobs.get(task.identifier)
                 if existing is None:
@@ -71,17 +93,13 @@ class JobStore:
                     existing.state is JobState.DONE
                     and existing.pull_request is None
                     and existing.last_error == "Issue closed before pull request creation"
-                ) or existing.state is JobState.QUARANTINED:
-                    # Quarantine is no longer a terminal state: the factory retries with
-                    # backoff instead of giving up. Any job still carrying an old
-                    # quarantine record (from before that change, or from an issue whose
-                    # quarantine labels an operator has since cleared) restarts clean.
+                ):
                     existing.state = JobState.DISCOVERED
                     existing.attempts = 0
                     existing.repair_attempts = 0
                     existing.quality_repairs = 0
                     existing.next_attempt_at = None
                     existing.last_error = None
-                    existing.updated_at = datetime.now(UTC)
+                    existing.updated_at = now
             self.save(jobs)
             return jobs
