@@ -266,6 +266,38 @@ def test_refresh_releases_a_closed_issue_during_security_review(
     assert removed == [worktree]
 
 
+def test_refresh_releases_a_pull_request_closed_while_under_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A PR-review job left in REVIEWING/CI_PENDING/MERGE_QUEUED used to be
+    skipped by cleanup entirely (it is outside PRE_PULL_REQUEST_STATES), so if
+    the external PR was closed without merging while the factory was still
+    working on it, the worktree - and the job - never went away.
+    """
+    github = GitHub()
+    github.tasks = []
+    github.pull_requests = [
+        Task("40", "Optimize quests", "Body", "github-pull-request", 5, pr_branch="bolt/x")
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["40"]
+    job.state = JobState.CI_PENDING
+    pipeline.jobs.save({"40": job})
+    worktree = pipeline.config.worktree_dir / "issue-40"
+    worktree.mkdir(parents=True)
+    removed: list[Path] = []
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
+    )
+    github.pull_requests = []
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["40"].state is JobState.DONE
+    assert refreshed["40"].last_error == "Pull request closed before the factory finished with it"
+    assert removed == [worktree]
+
+
 def test_complete_pipeline_reaches_done_only_after_merge(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
