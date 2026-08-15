@@ -39,6 +39,21 @@ describe('AdminAuditQueryService', () => {
     expect(range).toHaveBeenCalledWith(0, 49);
   });
 
+  it('filters audit events by exact outcome', async () => {
+    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const order = vi.fn().mockReturnValue({ range });
+    const eq = vi.fn().mockReturnValue({ order });
+    const select = vi.fn().mockReturnValue({ eq, order });
+    const service = new AdminAuditQueryService({
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ select }),
+      }),
+    } as unknown as SupabaseService);
+
+    await service.list({ outcome: 'failed' });
+    expect(eq).toHaveBeenCalledWith('outcome', 'failed');
+  });
+
   it('rejects inverted time bounds before querying storage', async () => {
     const from = vi.fn();
     const service = new AdminAuditQueryService({
