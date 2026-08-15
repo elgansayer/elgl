@@ -301,11 +301,20 @@ export class DiscoveryService {
           );
 
           // Cache the same match list for every user in this pair bucket
-          for (const entry of userEntries) {
+
+          // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with a concurrent
+          // Promise.all batch map to drastically reduce network latency during blocked IDs fetching.
+          // Expected impact: N sequential queries become 1 concurrent roundtrip block, reducing worst-case latency significantly.
+          const blockedIdsArray = await Promise.all(
+            userEntries.map((entry) =>
+              this.safetyService.getBlockedAndBlockerIds(entry.userId),
+            ),
+          );
+
+          for (let index = 0; index < userEntries.length; index++) {
+            const entry = userEntries[index];
+            const blockedIds = blockedIdsArray[index];
             let filtered = matchIds.filter((id) => id !== entry.userId);
-            const blockedIds = await this.safetyService.getBlockedAndBlockerIds(
-              entry.userId,
-            );
             if (blockedIds.length > 0) {
               filtered = filtered.filter((id) => !blockedIds.includes(id));
             }
