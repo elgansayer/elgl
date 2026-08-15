@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
   AdminModerationReport,
@@ -8,7 +9,7 @@ import {
 
 @Component({
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="panel" aria-labelledby="moderation-title">
@@ -58,11 +59,23 @@ import {
               <dl>
                 <div>
                   <dt>Reported user</dt>
-                  <dd>{{ report.reported_name || report.reported_user_id }}</dd>
+                  <dd>
+                    <a [routerLink]="['/users', report.reported_user_id]">
+                      {{ report.reported_name || report.reported_user_id }}
+                    </a>
+                  </dd>
                 </div>
                 <div>
                   <dt>Reporter</dt>
-                  <dd>{{ report.reporter_name || report.reporter_id || 'System / unavailable' }}</dd>
+                  <dd>
+                    @if (report.reporter_id) {
+                      <a [routerLink]="['/users', report.reporter_id]">
+                        {{ report.reporter_name || report.reporter_id }}
+                      </a>
+                    } @else {
+                      System / unavailable
+                    }
+                  </dd>
                 </div>
               </dl>
               @if (report.description) {
