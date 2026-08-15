@@ -19,6 +19,7 @@ import { AdminGuard } from './guards/admin.guard';
 import {
   AdminUserListResult,
   AdminUserSummary,
+  LoginHistoryEntry,
 } from './interfaces/admin-user.interface';
 
 interface AdminAuthRequest extends Request {
@@ -69,6 +70,22 @@ export class AdminV1Controller {
   @ApiOkResponse({ description: 'Paginated administrative user results' })
   listUsers(@Query() query: AdminUserQueryDto): Promise<AdminUserListResult> {
     return this.adminService.listUsers(query);
+  }
+
+  @Get('users/:id/login-history')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('users.sessions.read')
+  @ApiOperation({
+    summary: 'Inspect bounded privacy-scrubbed login history for one user',
+    description:
+      'Returns at most 50 recent login-history entries using the existing privacy-scrubbed backend service. This endpoint is intentionally separated from users.read because IP and user-agent derived data are more sensitive investigation metadata.',
+  })
+  @ApiParam({ name: 'id', description: 'Target user identifier' })
+  @ApiOkResponse({ description: 'Privacy-scrubbed login history returned' })
+  getUserLoginHistory(
+    @Param('id') id: string,
+  ): Promise<LoginHistoryEntry[]> {
+    return this.adminService.getLoginHistory(id);
   }
 
   @Get('users/:id')
