@@ -36,6 +36,49 @@ def test_prepare_worktree_fetches_and_branches_from_origin(tmp_path: Path) -> No
     assert (worktree / "frontend/node_modules").is_symlink()
 
 
+def test_prepare_worktree_retries_a_transient_lock_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every worktree shares one git dir. With more than one worker running
+    concurrently, `git fetch`/`worktree add`/`push` against that shared git dir
+    routinely collide on git's own short-lived advisory locks - a real, previously
+    unfixed failure mode (`could not lock config file .git/config: File exists`).
+    A lock collision means the operation was never attempted, so retrying is safe.
+    """
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    worktree = tmp_path / "worktrees" / "issue-12"
+    runner = Runner(
+        [
+            ProcessResult(128, "", "fatal: could not lock config file .git/config: File exists"),
+            ProcessResult(0, "", ""),
+            ProcessResult(1, "", ""),  # show-ref: no stale local branch to reclaim
+            ProcessResult(0, "", ""),  # worktree add
+        ]
+    )
+    monkeypatch.setattr("openhands_factory.git_workflow.time.sleep", lambda _seconds: None)
+    workflow = GitWorkflow(repository, "main", runner)
+
+    branch = workflow.prepare_worktree(worktree, "12", "Fix build")
+
+    assert branch == "factory/12-fix-build"
+    assert len(runner.calls) == 4
+    assert runner.calls[0] == runner.calls[1] == ("git", "fetch", "origin", "main")
+
+
+def test_prepare_worktree_does_not_retry_a_real_fetch_failure(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    worktree = tmp_path / "worktrees" / "issue-12"
+    runner = Runner([ProcessResult(1, "", "fatal: could not resolve host")])
+    workflow = GitWorkflow(repository, "main", runner)
+
+    with pytest.raises(RepositorySafetyError, match="could not resolve host"):
+        workflow.prepare_worktree(worktree, "12", "Fix build")
+
+    assert len(runner.calls) == 1
+
+
 def test_changed_paths_includes_untracked_files(tmp_path: Path) -> None:
     """has_changes() (git status) counts a new untracked file as a change, so
     changed_paths() (git diff, which never reports untracked files on its own)

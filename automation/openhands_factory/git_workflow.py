@@ -4,16 +4,52 @@ from __future__ import annotations
 
 import os
 import shutil
+import time
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
 from openhands_factory.exceptions import RepositorySafetyError
 from openhands_factory.repository_guard import (
+    ProcessResult,
     ProcessRunner,
     branch_name,
     ensure_push_target,
     run_process,
 )
+
+# Every worktree shares one git dir (worktrees/, objects/, config, refs) in the base
+# repository. With FACTORY_MAX_PARALLEL_JOBS > 1, workers routinely run `git fetch`,
+# `git worktree add/remove`, and `git push` against that same shared git dir at the
+# same time. Git's own advisory locks (config.lock, index.lock, packed-refs.lock,
+# the worktrees/ directory itself) are short-lived - held only for the duration of
+# the single operation that needs them - so a lock collision means the operation
+# was never attempted, not that it partially ran; retrying is safe.
+_LOCK_CONTENTION_MARKERS = ("could not lock", "unable to create", "already exists")
+
+
+def _is_lock_contention(stderr: str) -> bool:
+    lowered = stderr.lower()
+    if "could not lock" in lowered:
+        return True
+    return ".lock" in lowered and any(marker in lowered for marker in _LOCK_CONTENTION_MARKERS)
+
+
+def _run_with_lock_retry(
+    runner: ProcessRunner,
+    arguments: Sequence[str],
+    cwd: Path,
+    *,
+    attempts: int = 5,
+    base_delay: float = 0.5,
+) -> ProcessResult:
+    result = runner(tuple(arguments), cwd)
+    tries = 1
+    while result.returncode != 0 and tries < attempts and _is_lock_contention(result.stderr):
+        time.sleep(base_delay * tries)
+        result = runner(tuple(arguments), cwd)
+        tries += 1
+    return result
 
 
 class GitWorkflow:
@@ -36,7 +72,9 @@ class GitWorkflow:
     def prepare_worktree(self, worktree: Path, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
         ensure_push_target(branch, self.base_branch)
-        fetch = self.runner(("git", "fetch", "origin", self.base_branch), self.repository)
+        fetch = _run_with_lock_retry(
+            self.runner, ("git", "fetch", "origin", self.base_branch), self.repository
+        )
         if fetch.returncode != 0:
             raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
         self._add_worktree(worktree, branch, f"origin/{self.base_branch}")
@@ -49,7 +87,9 @@ class GitWorkflow:
         does not own the naming of - it exists to review and, if necessary, repair
         someone else's pull request in place.
         """
-        fetch = self.runner(("git", "fetch", "origin", branch), self.repository)
+        fetch = _run_with_lock_retry(
+            self.runner, ("git", "fetch", "origin", branch), self.repository
+        )
         if fetch.returncode != 0:
             raise RepositorySafetyError(f"Could not fetch pull request branch: {fetch.stderr}")
         self._add_worktree(worktree, branch, f"origin/{branch}")
@@ -67,7 +107,8 @@ class GitWorkflow:
                 raise RepositorySafetyError(
                     f"Could not reclaim stale local branch {branch}: {remove_branch.stderr}"
                 )
-        result = self.runner(
+        result = _run_with_lock_retry(
+            self.runner,
             ("git", "worktree", "add", "-b", branch, str(worktree), start_point),
             self.repository,
         )
@@ -141,7 +182,9 @@ class GitWorkflow:
 
     def push(self, branch: str) -> None:
         ensure_push_target(branch, self.base_branch, extra_allowed=self.external_branch)
-        result = self.runner(("git", "push", "--set-upstream", "origin", branch), self.repository)
+        result = _run_with_lock_retry(
+            self.runner, ("git", "push", "--set-upstream", "origin", branch), self.repository
+        )
         if result.returncode != 0:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")
 
@@ -154,7 +197,7 @@ class GitWorkflow:
         if force:
             arguments.append("--force")
         arguments.append(str(resolved_worktree))
-        result = self.runner(tuple(arguments), self.repository)
+        result = _run_with_lock_retry(self.runner, tuple(arguments), self.repository)
         if result.returncode != 0:
             raise RepositorySafetyError(f"Could not remove worktree: {result.stderr}")
 
