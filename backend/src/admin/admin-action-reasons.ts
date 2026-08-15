@@ -10,8 +10,7 @@ export const ADMIN_ACTION_REASON_CODES = [
   'other_reviewed',
 ] as const;
 
-export type AdminActionReasonCode =
-  (typeof ADMIN_ACTION_REASON_CODES)[number];
+export type AdminActionReasonCode = (typeof ADMIN_ACTION_REASON_CODES)[number];
 
 const SECRET_LIKE_PATTERN =
   /(authorization\s*:|bearer\s+[a-z0-9._~-]+|password\s*[=:]|token\s*[=:]|api[_-]?key\s*[=:])/i;
