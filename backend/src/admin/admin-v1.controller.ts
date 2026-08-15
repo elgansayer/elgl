@@ -17,11 +17,16 @@ import {
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import {
+  AdminAuditListResult,
+  AdminAuditQueryService,
+} from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminService } from './admin.service';
 import { AdminUserDetailService } from './admin-user-detail.service';
 import { RequireAdminCapabilities } from './decorators/require-admin-capabilities.decorator';
+import { AdminAuditQueryDto } from './dto/admin-audit-query.dto';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
@@ -45,6 +50,7 @@ export class AdminV1Controller {
     private readonly adminService: AdminService,
     private readonly userDetailService: AdminUserDetailService,
     private readonly audit: AdminAuditService,
+    private readonly auditQuery: AdminAuditQueryService,
   ) {}
 
   @Get('me')
@@ -67,6 +73,19 @@ export class AdminV1Controller {
       capabilities,
       authorizationModel: 'rbac-v1',
     };
+  }
+
+  @Get('audit')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('audit.read')
+  @ApiOperation({
+    summary: 'List bounded administrative audit events',
+    description:
+      'Returns newest-first sanitized audit summaries with exact-match filters. Private operator notes are intentionally excluded from this initial read contract.',
+  })
+  @ApiOkResponse({ description: 'Paginated administrative audit events' })
+  listAudit(@Query() query: AdminAuditQueryDto): Promise<AdminAuditListResult> {
+    return this.auditQuery.list(query);
   }
 
   @Get('users')
