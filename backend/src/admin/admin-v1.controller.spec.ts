@@ -1,6 +1,7 @@
 import { AdminAuditQueryService } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
+import { AdminRoleInventoryService } from './admin-role-inventory.service';
 import { AdminService } from './admin.service';
 import { AdminSystemHealthService } from './admin-system-health.service';
 import { AdminUserDetailService } from './admin-user-detail.service';
@@ -30,6 +31,9 @@ describe('AdminV1Controller', () => {
     const systemHealth = {
       getSnapshot: vi.fn(),
     };
+    const roleInventory = {
+      list: vi.fn(),
+    };
     const controller = new AdminV1Controller(
       authorization as unknown as AdminAuthorizationService,
       adminService as unknown as AdminService,
@@ -37,6 +41,7 @@ describe('AdminV1Controller', () => {
       audit as unknown as AdminAuditService,
       auditQuery as unknown as AdminAuditQueryService,
       systemHealth as unknown as AdminSystemHealthService,
+      roleInventory as unknown as AdminRoleInventoryService,
     );
 
     return {
@@ -47,6 +52,7 @@ describe('AdminV1Controller', () => {
       audit,
       auditQuery,
       systemHealth,
+      roleInventory,
     };
   };
 
@@ -70,6 +76,26 @@ describe('AdminV1Controller', () => {
     expect(authorization.getEffectiveCapabilities).toHaveBeenCalledWith(
       'admin-user-id',
     );
+  });
+
+  it('delegates role inventory to AdminRoleInventoryService', async () => {
+    const { controller, roleInventory } = buildController();
+    const expected = [
+      {
+        id: 'role-1',
+        key: 'support',
+        name: 'Support',
+        description: 'Support operators',
+        is_system: false,
+        created_at: '2026-08-15T20:00:00.000Z',
+        updated_at: '2026-08-15T20:00:00.000Z',
+        capabilities: ['users.read'],
+      },
+    ];
+    roleInventory.list.mockResolvedValue(expected);
+
+    await expect(controller.listRoles()).resolves.toEqual(expected);
+    expect(roleInventory.list).toHaveBeenCalledOnce();
   });
 
   it('delegates bounded system health to AdminSystemHealthService', async () => {

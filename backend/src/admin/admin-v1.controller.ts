@@ -23,6 +23,10 @@ import {
 } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
+import {
+  AdminRoleInventoryEntry,
+  AdminRoleInventoryService,
+} from './admin-role-inventory.service';
 import { AdminService } from './admin.service';
 import {
   AdminSystemHealthService,
@@ -58,6 +62,7 @@ export class AdminV1Controller {
     private readonly audit: AdminAuditService,
     private readonly auditQuery: AdminAuditQueryService,
     private readonly systemHealth: AdminSystemHealthService,
+    private readonly roleInventory: AdminRoleInventoryService,
   ) {}
 
   @Get('me')
@@ -80,6 +85,19 @@ export class AdminV1Controller {
       capabilities,
       authorizationModel: 'rbac-v1',
     };
+  }
+
+  @Get('roles')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('roles.read')
+  @ApiOperation({
+    summary: 'List administrative roles and capability assignments',
+    description:
+      'Returns a read-only inventory of role definitions and registered capability keys. It does not expose role-assignment mutations or private user data.',
+  })
+  @ApiOkResponse({ description: 'Administrative role inventory' })
+  listRoles(): Promise<AdminRoleInventoryEntry[]> {
+    return this.roleInventory.list();
   }
 
   @Get('system/health')
