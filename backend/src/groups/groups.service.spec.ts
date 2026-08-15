@@ -300,9 +300,7 @@ describe('GroupsService', () => {
     (supabaseService.getClient as unknown as Mock).mockReturnValue({
       from: vi.fn().mockReturnValue(insertBuilder),
     });
-    (centrifugoService.publish as unknown as Mock).mockResolvedValue(
-      undefined,
-    );
+    (centrifugoService.publish as unknown as Mock).mockResolvedValue(undefined);
 
     const result = await service.sendAnnouncement(
       'group-1',

@@ -7,12 +7,7 @@ import { FlashcardsModule } from '../flashcards/flashcards.module';
 import { StudyStreakModule } from '../study-streak/study-streak.module';
 
 @Module({
-  imports: [
-    LlmProxyModule,
-    UsersModule,
-    FlashcardsModule,
-    StudyStreakModule,
-  ],
+  imports: [LlmProxyModule, UsersModule, FlashcardsModule, StudyStreakModule],
   controllers: [AiConversationController],
   providers: [AiConversationService],
   exports: [AiConversationService],
