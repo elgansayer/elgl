@@ -1,0 +1,536 @@
+<!-- @dsCard group="Primitives" name="Feedback States" subtitle="empty-state · skeleton-loader · toast · no-network-banner" -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relay - Primitives · Feedback States</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Mirrors frontend/tailwind.config.js - see buttons.html for the same
+      // note on var-name mapping (this file's own :root block vs. the app's
+      // build-time --surface-50-rgb names).
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              surface: {
+                50: 'rgb(var(--surface-50) / <alpha-value>)',
+                100: 'rgb(var(--surface-100) / <alpha-value>)',
+                200: 'rgb(var(--surface-200) / <alpha-value>)',
+                300: 'rgb(var(--surface-300) / <alpha-value>)',
+                400: 'rgb(var(--surface-400) / <alpha-value>)',
+                500: 'rgb(var(--surface-500) / <alpha-value>)',
+                600: 'rgb(var(--surface-600) / <alpha-value>)',
+                700: 'rgb(var(--surface-700) / <alpha-value>)',
+                800: 'rgb(var(--surface-800) / <alpha-value>)',
+                900: 'rgb(var(--surface-900) / <alpha-value>)',
+              },
+              primary: { DEFAULT: 'rgb(var(--primary) / <alpha-value>)' },
+              secondary: { DEFAULT: 'rgb(var(--secondary) / <alpha-value>)' },
+              danger: { DEFAULT: 'rgb(var(--danger) / <alpha-value>)' },
+              success: { DEFAULT: 'rgb(var(--success) / <alpha-value>)' },
+              warning: { DEFAULT: 'rgb(var(--warning) / <alpha-value>)' },
+              vip: { DEFAULT: 'rgb(var(--vip) / <alpha-value>)' },
+              'on-fill': { DEFAULT: 'rgb(var(--on-fill) / <alpha-value>)' },
+              accent: { DEFAULT: 'rgb(var(--accent) / <alpha-value>)' },
+              neon: {
+                violet: '#8B6CF0',
+                pink: '#E8578F',
+                cyan: '#2FC6D9',
+                blue: '#5B8DEF',
+                orange: '#F0954A',
+              },
+              text: {
+                primary: 'rgb(var(--text-primary) / <alpha-value>)',
+                secondary: 'rgb(var(--text-secondary) / <alpha-value>)',
+                muted: 'rgb(var(--text-muted) / <alpha-value>)',
+              },
+            },
+            fontFamily: {
+              display: ['"Instrument Sans"', 'ui-sans-serif', '-apple-system', 'sans-serif'],
+            },
+            borderRadius: {
+              app: '0.75rem',
+              card: '1rem',
+              sheet: '1.25rem',
+              bubble: '1.125rem',
+              pill: '9999px',
+            },
+            boxShadow: {
+              card: '0 1px 2px rgb(var(--shadow) / 0.04), 0 4px 14px rgb(var(--shadow) / 0.08)',
+              lift: '0 12px 32px rgb(var(--shadow) / 0.16), 0 4px 10px rgb(var(--shadow) / 0.08)',
+            },
+            transitionTimingFunction: { app: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+            transitionDuration: { fast: '140ms', base: '180ms', slow: '260ms' },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --surface-50: 255, 255, 255;
+        --surface-100: 228, 231, 237;
+        --surface-200: 253, 253, 254;
+        --surface-300: 241, 243, 247;
+        --surface-400: 233, 235, 241;
+        --surface-500: 246, 247, 250;
+        --surface-600: 219, 223, 230;
+        --surface-700: 199, 204, 214;
+        --surface-800: 154, 161, 175;
+        --surface-900: 18, 21, 28;
+        --text-primary: 18, 21, 28;
+        --text-secondary: 74, 81, 99;
+        --text-muted: 107, 113, 130;
+        --primary: 198, 82, 48;
+        --secondary: 26, 132, 120;
+        --danger: 217, 58, 58;
+        --success: 25, 134, 84;
+        --warning: 161, 108, 9;
+        --vip: 153, 111, 16;
+        --on-fill: 255, 255, 255;
+        --shadow: 16, 19, 28;
+        --accent: 204, 72, 60;
+        --neon-violet: 139, 108, 240;
+        --neon-pink: 232, 87, 143;
+        --neon-cyan: 47, 198, 217;
+        --neon-blue: 91, 141, 239;
+        --neon-orange: 240, 149, 74;
+      }
+      html.dark {
+        --surface-50: 58, 65, 82;
+        --surface-100: 46, 52, 68;
+        --surface-200: 30, 35, 48;
+        --surface-300: 35, 40, 56;
+        --surface-400: 25, 29, 40;
+        --surface-500: 18, 21, 28;
+        --surface-600: 13, 15, 21;
+        --surface-700: 10, 12, 17;
+        --surface-800: 6, 7, 10;
+        --surface-900: 0, 0, 0;
+        --text-primary: 243, 244, 247;
+        --text-secondary: 180, 186, 201;
+        --text-muted: 126, 132, 148;
+        --primary: 255, 122, 82;
+        --secondary: 53, 214, 192;
+        --danger: 255, 107, 107;
+        --success: 52, 211, 153;
+        --warning: 242, 179, 61;
+        --vip: 232, 184, 75;
+        --on-fill: 18, 21, 28;
+        --shadow: 0, 0, 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background: rgb(var(--surface-500));
+        color: rgb(var(--text-primary));
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease;
+      }
+      .display {
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 40px 28px 96px;
+      }
+      header.top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      h1 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 34px;
+        font-weight: 700;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        color: rgb(var(--text-secondary));
+        font-size: 15px;
+        margin: 0 0 40px;
+        max-width: 640px;
+        line-height: 1.55;
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 6px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.5);
+        border-radius: 999px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle button {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgb(var(--text-secondary));
+        font-family: inherit;
+      }
+      .toggle button.active {
+        background: rgb(var(--primary));
+        color: rgb(var(--on-fill));
+      }
+      section {
+        margin-top: 48px;
+      }
+      h2 {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgb(var(--text-muted));
+        margin: 0 0 6px;
+        font-weight: 700;
+      }
+      .component-note {
+        font-size: 13px;
+        color: rgb(var(--text-secondary));
+        margin: 0 0 18px;
+        line-height: 1.6;
+        max-width: 720px;
+      }
+      .component-note code {
+        font-size: 12px;
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.3);
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      .demo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .demo-block {
+        background: rgb(var(--surface-200));
+        border: 1px solid rgb(var(--surface-600) / 0.3);
+        border-radius: 16px;
+        padding: 22px;
+      }
+      .demo-block + .demo-block {
+        margin-top: 14px;
+      }
+      .demo-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgb(var(--text-muted));
+        margin: 0 0 12px;
+      }
+      .demo-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+      footer {
+        margin-top: 64px;
+        font-size: 12px;
+        color: rgb(var(--text-muted));
+        max-width: 720px;
+        line-height: 1.6;
+      }
+
+      /* Copied from frontend/src/styles.scss, translated to this file's
+         rgb(var(--x)) token form instead of the app's plain hex custom
+         properties. */
+      @keyframes skeleton-shimmer {
+        0% {
+          opacity: 0.6;
+          background-position: -200% 0;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.6;
+          background-position: 200% 0;
+        }
+      }
+      .skeleton-shimmer {
+        background: linear-gradient(
+          90deg,
+          rgb(var(--surface-200)) 25%,
+          rgb(var(--surface-100)) 50%,
+          rgb(var(--surface-200)) 75%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1.8s ease-in-out infinite;
+      }
+      @keyframes empty-state-fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .empty-state-fade-in {
+        animation: empty-state-fade-in 0.35s ease-out;
+      }
+      @keyframes empty-state-icon-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      .empty-state-icon {
+        animation: empty-state-icon-pulse 3s ease-in-out infinite;
+      }
+      @keyframes slide-down {
+        0% {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-slide-down {
+        animation: slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div>
+          <h1 class="display">Feedback States</h1>
+        </div>
+        <div class="toggle" id="toggle">
+          <button id="btn-light" class="active">Light</button>
+          <button id="btn-dark">Dark</button>
+        </div>
+      </header>
+      <p class="sub">
+        Four real components under <code>src/app/components/primitives/</code>:
+        <code>empty-state</code>, <code>skeleton-loader</code>, <code>toast</code> and
+        <code>no-network-banner</code>. Markup, classes and animation keyframes below are copied
+        verbatim from each component's template and <code>src/styles.scss</code>.
+      </p>
+
+      <!-- empty-state (empty-state.component.ts) -->
+      <section>
+        <h2>Empty State</h2>
+        <p class="component-note">
+          <code>app-empty-state</code> - host renders <code>role="region"</code> with
+          <code>aria-label</code> falling back to <code>"Empty state"</code> when no
+          <code>title</code> is supplied. Shows an <code>illustration</code> image when given,
+          otherwise an emoji <code>icon</code> (default <code>📭</code>) that gently pulses via
+          <code>empty-state-icon-pulse</code>. Optional <code>actionLabel</code> renders a
+          primary-styled button emitting <code>actionClicked</code>. The whole block fades in on
+          mount with <code>empty-state-fade-in</code>.
+        </p>
+        <div class="demo-grid">
+          <div
+            role="region"
+            aria-label="Empty state"
+            class="flex flex-col items-center justify-center text-center p-6 rounded-card bg-surface-300 border border-dashed border-surface-100 empty-state-fade-in"
+          >
+            <div class="text-4xl mb-3 empty-state-icon" aria-hidden="true">📭</div>
+          </div>
+          <div
+            role="region"
+            aria-label="No conversations yet"
+            class="flex flex-col items-center justify-center text-center p-6 rounded-card bg-surface-300 border border-dashed border-surface-100 empty-state-fade-in"
+          >
+            <div class="text-4xl mb-3 empty-state-icon" aria-hidden="true">🔍</div>
+            <h3 class="font-bold text-base text-text-primary mb-1">No conversations yet</h3>
+            <p class="text-xs text-text-secondary max-w-sm mb-4">
+              Start a chat with a language partner to see it appear here.
+            </p>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center font-bold text-xs bg-primary text-on-fill ps-4 pe-4 pt-2 pb-2 rounded-app hover:bg-primary/90 transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+              Find a partner
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- skeleton-loader (skeleton-loader.component.ts) -->
+      <section>
+        <h2>Skeleton Loader</h2>
+        <p class="component-note">
+          <code>app-skeleton-loader</code> - a template-less component; everything renders on the
+          host itself via <code>host</code> bindings, sized with <code>height</code> /
+          <code>width</code> / <code>borderRadius</code> style bindings (default <code>16px</code> /
+          <code>100%</code> / <code>8px</code>). <code>variant</code>:
+          <code>text</code> (<code>rounded</code>), <code>circle</code> (<code>rounded-full</code>)
+          or <code>rect</code> (default, no extra radius class beyond the style-bound one). Host is
+          <code>aria-hidden="true"</code> with <code>role="presentation"</code> so screen readers
+          skip it entirely, plus an <code>aria-label</code> of
+          <code>"Loading placeholder"</code> for tooling that still inspects it.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Variants</p>
+          <div class="demo-row" style="align-items: flex-start">
+            <div
+              class="block skeleton-shimmer bg-surface-100 rounded"
+              style="height: 14px; width: 160px"
+              aria-hidden="true"
+              role="presentation"
+            ></div>
+            <div
+              class="block skeleton-shimmer bg-surface-100 rounded-full"
+              style="height: 48px; width: 48px"
+              aria-hidden="true"
+              role="presentation"
+            ></div>
+            <div
+              class="block skeleton-shimmer bg-surface-100"
+              style="height: 80px; width: 140px; border-radius: 12px"
+              aria-hidden="true"
+              role="presentation"
+            ></div>
+          </div>
+        </div>
+        <div class="demo-block">
+          <p class="demo-label">Composition: chat list row</p>
+          <div class="demo-row" style="align-items: center">
+            <div
+              class="block skeleton-shimmer bg-surface-100 rounded-full"
+              style="height: 44px; width: 44px"
+              aria-hidden="true"
+              role="presentation"
+            ></div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                class="block skeleton-shimmer bg-surface-100 rounded"
+                style="height: 12px; width: 120px"
+                aria-hidden="true"
+                role="presentation"
+              ></div>
+              <div
+                class="block skeleton-shimmer bg-surface-100 rounded"
+                style="height: 10px; width: 200px"
+                aria-hidden="true"
+                role="presentation"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- toast (toast.component.ts) -->
+      <section>
+        <h2>Toast</h2>
+        <p class="component-note">
+          <code>app-toast</code> - a single global host, normally mounted once and fixed to
+          <code>top-10 inset-x-0</code>, rendering every entry in the app-wide
+          <code>toastsSignal</code> from <code>toast.service.ts</code>. <code>type</code> is
+          <code>info</code> / <code>error</code> / <code>success</code> (no dedicated
+          <code>warning</code> type exists on the service). Each toast slides down on entry via
+          <code>animate-slide-down</code>; the outer container is
+          <code>pointer-events-none</code> so only the toast pills themselves
+          (<code>pointer-events-auto</code>) are interactive, letting clicks pass through to the
+          page behind them.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Types (shown inline - normally fixed to the viewport top)</p>
+          <div class="demo-row" style="flex-direction: column; align-items: flex-start">
+            <div
+              class="px-4 py-2 rounded-full shadow-lg font-bold text-sm border border-surface-100 bg-surface-200 text-text-primary animate-slide-down"
+            >
+              Profile updated.
+            </div>
+            <div
+              class="px-4 py-2 rounded-full shadow-lg font-bold text-sm border border-surface-100 bg-success text-on-fill animate-slide-down"
+            >
+              Message sent.
+            </div>
+            <div
+              class="px-4 py-2 rounded-full shadow-lg font-bold text-sm border border-surface-100 bg-danger text-on-fill animate-slide-down"
+            >
+              Could not upload photo.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- no-network-banner (no-network-banner.component.ts) -->
+      <section>
+        <h2>No Network Banner</h2>
+        <p class="component-note">
+          <code>app-no-network-banner</code> - reads
+          <code>NetworkStatusService.isOnline</code> directly and renders nothing at all while
+          online (no placeholder, no reserved space). When offline it fixes a
+          <code>role="alert"</code>, <code>aria-live="assertive"</code> bar to
+          <code>top-0 inset-x-0</code> in <code>bg-danger</code>, so it interrupts screen readers
+          immediately rather than waiting to be polled. Text is translated via
+          <code>no_network_banner.message</code>, never hard-coded.
+        </p>
+        <div class="demo-block">
+          <p class="demo-label">Offline (shown inline - normally fixed to the viewport top)</p>
+          <div
+            class="flex items-center justify-center gap-2 bg-danger text-on-fill px-4 py-2 text-sm font-semibold shadow-lg"
+            role="alert"
+            aria-live="assertive"
+          >
+            <span class="text-lg leading-none" aria-hidden="true">📡</span>
+            <span>No internet connection. Some features may be unavailable.</span>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Relay - HelloTalk Design System · Primitives · Feedback States. Covers
+        <code>empty-state.component.ts</code>, <code>skeleton-loader.component.ts</code>,
+        <code>toast.component.ts</code> and <code>no-network-banner.component.ts</code> in full.
+        Toast and no-network-banner are both normally fixed-position, viewport-level components;
+        they are shown inline here, in normal page flow, purely for design reference. Supersedes the
+        earlier, now-abandoned ember/tide/ink palette version of the toast preview - this file is
+        rebuilt from the real component and real Relay tokens.
+      </footer>
+    </div>
+
+    <script>
+      document.getElementById('btn-light').addEventListener('click', () => {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('btn-light').classList.add('active');
+        document.getElementById('btn-dark').classList.remove('active');
+      });
+      document.getElementById('btn-dark').addEventListener('click', () => {
+        document.documentElement.classList.add('dark');
+        document.getElementById('btn-dark').classList.add('active');
+        document.getElementById('btn-light').classList.remove('active');
+      });
+    </script>
+  </body>
+</html>

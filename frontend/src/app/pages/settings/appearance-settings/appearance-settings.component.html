@@ -12,14 +12,12 @@
       <div class="app-empty-state">{{ 'common.loading' | t }}</div>
     } @else {
       @if (errorMessage()) {
-        <div class="rounded-card border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+        <div class="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           {{ errorMessage() }}
         </div>
       }
       @if (successMessage()) {
-        <div
-          class="rounded-card border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400"
-        >
+        <div class="rounded-card border border-success/30 bg-success/10 p-3 text-sm text-success">
           {{ successMessage() | t }}
         </div>
       }

@@ -36,7 +36,21 @@ Confirmed via `DesignSync.list_projects` / `get_project`:
 
 **4 spec gaps to fill during Phase 2 regardless of rebuild scope:** `button`, `toast`, `fluency-indicator`, `lottie-player`.
 
-## 3. Net-new primitives (capability gaps, not replacements) - Spartan/ui adoption dropped (final)
+## 3. Net-new primitives (capability gaps, not replacements) - Spartan/ui adoption REOPENED
+
+**Superseded 2026-08-15 (session 6): the "dropped, permanently" decision below no longer applies.**
+The user explicitly reconfirmed wanting Spartan if it's the better long-run choice and authorised
+the one prerequisite every prior closure said was required: migrating this repo off Tailwind v3
+first. That migration (Phase T) is done - see `/home/elgan/.claude/plans/shimmering-hugging-treehouse.md`
+session 6 for full detail. **Spartan/ui adoption is back in scope, tracked as Phase S in that plan
+file.** Current (2026-08-15) install mechanics differ from the "Path forward" below - spartan.ng now
+ships a CLI schematic (`npm install -D @spartan-ng/cli`, `ng g @spartan-ng/cli:init`, then
+`ng g @spartan-ng/cli:ui` per component) rather than manual package installs; see the plan file for
+the up-to-date flow. The bespoke-CDK primitives described below were never built under the old
+decision - Phase S starts from a clean slate, no bespoke Dialog/Dropdown/Select work to reconcile.
+
+<details>
+<summary>Original decision (2026-08-08 through 2026-08-12, superseded above - kept for history)</summary>
 
 **Decision, re-confirmed across three separate sessions now, most recently 2026-08-12: Spartan/ui
 adoption stays dropped, permanently, not "revisit later."** The user's own `/goal` instruction this
@@ -66,6 +80,8 @@ idle dependency (confirmed in the original audit). This still delivers the acces
 correctness goal that motivated considering Spartan, without the Tailwind migration risk. If a
 genuine need for Tailwind v4 arises later for unrelated reasons, Spartan can be revisited then as a
 separate initiative.
+
+</details>
 
 Confirmed only one hand-rolled CDK usage exists today (`CdkTrapFocus` in `report-user-modal`); everything else below is fully hand-rolled with no CDK backing:
 

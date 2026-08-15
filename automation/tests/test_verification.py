@@ -34,6 +34,17 @@ def test_every_change_runs_full_frontend_backend_and_factory_gate(tmp_path: Path
     assert "factory-angular-e2e.log" in script
 
 
+def test_only_the_fixed_port_command_is_exclusive(tmp_path: Path) -> None:
+    """frontend-e2e binds a fixed host port (127.0.0.1:4200) and cannot run
+    concurrently with another instance of itself - everything else, including
+    backend-test:e2e (an in-process supertest server on an ephemeral port), is
+    safe under full worker parallelism and must not be serialized alongside it.
+    """
+    commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
+    exclusive = {command.name for command in commands if command.exclusive}
+    assert exclusive == {"frontend-e2e"}
+
+
 def test_empty_diff_cannot_claim_verification(tmp_path: Path) -> None:
     with pytest.raises(VerificationFailed, match="changed path"):
         commands_for(tmp_path, set())

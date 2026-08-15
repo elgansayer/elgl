@@ -266,6 +266,38 @@ def test_refresh_releases_a_closed_issue_during_security_review(
     assert removed == [worktree]
 
 
+def test_refresh_releases_a_pull_request_closed_while_under_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A PR-review job left in REVIEWING/CI_PENDING/MERGE_QUEUED used to be
+    skipped by cleanup entirely (it is outside PRE_PULL_REQUEST_STATES), so if
+    the external PR was closed without merging while the factory was still
+    working on it, the worktree - and the job - never went away.
+    """
+    github = GitHub()
+    github.tasks = []
+    github.pull_requests = [
+        Task("40", "Optimize quests", "Body", "github-pull-request", 5, pr_branch="bolt/x")
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["40"]
+    job.state = JobState.CI_PENDING
+    pipeline.jobs.save({"40": job})
+    worktree = pipeline.config.worktree_dir / "issue-40"
+    worktree.mkdir(parents=True)
+    removed: list[Path] = []
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
+    )
+    github.pull_requests = []
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["40"].state is JobState.DONE
+    assert refreshed["40"].last_error == "Pull request closed before the factory finished with it"
+    assert removed == [worktree]
+
+
 def test_complete_pipeline_reaches_done_only_after_merge(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -458,6 +490,53 @@ def test_successful_transition_resets_previous_failures(
     assert advanced.state is JobState.IMPLEMENTING
     assert advanced.attempts == 0
     assert advanced.last_error is None
+
+
+def test_verify_only_serializes_the_exclusive_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Shared commands (lint, build, unit tests, backend-test:e2e) must run
+    without holding verification_slots, so other workers' verification isn't
+    blocked behind them; only the fixed-port frontend-e2e command should ever
+    acquire that single global slot.
+    """
+    from threading import Semaphore
+
+    from openhands_factory.verification import VerificationCommand
+
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=GitHub(),  # type: ignore[arg-type]
+        verification_slots=Semaphore(1),
+    )
+    fake_commands = [
+        VerificationCommand("frontend-lint:check", ("true",), tmp_path),
+        VerificationCommand("frontend-e2e", ("true",), tmp_path, exclusive=True),
+        VerificationCommand("backend-test:e2e", ("true",), tmp_path),
+    ]
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.commands_for", lambda repository, changed: fake_commands
+    )
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("frontend/x.ts")})
+    slot_held_during: dict[str, bool] = {}
+
+    def fake_run_verification(commands: list[VerificationCommand]) -> None:
+        held = pipeline.verification_slots.acquire(blocking=False)  # type: ignore[union-attr]
+        if held:
+            pipeline.verification_slots.release()  # type: ignore[union-attr]
+        for command in commands:
+            slot_held_during[command.name] = not held
+
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", fake_run_verification)
+    workflow = GitWorkflow(tmp_path, "main")
+
+    pipeline._verify(workflow)
+
+    assert slot_held_during == {
+        "frontend-lint:check": False,
+        "backend-test:e2e": False,
+        "frontend-e2e": True,
+    }
 
 
 def test_discovery_retry_releases_lease_and_retires_stale_worktree(
