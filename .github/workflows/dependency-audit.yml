@@ -1,0 +1,88 @@
+name: Dependency audit
+
+on:
+  schedule:
+    - cron: '30 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit
+  cancel-in-progress: true
+
+jobs:
+  npm-audit:
+    name: npm audit / ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: root
+            directory: .
+            lockfile: package-lock.json
+          - name: backend
+            directory: backend
+            lockfile: backend/package-lock.json
+          - name: frontend
+            directory: frontend
+            lockfile: frontend/package-lock.json
+          - name: playwright-e2e
+            directory: e2e
+            lockfile: e2e/package-lock.json
+          - name: load-tests
+            directory: tests/load
+            lockfile: tests/load/package-lock.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.lockfile }}
+      - name: Generate npm audit report
+        id: audit
+        working-directory: ${{ matrix.directory }}
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > npm-audit.json
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Summarize vulnerabilities
+        working-directory: ${{ matrix.directory }}
+        env:
+          PACKAGE_NAME: ${{ matrix.name }}
+          AUDIT_EXIT_CODE: ${{ steps.audit.outputs.exit_code }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = 'npm-audit.json';
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const v = report.metadata?.vulnerabilities ?? {};
+          const severities = ['critical', 'high', 'moderate', 'low', 'info'];
+          const total = severities.reduce((sum, key) => sum + Number(v[key] ?? 0), 0);
+          const lines = [
+            `### npm audit / ${process.env.PACKAGE_NAME}`,
+            '',
+            `Audit exit code: ${process.env.AUDIT_EXIT_CODE}`,
+            '',
+            '| Severity | Count |',
+            '| --- | ---: |',
+            ...severities.map((key) => `| ${key} | ${Number(v[key] ?? 0)} |`),
+            `| total | ${total} |`,
+            '',
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
+          NODE
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ matrix.name }}-${{ github.run_id }}
+          path: ${{ matrix.directory }}/npm-audit.json
+          if-no-files-found: error
+          retention-days: 30
