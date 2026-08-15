@@ -28,6 +28,7 @@ export interface AdminAuditQuery {
   page?: number;
   pageSize?: number;
   action?: string;
+  outcome?: 'success' | 'denied' | 'failed';
   actorUserId?: string;
   targetType?: string;
   targetId?: string;

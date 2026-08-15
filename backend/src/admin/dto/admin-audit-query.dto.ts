@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsISO8601, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsISO8601, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class AdminAuditQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -22,6 +22,11 @@ export class AdminAuditQueryDto {
   @IsOptional()
   @IsString()
   action?: string;
+
+  @ApiPropertyOptional({ enum: ['success', 'denied', 'failed'], description: 'Exact audit outcome filter' })
+  @IsOptional()
+  @IsIn(['success', 'denied', 'failed'])
+  outcome?: 'success' | 'denied' | 'failed';
 
   @ApiPropertyOptional({ description: 'Exact actor user ID filter' })
   @IsOptional()

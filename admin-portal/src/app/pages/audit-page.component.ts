@@ -21,6 +21,14 @@ import {
 
       <form class="filters" (ngSubmit)="load(true)">
         <label>Action <input name="action" [(ngModel)]="action" /></label>
+        <label>Outcome
+          <select name="outcome" [(ngModel)]="outcome">
+            <option value="">All outcomes</option>
+            <option value="success">Success</option>
+            <option value="denied">Denied</option>
+            <option value="failed">Failed</option>
+          </select>
+        </label>
         <label>Actor user ID <input name="actor" [(ngModel)]="actorUserId" /></label>
         <label>Target type <input name="targetType" [(ngModel)]="targetType" /></label>
         <label>Target ID <input name="targetId" [(ngModel)]="targetId" /></label>
@@ -92,6 +100,7 @@ export class AuditPageComponent {
   private readonly audit = inject(AdminAuditService);
   readonly pageSize = 50;
   action = '';
+  outcome: '' | 'success' | 'denied' | 'failed' = '';
   actorUserId = '';
   targetType = '';
   targetId = '';
@@ -118,6 +127,7 @@ export class AuditPageComponent {
         page: this.page(),
         pageSize: this.pageSize,
         action: this.action,
+        outcome: this.outcome || undefined,
         actorUserId: this.actorUserId,
         targetType: this.targetType,
         targetId: this.targetId,
@@ -141,6 +151,7 @@ export class AuditPageComponent {
 
   clearFilters(): void {
     this.action = '';
+    this.outcome = '';
     this.actorUserId = '';
     this.targetType = '';
     this.targetId = '';
