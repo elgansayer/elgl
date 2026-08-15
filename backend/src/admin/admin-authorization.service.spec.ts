@@ -43,7 +43,9 @@ describe('AdminAuthorizationService', () => {
   it('returns an empty capability set when the user has no active roles', async () => {
     assignments.or.mockResolvedValue({ data: [], error: null });
 
-    await expect(service.getEffectiveCapabilities('user-1')).resolves.toEqual([]);
+    await expect(service.getEffectiveCapabilities('user-1')).resolves.toEqual(
+      [],
+    );
     expect(capabilities.select).not.toHaveBeenCalled();
   });
 
@@ -69,14 +71,19 @@ describe('AdminAuthorizationService', () => {
       'users.manage',
       'users.read',
     ]);
-    expect(capabilities.in).toHaveBeenCalledWith('role_id', ['role-1', 'role-2']);
+    expect(capabilities.in).toHaveBeenCalledWith('role_id', [
+      'role-1',
+      'role-2',
+    ]);
   });
 
   it('fails closed when role assignment lookup fails', async () => {
     const error = new Error('role lookup failed');
     assignments.or.mockResolvedValue({ data: null, error });
 
-    await expect(service.getEffectiveCapabilities('admin-1')).rejects.toBe(error);
+    await expect(service.getEffectiveCapabilities('admin-1')).rejects.toBe(
+      error,
+    );
   });
 
   it('fails closed when capability lookup fails', async () => {
@@ -87,7 +94,9 @@ describe('AdminAuthorizationService', () => {
     const error = new Error('capability lookup failed');
     capabilities.in.mockResolvedValue({ data: null, error });
 
-    await expect(service.getEffectiveCapabilities('admin-1')).rejects.toBe(error);
+    await expect(service.getEffectiveCapabilities('admin-1')).rejects.toBe(
+      error,
+    );
   });
 
   it('checks that all required capabilities are present', async () => {
