@@ -14,6 +14,7 @@ describe('AdminV1Controller', () => {
     };
     const adminService = {
       listUsers: vi.fn(),
+      listReports: vi.fn(),
       getLoginHistory: vi.fn(),
     };
     const userDetailService = {
@@ -73,6 +74,18 @@ describe('AdminV1Controller', () => {
 
     await expect(controller.listAudit(query)).resolves.toEqual(expected);
     expect(auditQuery.list).toHaveBeenCalledWith(query);
+  });
+
+  it('delegates bounded moderation reports to AdminService', async () => {
+    const { controller, adminService } = buildController();
+    const query = { page: 2, pageSize: 25, status: 'open' };
+    const expected = { reports: [], total: 0, page: 2, pageSize: 25 };
+    adminService.listReports.mockResolvedValue(expected);
+
+    await expect(controller.listModerationReports(query)).resolves.toEqual(
+      expected,
+    );
+    expect(adminService.listReports).toHaveBeenCalledWith(2, 25, 'open');
   });
 
   it('delegates bounded user search to AdminService', async () => {
