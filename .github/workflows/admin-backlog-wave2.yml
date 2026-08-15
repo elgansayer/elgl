@@ -126,4 +126,4 @@ jobs:
           if created < target:
               raise SystemExit(f'Only generated {created}; target was {target}')
           PY
-# wave2-trigger: 1
+# wave2-trigger: 2
