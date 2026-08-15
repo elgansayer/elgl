@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  application:
+  application-checks:
+    name: ${{ matrix.directory }} / ${{ matrix.check }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -18,9 +19,26 @@ jobs:
       matrix:
         include:
           - directory: backend
-            node-version: '22'
+            check: lint
+            command: npm run lint:check
+          - directory: backend
+            check: build
+            command: npm run build
+          - directory: backend
+            check: unit
+            command: npm test
+          - directory: backend
+            check: e2e
+            command: npm run test:e2e
           - directory: frontend
-            node-version: '22'
+            check: static-analysis
+            command: npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run lint:check
+          - directory: frontend
+            check: build
+            command: npm run build
+          - directory: frontend
+            check: unit
+            command: npm test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,22 +46,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          node-version: '22'
+          cache: npm
           cache-dependency-path: ${{ matrix.directory }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
         working-directory: ${{ matrix.directory }}
 
-      - name: Verify frontend
-        if: matrix.directory == 'frontend'
-        run: npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run lint:check && npm run build && npm test
-        working-directory: ${{ matrix.directory }}
-
-      - name: Verify backend
-        if: matrix.directory == 'backend'
-        run: npm run lint:check && npm run build && npm test && npm run test:e2e
+      - name: Run ${{ matrix.check }}
+        run: ${{ matrix.command }}
         working-directory: ${{ matrix.directory }}
 
   constitution:
