@@ -19,6 +19,10 @@ concurrency:
 
 jobs:
   govern:
+    if: >-
+      github.event_name != 'issues' ||
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'factory-ready'
     runs-on: ubuntu-latest
     steps:
       - name: Gate admin issues until explicitly ready
@@ -115,8 +119,6 @@ jobs:
               number = int(issue['number'])
               labels = labels_of(issue)
 
-              # A human/curation process promotes a ticket by adding factory-ready.
-              # Remove only the governance-owned skip state, never other blocking labels.
               if 'factory-ready' in labels:
                   remove = [name for name in ('factory-skip', 'admin-awaiting-ready') if name in labels]
                   for name in remove:
