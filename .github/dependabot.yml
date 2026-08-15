@@ -6,8 +6,23 @@ updates:
       interval: 'weekly'
     assignees:
       - 'elgansayer'
+
   - package-ecosystem: 'npm'
     directory: '/backend'
+    schedule:
+      interval: 'weekly'
+    assignees:
+      - 'elgansayer'
+
+  - package-ecosystem: 'npm'
+    directory: '/admin-portal'
+    schedule:
+      interval: 'weekly'
+    assignees:
+      - 'elgansayer'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
       interval: 'weekly'
     assignees:
