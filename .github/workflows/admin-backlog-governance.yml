@@ -32,6 +32,7 @@ jobs:
           import json
           import os
           import urllib.error
+          import urllib.parse
           import urllib.request
 
           token = os.environ['GH_TOKEN']
@@ -120,7 +121,8 @@ jobs:
                   remove = [name for name in ('factory-skip', 'admin-awaiting-ready') if name in labels]
                   for name in remove:
                       try:
-                          request('DELETE', f'{api}/issues/{number}/labels/{urllib.parse.quote(name, safe="")}')
+                          encoded = urllib.parse.quote(name, safe='')
+                          request('DELETE', f'{api}/issues/{number}/labels/{encoded}')
                       except urllib.error.HTTPError as exc:
                           if exc.code != 404:
                               raise
