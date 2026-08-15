@@ -27,6 +27,8 @@ export interface AdminOperationalEventsQuery {
   category?: string;
   source?: string;
   correlationId?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -45,6 +47,8 @@ export class AdminOperationalEventsService {
     if (query.category?.trim()) params = params.set('category', query.category.trim());
     if (query.source?.trim()) params = params.set('source', query.source.trim());
     if (query.correlationId?.trim()) params = params.set('correlationId', query.correlationId.trim());
+    if (query.startTime) params = params.set('startTime', query.startTime);
+    if (query.endTime) params = params.set('endTime', query.endTime);
 
     return from(this.login.apiBaseUrl()).pipe(
       switchMap((apiBaseUrl) =>
