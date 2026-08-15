@@ -1,19 +1,25 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminService } from './admin.service';
+import { AdminUserDetailService } from './admin-user-detail.service';
 import { RequireAdminCapabilities } from './decorators/require-admin-capabilities.decorator';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
-import { AdminUserListResult } from './interfaces/admin-user.interface';
+import {
+  AdminUserListResult,
+  AdminUserSummary,
+} from './interfaces/admin-user.interface';
 
 interface AdminAuthRequest extends Request {
   user: { id?: string; sub?: string; email?: string };
@@ -27,6 +33,7 @@ export class AdminV1Controller {
   constructor(
     private readonly authorization: AdminAuthorizationService,
     private readonly adminService: AdminService,
+    private readonly userDetailService: AdminUserDetailService,
   ) {}
 
   @Get('me')
@@ -62,5 +69,20 @@ export class AdminV1Controller {
   @ApiOkResponse({ description: 'Paginated administrative user results' })
   listUsers(@Query() query: AdminUserQueryDto): Promise<AdminUserListResult> {
     return this.adminService.listUsers(query);
+  }
+
+  @Get('users/:id')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('users.read')
+  @ApiOperation({
+    summary: 'Inspect bounded administrative metadata for one user',
+    description:
+      'Returns the same minimized operational user fields exposed by search. It does not expose credentials, email, session tokens or unrestricted private profile data.',
+  })
+  @ApiParam({ name: 'id', description: 'Target user identifier' })
+  @ApiOkResponse({ description: 'Administrative user summary returned' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  getUser(@Param('id') id: string): Promise<AdminUserSummary> {
+    return this.userDetailService.getUser(id);
   }
 }
