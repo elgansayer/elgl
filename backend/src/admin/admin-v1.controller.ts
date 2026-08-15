@@ -1,5 +1,10 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { AdminAuthorizationService } from './admin-authorization.service';
@@ -25,7 +30,10 @@ export class AdminV1Controller {
   ) {}
 
   @Get('me')
-  @ApiOperation({ summary: 'Return the authenticated admin context and effective capabilities' })
+  @ApiOperation({
+    summary:
+      'Return the authenticated admin context and effective capabilities',
+  })
   @ApiOkResponse({ description: 'Admin context returned successfully' })
   async getMe(@Req() req: AdminAuthRequest) {
     const userId = req.user.id ?? req.user.sub;
