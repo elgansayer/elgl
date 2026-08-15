@@ -28,6 +28,7 @@ import {
             id="moderation-status"
             name="status"
             [(ngModel)]="status"
+            maxlength="40"
             placeholder="e.g. open"
             [disabled]="busy()"
           />
