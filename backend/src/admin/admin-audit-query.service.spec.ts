@@ -2,22 +2,30 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { AdminAuditQueryService } from './admin-audit-query.service';
 
 describe('AdminAuditQueryService', () => {
-  it('returns newest-first bounded audit results', async () => {
+  it('returns newest-first bounded audit results with time bounds', async () => {
     const range = vi.fn().mockResolvedValue({
       data: [{ id: 'event-1', action: 'users.login_history.read' }],
       error: null,
       count: 1,
     });
     const order = vi.fn().mockReturnValue({ range });
-    const eq = vi.fn().mockReturnThis();
-    const select = vi.fn().mockReturnValue({ eq, order });
+    const lte = vi.fn().mockReturnValue({ order });
+    const gte = vi.fn().mockReturnValue({ lte });
+    const eq = vi.fn().mockReturnValue({ gte });
+    const select = vi.fn().mockReturnValue({ eq, gte, order });
     const from = vi.fn().mockReturnValue({ select });
     const service = new AdminAuditQueryService({
       getClient: vi.fn().mockReturnValue({ from }),
     } as unknown as SupabaseService);
 
     await expect(
-      service.list({ page: 1, pageSize: 50, action: 'users.login_history.read' }),
+      service.list({
+        page: 1,
+        pageSize: 50,
+        action: 'users.login_history.read',
+        startTime: '2026-08-15T20:00:00.000Z',
+        endTime: '2026-08-15T21:00:00.000Z',
+      }),
     ).resolves.toEqual({
       events: [{ id: 'event-1', action: 'users.login_history.read' }],
       total: 1,
@@ -25,8 +33,25 @@ describe('AdminAuditQueryService', () => {
       pageSize: 50,
     });
     expect(eq).toHaveBeenCalledWith('action', 'users.login_history.read');
+    expect(gte).toHaveBeenCalledWith('created_at', '2026-08-15T20:00:00.000Z');
+    expect(lte).toHaveBeenCalledWith('created_at', '2026-08-15T21:00:00.000Z');
     expect(order).toHaveBeenCalledWith('created_at', { ascending: false });
     expect(range).toHaveBeenCalledWith(0, 49);
+  });
+
+  it('rejects inverted time bounds before querying storage', async () => {
+    const from = vi.fn();
+    const service = new AdminAuditQueryService({
+      getClient: vi.fn().mockReturnValue({ from }),
+    } as unknown as SupabaseService);
+
+    await expect(
+      service.list({
+        startTime: '2026-08-15T22:00:00.000Z',
+        endTime: '2026-08-15T21:00:00.000Z',
+      }),
+    ).rejects.toThrow('startTime must be before or equal to endTime');
+    expect(from).not.toHaveBeenCalled();
   });
 
   it('fails closed when the audit query fails', async () => {

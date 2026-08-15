@@ -25,6 +25,8 @@ import {
         <label>Target type <input name="targetType" [(ngModel)]="targetType" /></label>
         <label>Target ID <input name="targetId" [(ngModel)]="targetId" /></label>
         <label>Correlation ID <input name="correlation" [(ngModel)]="correlationId" /></label>
+        <label>From <input type="datetime-local" name="startTime" [(ngModel)]="startTime" /></label>
+        <label>Until <input type="datetime-local" name="endTime" [(ngModel)]="endTime" /></label>
         <div class="actions">
           <button type="submit" [disabled]="busy()">Apply filters</button>
           <button type="button" (click)="clearFilters()" [disabled]="busy()">Clear</button>
@@ -94,6 +96,8 @@ export class AuditPageComponent {
   targetType = '';
   targetId = '';
   correlationId = '';
+  startTime = '';
+  endTime = '';
   readonly events = signal<AdminAuditEventSummary[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -118,6 +122,8 @@ export class AuditPageComponent {
         targetType: this.targetType,
         targetId: this.targetId,
         correlationId: this.correlationId,
+        startTime: this.toIso(this.startTime),
+        endTime: this.toIso(this.endTime),
       }));
       this.events.set(result.events);
       this.total.set(result.total);
@@ -139,6 +145,8 @@ export class AuditPageComponent {
     this.targetType = '';
     this.targetId = '';
     this.correlationId = '';
+    this.startTime = '';
+    this.endTime = '';
     void this.load(true);
   }
 
@@ -166,5 +174,11 @@ export class AuditPageComponent {
   formatDate(value: string): string {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? 'Unknown' : date.toLocaleString();
+  }
+
+  private toIso(value: string): string | undefined {
+    if (!value) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   }
 }

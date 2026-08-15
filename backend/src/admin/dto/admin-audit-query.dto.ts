@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsISO8601, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class AdminAuditQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -42,4 +42,14 @@ export class AdminAuditQueryDto {
   @IsOptional()
   @IsString()
   correlationId?: string;
+
+  @ApiPropertyOptional({ description: 'Inclusive ISO-8601 lower creation-time bound' })
+  @IsOptional()
+  @IsISO8601()
+  startTime?: string;
+
+  @ApiPropertyOptional({ description: 'Inclusive ISO-8601 upper creation-time bound' })
+  @IsOptional()
+  @IsISO8601()
+  endTime?: string;
 }
