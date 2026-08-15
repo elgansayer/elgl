@@ -1,0 +1,56 @@
+name: Admin portal CI
+
+on:
+  pull_request:
+    paths:
+      - 'admin-portal/**'
+      - 'backend/src/admin/**'
+      - '.github/workflows/admin-portal-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'admin-portal/**'
+      - 'backend/src/admin/**'
+      - '.github/workflows/admin-portal-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  admin-portal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install admin portal dependencies
+        working-directory: admin-portal
+        run: npm install --no-audit --no-fund
+      - name: Lint admin portal
+        working-directory: admin-portal
+        run: npm run lint:check
+      - name: Build admin portal
+        working-directory: admin-portal
+        run: npm run build
+
+  backend-admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Test admin backend
+        working-directory: backend
+        run: npm test -- --runInBand src/admin
+      - name: Build backend
+        working-directory: backend
+        run: npm run build

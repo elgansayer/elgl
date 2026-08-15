@@ -1,0 +1,35 @@
+{
+  "name": "admin-portal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve --port 4300",
+    "build": "ng build",
+    "test": "ng test --no-watch",
+    "lint:check": "eslint \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "@angular/common": "^22.1.1",
+    "@angular/compiler": "^22.1.1",
+    "@angular/core": "^22.1.1",
+    "@angular/forms": "^22.1.1",
+    "@angular/platform-browser": "^22.1.1",
+    "@angular/router": "^22.1.1",
+    "@supabase/supabase-js": "^2.112.3",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.1.3",
+    "@angular/cli": "^22.1.3",
+    "@angular/compiler-cli": "^22.1.1",
+    "@eslint/js": "^10.0.1",
+    "angular-eslint": "^22.1.0",
+    "eslint": "^10.8.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.0.8"
+  }
+}
