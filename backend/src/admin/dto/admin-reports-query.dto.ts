@@ -1,6 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class AdminReportsQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -21,5 +28,6 @@ export class AdminReportsQueryDto {
   @ApiPropertyOptional({ description: 'Exact report status filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(40)
   status?: string;
 }
