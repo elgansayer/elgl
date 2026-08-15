@@ -8,6 +8,7 @@ import { AdminService } from './admin.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuditQueryService } from './admin-audit-query.service';
+import { AdminSystemHealthService } from './admin-system-health.service';
 import { AdminUserDetailService } from './admin-user-detail.service';
 import { AdminGuard } from './guards/admin.guard';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
@@ -20,6 +21,7 @@ import { AdminCapabilityGuard } from './guards/admin-capability.guard';
     AdminAuthorizationService,
     AdminAuditService,
     AdminAuditQueryService,
+    AdminSystemHealthService,
     AdminUserDetailService,
     AdminGuard,
     AdminCapabilityGuard,

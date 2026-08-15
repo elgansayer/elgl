@@ -2,6 +2,7 @@ import { AdminAuditQueryService } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminService } from './admin.service';
+import { AdminSystemHealthService } from './admin-system-health.service';
 import { AdminUserDetailService } from './admin-user-detail.service';
 import { AdminV1Controller } from './admin-v1.controller';
 
@@ -26,12 +27,16 @@ describe('AdminV1Controller', () => {
     const auditQuery = {
       list: vi.fn(),
     };
+    const systemHealth = {
+      getSnapshot: vi.fn(),
+    };
     const controller = new AdminV1Controller(
       authorization as unknown as AdminAuthorizationService,
       adminService as unknown as AdminService,
       userDetailService as unknown as AdminUserDetailService,
       audit as unknown as AdminAuditService,
       auditQuery as unknown as AdminAuditQueryService,
+      systemHealth as unknown as AdminSystemHealthService,
     );
 
     return {
@@ -41,6 +46,7 @@ describe('AdminV1Controller', () => {
       userDetailService,
       audit,
       auditQuery,
+      systemHealth,
     };
   };
 
@@ -64,6 +70,19 @@ describe('AdminV1Controller', () => {
     expect(authorization.getEffectiveCapabilities).toHaveBeenCalledWith(
       'admin-user-id',
     );
+  });
+
+  it('delegates bounded system health to AdminSystemHealthService', async () => {
+    const { controller, systemHealth } = buildController();
+    const expected = {
+      state: 'healthy',
+      checkedAt: '2026-08-15T20:00:00.000Z',
+      dependencies: { database: 'healthy', redis: 'healthy' },
+    };
+    systemHealth.getSnapshot.mockResolvedValue(expected);
+
+    await expect(controller.getSystemHealth()).resolves.toEqual(expected);
+    expect(systemHealth.getSnapshot).toHaveBeenCalledOnce();
   });
 
   it('delegates bounded audit queries to AdminAuditQueryService', async () => {
