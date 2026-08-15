@@ -1,3 +1,4 @@
+import { AdminAuditQueryService } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminService } from './admin.service';
@@ -21,11 +22,15 @@ describe('AdminV1Controller', () => {
     const audit = {
       record: vi.fn().mockResolvedValue(undefined),
     };
+    const auditQuery = {
+      list: vi.fn(),
+    };
     const controller = new AdminV1Controller(
       authorization as unknown as AdminAuthorizationService,
       adminService as unknown as AdminService,
       userDetailService as unknown as AdminUserDetailService,
       audit as unknown as AdminAuditService,
+      auditQuery as unknown as AdminAuditQueryService,
     );
 
     return {
@@ -34,6 +39,7 @@ describe('AdminV1Controller', () => {
       adminService,
       userDetailService,
       audit,
+      auditQuery,
     };
   };
 
@@ -57,6 +63,16 @@ describe('AdminV1Controller', () => {
     expect(authorization.getEffectiveCapabilities).toHaveBeenCalledWith(
       'admin-user-id',
     );
+  });
+
+  it('delegates bounded audit queries to AdminAuditQueryService', async () => {
+    const { controller, auditQuery } = buildController();
+    const query = { page: 2, pageSize: 25, action: 'users.login_history.read' };
+    const expected = { events: [], total: 0, page: 2, pageSize: 25 };
+    auditQuery.list.mockResolvedValue(expected);
+
+    await expect(controller.listAudit(query)).resolves.toEqual(expected);
+    expect(auditQuery.list).toHaveBeenCalledWith(query);
   });
 
   it('delegates bounded user search to AdminService', async () => {
