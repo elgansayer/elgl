@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiNotFoundResponse,
@@ -9,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminService } from './admin.service';
 import { AdminUserDetailService } from './admin-user-detail.service';
@@ -35,6 +44,7 @@ export class AdminV1Controller {
     private readonly authorization: AdminAuthorizationService,
     private readonly adminService: AdminService,
     private readonly userDetailService: AdminUserDetailService,
+    private readonly audit: AdminAuditService,
   ) {}
 
   @Get('me')
@@ -82,10 +92,31 @@ export class AdminV1Controller {
   })
   @ApiParam({ name: 'id', description: 'Target user identifier' })
   @ApiOkResponse({ description: 'Privacy-scrubbed login history returned' })
-  getUserLoginHistory(
+  async getUserLoginHistory(
     @Param('id') id: string,
+    @Req() req: AdminAuthRequest,
   ): Promise<LoginHistoryEntry[]> {
-    return this.adminService.getLoginHistory(id);
+    const actorUserId = req.user.id ?? req.user.sub;
+    if (!actorUserId) {
+      throw new UnauthorizedException();
+    }
+
+    const result = await this.adminService.getLoginHistory(id);
+    const requestId = req.headers['x-request-id'];
+    const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
+
+    await this.audit.record({
+      actorUserId,
+      action: 'users.login_history.read',
+      capabilityKey: 'users.sessions.read',
+      targetType: 'user',
+      targetId: id,
+      outcome: 'success',
+      correlationId,
+      metadata: { resultCount: result.length, source: 'admin-v1' },
+    });
+
+    return result;
   }
 
   @Get('users/:id')
