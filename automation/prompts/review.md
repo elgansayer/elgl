@@ -27,3 +27,5 @@ The JSON report must strictly follow this schema:
   ]
 }
 ```
+
+If you change the worktree, the orchestrator will require a fresh review after the change is committed.

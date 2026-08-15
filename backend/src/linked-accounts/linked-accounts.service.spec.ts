@@ -90,13 +90,13 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should return empty array on supabase error', async () => {
-      const select = jest.fn().mockReturnThis();
-      const eq = jest.fn().mockReturnThis();
-      const order = jest
+      const select = vi.fn().mockReturnThis();
+      const eq = vi.fn().mockReturnThis();
+      const order = vi
         .fn()
         .mockResolvedValue({ data: null, error: { message: 'DB error' } });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ select, eq, order }),
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ select, eq, order }),
       });
 
       const result = await service.getLinkedAccounts('user-1');
@@ -117,11 +117,11 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should throw on error', async () => {
-      const upsert = jest
+      const upsert = vi
         .fn()
         .mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ upsert }),
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ upsert }),
       });
 
       await expect(service.linkAccount('user-1', 'google')).rejects.toThrow(
@@ -144,12 +144,12 @@ describe('LinkedAccountsService', () => {
     });
 
     it('should throw on error', async () => {
-      const deleteFn = jest.fn().mockReturnThis();
-      const match = jest
+      const deleteFn = vi.fn().mockReturnThis();
+      const match = vi
         .fn()
         .mockResolvedValue({ error: { message: 'DB error' } });
-      (supabaseService.getClient as jest.Mock).mockReturnValue({
-        from: jest.fn().mockReturnValue({ delete: deleteFn, match }),
+      (supabaseService.getClient as vi.Mock).mockReturnValue({
+        from: vi.fn().mockReturnValue({ delete: deleteFn, match }),
       });
 
       await expect(service.unlinkAccount('user-1', 'google')).rejects.toThrow(

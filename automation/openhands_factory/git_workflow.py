@@ -4,44 +4,112 @@ from __future__ import annotations
 
 import os
 import shutil
+import time
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
 from openhands_factory.exceptions import RepositorySafetyError
 from openhands_factory.repository_guard import (
+    ProcessResult,
     ProcessRunner,
     branch_name,
     ensure_push_target,
     run_process,
 )
 
+# Every worktree shares one git dir (worktrees/, objects/, config, refs) in the base
+# repository. With FACTORY_MAX_PARALLEL_JOBS > 1, workers routinely run `git fetch`,
+# `git worktree add/remove`, and `git push` against that same shared git dir at the
+# same time. Git's own advisory locks (config.lock, index.lock, packed-refs.lock,
+# the worktrees/ directory itself) are short-lived - held only for the duration of
+# the single operation that needs them - so a lock collision means the operation
+# was never attempted, not that it partially ran; retrying is safe.
+_LOCK_CONTENTION_MARKERS = ("could not lock", "unable to create", "already exists")
+
+
+def _is_lock_contention(stderr: str) -> bool:
+    lowered = stderr.lower()
+    if "could not lock" in lowered:
+        return True
+    return ".lock" in lowered and any(marker in lowered for marker in _LOCK_CONTENTION_MARKERS)
+
+
+def _run_with_lock_retry(
+    runner: ProcessRunner,
+    arguments: Sequence[str],
+    cwd: Path,
+    *,
+    attempts: int = 5,
+    base_delay: float = 0.5,
+) -> ProcessResult:
+    result = runner(tuple(arguments), cwd)
+    tries = 1
+    while result.returncode != 0 and tries < attempts and _is_lock_contention(result.stderr):
+        time.sleep(base_delay * tries)
+        result = runner(tuple(arguments), cwd)
+        tries += 1
+    return result
+
 
 class GitWorkflow:
     def __init__(
-        self, repository: Path, base_branch: str, runner: ProcessRunner = run_process
+        self,
+        repository: Path,
+        base_branch: str,
+        runner: ProcessRunner = run_process,
+        *,
+        external_branch: str | None = None,
     ) -> None:
         self.repository = repository
         self.base_branch = base_branch
         self.runner = runner
+        # Set only for a job independently reviewing a pull request it did not create.
+        # Allows push() to target that pull request's own branch instead of a fresh
+        # factory/* one. See ensure_push_target for why this is safe.
+        self.external_branch = external_branch
 
     def prepare_worktree(self, worktree: Path, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
         ensure_push_target(branch, self.base_branch)
-        fetch = self.runner(("git", "fetch", "origin", self.base_branch), self.repository)
+        fetch = _run_with_lock_retry(
+            self.runner, ("git", "fetch", "origin", self.base_branch), self.repository
+        )
         if fetch.returncode != 0:
             raise RepositorySafetyError(f"Could not fetch base branch: {fetch.stderr}")
+        self._add_worktree(worktree, branch, f"origin/{self.base_branch}")
+        return branch
+
+    def prepare_pull_request_worktree(self, worktree: Path, branch: str) -> None:
+        """Check out an existing pull request branch for independent review.
+
+        Unlike prepare_worktree, this tracks a branch the factory did not create and
+        does not own the naming of - it exists to review and, if necessary, repair
+        someone else's pull request in place.
+        """
+        fetch = _run_with_lock_retry(
+            self.runner, ("git", "fetch", "origin", branch), self.repository
+        )
+        if fetch.returncode != 0:
+            raise RepositorySafetyError(f"Could not fetch pull request branch: {fetch.stderr}")
+        self._add_worktree(worktree, branch, f"origin/{branch}")
+
+    def _add_worktree(self, worktree: Path, branch: str, start_point: str) -> None:
         if worktree.exists():
             raise RepositorySafetyError(f"Task worktree already exists: {worktree}")
-        result = self.runner(
-            (
-                "git",
-                "worktree",
-                "add",
-                "-b",
-                branch,
-                str(worktree),
-                f"origin/{self.base_branch}",
-            ),
+        existing_branch = self.runner(
+            ("git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"),
+            self.repository,
+        )
+        if existing_branch.returncode == 0:
+            remove_branch = self.runner(("git", "branch", "-D", branch), self.repository)
+            if remove_branch.returncode != 0:
+                raise RepositorySafetyError(
+                    f"Could not reclaim stale local branch {branch}: {remove_branch.stderr}"
+                )
+        result = _run_with_lock_retry(
+            self.runner,
+            ("git", "worktree", "add", "-b", branch, str(worktree), start_point),
             self.repository,
         )
         if result.returncode != 0:
@@ -57,7 +125,6 @@ class GitWorkflow:
             if source.is_dir() and not destination.exists():
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 os.symlink(source, destination, target_is_directory=True)
-        return branch
 
     def create_branch(self, task_id: str, title: str) -> str:
         branch = branch_name(task_id, title)
@@ -80,7 +147,21 @@ class GitWorkflow:
         )
         if result.returncode != 0:
             raise RepositorySafetyError(f"Could not inspect changes: {result.stderr}")
-        return {Path(line) for line in result.stdout.splitlines() if line.strip()}
+        paths = {Path(line) for line in result.stdout.splitlines() if line.strip()}
+        # `git diff` never reports untracked files, only modifications to tracked
+        # ones - but has_changes() (git status --porcelain) counts a new untracked
+        # file as a change too. Without this, a task whose only output is a new
+        # file would pass the has_changes() gate right after implementation, burn a
+        # full security-review cycle, and only then fail verification with a
+        # confusing "no changed paths" error instead of being judged - correctly -
+        # on the file it actually added.
+        untracked = self.runner(
+            ("git", "ls-files", "--others", "--exclude-standard"), self.repository
+        )
+        if untracked.returncode != 0:
+            raise RepositorySafetyError(f"Could not inspect changes: {untracked.stderr}")
+        paths.update(Path(line) for line in untracked.stdout.splitlines() if line.strip())
+        return paths
 
     def stage_all(self) -> None:
         result = self.runner(("git", "add", "--all"), self.repository)
@@ -100,8 +181,10 @@ class GitWorkflow:
         return bool(result.stdout.strip())
 
     def push(self, branch: str) -> None:
-        ensure_push_target(branch, self.base_branch)
-        result = self.runner(("git", "push", "--set-upstream", "origin", branch), self.repository)
+        ensure_push_target(branch, self.base_branch, extra_allowed=self.external_branch)
+        result = _run_with_lock_retry(
+            self.runner, ("git", "push", "--set-upstream", "origin", branch), self.repository
+        )
         if result.returncode != 0:
             raise RepositorySafetyError(f"Push failed: {result.stderr}")
 
@@ -114,7 +197,7 @@ class GitWorkflow:
         if force:
             arguments.append("--force")
         arguments.append(str(resolved_worktree))
-        result = self.runner(tuple(arguments), self.repository)
+        result = _run_with_lock_retry(self.runner, tuple(arguments), self.repository)
         if result.returncode != 0:
             raise RepositorySafetyError(f"Could not remove worktree: {result.stderr}")
 

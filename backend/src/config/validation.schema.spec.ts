@@ -2,7 +2,9 @@ import { validationSchema } from './validation.schema';
 
 describe('validationSchema', () => {
   it('applies default values when no environment variables are provided', () => {
-    const { error, value } = validationSchema.validate({});
+    const { error, value } = validationSchema.validate({
+      TRANSFER_SECRET: 'test-transfer-secret',
+    });
     expect(error).toBeUndefined();
 
     // Application
@@ -106,7 +108,7 @@ describe('validationSchema', () => {
     expect(value.SPAM_SIMILARITY_THRESHOLD).toBe(0.75);
 
     // Transfer
-    expect(value.TRANSFER_SECRET).toBe('device-transfer-secret-dev-only');
+    expect(value.TRANSFER_SECRET).toBe('test-transfer-secret');
 
     // LLM
     expect(value.LLM_API_KEY).toBe('test-llm-key');
@@ -245,12 +247,16 @@ describe('validationSchema', () => {
   });
 
   it('allows unknown keys because of unknown(true)', () => {
-    const result = validationSchema.validate({ UNEXPECTED_KEY: 'anything' });
+    const result = validationSchema.validate({
+      TRANSFER_SECRET: 'test-transfer-secret',
+      UNEXPECTED_KEY: 'anything',
+    });
     expect(result.error).toBeUndefined();
   });
 
   it('accepts optional fields that are present', () => {
     const result = validationSchema.validate({
+      TRANSFER_SECRET: 'test-transfer-secret',
       APPLE_ROOT_CA_CERT_2: '',
       GOOGLE_PLAY_PACKAGE_NAME: 'com.example.play',
       GOOGLE_PLAY_ACCESS_TOKEN: 'token',
@@ -271,6 +277,7 @@ describe('validationSchema', () => {
 
   it('coerces numeric string values to numbers where appropriate', () => {
     const result = validationSchema.validate({
+      TRANSFER_SECRET: 'test-transfer-secret',
       MAIL_PORT: '465',
       SPAM_DUPLICATE_THRESHOLD: '5',
       SPAM_SIMILARITY_THRESHOLD: '0.85',

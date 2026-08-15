@@ -17,3 +17,13 @@
 **Vulnerability:** A hardcoded default secret (`device-transfer-secret-dev-only`) was being used for `TRANSFER_SECRET` without strict validation. If the production environment failed to pass a secret, it would silently fallback to this dev-only string, creating a critical vulnerability where transfers could be intercepted or forged.
 **Learning:** Default fallback configs for secrets are extremely dangerous and can mask missing configuration in production.
 **Prevention:** Avoid providing hardcoded string fallbacks for secrets in production. Ensure validation schemas strictly require secrets when `NODE_ENV === 'production'` and apply fail-fast checks within the consuming class constructors to throw an error on startup.
+
+## 2026-08-13 - [Remove hardcoded fallback for LiveKit TURN credentials]
+**Vulnerability:** Found hardcoded fallback strings for `LIVEKIT_TURN_USERNAME`, `LIVEKIT_TURN_PASSWORD`, and `LIVEKIT_TURN_DOMAIN` in `backend/src/livekit/livekit.service.ts`.
+**Learning:** Default fallback configs in service files can easily expose hardcoded credentials or domains that an attacker could leverage or that could misdirect traffic if environmental variables are absent.
+**Prevention:** Avoid providing hardcoded string fallbacks for secrets and domains when configuring network services like TURN. Throw an error on initialization or usage if a required configuration value is missing.
+
+## 2024-05-24 - [Enforce critical secrets in production]
+**Vulnerability:** JWT signing keys (e.g. `TRANSFER_SECRET`) can default to insecure fallbacks if misconfigured, allowing attackers to forge tokens.
+**Learning:** Services should employ a fail-secure approach during startup. Defaulting to development secrets is risky unless explicitly constrained to non-production environments.
+**Prevention:** In constructors or initialization blocks, verify that `NODE_ENV === "production"` has the required sensitive environment variables set, and throw a fast-failing error if not.
