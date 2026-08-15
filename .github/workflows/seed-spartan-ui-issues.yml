@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - scripts/seed-spartan-ui-issues.mjs
+      - scripts/verify-spartan-ui-issues.mjs
       - .github/workflows/seed-spartan-ui-issues.yml
 
 permissions:
@@ -30,57 +31,19 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Seed migration backlog
+      - name: Seed and verify complete migration backlog
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/seed-spartan-ui-issues.mjs
-
-      - name: Verify complete numbered migration backlog
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPOSITORY: ${{ github.repository }}
         run: |
-          node <<'NODE'
-          const [owner, repo] = process.env.GH_REPOSITORY.split('/');
-          const token = process.env.GH_TOKEN;
-          const seen = new Set();
-          let page = 1;
+          for attempt in $(seq 1 15); do
+            echo "Seeder pass ${attempt}/15"
+            node scripts/seed-spartan-ui-issues.mjs
+            if node scripts/verify-spartan-ui-issues.mjs; then
+              exit 0
+            fi
+            echo "Backlog still has gaps; pausing before the next idempotent pass."
+            sleep 10
+          done
 
-          while (true) {
-            const response = await fetch(
-              `https://api.github.com/repos/${owner}/${repo}/issues?state=all&per_page=100&page=${page}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  Accept: 'application/vnd.github+json',
-                  'X-GitHub-Api-Version': '2022-11-28',
-                  'User-Agent': 'elgl-spartan-ui-backlog-verifier',
-                },
-              },
-            );
-            if (!response.ok) {
-              throw new Error(`GitHub issue verification failed with HTTP ${response.status}`);
-            }
-            const items = await response.json();
-            for (const item of items) {
-              if (item.pull_request) continue;
-              const match = /^\[Spartan UI (\d{4})\]/.exec(item.title);
-              if (match) seen.add(Number(match[1]));
-            }
-            if (items.length < 100) break;
-            page += 1;
-          }
-
-          const missing = [];
-          for (let id = 1; id <= 1050; id += 1) {
-            if (!seen.has(id)) missing.push(String(id).padStart(4, '0'));
-          }
-
-          if (missing.length) {
-            throw new Error(
-              `Spartan UI backlog is incomplete: ${missing.length} IDs missing: ${missing.slice(0, 40).join(', ')}${missing.length > 40 ? ', ...' : ''}. Re-run this job to resume the idempotent seeder.`,
-            );
-          }
-
-          console.log('Verified all Spartan UI tickets 0001 through 1050 exist with no numbered gaps.');
-          NODE
+          echo "Spartan UI backlog is still incomplete after 15 passes."
+          exit 1
