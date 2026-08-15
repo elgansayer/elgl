@@ -7,14 +7,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
   selector: 'app-device-lock',
   imports: [TranslatePipe],
   template: `
-    <div class="flex h-full items-center justify-center bg-neutral-900 text-white">
+    <div class="flex h-full items-center justify-center bg-surface-500 text-text-primary">
       <div class="max-w-sm text-center">
         <h1 class="mb-6 text-2xl font-bold">{{ 'deviceLock.title' | t }}</h1>
-        <p class="mb-8 text-neutral-400">{{ 'deviceLock.message' | t }}</p>
+        <p class="mb-8 text-text-secondary">{{ 'deviceLock.message' | t }}</p>
         <button
           type="button"
           (click)="unlock()"
-          class="rounded-full bg-primary-500 px-6 py-3 text-white transition hover:bg-primary-600"
+          class="rounded-full bg-primary px-6 py-3 text-on-fill transition hover:bg-primary-dark"
         >
           {{ 'deviceLock.unlock' | t }}
         </button>

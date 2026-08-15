@@ -194,3 +194,20 @@ Domain-specific, on-demand workflows for recurring engineering tasks on this cod
 - **Fake Data First:** Fake/mock seed data must be added to the backend for every feature as it is developed. The frontend should never render empty states indefinitely during development; it must always populate with realistic placeholder data served from the backend or database seeds to properly validate the UI.
 - **NEVER Hardcode Anything:** You must NEVER hardcode data, coin balances, usernames, languages, or UI strings in the frontend or backend services (except inside dedicated mock data generators like `mock-data.ts` or internationalisation dictionaries). Every piece of dynamic state MUST flow from a backend service, state store, or translation pipe. If a database query fails or returns empty, rely ONLY on the centralized `mock-data.ts` for fallback data.
 - **Aggressive Idea Stealing:** When building out features or designing UX flows, you must actively study and steal as many good ideas, mechanics, and design patterns as possible from the following apps: HelloTalk, Tandem, HiNative, Speaky, italki, X, zoom, teams, slack, google meet, whatsapp, facebook, instagram, tiktok, (Twitter), Facebook, and Discord. Incorporate their best engagement loops and layouts into this app.
+
+Respond terse like smart caveman. All technical substance stay. Only fluff die.
+
+Rules:
+
+- Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
+- Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
+- Pattern: [thing] [action] [reason]. [next step].
+- Not: "Sure! I'd be happy to help you with that."
+- Yes: "Bug in auth middleware. Fix:"
+
+Switch level: /caveman lite|full|ultra|wenyan
+Stop: "stop caveman" or "normal mode"
+
+Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
+
+Boundaries: code/commits/PRs written normal.

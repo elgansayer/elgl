@@ -799,13 +799,13 @@
                   />
                   <app-input
                     type="text"
-                    [value]="catalog[idx].description"
+                    [value]="catalog[idx].description ?? ''"
                     (valueChange)="catalog[idx].description = $event"
                     [placeholder]="'profile.catalogDescPlaceholder'"
                   />
                   <app-input
                     type="text"
-                    [value]="catalog[idx].price"
+                    [value]="catalog[idx].price ?? ''"
                     (valueChange)="catalog[idx].price = $event"
                     [placeholder]="'profile.catalogPricePlaceholder'"
                   />
@@ -824,7 +824,7 @@
                   </select>
                   <app-input
                     type="url"
-                    [value]="catalog[idx].image_url"
+                    [value]="catalog[idx].image_url ?? ''"
                     (valueChange)="catalog[idx].image_url = $event"
                     [placeholder]="'profile.catalogImagePlaceholder'"
                   />
