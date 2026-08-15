@@ -28,6 +28,11 @@ export class AdminAuditQueryDto {
   @IsIn(['success', 'denied', 'failed'])
   outcome?: 'success' | 'denied' | 'failed';
 
+  @ApiPropertyOptional({ description: 'Exact capability key filter' })
+  @IsOptional()
+  @IsString()
+  capabilityKey?: string;
+
   @ApiPropertyOptional({ description: 'Exact actor user ID filter' })
   @IsOptional()
   @IsString()
