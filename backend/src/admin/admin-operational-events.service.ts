@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AdminOperationalEventsQueryDto } from './dto/admin-operational-events-query.dto';
 
@@ -61,6 +61,10 @@ export class AdminOperationalEventsService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
+    if (query.startTime && query.endTime && Date.parse(query.startTime) > Date.parse(query.endTime)) {
+      throw new BadRequestException('startTime must be before or equal to endTime');
+    }
+
     let request = this.supabaseService
       .getClient()
       .from('admin_operational_events')
@@ -70,6 +74,8 @@ export class AdminOperationalEventsService {
     if (query.category?.trim()) request = request.eq('category', query.category.trim());
     if (query.source?.trim()) request = request.eq('source', query.source.trim());
     if (query.correlationId?.trim()) request = request.eq('correlation_id', query.correlationId.trim());
+    if (query.startTime) request = request.gte('created_at', query.startTime);
+    if (query.endTime) request = request.lte('created_at', query.endTime);
 
     const { data, error, count } = await request
       .order('created_at', { ascending: false })

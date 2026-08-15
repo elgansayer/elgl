@@ -34,6 +34,12 @@ import { AdminOperationalEvent, AdminOperationalEventsService } from '../admin-o
         <label>Correlation ID
           <input name="correlationId" [(ngModel)]="correlationId" maxlength="128" [disabled]="busy()" />
         </label>
+        <label>From
+          <input type="datetime-local" name="startTime" [(ngModel)]="startTime" [disabled]="busy()" />
+        </label>
+        <label>Until
+          <input type="datetime-local" name="endTime" [(ngModel)]="endTime" [disabled]="busy()" />
+        </label>
         <button type="submit" [disabled]="busy()">{{ busy() ? 'Loading…' : 'Apply filters' }}</button>
       </form>
 
@@ -89,6 +95,8 @@ export class LogsPageComponent {
   category = '';
   source = '';
   correlationId = '';
+  startTime = '';
+  endTime = '';
   readonly events = signal<AdminOperationalEvent[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -111,6 +119,8 @@ export class LogsPageComponent {
         category: this.category,
         source: this.source,
         correlationId: this.correlationId,
+        startTime: this.toIso(this.startTime),
+        endTime: this.toIso(this.endTime),
       }));
       this.events.set(result.events);
       this.total.set(result.total);
@@ -125,4 +135,9 @@ export class LogsPageComponent {
   previousPage(): void { if (this.page() > 1 && !this.busy()) { this.page.update(v => v - 1); void this.load(); } }
   nextPage(): void { if (this.page() < this.totalPages() && !this.busy()) { this.page.update(v => v + 1); void this.load(); } }
   formatDate(value: string): string { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Unknown' : date.toLocaleString(); }
+  private toIso(value: string): string | undefined {
+    if (!value) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+  }
 }
