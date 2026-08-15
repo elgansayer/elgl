@@ -56,6 +56,36 @@ def test_secure_tool_replaces_the_frozen_executor_by_copying() -> None:
     assert "tools[0].executor =" not in source
 
 
+def test_terminal_mounts_the_workspace_at_its_real_host_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The file_editor tool reports and accepts real host paths (it edits the
+    filesystem directly, not through this container), so the terminal tool's
+    container must expose the workspace at that same absolute path rather than a
+    generic /workspace alias - otherwise a path the agent gets back from one tool
+    is one the other tool can't find. Confirmed live: an agent that created a file
+    via file_editor, then ran `ls` on that exact reported path from the terminal,
+    got "No such file or directory" and burned its whole conversation debugging a
+    nonexistent permission issue.
+    """
+    workspace = tmp_path / "worktree"
+    workspace.mkdir()
+    calls: list[list[str]] = []
+
+    def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
+        calls.append(arguments)
+        return CompletedProcess(arguments, 0, "ready\n", "")
+
+    monkeypatch.setattr("openhands_factory.secure_tools.subprocess.run", run)
+    executor = PodmanTerminalExecutor(workspace, workspace, Path("/usr/bin/podman"), "worker")
+
+    executor(TerminalAction(command="printf ready"))
+
+    assert f"{workspace}:{workspace}:rw,Z" in calls[0]
+    assert f"--workdir={workspace}" in calls[0]
+    assert "/workspace" not in " ".join(calls[0])
+
+
 def test_terminal_keeps_nested_resource_and_security_limits(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

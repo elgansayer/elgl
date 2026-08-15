@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from openhands_factory.models import CircuitState, FailureKind, ProviderName
 from openhands_factory.state import atomic_write_json, read_json
+
+# Never wait longer than this for a single provider response, no matter what it
+# claims: caps a malformed or absurd resets_in_seconds value from wedging a
+# breaker open indefinitely.
+MAX_RETRY_AFTER_SECONDS = 7 * 24 * 3600
 
 
 @dataclass
@@ -18,12 +24,22 @@ class CircuitBreaker:
     state: CircuitState = CircuitState.CLOSED
     consecutive_failures: int = 0
     opened_at: datetime | None = None
+    # A provider-reported wait duration for the failure that opened this breaker
+    # (e.g. a subscription plan's usage-limit reset), when longer than the default
+    # cooldown_seconds. None means the default cooldown applies.
+    retry_after_seconds: int | None = None
+
+    def _effective_cooldown_seconds(self) -> int:
+        if self.retry_after_seconds is not None:
+            return max(self.cooldown_seconds, self.retry_after_seconds)
+        return self.cooldown_seconds
 
     def permits_call(self, now: datetime | None = None) -> bool:
         current = now or datetime.now(UTC)
         if self.state is not CircuitState.OPEN:
             return True
-        if self.opened_at and current >= self.opened_at + timedelta(seconds=self.cooldown_seconds):
+        cooldown = self._effective_cooldown_seconds()
+        if self.opened_at and current >= self.opened_at + timedelta(seconds=cooldown):
             self.state = CircuitState.HALF_OPEN
             return True
         return False
@@ -32,8 +48,16 @@ class CircuitBreaker:
         self.state = CircuitState.CLOSED
         self.consecutive_failures = 0
         self.opened_at = None
+        self.retry_after_seconds = None
 
-    def record_failure(self, kind: FailureKind, now: datetime | None = None) -> None:
+    def record_failure(
+        self,
+        kind: FailureKind,
+        now: datetime | None = None,
+        retry_after_seconds: int | None = None,
+    ) -> None:
+        if retry_after_seconds is not None:
+            self.retry_after_seconds = min(retry_after_seconds, MAX_RETRY_AFTER_SECONDS)
         if kind in {FailureKind.AUTHENTICATION, FailureKind.CONFIGURATION, FailureKind.BUDGET}:
             self.state = CircuitState.OPEN
             self.consecutive_failures = self.failure_threshold
@@ -45,13 +69,32 @@ class CircuitBreaker:
             self.opened_at = now or datetime.now(UTC)
 
 
+def extract_retry_after_seconds(message: str) -> int | None:
+    """Pull a provider-reported wait duration out of an error message, if present.
+
+    Some providers (e.g. a subscription plan's usage-limit response) report
+    precisely how long until the limit clears, as `"resets_in_seconds":NUMBER` in
+    an embedded JSON body. That is far more informative than a fixed cooldown -
+    the alternative is retrying a multi-day outage every five minutes forever.
+    """
+    match = re.search(r'"resets_in_seconds"\s*:\s*(\d+)', message)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
 def classify_failure(status_code: int | None, message: str) -> FailureKind:
     normalised = message.lower()
     if status_code in {401, 403} or any(
         word in normalised for word in ("expired token", "invalid api key", "authentication")
     ):
         return FailureKind.AUTHENTICATION
-    if status_code == 429 or "rate limit" in normalised or "quota" in normalised:
+    if (
+        status_code == 429
+        or "rate limit" in normalised
+        or "quota" in normalised
+        or "usage limit" in normalised
+    ):
         return FailureKind.RATE_LIMIT
     if "budget" in normalised or "allowance exhausted" in normalised:
         return FailureKind.BUDGET
@@ -91,6 +134,7 @@ class ProviderHealthStore:
                     state=CircuitState(item["state"]),
                     consecutive_failures=int(item["consecutive_failures"]),
                     opened_at=datetime.fromisoformat(opened) if opened else None,
+                    retry_after_seconds=item.get("retry_after_seconds"),
                 )
             )
         return result
