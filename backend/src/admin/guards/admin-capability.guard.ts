@@ -9,10 +9,8 @@ import { Reflector } from '@nestjs/core';
 import { User } from '@supabase/supabase-js';
 import { Request } from 'express';
 import { AdminAuthorizationService } from '../admin-authorization.service';
-import {
-  ADMIN_CAPABILITIES_METADATA_KEY,
-} from '../decorators/require-admin-capabilities.decorator';
 import { AdminCapability } from '../admin-capabilities';
+import { ADMIN_CAPABILITIES_METADATA_KEY } from '../decorators/require-admin-capabilities.decorator';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -43,7 +41,10 @@ export class AdminCapabilityGuard implements CanActivate {
       return true;
     }
 
-    const allowed = await this.authorization.hasAllCapabilities(user.id, required);
+    const allowed = await this.authorization.hasAllCapabilities(
+      user.id,
+      required,
+    );
     if (!allowed) {
       throw new ForbiddenException('Required admin capability missing');
     }

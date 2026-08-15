@@ -61,6 +61,8 @@ export class AdminAuthorizationService {
     }
 
     const effective = new Set(await this.getEffectiveCapabilities(userId));
-    return requiredCapabilities.every((capability) => effective.has(capability));
+    return requiredCapabilities.every((capability) =>
+      effective.has(capability),
+    );
   }
 }
