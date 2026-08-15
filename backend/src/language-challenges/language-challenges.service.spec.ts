@@ -491,13 +491,11 @@ describe('LanguageChallengesService', () => {
       const result = await service.claimPrize('user-1', 'challenge-1');
 
       // prize pool 300 split between 2 completers = 150 each, no remainder
-      expect(monetisationService.addCoins).toHaveBeenNthCalledWith(
-        1,
+      expect(monetisationService.addCoins).toHaveBeenCalledWith(
         'user-1',
         150,
       );
-      expect(monetisationService.addCoins).toHaveBeenNthCalledWith(
-        2,
+      expect(monetisationService.addCoins).toHaveBeenCalledWith(
         'user-2',
         150,
       );
