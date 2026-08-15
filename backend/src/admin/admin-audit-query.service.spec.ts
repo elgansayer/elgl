@@ -45,9 +45,9 @@ describe('AdminAuditQueryService', () => {
     const eq = vi.fn().mockReturnValue({ order });
     const select = vi.fn().mockReturnValue({ eq, order });
     const service = new AdminAuditQueryService({
-      getClient: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({ select }),
-      }),
+      getClient: vi
+        .fn()
+        .mockReturnValue({ from: vi.fn().mockReturnValue({ select }) }),
     } as unknown as SupabaseService);
 
     await service.list({ outcome: 'failed' });
@@ -60,9 +60,9 @@ describe('AdminAuditQueryService', () => {
     const eq = vi.fn().mockReturnValue({ order });
     const select = vi.fn().mockReturnValue({ eq, order });
     const service = new AdminAuditQueryService({
-      getClient: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({ select }),
-      }),
+      getClient: vi
+        .fn()
+        .mockReturnValue({ from: vi.fn().mockReturnValue({ select }) }),
     } as unknown as SupabaseService);
 
     await service.list({ capabilityKey: 'users.read' });
