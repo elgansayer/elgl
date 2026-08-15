@@ -13,23 +13,11 @@ export class TransferService {
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
   ) {
-    const env = this.configService.get<string>('NODE_ENV', 'development');
-    const configuredSecret = this.configService.get<string>('TRANSFER_SECRET');
-    const defaultSecret = 'device-transfer-secret-dev-only';
-
-    if (
-      env === 'production' &&
-      (!configuredSecret || configuredSecret === defaultSecret)
-    ) {
-      throw new Error(
-        'CRITICAL: TRANSFER_SECRET must be securely configured in production',
-      );
+    const secret = this.configService.get<string>('TRANSFER_SECRET');
+    if (!secret || secret === 'device-transfer-secret-dev-only') {
+      throw new Error('TRANSFER_SECRET must be configured');
     }
-
-    this.secret =
-      configuredSecret && configuredSecret !== defaultSecret
-        ? configuredSecret
-        : defaultSecret;
+    this.secret = secret;
   }
 
   /**
