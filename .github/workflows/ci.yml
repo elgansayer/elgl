@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   application-checks:
     name: ${{ matrix.directory }} / ${{ matrix.check }}
@@ -86,3 +90,29 @@ jobs:
         working-directory: automation
       - run: pytest
         working-directory: automation
+
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs:
+      - application-checks
+      - constitution
+      - factory
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      APPLICATION_RESULT: ${{ needs.application-checks.result }}
+      CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+      FACTORY_RESULT: ${{ needs.factory.result }}
+    steps:
+      - name: Require all canonical CI checks
+        run: |
+          set -euo pipefail
+          printf 'application-checks=%s\nconstitution=%s\nfactory=%s\n' \
+            "$APPLICATION_RESULT" "$CONSTITUTION_RESULT" "$FACTORY_RESULT"
+          if [[ "$APPLICATION_RESULT" != "success" || \
+                "$CONSTITUTION_RESULT" != "success" || \
+                "$FACTORY_RESULT" != "success" ]]; then
+            echo "One or more canonical CI jobs did not succeed."
+            exit 1
+          fi
