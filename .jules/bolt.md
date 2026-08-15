@@ -44,6 +44,10 @@
 **Learning:** In `backend/src/discovery/discovery.service.ts`, iterating through user match generation and sequentially calling `safetyService.getBlockedAndBlockerIds` using `await` inside a `for...of` loop causes an N+1 query problem, creating linear scaling latency when generating daily recommendations.
 **Action:** Replaced the sequential `await` within the `for...of` loop with a concurrent approach by mapping the array to `Promise.all` and fetching `blockedIds` in parallel. This transforms N sequential queries into 1 concurrent roundtrip block, drastically reducing worst-case latency during discovery matchmaking calculations.
 
+## 2026-08-14 - [Optimize System Message Room Discovery via Batching]
+**Learning:** In the backend `system-message.service.ts`, finding a 1-on-1 chat room iteratively queried the database inside a loop using `await` for `count`. With 50 mutual rooms and 30ms latency, this causes a 1.5s worst-case bottleneck. Replacing this with a single batch `.in()` query reduces the execution time to 30ms, a 98% improvement.
+**Action:** Replaced sequential query checks with a single bulk fetch using `.select` followed by calculating member counts in memory, collapsing database overhead from O(N) linear time to O(1) concurrent time.
+
 ## 2026-08-15 - [Optimize Node.js stream iteration using toArray()]
 **Learning:** In the backend `media.service.ts`, reading stream body chunks from a Cloudflare R2 / S3 `GetObjectCommand` via an asynchronous `for await...of` loop is significantly slower than parsing it directly. Asynchronous stream iteration has measurable event-loop overhead, which compounds for larger files.
 **Action:** When converting a Node.js `Readable` stream to a buffer (especially AWS SDK response bodies), replace `for await (const chunk of stream) { chunks.push(chunk); }` with the native `stream.toArray()` followed by `Buffer.concat()`. This natively aggregates the chunks in internal C++ bindings and resolves substantially faster.
