@@ -26,7 +26,7 @@ jobs:
             command: npm run build
           - directory: backend
             check: unit
-            command: npm test
+            command: npm run test:cov
           - directory: backend
             check: e2e
             command: npm run test:e2e
@@ -57,6 +57,15 @@ jobs:
       - name: Run ${{ matrix.check }}
         run: ${{ matrix.command }}
         working-directory: ${{ matrix.directory }}
+
+      - name: Upload backend coverage
+        if: success() && matrix.directory == 'backend' && matrix.check == 'unit'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-${{ github.sha }}
+          path: backend/coverage
+          if-no-files-found: error
+          retention-days: 14
 
   constitution:
     runs-on: ubuntu-latest
