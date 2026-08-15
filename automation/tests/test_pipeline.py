@@ -224,7 +224,7 @@ def test_refresh_does_not_remove_a_closed_issue_while_its_worker_is_active(
     assert removed == []
 
 
-def test_refresh_preserves_a_quarantined_issue_until_human_recovery(
+def test_refresh_migrates_a_quarantined_closed_issue_into_normal_completion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     github = GitHub()
@@ -239,8 +239,8 @@ def test_refresh_preserves_a_quarantined_issue_until_human_recovery(
 
     refreshed = pipeline.refresh()
 
-    assert refreshed["42"].state is JobState.QUARANTINED
-    assert refreshed["42"].last_error is None
+    assert refreshed["42"].state is JobState.DONE
+    assert refreshed["42"].last_error == "Issue closed before pull request creation"
 
 
 def test_refresh_releases_a_closed_issue_during_security_review(
