@@ -30,6 +30,7 @@ import {
           </select>
         </label>
         <label>Capability <input name="capabilityKey" [(ngModel)]="capabilityKey" /></label>
+        <label>Reason code <input name="reasonCode" [(ngModel)]="reasonCode" /></label>
         <label>Actor user ID <input name="actor" [(ngModel)]="actorUserId" /></label>
         <label>Target type <input name="targetType" [(ngModel)]="targetType" /></label>
         <label>Target ID <input name="targetId" [(ngModel)]="targetId" /></label>
@@ -103,6 +104,7 @@ export class AuditPageComponent {
   action = '';
   outcome: '' | 'success' | 'denied' | 'failed' = '';
   capabilityKey = '';
+  reasonCode = '';
   actorUserId = '';
   targetType = '';
   targetId = '';
@@ -131,6 +133,7 @@ export class AuditPageComponent {
         action: this.action,
         outcome: this.outcome || undefined,
         capabilityKey: this.capabilityKey,
+        reasonCode: this.reasonCode,
         actorUserId: this.actorUserId,
         targetType: this.targetType,
         targetId: this.targetId,
@@ -156,6 +159,7 @@ export class AuditPageComponent {
     this.action = '';
     this.outcome = '';
     this.capabilityKey = '';
+    this.reasonCode = '';
     this.actorUserId = '';
     this.targetType = '';
     this.targetId = '';
