@@ -64,7 +64,9 @@ describe('AdminSystemHealthService', () => {
   });
 
   it('still returns the degraded snapshot when operational-event storage fails', async () => {
-    const limit = vi.fn().mockResolvedValue({ data: null, error: new Error('down') });
+    const limit = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: new Error('down') });
     const select = vi.fn().mockReturnValue({ limit });
     const operationalEvents = {
       record: vi.fn().mockRejectedValue(new Error('event store unavailable')),
