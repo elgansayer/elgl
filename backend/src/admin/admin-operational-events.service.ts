@@ -41,16 +41,19 @@ export class AdminOperationalEventsService {
       throw new Error('Operational event category and message are required');
     }
 
+    const payload = {
+      severity: input.severity,
+      category,
+      message,
+      correlation_id: correlationId,
+      source,
+    };
+    // The migration exists before the local Supabase Database type is regenerated.
+    // Keep the cast at this schema boundary instead of weakening the service types.
     const { error } = await this.supabaseService
       .getClient()
       .from('admin_operational_events')
-      .insert({
-        severity: input.severity,
-        category,
-        message,
-        correlation_id: correlationId,
-        source,
-      });
+      .insert(payload as never);
 
     if (error) throw error;
   }
