@@ -43,25 +43,27 @@ jobs:
           gh label create "priority:medium" --color "E4E669" --force --repo "$REPOSITORY" || true
           gh label create "priority:low"    --color "C2E0C6" --force --repo "$REPOSITORY" || true
 
-          # Keep Swarm aligned with Factory/admin governance. These labels are hard exclusions.
+          # Swarm is a privileged execution path. Only issues explicitly marked
+          # ai-agent-task by trusted planning/governance automation are eligible.
+          # Keep Factory/admin governance exclusions as additional hard blocks.
           EXCLUSIONS="-label:swarm-active -label:factory-active -label:admin-awaiting-ready -label:factory-skip -label:factory-epic -label:factory-planning -label:needs-human -label:duplicate"
 
-          # Pick next issue: priority:high first, then any unlabelled, then priority:medium.
+          # Pick next eligible AI task: high priority, then unprioritized, then medium.
           ISSUE_NUM=$(gh issue list --repo "$REPOSITORY" \
-            --state open --label "priority:high" \
+            --state open --label "ai-agent-task" --label "priority:high" \
             --search "$EXCLUSIONS sort:created-asc" \
             --limit 1 --json number -q '.[0].number' 2>/dev/null || echo "")
 
           if [ -z "$ISSUE_NUM" ] || [ "$ISSUE_NUM" = "null" ]; then
             ISSUE_NUM=$(gh issue list --repo "$REPOSITORY" \
-              --state open \
+              --state open --label "ai-agent-task" \
               --search "$EXCLUSIONS -label:priority:high -label:priority:medium -label:priority:low sort:created-asc" \
               --limit 1 --json number -q '.[0].number' 2>/dev/null || echo "")
           fi
 
           if [ -z "$ISSUE_NUM" ] || [ "$ISSUE_NUM" = "null" ]; then
             ISSUE_NUM=$(gh issue list --repo "$REPOSITORY" \
-              --state open --label "priority:medium" \
+              --state open --label "ai-agent-task" --label "priority:medium" \
               --search "$EXCLUSIONS sort:created-asc" \
               --limit 1 --json number -q '.[0].number' 2>/dev/null || echo "")
           fi
