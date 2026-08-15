@@ -5,7 +5,7 @@ on:
     workflows:
       - CI
       - Deploy
-      - Admin Portal CI
+      - Admin portal CI
     types: [completed]
 
 permissions:
