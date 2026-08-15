@@ -55,6 +55,7 @@ const testDefaults: Record<string, string> = {
   INTERNAL_API_SECRET: 'test-internal-api-secret',
   FRONTEND_URL: 'http://localhost:4200',
   LLM_API_KEY: 'test-llm-key',
+  TRANSFER_SECRET: 'test-transfer-secret',
 };
 
 export const validationSchema = Joi.object({
@@ -229,7 +230,7 @@ export const validationSchema = Joi.object({
   SPAM_SIMILARITY_THRESHOLD: Joi.number().default(0.75),
 
   // -- Transfer --
-  TRANSFER_SECRET: Joi.string().default('device-transfer-secret-dev-only'),
+  TRANSFER_SECRET: Joi.string().required(),
 
   // -- Privacy & Legal --
   PRIVACY_EFFECTIVE_DATE: Joi.string().optional().allow(''),
