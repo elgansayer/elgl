@@ -1,6 +1,7 @@
 export const ADMIN_CAPABILITIES = [
   'users.read',
   'users.manage',
+  'users.sessions.read',
   'moderation.cases.read',
   'moderation.cases.manage',
   'audit.read',
