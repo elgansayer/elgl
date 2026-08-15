@@ -1,3 +1,6 @@
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
+
 from openhands_factory.daemon import select_batch
 from openhands_factory.models import Job, JobState, Task
 
@@ -31,3 +34,19 @@ def test_select_batch_refills_free_capacity_without_rescheduling_active_jobs() -
     selected = select_batch(jobs, 2, {"10"})
 
     assert [item.task.identifier for item in selected] == ["11", "12"]
+
+
+def test_select_batch_skips_jobs_still_backing_off() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": replace(
+            job("10", 0, JobState.IMPLEMENTING), next_attempt_at=now + timedelta(minutes=5)
+        ),
+        "11": replace(
+            job("11", 0, JobState.IMPLEMENTING), next_attempt_at=now - timedelta(minutes=5)
+        ),
+    }
+
+    selected = select_batch(jobs, 5, now=now)
+
+    assert [item.task.identifier for item in selected] == ["11"]

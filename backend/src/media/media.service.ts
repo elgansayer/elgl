@@ -213,12 +213,10 @@ export class MediaService implements OnModuleInit {
     const getResult = await this.s3Client.send(
       new GetObjectCommand({ Bucket: bucket, Key: key }),
     );
+    // ⚡ Bolt Optimization: Replace slow 'for await' with native toArray()
     const stream = getResult.Body as import('stream').Readable;
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    const originalBuffer = Buffer.concat(chunks);
+    const chunks = await stream.toArray();
+    const originalBuffer = Buffer.concat(chunks as Uint8Array[]);
 
     // 3. Compress image
     const compressedBuffer = await this.imageCompressionService.compress(
@@ -267,12 +265,10 @@ export class MediaService implements OnModuleInit {
     const getResult = await this.s3Client.send(
       new GetObjectCommand({ Bucket: this.bucket, Key: objectKey }),
     );
+    // ⚡ Bolt Optimization: Replace slow 'for await' with native toArray()
     const stream = getResult.Body as import('stream').Readable;
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    const originalBuffer = Buffer.concat(chunks);
+    const chunks = await stream.toArray();
+    const originalBuffer = Buffer.concat(chunks as Uint8Array[]);
 
     // Compress image
     const compressedBuffer = await this.imageCompressionService.compress(

@@ -1,6 +1,9 @@
 from pathlib import Path
 from unittest.mock import Mock
 
+import pytest
+
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.quality_gate import check_quality_gate, is_test_path
 
 
@@ -24,6 +27,7 @@ def test_check_quality_gate_blocks_production_mock() -> None:
     findings = check_quality_gate(workflow, "main")
     assert len(findings) == 1
     assert findings[0].code == "production-mock"
+    assert findings[0].line == 1
 
 
 def test_check_quality_gate_allows_test_mock() -> None:
@@ -62,3 +66,25 @@ def test_check_quality_gate_blocks_skipped_tests() -> None:
     findings = check_quality_gate(workflow, "main")
     assert len(findings) == 1
     assert findings[0].code == "skipped-test"
+
+
+def test_check_quality_gate_blocks_e2e_skip() -> None:
+    workflow = Mock()
+    workflow.runner.return_value = Mock(
+        stdout="""+++ b/frontend/cypress/example.cy.ts
+@@ -1 +1,2 @@
++  cy.skip('not ready');
+"""
+    )
+
+    findings = check_quality_gate(workflow, "main")
+
+    assert [finding.code for finding in findings] == ["skipped-test"]
+
+
+def test_check_quality_gate_reports_diff_failure() -> None:
+    workflow = Mock()
+    workflow.runner.return_value = Mock(returncode=1, stderr="fatal: bad revision", stdout="")
+
+    with pytest.raises(FactoryError, match="Could not inspect quality diff"):
+        check_quality_gate(workflow, "main")
