@@ -45,7 +45,8 @@ describe('AdminOperationalEventsService', () => {
     const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
     const eqCorrelation = vi.fn().mockReturnValue({ order });
-    const eqCategory = vi.fn().mockReturnValue({ eq: eqCorrelation });
+    const eqSource = vi.fn().mockReturnValue({ eq: eqCorrelation });
+    const eqCategory = vi.fn().mockReturnValue({ eq: eqSource });
     const eqSeverity = vi.fn().mockReturnValue({ eq: eqCategory });
     const select = vi.fn().mockReturnValue({ eq: eqSeverity });
     const from = vi.fn().mockReturnValue({ select });
@@ -59,6 +60,7 @@ describe('AdminOperationalEventsService', () => {
         pageSize: 25,
         severity: 'error',
         category: 'database',
+        source: 'admin-v1',
         correlationId: 'request-1',
       }),
     ).resolves.toEqual({ events: [], total: 0, page: 2, pageSize: 25 });
@@ -66,6 +68,7 @@ describe('AdminOperationalEventsService', () => {
     expect(from).toHaveBeenCalledWith('admin_operational_events');
     expect(eqSeverity).toHaveBeenCalledWith('severity', 'error');
     expect(eqCategory).toHaveBeenCalledWith('category', 'database');
+    expect(eqSource).toHaveBeenCalledWith('source', 'admin-v1');
     expect(eqCorrelation).toHaveBeenCalledWith('correlation_id', 'request-1');
     expect(order).toHaveBeenCalledWith('created_at', { ascending: false });
     expect(range).toHaveBeenCalledWith(25, 49);
