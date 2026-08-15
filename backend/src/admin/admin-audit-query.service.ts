@@ -47,6 +47,7 @@ export class AdminAuditQueryService {
 
     if (query.action) request = request.eq('action', query.action);
     if (query.outcome) request = request.eq('outcome', query.outcome);
+    if (query.capabilityKey) request = request.eq('capability_key', query.capabilityKey);
     if (query.actorUserId) request = request.eq('actor_user_id', query.actorUserId);
     if (query.targetType) request = request.eq('target_type', query.targetType);
     if (query.targetId) request = request.eq('target_id', query.targetId);
