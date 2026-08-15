@@ -136,7 +136,7 @@ interface ChatMessage {
     @if (activeWordToken(); as token) {
       <app-word-definition-modal
         [wordToken]="token"
-        [contextSentence]="activeWordContext() ?? undefined"
+        [contextSentence]="activeWordContext() ?? ''"
         (closed)="activeWordToken.set(null)"
       ></app-word-definition-modal>
     }
