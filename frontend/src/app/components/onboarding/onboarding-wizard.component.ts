@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -129,7 +129,7 @@ export class OnboardingWizardComponent {
   handleNext(): void {
     this.onboardingService.nextStep();
     if (this.onboardingService.isOnboardingComplete()) {
-      this.router.navigate(['/discovery']);
+      this.router.navigate(['/home']);
     }
   }
 }

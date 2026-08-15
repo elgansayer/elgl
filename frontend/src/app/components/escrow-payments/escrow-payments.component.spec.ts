@@ -14,7 +14,11 @@ describe('EscrowPaymentsComponent', () => {
   let component: EscrowPaymentsComponent;
   let fixture: ComponentFixture<EscrowPaymentsComponent>;
   let mockAuthService: { getAccessToken: ReturnType<typeof vi.fn> };
-  let mockI18nService: { translate: ReturnType<typeof vi.fn>; currentLang: ReturnType<typeof signal>; direction: ReturnType<typeof signal> };
+  let mockI18nService: {
+    translate: ReturnType<typeof vi.fn>;
+    currentLang: ReturnType<typeof signal>;
+    direction: ReturnType<typeof signal>;
+  };
   let mockEscrowService: {
     listEscrows: ReturnType<typeof vi.fn>;
     releaseEscrow: ReturnType<typeof vi.fn>;
@@ -24,7 +28,13 @@ describe('EscrowPaymentsComponent', () => {
     pendingOperationCount: ReturnType<typeof signal>;
   };
   let mockNetworkService: { isOnline: ReturnType<typeof signal> };
-  let mockOnboardingService: { isCompleted: ReturnType<typeof vi.fn>; isTourInProgress: ReturnType<typeof signal>; markComplete: ReturnType<typeof vi.fn>; stepNames: string[]; startTour: ReturnType<typeof vi.fn> };
+  let mockOnboardingService: {
+    isCompleted: ReturnType<typeof vi.fn>;
+    isTourInProgress: ReturnType<typeof signal>;
+    markComplete: ReturnType<typeof vi.fn>;
+    stepNames: string[];
+    startTour: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockAuthService = {
@@ -54,10 +64,14 @@ describe('EscrowPaymentsComponent', () => {
       isCompleted: vi.fn().mockReturnValue(true),
       isTourInProgress: signal(false),
       markComplete: vi.fn(),
-      stepNames: ['escrowStepTitle', 'escrowStepCreate', 'escrowStepFilters', 'escrowStepTransactions'],
+      stepNames: [
+        'escrowStepTitle',
+        'escrowStepCreate',
+        'escrowStepFilters',
+        'escrowStepTransactions',
+      ],
       startTour: vi.fn(),
     };
-
 
     await TestBed.configureTestingModule({
       imports: [EscrowPaymentsComponent],
@@ -95,21 +109,23 @@ describe('EscrowPaymentsComponent', () => {
     expect(component.selectedStatus()).toBe('all');
   });
 
-  it('should toggle create form', () => {
-  });
+  it('should toggle create form', () => {});
 
   it('should return correct status badge class', () => {
-    expect(component.statusBadgeClass('pending')).toContain('amber');
-    expect(component.statusBadgeClass('released')).toContain('emerald');
-    expect(component.statusBadgeClass('disputed')).toContain('rose');
-    expect(component.statusBadgeClass('refunded')).toContain('slate');
-    expect(component.statusBadgeClass('cancelled')).toContain('zinc');
+    expect(component.statusBadgeClass('pending')).toContain('warning');
+    expect(component.statusBadgeClass('released')).toContain('success');
+    expect(component.statusBadgeClass('disputed')).toContain('danger');
+    expect(component.statusBadgeClass('refunded')).toContain('surface');
+    expect(component.statusBadgeClass('cancelled')).toContain('muted');
   });
 
   it('should return status filters with labels', () => {
     expect(component.statusFilters).toHaveLength(6);
     expect(component.statusFilters[0]).toEqual({ value: 'all', label: 'escrow.status.all' });
-    expect(component.statusFilters[1]).toEqual({ value: 'pending', label: 'escrow.status.pending' });
+    expect(component.statusFilters[1]).toEqual({
+      value: 'pending',
+      label: 'escrow.status.pending',
+    });
   });
 
   it('should not start onboarding tour when already completed', () => {

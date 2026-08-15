@@ -25,7 +25,24 @@ def test_every_change_runs_full_frontend_backend_and_factory_gate(tmp_path: Path
     frontend_commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
     frontend_e2e = next(command for command in frontend_commands if command.name == "frontend-e2e")
     assert frontend_e2e.arguments[:2] == ("bash", "-lc")
-    assert "npm start" in frontend_e2e.arguments[2]
+    script = frontend_e2e.arguments[2]
+    assert "npm start" in script
+    # A crashed dev server must fail fast with its own log, not silently burn
+    # the whole wait window and then fail a second, more confusing time inside
+    # npm run e2e against a server that was never coming up.
+    assert "kill -0" in script
+    assert "factory-angular-e2e.log" in script
+
+
+def test_only_the_fixed_port_command_is_exclusive(tmp_path: Path) -> None:
+    """frontend-e2e binds a fixed host port (127.0.0.1:4200) and cannot run
+    concurrently with another instance of itself - everything else, including
+    backend-test:e2e (an in-process supertest server on an ephemeral port), is
+    safe under full worker parallelism and must not be serialized alongside it.
+    """
+    commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
+    exclusive = {command.name for command in commands if command.exclusive}
+    assert exclusive == {"frontend-e2e"}
 
 
 def test_empty_diff_cannot_claim_verification(tmp_path: Path) -> None:

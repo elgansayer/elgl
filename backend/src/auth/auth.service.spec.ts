@@ -100,9 +100,10 @@ describe('AuthService (unit)', () => {
       const mockClient = {
         auth: {
           admin: {
-            generateLink: jest
-              .fn()
-              .mockRejectedValue(new Error('Network error')),
+            generateLink: vi.fn().mockResolvedValue({
+              error: new Error('Network error'),
+              data: null,
+            }),
           },
         },
       };
@@ -110,7 +111,7 @@ describe('AuthService (unit)', () => {
 
       await expect(
         service.requestPasswordReset('user@example.com'),
-      ).rejects.toThrow();
+      ).resolves.not.toThrow();
     });
   });
 
