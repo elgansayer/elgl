@@ -27,10 +27,12 @@ import { AdminService } from './admin.service';
 import { AdminUserDetailService } from './admin-user-detail.service';
 import { RequireAdminCapabilities } from './decorators/require-admin-capabilities.decorator';
 import { AdminAuditQueryDto } from './dto/admin-audit-query.dto';
+import { AdminReportsQueryDto } from './dto/admin-reports-query.dto';
 import { AdminUserQueryDto } from './dto/admin-user-query.dto';
 import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 import { AdminGuard } from './guards/admin.guard';
 import {
+  AdminReportsListResult,
   AdminUserListResult,
   AdminUserSummary,
   LoginHistoryEntry,
@@ -86,6 +88,25 @@ export class AdminV1Controller {
   @ApiOkResponse({ description: 'Paginated administrative audit events' })
   listAudit(@Query() query: AdminAuditQueryDto): Promise<AdminAuditListResult> {
     return this.auditQuery.list(query);
+  }
+
+  @Get('moderation/reports')
+  @UseGuards(AdminCapabilityGuard)
+  @RequireAdminCapabilities('moderation.cases.read')
+  @ApiOperation({
+    summary: 'List bounded moderation reports for triage',
+    description:
+      'Returns newest-first report summaries through the dedicated admin API. This read-only queue requires moderation.cases.read and supports an exact status filter.',
+  })
+  @ApiOkResponse({ description: 'Paginated moderation reports' })
+  listModerationReports(
+    @Query() query: AdminReportsQueryDto,
+  ): Promise<AdminReportsListResult> {
+    return this.adminService.listReports(
+      query.page,
+      query.pageSize,
+      query.status,
+    );
   }
 
   @Get('users')
