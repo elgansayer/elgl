@@ -48,12 +48,11 @@ export class AdminAuditQueryService {
     if (query.action) request = request.eq('action', query.action);
     if (query.outcome) request = request.eq('outcome', query.outcome);
     if (query.capabilityKey) request = request.eq('capability_key', query.capabilityKey);
+    if (query.reasonCode) request = request.eq('reason_code', query.reasonCode);
     if (query.actorUserId) request = request.eq('actor_user_id', query.actorUserId);
     if (query.targetType) request = request.eq('target_type', query.targetType);
     if (query.targetId) request = request.eq('target_id', query.targetId);
-    if (query.correlationId) {
-      request = request.eq('correlation_id', query.correlationId);
-    }
+    if (query.correlationId) request = request.eq('correlation_id', query.correlationId);
     if (query.startTime) request = request.gte('created_at', query.startTime);
     if (query.endTime) request = request.lte('created_at', query.endTime);
 
