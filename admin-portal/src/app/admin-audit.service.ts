@@ -32,6 +32,8 @@ export interface AdminAuditQuery {
   targetType?: string;
   targetId?: string;
   correlationId?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 @Injectable({ providedIn: 'root' })
