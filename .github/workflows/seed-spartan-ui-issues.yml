@@ -34,3 +34,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/seed-spartan-ui-issues.mjs
+
+      - name: Verify terminal migration ticket exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          node <<'NODE'
+          const ownerRepo = process.env.GH_REPOSITORY;
+          const token = process.env.GH_TOKEN;
+          const expected = '[Spartan UI 1050]';
+          const query = encodeURIComponent(`repo:${ownerRepo} in:title "${expected}" type:issue`);
+          const response = await fetch(`https://api.github.com/search/issues?q=${query}&per_page=20`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'elgl-spartan-ui-backlog-verifier',
+            },
+          });
+          if (!response.ok) {
+            throw new Error(`GitHub issue verification failed with HTTP ${response.status}`);
+          }
+          const payload = await response.json();
+          const found = payload.items?.some((issue) => issue.title.startsWith(expected));
+          if (!found) {
+            throw new Error(`${expected} was not created. Re-run this job to resume the idempotent seeder.`);
+          }
+          console.log(`${expected} exists; numbered migration backlog reached its terminal ticket.`);
+          NODE
