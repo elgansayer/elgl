@@ -1,5 +1,14 @@
 import { Type } from 'class-transformer';
-import { IsISO8601, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsISO8601,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class AdminOperationalEventsQueryDto {
   @IsOptional()
