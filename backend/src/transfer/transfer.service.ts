@@ -1,12 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { randomUUID as uuidv4 } from 'crypto';
 import * as jwt from 'jsonwebtoken';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TransferService {
   private readonly secret: string;
+  private readonly logger = new Logger(TransferService.name);
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -14,7 +15,8 @@ export class TransferService {
   ) {
     const secret = this.configService.get<string>('TRANSFER_SECRET');
     if (!secret || secret === 'device-transfer-secret-dev-only') {
-      throw new Error('TRANSFER_SECRET must be configured');    }
+      throw new Error('TRANSFER_SECRET must be configured');
+    }
     this.secret = secret;
   }
 

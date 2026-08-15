@@ -18,6 +18,11 @@
 **Learning:** Hardcoded default secrets represent a critical vulnerability in production as they allow silent fallback to insecure states.
 **Prevention:** Always validate that environment secrets are explicitly configured on initialization (fail-fast) and actively reject any known dev/test default strings.
 
+## 2026-08-13 - [Strict Secrets Validation in Production]
+**Vulnerability:** Missing strict environment secret validation allowed insecure defaults or missing keys (e.g. `TRANSFER_SECRET`) to pass unnoticed into production.
+**Learning:** Hardcoded dev defaults or weak optional secret fallbacks can compromise critical authentication endpoints if not explicitly validated during app startup.
+**Prevention:** Apply a fail-fast/fail-secure pattern in the service constructor. Check if `NODE_ENV === 'production'` and explicitly throw an `Error` if the secret is absent or matches the insecure default, preventing the backend from initializing insecurely.
+
 ## 2026-08-13 - [Remove hardcoded fallback for LiveKit TURN credentials]
 **Vulnerability:** Found hardcoded fallback strings for `LIVEKIT_TURN_USERNAME`, `LIVEKIT_TURN_PASSWORD`, and `LIVEKIT_TURN_DOMAIN` in `backend/src/livekit/livekit.service.ts`.
 **Learning:** Default fallback configs in service files can easily expose hardcoded credentials or domains that an attacker could leverage or that could misdirect traffic if environmental variables are absent.
