@@ -5,8 +5,6 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
-  issues:
-    types: [opened]
 
 concurrency:
   # Per-issue concurrency: different issues run in parallel, same issue is serialised
@@ -17,9 +15,7 @@ jobs:
   ai-agent:
     if: >
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
-      (github.event_name == 'pull_request') ||
-      (github.event_name == 'issues')
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
