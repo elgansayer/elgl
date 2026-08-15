@@ -39,10 +39,6 @@ import { AdminCapabilityGuard } from './guards/admin-capability.guard';
     AdminGuard,
     AdminCapabilityGuard,
   ],
-  exports: [
-    AdminAuthorizationService,
-    AdminAuditService,
-    AdminCapabilityGuard,
-  ],
+  exports: [AdminAuthorizationService, AdminAuditService, AdminCapabilityGuard],
 })
 export class AdminModule {}
