@@ -1,3 +1,4 @@
+import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminService } from './admin.service';
 import { AdminUserDetailService } from './admin-user-detail.service';
@@ -17,13 +18,23 @@ describe('AdminV1Controller', () => {
     const userDetailService = {
       getUser: vi.fn(),
     };
+    const audit = {
+      record: vi.fn().mockResolvedValue(undefined),
+    };
     const controller = new AdminV1Controller(
       authorization as unknown as AdminAuthorizationService,
       adminService as unknown as AdminService,
       userDetailService as unknown as AdminUserDetailService,
+      audit as unknown as AdminAuditService,
     );
 
-    return { controller, authorization, adminService, userDetailService };
+    return {
+      controller,
+      authorization,
+      adminService,
+      userDetailService,
+      audit,
+    };
   };
 
   it('returns the authenticated admin identity and persisted effective capabilities', async () => {
@@ -63,8 +74,8 @@ describe('AdminV1Controller', () => {
     expect(adminService.listUsers).toHaveBeenCalledWith(query);
   });
 
-  it('delegates privacy-scrubbed login history to AdminService', async () => {
-    const { controller, adminService } = buildController();
+  it('audits privacy-scrubbed login-history reads before returning them', async () => {
+    const { controller, adminService, audit } = buildController();
     const expected = [
       {
         id: 'history-1',
@@ -75,11 +86,39 @@ describe('AdminV1Controller', () => {
       },
     ];
     adminService.getLoginHistory.mockResolvedValue(expected);
+    const request = {
+      user: { id: 'admin-1' },
+      headers: { 'x-request-id': 'request-1' },
+    } as never;
 
-    await expect(controller.getUserLoginHistory('user-1')).resolves.toEqual(
-      expected,
-    );
+    await expect(
+      controller.getUserLoginHistory('user-1', request),
+    ).resolves.toEqual(expected);
     expect(adminService.getLoginHistory).toHaveBeenCalledWith('user-1');
+    expect(audit.record).toHaveBeenCalledWith({
+      actorUserId: 'admin-1',
+      action: 'users.login_history.read',
+      capabilityKey: 'users.sessions.read',
+      targetType: 'user',
+      targetId: 'user-1',
+      outcome: 'success',
+      correlationId: 'request-1',
+      metadata: { resultCount: 1, source: 'admin-v1' },
+    });
+  });
+
+  it('fails closed when login-history auditing fails', async () => {
+    const { controller, adminService, audit } = buildController();
+    adminService.getLoginHistory.mockResolvedValue([]);
+    audit.record.mockRejectedValue(new Error('audit unavailable'));
+    const request = {
+      user: { id: 'admin-1' },
+      headers: {},
+    } as never;
+
+    await expect(
+      controller.getUserLoginHistory('user-1', request),
+    ).rejects.toThrow('audit unavailable');
   });
 
   it('delegates bounded user inspection to AdminUserDetailService', async () => {
