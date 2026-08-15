@@ -5,8 +5,8 @@ import { AccessDeniedPageComponent } from './pages/access-denied-page.component'
 import { AuditPageComponent } from './pages/audit-page.component';
 import { DashboardPageComponent } from './pages/dashboard-page.component';
 import { LoginPageComponent } from './pages/login-page.component';
+import { LogsPageComponent } from './pages/logs-page.component';
 import { ModerationPageComponent } from './pages/moderation-page.component';
-import { PlaceholderPageComponent } from './pages/placeholder-page.component';
 import { RoleAssignmentsPageComponent } from './pages/role-assignments-page.component';
 import { RolesPageComponent } from './pages/roles-page.component';
 import { SystemHealthPageComponent } from './pages/system-health-page.component';
@@ -23,7 +23,7 @@ export const ADMIN_ROUTES: Routes = [
   { path: 'roles', component: RolesPageComponent, canActivate: [adminCapabilityGuard], data: { capability: 'roles.read' } },
   { path: 'roles/assignments', component: RoleAssignmentsPageComponent, canActivate: [adminCapabilityGuard], data: { capability: 'roles.read' } },
   { path: 'audit', component: AuditPageComponent, canActivate: [adminCapabilityGuard], data: { capability: 'audit.read' } },
-  { path: 'logs', component: PlaceholderPageComponent, canActivate: [adminCapabilityGuard], data: { title: 'Logs', capability: 'logs.read' } },
+  { path: 'logs', component: LogsPageComponent, canActivate: [adminCapabilityGuard], data: { capability: 'logs.read' } },
   { path: 'system', component: SystemHealthPageComponent, canActivate: [adminCapabilityGuard], data: { capability: 'system.health.read' } },
   { path: '**', redirectTo: '' },
 ];
