@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { AdminOperationalEventsService } from './admin-operational-events.service';
 
 export type AdminHealthState = 'healthy' | 'degraded';
 
@@ -14,19 +15,34 @@ export interface AdminSystemHealthSnapshot {
 
 @Injectable()
 export class AdminSystemHealthService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly operationalEvents: AdminOperationalEventsService,
+  ) {}
 
   async getSnapshot(): Promise<AdminSystemHealthSnapshot> {
     const [database, redis] = await Promise.all([
       this.checkDatabase(),
       this.checkRedis(),
     ]);
-
-    return {
-      state: database === 'healthy' && redis === 'healthy' ? 'healthy' : 'degraded',
+    const state =
+      database === 'healthy' && redis === 'healthy' ? 'healthy' : 'degraded';
+    const snapshot = {
+      state,
       checkedAt: new Date().toISOString(),
       dependencies: { database, redis },
-    };
+    } satisfies AdminSystemHealthSnapshot;
+
+    if (state === 'degraded') {
+      await this.operationalEvents.record({
+        severity: 'warning',
+        category: 'system-health',
+        message: `Dependency state degraded: database=${database}, redis=${redis}`,
+        source: 'admin-system-health',
+      });
+    }
+
+    return snapshot;
   }
 
   private async checkDatabase(): Promise<AdminHealthState> {

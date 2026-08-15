@@ -19,9 +19,41 @@ export interface AdminOperationalEventsResult {
   pageSize: number;
 }
 
+export interface AdminOperationalEventInput {
+  severity: 'info' | 'warning' | 'error';
+  category: string;
+  message: string;
+  correlationId?: string;
+  source?: string;
+}
+
 @Injectable()
 export class AdminOperationalEventsService {
   constructor(private readonly supabaseService: SupabaseService) {}
+
+  async record(input: AdminOperationalEventInput): Promise<void> {
+    const category = input.category.trim().slice(0, 80);
+    const message = input.message.trim().slice(0, 500);
+    const correlationId = input.correlationId?.trim().slice(0, 128) || null;
+    const source = input.source?.trim().slice(0, 80) || null;
+
+    if (!category || !message) {
+      throw new Error('Operational event category and message are required');
+    }
+
+    const { error } = await this.supabaseService
+      .getClient()
+      .from('admin_operational_events')
+      .insert({
+        severity: input.severity,
+        category,
+        message,
+        correlation_id: correlationId,
+        source,
+      });
+
+    if (error) throw error;
+  }
 
   async list(query: AdminOperationalEventsQueryDto): Promise<AdminOperationalEventsResult> {
     const page = query.page ?? 1;
