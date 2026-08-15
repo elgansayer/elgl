@@ -19,65 +19,65 @@
     --app-motion-slow: 260ms;
     --app-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-    /* Light theme */
-    --surface-50-rgb: 255, 255, 255;
-    --surface-100-rgb: 228, 231, 237;
-    --surface-200-rgb: 253, 253, 254;
-    --surface-300-rgb: 241, 243, 247;
-    --surface-400-rgb: 233, 235, 241;
-    --surface-500-rgb: 246, 247, 250;
-    --surface-600-rgb: 219, 223, 230;
-    --surface-700-rgb: 199, 204, 214;
-    --surface-800-rgb: 154, 161, 175;
-    --surface-900-rgb: 18, 21, 28;
+    /* Light theme. RGB triplets MUST be space-separated (not comma-separated)
+       - every consumer in tailwind.config.js is `rgb(var(--x-rgb) / <alpha-value>)`,
+       modern slash-alpha syntax, which is invalid CSS when combined with a
+       legacy comma-separated value (silently drops the whole declaration). */
+    --surface-50-rgb: 255 255 255;
+    --surface-100-rgb: 228 231 237;
+    --surface-200-rgb: 253 253 254;
+    --surface-300-rgb: 241 243 247;
+    --surface-400-rgb: 233 235 241;
+    --surface-500-rgb: 246 247 250;
+    --surface-600-rgb: 219 223 230;
+    --surface-700-rgb: 199 204 214;
+    --surface-800-rgb: 154 161 175;
+    --surface-900-rgb: 18 21 28;
 
-    --text-primary-rgb: 18, 21, 28;
-    --text-secondary-rgb: 74, 81, 99;
-    --text-muted-rgb: 107, 113, 130; /* darkened from initial pass to clear 4.5:1 vs surface-500 */
+    --text-primary-rgb: 18 21 28;
+    --text-secondary-rgb: 74 81 99;
+    --text-muted-rgb: 107 113 130; /* darkened from initial pass to clear 4.5:1 vs surface-500 */
 
-    --color-primary-rgb:
-      198, 82, 48; /* Ember - darkened from initial pass so on-fill(paper) text clears 4.5:1 */
+    --color-primary-rgb: 198 82 48; /* Ember - darkened from initial pass so on-fill(paper) text clears 4.5:1 */
     --color-primary: #c65230;
-    --color-secondary-rgb: 26, 132, 120; /* Tide, same reasoning */
-    --color-danger-rgb: 217, 58, 58;
-    --color-success-rgb: 25, 134, 84;
-    --color-warning-rgb: 161, 108, 9;
-    --color-vip-rgb: 153, 111, 16;
-    --color-accent-rgb: 204, 72, 60; /* raspberry-ember, darkened so on-fill(paper) clears 4.5:1 */
+    --color-secondary-rgb: 26 132 120; /* Tide, same reasoning */
+    --color-danger-rgb: 217 58 58;
+    --color-success-rgb: 25 134 84;
+    --color-warning-rgb: 161 108 9;
+    --color-vip-rgb: 153 111 16;
+    --color-accent-rgb: 204 72 60; /* raspberry-ember, darkened so on-fill(paper) clears 4.5:1 */
 
-    --on-fill-rgb: 255, 255, 255; /* paper */
-    --shadow-color-rgb: 16, 19, 28;
+    --on-fill-rgb: 255 255 255; /* paper */
+    --shadow-color-rgb: 16 19 28;
   }
 
   .dark {
-    --surface-50-rgb: 58, 65, 82;
-    --surface-100-rgb: 46, 52, 68;
-    --surface-200-rgb: 30, 35, 48;
-    --surface-300-rgb: 35, 40, 56;
-    --surface-400-rgb: 25, 29, 40;
-    --surface-500-rgb: 18, 21, 28;
-    --surface-600-rgb: 13, 15, 21;
-    --surface-700-rgb: 10, 12, 17;
-    --surface-800-rgb: 6, 7, 10;
-    --surface-900-rgb: 0, 0, 0;
+    --surface-50-rgb: 58 65 82;
+    --surface-100-rgb: 46 52 68;
+    --surface-200-rgb: 30 35 48;
+    --surface-300-rgb: 35 40 56;
+    --surface-400-rgb: 25 29 40;
+    --surface-500-rgb: 18 21 28;
+    --surface-600-rgb: 13 15 21;
+    --surface-700-rgb: 10 12 17;
+    --surface-800-rgb: 6 7 10;
+    --surface-900-rgb: 0 0 0;
 
-    --text-primary-rgb: 243, 244, 247;
-    --text-secondary-rgb: 180, 186, 201;
-    --text-muted-rgb: 126, 132, 148;
+    --text-primary-rgb: 243 244 247;
+    --text-secondary-rgb: 180 186 201;
+    --text-muted-rgb: 126 132 148;
 
-    --color-primary-rgb: 255, 122, 82; /* Ember, brighter for dark bg */
+    --color-primary-rgb: 255 122 82; /* Ember, brighter for dark bg */
     --color-primary: #ff7a52;
-    --color-secondary-rgb: 53, 214, 192; /* Tide, brighter for dark bg */
-    --color-danger-rgb: 255, 107, 107;
-    --color-success-rgb: 52, 211, 153;
-    --color-warning-rgb: 242, 179, 61;
-    --color-vip-rgb: 232, 184, 75;
-    --color-accent-rgb:
-      225, 79, 66; /* raspberry-ember, already clears 4.5:1 vs on-fill(ink) unchanged */
+    --color-secondary-rgb: 53 214 192; /* Tide, brighter for dark bg */
+    --color-danger-rgb: 255 107 107;
+    --color-success-rgb: 52 211 153;
+    --color-warning-rgb: 242 179 61;
+    --color-vip-rgb: 232 184 75;
+    --color-accent-rgb: 225 79 66; /* raspberry-ember, already clears 4.5:1 vs on-fill(ink) unchanged */
 
-    --on-fill-rgb:
-      18, 21, 28; /* ink - fills are brighter in dark mode, read better with a dark label */
-    --shadow-color-rgb: 0, 0, 0;
+    --on-fill-rgb: 18 21 28; /* ink - fills are brighter in dark mode, read better with a dark label */
+    --shadow-color-rgb: 0 0 0;
   }
 
   html {
