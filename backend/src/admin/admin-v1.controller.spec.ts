@@ -1,9 +1,16 @@
-import { ADMIN_BOOTSTRAP_CAPABILITIES } from './admin-capabilities';
+import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminV1Controller } from './admin-v1.controller';
 
 describe('AdminV1Controller', () => {
-  it('returns the authenticated admin identity and bootstrap capabilities', () => {
-    const controller = new AdminV1Controller();
+  it('returns the authenticated admin identity and persisted effective capabilities', async () => {
+    const authorization = {
+      getEffectiveCapabilities: vi
+        .fn()
+        .mockResolvedValue(['users.read', 'audit.read']),
+    };
+    const controller = new AdminV1Controller(
+      authorization as unknown as AdminAuthorizationService,
+    );
     const request = {
       user: {
         id: 'admin-user-id',
@@ -11,13 +18,16 @@ describe('AdminV1Controller', () => {
       },
     } as never;
 
-    expect(controller.getMe(request)).toEqual({
+    await expect(controller.getMe(request)).resolves.toEqual({
       user: {
         id: 'admin-user-id',
         email: 'admin@example.com',
       },
-      capabilities: ADMIN_BOOTSTRAP_CAPABILITIES,
-      authorizationModel: 'legacy-is-admin-bootstrap',
+      capabilities: ['users.read', 'audit.read'],
+      authorizationModel: 'rbac-v1',
     });
+    expect(authorization.getEffectiveCapabilities).toHaveBeenCalledWith(
+      'admin-user-id',
+    );
   });
 });
