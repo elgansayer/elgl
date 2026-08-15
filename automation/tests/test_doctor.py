@@ -8,6 +8,7 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.doctor import (
     daemon_health_check,
     job_health_checks,
+    leaked_port_environment_check,
     run_doctor,
     worker_terminal_check,
 )
@@ -114,6 +115,28 @@ def test_doctor_reports_openai_subscription_credentials(
 
     assert checks["openai-subscription"].passed
     assert checks["openai-subscription"].detail == "gpt-5.6-sol"
+
+
+def test_leaked_port_env_fails_the_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A stray PORT in the daemon's own environment previously reached production
+    as an untracked line in factory.env and silently broke the frontend-e2e dev
+    server (it binds a fixed 127.0.0.1:4200 that every spec assumes) - nothing
+    enforced it never comes back, so this is that enforcement.
+    """
+    monkeypatch.setenv("PORT", "3000")
+
+    check = leaked_port_environment_check()
+
+    assert not check.passed
+    assert "PORT=3000" in check.detail
+
+
+def test_no_port_env_passes_the_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("PORT", raising=False)
+
+    check = leaked_port_environment_check()
+
+    assert check.passed
 
 
 def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:

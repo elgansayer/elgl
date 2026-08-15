@@ -206,6 +206,29 @@ def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> lis
     ]
 
 
+def leaked_port_environment_check() -> Check:
+    """Warn if PORT is set in the daemon's own environment.
+
+    Not read by the factory itself, but every subprocess it spawns inherits it -
+    including `npm start` during frontend-e2e verification, whose Vite-based dev
+    server treats PORT as an override and silently stops binding 127.0.0.1:4200 (the
+    fixed port every e2e spec and the exclusive-verification-slot logic assume). This
+    previously reached production as a stray, untracked line in
+    /etc/hellotalk-factory/factory.env with no code path enforcing it never comes
+    back; this check is that enforcement.
+    """
+    port = os.environ.get("PORT")
+    if port is None:
+        return Check("leaked-port-env", True, "PORT is not set")
+    return Check(
+        "leaked-port-env",
+        False,
+        f"PORT={port} is set in the daemon's environment and will leak into every "
+        "subprocess, including the frontend-e2e dev server - remove it from "
+        "factory.env",
+    )
+
+
 def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> Check:
     current = now or datetime.now(UTC)
     daemon = read_json(config.state_dir / "daemon.json", {})
@@ -276,6 +299,7 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
         config.repository / "scripts/check-conflict-markers.mjs",
     ):
         checks.append(Check(f"script:{script.name}", script.is_file(), str(script)))
+    checks.append(leaked_port_environment_check())
     checks.append(daemon_health_check(config))
     job_checks = job_health_checks(config)
     checks.extend(job_checks)
