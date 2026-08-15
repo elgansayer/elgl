@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminUserSummary, AdminUsersService } from '../admin-users.service';
 
 @Component({
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="panel" aria-labelledby="users-title">
@@ -49,7 +50,11 @@ import { AdminUserSummary, AdminUsersService } from '../admin-users.service';
           @for (user of users(); track user.id) {
             <article class="user-card">
               <div>
-                <h3>{{ user.display_name || 'Unnamed user' }}</h3>
+                <h3>
+                  <a [routerLink]="['/users', user.id]">
+                    {{ user.display_name || 'Unnamed user' }}
+                  </a>
+                </h3>
                 <p class="user-id"><span class="visually-hidden">User ID: </span>{{ user.id }}</p>
               </div>
               <dl>
@@ -70,6 +75,7 @@ import { AdminUserSummary, AdminUsersService } from '../admin-users.service';
                   <dd>{{ formatDate(user.created_at) }}</dd>
                 </div>
               </dl>
+              <p class="inspect-link"><a [routerLink]="['/users', user.id]">Inspect user</a></p>
             </article>
           }
         </div>
@@ -103,6 +109,7 @@ import { AdminUserSummary, AdminUsersService } from '../admin-users.service';
     .user-card { border: 1px solid currentColor; border-radius: .75rem; padding: 1rem; overflow-wrap: anywhere; }
     .user-card h3 { margin: 0; }
     .user-id { font-family: ui-monospace, monospace; font-size: .9em; }
+    .inspect-link { margin-bottom: 0; }
     dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .75rem; margin-bottom: 0; }
     dl div { display: grid; gap: .2rem; }
     dt { font-weight: 700; }
