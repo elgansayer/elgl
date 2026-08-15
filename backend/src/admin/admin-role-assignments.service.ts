@@ -61,7 +61,8 @@ export class AdminRoleAssignmentsService {
         .select('id')
         .eq('key', query.roleKey);
       if (matchingRolesError) throw matchingRolesError;
-      roleIdsForKey = (matchingRoles ?? []).map((role) => String(role.id));
+      const matchingRoleRows = (matchingRoles ?? []) as Array<{ id: string }>;
+      roleIdsForKey = matchingRoleRows.map((role) => String(role.id));
       if (roleIdsForKey.length === 0) {
         return { assignments: [], total: 0, page, pageSize };
       }
