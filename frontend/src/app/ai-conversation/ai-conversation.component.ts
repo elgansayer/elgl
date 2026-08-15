@@ -1,10 +1,13 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { from } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AiConversationService, Scenario } from '../services/ai-conversation.service';
 import { TranslatePipe } from '../services/translate.pipe';
+import { TokenisedTextComponent } from '../components/tokenised-text/tokenised-text.component';
+import { WordDefinitionModalComponent } from '../components/word-definition-modal/word-definition-modal.component';
+import { UserService } from '../services/user.service';
 
 const EMPTY_SCENARIO_LIST: Scenario[] = [];
 
@@ -16,7 +19,7 @@ interface ChatMessage {
 @Component({
   selector: 'app-ai-conversation',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, TokenisedTextComponent, WordDefinitionModalComponent],
   host: {
     class: 'flex flex-col h-full bg-surface-500 text-text-primary',
   },
@@ -79,7 +82,7 @@ interface ChatMessage {
               [class.text-on-fill]="msg.from === 'user'"
               [class.text-text-primary]="msg.from === 'ai'"
             >
-              <span class="whitespace-pre-wrap break-words">{{ msg.text }}</span>
+              <div class="whitespace-pre-wrap break-words"><app-tokenised-text [text]="msg.text" [language]="targetLanguage()" (wordClicked)="onWordClicked($event)"></app-tokenised-text></div>
               @if (msg.from === 'user') {
                 <div
                   class="absolute -end-1.5 bottom-2 w-0 h-0
@@ -129,20 +132,46 @@ interface ChatMessage {
         </div>
       </div>
     }
+
+    @if (activeWordToken(); as token) {
+      <app-word-definition-modal
+        [wordToken]="token"
+        [contextSentence]="activeWordContext() ?? ''"
+        (closed)="activeWordToken.set(null)"
+      ></app-word-definition-modal>
+    }
   `,
   styles: [],
 })
-export class AiConversationComponent {
+export class AiConversationComponent implements OnInit {
   private aiService = inject(AiConversationService);
+  private userService = inject(UserService);
 
   readonly scenarioList = toSignal(from(this.aiService.getScenarios()), {
     initialValue: EMPTY_SCENARIO_LIST,
   });
 
+
   readonly selectedScenario = signal<Scenario | null>(null);
   readonly messages = signal<ChatMessage[]>([]);
   readonly inputText = signal('');
   readonly isLoading = signal(false);
+  readonly targetLanguage = signal('en');
+  readonly activeWordToken = signal<string | null>(null);
+  readonly activeWordContext = signal<string | null>(null);
+
+  async ngOnInit() {
+    const profile = await this.userService.getMyProfile();
+    if (profile && profile.target_languages && profile.target_languages.length > 0) {
+      this.targetLanguage.set(profile.target_languages[0]);
+    }
+  }
+
+  onWordClicked(event: { token: string; context: string }): void {
+    this.activeWordToken.set(event.token);
+    this.activeWordContext.set(event.context);
+  }
+
 
   private currentScenarioId: string | undefined;
 
