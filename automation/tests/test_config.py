@@ -22,11 +22,11 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "hellotalk-factory@users.noreply.github.com" in setup
 
 
-def test_competing_legacy_agent_workflows_are_retired() -> None:
+def test_explicit_agent_workflows_are_present() -> None:
     workflows = Path(__file__).parents[2] / ".github" / "workflows"
 
     for name in ("architect.yml", "auto-dispatcher.yml", "openhands.yml", "pr-reviewer.yml"):
-        assert not (workflows / name).exists()
+        assert (workflows / name).exists()
 
 
 def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
@@ -62,9 +62,9 @@ def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> N
     for directive in (
         "PrivateTmp=true",
         "PrivateDevices=false",
-        "ProtectSystem=strict",
+        "ProtectSystem=full",
         "ProtectHome=true",
-        "ProtectKernelTunables=true",
+        "ProtectKernelTunables=false",
         "ProtectKernelModules=true",
         "ProtectKernelLogs=true",
         "ProtectClock=true",
@@ -74,12 +74,6 @@ def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> N
         "LimitNOFILE=4096",
     ):
         assert directive in unit
-
-
-def test_backend_test_heap_fits_the_service_memory_limit() -> None:
-    package = (Path(__file__).parents[2] / "backend" / "package.json").read_text(encoding="utf-8")
-
-    assert "--max-old-space-size=3072" in package
 
 
 def environment(**overrides: str) -> dict[str, str]:

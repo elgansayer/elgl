@@ -243,7 +243,9 @@ The user's role: Someone practising casual English.
     if (!systemPrompt) {
       const [profile, flashcards, streak] = await Promise.all([
         this.usersService.getProfile(userId).catch(() => null),
-        this.flashcardsService.getFlashcards(userId, undefined, 10).catch(() => []),
+        this.flashcardsService
+          .getFlashcards(userId, undefined, 10)
+          .catch(() => []),
         this.studyStreakService.getStreak(userId).catch(() => 0),
       ]);
       systemPrompt = this.getDefaultSystemPrompt(profile, flashcards, streak);
@@ -271,14 +273,18 @@ The user's role: Someone practising casual English.
     }
   }
 
-  private getDefaultSystemPrompt(profile: UserProfile | null, flashcards: Flashcard[], streak: number): string {
+  private getDefaultSystemPrompt(
+    profile: UserProfile | null,
+    flashcards: Flashcard[],
+    streak: number,
+  ): string {
     const targetLanguages = profile?.target_languages?.join(', ') || 'English';
     const interests = profile?.interests?.join(', ') || 'various topics';
     const level = profile?.proficiency_level || 'beginner/intermediate';
 
     let flashcardContext = '';
     if (flashcards && flashcards.length > 0) {
-      const words = flashcards.map(f => f.word_token).join(', ');
+      const words = flashcards.map((f) => f.word_token).join(', ');
       flashcardContext = `\n- The user has recently been studying these words/phrases: ${words}. Try to naturally incorporate some of these into the conversation to help them practice.`;
     }
 
