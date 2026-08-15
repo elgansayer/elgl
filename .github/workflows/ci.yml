@@ -65,6 +65,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -72,6 +74,10 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check:constitution
       - run: node scripts/check-conflict-markers.mjs
+      - name: Enforce append-only, collision-free migration changes
+        env:
+          MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/check-migration-delta.mjs
 
   factory:
     runs-on: ubuntu-latest
