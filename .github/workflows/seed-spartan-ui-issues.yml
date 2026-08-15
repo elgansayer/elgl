@@ -1,0 +1,36 @@
+name: Seed Spartan UI migration backlog
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/seed-spartan-ui-issues.mjs
+      - .github/workflows/seed-spartan-ui-issues.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: seed-spartan-ui-migration-backlog
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Create numbered Spartan UI migration issues
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Seed migration backlog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/seed-spartan-ui-issues.mjs
