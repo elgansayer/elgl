@@ -40,14 +40,16 @@ describe('AdminAuditQueryService', () => {
   });
 
   it('filters audit events by exact outcome', async () => {
-    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const range = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
     const eq = vi.fn().mockReturnValue({ order });
     const select = vi.fn().mockReturnValue({ eq, order });
     const service = new AdminAuditQueryService({
-      getClient: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({ select }),
-      }),
+      getClient: vi
+        .fn()
+        .mockReturnValue({ from: vi.fn().mockReturnValue({ select }) }),
     } as unknown as SupabaseService);
 
     await service.list({ outcome: 'failed' });
@@ -55,14 +57,16 @@ describe('AdminAuditQueryService', () => {
   });
 
   it('filters audit events by exact capability key', async () => {
-    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const range = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
     const eq = vi.fn().mockReturnValue({ order });
     const select = vi.fn().mockReturnValue({ eq, order });
     const service = new AdminAuditQueryService({
-      getClient: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({ select }),
-      }),
+      getClient: vi
+        .fn()
+        .mockReturnValue({ from: vi.fn().mockReturnValue({ select }) }),
     } as unknown as SupabaseService);
 
     await service.list({ capabilityKey: 'users.read' });
