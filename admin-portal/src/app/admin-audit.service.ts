@@ -30,6 +30,7 @@ export interface AdminAuditQuery {
   action?: string;
   outcome?: 'success' | 'denied' | 'failed';
   capabilityKey?: string;
+  reasonCode?: string;
   actorUserId?: string;
   targetType?: string;
   targetId?: string;
