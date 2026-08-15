@@ -43,7 +43,8 @@ export class AdminAuditService {
     // The handwritten Database type currently lags newly-added admin tables.
     // Keep this escape hatch local to the audit insert until generated Supabase
     // database types replace the manual schema definition.
-    const client = this.supabaseService.getClient() as unknown as SupabaseClient;
+    const client =
+      this.supabaseService.getClient() as unknown as SupabaseClient;
     const { error } = await client.from('admin_audit_events').insert({
       actor_user_id: input.actorUserId,
       action: input.action,
