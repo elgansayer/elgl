@@ -79,9 +79,9 @@ class JobStore:
             # that still appear in today's open-issue/open-PR task set. Otherwise closed
             # or otherwise inactive historical jobs remain quarantined forever and the
             # production doctor repeatedly pages an ever-growing stale backlog.
-            for existing in jobs.values():
-                if existing.state is JobState.QUARANTINED:
-                    self._reset_legacy_quarantine(existing, now)
+            for persisted_job in jobs.values():
+                if persisted_job.state is JobState.QUARANTINED:
+                    self._reset_legacy_quarantine(persisted_job, now)
 
             for task in tasks:
                 existing = jobs.get(task.identifier)
