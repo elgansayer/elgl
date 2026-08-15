@@ -26,6 +26,11 @@ export class AdminOperationalEventsQueryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(80)
+  source?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(128)
   correlationId?: string;
 }

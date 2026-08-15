@@ -68,6 +68,7 @@ export class AdminOperationalEventsService {
 
     if (query.severity) request = request.eq('severity', query.severity);
     if (query.category?.trim()) request = request.eq('category', query.category.trim());
+    if (query.source?.trim()) request = request.eq('source', query.source.trim());
     if (query.correlationId?.trim()) request = request.eq('correlation_id', query.correlationId.trim());
 
     const { data, error, count } = await request

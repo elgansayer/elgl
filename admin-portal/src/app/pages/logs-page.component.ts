@@ -28,6 +28,9 @@ import { AdminOperationalEvent, AdminOperationalEventsService } from '../admin-o
         <label>Category
           <input name="category" [(ngModel)]="category" maxlength="80" [disabled]="busy()" />
         </label>
+        <label>Source
+          <input name="source" [(ngModel)]="source" maxlength="80" [disabled]="busy()" />
+        </label>
         <label>Correlation ID
           <input name="correlationId" [(ngModel)]="correlationId" maxlength="128" [disabled]="busy()" />
         </label>
@@ -84,6 +87,7 @@ export class LogsPageComponent {
   readonly pageSize = 25;
   severity = '';
   category = '';
+  source = '';
   correlationId = '';
   readonly events = signal<AdminOperationalEvent[]>([]);
   readonly total = signal(0);
@@ -105,6 +109,7 @@ export class LogsPageComponent {
         page: this.page(), pageSize: this.pageSize,
         severity: this.severity || undefined,
         category: this.category,
+        source: this.source,
         correlationId: this.correlationId,
       }));
       this.events.set(result.events);
