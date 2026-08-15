@@ -136,13 +136,22 @@ class FailingConversations:
         raise FactoryError("Conversation exceeded the maximum task duration")
 
 
+def _seed_prompts(directory: Path) -> None:
+    """Populate a fake worktree with the prompt files _advance() reads from it.
+
+    Production reads phase prompts from each task's own worktree (always freshly
+    checked out from origin/main), not the shared base checkout, so any fake
+    worktree a test creates must carry its own copy too.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    for name in ("task", "review", "repair", "security", "quality_repair", "architect"):
+        (directory / f"{name}.md").write_text(f"{name} instructions", encoding="utf-8")
+
+
 def config(tmp_path: Path) -> FactoryConfig:
     repository = tmp_path / "repository"
     repository.mkdir()
-    prompt_dir = repository / "automation/prompts"
-    prompt_dir.mkdir(parents=True)
-    for name in ("task", "review", "repair", "security", "architect"):
-        (prompt_dir / f"{name}.md").write_text(f"{name} instructions", encoding="utf-8")
+    _seed_prompts(repository / "automation/prompts")
     return FactoryConfig.from_environment(
         {
             "FACTORY_REPOSITORY": str(repository),
@@ -257,6 +266,38 @@ def test_refresh_releases_a_closed_issue_during_security_review(
     assert removed == [worktree]
 
 
+def test_refresh_releases_a_pull_request_closed_while_under_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A PR-review job left in REVIEWING/CI_PENDING/MERGE_QUEUED used to be
+    skipped by cleanup entirely (it is outside PRE_PULL_REQUEST_STATES), so if
+    the external PR was closed without merging while the factory was still
+    working on it, the worktree - and the job - never went away.
+    """
+    github = GitHub()
+    github.tasks = []
+    github.pull_requests = [
+        Task("40", "Optimize quests", "Body", "github-pull-request", 5, pr_branch="bolt/x")
+    ]
+    pipeline = FactoryPipeline(config(tmp_path), github=github)  # type: ignore[arg-type]
+    job = pipeline.refresh()["40"]
+    job.state = JobState.CI_PENDING
+    pipeline.jobs.save({"40": job})
+    worktree = pipeline.config.worktree_dir / "issue-40"
+    worktree.mkdir(parents=True)
+    removed: list[Path] = []
+    monkeypatch.setattr(
+        GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: removed.append(path)
+    )
+    github.pull_requests = []
+
+    refreshed = pipeline.refresh()
+
+    assert refreshed["40"].state is JobState.DONE
+    assert refreshed["40"].last_error == "Pull request closed before the factory finished with it"
+    assert removed == [worktree]
+
+
 def test_complete_pipeline_reaches_done_only_after_merge(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -274,6 +315,7 @@ def test_complete_pipeline_reaches_done_only_after_merge(
     def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
         worktree.mkdir(parents=True)
         (worktree / "AGENTS.md").write_text("Instructions", encoding="utf-8")
+        _seed_prompts(worktree / "automation/prompts")
         return "factory/42-fix-build"
 
     monkeypatch.setattr(GitWorkflow, "prepare_worktree", prepare)
@@ -342,6 +384,7 @@ def test_pull_request_review_skips_implementation_and_reuses_merge_flow(
 
     def prepare_pr(workflow: GitWorkflow, worktree: Path, branch: str) -> None:
         worktree.mkdir(parents=True)
+        _seed_prompts(worktree / "automation/prompts")
 
     monkeypatch.setattr(GitWorkflow, "prepare_pull_request_worktree", prepare_pr)
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
@@ -390,6 +433,7 @@ def test_pull_request_review_can_push_repair_commits_to_its_own_branch(
 
     worktree = factory_config.worktree_dir / "issue-77"
     worktree.mkdir(parents=True)
+    _seed_prompts(worktree / "automation/prompts")
     task = Task(
         "77",
         "Optimize quests",
@@ -446,6 +490,53 @@ def test_successful_transition_resets_previous_failures(
     assert advanced.state is JobState.IMPLEMENTING
     assert advanced.attempts == 0
     assert advanced.last_error is None
+
+
+def test_verify_only_serializes_the_exclusive_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Shared commands (lint, build, unit tests, backend-test:e2e) must run
+    without holding verification_slots, so other workers' verification isn't
+    blocked behind them; only the fixed-port frontend-e2e command should ever
+    acquire that single global slot.
+    """
+    from threading import Semaphore
+
+    from openhands_factory.verification import VerificationCommand
+
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=GitHub(),  # type: ignore[arg-type]
+        verification_slots=Semaphore(1),
+    )
+    fake_commands = [
+        VerificationCommand("frontend-lint:check", ("true",), tmp_path),
+        VerificationCommand("frontend-e2e", ("true",), tmp_path, exclusive=True),
+        VerificationCommand("backend-test:e2e", ("true",), tmp_path),
+    ]
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.commands_for", lambda repository, changed: fake_commands
+    )
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("frontend/x.ts")})
+    slot_held_during: dict[str, bool] = {}
+
+    def fake_run_verification(commands: list[VerificationCommand]) -> None:
+        held = pipeline.verification_slots.acquire(blocking=False)  # type: ignore[union-attr]
+        if held:
+            pipeline.verification_slots.release()  # type: ignore[union-attr]
+        for command in commands:
+            slot_held_during[command.name] = not held
+
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", fake_run_verification)
+    workflow = GitWorkflow(tmp_path, "main")
+
+    pipeline._verify(workflow)
+
+    assert slot_held_during == {
+        "frontend-lint:check": False,
+        "backend-test:e2e": False,
+        "frontend-e2e": True,
+    }
 
 
 def test_discovery_retry_releases_lease_and_retires_stale_worktree(
@@ -510,6 +601,7 @@ def test_conversation_timeout_retries_durably_with_backoff_and_never_quarantines
     job = pipeline.refresh()["42"]
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
+    _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
 
     first = pipeline.run_job("42")
     second = pipeline.run_job("42")
@@ -543,6 +635,7 @@ def test_no_changes_after_repeated_attempts_closes_issue_as_already_done(
     job = pipeline.refresh()["42"]
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
+    _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: False)
     monkeypatch.setattr(GitWorkflow, "remove_worktree", lambda workflow, path, **kwargs: None)
 
@@ -568,6 +661,7 @@ def test_refresh_preserves_a_retrying_job_whose_issue_is_still_open(
     job = pipeline.refresh()["42"]
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
+    _seed_prompts(pipeline.config.worktree_dir / "issue-42" / "automation/prompts")
 
     for _ in range(4):
         pipeline.run_job("42")
@@ -593,7 +687,8 @@ def test_security_review_runs_between_implementation_and_verification(
     job.state = JobState.IMPLEMENTING
     pipeline.jobs.save({"42": job})
     monkeypatch.setattr(GitWorkflow, "has_changes", lambda workflow: True)
-    prompt_dir = pipeline.config.repository / "automation/prompts"
+    prompt_dir = pipeline.config.worktree_dir / "issue-42" / "automation/prompts"
+    _seed_prompts(prompt_dir)
     (prompt_dir / "security.md").write_text(
         "Security Review Workflow instructions", encoding="utf-8"
     )
@@ -687,6 +782,7 @@ def test_architect_cycle_opens_a_pull_request_when_docs_change(
 
     def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
         worktree.mkdir(parents=True)
+        _seed_prompts(worktree / "automation/prompts")
         return f"factory/{task_id}-weekly-gap-analysis"
 
     monkeypatch.setattr(GitWorkflow, "prepare_worktree", prepare)
@@ -723,6 +819,7 @@ def test_architect_cycle_does_nothing_when_no_proposals_or_changes(
 
     def prepare(workflow: GitWorkflow, worktree: Path, task_id: str, title: str) -> str:
         worktree.mkdir(parents=True)
+        _seed_prompts(worktree / "automation/prompts")
         return f"factory/{task_id}-weekly-gap-analysis"
 
     monkeypatch.setattr(GitWorkflow, "prepare_worktree", prepare)

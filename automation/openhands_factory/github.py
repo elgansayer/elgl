@@ -138,6 +138,9 @@ class GitHubClient:
                 {self.ready_label, "factory-active", "guardian-alert"}
             ):
                 continue
+            # 0 = guardian-alert, 5 = pull-request review (see
+            # collect_open_pull_requests), 10 = everything else - lower runs
+            # first (select_batch sorts ascending).
             priority = 0 if "guardian-alert" in labels else 10
             tasks.append(
                 Task(
@@ -191,7 +194,15 @@ class GitHubClient:
                     title=str(item["title"]),
                     body=str(item.get("body") or ""),
                     source="github-pull-request",
-                    priority=10,
+                    # Below guardian-alert issues (0) but above ordinary issue
+                    # work (10, see collect_open_issues): reviewing an
+                    # already-written external PR is typically fast (no
+                    # implementation needed) and often carries its own urgency
+                    # - security or performance fixes from other automated
+                    # systems - so it should not sit behind a long backlog of
+                    # fresh issue implementations at equal priority, the way
+                    # it did before this ordering existed.
+                    priority=5,
                     pr_branch=head_ref,
                 )
             )
