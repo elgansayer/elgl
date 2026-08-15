@@ -17,46 +17,54 @@ permissions:
   contents: read
 
 jobs:
-  admin-portal:
+  admin-checks:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install admin portal dependencies
-        working-directory: admin-portal
-        run: npm install --no-audit --no-fund
-      - name: Lint admin portal
-        working-directory: admin-portal
-        run: npm run lint:check
-      - name: Test admin portal
-        working-directory: admin-portal
-        run: npm test
-      - name: Build admin portal
-        working-directory: admin-portal
-        run: npm run build
-
-  backend-admin:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: admin portal / lint
+            directory: admin-portal
+            lockfile: admin-portal/package-lock.json
+            install: npm ci
+            command: npm run lint:check
+          - name: admin portal / unit
+            directory: admin-portal
+            lockfile: admin-portal/package-lock.json
+            install: npm ci
+            command: npm test
+          - name: admin portal / build
+            directory: admin-portal
+            lockfile: admin-portal/package-lock.json
+            install: npm ci
+            command: npm run build
+          - name: backend admin / lint
+            directory: backend
+            lockfile: backend/package-lock.json
+            install: npm ci --legacy-peer-deps
+            command: npx --no-install eslint "src/admin/**/*.ts"
+          - name: backend admin / unit
+            directory: backend
+            lockfile: backend/package-lock.json
+            install: npm ci --legacy-peer-deps
+            command: npm test -- src/admin
+          - name: backend admin / build
+            directory: backend
+            lockfile: backend/package-lock.json
+            install: npm ci --legacy-peer-deps
+            command: npm run build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: backend/package-lock.json
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci --legacy-peer-deps
-      - name: Lint admin backend
-        working-directory: backend
-        run: npm run lint:check -- src/admin
-      - name: Test admin backend
-        working-directory: backend
-        run: npm test -- src/admin
-      - name: Build backend
-        working-directory: backend
-        run: npm run build
+          cache-dependency-path: ${{ matrix.lockfile }}
+      - name: Install dependencies
+        working-directory: ${{ matrix.directory }}
+        run: ${{ matrix.install }}
+      - name: Run ${{ matrix.name }}
+        working-directory: ${{ matrix.directory }}
+        run: ${{ matrix.command }}

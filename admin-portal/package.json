@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "ng": "ng",
     "start": "ng serve --port 4300",
@@ -28,6 +33,7 @@
     "@eslint/js": "^10.0.1",
     "angular-eslint": "^22.1.0",
     "eslint": "^10.8.0",
+    "jsdom": "^30.0.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.67.0",
     "vitest": "^4.0.8"
