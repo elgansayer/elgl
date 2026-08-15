@@ -37,5 +37,6 @@ jobs:
           tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" actionlint
           "${RUNNER_TEMP}/actionlint" -version
 
-      - name: Validate workflows
-        run: "${RUNNER_TEMP}/actionlint -color"
+      - name: Validate workflow syntax and expressions
+        run: |
+          "${RUNNER_TEMP}/actionlint" -color -shellcheck= -pyflakes=
