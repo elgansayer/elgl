@@ -70,6 +70,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check:constitution
       - run: node scripts/check-conflict-markers.mjs
+      - run: node scripts/check-migration-history.mjs
 
   factory:
     runs-on: ubuntu-latest
