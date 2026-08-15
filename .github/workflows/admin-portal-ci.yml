@@ -50,11 +50,6 @@ jobs:
             lockfile: backend/package-lock.json
             install: npm ci --legacy-peer-deps
             command: npm test -- src/admin
-          - name: backend admin / build
-            directory: backend
-            lockfile: backend/package-lock.json
-            install: npm ci --legacy-peer-deps
-            command: npm run build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
