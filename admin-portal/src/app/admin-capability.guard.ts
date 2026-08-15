@@ -2,14 +2,20 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { AdminAuthContextService } from './admin-auth-context.service';
+import { AdminLoginService } from './admin-login.service';
 
 export const adminCapabilityGuard: CanActivateFn = (route) => {
   const auth = inject(AdminAuthContextService);
+  const login = inject(AdminLoginService);
   const router = inject(Router);
   const capability = route.data['capability'] as string | undefined;
 
   if (!capability) {
     return true;
+  }
+
+  if (!login.accessToken()) {
+    return router.createUrlTree(['/login']);
   }
 
   const current = auth.context();
@@ -25,6 +31,6 @@ export const adminCapabilityGuard: CanActivateFn = (route) => {
         ? true
         : router.createUrlTree(['/access-denied']),
     ),
-    catchError(() => of(router.createUrlTree(['/access-denied']))),
+    catchError(() => of(router.createUrlTree(['/login']))),
   );
 };
