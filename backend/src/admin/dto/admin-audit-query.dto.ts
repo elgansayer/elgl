@@ -33,6 +33,11 @@ export class AdminAuditQueryDto {
   @IsString()
   capabilityKey?: string;
 
+  @ApiPropertyOptional({ description: 'Exact reason code filter' })
+  @IsOptional()
+  @IsString()
+  reasonCode?: string;
+
   @ApiPropertyOptional({ description: 'Exact actor user ID filter' })
   @IsOptional()
   @IsString()
