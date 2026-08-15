@@ -31,6 +31,14 @@ export interface AdminUserSearchQuery {
   search?: string;
 }
 
+export interface AdminLoginHistoryEntry {
+  id: string;
+  user_id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminUsersService {
   private readonly http = inject(HttpClient);
@@ -70,6 +78,24 @@ export class AdminUsersService {
       switchMap((apiBaseUrl) =>
         this.http.get<AdminUserSummary>(
           `${apiBaseUrl}/admin/v1/users/${encodeURIComponent(userId)}`,
+          {
+            headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
+          },
+        ),
+      ),
+    );
+  }
+
+  getLoginHistory(userId: string): Observable<AdminLoginHistoryEntry[]> {
+    const token = this.login.accessToken();
+    if (!token) {
+      return throwError(() => new Error('Admin authentication required'));
+    }
+
+    return from(this.login.apiBaseUrl()).pipe(
+      switchMap((apiBaseUrl) =>
+        this.http.get<AdminLoginHistoryEntry[]>(
+          `${apiBaseUrl}/admin/v1/users/${encodeURIComponent(userId)}/login-history`,
           {
             headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
           },
