@@ -16,6 +16,7 @@ concurrency:
 jobs:
   dispatch_and_plan:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       issues: write
       actions: read

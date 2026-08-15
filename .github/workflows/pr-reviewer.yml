@@ -15,6 +15,7 @@ jobs:
     # WARNING: Do NOT block all [bot] actors — that prevents all AI PRs from being reviewed!
     if: github.actor != 'claude-code[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     permissions:
       contents: write
       pull-requests: write
