@@ -77,7 +77,7 @@ class FactoryPipeline:
             if (
                 task_id in active_task_ids
                 or task_id in protected
-                or job.state not in PRE_PULL_REQUEST_STATES
+                or job.state in TERMINAL_STATES
             ):
                 continue
             worktree = self.config.worktree_dir / f"issue-{task_id}"
@@ -97,7 +97,20 @@ class FactoryPipeline:
                 workflow.remove_worktree(worktree, force=dirty)
             self.tasks.release(task_id)
             job.state = JobState.DONE
-            job.last_error = "Issue closed before pull request creation"
+            # This clause used to be scoped to PRE_PULL_REQUEST_STATES, so a job
+            # whose pull request was closed (not merged) while the factory was
+            # still reviewing or waiting on CI never got here at all - its
+            # worktree, and everything downstream of it, stayed on disk forever.
+            # reconcile() only resets a DONE job with this exact message back to
+            # DISCOVERED when job.pull_request is still None, which is already
+            # never true once a PR-review job reaches this branch (it is set
+            # immediately in _discover_pull_request), so this message split does
+            # not change that behaviour.
+            job.last_error = (
+                "Issue closed before pull request creation"
+                if job.task.source == "github-issue"
+                else "Pull request closed before the factory finished with it"
+            )
             self.jobs.save_job(job)
         return self.jobs.load()
 
@@ -456,11 +469,22 @@ class FactoryPipeline:
         if not changed:
             raise FactoryError("No changed paths were found")
         commands = commands_for(workflow.repository, changed)
+        # Only commands that bind a fixed host port (frontend-e2e's dev server)
+        # need to be serialized across workers; everything else - lint, build,
+        # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
+        # port) - is safe to run at full worker parallelism. Running the shared
+        # commands first also means a cheap, fast-failing check (lint, a broken
+        # build) is judged before spending minutes on the exclusive one.
+        shared = [command for command in commands if not command.exclusive]
+        exclusive = [command for command in commands if command.exclusive]
+        run_verification(shared)
+        if not exclusive:
+            return
         if self.verification_slots is None:
-            run_verification(commands)
+            run_verification(exclusive)
             return
         with self.verification_slots:
-            run_verification(commands)
+            run_verification(exclusive)
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
         context: list[tuple[Path, str]] = []

@@ -129,7 +129,7 @@ export class OnboardingWizardComponent {
   handleNext(): void {
     this.onboardingService.nextStep();
     if (this.onboardingService.isOnboardingComplete()) {
-      this.router.navigate(['/discovery']);
+      this.router.navigate(['/home']);
     }
   }
 }
