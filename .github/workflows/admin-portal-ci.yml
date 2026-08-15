@@ -50,7 +50,7 @@ jobs:
         run: npm ci
       - name: Test admin backend
         working-directory: backend
-        run: npm test -- --runInBand src/admin
+        run: npm test -- src/admin
       - name: Build backend
         working-directory: backend
         run: npm run build
