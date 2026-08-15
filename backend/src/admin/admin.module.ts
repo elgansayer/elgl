@@ -5,11 +5,19 @@ import { PrivacyModule } from '../privacy/privacy.module';
 import { AdminController } from './admin.controller';
 import { AdminV1Controller } from './admin-v1.controller';
 import { AdminService } from './admin.service';
+import { AdminAuthorizationService } from './admin-authorization.service';
 import { AdminGuard } from './guards/admin.guard';
+import { AdminCapabilityGuard } from './guards/admin-capability.guard';
 
 @Module({
   imports: [SupabaseModule, LessonsModule, PrivacyModule],
   controllers: [AdminController, AdminV1Controller],
-  providers: [AdminService, AdminGuard],
+  providers: [
+    AdminService,
+    AdminAuthorizationService,
+    AdminGuard,
+    AdminCapabilityGuard,
+  ],
+  exports: [AdminAuthorizationService, AdminCapabilityGuard],
 })
 export class AdminModule {}

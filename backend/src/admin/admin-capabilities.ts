@@ -1,4 +1,4 @@
-export const ADMIN_BOOTSTRAP_CAPABILITIES = [
+export const ADMIN_CAPABILITIES = [
   'users.read',
   'users.manage',
   'moderation.cases.read',
@@ -8,4 +8,14 @@ export const ADMIN_BOOTSTRAP_CAPABILITIES = [
   'system.health.read',
 ] as const;
 
-export type AdminCapability = (typeof ADMIN_BOOTSTRAP_CAPABILITIES)[number];
+// Kept as an alias while the dedicated portal migrates from the legacy
+// hard-coded bootstrap response to persisted role assignments.
+export const ADMIN_BOOTSTRAP_CAPABILITIES = ADMIN_CAPABILITIES;
+
+export type AdminCapability = (typeof ADMIN_CAPABILITIES)[number];
+
+const ADMIN_CAPABILITY_SET = new Set<string>(ADMIN_CAPABILITIES);
+
+export function isAdminCapability(value: string): value is AdminCapability {
+  return ADMIN_CAPABILITY_SET.has(value);
+}
