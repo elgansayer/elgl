@@ -1,22 +1,35 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { randomUUID as uuidv4 } from 'crypto';
 import * as jwt from 'jsonwebtoken';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TransferService {
   private readonly secret: string;
+  private readonly logger = new Logger(TransferService.name);
 
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly configService: ConfigService,
   ) {
-    const secret = this.configService.get<string>('TRANSFER_SECRET');
-    if (!secret) {
-      throw new Error('TRANSFER_SECRET is not configured');
+    const env = this.configService.get<string>('NODE_ENV', 'development');
+    const configuredSecret = this.configService.get<string>('TRANSFER_SECRET');
+    const defaultSecret = 'device-transfer-secret-dev-only';
+
+    if (
+      env === 'production' &&
+      (!configuredSecret || configuredSecret === defaultSecret)
+    ) {
+      throw new Error(
+        'CRITICAL: TRANSFER_SECRET must be securely configured in production',
+      );
     }
-    this.secret = secret;
+
+    this.secret =
+      configuredSecret && configuredSecret !== defaultSecret
+        ? configuredSecret
+        : defaultSecret;
   }
 
   /**
