@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
   AdminRoleInventoryEntry,
@@ -7,6 +8,7 @@ import {
 
 @Component({
   standalone: true,
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="panel" aria-labelledby="roles-title">
@@ -15,6 +17,8 @@ import {
       <p>
         Read-only role inventory authorized by <code>roles.read</code>. Role assignment and privilege mutation are intentionally unavailable here.
       </p>
+
+      <p><a routerLink="/roles/assignments">View operator role assignments</a></p>
 
       <button type="button" (click)="load()" [disabled]="busy()">
         {{ busy() ? 'Refreshing…' : 'Refresh roles' }}
