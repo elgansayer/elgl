@@ -62,4 +62,32 @@ describe('AdminSystemHealthService', () => {
       source: 'admin-system-health',
     });
   });
+
+  it('still returns the degraded snapshot when operational-event storage fails', async () => {
+    const limit = vi.fn().mockResolvedValue({ data: null, error: new Error('down') });
+    const select = vi.fn().mockReturnValue({ limit });
+    const operationalEvents = {
+      record: vi.fn().mockRejectedValue(new Error('event store unavailable')),
+    };
+    const service = new AdminSystemHealthService(
+      {
+        getClient: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({ select }),
+        }),
+        getRedisClient: vi.fn().mockReturnValue({
+          ping: vi.fn().mockResolvedValue('PONG'),
+        }),
+      } as unknown as SupabaseService,
+      operationalEvents as unknown as AdminOperationalEventsService,
+    );
+
+    await expect(service.getSnapshot()).resolves.toMatchObject({
+      state: 'degraded',
+      dependencies: {
+        database: 'degraded',
+        redis: 'healthy',
+      },
+    });
+    expect(operationalEvents.record).toHaveBeenCalledOnce();
+  });
 });
