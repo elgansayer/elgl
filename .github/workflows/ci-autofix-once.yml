@@ -1,0 +1,45 @@
+name: CI Autofix Once
+
+on:
+  push:
+    branches:
+      - fix/backend-lint-debt-20260815
+
+permissions:
+  contents: write
+
+jobs:
+  backend-lint-autofix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/backend-lint-debt-20260815
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --legacy-peer-deps
+
+      - name: Apply repository lint autofixes
+        working-directory: backend
+        run: npm run lint
+
+      - name: Commit autofixes
+        run: |
+          if git diff --quiet -- backend; then
+            echo "No backend autofixes were required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend
+          git commit -m "style(backend): commit lint autofixes"
+          git push origin HEAD:fix/backend-lint-debt-20260815
