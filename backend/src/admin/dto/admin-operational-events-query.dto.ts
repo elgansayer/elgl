@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsISO8601, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class AdminOperationalEventsQueryDto {
   @IsOptional()
@@ -33,4 +33,12 @@ export class AdminOperationalEventsQueryDto {
   @IsString()
   @MaxLength(128)
   correlationId?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  startTime?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  endTime?: string;
 }
