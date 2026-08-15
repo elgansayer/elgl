@@ -30,7 +30,7 @@ jobs:
           ACTIONLINT_VERSION: '1.7.7'
         run: |
           set -euo pipefail
-          archive="actionlint_${ACTIONLINT_VERSION}_linux_x86_64.tar.gz"
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           curl --fail --location --silent --show-error \
             "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}" \
             --output "${RUNNER_TEMP}/${archive}"
