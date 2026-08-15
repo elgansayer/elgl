@@ -19,8 +19,9 @@ from openhands_factory.provider_health import (
     CircuitBreaker,
     ProviderHealthStore,
     classify_failure,
+    extract_retry_after_seconds,
 )
-from openhands_factory.provider_profiles import openai_credentials_available
+from openhands_factory.provider_profiles import select_primary_provider
 
 
 class ConversationProtocol(Protocol):
@@ -164,11 +165,7 @@ class ConversationRunner:
                 ),
             ]
 
-        primary_provider = (
-            ProviderName.OPENAI_SUBSCRIPTION
-            if openai_credentials_available(self.config)
-            else ProviderName.OPENCODE_GO
-        )
+        primary_provider = select_primary_provider(self.config)
 
         if not isinstance(outcome, dict) or outcome.get("completed") is not True:
             status_code = outcome.get("status_code") if isinstance(outcome, dict) else None
@@ -177,9 +174,10 @@ class ConversationRunner:
                 detail = f"conversation process exited with status {exit_code}"
 
             kind = classify_failure(status_code, detail)
+            retry_after = extract_retry_after_seconds(detail)
             for b in breakers:
                 if b.provider == primary_provider:
-                    b.record_failure(kind)
+                    b.record_failure(kind, retry_after_seconds=retry_after)
             store.save(breakers)
             raise FactoryError(detail)
 
@@ -205,7 +203,7 @@ class SdkConversationFactory:
         agent = Agent(
             llm=build_llm(self.config),
             tools=[Tool(name=SecureTerminalTool.name), Tool(name=SecureFileEditorTool.name)],
-            system_prompt=build_system_prompt(self.config.repository / "automation/prompts"),
+            system_prompt=build_system_prompt(workspace / "automation/prompts"),
         )
         return Conversation(  # type: ignore[return-value]
             agent=agent,
