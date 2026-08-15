@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -29,6 +30,7 @@ export class AdminAuditQueryDto {
   @ApiPropertyOptional({ description: 'Exact action identifier filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   action?: string;
 
   @ApiPropertyOptional({
@@ -42,31 +44,37 @@ export class AdminAuditQueryDto {
   @ApiPropertyOptional({ description: 'Exact capability key filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   capabilityKey?: string;
 
   @ApiPropertyOptional({ description: 'Exact reason code filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   reasonCode?: string;
 
   @ApiPropertyOptional({ description: 'Exact actor user ID filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(128)
   actorUserId?: string;
 
   @ApiPropertyOptional({ description: 'Exact target type filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   targetType?: string;
 
   @ApiPropertyOptional({ description: 'Exact target identifier filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(128)
   targetId?: string;
 
   @ApiPropertyOptional({ description: 'Exact correlation identifier filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(128)
   correlationId?: string;
 
   @ApiPropertyOptional({
