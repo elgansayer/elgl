@@ -22,7 +22,9 @@ def test_validate_review_report_success(tmp_path: Path) -> None:
     report = {
         "approved": True,
         "summary": "LGTM",
-        "acceptance_criteria": [{"criterion": "User can login", "passed": True}],
+        "acceptance_criteria": [
+            {"criterion": "User can login", "passed": True, "evidence": ["test"]}
+        ],
         "blocking_findings": [],
     }
     (tmp_path / ".factory-review.json").write_text(json.dumps(report))
@@ -55,7 +57,9 @@ def test_validate_review_report_failed_criterion(tmp_path: Path) -> None:
     report = {
         "approved": True,
         "summary": "LGTM",
-        "acceptance_criteria": [{"criterion": "User can login", "passed": False}],
+        "acceptance_criteria": [
+            {"criterion": "User can login", "passed": False, "evidence": ["test"]}
+        ],
         "blocking_findings": [],
     }
     (tmp_path / ".factory-review.json").write_text(json.dumps(report))
@@ -70,7 +74,9 @@ def test_validate_review_report_blocking_findings(tmp_path: Path) -> None:
         "approved": True,
         "summary": "LGTM",
         "acceptance_criteria": [],
-        "blocking_findings": [{"severity": "blocking"}],
+        "blocking_findings": [
+            {"severity": "blocking", "summary": "Problem", "evidence": ["file"]}
+        ],
     }
     (tmp_path / ".factory-review.json").write_text(json.dumps(report))
 
@@ -89,3 +95,5 @@ def test_validate_review_report_not_approved(tmp_path: Path) -> None:
 
     with pytest.raises(FactoryError, match="not approved"):
         validate_review_report(tmp_path, "")
+
+

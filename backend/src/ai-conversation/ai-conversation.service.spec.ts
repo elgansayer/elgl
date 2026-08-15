@@ -13,9 +13,9 @@ describe('AiConversationService', () => {
     isVipUser: Mock;
     getRedisClient: Mock;
   };
-  let usersService: { getProfile: jest.Mock };
-  let flashcardsService: { getFlashcards: jest.Mock };
-  let studyStreakService: { getStreak: jest.Mock };
+  let usersService: { getProfile: vi.Mock };
+  let flashcardsService: { getFlashcards: vi.Mock };
+  let studyStreakService: { getStreak: vi.Mock };
   let redisMock: {
     incr: Mock;
     expire: Mock;
@@ -33,13 +33,13 @@ describe('AiConversationService', () => {
       getRedisClient: vi.fn().mockReturnValue(redisMock),
     };
     usersService = {
-      getProfile: jest.fn().mockResolvedValue({ target_languages: ['Spanish'], interests: ['travel'], proficiency_level: 'intermediate' }),
+      getProfile: vi.fn().mockResolvedValue({ target_languages: ['Spanish'], interests: ['travel'], proficiency_level: 'intermediate' }),
     };
     flashcardsService = {
-      getFlashcards: jest.fn().mockResolvedValue([{ word_token: 'hola' }]),
+      getFlashcards: vi.fn().mockResolvedValue([{ word_token: 'hola' }]),
     };
     studyStreakService = {
-      getStreak: jest.fn().mockResolvedValue(5),
+      getStreak: vi.fn().mockResolvedValue(5),
     };
 
     service = new AiConversationService(

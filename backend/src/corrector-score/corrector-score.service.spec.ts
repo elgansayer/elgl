@@ -12,7 +12,7 @@ describe('CorrectorScoreService', () => {
     selectError: unknown | null = null,
     upsertError: unknown | null = null,
   ) {
-    const mockEq = jest
+    const mockEq = vi
       .fn()
       .mockReturnValue(
         Promise.resolve({ data: selectData, error: selectError }),
@@ -20,7 +20,7 @@ describe('CorrectorScoreService', () => {
 
     const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
 
-    const mockUpsert = jest
+    const mockUpsert = vi
       .fn()
       .mockReturnValue(Promise.resolve({ error: upsertError }));
 
