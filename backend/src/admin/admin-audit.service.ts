@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { SupabaseService } from '../supabase/supabase.service';
+import {
+  AdminActionReasonCode,
+  normalizeAdminOperatorNote,
+} from './admin-action-reasons';
 import { AdminCapability } from './admin-capabilities';
 
 export type AdminAuditOutcome = 'success' | 'denied' | 'failed';
@@ -11,7 +15,8 @@ export interface AdminAuditEventInput {
   capabilityKey?: AdminCapability;
   targetType?: string;
   targetId?: string;
-  reasonCode?: string;
+  reasonCode?: AdminActionReasonCode;
+  operatorNote?: string;
   outcome: AdminAuditOutcome;
   correlationId?: string;
   metadata?: Record<string, unknown>;
@@ -32,6 +37,7 @@ export class AdminAuditService {
   async record(input: AdminAuditEventInput): Promise<void> {
     const correlationId = input.correlationId?.trim() || randomUUID();
     const metadata = this.sanitizeMetadata(input.metadata ?? {});
+    const operatorNote = normalizeAdminOperatorNote(input.operatorNote);
     const { error } = await this.supabaseService
       .getClient()
       .from('admin_audit_events')
@@ -42,6 +48,7 @@ export class AdminAuditService {
         target_type: input.targetType ?? null,
         target_id: input.targetId ?? null,
         reason_code: input.reasonCode ?? null,
+        operator_note: operatorNote,
         outcome: input.outcome,
         correlation_id: correlationId,
         metadata,
@@ -52,7 +59,9 @@ export class AdminAuditService {
     }
   }
 
-  private sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  private sanitizeMetadata(
+    metadata: Record<string, unknown>,
+  ): Record<string, unknown> {
     const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(metadata)) {
       if (!ALLOWED_METADATA_KEYS.has(key)) continue;
