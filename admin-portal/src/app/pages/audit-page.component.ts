@@ -29,6 +29,7 @@ import {
             <option value="failed">Failed</option>
           </select>
         </label>
+        <label>Capability <input name="capabilityKey" [(ngModel)]="capabilityKey" /></label>
         <label>Actor user ID <input name="actor" [(ngModel)]="actorUserId" /></label>
         <label>Target type <input name="targetType" [(ngModel)]="targetType" /></label>
         <label>Target ID <input name="targetId" [(ngModel)]="targetId" /></label>
@@ -101,6 +102,7 @@ export class AuditPageComponent {
   readonly pageSize = 50;
   action = '';
   outcome: '' | 'success' | 'denied' | 'failed' = '';
+  capabilityKey = '';
   actorUserId = '';
   targetType = '';
   targetId = '';
@@ -128,6 +130,7 @@ export class AuditPageComponent {
         pageSize: this.pageSize,
         action: this.action,
         outcome: this.outcome || undefined,
+        capabilityKey: this.capabilityKey,
         actorUserId: this.actorUserId,
         targetType: this.targetType,
         targetId: this.targetId,
@@ -152,6 +155,7 @@ export class AuditPageComponent {
   clearFilters(): void {
     this.action = '';
     this.outcome = '';
+    this.capabilityKey = '';
     this.actorUserId = '';
     this.targetType = '';
     this.targetId = '';
