@@ -89,10 +89,10 @@ describe('ReportUserModalComponent', () => {
       expect(templateContent).not.toMatch(/Submitting\.\.\./);
     });
 
-    it('should delegate the dialog shell to app-dialog instead of hand-rolling backdrop/focus-trap', () => {
-      expect(templateContent).toContain('<app-dialog');
-      expect(templateContent).toContain('[open]="isOpen()"');
-      expect(templateContent).toContain('(dismissed)="cancel()"');
+    it('should delegate the dialog shell to the Spartan Dialog primitive instead of hand-rolling backdrop/focus-trap', () => {
+      expect(templateContent).toContain('<hlm-dialog');
+      expect(templateContent).toContain('[state]="dialogState()"');
+      expect(templateContent).toContain('(stateChanged)="onDialogStateChanged($event)"');
       expect(templateContent).not.toContain('cdkTrapFocus');
     });
 

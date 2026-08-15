@@ -164,6 +164,12 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory resu
   retry without nested CPU, memory and PID flags. Network isolation, dropped capabilities, no-new-privileges,
   user namespaces and worktree confinement remain enabled, while the systemd service limits the factory as a
   whole.
+- Cgroup delegation itself depends on the `hellotalk-factory` user having a real systemd user session:
+  `loginctl enable-linger hellotalk-factory` creates `user@<uid>.service`, and the unit's
+  `XDG_RUNTIME_DIR=/run/user/<uid>` points Podman at it. Without both, Podman falls back to a cgroupfs mode
+  that races and intermittently fails container creation under concurrent worker load rather than reliably
+  hitting the degraded-limits fallback above. `<uid>` is the `hellotalk-factory` user's uid on the host
+  (`id -u hellotalk-factory`) and must match the unit file if a fresh install assigns a different one.
 - If the host blocks `newuidmap` for the diagnostic smoke test, doctor retries that diagnostic only with a
   host namespace and labels the result. Actual agent terminals continue to use `keep-id` isolation.
 - `providers check` reports the PASS or FAIL state of each configured provider, which isolates a blocked

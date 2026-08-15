@@ -17,9 +17,9 @@ describe('SystemMessageService', () => {
   });
 
   beforeEach(async () => {
-    centrifugoService = { publish: jest.fn().mockResolvedValue(true) };
+    centrifugoService = { publish: vi.fn().mockResolvedValue(true) };
     supabaseService = {
-      getClient: jest.fn().mockReturnValue(mockSupabaseClient()),
+      getClient: vi.fn().mockReturnValue(mockSupabaseClient()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -147,9 +147,19 @@ describe('SystemMessageService', () => {
           error: null,
         }),
       };
-      // Third call: count members for candidate room (2 = 1-on-1)
+
+      // Third call: get all members for mutual rooms
       const selectChainCount = {
-        eq: vi.fn().mockResolvedValue({ count: 2, error: null }),
+        in: vi.fn().mockResolvedValue({
+          data: [
+            { room_id: 'dm-1' },
+            { room_id: 'dm-1' }, // 2 members
+            { room_id: 'group-1' },
+            { room_id: 'group-1' },
+            { room_id: 'group-1' }, // 3 members
+          ],
+          error: null,
+        }),
       };
 
       let callIndex = 0;
