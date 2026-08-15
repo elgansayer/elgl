@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AdminAuthContextService } from './admin-auth-context.service';
 
 @Component({
   selector: 'admin-root',
@@ -15,12 +16,25 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
           <span>Privileged operations</span>
         </div>
         <nav>
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Overview</a>
-          <a routerLink="/users" routerLinkActive="active">Users</a>
-          <a routerLink="/moderation" routerLinkActive="active">Moderation</a>
-          <a routerLink="/audit" routerLinkActive="active">Audit</a>
-          <a routerLink="/logs" routerLinkActive="active">Logs</a>
-          <a routerLink="/system" routerLinkActive="active">System</a>
+          @if (has('users.read')) {
+            <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Overview</a>
+            <a routerLink="/users" routerLinkActive="active">Users</a>
+          }
+          @if (has('moderation.cases.read')) {
+            <a routerLink="/moderation" routerLinkActive="active">Moderation</a>
+          }
+          @if (has('roles.read')) {
+            <a routerLink="/roles" routerLinkActive="active">Roles & Permissions</a>
+          }
+          @if (has('audit.read')) {
+            <a routerLink="/audit" routerLinkActive="active">Audit</a>
+          }
+          @if (has('logs.read')) {
+            <a routerLink="/logs" routerLinkActive="active">Logs</a>
+          }
+          @if (has('system.health.read')) {
+            <a routerLink="/system" routerLinkActive="active">System</a>
+          }
         </nav>
         <div class="security-note" role="note">
           Backend authorization is authoritative. Hidden navigation never grants or removes access.
@@ -39,4 +53,10 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     </div>
   `,
 })
-export class AdminAppComponent {}
+export class AdminAppComponent {
+  private readonly authContext = inject(AdminAuthContextService);
+
+  has(capability: string): boolean {
+    return this.authContext.hasCapability(capability);
+  }
+}
