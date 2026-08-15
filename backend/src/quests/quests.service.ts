@@ -123,27 +123,36 @@ export class QuestsService {
     ];
 
     const supabase = this.supabaseService.getClient();
-    for (const q of defaultQuests) {
-      const { data } = await supabase
-        .from('user_quests')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('quest_type', q.quest_type)
-        .eq('quest_key', q.quest_key)
-        .maybeSingle();
 
-      if (!data) {
-        await supabase.from('user_quests').insert({
-          user_id: userId,
-          quest_type: q.quest_type,
-          quest_key: q.quest_key,
-          progress: 0,
-          target: q.target,
-          reward_coins: q.reward_coins,
-          completed: false,
-          updated_at: new Date().toISOString(),
-        });
-      }
+    // ⚡ Bolt Optimization: Replaced sequential N+1 database queries and inserts with a single bulk fetch and bulk insert.
+    // Expected impact: Reduces database roundtrips from O(n) to O(1) when initializing default quests.
+    const { data: existingQuests } = await supabase
+      .from('user_quests')
+      .select('quest_type, quest_key')
+      .eq('user_id', userId);
+
+    const existingKeys = new Set(
+      (existingQuests || []).map(
+        (q: { quest_type: string; quest_key: string }) =>
+          `${q.quest_type}:${q.quest_key}`,
+      ),
+    );
+
+    const questsToInsert = defaultQuests
+      .filter((q) => !existingKeys.has(`${q.quest_type}:${q.quest_key}`))
+      .map((q) => ({
+        user_id: userId,
+        quest_type: q.quest_type,
+        quest_key: q.quest_key,
+        progress: 0,
+        target: q.target,
+        reward_coins: q.reward_coins,
+        completed: false,
+        updated_at: new Date().toISOString(),
+      }));
+
+    if (questsToInsert.length > 0) {
+      await supabase.from('user_quests').insert(questsToInsert);
     }
   }
 
@@ -162,7 +171,9 @@ export class QuestsService {
 
     if (!data || data.length === 0) return;
 
-    for (const quest of data) {
+    // ⚡ Bolt Optimization: Replaced sequential awaits in a for...of loop with concurrent execution via Promise.allSettled.
+    // Expected impact: Significant reduction in database latency when a single user action increments progress across multiple quests simultaneously.
+    const updatePromises = data.map(async (quest) => {
       const newProgress = (quest.progress ?? 0) + amount;
       const completed = newProgress >= quest.target;
       const updatePayload: {
@@ -174,6 +185,7 @@ export class QuestsService {
         completed,
         updated_at: new Date().toISOString(),
       };
+
       if (completed) {
         await this.usersService.awardCoins(userId, quest.reward_coins);
       }
@@ -181,6 +193,17 @@ export class QuestsService {
         .from('user_quests')
         .update(updatePayload)
         .eq('id', quest.id);
+    });
+
+    const results = await Promise.allSettled(updatePromises);
+
+    // Log any errors that occurred during the concurrent execution
+    const rejected = results.filter((r) => r.status === 'rejected');
+    if (rejected.length > 0) {
+      rejected.forEach((r) => {
+        console.error('Failed to increment quest progress:', r.reason);
+      });
+      throw new Error(`Failed to update ${rejected.length} quest(s)`);
     }
   }
 }

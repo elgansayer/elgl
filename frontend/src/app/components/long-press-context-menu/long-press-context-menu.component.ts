@@ -1,9 +1,11 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
+import type { BrnDialogState } from '@spartan-ng/brain/dialog';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-long-press-context-menu',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmDialogImports],
   template: `
     <div
       (touchstart)="onTouchStart($event)"
@@ -17,102 +19,92 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <ng-content />
     </div>
 
-    @if (menuVisible()) {
-      <div
-        class="fixed inset-0 z-50 flex items-end justify-center pb-8"
-        tabindex="0"
-        (keydown.enter)="$event.preventDefault(); closeMenu()"
-        (click)="closeMenu()"
-        role="dialog"
-        aria-modal="true"
+    <hlm-dialog [state]="dialogState()" (stateChanged)="onDialogStateChanged($event)">
+      <hlm-dialog-content
+        *hlmDialogPortal
+        [showCloseButton]="false"
+        class="w-full mx-auto bg-surface-200 rounded-t-sheet sm:rounded-sheet shadow-lift border border-surface-100 px-6 py-4 space-y-2 sm:max-w-sm"
       >
-        <div
-          class="bg-surface-300 rounded-2xl shadow-2xl px-6 py-4 space-y-2"
-          tabindex="0"
-          (keydown.enter)="$event.preventDefault(); $event.stopPropagation()"
-          (click)="$event.stopPropagation()"
+        <button
+          class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+          (click)="doReply()"
         >
+          {{ 'context_menu.reply' | t }}
+        </button>
+
+        <button
+          class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+          (click)="doCopy()"
+        >
+          {{ 'context_menu.copy' | t }}
+        </button>
+
+        @if (messageType() === 'text') {
           <button
-            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-            (click)="doReply()"
+            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            (click)="doTranslate()"
           >
-            {{ 'context_menu.reply' | t }}
+            {{ 'context_menu.translate' | t }}
           </button>
 
           <button
-            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-            (click)="doCopy()"
+            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            (click)="doTransliterate()"
           >
-            {{ 'context_menu.copy' | t }}
-          </button>
-
-          @if (messageType() === 'text') {
-            <button
-              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-              (click)="doTranslate()"
-            >
-              {{ 'context_menu.translate' | t }}
-            </button>
-
-            <button
-              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-              (click)="doTransliterate()"
-            >
-              {{ 'context_menu.transliterate' | t }}
-            </button>
-
-            <button
-              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-              (click)="doSpeak()"
-            >
-              {{ 'context_menu.speak' | t }}
-            </button>
-
-            <button
-              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-              (click)="doCorrect()"
-            >
-              {{ 'context_menu.correct' | t }}
-            </button>
-
-            <button
-              class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-              (click)="doRequestCorrection()"
-            >
-              {{ 'context_menu.requestCorrection' | t }}
-            </button>
-          }
-
-          <button
-            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-            (click)="doFavourite()"
-          >
-            {{ 'context_menu.favourite' | t }}
+            {{ 'context_menu.transliterate' | t }}
           </button>
 
           <button
-            class="w-full text-start text-danger font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-            (click)="doReport()"
+            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            (click)="doSpeak()"
           >
-            {{ 'context_menu.report' | t }}
+            {{ 'context_menu.speak' | t }}
           </button>
 
           <button
-            class="w-full text-start text-danger font-medium py-2 px-3 rounded-lg hover:bg-surface-200"
-            (click)="doBlockToggle()"
+            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            (click)="doCorrect()"
           >
-            {{ (isBlocked() ? 'context_menu.unblock' : 'context_menu.block') | t }}
+            {{ 'context_menu.correct' | t }}
           </button>
 
           <button
-            class="w-full text-center text-text-secondary py-2 px-3 rounded-lg hover:bg-surface-200 mt-1"
-            (click)="closeMenu()"
+            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            (click)="doRequestCorrection()"
           >
-            {{ 'context_menu.cancel' | t }}
+            {{ 'context_menu.requestCorrection' | t }}
           </button>
-        </div>
-      </div>
-    }
+        }
+
+        <button
+          class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+          (click)="doFavourite()"
+        >
+          {{ 'context_menu.favourite' | t }}
+        </button>
+
+        <button
+          class="w-full text-start text-danger font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+          (click)="doReport()"
+        >
+          {{ 'context_menu.report' | t }}
+        </button>
+
+        <button
+          class="w-full text-start text-danger font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+          (click)="doBlockToggle()"
+        >
+          {{ (isBlocked() ? 'context_menu.unblock' : 'context_menu.block') | t }}
+        </button>
+
+        <button
+          class="w-full text-center text-text-secondary py-2 px-3 rounded-lg hover:bg-surface-100 mt-1"
+          (click)="closeMenu()"
+        >
+          {{ 'context_menu.cancel' | t }}
+        </button>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
   styles: [
     `
@@ -146,6 +138,7 @@ export class LongPressContextMenuComponent {
   readonly requestCorrection = output<{ messageId: string; content: string }>();
 
   menuVisible = signal(false);
+  readonly dialogState = computed<BrnDialogState>(() => (this.menuVisible() ? 'open' : 'closed'));
 
   private longPressTimer?: ReturnType<typeof setTimeout>;
   private readonly LONG_PRESS_DURATION = 600;
@@ -192,6 +185,16 @@ export class LongPressContextMenuComponent {
 
   closeMenu() {
     this.menuVisible.set(false);
+  }
+
+  /** BrnDialog reports every state transition, including ones this component
+   * triggered itself via closeMenu() - only react to a 'closed' we didn't
+   * already cause (backdrop click, Escape), guarded by menuVisible() so a
+   * self-triggered close is a harmless no-op here. */
+  onDialogStateChanged(state: BrnDialogState): void {
+    if (state === 'closed' && this.menuVisible()) {
+      this.menuVisible.set(false);
+    }
   }
 
   doReply() {
