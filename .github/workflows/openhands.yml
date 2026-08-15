@@ -14,8 +14,9 @@ concurrency:
 jobs:
   ai-agent:
     if: >
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix'))
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+      ((github.event_name == 'issue_comment' && contains(github.event.comment.body, '/openhands-fix')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/openhands-fix')))
     runs-on: ubuntu-latest
     permissions:
       contents: write
