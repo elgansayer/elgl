@@ -8,8 +8,14 @@ export class TransferService {
   private readonly secret: string;
 
   constructor(private readonly supabaseService: SupabaseService) {
-    this.secret =
-      process.env.TRANSFER_SECRET ?? 'device-transfer-secret-dev-only';
+    const defaultSecret = 'device-transfer-secret-dev-only';
+    const secret = process.env.TRANSFER_SECRET ?? defaultSecret;
+
+    if (process.env.NODE_ENV === 'production' && secret === defaultSecret) {
+      throw new Error('TRANSFER_SECRET must be securely configured in production');
+    }
+
+    this.secret = secret;
   }
 
   /**
