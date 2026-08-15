@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
 import { randomUUID as uuidv4 } from 'crypto';
 import * as jwt from 'jsonwebtoken';
@@ -7,20 +8,15 @@ import * as jwt from 'jsonwebtoken';
 export class TransferService {
   private readonly secret: string;
 
-  constructor(private readonly supabaseService: SupabaseService) {
-    this.secret =
-      process.env.TRANSFER_SECRET ?? 'device-transfer-secret-dev-only';
-
-    // Fail-fast security check: DO NOT allow the application to run in
-    // production using the default/insecure transfer secret.
-    if (
-      process.env.NODE_ENV === 'production' &&
-      this.secret === 'device-transfer-secret-dev-only'
-    ) {
-      throw new Error(
-        'CRITICAL SECURITY ERROR: TRANSFER_SECRET must be explicitly set in production environments to prevent authorization bypass.',
-      );
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {
+    const secret = this.configService.get<string>('TRANSFER_SECRET');
+    if (!secret) {
+      throw new Error('TRANSFER_SECRET is not configured');
     }
+    this.secret = secret;
   }
 
   /**

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
+import os
 import re
+import signal
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -29,10 +32,36 @@ class ProcessRunner(Protocol):
 
 
 def run_process(arguments: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
-    result = subprocess.run(
-        list(arguments), cwd=cwd, capture_output=True, text=True, timeout=timeout, check=False
+    # A verification command can background a long-lived child of its own (e.g.
+    # the frontend-e2e step's `npm start -- --host 127.0.0.1 &` dev server). A
+    # plain subprocess.run(timeout=...) only kills the immediate bash child on
+    # timeout - SIGKILL can never be trapped, so bash's own `trap ... EXIT`
+    # cleanup never runs either, and the backgrounded server is orphaned
+    # (reparented to init) rather than terminated, leaking memory indefinitely.
+    # start_new_session puts the whole command in its own process group so it
+    # can be killed as a unit regardless of how it exits.
+    process = subprocess.Popen(
+        list(arguments),
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
     )
-    return ProcessResult(result.returncode, result.stdout, result.stderr)
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill_process_group(process)
+        stdout, stderr = process.communicate()
+        raise
+    finally:
+        _kill_process_group(process)
+    return ProcessResult(process.returncode, stdout, stderr)
+
+
+def _kill_process_group(process: subprocess.Popen[str]) -> None:
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(process.pid, signal.SIGKILL)
 
 
 def verify_repository(

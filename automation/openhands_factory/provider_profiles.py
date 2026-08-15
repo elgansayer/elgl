@@ -160,51 +160,68 @@ def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
     return profiles
 
 
-def build_llm(config: FactoryConfig) -> LLM:
-    """Construct the verified SDK fallback chain lazily to keep doctor usable."""
-    from openhands.sdk import LLM, LLMProfileStore
-    from openhands.sdk.llm import FallbackStrategy
+def select_primary_provider(config: FactoryConfig) -> ProviderName:
+    """Pick the healthiest provider tier for a conversation to use exclusively.
 
-    profile_store = LLMProfileStore(base_dir=config.profile_store)
-    opencode = LLM(
-        model=f"openai/{config.opencode_model}",
-        api_key=config.opencode_api_key,
-        base_url=config.opencode_base_url,
-        usage_id=config.opencode_profile_name,
-    )
-    profile_store.save(config.opencode_profile_name, opencode, include_secrets=True)
-    fallback_names = [config.opencode_profile_name]
+    No per-call cross-provider fallback is attached in build_llm() (see there for
+    why), so the provider chosen here is the only one the conversation will use for
+    its whole duration. Resilience across tiers instead comes from the daemon's job
+    retry: build_llm() is called fresh per attempt, and each tier's circuit breaker
+    in health.json already tracks whether it is currently healthy enough to try.
+    """
+    if openai_credentials_available(config):
+        return ProviderName.OPENAI_SUBSCRIPTION
+    store = ProviderHealthStore(config.state_dir / "health.json")
+    breakers = {breaker.provider: breaker for breaker in store.load()}
+    opencode_breaker = breakers.get(ProviderName.OPENCODE_GO)
+    if opencode_breaker is None or opencode_breaker.permits_call():
+        return ProviderName.OPENCODE_GO
     if config.gemini_enabled and config.gemini_api_key is not None:
-        gemini = LLM(
+        return ProviderName.GEMINI
+    return ProviderName.OPENCODE_GO
+
+
+def build_llm(config: FactoryConfig) -> LLM:
+    """Construct this conversation's sole LLM, with no per-call fallback chain.
+
+    openhands' FallbackStrategy retries the primary model first on every new turn
+    (fallback is per-call, not per-conversation), so a multi-turn conversation that
+    dips to a fallback provider on one turn and back to a strict-validating primary
+    on the next replays that fallback provider's tool-call ID format into the
+    primary - which OpenAI's Responses API rejects outright with "Expected an ID
+    that begins with 'fc'". This is an upstream litellm bug with no released fix
+    yet: https://github.com/BerriAI/litellm/pull/34387 (open since 2026-07-23).
+    Provider selection instead happens once per conversation via
+    select_primary_provider(), which is breaker-aware.
+    """
+    from openhands.sdk import LLM
+
+    provider = select_primary_provider(config)
+    if provider is ProviderName.OPENAI_SUBSCRIPTION:
+        return LLM.subscription_login(
+            vendor="openai",
+            model=config.openai_model,
+            open_browser=False,
+        )
+    if provider is ProviderName.GEMINI:
+        return LLM(
             model=f"gemini/{config.gemini_model}",
             api_key=config.gemini_api_key,
             usage_id=config.gemini_profile_name,
         )
-        profile_store.save(config.gemini_profile_name, gemini, include_secrets=True)
-        fallback_names.append(config.gemini_profile_name)
-    for profile_path in config.profile_store.glob("*.json"):
-        profile_path.chmod(0o600)
-    subscription_strategy = FallbackStrategy(
-        fallback_llms=fallback_names,
-        profile_store_dir=config.profile_store,
-    )
-    if not openai_credentials_available(config):
-        opencode_fallbacks = fallback_names[1:]
-        if not opencode_fallbacks:
-            return opencode
-        return LLM(
-            model=f"openai/{config.opencode_model}",
-            api_key=config.opencode_api_key,
-            base_url=config.opencode_base_url,
-            usage_id=config.opencode_profile_name,
-            fallback_strategy=FallbackStrategy(
-                fallback_llms=opencode_fallbacks,
-                profile_store_dir=config.profile_store,
-            ),
-        )
-    return LLM.subscription_login(
-        vendor="openai",
-        model=config.openai_model,
-        open_browser=False,
-        fallback_strategy=subscription_strategy,
+    return LLM(
+        model=f"openai/{config.opencode_model}",
+        api_key=config.opencode_api_key,
+        base_url=config.opencode_base_url,
+        usage_id=config.opencode_profile_name,
+        # deepseek-v4-flash's thinking mode hits a well-documented, still-open
+        # litellm bug class: reasoning_content from one turn isn't correctly
+        # forwarded on the next, so the provider (Console Go) rejects the
+        # follow-up turn outright with "reasoning_content ... must be passed
+        # back to the API" - killing the whole conversation.
+        # reasoning_effort="none" disables thinking mode for this tier,
+        # sidestepping the bug rather than chasing a moving target of fixes.
+        # See e.g. https://github.com/BerriAI/litellm/issues/26395 and
+        # https://github.com/BerriAI/litellm/pull/28080 (both DeepSeek V4).
+        reasoning_effort="none",
     )

@@ -77,7 +77,7 @@ class FactoryPipeline:
             if (
                 task_id in active_task_ids
                 or task_id in protected
-                or job.state not in PRE_PULL_REQUEST_STATES
+                or job.state in TERMINAL_STATES
             ):
                 continue
             worktree = self.config.worktree_dir / f"issue-{task_id}"
@@ -97,7 +97,20 @@ class FactoryPipeline:
                 workflow.remove_worktree(worktree, force=dirty)
             self.tasks.release(task_id)
             job.state = JobState.DONE
-            job.last_error = "Issue closed before pull request creation"
+            # This clause used to be scoped to PRE_PULL_REQUEST_STATES, so a job
+            # whose pull request was closed (not merged) while the factory was
+            # still reviewing or waiting on CI never got here at all - its
+            # worktree, and everything downstream of it, stayed on disk forever.
+            # reconcile() only resets a DONE job with this exact message back to
+            # DISCOVERED when job.pull_request is still None, which is already
+            # never true once a PR-review job reaches this branch (it is set
+            # immediately in _discover_pull_request), so this message split does
+            # not change that behaviour.
+            job.last_error = (
+                "Issue closed before pull request creation"
+                if job.task.source == "github-issue"
+                else "Pull request closed before the factory finished with it"
+            )
             self.jobs.save_job(job)
         return self.jobs.load()
 
@@ -182,7 +195,10 @@ class FactoryPipeline:
 
     def _advance(self, job: Job) -> None:
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
-        prompt_dir = self.config.repository / "automation/prompts"
+        # Read from the task's own worktree, not the shared base checkout: the worktree
+        # is always freshly created from origin/main, while the base checkout's working
+        # tree is only ever fetched (refs updated), never reset, and can drift stale.
+        prompt_dir = worktree / "automation/prompts"
         if job.state is JobState.DISCOVERED:
             if job.task.source == "github-pull-request":
                 self._discover_pull_request(job, worktree)
@@ -298,11 +314,17 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
-            reviewed_head = job.head_sha or workflow.head_sha()
+            # The worktree persists across retries of this state, so a review report
+            # left behind by an earlier failed attempt (crashed conversation, hit its
+            # turn budget, etc.) must not be re-validated as if it were fresh: remove
+            # it before running the conversation, so a conversation that fails to
+            # (re)write a valid report is reported as missing one, not judged against
+            # someone else's stale output.
+            (worktree / ".factory-review.json").unlink(missing_ok=True)
             self.conversations.run(
                 job.task, worktree, build_phase_prompt(prompt_dir, "review", job.task)
             )
-            report = validate_review_report(worktree, job.task.body, reviewed_head)
+            report = validate_review_report(worktree, job.task.body)
             if workflow.has_changes():
                 self._verify(workflow)
                 workflow.stage_all()
@@ -321,8 +343,6 @@ class FactoryPipeline:
                 raise FactoryError("Pull request number is missing")
             if job.head_sha is None:
                 job.head_sha = workflow.head_sha()
-            if job.head_sha != reviewed_head:
-                raise FactoryError("Review report head differs from the final reviewed SHA")
             self.github.publish_review_status(
                 job.head_sha,
                 approved=True,
@@ -449,11 +469,22 @@ class FactoryPipeline:
         if not changed:
             raise FactoryError("No changed paths were found")
         commands = commands_for(workflow.repository, changed)
+        # Only commands that bind a fixed host port (frontend-e2e's dev server)
+        # need to be serialized across workers; everything else - lint, build,
+        # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
+        # port) - is safe to run at full worker parallelism. Running the shared
+        # commands first also means a cheap, fast-failing check (lint, a broken
+        # build) is judged before spending minutes on the exclusive one.
+        shared = [command for command in commands if not command.exclusive]
+        exclusive = [command for command in commands if command.exclusive]
+        run_verification(shared)
+        if not exclusive:
+            return
         if self.verification_slots is None:
-            run_verification(commands)
+            run_verification(exclusive)
             return
         with self.verification_slots:
-            run_verification(commands)
+            run_verification(exclusive)
 
     def _context_files(self, worktree: Path) -> list[tuple[Path, str]]:
         context: list[tuple[Path, str]] = []
@@ -503,7 +534,9 @@ class FactoryPipeline:
             self._architect_state_path(), {"last_run_at": datetime.now(UTC).isoformat()}
         )
         worktree = self.config.worktree_dir / "architect"
-        prompt_dir = self.config.repository / "automation/prompts"
+        # See the matching comment in _advance(): read from the worktree, not the
+        # shared base checkout, so this always uses the current prompt on origin/main.
+        prompt_dir = worktree / "automation/prompts"
         if worktree.exists():
             GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(
                 worktree, force=True
