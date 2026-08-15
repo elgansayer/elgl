@@ -14,6 +14,11 @@ jobs:
     name: ${{ matrix.directory }} / ${{ matrix.check }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Runtime validation intentionally requires TRANSFER_SECRET. CI must boot the
+      # application with a deterministic non-production value rather than weakening
+      # production validation or depending on a repository secret for test execution.
+      TRANSFER_SECRET: ci-test-transfer-secret
     strategy:
       fail-fast: false
       matrix:
