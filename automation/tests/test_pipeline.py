@@ -460,6 +460,53 @@ def test_successful_transition_resets_previous_failures(
     assert advanced.last_error is None
 
 
+def test_verify_only_serializes_the_exclusive_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Shared commands (lint, build, unit tests, backend-test:e2e) must run
+    without holding verification_slots, so other workers' verification isn't
+    blocked behind them; only the fixed-port frontend-e2e command should ever
+    acquire that single global slot.
+    """
+    from threading import Semaphore
+
+    from openhands_factory.verification import VerificationCommand
+
+    pipeline = FactoryPipeline(
+        config(tmp_path),
+        github=GitHub(),  # type: ignore[arg-type]
+        verification_slots=Semaphore(1),
+    )
+    fake_commands = [
+        VerificationCommand("frontend-lint:check", ("true",), tmp_path),
+        VerificationCommand("frontend-e2e", ("true",), tmp_path, exclusive=True),
+        VerificationCommand("backend-test:e2e", ("true",), tmp_path),
+    ]
+    monkeypatch.setattr(
+        "openhands_factory.pipeline.commands_for", lambda repository, changed: fake_commands
+    )
+    monkeypatch.setattr(GitWorkflow, "changed_paths", lambda workflow: {Path("frontend/x.ts")})
+    slot_held_during: dict[str, bool] = {}
+
+    def fake_run_verification(commands: list[VerificationCommand]) -> None:
+        held = pipeline.verification_slots.acquire(blocking=False)  # type: ignore[union-attr]
+        if held:
+            pipeline.verification_slots.release()  # type: ignore[union-attr]
+        for command in commands:
+            slot_held_during[command.name] = not held
+
+    monkeypatch.setattr("openhands_factory.pipeline.run_verification", fake_run_verification)
+    workflow = GitWorkflow(tmp_path, "main")
+
+    pipeline._verify(workflow)
+
+    assert slot_held_during == {
+        "frontend-lint:check": False,
+        "backend-test:e2e": False,
+        "frontend-e2e": True,
+    }
+
+
 def test_discovery_retry_releases_lease_and_retires_stale_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
