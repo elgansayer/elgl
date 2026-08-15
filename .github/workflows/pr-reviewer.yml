@@ -10,10 +10,12 @@ concurrency:
 
 jobs:
   review_and_fix:
-    # Guard: only skip if the PR reviewer itself pushed the commit (true self-review loop).
-    # AI-created PRs (openhands-agent, jules, etc.) MUST be reviewed and merged.
-    # WARNING: Do NOT block all [bot] actors — that prevents all AI PRs from being reviewed!
-    if: github.actor != 'claude-code[bot]'
+    # This job has privileged repository credentials and may push or admin-merge.
+    # Never run that path against a fork-controlled checkout. Same-repository AI
+    # branches remain eligible, while external fork PRs are reviewed by normal CI.
+    if: >
+      github.actor != 'claude-code[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: write
