@@ -56,21 +56,22 @@ jobs:
         if: github.event.issue.number != ''
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          ISSUE="${{ github.event.issue.number }}"
           if [ -z "$ISSUE" ] || [ "$ISSUE" = "null" ]; then
-            echo "pr_exists=true" >> $GITHUB_OUTPUT
+            echo "pr_exists=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          COUNT=$(gh pr list --repo ${{ github.repository }} \
+          COUNT=$(gh pr list --repo "$REPOSITORY" \
             --search "Fixes #${ISSUE} in:body" \
             --state open --json number -q 'length' 2>/dev/null || echo "0")
           echo "pr_count=$COUNT"
           if [ "$COUNT" -gt 0 ]; then
-            echo "pr_exists=true" >> $GITHUB_OUTPUT
+            echo "pr_exists=true" >> "$GITHUB_OUTPUT"
             echo "Claude created a PR — skipping lower tiers."
           else
-            echo "pr_exists=false" >> $GITHUB_OUTPUT
+            echo "pr_exists=false" >> "$GITHUB_OUTPUT"
             echo "Claude did NOT create a PR (token exhausted or error) — falling through to Tier 2."
           fi
 
