@@ -39,7 +39,9 @@ describe('AdminUserDetailService', () => {
   });
 
   it('returns a stable not-found error when the user cannot be loaded', async () => {
-    const single = vi.fn().mockResolvedValue({ data: null, error: new Error('missing') });
+    const single = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: new Error('missing') });
     const eq = vi.fn().mockReturnValue({ single });
     const select = vi.fn().mockReturnValue({ eq });
     const from = vi.fn().mockReturnValue({ select });

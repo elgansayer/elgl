@@ -17,7 +17,11 @@ describe('AdminAuditQueryService', () => {
     } as unknown as SupabaseService);
 
     await expect(
-      service.list({ page: 1, pageSize: 50, action: 'users.login_history.read' }),
+      service.list({
+        page: 1,
+        pageSize: 50,
+        action: 'users.login_history.read',
+      }),
     ).resolves.toEqual({
       events: [{ id: 'event-1', action: 'users.login_history.read' }],
       total: 1,

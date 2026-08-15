@@ -23,7 +23,8 @@ export class AdminSystemHealthService {
     ]);
 
     return {
-      state: database === 'healthy' && redis === 'healthy' ? 'healthy' : 'degraded',
+      state:
+        database === 'healthy' && redis === 'healthy' ? 'healthy' : 'degraded',
       checkedAt: new Date().toISOString(),
       dependencies: { database, redis },
     };

@@ -4,7 +4,9 @@ import { AdminOperationalEventsV1Controller } from './admin-operational-events-v
 describe('AdminOperationalEventsV1Controller', () => {
   it('delegates bounded log queries to the operational event service', async () => {
     const events = {
-      list: vi.fn().mockResolvedValue({ events: [], total: 0, page: 1, pageSize: 25 }),
+      list: vi
+        .fn()
+        .mockResolvedValue({ events: [], total: 0, page: 1, pageSize: 25 }),
     };
     const controller = new AdminOperationalEventsV1Controller(
       events as unknown as AdminOperationalEventsService,

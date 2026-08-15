@@ -52,7 +52,8 @@ export class AdminRoleAssignmentsService {
       .select('user_id, role_id, granted_by, granted_at, expires_at', {
         count: 'exact',
       });
-    if (query.userId) assignmentQuery = assignmentQuery.eq('user_id', query.userId);
+    if (query.userId)
+      assignmentQuery = assignmentQuery.eq('user_id', query.userId);
 
     let roleIdsForKey: string[] | null = null;
     if (query.roleKey) {

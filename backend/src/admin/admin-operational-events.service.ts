@@ -23,7 +23,9 @@ export interface AdminOperationalEventsResult {
 export class AdminOperationalEventsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async list(query: AdminOperationalEventsQueryDto): Promise<AdminOperationalEventsResult> {
+  async list(
+    query: AdminOperationalEventsQueryDto,
+  ): Promise<AdminOperationalEventsResult> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     const from = (page - 1) * pageSize;
@@ -32,11 +34,16 @@ export class AdminOperationalEventsService {
     let request = this.supabaseService
       .getClient()
       .from('admin_operational_events')
-      .select('id, severity, category, message, correlation_id, source, created_at', { count: 'exact' });
+      .select(
+        'id, severity, category, message, correlation_id, source, created_at',
+        { count: 'exact' },
+      );
 
     if (query.severity) request = request.eq('severity', query.severity);
-    if (query.category?.trim()) request = request.eq('category', query.category.trim());
-    if (query.correlationId?.trim()) request = request.eq('correlation_id', query.correlationId.trim());
+    if (query.category?.trim())
+      request = request.eq('category', query.category.trim());
+    if (query.correlationId?.trim())
+      request = request.eq('correlation_id', query.correlationId.trim());
 
     const { data, error, count } = await request
       .order('created_at', { ascending: false })
@@ -44,7 +51,7 @@ export class AdminOperationalEventsService {
 
     if (error) throw error;
     return {
-      events: (data ?? []) as AdminOperationalEvent[],
+      events: data ?? [],
       total: count ?? 0,
       page,
       pageSize,

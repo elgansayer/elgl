@@ -3,7 +3,9 @@ import { AdminOperationalEventsService } from './admin-operational-events.servic
 
 describe('AdminOperationalEventsService', () => {
   it('returns bounded newest-first operational events with exact filters', async () => {
-    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const range = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
     const eqCorrelation = vi.fn().mockReturnValue({ order });
     const eqCategory = vi.fn().mockReturnValue({ eq: eqCorrelation });
