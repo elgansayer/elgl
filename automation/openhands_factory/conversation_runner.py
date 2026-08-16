@@ -16,14 +16,21 @@ from filelock import FileLock
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import FactoryError
+from openhands_factory.metrics import MetricsStore
 from openhands_factory.models import FailureKind, ProviderName, Task
+from openhands_factory.provider_capacity import provider_slot
 from openhands_factory.provider_health import (
     CircuitBreaker,
     ProviderHealthStore,
     classify_failure,
     extract_retry_after_seconds,
 )
-from openhands_factory.provider_profiles import select_primary_provider
+from openhands_factory.provider_profiles import select_provider_decision
+from openhands_factory.provider_runtime import (
+    ProviderAttributionStore,
+    conversation_role,
+    provider_model,
+)
 
 
 class ConversationProtocol(Protocol):
@@ -44,6 +51,13 @@ class ConversationResult:
     task_id: str
     elapsed_seconds: float
     completed: bool
+    # Defaults preserve the original three-field public/test interface. Production
+    # ConversationRunner always supplies the real attribution values explicitly.
+    provider: ProviderName = ProviderName.OPENAI_SUBSCRIPTION
+    model: str = ""
+    role: str = "factory-phase"
+    fallback: bool = False
+    fallback_reason: str | None = None
 
 
 def _conversation_process(
@@ -103,6 +117,7 @@ class ConversationRunner:
         self.factory = factory
         self.timeout_seconds = timeout_seconds
         self.cancellation_grace_seconds = cancellation_grace_seconds
+        self.attribution = ProviderAttributionStore(config.state_dir / "provider-attribution.json")
 
     def _default_breakers(self) -> list[CircuitBreaker]:
         return [
@@ -148,52 +163,136 @@ class ConversationRunner:
                 break
             store.save(breakers)
 
+    def _record_attempt(
+        self,
+        *,
+        task: Task,
+        role: str,
+        provider: ProviderName,
+        model: str,
+        successful: bool,
+        fallback: bool,
+        fallback_reason: str | None,
+        elapsed_seconds: float,
+        capacity_wait_seconds: float = 0,
+        failure_kind: FailureKind | None = None,
+    ) -> None:
+        metrics_lock = FileLock(str(self.config.state_dir / "metrics.json.lock"))
+        with metrics_lock:
+            MetricsStore(self.config.state_dir / "metrics.json").record(
+                provider,
+                model,
+                successful=successful,
+                fallback=fallback,
+                rate_limited=failure_kind is FailureKind.RATE_LIMIT,
+                authentication_failure=failure_kind is FailureKind.AUTHENTICATION,
+                capacity_wait_seconds=capacity_wait_seconds,
+            )
+        self.attribution.record(
+            task_id=task.identifier,
+            role=role,
+            provider=provider,
+            model=model,
+            generation=self.config.factory_generation,
+            successful=successful,
+            fallback=fallback,
+            fallback_reason=fallback_reason,
+            elapsed_seconds=elapsed_seconds,
+            capacity_wait_seconds=capacity_wait_seconds,
+            failure_kind=failure_kind,
+        )
+
     def run(self, task: Task, workspace: Path, prompt: str) -> ConversationResult:
         started = time.monotonic()
-        primary_provider = select_primary_provider(self.config)
-        context = multiprocessing.get_context("spawn")
-        result_connection, child_connection = context.Pipe(duplex=False)
-        process = context.Process(
-            target=_conversation_process,
-            args=(
-                self.factory,
-                workspace,
-                self.config.max_conversation_turns,
-                primary_provider,
-                prompt,
-                child_connection,
-            ),
-            name=f"factory-conversation-{task.identifier}",
+        role = conversation_role(prompt)
+        implementation_provider = (
+            self.attribution.latest_provider(task.identifier, role="implementation")
+            if role == "review"
+            else None
         )
-        process.start()
-        child_connection.close()
-        timeout = self.timeout_seconds or self.config.max_task_minutes * 60
-        process.join(timeout)
-        if process.is_alive():
-            process_identifier = process.pid
-            if process_identifier is not None:
-                try:
-                    os.killpg(process_identifier, signal.SIGTERM)
-                except ProcessLookupError:
-                    process.terminate()
-            process.join(self.cancellation_grace_seconds)
-            if process.is_alive():
-                if process_identifier is not None:
-                    try:
-                        os.killpg(process_identifier, signal.SIGKILL)
-                    except ProcessLookupError:
-                        process.kill()
-                process.join()
-            result_connection.close()
-            process.close()
-            self._mutate_provider_health(primary_provider, failure_kind=FailureKind.TRANSIENT)
-            raise FactoryError("Conversation exceeded the maximum task duration")
+        decision = select_provider_decision(
+            self.config,
+            prefer_different_from=implementation_provider,
+        )
+        provider = decision.provider
+        model = provider_model(self.config, provider)
+        fallback = provider is not ProviderName.OPENAI_SUBSCRIPTION
+        owner = f"{task.identifier}:{role}:{os.getpid()}:{time.monotonic_ns()}"
+        capacity_wait_seconds = 0.0
 
-        elapsed = time.monotonic() - started
-        outcome: object = result_connection.recv() if result_connection.poll() else None
-        result_connection.close()
-        exit_code = process.exitcode
-        process.close()
+        try:
+            with provider_slot(self.config, provider, owner=owner) as waited:
+                capacity_wait_seconds = waited
+                context = multiprocessing.get_context("spawn")
+                result_connection, child_connection = context.Pipe(duplex=False)
+                process = context.Process(
+                    target=_conversation_process,
+                    args=(
+                        self.factory,
+                        workspace,
+                        self.config.max_conversation_turns,
+                        provider,
+                        prompt,
+                        child_connection,
+                    ),
+                    name=f"factory-conversation-{task.identifier}",
+                )
+                process.start()
+                child_connection.close()
+                timeout = self.timeout_seconds or self.config.max_task_minutes * 60
+                process.join(timeout)
+                if process.is_alive():
+                    process_identifier = process.pid
+                    if process_identifier is not None:
+                        try:
+                            os.killpg(process_identifier, signal.SIGTERM)
+                        except ProcessLookupError:
+                            process.terminate()
+                    process.join(self.cancellation_grace_seconds)
+                    if process.is_alive():
+                        if process_identifier is not None:
+                            try:
+                                os.killpg(process_identifier, signal.SIGKILL)
+                            except ProcessLookupError:
+                                process.kill()
+                        process.join()
+                    result_connection.close()
+                    process.close()
+                    elapsed = time.monotonic() - started
+                    self._mutate_provider_health(provider, failure_kind=FailureKind.TRANSIENT)
+                    self._record_attempt(
+                        task=task,
+                        role=role,
+                        provider=provider,
+                        model=model,
+                        successful=False,
+                        fallback=fallback,
+                        fallback_reason=decision.fallback_reason,
+                        elapsed_seconds=elapsed,
+                        capacity_wait_seconds=capacity_wait_seconds,
+                        failure_kind=FailureKind.TRANSIENT,
+                    )
+                    raise FactoryError("Conversation exceeded the maximum task duration")
+
+                elapsed = time.monotonic() - started
+                outcome: object = result_connection.recv() if result_connection.poll() else None
+                result_connection.close()
+                exit_code = process.exitcode
+                process.close()
+        except FactoryError as error:
+            if "Provider capacity exhausted" in str(error):
+                self._record_attempt(
+                    task=task,
+                    role=role,
+                    provider=provider,
+                    model=model,
+                    successful=False,
+                    fallback=fallback,
+                    fallback_reason="provider-capacity-exhausted",
+                    elapsed_seconds=time.monotonic() - started,
+                    capacity_wait_seconds=float(self.config.provider_slot_wait_seconds),
+                )
+            raise
 
         if not isinstance(outcome, dict) or outcome.get("completed") is not True:
             status_code = outcome.get("status_code") if isinstance(outcome, dict) else None
@@ -203,14 +302,46 @@ class ConversationRunner:
             kind = classify_failure(status_code, detail)
             retry_after = extract_retry_after_seconds(detail)
             self._mutate_provider_health(
-                primary_provider,
+                provider,
                 failure_kind=kind,
                 retry_after_seconds=retry_after,
             )
+            self._record_attempt(
+                task=task,
+                role=role,
+                provider=provider,
+                model=model,
+                successful=False,
+                fallback=fallback,
+                fallback_reason=decision.fallback_reason,
+                elapsed_seconds=elapsed,
+                capacity_wait_seconds=capacity_wait_seconds,
+                failure_kind=kind,
+            )
             raise FactoryError(detail)
 
-        self._mutate_provider_health(primary_provider)
-        return ConversationResult(task.identifier, elapsed, True)
+        self._mutate_provider_health(provider)
+        self._record_attempt(
+            task=task,
+            role=role,
+            provider=provider,
+            model=model,
+            successful=True,
+            fallback=fallback,
+            fallback_reason=decision.fallback_reason,
+            elapsed_seconds=elapsed,
+            capacity_wait_seconds=capacity_wait_seconds,
+        )
+        return ConversationResult(
+            task.identifier,
+            elapsed,
+            True,
+            provider,
+            model,
+            role,
+            fallback,
+            decision.fallback_reason,
+        )
 
 
 @dataclass(frozen=True)

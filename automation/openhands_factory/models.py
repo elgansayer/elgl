@@ -54,8 +54,6 @@ class Task:
     body: str
     source: str
     priority: int
-    # Set only when source is "github-pull-request": the existing branch to review,
-    # as opposed to a factory/* branch the factory creates for an issue it implements.
     pr_branch: str | None = None
 
 
@@ -84,6 +82,8 @@ class ProviderUsage:
     fallbacks: int = 0
     rate_limits: int = 0
     authentication_failures: int = 0
+    capacity_wait_seconds: float = 0.0
+    capacity_waited_calls: int = 0
     estimated_cost_usd: float = 0.0
     unknown_cost_calls: int = 0
 
