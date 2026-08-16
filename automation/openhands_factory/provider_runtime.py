@@ -17,10 +17,12 @@ def provider_model(config: FactoryConfig, provider: ProviderName) -> str:
     if provider is ProviderName.OPENAI_SUBSCRIPTION:
         return config.openai_model
     if provider is ProviderName.OPENCODE_GO:
+        if config.opencode_model is None:
+            raise ConfigurationError("OpenCode Go was selected without a configured model")
         return f"openai/{config.opencode_model}"
     raise ConfigurationError(
-        f"Provider {provider.value!r} is historical-only; production routing is "
-        "Codex subscription OAuth -> OpenCode Go"
+        f"Provider {provider.value!r} is historical-only; active OpenHands routing uses "
+        "Codex subscription OAuth with optional OpenCode Go fallback"
     )
 
 
