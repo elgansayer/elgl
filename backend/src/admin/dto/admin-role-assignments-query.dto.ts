@@ -44,12 +44,16 @@ export class AdminRoleAssignmentsQueryDto {
   @MaxLength(128)
   grantedBy?: string;
 
-  @ApiPropertyOptional({ description: 'Inclusive ISO-8601 lower grant-time bound' })
+  @ApiPropertyOptional({
+    description: 'Inclusive ISO-8601 lower grant-time bound',
+  })
   @IsOptional()
   @IsISO8601()
   startTime?: string;
 
-  @ApiPropertyOptional({ description: 'Inclusive ISO-8601 upper grant-time bound' })
+  @ApiPropertyOptional({
+    description: 'Inclusive ISO-8601 upper grant-time bound',
+  })
   @IsOptional()
   @IsISO8601()
   endTime?: string;
