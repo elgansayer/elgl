@@ -30,4 +30,10 @@ export class AdminReportsQueryDto {
   @IsString()
   @MaxLength(40)
   status?: string;
+
+  @ApiPropertyOptional({ description: 'Exact report reason-category filter' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  reasonCategory?: string;
 }
