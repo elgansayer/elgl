@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import dataclasses
-import pathlib
 import subprocess
+from dataclasses import dataclass
+from pathlib import Path
 
 
 LEGACY_SYSTEMD_UNITS = (
@@ -25,16 +25,16 @@ LEGACY_TMUX_SESSIONS = (
 )
 
 LEGACY_STATE_PATHS = (
-    pathlib.Path("/var/lib/hellotalk-swarm"),
-    pathlib.Path("/var/log/hellotalk-swarm"),
-    pathlib.Path("/etc/hellotalk-swarm"),
-    pathlib.Path("/opt/hellotalk-swarm"),
-    pathlib.Path("/var/lib/ai-swarm"),
-    pathlib.Path("/opt/ai-swarm"),
+    Path("/var/lib/hellotalk-swarm"),
+    Path("/var/log/hellotalk-swarm"),
+    Path("/etc/hellotalk-swarm"),
+    Path("/opt/hellotalk-swarm"),
+    Path("/var/lib/ai-swarm"),
+    Path("/opt/ai-swarm"),
 )
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True)
 class LegacyFinding:
     kind: str
     identifier: str
@@ -94,7 +94,7 @@ def detect_legacy_tmux_sessions() -> list[LegacyFinding]:
 
 
 def detect_legacy_state_paths(
-    paths: tuple[pathlib.Path, ...] = LEGACY_STATE_PATHS,
+    paths: tuple[Path, ...] = LEGACY_STATE_PATHS,
 ) -> list[LegacyFinding]:
     findings: list[LegacyFinding] = []
     for path in paths:
