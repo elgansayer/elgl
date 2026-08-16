@@ -13,15 +13,19 @@ class SandboxRunner:
     def __init__(self, worktree: Path):
         self.worktree = worktree.resolve()
         
-    def execute(self, cmd: list[str]) -> subprocess.CompletedProcess:
-        """Runs the given command array inside the sandboxed environment."""
-        podman_cmd = [
+    def get_podman_cmd(self, cmd: list[str]) -> list[str]:
+        """Returns the full podman command array."""
+        return [
             "podman", "run", "--rm",
             "-v", f"{self.worktree}:/workspace:Z",
             "-w", "/workspace",
             "--network", "none", # Block all network
             "python:3.11-slim"
         ] + cmd
+        
+    def execute(self, cmd: list[str]) -> subprocess.CompletedProcess:
+        """Runs the given command array inside the sandboxed environment."""
+        podman_cmd = self.get_podman_cmd(cmd)
         
         return subprocess.run(
             podman_cmd,

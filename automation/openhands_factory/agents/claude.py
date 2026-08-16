@@ -35,26 +35,28 @@ class ClaudeCodeProvider:
     def run(self, request: AgentRequest) -> AgentResult:
         return asyncio.run(self._run_async(request))
 
-    async def _run_async(self, request: AgentRequest) -> AgentResult:
+        from openhands_factory.sandbox import SandboxRunner
+        from openhands_factory.pty_wrapper import PTYWrapper
         started_at = datetime.now(UTC)
         try:
-            # Authentication is expected to be supplied by the installed CLI environment.
-            process = await asyncio.create_subprocess_exec(
-                self.command,
-                "-p",
-                request.prompt,
-                cwd=request.cwd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
-            exit_code = process.returncode
+            # Use the new SandboxRunner to execute safely
+            sandbox = SandboxRunner(request.cwd)
+            # We wrap the command inside PTYWrapper to strip ANSI and auto-answer interactive prompts
+            cmd = [self.command, "-p", request.prompt]
+            
+            # Create a script or just run it via our PTYWrapper
+            wrapper = PTYWrapper(sandbox.get_podman_cmd(cmd))
+            
+            # Execute synchronously in a thread to not block the async event loop
+            stdout_text = await asyncio.to_thread(wrapper.execute)
+            exit_code = 0 if "Error" not in stdout_text else 1  # Simplified exit logic for PTY
+
             finished_at = datetime.now(UTC)
             success = exit_code == 0
 
             failure = None
             if not success:
-                stderr_text = stderr.decode(errors="replace").lower()
+                stderr_text = stdout_text.lower()
                 if any(
                     marker in stderr_text
                     for marker in ("authentication", "invalid token", "expired")
@@ -72,7 +74,7 @@ class ClaudeCodeProvider:
                 else:
                     kind = AgentFailureKind.INVALID_AGENT_OUTPUT
 
-                stderr_summary = stderr.decode(errors="replace")[:200]
+                stderr_summary = stdout_text[:200]
                 failure = AgentFailure(
                     kind=kind,
                     message=(
@@ -88,7 +90,7 @@ class ClaudeCodeProvider:
                 started_at=started_at,
                 finished_at=finished_at,
                 exit_code=exit_code,
-                summary=stdout.decode(errors="replace"),
+                summary=stdout_text,
                 output_path=None,
                 failure=failure,
             )
