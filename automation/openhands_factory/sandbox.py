@@ -10,17 +10,17 @@ from pathlib import Path
 class SandboxRunner:
     """Executes commands inside a disposable Podman container."""
     
-    def __init__(self, worktree: Path):
+    def __init__(self, worktree: Path, image: str = "localhost/hellotalk-factory-worker:current"):
         self.worktree = worktree.resolve()
+        self.image = image
         
     def get_podman_cmd(self, cmd: list[str]) -> list[str]:
-        """Returns the full podman command array."""
         return [
             "podman", "run", "--rm",
             "-v", f"{self.worktree}:/workspace:Z",
             "-w", "/workspace",
             "--network", "none", # Block all network
-            "python:3.11-slim"
+            self.image
         ] + cmd
         
     def execute(self, cmd: list[str]) -> subprocess.CompletedProcess:

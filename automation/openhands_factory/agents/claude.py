@@ -35,6 +35,7 @@ class ClaudeCodeProvider:
     def run(self, request: AgentRequest) -> AgentResult:
         return asyncio.run(self._run_async(request))
 
+    async def _run_async(self, request: AgentRequest) -> AgentResult:
         from openhands_factory.sandbox import SandboxRunner
         from openhands_factory.pty_wrapper import PTYWrapper
         started_at = datetime.now(UTC)
@@ -42,7 +43,7 @@ class ClaudeCodeProvider:
             # Use the new SandboxRunner to execute safely
             sandbox = SandboxRunner(request.cwd)
             # We wrap the command inside PTYWrapper to strip ANSI and auto-answer interactive prompts
-            cmd = [self.command, "-p", request.prompt]
+            cmd = ["caveman", self.command, "-p", request.prompt]
             
             # Create a script or just run it via our PTYWrapper
             wrapper = PTYWrapper(sandbox.get_podman_cmd(cmd))

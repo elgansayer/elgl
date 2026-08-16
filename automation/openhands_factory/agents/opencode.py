@@ -35,12 +35,13 @@ class OpenCodeProvider:
     def run(self, request: AgentRequest) -> AgentResult:
         return asyncio.run(self._run_async(request))
 
+    async def _run_async(self, request: AgentRequest) -> AgentResult:
         from openhands_factory.sandbox import SandboxRunner
         from openhands_factory.pty_wrapper import PTYWrapper
         started_at = datetime.now(UTC)
         try:
             sandbox = SandboxRunner(request.cwd)
-            cmd = [self.command, "agent", "--prompt", request.prompt]
+            cmd = ["caveman", self.command, "agent", "--prompt", request.prompt]
             wrapper = PTYWrapper(sandbox.get_podman_cmd(cmd))
             
             stdout_text = await asyncio.to_thread(wrapper.execute)
