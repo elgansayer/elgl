@@ -56,7 +56,13 @@ def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
     checks = run_doctor(config, online=online)
     if online:
         oauth = smoke_openai_subscription(config)
-        checks.append(Check("openai-subscription-online", oauth.passed, f"{oauth.kind}: {oauth.detail}"))
+        checks.append(
+            Check(
+                "openai-subscription-online",
+                oauth.passed,
+                f"{oauth.kind}: {oauth.detail}",
+            )
+        )
     return checks
 
 
