@@ -13,7 +13,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.head_ref == 'audit/ux-full-tree-spartan-convergence'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout PR head
         uses: actions/checkout@v7
@@ -25,6 +25,25 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate missing Spartan interaction families
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          for component in native-select checkbox radio-group combobox; do
+            target="src/app/components/ui/${component}"
+            if [ -d "$target" ]; then
+              echo "${component} already owned"
+              continue
+            fi
+            npx ng g @spartan-ng/cli:ui "$component"
+          done
 
       - name: Apply owned Spartan control migration
         run: node scripts/migrate-spartan-owned-controls.mjs
@@ -34,12 +53,12 @@ jobs:
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           if git diff --quiet; then
-            echo "No owned-control migration changes remain."
+            echo "No Spartan generation or owned-control migration changes remain."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/src/app
-          git commit -m "refactor(ui): migrate full tree to owned Spartan controls"
+          git add frontend
+          git commit -m "refactor(ui): add missing owned Spartan interaction families"
           git push origin "HEAD:${HEAD_BRANCH}"
