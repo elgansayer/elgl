@@ -8,6 +8,7 @@ describe('AdminReportsQueryDto', () => {
     const dto = plainToInstance(AdminReportsQueryDto, {
       status: 'open',
       reasonCategory: 'harassment',
+      reportedUserId: 'user-1',
     });
     await expect(validate(dto)).resolves.toEqual([]);
   });
@@ -15,6 +16,7 @@ describe('AdminReportsQueryDto', () => {
   it.each([
     ['status', 41],
     ['reasonCategory', 81],
+    ['reportedUserId', 129],
   ])('rejects an overlong %s filter', async (field, length) => {
     const dto = plainToInstance(AdminReportsQueryDto, {
       [field]: 'x'.repeat(length),
