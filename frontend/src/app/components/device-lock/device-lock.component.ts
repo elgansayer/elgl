@@ -1,21 +1,18 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { AppLockService } from '../../services/app-lock.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-device-lock',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports],
   template: `
     <div class="flex h-full items-center justify-center bg-surface-900 text-white">
       <div class="max-w-sm text-center">
         <h1 class="mb-6 text-2xl font-bold">{{ 'deviceLock.title' | t }}</h1>
         <p class="mb-8 text-white/60">{{ 'deviceLock.message' | t }}</p>
-        <button
-          type="button"
-          (click)="unlock()"
-          class="rounded-full bg-primary px-6 py-3 text-on-fill transition hover:bg-primary-dark"
-        >
+        <button hlmBtn type="button" size="touch" (click)="unlock()">
           {{ 'deviceLock.unlock' | t }}
         </button>
       </div>
