@@ -56,7 +56,7 @@ class FactoryPipeline:
         self.conversations = conversations or ConversationRunner(
             config, sdk_conversation_factory(config)
         )
-        
+
         # Build the new AgentRouter
         from openhands_factory.agents import (
             AgentHealthStore,
@@ -68,15 +68,20 @@ class FactoryPipeline:
             OpenCodeProvider,
             OpenHandsProvider,
         )
-        self.health_store = AgentHealthStore(config.state_dir / "agent_health.json")
         from openhands_factory.agents.base import AgentProvider
-        
+
+        self.health_store = AgentHealthStore(config.state_dir / "agent_health.json")
+
+        def provider_command(name: str, default: str) -> str:
+            provider = config.agents.providers.get(name)
+            return provider.command if provider and provider.command else default
+
         providers: list[AgentProvider] = [
-            ClaudeCodeProvider(command=config.agents.providers["claude"].command if "claude" in config.agents.providers and config.agents.providers["claude"].command else "claude"),
-            CodexProvider(command=config.agents.providers["codex"].command if "codex" in config.agents.providers and config.agents.providers["codex"].command else "codex"),
-            GoogleAgentProvider(command=config.agents.providers["google"].command if "google" in config.agents.providers and config.agents.providers["google"].command else "gemini"),
-            OpenCodeProvider(command=config.agents.providers["opencode"].command if "opencode" in config.agents.providers and config.agents.providers["opencode"].command else "opencode"),
-            OpenHandsProvider(self.conversations)
+            ClaudeCodeProvider(command=provider_command("claude", "claude")),
+            CodexProvider(command=provider_command("codex", "codex")),
+            GoogleAgentProvider(command=provider_command("google", "gemini")),
+            OpenCodeProvider(command=provider_command("opencode", "opencode")),
+            OpenHandsProvider(self.conversations),
         ]
         self.router = AgentRouter(providers=providers, policy=ConfigRoutingPolicy(config.agents))
         self.labels_ready = False
@@ -197,7 +202,10 @@ class FactoryPipeline:
         job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
 
     def _run_agent(self, job: Job, worktree: Path, phase: str, prompt: str) -> None:
+        from typing import Any
+
         from openhands_factory.agents.base import AgentPhase, AgentRequest
+
         # Map phase string to enum
         phase_map = {
             "planning": AgentPhase.PLANNING,
@@ -211,12 +219,11 @@ class FactoryPipeline:
         }
         agent_phase = phase_map.get(phase, AgentPhase.GENERAL_ACTION)
         request = AgentRequest(phase=agent_phase, task=job.task, prompt=prompt, cwd=worktree)
-        
+
         # In a complete implementation, this would load breakers from self.health_store
         result = self.router.run(request, job)
-        
+
         # Track history
-        from typing import Any
         history_entry: dict[str, Any] = {
             "provider": result.provider,
             "phase": result.phase.value,
@@ -229,12 +236,14 @@ class FactoryPipeline:
         if result.failure:
             history_entry["error"] = result.failure.message
             history_entry["kind"] = result.failure.kind.value
-        
+
         job.provider_history.append(history_entry)
-        
+
         if not result.success:
             if result.failure:
-                raise FactoryError(f"Agent provider '{result.provider}' failed: {result.failure.message}")
+                raise FactoryError(
+                    f"Agent provider '{result.provider}' failed: {result.failure.message}"
+                )
             raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
 
     @staticmethod
@@ -620,7 +629,12 @@ class FactoryPipeline:
             priority=10,
         )
         job = Job(task=task)
-        self._run_agent(job, worktree, "architect", build_phase_prompt(prompt_dir, "architect", task))
+        self._run_agent(
+            job,
+            worktree,
+            "architect",
+            build_phase_prompt(prompt_dir, "architect", task),
+        )
         review_workflow = GitWorkflow(worktree, self.config.base_branch)
         proposals = load_architect_report(worktree)
         if proposals:

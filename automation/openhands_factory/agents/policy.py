@@ -22,7 +22,7 @@ class ConfigRoutingPolicy(RoutingPolicy):
     ) -> Sequence[str]:
         if not self.config.routing_enabled:
             return ["openhands"]
-            
+
         routing = self.config.routing
         if phase == AgentPhase.PLANNING:
             preferred = routing.planning
@@ -41,29 +41,31 @@ class ConfigRoutingPolicy(RoutingPolicy):
         elif phase == AgentPhase.GENERAL_ACTION:
             preferred = routing.general_action
         else:
-            # Fallback for unknown phases
             preferred = ["openhands"]
-            
-        # Filter based on health and availability
+
         valid_candidates = []
         for name in preferred:
-            # Skip if disabled in config
             if name not in self.config.providers or not self.config.providers[name].enabled:
                 continue
-                
-            # Skip if unhealthy
+
             health = provider_health.get(name)
-            if health and health.status not in (ProviderStatus.HEALTHY, ProviderStatus.DEGRADED):
+            if health and health.status not in (
+                ProviderStatus.HEALTHY,
+                ProviderStatus.DEGRADED,
+            ):
                 continue
-                
+
             valid_candidates.append(name)
-            
-        # If no candidates are available, fallback to emergency providers if they are healthy
+
         if not valid_candidates:
             for name, provider_cfg in self.config.providers.items():
-                if provider_cfg.emergency_only and provider_cfg.enabled:
-                    health = provider_health.get(name)
-                    if not health or health.status in (ProviderStatus.HEALTHY, ProviderStatus.DEGRADED):
-                        valid_candidates.append(name)
-                        
+                if not (provider_cfg.emergency_only and provider_cfg.enabled):
+                    continue
+                health = provider_health.get(name)
+                if not health or health.status in (
+                    ProviderStatus.HEALTHY,
+                    ProviderStatus.DEGRADED,
+                ):
+                    valid_candidates.append(name)
+
         return valid_candidates

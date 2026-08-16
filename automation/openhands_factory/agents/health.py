@@ -51,8 +51,7 @@ class AgentCircuitBreaker:
     ) -> None:
         if retry_after_seconds is not None:
             self.retry_after_seconds = min(retry_after_seconds, MAX_RETRY_AFTER_SECONDS)
-        
-        # Hard failures that open the circuit immediately
+
         if kind in {
             AgentFailureKind.PROVIDER_AUTH,
             AgentFailureKind.PROVIDER_QUOTA,
@@ -70,7 +69,6 @@ class AgentCircuitBreaker:
     def get_health(self) -> ProviderHealth:
         status = ProviderStatus.HEALTHY
         if self.state == "open":
-            # Determine specific broken status if possible
             if self.consecutive_failures >= self.failure_threshold:
                 status = ProviderStatus.UNAVAILABLE
         elif self.state == "half-open":
@@ -101,7 +99,10 @@ class AgentHealthStore:
             payload.append(item)
         atomic_write_json(self.path, {"breakers": payload})
 
-    def load(self, defaults: Mapping[str, AgentCircuitBreaker] | None = None) -> dict[str, AgentCircuitBreaker]:
+    def load(
+        self,
+        defaults: Mapping[str, AgentCircuitBreaker] | None = None,
+    ) -> dict[str, AgentCircuitBreaker]:
         payload = read_json(self.path, {"breakers": []})
         result: dict[str, AgentCircuitBreaker] = {}
         for item in payload.get("breakers", []):
@@ -116,7 +117,7 @@ class AgentHealthStore:
                 retry_after_seconds=item.get("retry_after_seconds"),
             )
             result[breaker.provider] = breaker
-        
+
         if defaults:
             for name, default_breaker in defaults.items():
                 if name not in result:
