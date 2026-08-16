@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 from datetime import timedelta
-from typing import Any
 
 from openhands_factory.failure_fingerprint import fingerprint_failure
 from openhands_factory.models import FailureKind, Job
@@ -30,25 +29,79 @@ def classify_failure(detail: str, *, agent_kind: str | None = None) -> FailureKi
     diagnostic message.
     """
 
-    if agent_kind in _AGENT_KIND_MAP:
+    if agent_kind is not None and agent_kind in _AGENT_KIND_MAP:
         return _AGENT_KIND_MAP[agent_kind]
 
     text = detail.lower()
-    if any(token in text for token in ("unauthorized", "authentication", "auth failed", "oauth", "login required", "token expired")):
+    authentication_tokens = (
+        "unauthorized",
+        "authentication",
+        "auth failed",
+        "oauth",
+        "login required",
+        "token expired",
+    )
+    if any(token in text for token in authentication_tokens):
         return FailureKind.AUTHENTICATION
-    if any(token in text for token in ("rate limit", "rate-limit", "quota", "http 429", "status 429", "too many requests")):
+
+    rate_limit_tokens = (
+        "rate limit",
+        "rate-limit",
+        "quota",
+        "http 429",
+        "status 429",
+        "too many requests",
+    )
+    if any(token in text for token in rate_limit_tokens):
         return FailureKind.RATE_LIMIT
-    if any(token in text for token in ("timed out", "timeout", "maximum task duration", "deadline exceeded")):
+
+    timeout_tokens = ("timed out", "timeout", "maximum task duration", "deadline exceeded")
+    if any(token in text for token in timeout_tokens):
         return FailureKind.TASK_TIMEOUT
-    if any(token in text for token in ("malformed", "invalid json", "json decode", "parse error", "invalid agent output")):
+
+    malformed_tokens = (
+        "malformed",
+        "invalid json",
+        "json decode",
+        "parse error",
+        "invalid agent output",
+    )
+    if any(token in text for token in malformed_tokens):
         return FailureKind.MALFORMED_RESPONSE
-    if any(token in text for token in ("validation", "quality gate", "review report", "acceptance criteria", "test failed", "tests failed")):
+
+    validation_tokens = (
+        "validation",
+        "quality gate",
+        "review report",
+        "acceptance criteria",
+        "test failed",
+        "tests failed",
+    )
+    if any(token in text for token in validation_tokens):
         return FailureKind.VALIDATION
+
     if any(token in text for token in ("budget", "cost ceiling", "spend limit")):
         return FailureKind.BUDGET
-    if any(token in text for token in ("configuration", "misconfigured", "missing environment", "missing env", "unsupported provider")):
+
+    configuration_tokens = (
+        "configuration",
+        "misconfigured",
+        "missing environment",
+        "missing env",
+        "unsupported provider",
+    )
+    if any(token in text for token in configuration_tokens):
         return FailureKind.CONFIGURATION
-    if any(token in text for token in ("repository", "git ", "verification", "tool failed", "no changed paths", "no repository changes")):
+
+    tool_tokens = (
+        "repository",
+        "git ",
+        "verification",
+        "tool failed",
+        "no changed paths",
+        "no repository changes",
+    )
+    if any(token in text for token in tool_tokens):
         return FailureKind.TOOL
     return FailureKind.TRANSIENT
 
@@ -62,7 +115,8 @@ def _matching_agent_failure(job: Job, detail: str) -> tuple[str | None, str | No
     """
 
     for entry in reversed(job.provider_history):
-        if entry.get("success") is not False:
+        success = entry.get("success")
+        if not isinstance(success, bool) or success:
             continue
         error = str(entry.get("error") or "")
         if not error or error not in detail:
