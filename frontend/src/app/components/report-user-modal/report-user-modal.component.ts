@@ -4,8 +4,7 @@ import { SafetyService, ReportCategory, ReportUserDto } from '../../services/saf
 import { showToast } from '../../services/toast.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
-import { HlmDialogImports } from '@spartan-ng/helm/dialog';
-import type { BrnDialogState } from '@spartan-ng/brain/dialog';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 
 interface ReportFormModel {
   category: string;
@@ -26,7 +25,7 @@ export class ReportUserModalComponent {
   private readonly i18n = inject(I18nService);
 
   readonly isOpen = signal(false);
-  readonly dialogState = computed<BrnDialogState>(() => (this.isOpen() ? 'open' : 'closed'));
+  readonly dialogState = computed<HlmDialogState>(() => (this.isOpen() ? 'open' : 'closed'));
   readonly titleId = 'report-user-modal-title';
 
   private readonly reportUserId = signal('');
@@ -90,12 +89,12 @@ export class ReportUserModalComponent {
     this.modalClosed.emit();
   }
 
-  /** BrnDialog reports every state transition, including ones this component
+  /** The Helm dialog reports every state transition, including ones this component
    * triggered itself via cancel()/submitReport() - only react to a 'closed'
    * that WE didn't already cause (backdrop click, Escape, or the primitive's
    * own close button), guarded by isOpen() so a self-triggered close is a
    * harmless no-op here rather than a double emit. */
-  onDialogStateChanged(state: BrnDialogState): void {
+  onDialogStateChanged(state: HlmDialogState): void {
     if (state === 'closed' && this.isOpen()) {
       this.isOpen.set(false);
       this.modalClosed.emit();
