@@ -50,10 +50,14 @@ describe('AdminRoleAssignmentsService', () => {
   });
 
   it('filters assignments by exact granting administrator', async () => {
-    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const range = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
     const eqGrantedBy = vi.fn().mockReturnValue({ order });
-    const assignmentSelect = vi.fn().mockReturnValue({ eq: eqGrantedBy, order });
+    const assignmentSelect = vi
+      .fn()
+      .mockReturnValue({ eq: eqGrantedBy, order });
     const service = new AdminRoleAssignmentsService({
       getClient: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({ select: assignmentSelect }),
