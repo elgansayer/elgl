@@ -19,7 +19,7 @@ class FactoryConfig(BaseModel):
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
-    openai_model: str = "gpt-5.6-sol"
+    openai_model: str = "gpt-5.2-codex"
     opencode_api_key: SecretStr
     opencode_base_url: str = "https://opencode.ai/zen/go/v1"
     opencode_model: str
@@ -27,7 +27,7 @@ class FactoryConfig(BaseModel):
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.6-flash"
     gemini_profile_name: str = "gemini-flash"
-    gemini_enabled: bool = True
+    gemini_enabled: bool = False
     gemini_free_tier_only: bool = True
     monthly_subscription_budget_usd: float = 30
     monthly_variable_budget_usd: float = 0
@@ -126,7 +126,7 @@ class FactoryConfig(BaseModel):
                 recovery_dir=Path(
                     env.get("FACTORY_RECOVERY_DIR", cls.model_fields["recovery_dir"].default)
                 ),
-                openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.6-sol"),
+                openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.2-codex"),
                 opencode_api_key=SecretStr(required("OPENCODE_GO_API_KEY")),
                 opencode_base_url=env.get(
                     "OPENCODE_GO_BASE_URL", "https://opencode.ai/zen/go/v1"
@@ -138,7 +138,7 @@ class FactoryConfig(BaseModel):
                 else None,
                 gemini_model=env.get("GEMINI_MODEL", "gemini-3.6-flash"),
                 gemini_profile_name=env.get("GEMINI_PROFILE_NAME", "gemini-flash"),
-                gemini_enabled=boolean("GEMINI_ENABLED", True),
+                gemini_enabled=boolean("GEMINI_ENABLED", False),
                 gemini_free_tier_only=boolean("GEMINI_FREE_TIER_ONLY", True),
                 monthly_subscription_budget_usd=float(
                     env.get("FACTORY_MONTHLY_SUBSCRIPTION_BUDGET_USD", "30")

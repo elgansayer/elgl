@@ -44,7 +44,6 @@ def config() -> FactoryConfig:
             "OPENCODE_GO_API_KEY": "not-a-real-key",
             "OPENCODE_GO_MODEL": "kimi-k2.7-code",
             "GITHUB_TOKEN": "not-a-real-token",
-            "GEMINI_ENABLED": "false",
         }
     )
 
@@ -63,6 +62,16 @@ def three_provider_config(tmp_path: Path) -> FactoryConfig:
     )
 
 
+def test_default_provider_policy_is_codex_oauth_then_opencode() -> None:
+    factory_config = config()
+    assert factory_config.openai_model == "gpt-5.2-codex"
+    assert factory_config.gemini_enabled is False
+    assert [profile.name for profile in ordered_profiles(factory_config)] == [
+        ProviderName.OPENAI_SUBSCRIPTION,
+        ProviderName.OPENCODE_GO,
+    ]
+
+
 def test_provider_priority_order() -> None:
     assert [profile.name for profile in ordered_profiles(config())] == [
         ProviderName.OPENAI_SUBSCRIPTION,
@@ -73,7 +82,7 @@ def test_provider_priority_order() -> None:
 def test_configured_three_provider_order_and_models() -> None:
     factory_config = FactoryConfig.from_environment(
         {
-            "OPENHANDS_OPENAI_MODEL": "gpt-5.6-sol",
+            "OPENHANDS_OPENAI_MODEL": "gpt-5.2-codex",
             "OPENCODE_GO_API_KEY": "not-a-real-key",
             "OPENCODE_GO_MODEL": "deepseek-v4-flash",
             "GITHUB_TOKEN": "not-a-real-token",
@@ -135,7 +144,7 @@ def test_gemini_open_breaker_is_not_selected(tmp_path: Path) -> None:
         select_primary_provider(factory_config)
 
 
-def test_gemini_is_selected_when_opencode_is_open_and_gemini_is_healthy(tmp_path: Path) -> None:
+def test_gemini_is_selected_when_explicitly_enabled_and_opencode_is_open(tmp_path: Path) -> None:
     factory_config = three_provider_config(tmp_path)
     ProviderHealthStore(factory_config.state_dir / "health.json").save(
         [
