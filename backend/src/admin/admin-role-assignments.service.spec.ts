@@ -48,4 +48,26 @@ describe('AdminRoleAssignmentsService', () => {
     });
     expect(range).toHaveBeenCalledWith(0, 49);
   });
+
+  it('filters assignments by exact granting administrator', async () => {
+    const range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 });
+    const order = vi.fn().mockReturnValue({ range });
+    const eqGrantedBy = vi.fn().mockReturnValue({ order });
+    const assignmentSelect = vi.fn().mockReturnValue({ eq: eqGrantedBy, order });
+    const service = new AdminRoleAssignmentsService({
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ select: assignmentSelect }),
+      }),
+    } as unknown as SupabaseService);
+
+    await expect(
+      service.list({ page: 1, pageSize: 50, grantedBy: 'admin-2' }),
+    ).resolves.toEqual({
+      assignments: [],
+      total: 0,
+      page: 1,
+      pageSize: 50,
+    });
+    expect(eqGrantedBy).toHaveBeenCalledWith('granted_by', 'admin-2');
+  });
 });
