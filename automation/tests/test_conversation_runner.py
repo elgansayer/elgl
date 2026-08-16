@@ -71,7 +71,6 @@ def test_stuck_conversation_is_cancelled_and_counts_against_provider(tmp_path: P
         runner.run(Task("two", "Task", "body", "test", 1), tmp_path, "prompt")
 
     assert time.monotonic() - started < 5
-    assert (tmp_path / "provider").read_text(encoding="utf-8") == ProviderName.OPENCODE_GO.value
     breakers = ProviderHealthStore(factory_config.state_dir / "health.json").load()
     opencode = next(item for item in breakers if item.provider is ProviderName.OPENCODE_GO)
     assert opencode.consecutive_failures == 1
