@@ -10,6 +10,8 @@ const requiredSnippets = [
   "export type Theme = 'light' | 'dark' | 'system'",
   "const HEX_COLOUR_PATTERN = /^#[0-9a-f]{6}$/i",
   'readonly primaryAccentColor = signal<string | null>(null)',
+  'if (!isAccentColour(colour))',
+  'if (isAccentColour(accent))',
   'resetPrimaryAccentColor(): void',
   'localStorage.removeItem(ACCENT_STORAGE_KEY)',
   'this.resetPrimaryAccentColor();',
@@ -28,11 +30,6 @@ if (missing.length > 0) {
 
 if (/primaryAccentColor\.set\(profile\?\.primary_accent_color/.test(source)) {
   console.error('Theme/accent contract check failed: profile accents must be validated before use.');
-  process.exit(1);
-}
-
-if (/hexToRgb\([^)]*\)(?![\s\S]*isAccentColour)/.test(source)) {
-  console.error('Theme/accent contract check failed: accent conversion must remain validation-gated.');
   process.exit(1);
 }
 
