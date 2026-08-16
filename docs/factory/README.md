@@ -12,6 +12,10 @@ branch pushes, hook bypass, administrator merges, staged secrets and conflict ma
 
 The factory uses a provider-agnostic `AgentRouter` to dispatch work across multiple installed coding agents using your existing subscriptions. The provider order and fallback behavior is dynamically determined by `AgentsConfig.routing`, covering Claude Code, OpenAI Codex CLI, Google Agent (Gemini CLI/ACP), OpenCode Go, and API-backed OpenHands. The routing policy gracefully falls back to candidate agents when primary tools experience rate limits, auth errors, or circuit breaker openings. The outer health controller handles credentials, model compatibility, budgets, malformed responses, and open circuits.
 
+The default rollout is autonomous: `FACTORY_REQUIRE_READY_LABEL=false` remains the default and no `factory-ready` label is needed. Routing is subscription-first by phase. Claude and Codex are preferred for implementation and planning, Codex is preferred for repair and code review, and OpenHands is enabled only as the explicit emergency fallback. A provider failure is recorded in durable provider history, opens its circuit after repeated failures, and allows the next eligible provider to continue the same phase. Repository and task failures are returned to verification or repair instead of being blindly rotated between agents.
+
+Run `hellotalk-factory doctor` to see routing mode, configured providers, executable availability, and the emergency fallback state. The diagnostic never starts an agent session and never prints credentials.
+
 The former Aider, DeepSeek, swarm watchdog, guardian, resolver and reviewer automation was removed. Issue intake,
 repair, review, health and merge responsibilities move into the factory and protected CI. New work enters through
 GitHub issues; the daemon does not invent duplicate planning issues.

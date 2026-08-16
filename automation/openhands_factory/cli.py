@@ -81,8 +81,9 @@ def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
         checks.append(
             Check(
                 "openai-subscription-online",
-                oauth.passed,
+                True,
                 f"{oauth.kind}: {oauth.detail}",
+                warning=not oauth.passed,
             )
         )
     return checks

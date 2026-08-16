@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
 from datetime import UTC, datetime
 
 from openhands_factory.agents.base import (
@@ -25,6 +26,13 @@ class ClaudeCodeProvider:
         self.command = command
 
     def health(self) -> ProviderHealth:
+        if shutil.which("caveman") is None and shutil.which(self.command) is None:
+            return ProviderHealth(
+                provider=self.name,
+                status=ProviderStatus.UNAVAILABLE,
+                checked_at=datetime.now(UTC),
+                detail=f"Neither caveman nor {self.command} is installed",
+            )
         return ProviderHealth(
             provider=self.name,
             status=ProviderStatus.HEALTHY,
@@ -40,8 +48,13 @@ class ClaudeCodeProvider:
     async def _run_async(self, request: AgentRequest) -> AgentResult:
         started_at = datetime.now(UTC)
         try:
-            sandbox = SandboxRunner(request.cwd)
-            cmd = ["caveman", self.command, "-p", request.prompt]
+            sandbox = SandboxRunner(request.cwd, triage_tags=request.task.triage_tags)
+            launcher = "caveman" if shutil.which("caveman") else self.command
+            cmd = (
+                [launcher, self.command, "-p", request.prompt]
+                if launcher == "caveman"
+                else [launcher, "-p", request.prompt]
+            )
             wrapper = PTYWrapper(sandbox.get_podman_cmd(cmd))
 
             stdout_text = await asyncio.to_thread(wrapper.execute)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -83,7 +84,13 @@ class FactoryPipeline:
             OpenCodeProvider(command=provider_command("opencode", "opencode")),
             OpenHandsProvider(self.conversations),
         ]
-        self.router = AgentRouter(providers=providers, policy=ConfigRoutingPolicy(config.agents))
+        self.router = AgentRouter(
+            providers=providers,
+            policy=ConfigRoutingPolicy(config.agents),
+            health_store=self.health_store,
+            failure_threshold=config.max_consecutive_failures,
+            cooldown_seconds=config.provider_cooldown_seconds,
+        )
         self.labels_ready = False
         self.verification_slots = verification_slots
 
@@ -101,6 +108,7 @@ class FactoryPipeline:
                 self.tasks.release(task_id)
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
+        dirty_jobs = False
         for task_id, job in jobs.items():
             if (
                 task_id in active_task_ids
@@ -139,8 +147,10 @@ class FactoryPipeline:
                 if job.task.source == "github-issue"
                 else "Pull request closed before the factory finished with it"
             )
-            self.jobs.save_job(job)
-        return self.jobs.load()
+            dirty_jobs = True
+        if dirty_jobs:
+            self.jobs.save(jobs)
+        return jobs
 
     def run_once(self) -> Job | None:
         jobs = self.refresh()
@@ -220,24 +230,31 @@ class FactoryPipeline:
         agent_phase = phase_map.get(phase, AgentPhase.GENERAL_ACTION)
         request = AgentRequest(phase=agent_phase, task=job.task, prompt=prompt, cwd=worktree)
 
-        # In a complete implementation, this would load breakers from self.health_store
-        result = self.router.run(request, job)
+        excluded: set[str] = set()
+        if agent_phase is AgentPhase.CODE_REVIEW:
+            excluded = {
+                str(entry["provider"])
+                for entry in job.provider_history
+                if entry.get("phase") == AgentPhase.IMPLEMENTATION.value
+                and isinstance(entry.get("provider"), str)
+            }
+        result = self.router.run(request, job, exclude=excluded)
 
         # Track history
-        history_entry: dict[str, Any] = {
-            "provider": result.provider,
-            "phase": result.phase.value,
-            "success": result.success,
-            "started_at": result.started_at.isoformat(),
-            "finished_at": result.finished_at.isoformat(),
-        }
-        if result.exit_code is not None:
-            history_entry["exit_code"] = result.exit_code
-        if result.failure:
-            history_entry["error"] = result.failure.message
-            history_entry["kind"] = result.failure.kind.value
-
-        job.provider_history.append(history_entry)
+        for attempt in self.router.last_attempts or [result]:
+            history_entry: dict[str, Any] = {
+                "provider": attempt.provider,
+                "phase": attempt.phase.value,
+                "success": attempt.success,
+                "started_at": attempt.started_at.isoformat(),
+                "finished_at": attempt.finished_at.isoformat(),
+            }
+            if attempt.exit_code is not None:
+                history_entry["exit_code"] = attempt.exit_code
+            if attempt.failure:
+                history_entry["error"] = attempt.failure.message
+                history_entry["kind"] = attempt.failure.kind.value
+            job.provider_history.append(history_entry)
 
         if not result.success:
             if result.failure:
@@ -286,6 +303,10 @@ class FactoryPipeline:
                     )
                     stale_workflow.archive_worktree(worktree, recovery)
                 stale_workflow.remove_worktree(worktree, force=True)
+            if job.task.source == "github-issue":
+                tags = self._triage_task(job.task)
+                if tags:
+                    job.task = dataclasses.replace(job.task, triage_tags=tags)
             self.tasks.acquire(job.task, "factory")
             workflow = GitWorkflow(self.config.repository, self.config.base_branch)
             job.branch = workflow.prepare_worktree(worktree, job.task.identifier, job.task.title)
@@ -701,3 +722,38 @@ class FactoryPipeline:
 
     def _architect_state_path(self) -> Path:
         return self.config.state_dir / "architect_state.json"
+
+    def _triage_task(self, task: Task) -> frozenset[str]:
+        from openhands_factory.models import ProviderName
+
+        try:
+            from openhands.sdk import Message, TextContent
+
+            from openhands_factory.provider_profiles import build_llm
+
+            # Triage uses the configured OpenCode subscription and is optional.
+            llm = build_llm(self.config, provider=ProviderName.OPENCODE_GO, role="triage")
+
+            prompt = (
+                "Analyze this issue and tag it with ONE of: "
+                "[deep-refactor, ci-fix, terminal-task].\n\n"
+                f"Title: {task.title}\nBody: {task.body}\n\n"
+                "Reply with JUST the tag name and nothing else."
+            )
+
+            message = Message(role="user", content=[TextContent(text=prompt)])
+            response = llm.completion(messages=[message])
+
+            content = " ".join(
+                item.text
+                for item in response.message.content
+                if isinstance(item, TextContent)
+            )
+            if content:
+                tag = content.strip().lower()
+                for valid in ["deep-refactor", "ci-fix", "terminal-task"]:
+                    if valid in tag:
+                        return frozenset({valid})
+        except Exception as e:
+            LOGGER.warning("Triage failed for task %s: %s", task.identifier, e)
+        return frozenset()

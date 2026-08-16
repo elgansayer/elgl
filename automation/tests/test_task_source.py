@@ -21,6 +21,22 @@ def test_priority_and_duplicate_lease_rejection(tmp_path: Path) -> None:
         store.acquire(urgent, "other")
 
 
+def test_triage_tags_round_trip_through_backlog_state(tmp_path: Path) -> None:
+    store = TaskStore(tmp_path)
+    task = Task(
+        "issue-3",
+        "Refactor",
+        "body",
+        "github",
+        2,
+        triage_tags=frozenset({"deep-refactor"}),
+    )
+
+    store.cache([task])
+
+    assert store.cached() == [task]
+
+
 def test_stale_lease_is_recovered(tmp_path: Path) -> None:
     store = TaskStore(tmp_path, lease_minutes=1)
     task = Task("issue-1", "Task", "body", "github", 2)

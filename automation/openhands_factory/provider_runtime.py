@@ -13,11 +13,21 @@ from openhands_factory.models import FailureKind, ProviderName
 from openhands_factory.state import atomic_write_json, read_json
 
 
-def provider_model(config: FactoryConfig, provider: ProviderName) -> str:
+def provider_model(config: FactoryConfig, provider: ProviderName, role: str | None = None) -> str:
     if provider is ProviderName.OPENAI_SUBSCRIPTION:
+        if role in ("architect", "review") and config.planning_model is not None:
+            return config.planning_model
+        if role == "implementation" and config.terminal_execution_model is not None:
+            return config.terminal_execution_model
+        if role == "ci-repair" and config.bulk_ci_repair_model is not None:
+            return config.bulk_ci_repair_model
         return config.openai_model
     if provider is ProviderName.OPENCODE_GO:
         return f"openai/{config.opencode_model}"
+    if provider is ProviderName.GEMINI:
+        if role == "triage":
+            return "gemini-3.6-flash"
+        return config.gemini_model
     raise ConfigurationError(
         f"Provider {provider.value!r} is historical-only; production routing is "
         "Codex subscription OAuth -> OpenCode Go"

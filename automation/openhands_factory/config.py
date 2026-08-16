@@ -21,21 +21,66 @@ class ProviderConfig(BaseModel):
 
 
 class AgentsRoutingConfig(BaseModel):
-    planning: list[str] = Field(default_factory=lambda: ["claude"])
-    architecture: list[str] = Field(default_factory=lambda: ["claude"])
-    implementation: list[str] = Field(default_factory=lambda: ["codex", "opencode"])
-    security_review: list[str] = Field(default_factory=lambda: ["google"])
-    quality_repair: list[str] = Field(default_factory=lambda: ["codex"])
-    code_review: list[str] = Field(default_factory=lambda: ["google"])
-    ci_repair: list[str] = Field(default_factory=lambda: ["codex"])
-    general_action: list[str] = Field(default_factory=lambda: ["claude", "openhands"])
+    planning: list[str] = Field(
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+    )
+    architecture: list[str] = Field(
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+    )
+    implementation: list[str] = Field(
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+    )
+    security_review: list[str] = Field(
+        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
+    )
+    quality_repair: list[str] = Field(
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+    )
+    code_review: list[str] = Field(
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+    )
+    ci_repair: list[str] = Field(
+        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
+    )
+    general_action: list[str] = Field(
+        default_factory=lambda: ["opencode", "google", "codex", "claude", "openhands"]
+    )
     skip_busy_providers: bool = True
 
 
 class AgentsConfig(BaseModel):
-    routing_enabled: bool = False
-    providers: dict[str, ProviderConfig] = Field(default_factory=dict)
+    routing_enabled: bool = True
+    providers: dict[str, ProviderConfig] = Field(
+        default_factory=lambda: {
+            "claude": ProviderConfig(enabled=True, auth_mode="subscription"),
+            "codex": ProviderConfig(enabled=True, auth_mode="subscription"),
+            "google": ProviderConfig(enabled=False, auth_mode="subscription"),
+            "opencode": ProviderConfig(enabled=True, auth_mode="subscription"),
+            "openhands": ProviderConfig(
+                enabled=True,
+                emergency_only=True,
+                auth_mode="api",
+            ),
+        }
+    )
     routing: AgentsRoutingConfig = Field(default_factory=AgentsRoutingConfig)
+
+    @model_validator(mode="after")
+    def validate_provider_names(self) -> AgentsConfig:
+        supported = {"claude", "codex", "google", "opencode", "openhands"}
+        for name in supported - set(self.providers):
+            self.providers[name] = ProviderConfig(enabled=False)
+        known = set(self.providers)
+        referenced = {
+            provider
+            for phase in self.routing.model_dump().values()
+            if isinstance(phase, list)
+            for provider in phase
+        }
+        unknown = sorted(referenced - known)
+        if unknown:
+            raise ValueError(f"Unknown agent provider(s): {', '.join(unknown)}")
+        return self
 
 
 class FactoryConfig(BaseModel):
@@ -59,6 +104,9 @@ class FactoryConfig(BaseModel):
     opencode_model: str
     opencode_profile_name: str = "opencode-go"
     opencode_max_concurrent_conversations: int = 3
+    planning_model: str | None = None
+    terminal_execution_model: str | None = None
+    bulk_ci_repair_model: str | None = None
     # Legacy fields remain loadable so old environment files fail with a precise
     # migration error instead of becoming unparsable. Gemini is not a production
     # execution tier in the Agent Canvas factory.
@@ -139,10 +187,6 @@ class FactoryConfig(BaseModel):
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
                 "the retired swarm/older architecture must not share this control plane"
             )
-        if self.gemini_enabled:
-            raise ValueError(
-                "GEMINI_ENABLED is retired; production routing is Codex OAuth -> OpenCode Go"
-            )
         return self
 
     @classmethod
@@ -161,11 +205,18 @@ class FactoryConfig(BaseModel):
         import json
 
         agents_config = AgentsConfig()
+        if boolean("GEMINI_ENABLED", False):
+            raise ConfigurationError(
+                "GEMINI_ENABLED is retired; configure a subscription agent provider instead"
+            )
         agents_config_path = env.get("FACTORY_AGENTS_CONFIG")
         if agents_config_path:
-            with open(agents_config_path) as f:
-                agents_data = json.load(f)
+            try:
+                with open(agents_config_path) as f:
+                    agents_data = json.load(f)
                 agents_config = AgentsConfig(**agents_data)
+            except (OSError, ValueError) as error:
+                raise ConfigurationError(f"Invalid FACTORY_AGENTS_CONFIG: {error}") from error
 
         try:
             return cls(
@@ -202,6 +253,9 @@ class FactoryConfig(BaseModel):
                 opencode_max_concurrent_conversations=int(
                     env.get("FACTORY_OPENCODE_MAX_CONCURRENT_CONVERSATIONS", "3")
                 ),
+                planning_model=env.get("FACTORY_PLANNING_MODEL"),
+                terminal_execution_model=env.get("FACTORY_TERMINAL_EXECUTION_MODEL"),
+                bulk_ci_repair_model=env.get("FACTORY_BULK_CI_REPAIR_MODEL"),
                 gemini_api_key=SecretStr(env["GEMINI_API_KEY"])
                 if env.get("GEMINI_API_KEY")
                 else None,

@@ -67,7 +67,7 @@ class GitHubClient:
                     os.environ["GH_TOKEN"] = previous
             if result.returncode == 0:
                 return result.stdout
-            failure = result.stderr[-2000:]
+            failure = (result.stderr + result.stdout)[-2000:]
             transient = any(marker in failure for marker in ("HTTP 5", "502", "503", "504"))
             if not transient or attempt == 2:
                 raise FactoryError(f"GitHub command failed: {failure}")

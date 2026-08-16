@@ -58,6 +58,7 @@ class Task:
     source: str
     priority: int
     pr_branch: str | None = None
+    triage_tags: frozenset[str] = frozenset()
 
 
 @dataclass

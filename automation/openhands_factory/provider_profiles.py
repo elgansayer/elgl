@@ -211,9 +211,16 @@ def select_provider_decision(
     if opencode_usable:
         return ProviderDecision(ProviderName.OPENCODE_GO, fallback_reason)
 
+    try:
+        gemini_profile = validate_gemini(config)
+        if gemini_profile is not None:
+            return ProviderDecision(ProviderName.GEMINI, fallback_reason + "-and-opencode-down")
+    except Exception:
+        pass
+
     raise FactoryError(
         "Both production model providers are temporarily unavailable "
-        "(Codex subscription OAuth and OpenCode Go)"
+        "(Codex subscription OAuth and OpenCode Go) and Gemini fallback is disabled/unavailable."
     )
 
 
@@ -222,15 +229,21 @@ def select_primary_provider(config: FactoryConfig) -> ProviderName:
     return select_provider_decision(config).provider
 
 
-def build_llm(config: FactoryConfig, provider: ProviderName | None = None) -> LLM:
+def build_llm(
+    config: FactoryConfig,
+    provider: ProviderName | None = None,
+    role: str | None = None,
+) -> LLM:
     """Construct this conversation's sole LLM, with no per-call fallback chain."""
     from openhands.sdk import LLM
+
+    from openhands_factory.provider_runtime import provider_model
 
     selected_provider = provider or select_primary_provider(config)
     if selected_provider is ProviderName.OPENAI_SUBSCRIPTION:
         return LLM.subscription_login(
             vendor="openai",
-            model=config.openai_model,
+            model=provider_model(config, selected_provider, role=role),
             open_browser=False,
         )
     if selected_provider is ProviderName.OPENCODE_GO:
@@ -240,6 +253,12 @@ def build_llm(config: FactoryConfig, provider: ProviderName | None = None) -> LL
             base_url=config.opencode_base_url,
             usage_id=config.opencode_profile_name,
             reasoning_effort="none",
+        )
+    if selected_provider is ProviderName.GEMINI:
+        return LLM(
+            model=f"gemini/{config.gemini_model}",
+            api_key=config.gemini_api_key,
+            usage_id=config.gemini_profile_name,
         )
     raise ConfigurationError(
         f"Provider {selected_provider.value!r} is historical-only and is not eligible "

@@ -8,6 +8,7 @@ import signal
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from inspect import signature
 from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Protocol
@@ -43,7 +44,7 @@ class ConversationProtocol(Protocol):
     def close(self) -> None: ...
 
 
-ConversationFactory = Callable[[Path, int, ProviderName], ConversationProtocol]
+ConversationFactory = Callable[..., ConversationProtocol]
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,7 @@ def _conversation_process(
     provider: ProviderName,
     prompt: str,
     result_connection: Connection,
+    role: str | None = None,
 ) -> None:
     """Run the SDK in its own process group so the parent can cancel every child."""
     os.setsid()
@@ -78,7 +80,11 @@ def _conversation_process(
 
     signal.signal(signal.SIGTERM, pause_for_shutdown)
     try:
-        conversation = factory(workspace, max_turns, provider)
+        parameters = signature(factory).parameters
+        if len(parameters) >= 4:
+            conversation = factory(workspace, max_turns, provider, role)
+        else:
+            conversation = factory(workspace, max_turns, provider)
         conversation.send_message(prompt)
         conversation.run()
         outcome = {"completed": True}
@@ -217,7 +223,7 @@ class ConversationRunner:
             prefer_different_from=implementation_provider,
         )
         provider = decision.provider
-        model = provider_model(self.config, provider)
+        model = provider_model(self.config, provider, role=role)
         fallback = provider is not ProviderName.OPENAI_SUBSCRIPTION
         owner = f"{task.identifier}:{role}:{os.getpid()}:{time.monotonic_ns()}"
         capacity_wait_seconds = 0.0
@@ -236,6 +242,7 @@ class ConversationRunner:
                         provider,
                         prompt,
                         child_connection,
+                        role,
                     ),
                     name=f"factory-conversation-{task.identifier}",
                 )
@@ -355,7 +362,7 @@ class SdkConversationFactory:
     config: FactoryConfig
 
     def __call__(
-        self, workspace: Path, max_turns: int, provider: ProviderName
+        self, workspace: Path, max_turns: int, provider: ProviderName, role: str | None = None
     ) -> ConversationProtocol:
         from openhands.sdk import Agent, Conversation, Tool
 
@@ -364,7 +371,7 @@ class SdkConversationFactory:
         from openhands_factory.secure_tools import SecureFileEditorTool, SecureTerminalTool
 
         agent = Agent(
-            llm=build_llm(self.config, provider),
+            llm=build_llm(self.config, provider, role=role),
             tools=[Tool(name=SecureTerminalTool.name), Tool(name=SecureFileEditorTool.name)],
             system_prompt=build_system_prompt(workspace / "automation/prompts"),
         )

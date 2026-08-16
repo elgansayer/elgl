@@ -162,6 +162,24 @@ def test_default_repository_is_production_clone() -> None:
     assert config.max_parallel_jobs == 5
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
+    assert config.agents.routing_enabled is True
+    assert config.agents.providers["openhands"].emergency_only is True
+    assert config.agents.routing.implementation[0] == "claude"
+
+
+def test_agent_routing_rejects_unknown_provider_names(tmp_path: Path) -> None:
+    config_path = tmp_path / "agents.json"
+    config_path.write_text(
+        '{"routing_enabled": true, "providers": {"codex": {"enabled": true}}, '
+        '"routing": {"implementation": ["missing"]}}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigurationError, match="Unknown agent provider"):
+        FactoryConfig.from_environment(
+            environment(
+                FACTORY_AGENTS_CONFIG=str(config_path),
+            )
+        )
 
 
 def test_factory_environment_template_contains_runtime_path_settings() -> None:

@@ -38,11 +38,28 @@ class TaskStore:
 
     def cache(self, tasks: list[Task]) -> None:
         self._assert_generation_current()
-        atomic_write_json(self.backlog_path, {"tasks": [task.__dict__ for task in tasks]})
+        atomic_write_json(
+            self.backlog_path,
+            {
+                "tasks": [
+                    {
+                        **task.__dict__,
+                        "triage_tags": sorted(task.triage_tags),
+                    }
+                    for task in tasks
+                ]
+            },
+        )
 
     def cached(self) -> list[Task]:
         payload = read_json(self.backlog_path, {"tasks": []})
-        return [Task(**item) for item in payload.get("tasks", [])]
+        tasks: list[Task] = []
+        for item in payload.get("tasks", []):
+            tags = item.get("triage_tags", [])
+            if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+                tags = []
+            tasks.append(Task(**{**item, "triage_tags": frozenset(tags)}))
+        return tasks
 
     def leases(self, now: datetime | None = None) -> dict[str, Lease]:
         current = now or datetime.now(UTC)

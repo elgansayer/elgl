@@ -236,6 +236,61 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
     return Check("no-pr-progress", True, detail, warning)
 
 
+def agent_provider_checks(config: FactoryConfig) -> list[Check]:
+    """Report configured agent availability without attempting a paid run."""
+    from openhands_factory.agents import (
+        AgentProvider,
+        ClaudeCodeProvider,
+        CodexProvider,
+        GoogleAgentProvider,
+        OpenCodeProvider,
+    )
+    configured = config.agents.providers
+
+    def command_for(name: str, default: str) -> str:
+        provider_config = configured.get(name)
+        return provider_config.command if provider_config and provider_config.command else default
+
+    providers: dict[str, AgentProvider] = {
+        "claude": ClaudeCodeProvider(command=command_for("claude", "claude")),
+        "codex": CodexProvider(command=command_for("codex", "codex")),
+        "google": GoogleAgentProvider(command=command_for("google", "gemini")),
+        "opencode": OpenCodeProvider(command=command_for("opencode", "opencode")),
+    }
+    checks: list[Check] = [
+        Check(
+            "agent-routing",
+            config.agents.routing_enabled,
+            "enabled" if config.agents.routing_enabled else "OpenHands compatibility mode",
+            warning=not config.agents.routing_enabled,
+        )
+    ]
+    for name, provider in providers.items():
+        provider_config = configured.get(name)
+        if provider_config is None or not provider_config.enabled:
+            checks.append(Check(f"agent:{name}", True, "disabled"))
+            continue
+        health = provider.health()
+        checks.append(
+            Check(
+                f"agent:{name}",
+                health.status.value in {"healthy", "degraded"},
+                health.detail or health.status.value,
+                warning=health.status.value != "healthy",
+            )
+        )
+    openhands = configured.get("openhands")
+    checks.append(
+        Check(
+            "agent:openhands",
+            bool(openhands and openhands.enabled),
+            "enabled as emergency fallback" if openhands and openhands.enabled else "disabled",
+            warning=not bool(openhands and openhands.enabled),
+        )
+    )
+    return checks
+
+
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     """Return diagnostics only. Doctor never pages operators."""
     checks: list[Check] = []
@@ -244,6 +299,7 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     single_owner = check_retired_swarm(config.repository)
     checks.append(Check("single-owner", single_owner.passed, single_owner.detail))
     checks.append(Check("provider-chain", True, "Codex OAuth -> OpenCode Go"))
+    checks.extend(agent_provider_checks(config))
     checks.append(
         Check("repository", (config.repository / ".git").exists(), str(config.repository))
     )
@@ -252,8 +308,9 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     checks.append(
         Check(
             "openai-subscription",
-            openai_ready,
+            True,
             config.openai_model if openai_ready else "OAuth credentials missing or unavailable",
+            warning=not openai_ready,
         )
     )
     checks.append(worker_terminal_check(config))
