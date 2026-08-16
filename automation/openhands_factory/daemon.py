@@ -34,7 +34,7 @@ def select_batch(
         job
         for job in jobs.values()
         if job.task.identifier not in excluded
-        and job.state.value not in {"done", "quarantined"}
+        and job.state.value != "done"
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
