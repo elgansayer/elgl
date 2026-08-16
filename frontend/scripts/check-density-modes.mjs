@@ -10,16 +10,24 @@ function requireFragment(source, fragment, description) {
   if (!source.includes(fragment)) failures.push(`${description}: missing ${fragment}`);
 }
 
-function requireCanonicalSizeContract(path, description) {
+function requireCanonicalSizeContract(path, description, inputFragment) {
   const source = readFileSync(resolve(primitiveRoot, path), 'utf8');
-  requireFragment(source, "input<'sm' | 'md' | 'lg'>('md')", `${description} canonical density input`);
+  requireFragment(source, inputFragment, `${description} canonical density input`);
   for (const size of ['sm', 'md', 'lg']) {
     requireFragment(source, `case '${size}':`, `${description} ${size} density mapping`);
   }
 }
 
-requireCanonicalSizeContract('card/card.component.ts', 'AppCard');
-requireCanonicalSizeContract('button-primary/button-primary.component.ts', 'AppButtonPrimary');
+requireCanonicalSizeContract(
+  'card/card.component.ts',
+  'AppCard',
+  "padding = input<'none' | 'sm' | 'md' | 'lg'>('md')",
+);
+requireCanonicalSizeContract(
+  'button-primary/button-primary.component.ts',
+  'AppButtonPrimary',
+  "size = input<'sm' | 'md' | 'lg'>('md')",
+);
 
 const allowedExtensions = new Set(['.html', '.ts', '.scss', '.css']);
 const scaleHack = /(?:transform\s*:\s*[^;]*\bscale\s*\(|\bzoom\s*:)/i;
