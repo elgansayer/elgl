@@ -34,12 +34,17 @@ export class AdminSystemHealthService {
     } satisfies AdminSystemHealthSnapshot;
 
     if (state === 'degraded') {
-      await this.operationalEvents.record({
-        severity: 'warning',
-        category: 'system-health',
-        message: `Dependency state degraded: database=${database}, redis=${redis}`,
-        source: 'admin-system-health',
-      });
+      try {
+        await this.operationalEvents.record({
+          severity: 'warning',
+          category: 'system-health',
+          message: `Dependency state degraded: database=${database}, redis=${redis}`,
+          source: 'admin-system-health',
+        });
+      } catch {
+        // Health reads must remain available even when the operational-event store
+        // is one of the degraded dependencies. Recording is intentionally best effort.
+      }
     }
 
     return snapshot;
