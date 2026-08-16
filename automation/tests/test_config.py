@@ -67,13 +67,17 @@ def test_retired_autonomous_entrypoints_cannot_reappear() -> None:
 
 
 def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
-    unit = (Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service").read_text(encoding="utf-8")
+    unit = (
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service"
+    ).read_text(encoding="utf-8")
     assert "NoNewPrivileges=true" not in unit
     assert "RestrictSUIDSGID=true" not in unit
 
 
 def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> None:
-    unit = (Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service").read_text(encoding="utf-8")
+    unit = (
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service"
+    ).read_text(encoding="utf-8")
     assert "Delegate=yes" in unit
     assert "ProtectControlGroups=false" in unit
     assert "MemoryHigh=6G" in unit
@@ -82,9 +86,24 @@ def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> 
 
 
 def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
-    unit = (Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-health.service").read_text(encoding="utf-8")
-    timer = (Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-health.timer").read_text(encoding="utf-8")
-    watchdog = (Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-watchdog.sh").read_text(encoding="utf-8")
+    unit = (
+        Path(__file__).parents[2]
+        / "config"
+        / "systemd"
+        / "hellotalk-factory-health.service"
+    ).read_text(encoding="utf-8")
+    timer = (
+        Path(__file__).parents[2]
+        / "config"
+        / "systemd"
+        / "hellotalk-factory-health.timer"
+    ).read_text(encoding="utf-8")
+    watchdog = (
+        Path(__file__).parents[2]
+        / "config"
+        / "systemd"
+        / "hellotalk-factory-watchdog.sh"
+    ).read_text(encoding="utf-8")
     assert "User=hellotalk-factory" not in unit
     assert "ExecStart=/bin/bash /opt/hellotalk-factory/hellotalk-factory-watchdog.sh" in unit
     assert "Delegate=yes" not in unit
@@ -125,7 +144,9 @@ def test_missing_required_environment_is_rejected() -> None:
 
 def test_gemini_cannot_be_enabled_in_the_production_factory() -> None:
     with pytest.raises(ConfigurationError, match="GEMINI_ENABLED is retired"):
-        FactoryConfig.from_environment(environment(GEMINI_ENABLED="true", GEMINI_API_KEY="not-a-real-key"))
+        FactoryConfig.from_environment(
+            environment(GEMINI_ENABLED="true", GEMINI_API_KEY="not-a-real-key")
+        )
 
 
 def test_retired_factory_architecture_is_rejected() -> None:
@@ -143,7 +164,9 @@ def test_default_repository_is_production_clone() -> None:
 
 
 def test_factory_environment_template_contains_runtime_path_settings() -> None:
-    template = (Path(__file__).parents[2] / "config/systemd/factory.env.example").read_text(encoding="utf-8")
+    template = (
+        Path(__file__).parents[2] / "config/systemd/factory.env.example"
+    ).read_text(encoding="utf-8")
     assert "FACTORY_PODMAN_PATH=/usr/bin/podman" in template
     assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
     assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
