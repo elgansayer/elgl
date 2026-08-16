@@ -22,6 +22,8 @@ export interface AdminSystemHealthSnapshot {
   };
 }
 
+const DEPENDENCY_TIMEOUT_MS = 2_000;
+
 @Injectable()
 export class AdminSystemHealthService {
   constructor(
@@ -68,13 +70,15 @@ export class AdminSystemHealthService {
   private async checkDatabase(): Promise<DependencyHealthCheck> {
     const startedAt = Date.now();
     try {
-      const { error } = await this.supabaseService
-        .getClient()
-        .from('admin_roles')
-        .select('id')
-        .limit(1);
+      const result = await this.withTimeout(
+        this.supabaseService
+          .getClient()
+          .from('admin_roles')
+          .select('id')
+          .limit(1),
+      );
       return {
-        state: error ? 'degraded' : 'healthy',
+        state: result.error ? 'degraded' : 'healthy',
         latencyMs: Math.max(0, Date.now() - startedAt),
       };
     } catch {
@@ -88,7 +92,9 @@ export class AdminSystemHealthService {
   private async checkRedis(): Promise<DependencyHealthCheck> {
     const startedAt = Date.now();
     try {
-      const response = await this.supabaseService.getRedisClient().ping();
+      const response = await this.withTimeout(
+        this.supabaseService.getRedisClient().ping(),
+      );
       return {
         state: response === 'PONG' ? 'healthy' : 'degraded',
         latencyMs: Math.max(0, Date.now() - startedAt),
@@ -98,6 +104,23 @@ export class AdminSystemHealthService {
         state: 'degraded',
         latencyMs: Math.max(0, Date.now() - startedAt),
       };
+    }
+  }
+
+  private async withTimeout<T>(operation: PromiseLike<T>): Promise<T> {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        Promise.resolve(operation),
+        new Promise<T>((_, reject) => {
+          timeout = setTimeout(
+            () => reject(new Error('dependency health check timed out')),
+            DEPENDENCY_TIMEOUT_MS,
+          );
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
   }
 }
