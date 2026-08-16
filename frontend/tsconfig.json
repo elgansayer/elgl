@@ -14,7 +14,9 @@
     "paths": {
       "@spartan-ng/helm/dialog": ["./src/app/components/ui/dialog/src/index.ts"],
       "@spartan-ng/helm/utils": ["./src/app/components/ui/utils/src/index.ts"],
-      "@spartan-ng/helm/button": ["./src/app/components/ui/button/src/index.ts"]
+      "@spartan-ng/helm/button": ["./src/app/components/ui/button/src/index.ts"],
+      "@spartan-ng/helm/input": ["./src/app/components/ui/input/src/index.ts"],
+      "@spartan-ng/helm/textarea": ["./src/app/components/ui/textarea/src/index.ts"]
     }
   },
   "angularCompilerOptions": {
