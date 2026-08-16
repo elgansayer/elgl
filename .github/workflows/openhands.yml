@@ -32,7 +32,7 @@ jobs:
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9d7150bc8a3dae8149739a88019d192b579ad90c # v1.0.193
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
@@ -78,7 +78,7 @@ jobs:
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.pr_exists == 'false'
         continue-on-error: true
-        uses: xinbenlv/openhands-action@v1.0.1
+        uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04 # v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "deepseek/deepseek-v4-pro"
@@ -99,7 +99,7 @@ jobs:
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
-        uses: xinbenlv/openhands-action@v1.0.1
+        uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04 # v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "gemini/gemini-3.5-flash"
