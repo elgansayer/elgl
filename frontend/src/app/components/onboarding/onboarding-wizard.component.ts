@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -10,7 +11,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-onboarding-wizard',
-  imports: [HlmInput, CommonModule, TranslatePipe, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
+  imports: [HlmNativeSelect, HlmInput, CommonModule, TranslatePipe, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   template: `
     <div class="onboarding-wizard bg-surface-500 text-text-primary ps-4 pe-4 pt-6 pb-6">
       <h1 class="text-xl font-bold">{{ 'onboarding.title' | t }}</h1>
@@ -39,9 +40,9 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
           <label class="block text-sm mb-1" for="native-lang">{{
             'onboarding.step1.label' | t
           }}</label>
-          <select
-            id="native-lang"
-            class="w-full bg-surface-200 border border-surface-100 text-text-primary p-2 rounded"
+          <hlm-native-select
+            selectId="native-lang"
+            class="w-full bg-surface-200 border border-surface-100 text-text-primary p-2 rounded" selectClass="w-full bg-surface-200 border border-surface-100 text-text-primary p-2 rounded"
             [value]="onboardingService.nativeLanguage()"
             (change)="onNativeLanguageChange($event)"
           >
@@ -49,7 +50,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
             @for (lang of i18n.availableLanguages; track lang.code) {
               <option [value]="lang.code">{{ lang.flag }} {{ lang.nativeName }}</option>
             }
-          </select>
+          </hlm-native-select>
         </div>
       }
 

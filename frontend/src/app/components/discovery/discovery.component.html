@@ -136,16 +136,16 @@
           >
             {{ 'discovery.sortLabel' | t }}
           </label>
-          <select
-            id="sortBySelect"
-            class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer"
+          <hlm-native-select
+            selectId="sortBySelect"
+            class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer" selectClass="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer"
             [value]="selectedSort()"
             (change)="setSort($any($event.target).value)"
           >
             @for (option of sortOptions(); track option.id) {
               <option [value]="option.id">{{ option.label }}</option>
             }
-          </select>
+          </hlm-native-select>
         </div>
 
         <!-- Gender Filter (VIP only) -->
@@ -156,18 +156,18 @@
           >
             {{ 'discovery.genderLabel' | t }}
           </label>
-          <select
-            id="genderSelect"
-            class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          <hlm-native-select
+            selectId="genderSelect"
+            class="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" selectClass="bg-surface-200 text-text-primary px-3 sm:px-4 py-1.5 rounded-full border border-surface-100 text-xs sm:text-sm font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             [value]="selectedGender()"
             [disabled]="!isVip()"
-            [attr.aria-describedby]="!isVip() ? 'genderVipNote' : null"
+            [aria-describedby]="!isVip() ? 'genderVipNote' : null"
             (change)="setGender($any($event.target).value)"
           >
             <option value="">{{ 'discovery.genderAny' | t }}</option>
             <option value="male">{{ 'discovery.genderMale' | t }}</option>
             <option value="female">{{ 'discovery.genderFemale' | t }}</option>
-          </select>
+          </hlm-native-select>
           @if (!isVip()) {
             <a
               id="genderVipNote"

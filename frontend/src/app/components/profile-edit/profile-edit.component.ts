@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
@@ -9,7 +10,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-edit',
-  imports: [HlmInput, HlmButton, FormsModule, CoverPhotoCropperComponent, TranslatePipe],
+  imports: [HlmNativeSelect, HlmInput, HlmButton, FormsModule, CoverPhotoCropperComponent, TranslatePipe],
   template: `
     <div class="max-w-2xl mx-auto p-6">
       <h2 class="text-2xl font-bold text-text-primary mb-6">{{ 'profileEdit.title' | t }}</h2>
@@ -79,16 +80,16 @@ import { TranslatePipe } from '../../services/translate.pipe';
           <label for="genderSelect" class="block text-sm font-medium text-text-secondary mb-1">{{
             'profileEdit.gender' | t
           }}</label>
-          <select
-            id="genderSelect"
+          <hlm-native-select
+            selectId="genderSelect"
             [(ngModel)]="gender"
-            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
+            class="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent" selectClass="w-full px-4 py-2 bg-surface-200 border border-surface-100 rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent"
           >
             <option value="">{{ 'profileEdit.genderNone' | t }}</option>
             <option value="male">{{ 'profileEdit.genderMale' | t }}</option>
             <option value="female">{{ 'profileEdit.genderFemale' | t }}</option>
             <option value="other">{{ 'profileEdit.genderOther' | t }}</option>
-          </select>
+          </hlm-native-select>
         </div>
 
         <!-- Business profile fields -->

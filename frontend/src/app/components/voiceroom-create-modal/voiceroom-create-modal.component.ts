@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, output, signal } from '@angular/core';
@@ -18,7 +19,7 @@ interface SelectOption {
 
 @Component({
   selector: 'app-voiceroom-create-modal',
-  imports: [HlmInput, HlmButton, FormsModule, TranslatePipe],
+  imports: [HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
@@ -62,17 +63,17 @@ interface SelectOption {
             <label for="langPair" class="text-sm font-medium text-text-secondary">
               {{ 'audioRoom.languagePairLabel' | t }}
             </label>
-            <select
-              id="langPair"
+            <hlm-native-select
+              selectId="langPair"
               [(ngModel)]="languagePair"
-              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none" selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
               @for (option of languagePairOptions(); track option.value) {
                 <option [value]="option.value">
                   {{ option.labelKey | t }}
                 </option>
               }
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Topic Select -->
@@ -80,17 +81,17 @@ interface SelectOption {
             <label for="topicTag" class="text-sm font-medium text-text-secondary">
               {{ 'audioRoom.topicLabel' | t }}
             </label>
-            <select
-              id="topicTag"
+            <hlm-native-select
+              selectId="topicTag"
               [(ngModel)]="topicTag"
-              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
+              class="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none" selectClass="w-full bg-surface-300 border border-surface-100 rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none"
             >
               @for (option of topicOptions(); track option.value) {
                 <option [value]="option.value">
                   {{ option.labelKey | t }}
                 </option>
               }
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Video Stream Toggle -->

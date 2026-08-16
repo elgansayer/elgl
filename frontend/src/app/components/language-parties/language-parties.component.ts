@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, resource, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -69,7 +70,7 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
 
 @Component({
   standalone: true,
-  imports: [HlmButton, RouterModule, FormsModule, TranslatePipe, LanguagePartyCreateModalComponent],
+  imports: [HlmNativeSelect, HlmButton, RouterModule, FormsModule, TranslatePipe, LanguagePartyCreateModalComponent],
   template: `<div class="min-h-screen bg-surface-500 text-text-primary">
       <!-- Header + Create button -->
       <div
@@ -93,10 +94,10 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
         <div class="flex items-center gap-2 flex-nowrap">
           <!-- Language filter -->
           <div class="relative">
-            <select
+            <hlm-native-select
               [ngModel]="filterLanguagePair()"
               (ngModelChange)="filterLanguagePair.set($event)"
-              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8" selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
             >
               <option value="">{{ 'languageParty.filterAllLanguages' | t }}</option>
               @for (opt of languagePairOptions; track opt.value) {
@@ -104,35 +105,35 @@ const LEVEL_OPTIONS: readonly FilterOption[] = [
                   {{ opt.flag1 }} {{ opt.flag2 }} {{ opt.labelKey | t }}
                 </option>
               }
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Topic filter -->
           <div class="relative">
-            <select
+            <hlm-native-select
               [ngModel]="filterTopic()"
               (ngModelChange)="filterTopic.set($event)"
-              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8" selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
             >
               <option value="">{{ 'languageParty.filterAllTopics' | t }}</option>
               @for (opt of topicOptions; track opt.value) {
                 <option [value]="opt.value">{{ opt.emoji }} {{ opt.labelKey | t }}</option>
               }
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Level filter -->
           <div class="relative">
-            <select
+            <hlm-native-select
               [ngModel]="filterLevel()"
               (ngModelChange)="filterLevel.set($event)"
-              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
+              class="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8" selectClass="appearance-none bg-surface-300 border border-surface-400 rounded-full px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors cursor-pointer pe-8"
             >
               <option value="">{{ 'languageParty.filterAllLevels' | t }}</option>
               @for (opt of levelOptions; track opt.value) {
                 <option [value]="opt.value">{{ opt.labelKey | t }}</option>
               }
-            </select>
+            </hlm-native-select>
           </div>
 
           @if (activeFilterCount() > 0) {

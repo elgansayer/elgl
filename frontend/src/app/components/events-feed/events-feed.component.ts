@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -7,7 +8,7 @@ import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-events-feed',
-  imports: [HlmButton, CommonModule, TranslatePipe, DatePipe],
+  imports: [HlmNativeSelect, HlmButton, CommonModule, TranslatePipe, DatePipe],
   template: `
     <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
 
@@ -30,10 +31,10 @@ import { firstValueFrom } from 'rxjs';
         {{ 'events.filter_past' | t }}
       </button>
 
-      <select
+      <hlm-native-select
         [value]="languagePair() ?? ''"
         (change)="onLanguageChange($any($event.target).value)"
-        class="bg-surface-300 border border-surface-100 text-text-primary rounded px-2 py-1 text-sm"
+        class="bg-surface-300 border border-surface-100 text-text-primary rounded px-2 py-1 text-sm" selectClass="bg-surface-300 border border-surface-100 text-text-primary rounded px-2 py-1 text-sm"
       >
         <option value="">{{ 'events.all_languages' | t }}</option>
         <option value="en-es">English ↔ Spanish</option>
@@ -46,7 +47,7 @@ import { firstValueFrom } from 'rxjs';
         <option value="en-pt">English ↔ Portuguese</option>
         <option value="en-ru">English ↔ Russian</option>
         <option value="en-it">English ↔ Italian</option>
-      </select>
+      </hlm-native-select>
     </div>
 
     <!-- Event list -->

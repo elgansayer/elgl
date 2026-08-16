@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -35,7 +36,7 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
 
 @Component({
   selector: 'app-backup-restore',
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmNativeSelect, HlmButton, TranslatePipe],
   template: `
     <div class="min-h-screen bg-surface-500 text-text-primary ps-4 pe-4 pt-6 pb-10">
       <h1 class="text-2xl font-bold mb-1">{{ 'backupRestore.title' | t }}</h1>
@@ -46,16 +47,16 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
       } @else if (rooms().length) {
         <label for="roomSelect" class="block mb-2 text-sm font-medium text-text-secondary">
           {{ 'backupRestore.selectRoom' | t }}
-          <select
-            id="roomSelect"
-            class="w-full mb-4 rounded-lg border border-surface-300 bg-surface-100 px-3 py-2 text-text-primary"
+          <hlm-native-select
+            selectId="roomSelect"
+            class="w-full mb-4 rounded-lg border border-surface-300 bg-surface-100 px-3 py-2 text-text-primary" selectClass="w-full mb-4 rounded-lg border border-surface-300 bg-surface-100 px-3 py-2 text-text-primary"
             [value]="selectedRoom()"
             (change)="onRoomChange($event)"
           >
             @for (room of rooms(); track room.id) {
               <option [value]="room.id">{{ room.title ?? room.id }}</option>
             }
-          </select>
+          </hlm-native-select>
         </label>
       } @else {
         <p class="text-text-secondary">{{ 'chatList.empty' | t }}</p>

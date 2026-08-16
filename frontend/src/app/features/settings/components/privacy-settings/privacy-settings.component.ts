@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, effect } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -6,7 +7,7 @@ import { SettingsService } from '../../../../core/services/settings.service';
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
-  imports: [HlmButton, ReactiveFormsModule],
+  imports: [HlmNativeSelect, HlmButton, ReactiveFormsModule],
   template: `
     <form [formGroup]="form">
       <h3>Direct Messages</h3>
@@ -17,11 +18,11 @@ import { SettingsService } from '../../../../core/services/settings.service';
 
       <label>
         Explicit Image Filter Level:
-        <select formControlName="imageFilterLevel">
+        <hlm-native-select formControlName="imageFilterLevel">
           <option value="All">Scan and delete</option>
           <option value="Blurred">Blur explicit images</option>
           <option value="None">Do not filter</option>
-        </select>
+        </hlm-native-select>
       </label>
 
       <button hlmBtn (click)="save()" [disabled]="form.pristine">Save Changes</button>

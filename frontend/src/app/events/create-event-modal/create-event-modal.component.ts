@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -9,7 +10,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-create-event-modal',
-  imports: [HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
+  imports: [HlmNativeSelect, HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div class="max-w-md w-full rounded-2xl bg-surface-200 p-6 shadow-xl">
@@ -52,10 +53,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="langPairInput">
               {{ 'events.languagePair' | t }}
             </label>
-            <select
-              id="langPairInput"
+            <hlm-native-select
+              selectId="langPairInput"
               formControlName="language_pair"
-              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm" selectClass="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
             >
               <option value="">
                 {{ 'events.noLanguagePair' | t }}
@@ -70,7 +71,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               <option value="en-pt">English &harr; Portuguese</option>
               <option value="en-ru">English &harr; Russian</option>
               <option value="en-it">English &harr; Italian</option>
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Category -->
@@ -78,10 +79,10 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="categoryInput">
               {{ 'events.category' | t }}
             </label>
-            <select
-              id="categoryInput"
+            <hlm-native-select
+              selectId="categoryInput"
               formControlName="category"
-              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm" selectClass="w-full rounded-lg border border-surface-100 bg-surface-300 px-3 py-2 text-sm"
             >
               <option value="audio_room">
                 {{ 'events.categoryAudioRoom' | t }}
@@ -95,7 +96,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               <option value="cultural_exchange">
                 {{ 'events.categoryCulturalExchange' | t }}
               </option>
-            </select>
+            </hlm-native-select>
           </div>
 
           <!-- Location -->

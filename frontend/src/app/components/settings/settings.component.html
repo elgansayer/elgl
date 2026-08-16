@@ -189,16 +189,16 @@
 
           <div class="flex items-center justify-between p-4">
             <span class="text-sm font-medium text-text-primary">{{ 'settings.textSize' | t }}</span>
-            <select
+            <hlm-native-select
               [ngModel]="chatTextSize()"
               (ngModelChange)="chatTextSize.set($event)"
-              class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              [attr.aria-label]="'Select'"
+              class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30" selectClass="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+              [aria-label]="'Select'"
             >
               <option value="small">{{ 'settings.textSizeSmall' | t }}</option>
               <option value="medium">{{ 'settings.textSizeMedium' | t }}</option>
               <option value="large">{{ 'settings.textSizeLarge' | t }}</option>
-            </select>
+            </hlm-native-select>
           </div>
         </div>
       </section>
@@ -306,16 +306,16 @@
             <span class="text-sm font-medium text-text-primary">{{
               'settings.autoDownloadMedia' | t
             }}</span>
-            <select
+            <hlm-native-select
               [ngModel]="autoDownloadMedia() ? autoDownloadPreference() : 'off'"
               (ngModelChange)="updateAutoDownloadMode($event)"
-              class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-              [attr.aria-label]="'Select'"
+              class="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30" selectClass="bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+              [aria-label]="'Select'"
             >
               <option value="off">{{ 'settings.off' | t }}</option>
               <option value="wifi">{{ 'settings.autoDownloadWifiOnly' | t }}</option>
               <option value="cellular">{{ 'settings.autoDownloadCellular' | t }}</option>
-            </select>
+            </hlm-native-select>
           </div>
 
           <button hlmBtn

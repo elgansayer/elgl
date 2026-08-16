@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, output, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../../services/translate.pipe';
@@ -14,7 +15,7 @@ export interface TranslatedLanguage {
 
 @Component({
   selector: 'app-global-search',
-  imports: [HlmButton, TranslatePipe],
+  imports: [HlmNativeSelect, HlmButton, TranslatePipe],
   templateUrl: './global-search.component.html',
   styleUrls: ['./global-search.component.scss'],
 })
