@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, extname, join, relative, resolve } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { extname, join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const frontendRoot = resolve(root, 'frontend');
@@ -34,10 +34,16 @@ const applicationSource = walk(appRoot).filter(
 const nonHelmSource = applicationSource.filter((path) => !path.startsWith(`${uiRoot}/`));
 const directBrainFiles = nonHelmSource.filter((path) => readFileSync(path, 'utf8').includes('@spartan-ng/brain'));
 const helmComponents = existsSync(uiRoot)
-  ? readdirSync(uiRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
+  ? readdirSync(uiRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort()
   : [];
 const relayPrimitives = existsSync(primitiveRoot)
-  ? readdirSync(primitiveRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
+  ? readdirSync(primitiveRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort()
   : [];
 const reconciledItems = manifest.items.filter((item) => typeof item.lastReconciledCommit === 'string');
 const pendingReconciliation = manifest.items.filter((item) => item.lastReconciledCommit === null);
@@ -90,10 +96,7 @@ const report = {
     missingPreviewPaths: previewPaths.filter((path) => !existsSync(resolve(root, path))),
     missingGovernanceFiles,
   },
-  inventory: {
-    helmComponents,
-    relayPrimitives,
-  },
+  inventory: { helmComponents, relayPrimitives },
 };
 
 const lines = [
@@ -157,14 +160,10 @@ const markdown = `${lines.join('\n')}\n`;
 if (process.argv.includes('--json')) {
   console.log(JSON.stringify(report, null, 2));
 } else if (process.argv.includes('--write')) {
-  const jsonPath = resolve(root, 'reports/ux-system-health.json');
-  const markdownPath = resolve(root, 'reports/ux-system-health.md');
-  for (const path of [jsonPath, markdownPath]) {
-    const directory = dirname(path);
-    if (!existsSync(directory)) await import('node:fs').then(({ mkdirSync }) => mkdirSync(directory, { recursive: true }));
-  }
-  writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(markdownPath, markdown);
+  const reports = resolve(root, 'reports');
+  mkdirSync(reports, { recursive: true });
+  writeFileSync(resolve(reports, 'ux-system-health.json'), `${JSON.stringify(report, null, 2)}\n`);
+  writeFileSync(resolve(reports, 'ux-system-health.md'), markdown);
   console.log('Wrote reports/ux-system-health.json and reports/ux-system-health.md');
 } else {
   console.log(markdown);
