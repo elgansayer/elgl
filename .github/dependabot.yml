@@ -83,5 +83,7 @@ updates:
       container-routine-updates:
         applies-to: version-updates
         patterns:
+          - '*'
+        update-types:
           - 'minor'
           - 'patch'
