@@ -118,11 +118,6 @@ def test_doctor_reports_openai_subscription_credentials(
 
 
 def test_leaked_port_env_fails_the_check(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A stray PORT in the daemon's own environment previously reached production
-    as an untracked line in factory.env and silently broke the frontend-e2e dev
-    server (it binds a fixed 127.0.0.1:4200 that every spec assumes) - nothing
-    enforced it never comes back, so this is that enforcement.
-    """
     monkeypatch.setenv("PORT", "3000")
 
     check = leaked_port_environment_check()
@@ -150,9 +145,9 @@ def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
     checks = {check.name: check for check in job_health_checks(factory_config, now)}
 
     assert checks["jobs-quarantined"].passed
-    assert checks["jobs-quarantined"].detail == "ALERT: issues=3152"
+    assert checks["jobs-quarantined"].detail == "retrying legacy state: issues=3152"
     assert checks["jobs-stalled"].passed
-    assert checks["jobs-stalled"].detail == "ALERT: issues=239"
+    assert checks["jobs-stalled"].detail == "retry/recovery pending: issues=239"
 
 
 def test_health_reports_stale_daemon_heartbeat(tmp_path: Path) -> None:
@@ -227,4 +222,4 @@ def test_health_reports_no_pull_request_progress_with_active_jobs(tmp_path: Path
     check = no_pr_progress_check(factory_config, now)
 
     assert check.passed
-    assert check.detail == "ALERT: no pull request yet; active_jobs=1"
+    assert check.detail == "no pull request yet; active_jobs=1"
