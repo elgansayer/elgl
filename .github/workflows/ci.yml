@@ -105,7 +105,10 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check:constitution
       - run: npm run check:design-sync
-      - run: npm run check:spartan-boundaries
+      - name: Enforce Spartan ownership boundaries
+        env:
+          SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: npm run check:spartan-boundaries
       - name: Enforce design-sync drift on pull requests
         if: github.event_name == 'pull_request'
         env:
