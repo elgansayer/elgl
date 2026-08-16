@@ -40,10 +40,10 @@ Do not:
 Run from `frontend/`:
 
 ```bash
-npm run check:theme-accent-contract
+node scripts/check-theme-accent-contract.mjs
 npm run lint:check
 npm test -- --watch=false
 npm run build
 ```
 
-The focused contract check fails if ThemeService loses validation, explicit reset behaviour, root semantic-variable ownership, or root dark-class application. Unit tests cover persistence validation, profile changes, CSS variable reset/application, and theme switching.
+The focused contract check fails if ThemeService loses validation, explicit reset behaviour, root semantic-variable ownership, or root dark-class application. Canonical CI also executes the focused guard for changes to the service, its tests, or this contract. Unit tests cover persistence validation, profile changes, CSS variable reset/application, and theme switching.
