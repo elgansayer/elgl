@@ -7,6 +7,7 @@ import { join, relative, resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const appRoot = resolve(root, 'frontend/src/app');
 const ownedUiRoot = 'frontend/src/app/components/ui/';
+const legacyPrimitiveRoot = 'frontend/src/app/components/primitives/';
 
 function files(path) {
   const result = [];
@@ -41,6 +42,11 @@ function changedFrontendFiles() {
   }
 }
 
+function openingTags(source, tagName) {
+  const pattern = new RegExp(`<${tagName}\\b[\\s\\S]*?>`, 'g');
+  return source.match(pattern) ?? [];
+}
+
 const violations = [];
 const brainImportPattern = /from\s+['"]@spartan-ng\/brain(?:\/[^'"]*)?['"]/;
 
@@ -59,7 +65,7 @@ for (const absolutePath of files(appRoot)) {
 // migration can continue incrementally without forcing an unsafe bulk rewrite.
 const changedFiles = changedFrontendFiles();
 for (const path of changedFiles) {
-  if (path.startsWith(ownedUiRoot)) continue;
+  if (path.startsWith(ownedUiRoot) || path.endsWith('.spec.ts')) continue;
   const source = readFileSync(resolve(root, path), 'utf8');
 
   const manualFocusTrap = /\b(trapFocus|focusTrap|firstFocusable|lastFocusable|focusableElements)\b/i.test(source);
@@ -87,6 +93,18 @@ for (const path of changedFiles) {
     /(?:ArrowDown|ArrowUp|aria-activedescendant)/.test(source);
   if (manualCombobox) {
     violations.push(`${path}: newly changed feature code appears to implement combobox keyboard state; use the Spartan combobox/autocomplete primitive`);
+  }
+
+  // Generic feature actions must now cross the owned Helm button boundary.
+  // Legacy primitive implementations themselves remain temporarily exempt so
+  // they can be retired incrementally without making unrelated migrations atomic.
+  if (!path.startsWith(legacyPrimitiveRoot)) {
+    const unownedButtons = openingTags(source, 'button').filter((tag) => !/\bhlmBtn\b/.test(tag));
+    if (unownedButtons.length > 0) {
+      violations.push(
+        `${path}: ${unownedButtons.length} native button(s) bypass the Spartan Helm button directive; add hlmBtn or use an approved product composition`,
+      );
+    }
   }
 }
 

@@ -218,6 +218,14 @@ describe('LongPressContextMenuComponent', () => {
     expect(buttons.length).toBe(11);
   });
 
+  it('should render every action through the Spartan Helm button directive', () => {
+    component.menuVisible.set(true);
+    fixture.detectChanges();
+
+    const helmButtons = fixture.debugElement.queryAll(By.css('button[data-slot="button"]'));
+    expect(helmButtons.length).toBe(11);
+  });
+
   it('should emit block toggled to false when the sender is already blocked', () => {
     vi.spyOn(component.block, 'emit');
     fixture.componentRef.setInput('isBlocked', true);
