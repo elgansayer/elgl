@@ -7,6 +7,7 @@ import asyncio
 from openhands_factory.agents.base import AgentPhase, AgentRequest, AgentResult, ProviderHealth
 from openhands_factory.agents.process import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
+    DEFAULT_MAX_OUTPUT_BYTES,
     passive_cli_health,
     run_cli_provider,
 )
@@ -38,5 +39,6 @@ class GoogleAgentProvider:
             provider=self.name,
             request=request,
             command=["caveman", self.command, request.prompt],
-            timeout_seconds=self.timeout_seconds,
+            timeout_seconds=request.timeout_seconds or self.timeout_seconds,
+            max_output_bytes=request.max_output_bytes or DEFAULT_MAX_OUTPUT_BYTES,
         )
