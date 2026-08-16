@@ -14,8 +14,9 @@
     "check:relay-token-ownership": "node scripts/check-relay-token-ownership.mjs",
     "check:multilingual-typography": "node scripts/check-multilingual-typography.mjs",
     "check:semantic-colour-roles": "node scripts/check-semantic-colour-roles.mjs",
-    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles",
-    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles",
+    "check:surface-elevation": "node scripts/check-surface-elevation.mjs",
+    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation",
+    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation",
     "cypress:open": "cypress open",
     "e2e": "cypress run",
     "e2e:ci": "start-server-and-test start http://localhost:4200 e2e"
