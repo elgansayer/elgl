@@ -15,9 +15,25 @@ class SandboxRunner:
         self,
         worktree: Path,
         image: str = "localhost/hellotalk-factory-worker:current",
+        triage_tags: frozenset[str] = frozenset(),
     ) -> None:
         self.worktree = worktree.resolve()
         self.image = image
+
+        # Default limits
+        self.memory = "2g"
+        self.cpus = 1.0
+
+        # Dynamic sizing based on triage tags
+        if "deep-refactor" in triage_tags:
+            self.memory = "4g"
+            self.cpus = 2.0
+        elif "ci-fix" in triage_tags:
+            self.memory = "1g"
+            self.cpus = 0.5
+        elif "terminal-task" in triage_tags:
+            self.memory = "2g"
+            self.cpus = 1.0
 
     def get_podman_cmd(self, cmd: list[str]) -> list[str]:
         """Return the full Podman command array."""
@@ -25,6 +41,10 @@ class SandboxRunner:
             "podman",
             "run",
             "--rm",
+            "--memory",
+            self.memory,
+            "--cpus",
+            str(self.cpus),
             "-v",
             f"{self.worktree}:/workspace:Z",
             "-w",

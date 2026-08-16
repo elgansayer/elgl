@@ -1,18 +1,22 @@
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from openhands_factory.agents.base import (
+    AgentFailure,
+    AgentFailureKind,
     AgentPhase,
     AgentRequest,
+    AgentResult,
     ProviderHealth,
     ProviderStatus,
 )
 from openhands_factory.agents.claude import ClaudeCodeProvider
 from openhands_factory.agents.codex import CodexProvider
 from openhands_factory.agents.google import GoogleAgentProvider
-from openhands_factory.agents.health import AgentCircuitBreaker, AgentFailureKind
+from openhands_factory.agents.health import AgentCircuitBreaker
 from openhands_factory.agents.opencode import OpenCodeProvider
 from openhands_factory.agents.router import AgentRouter
 from openhands_factory.models import Job, Task
@@ -30,6 +34,32 @@ class DummyProvider:
 
     def supports(self, phase: AgentPhase) -> bool:
         return True
+
+
+class ResultProvider:
+    def __init__(self, name: str, result: AgentResult) -> None:
+        self.name = name
+        self.result = result
+        self.calls = 0
+
+    def health(self) -> ProviderHealth:
+        return ProviderHealth(
+            provider=self.name,
+            status=ProviderStatus.HEALTHY,
+            checked_at=datetime.now(UTC),
+        )
+
+    def supports(self, phase: AgentPhase) -> bool:
+        return True
+
+    def run(self, request: AgentRequest) -> AgentResult:
+        self.calls += 1
+        return self.result
+
+
+class OrderedPolicy:
+    def candidates(self, phase, job, provider_health):
+        return ["first", "second"]
 
 
 class TestAgentRouter(unittest.TestCase):
@@ -56,6 +86,90 @@ class TestAgentRouter(unittest.TestCase):
             exclude={"dummy"},
         )
         self.assertIsNone(acquired)
+
+    def test_provider_failure_falls_back_to_next_provider(self):
+        task = Task("1", "test", "body", "issue", 1)
+        job = Job(task=task)
+        failed = AgentResult(
+            provider="first",
+            phase=AgentPhase.IMPLEMENTATION,
+            success=False,
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
+            exit_code=1,
+            summary=None,
+            output_path=None,
+            failure=AgentFailure(AgentFailureKind.PROVIDER_TIMEOUT, "timed out"),
+        )
+        succeeded = AgentResult(
+            provider="second",
+            phase=AgentPhase.IMPLEMENTATION,
+            success=True,
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
+            exit_code=0,
+            summary="done",
+            output_path=None,
+            failure=None,
+        )
+        first = ResultProvider("first", failed)
+        second = ResultProvider("second", succeeded)
+        router = AgentRouter([first, second], policy=OrderedPolicy())
+
+        with TemporaryDirectory() as directory:
+            request = AgentRequest(
+                phase=AgentPhase.IMPLEMENTATION,
+                task=task,
+                prompt="do it",
+                cwd=Path(directory),
+            )
+            result = router.run(request, job)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.provider, "second")
+        self.assertEqual(first.calls, 1)
+        self.assertEqual(second.calls, 1)
+
+    def test_task_failure_is_not_rotated_to_another_provider(self):
+        task = Task("1", "test", "body", "issue", 1)
+        job = Job(task=task)
+        failed = AgentResult(
+            provider="first",
+            phase=AgentPhase.IMPLEMENTATION,
+            success=False,
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
+            exit_code=1,
+            summary=None,
+            output_path=None,
+            failure=AgentFailure(AgentFailureKind.TASK_FAILURE, "tests failed"),
+        )
+        first = ResultProvider("first", failed)
+        second = ResultProvider(
+            "second",
+            AgentResult(
+                provider="second",
+                phase=AgentPhase.IMPLEMENTATION,
+                success=True,
+                started_at=datetime.now(UTC),
+                finished_at=datetime.now(UTC),
+                exit_code=0,
+                summary="should not run",
+                output_path=None,
+                failure=None,
+            ),
+        )
+        router = AgentRouter([first, second], policy=OrderedPolicy())
+
+        with TemporaryDirectory() as directory:
+            result = router.run(
+                AgentRequest(AgentPhase.IMPLEMENTATION, task, "do it", Path(directory)),
+                job,
+            )
+
+        self.assertFalse(result.success)
+        self.assertEqual(first.calls, 1)
+        self.assertEqual(second.calls, 0)
 
 
 class TestHealthTracking(unittest.TestCase):

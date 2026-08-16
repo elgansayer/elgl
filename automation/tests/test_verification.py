@@ -63,5 +63,5 @@ def test_failure_reports_stdout_and_stderr(tmp_path: Path) -> None:
     def failure_runner(arguments: Sequence[str], cwd: Path, timeout: int = 300) -> ProcessResult:
         return ProcessResult(1, "stdout detail", "stderr detail")
 
-    with pytest.raises(VerificationFailed, match="(?s)stdout detail.*stderr detail"):
+    with pytest.raises(VerificationFailed, match=r"(?s)stdout detail.*stderr detail"):
         run_verification(commands, failure_runner)

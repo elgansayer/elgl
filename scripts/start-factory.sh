@@ -42,18 +42,6 @@ if [ "$configured_architecture" != "$EXPECTED_ARCHITECTURE" ]; then
   exit 1
 fi
 
-if awk '
-  /^[[:space:]]*GEMINI_ENABLED=/ {
-    enabled = $0
-    sub(/^[^=]*=/, "", enabled)
-  }
-  END { exit(enabled == "true" ? 0 : 1) }
-' "$FACTORY_CONFIG"; then
-  echo 'GEMINI_ENABLED=true is retired for production factory routing.' >&2
-  echo 'Use Codex through OpenHands subscription OAuth with OpenCode Go fallback.' >&2
-  exit 1
-fi
-
 if ! command -v systemctl >/dev/null 2>&1; then
   echo 'systemctl is unavailable. Run this on the factory host.' >&2
   exit 1
