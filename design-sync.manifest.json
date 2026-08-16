@@ -87,7 +87,7 @@
       "previewPaths": ["frontend/design-preview/components/primitives/overlays-menus.html"],
       "claudeDesignPath": "components/primitives/overlays-menus.html",
       "syncDirection": "reconcile",
-      "lastReconciledCommit": null,
+      "lastReconciledCommit": "419d16ea6d30510d0c4569197808f888cdf29586",
       "requiredStates": ["light", "dark", "focus-visible", "keyboard", "390px", "rtl", "400%-zoom"]
     },
     {
