@@ -39,16 +39,13 @@ const findings = {
   rawButtons: [],
   rawTextInputs: [],
   rawTextareas: [],
-  rawSelectsOutsideBoundary: [],
-  checkboxRadioControls: [],
+  rawSelects: [],
+  rawCheckboxes: [],
+  rawRadios: [],
   roleButtons: [],
 };
 
 const brainImportPattern = /from\s+['"]@spartan-ng\/brain(?:\/[^'"]*)?['"]/;
-const approvedNativeSelectPrefixes = [
-  'frontend/src/app/components/primitives/select/',
-  'frontend/src/app/components/primitives/language-picker/',
-];
 const nonTextInputTypes = new Set(['hidden', 'file', 'checkbox', 'radio', 'range', 'color']);
 
 for (const path of featureFiles) {
@@ -63,8 +60,12 @@ for (const path of featureFiles) {
 
   for (const tag of openingTags(source, 'input')) {
     const type = /\btype\s*=\s*["']([^"']+)["']/.exec(tag)?.[1]?.toLowerCase() ?? 'text';
-    if (['checkbox', 'radio'].includes(type)) {
-      findings.checkboxRadioControls.push(`${file} (${type})`);
+    if (type === 'checkbox') {
+      findings.rawCheckboxes.push(file);
+      continue;
+    }
+    if (type === 'radio') {
+      findings.rawRadios.push(file);
       continue;
     }
     if (!nonTextInputTypes.has(type) && !/\bhlmInput\b/.test(tag)) findings.rawTextInputs.push(file);
@@ -74,9 +75,7 @@ for (const path of featureFiles) {
     if (!/\bhlmTextarea\b/.test(tag)) findings.rawTextareas.push(file);
   }
 
-  if (openingTags(source, 'select').length > 0 && !approvedNativeSelectPrefixes.some((prefix) => file.startsWith(prefix))) {
-    findings.rawSelectsOutsideBoundary.push(file);
-  }
+  if (openingTags(source, 'select').length > 0) findings.rawSelects.push(file);
 
   if (/role\s*=\s*["']button["']/.test(source) && !file.endsWith('a11y-clickable.ts')) findings.roleButtons.push(file);
 }
@@ -111,7 +110,9 @@ const strictFailures = [
   ...findings.rawButtons.map((file) => `${file}: native button bypasses hlmBtn`),
   ...findings.rawTextInputs.map((file) => `${file}: text-like input bypasses hlmInput`),
   ...findings.rawTextareas.map((file) => `${file}: textarea bypasses hlmTextarea`),
-  ...findings.rawSelectsOutsideBoundary.map((file) => `${file}: native select exists outside approved platform-boundary primitives`),
+  ...findings.rawSelects.map((file) => `${file}: native select bypasses owned Spartan Native Select`),
+  ...findings.rawCheckboxes.map((file) => `${file}: native checkbox bypasses owned Spartan Checkbox`),
+  ...findings.rawRadios.map((file) => `${file}: native radio bypasses owned Spartan Radio Group`),
 ];
 
 if (strict && strictFailures.length > 0) {
@@ -120,4 +121,4 @@ if (strict && strictFailures.length > 0) {
   process.exit(1);
 }
 
-if (strict) console.log('Full-tree Spartan adoption verified for currently owned Helm control families.');
+if (strict) console.log('Full-tree Spartan adoption verified for all currently used native control families.');
