@@ -94,14 +94,8 @@ describe('AdminRoleAssignmentsService', () => {
       endTime: '2026-08-15T21:00:00.000Z',
     });
 
-    expect(gte).toHaveBeenCalledWith(
-      'granted_at',
-      '2026-08-15T20:00:00.000Z',
-    );
-    expect(lte).toHaveBeenCalledWith(
-      'granted_at',
-      '2026-08-15T21:00:00.000Z',
-    );
+    expect(gte).toHaveBeenCalledWith('granted_at', '2026-08-15T20:00:00.000Z');
+    expect(lte).toHaveBeenCalledWith('granted_at', '2026-08-15T21:00:00.000Z');
   });
 
   it('rejects inverted grant-time bounds before querying storage', async () => {
