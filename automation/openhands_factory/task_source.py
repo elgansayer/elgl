@@ -24,6 +24,9 @@ class TaskStore:
         self.backlog_path = state_dir / "backlog.json"
         self.lease_path = state_dir / "leases.json"
         self.lease_minutes = lease_minutes
+        if factory_generation == "unknown":
+            generation = read_json(state_dir / "generation.json", {})
+            factory_generation = str(generation.get("identifier", "unknown"))
         self.factory_generation = factory_generation
 
     def _assert_generation_current(self) -> None:
