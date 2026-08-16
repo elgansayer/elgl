@@ -4,7 +4,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   forwardRef,
+  inject,
   input,
   linkedSignal,
   model,
@@ -25,11 +27,6 @@ export const HLM_CHECKBOX_VALUE_ACCESSOR = {
   useExisting: forwardRef(() => HlmCheckbox),
   multi: true,
 };
-
-export interface HlmCheckboxChangeEvent {
-  readonly target: { readonly checked: boolean };
-  readonly checked: boolean;
-}
 
 @Component({
   selector: 'hlm-checkbox',
@@ -72,6 +69,8 @@ export interface HlmCheckboxChangeEvent {
   `,
 })
 export class HlmCheckbox implements ControlValueAccessor {
+  private readonly _host = inject(ElementRef<HTMLElement>);
+
   public readonly userClass = input<ClassValue>('', { alias: 'class' });
 
   protected readonly _computedClass = computed(() =>
@@ -93,8 +92,6 @@ export class HlmCheckbox implements ControlValueAccessor {
   });
   public readonly checked = linkedSignal(this.checkedInput);
   public readonly checkedChange = output<boolean>();
-  /** Native-checkbox compatibility output. Prefer checkedChange for new code. */
-  public readonly change = output<HlmCheckboxChangeEvent>();
 
   public readonly indeterminate = model<boolean>(false);
   public readonly name = input<string | null>(null);
@@ -124,7 +121,9 @@ export class HlmCheckbox implements ControlValueAccessor {
     if (this._disabled()) return;
     this.checked.set(value);
     this.checkedChange.emit(value);
-    this.change.emit({ target: { checked: value }, checked: value });
+    this._host.nativeElement.dispatchEvent(
+      new CustomEvent('change', { bubbles: true, detail: { checked: value } }),
+    );
     this._onChange?.(value);
   }
 
