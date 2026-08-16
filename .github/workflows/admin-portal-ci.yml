@@ -38,7 +38,7 @@ jobs:
         run: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
       - name: Upload failed admin portal test report
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: admin-portal-failure-report-${{ github.sha }}
           path: admin-portal/test-results/unit.json
@@ -69,7 +69,7 @@ jobs:
         run: mkdir -p test-results && npm test -- src/admin --reporter=default --reporter=github-actions --reporter=json --outputFile=test-results/admin.json
       - name: Upload failed admin backend test report
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: admin-backend-failure-report-${{ github.sha }}
           path: backend/test-results/admin.json
