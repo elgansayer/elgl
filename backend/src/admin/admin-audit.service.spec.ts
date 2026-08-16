@@ -120,7 +120,9 @@ describe('AdminAuditService', () => {
   it('fails closed and logs only sanitized audit persistence context', async () => {
     const error = new Error('audit unavailable with sensitive backend detail');
     const insert = vi.fn().mockResolvedValue({ error });
-    const errorLog = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const errorLog = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const service = new AdminAuditService({
       getClient: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({ insert }),
@@ -149,6 +151,8 @@ describe('AdminAuditService', () => {
     expect(logged).toContain('request-failure-1');
     expect(logged).not.toContain('sensitive-user-id');
     expect(logged).not.toContain('private investigation detail');
-    expect(logged).not.toContain('audit unavailable with sensitive backend detail');
+    expect(logged).not.toContain(
+      'audit unavailable with sensitive backend detail',
+    );
   });
 });
