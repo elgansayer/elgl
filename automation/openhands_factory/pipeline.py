@@ -10,7 +10,11 @@ from threading import Semaphore
 from openhands_factory.architect_report import ArchitectProposal, load_architect_report
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner, sdk_conversation_factory
-from openhands_factory.exceptions import FactoryError, RepositorySafetyError
+from openhands_factory.exceptions import (
+    FactoryError,
+    ProviderCapacityUnavailable,
+    RepositorySafetyError,
+)
 from openhands_factory.git_workflow import GitWorkflow
 from openhands_factory.github import GitHubClient, PullRequestStatus
 from openhands_factory.jobs import JobStore
@@ -57,8 +61,8 @@ class FactoryPipeline:
             config, sdk_conversation_factory(config)
         )
 
-        # Build the new AgentRouter
         from openhands_factory.agents import (
+            AgentCircuitBreaker,
             AgentHealthStore,
             AgentRouter,
             ClaudeCodeProvider,
@@ -83,7 +87,21 @@ class FactoryPipeline:
             OpenCodeProvider(command=provider_command("opencode", "opencode")),
             OpenHandsProvider(self.conversations),
         ]
-        self.router = AgentRouter(providers=providers, policy=ConfigRoutingPolicy(config.agents))
+        breaker_defaults = {
+            provider.name: AgentCircuitBreaker(
+                provider=provider.name,
+                failure_threshold=max(1, config.max_consecutive_failures),
+                cooldown_seconds=config.provider_cooldown_seconds,
+            )
+            for provider in providers
+        }
+        breakers = self.health_store.load(breaker_defaults)
+        self.router = AgentRouter(
+            providers=providers,
+            policy=ConfigRoutingPolicy(config.agents),
+            breakers=breakers,
+            health_store=self.health_store,
+        )
         self.labels_ready = False
         self.verification_slots = verification_slots
 
@@ -94,8 +112,6 @@ class FactoryPipeline:
         tasks = self.github.collect_open_issues() + self.github.collect_open_pull_requests()
         self.tasks.cache(tasks)
         jobs = self.jobs.reconcile(tasks)
-        # A daemon restart or an interrupted worker can leave a lease behind while the
-        # durable job is still discovered. Such jobs are safe to reclaim before scheduling.
         for task_id, job in jobs.items():
             if job.state is JobState.DISCOVERED:
                 self.tasks.release(task_id)
@@ -115,7 +131,6 @@ class FactoryPipeline:
                 try:
                     dirty = inspection.has_changes()
                 except RepositorySafetyError:
-                    # A damaged or partially-created worktree is not safe to delete silently.
                     dirty = True
                 if dirty:
                     recovery = self.config.recovery_dir / (
@@ -125,15 +140,6 @@ class FactoryPipeline:
                 workflow.remove_worktree(worktree, force=dirty)
             self.tasks.release(task_id)
             job.state = JobState.DONE
-            # This clause used to be scoped to PRE_PULL_REQUEST_STATES, so a job
-            # whose pull request was closed (not merged) while the factory was
-            # still reviewing or waiting on CI never got here at all - its
-            # worktree, and everything downstream of it, stayed on disk forever.
-            # reconcile() only resets a DONE job with this exact message back to
-            # DISCOVERED when job.pull_request is still None, which is already
-            # never true once a PR-review job reaches this branch (it is set
-            # immediately in _discover_pull_request), so this message split does
-            # not change that behaviour.
             job.last_error = (
                 "Issue closed before pull request creation"
                 if job.task.source == "github-issue"
@@ -141,6 +147,19 @@ class FactoryPipeline:
             )
             self.jobs.save_job(job)
         return self.jobs.load()
+
+    def _defer_for_provider_capacity(
+        self, job: Job, error: ProviderCapacityUnavailable
+    ) -> None:
+        job.last_error = str(error)[-2000:]
+        wait_seconds = error.retry_after_seconds or self.config.provider_cooldown_seconds
+        job.next_attempt_at = datetime.now(UTC) + timedelta(seconds=max(1, wait_seconds))
+        LOGGER.info(
+            "Deferring Factory job %s for %ss because provider capacity is unavailable: %s",
+            job.task.identifier,
+            wait_seconds,
+            error,
+        )
 
     def run_once(self) -> Job | None:
         jobs = self.refresh()
@@ -153,6 +172,8 @@ class FactoryPipeline:
             job.attempts = 0
             job.last_error = None
             job.next_attempt_at = None
+        except ProviderCapacityUnavailable as error:
+            self._defer_for_provider_capacity(job, error)
         except Exception as error:
             job.attempts += 1
             job.last_error = str(error)[-2000:]
@@ -172,6 +193,8 @@ class FactoryPipeline:
             job.attempts = 0
             job.last_error = None
             job.next_attempt_at = None
+        except ProviderCapacityUnavailable as error:
+            self._defer_for_provider_capacity(job, error)
         except Exception as error:
             job.attempts += 1
             job.last_error = str(error)[-2000:]
@@ -187,26 +210,21 @@ class FactoryPipeline:
             job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
             return
         if job.last_error and "no repository changes" in job.last_error:
-            # Every attempt produced an empty diff. That almost always means the work
-            # was already implemented (often by another pipeline racing on the same
-            # issue), not that the task is impossible. Close it instead of retrying
-            # forever for no reason.
             self._close_as_already_satisfied(job)
             return
-        # There is no permanent give-up state. A persistently broken task keeps being
-        # retried, with exponential backoff so it does not burn worker capacity or
-        # budget while it fails. This is routine, expected self-correction, not an
-        # incident: it is not paged. Genuinely exceptional conditions (the daemon
-        # crashing, budget exhaustion, no pull request progress for hours) still alert
-        # through doctor.py and daemon.py.
         job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
 
-    def _run_agent(self, job: Job, worktree: Path, phase: str, prompt: str) -> None:
-        from typing import Any
+    @staticmethod
+    def _successful_provider_for_phase(job: Job, phase: str) -> str | None:
+        for entry in reversed(job.provider_history):
+            if entry.get("phase") == phase and int(entry.get("success", 0)) == 1:
+                provider = entry.get("provider")
+                return str(provider) if provider is not None else None
+        return None
 
+    def _run_agent(self, job: Job, worktree: Path, phase: str, prompt: str) -> None:
         from openhands_factory.agents.base import AgentPhase, AgentRequest
 
-        # Map phase string to enum
         phase_map = {
             "planning": AgentPhase.PLANNING,
             "architecture": AgentPhase.ARCHITECTURE,
@@ -220,29 +238,30 @@ class FactoryPipeline:
         agent_phase = phase_map.get(phase, AgentPhase.GENERAL_ACTION)
         request = AgentRequest(phase=agent_phase, task=job.task, prompt=prompt, cwd=worktree)
 
-        # In a complete implementation, this would load breakers from self.health_store
-        result = self.router.run(request, job)
+        exclude: set[str] | None = None
+        implementation_provider = self._successful_provider_for_phase(
+            job, AgentPhase.IMPLEMENTATION.value
+        )
+        if implementation_provider and agent_phase in {
+            AgentPhase.SECURITY_REVIEW,
+            AgentPhase.CODE_REVIEW,
+        }:
+            exclude = {implementation_provider}
 
-        # Track history
-        history_entry: dict[str, Any] = {
-            "provider": result.provider,
-            "phase": result.phase.value,
-            "success": result.success,
-            "started_at": result.started_at.isoformat(),
-            "finished_at": result.finished_at.isoformat(),
-        }
-        if result.exit_code is not None:
-            history_entry["exit_code"] = result.exit_code
-        if result.failure:
-            history_entry["error"] = result.failure.message
-            history_entry["kind"] = result.failure.kind.value
+        diversity_fallback = False
+        try:
+            result = self.router.run(request, job, exclude=exclude)
+        except ProviderCapacityUnavailable:
+            if not exclude:
+                raise
+            diversity_fallback = True
+            result = self.router.run(request, job)
 
-        job.provider_history.append(history_entry)
+        if diversity_fallback and job.provider_history:
+            job.provider_history[-1]["diversity_fallback"] = "same-provider-last-resort"
 
         if not result.success:
             if result.failure:
-                if result.provider == "openhands":
-                    raise FactoryError(result.failure.message)
                 raise FactoryError(
                     f"Agent provider '{result.provider}' failed: {result.failure.message}"
                 )
@@ -270,9 +289,6 @@ class FactoryPipeline:
 
     def _advance(self, job: Job) -> None:
         worktree = self.config.worktree_dir / f"issue-{job.task.identifier}"
-        # Read from the task's own worktree, not the shared base checkout: the worktree
-        # is always freshly created from origin/main, while the base checkout's working
-        # tree is only ever fetched (refs updated), never reset, and can drift stale.
         prompt_dir = worktree / "automation/prompts"
         if job.state is JobState.DISCOVERED:
             if job.task.source == "github-pull-request":
@@ -390,12 +406,6 @@ class FactoryPipeline:
             return
 
         if job.state is JobState.REVIEWING:
-            # The worktree persists across retries of this state, so a review report
-            # left behind by an earlier failed attempt (crashed conversation, hit its
-            # turn budget, etc.) must not be re-validated as if it were fresh: remove
-            # it before running the conversation, so a conversation that fails to
-            # (re)write a valid report is reported as missing one, not judged against
-            # someone else's stale output.
             (worktree / ".factory-review.json").unlink(missing_ok=True)
             self._run_agent(
                 job, worktree, "review", build_phase_prompt(prompt_dir, "review", job.task)
@@ -499,12 +509,7 @@ class FactoryPipeline:
             job.state = JobState.DONE
 
     def _discover_pull_request(self, job: Job, worktree: Path) -> None:
-        """Start independently reviewing a pull request the factory did not create.
-
-        Skips straight to REVIEWING and reuses the rest of the state machine
-        (verification, repair, CI polling, merge) unchanged - the only difference
-        from an issue-driven job is that the branch and pull request already exist.
-        """
+        """Start independently reviewing a pull request the factory did not create."""
         if job.task.pr_branch is None:
             raise FactoryError("Pull request branch is missing")
         if worktree.exists():
@@ -545,12 +550,6 @@ class FactoryPipeline:
         if not changed:
             raise FactoryError("No changed paths were found")
         commands = commands_for(workflow.repository, changed)
-        # Only commands that bind a fixed host port (frontend-e2e's dev server)
-        # need to be serialized across workers; everything else - lint, build,
-        # unit tests, backend-test:e2e (ephemeral-port supertest, not a bound
-        # port) - is safe to run at full worker parallelism. Running the shared
-        # commands first also means a cheap, fast-failing check (lint, a broken
-        # build) is judged before spending minutes on the exclusive one.
         shared = [command for command in commands if not command.exclusive]
         exclusive = [command for command in commands if command.exclusive]
         run_verification(shared)
@@ -580,12 +579,16 @@ class FactoryPipeline:
         ]
 
     def _pull_request_body(self, job: Job) -> str:
+        implementation_provider = self._successful_provider_for_phase(job, "implementation") or "unknown"
+        review_provider = self._successful_provider_for_phase(job, "code-review") or "pending"
         return (
             f"Fixes #{job.task.identifier}\n\n"
             "## Factory execution\n\n"
             "This pull request was planned, implemented, security reviewed, locally verified and "
             "independently reviewed by the bounded OpenHands factory. GitHub required checks "
             "remain authoritative.\n\n"
+            f"Implementation provider: `{implementation_provider}`\n"
+            f"Review provider: `{review_provider}`\n"
             f"Reviewed head SHA: `{job.head_sha or 'pending'}`\n"
         )
 
@@ -599,19 +602,11 @@ class FactoryPipeline:
         return elapsed.total_seconds() / 3600 >= self.config.architect_interval_hours
 
     def run_architect_cycle(self) -> None:
-        """Best-effort weekly gap analysis: propose new issues and roadmap updates.
-
-        Unlike issue and pull request work, this is not modeled as a durable retried
-        Job - a single bounded conversation either finds something worth proposing or
-        it does not. If it fails or times out, the cooldown already recorded below
-        means it simply tries again next interval rather than hot-looping.
-        """
+        """Best-effort weekly gap analysis: propose new issues and roadmap updates."""
         atomic_write_json(
             self._architect_state_path(), {"last_run_at": datetime.now(UTC).isoformat()}
         )
         worktree = self.config.worktree_dir / "architect"
-        # See the matching comment in _advance(): read from the worktree, not the
-        # shared base checkout, so this always uses the current prompt on origin/main.
         prompt_dir = worktree / "automation/prompts"
         if worktree.exists():
             GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(
@@ -677,13 +672,7 @@ class FactoryPipeline:
             GitWorkflow(self.config.repository, self.config.base_branch).remove_worktree(worktree)
 
     def _create_deduplicated_issues(self, proposals: list[ArchitectProposal]) -> list[int]:
-        """Create proposed issues, skipping anything that already exists.
-
-        This check is deliberately not delegated to the LLM: bulk-created near-
-        duplicate issues from an earlier, unchecked version of this idea are what
-        caused the swarm/factory collision quarantine spike this factory recovered
-        from, so the dedup is enforced here in trusted code.
-        """
+        """Create proposed issues, skipping anything that already exists."""
         existing = {
             " ".join(title.split()).lower() for title in self.github.list_all_open_issue_titles()
         }
