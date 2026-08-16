@@ -1,4 +1,22 @@
-You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
+You are an expert in TypeScript, Angular, Spartan UI, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular, TypeScript, Spartan, and project best practices.
+
+## Spartan UI - Mandatory Default
+
+Spartan UI is the canonical component architecture for frontend UI work.
+
+- Read `../.claude/skills/spartan/SKILL.md` before substantial component, form, overlay, icon, styling, theming, or UI migration work.
+- Inspect `components.json` and existing Helm code under `src/app/components/ui` before creating any primitive.
+- Before generating or replacing Spartan components, run the appropriate `@spartan-ng/cli:info --json` command and inspect `installedComponents` and `availableComponents`.
+- Use Spartan MCP or the current Spartan documentation to confirm selectors, imports, variants, sizes, composition, dependencies, and accessibility. Never guess Spartan APIs.
+- Prefer existing Helm components and documented Spartan composition over ad hoc HTML/Tailwind primitives.
+- Add missing components through `@spartan-ng/cli:ui`. Do not recreate generated components from memory.
+- Use Helm by default. Brain owns headless behaviour/accessibility and must not be forked or edited.
+- Prefer built-in component variants and sizes before call-site class overrides. Product-wide styling belongs in owned Helm code or shared Relay tokens.
+- Use Spartan Field composition for forms and documented Spartan overlay composition for dialogs, sheets, popovers, menus, and tooltips.
+- Use the existing `@ng-icons/core` + Lucide stack for generic vector UI icons and register icons with `provideIcons`.
+- After broad Spartan migrations or package upgrades, run the Spartan healthcheck in addition to project verification.
+
+Project-specific rules remain stricter than generic Spartan examples. `../DESIGN.md`, Relay semantic tokens, light/dark parity, per-user primary accent behaviour, RTL, i18n, reduced motion, forced colours, high zoom, screen-reader support, and WCAG AA are authoritative.
 
 ## TypeScript Best Practices
 
@@ -23,10 +41,12 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 - It MUST pass all AXE checks.
 - It MUST follow all WCAG AA minimums, including focus management, colour contrast, and ARIA attributes.
+- Prefer Spartan Brain behaviour for interaction primitives rather than reimplementing keyboard/focus semantics.
 
 ### Components
 
 - Keep components small and focused on a single responsibility
+- Use existing Spartan/Relay components before creating a new primitive
 - Use `input()` and `output()` functions instead of decorators
 - Use `computed()` for derived state
 - Prefer inline templates for small components
@@ -49,6 +69,8 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
 - Use the async pipe to handle observables
 - Do not assume globals like (`new Date()`) are available.
+- Use semantic Relay/Spartan colour roles rather than raw Tailwind palette colours.
+- Prefer `gap-*` over `space-*` and logical direction utilities over physical direction utilities.
 
 ## Services
 
@@ -59,7 +81,7 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 ## Engineering Constitution & Project Mandates
 
-In addition to the Angular and TypeScript best practices above, you must adhere to the global Engineering Constitution located at `/home/elgan/dev/hellotalk/AGENTS.md` (or parent directory `../AGENTS.md`):
+In addition to the Angular, TypeScript, and Spartan best practices above, you must adhere to the global Engineering Constitution located at `/home/elgan/dev/hellotalk/AGENTS.md` (or parent directory `../AGENTS.md`):
 
 - **British English:** Always use British English spelling (`colour`, `favourite`, `monetisation`, `tokenise`, etc.).
 - **Banned Punctuation:** Never use an em dash in code, comments, or documentation. Use standard hyphens or colons instead.
