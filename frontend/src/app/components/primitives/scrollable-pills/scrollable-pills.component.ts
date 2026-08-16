@@ -11,7 +11,7 @@ import { Component, input, output } from '@angular/core';
       @for (pill of pills(); track pill.id) {
         <button
           (click)="pillPicked.emit(pill.id)"
-          class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200"
+          class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-base ease-app"
           [class.bg-primary]="selected() === pill.id"
           [class.text-on-fill]="selected() === pill.id"
           [class.bg-surface-300]="selected() !== pill.id"
