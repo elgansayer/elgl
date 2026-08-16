@@ -14,7 +14,18 @@
     "paths": {
       "@spartan-ng/helm/dialog": ["./src/app/components/ui/dialog/src/index.ts"],
       "@spartan-ng/helm/utils": ["./src/app/components/ui/utils/src/index.ts"],
-      "@spartan-ng/helm/button": ["./src/app/components/ui/button/src/index.ts"]
+      "@spartan-ng/helm/button": ["./src/app/components/ui/button/src/index.ts"],
+      "@spartan-ng/helm/card": ["./src/app/components/ui/card/src/index.ts"],
+      "@spartan-ng/helm/input": ["./src/app/components/ui/input/src/index.ts"],
+      "@spartan-ng/helm/textarea": ["./src/app/components/ui/textarea/src/index.ts"],
+      "@spartan-ng/helm/field": ["./src/app/components/ui/field/src/index.ts"],
+      "@spartan-ng/helm/label": ["./src/app/components/ui/label/src/index.ts"],
+      "@spartan-ng/helm/separator": ["./src/app/components/ui/separator/src/index.ts"],
+      "@spartan-ng/helm/checkbox": ["./src/app/components/ui/checkbox/src/index.ts"],
+      "@spartan-ng/helm/switch": ["./src/app/components/ui/switch/src/index.ts"],
+      "@spartan-ng/helm/badge": ["./src/app/components/ui/badge/src/index.ts"],
+      "@spartan-ng/helm/avatar": ["./src/app/components/ui/avatar/src/index.ts"],
+      "@spartan-ng/helm/empty": ["./src/app/components/ui/empty/src/index.ts"]
     }
   },
   "angularCompilerOptions": {
