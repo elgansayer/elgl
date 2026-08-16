@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from subprocess import CompletedProcess, TimeoutExpired, run
+from subprocess import CompletedProcess, run, TimeoutExpired
 
 
 LEGACY_SYSTEMD_UNITS = (
