@@ -39,6 +39,25 @@ try {
 
 const changedSet = new Set(changed);
 const isWithin = (file, mappedPath) => file === mappedPath || file.startsWith(`${mappedPath}/`);
+const looksLikeFile = (mappedPath) => /\.[^/]+$/.test(mappedPath);
+
+function isVisualContractSource(file) {
+  return (
+    /\.(?:html|css|scss|sass|less)$/.test(file) ||
+    /\.component\.ts$/.test(file) ||
+    file.includes('/components/ui/') ||
+    file.includes('/components/primitives/')
+  );
+}
+
+// Broad screen mappings intentionally provide a fallback ownership boundary, but they must not turn
+// non-visual application code (services, stores, guards, data helpers, etc.) into design-sync work.
+// Explicit file mappings remain authoritative regardless of extension, so theme.service.ts and other
+// deliberately mapped non-template files still participate in drift verification.
+function mappingOwnsFile(file, mappedPath) {
+  if (!isWithin(file, mappedPath)) return false;
+  return looksLikeFile(mappedPath) || isVisualContractSource(file);
+}
 
 // A file can sit below several aggregate design mappings (for example app -> components -> primitive family).
 // Only the most-specific matching repository path owns that file for drift purposes. This preserves broad
@@ -48,7 +67,7 @@ for (const file of changed) {
   const matches = [];
   for (const item of manifest.items) {
     for (const mappedPath of item.repositoryPaths) {
-      if (isWithin(file, mappedPath)) matches.push({ item, mappedPath });
+      if (mappingOwnsFile(file, mappedPath)) matches.push({ item, mappedPath });
     }
   }
   if (matches.length === 0) continue;
