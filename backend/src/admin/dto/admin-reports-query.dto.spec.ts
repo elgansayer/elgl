@@ -16,11 +16,16 @@ describe('AdminReportsQueryDto', () => {
     await expect(validate(dto)).resolves.toEqual([]);
   });
 
-  it.each(['startTime', 'endTime'])('rejects an invalid %s timestamp', async (field) => {
-    const dto = plainToInstance(AdminReportsQueryDto, { [field]: 'not-a-date' });
-    const errors = await validate(dto);
-    expect(errors.some((error) => error.property === field)).toBe(true);
-  });
+  it.each(['startTime', 'endTime'])(
+    'rejects an invalid %s timestamp',
+    async (field) => {
+      const dto = plainToInstance(AdminReportsQueryDto, {
+        [field]: 'not-a-date',
+      });
+      const errors = await validate(dto);
+      expect(errors.some((error) => error.property === field)).toBe(true);
+    },
+  );
 
   it.each([
     ['status', 41],
