@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AdminAuditService } from './admin-audit.service';
 
@@ -116,9 +117,10 @@ describe('AdminAuditService', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('fails closed when audit persistence fails', async () => {
-    const error = new Error('audit unavailable');
+  it('fails closed and logs only sanitized audit persistence context', async () => {
+    const error = new Error('audit unavailable with sensitive backend detail');
     const insert = vi.fn().mockResolvedValue({ error });
+    const errorLog = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const service = new AdminAuditService({
       getClient: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({ insert }),
@@ -128,9 +130,25 @@ describe('AdminAuditService', () => {
     await expect(
       service.record({
         actorUserId: 'admin-1',
-        action: 'users.login_history.read',
+        action: 'users.restriction.apply',
+        capabilityKey: 'users.restrictions.manage',
+        targetType: 'user',
+        targetId: 'sensitive-user-id',
+        operatorNote: 'private investigation detail',
         outcome: 'failed',
+        correlationId: 'request-failure-1',
+        metadata: { source: 'admin-v1' },
       }),
     ).rejects.toBe(error);
+
+    expect(errorLog).toHaveBeenCalledOnce();
+    const logged = String(errorLog.mock.calls[0]?.[0]);
+    expect(logged).toContain('admin_audit_persistence_failed');
+    expect(logged).toContain('users.restriction.apply');
+    expect(logged).toContain('users.restrictions.manage');
+    expect(logged).toContain('request-failure-1');
+    expect(logged).not.toContain('sensitive-user-id');
+    expect(logged).not.toContain('private investigation detail');
+    expect(logged).not.toContain('audit unavailable with sensitive backend detail');
   });
 });
