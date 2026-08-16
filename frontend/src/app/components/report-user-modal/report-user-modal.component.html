@@ -9,12 +9,15 @@
     <div class="flex items-center justify-between p-5 border-b border-surface-100 shrink-0">
       <h2 [id]="titleId" class="text-xl font-bold text-text-primary">{{ 'report.title' | t }}</h2>
       <button
+        hlmBtn
+        variant="ghost"
+        size="icon-touch"
         type="button"
-        class="text-text-muted hover:text-text-primary transition-colors p-2 -me-2 rounded-full hover:bg-surface-100"
+        class="-me-2 rounded-full text-text-muted hover:text-text-primary"
         (click)="cancel()"
         [attr.aria-label]="'report.close' | t"
       >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -49,8 +52,10 @@
         <div class="text-center py-10">
           <p class="text-text-secondary mb-4">{{ 'report.load_error' | t }}</p>
           <button
+            hlmBtn
+            variant="secondary"
+            size="touch"
             type="button"
-            class="px-6 py-2.5 rounded-pill bg-surface-100 text-sm font-bold text-text-primary hover:bg-surface-50 transition-colors"
             (click)="loadCategories()"
             [attr.aria-label]="'report.retry' | t"
           >
@@ -143,17 +148,23 @@
     <!-- Actions -->
     <div class="p-5 border-t border-surface-100 shrink-0 flex gap-3">
       <button
+        hlmBtn
+        variant="secondary"
+        size="touch"
         type="button"
-        class="flex-1 py-3.5 rounded-pill text-sm font-bold bg-surface-100 hover:bg-surface-50 text-text-primary transition-colors"
+        class="flex-1"
         (click)="cancel()"
         [attr.aria-label]="'report.cancel' | t"
       >
         {{ 'report.cancel' | t }}
       </button>
       <button
+        hlmBtn
+        variant="destructive-solid"
+        size="touch"
         type="button"
+        class="flex-1"
         [disabled]="!canSubmit()"
-        class="flex-1 py-3.5 rounded-pill text-sm font-bold bg-danger hover:bg-danger/90 disabled:opacity-40 disabled:hover:bg-danger text-on-fill transition-colors shadow-lift"
         (click)="submitReport()"
         [attr.aria-label]="'report.submitting' | t"
       >
