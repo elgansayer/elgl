@@ -123,8 +123,6 @@ export class HlmNativeSelect implements ControlValueAccessor {
   public readonly value = linkedSignal(this.valueInput);
 
   public readonly valueChange = output<string | undefined | null>();
-  /** Compatibility output for native-select migrations. Prefer valueChange for new code. */
-  public readonly change = output<Event>();
 
   protected _onChange?: ChangeFn<string | undefined | null>;
   protected _onTouched?: TouchFn;
@@ -143,10 +141,11 @@ export class HlmNativeSelect implements ControlValueAccessor {
   }
 
   protected _valueChanged(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    const value = target.value;
     this.value.set(value);
     this.valueChange.emit(value);
-    this.change.emit(event);
     this._onChange?.(value);
     this._onTouched?.();
   }
