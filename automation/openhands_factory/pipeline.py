@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -57,40 +56,6 @@ class FactoryPipeline:
         self.conversations = conversations or ConversationRunner(
             config, sdk_conversation_factory(config)
         )
-
-        # Build the new AgentRouter
-        from openhands_factory.agents import (
-            AgentHealthStore,
-            AgentRouter,
-            ClaudeCodeProvider,
-            CodexProvider,
-            ConfigRoutingPolicy,
-            GoogleAgentProvider,
-            OpenCodeProvider,
-            OpenHandsProvider,
-        )
-        from openhands_factory.agents.base import AgentProvider
-
-        self.health_store = AgentHealthStore(config.state_dir / "agent_health.json")
-
-        def provider_command(name: str, default: str) -> str:
-            provider = config.agents.providers.get(name)
-            return provider.command if provider and provider.command else default
-
-        providers: list[AgentProvider] = [
-            ClaudeCodeProvider(command=provider_command("claude", "claude")),
-            CodexProvider(command=provider_command("codex", "codex")),
-            GoogleAgentProvider(command=provider_command("google", "gemini")),
-            OpenCodeProvider(command=provider_command("opencode", "opencode")),
-            OpenHandsProvider(self.conversations),
-        ]
-        self.router = AgentRouter(
-            providers=providers,
-            policy=ConfigRoutingPolicy(config.agents),
-            health_store=self.health_store,
-            failure_threshold=config.max_consecutive_failures,
-            cooldown_seconds=config.provider_cooldown_seconds,
-        )
         self.labels_ready = False
         self.verification_slots = verification_slots
 
@@ -108,7 +73,6 @@ class FactoryPipeline:
                 self.tasks.release(task_id)
         active_task_ids = {task.identifier for task in tasks}
         protected = protected_task_ids or set()
-        dirty_jobs = False
         for task_id, job in jobs.items():
             if (
                 task_id in active_task_ids
@@ -147,10 +111,8 @@ class FactoryPipeline:
                 if job.task.source == "github-issue"
                 else "Pull request closed before the factory finished with it"
             )
-            dirty_jobs = True
-        if dirty_jobs:
-            self.jobs.save(jobs)
-        return jobs
+            self.jobs.save_job(job)
+        return self.jobs.load()
 
     def run_once(self) -> Job | None:
         jobs = self.refresh()
@@ -211,60 +173,6 @@ class FactoryPipeline:
         # through doctor.py and daemon.py.
         job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
 
-    def _run_agent(self, job: Job, worktree: Path, phase: str, prompt: str) -> None:
-        from typing import Any
-
-        from openhands_factory.agents.base import AgentPhase, AgentRequest
-
-        # Map phase string to enum
-        phase_map = {
-            "planning": AgentPhase.PLANNING,
-            "architecture": AgentPhase.ARCHITECTURE,
-            "implementation": AgentPhase.IMPLEMENTATION,
-            "security": AgentPhase.SECURITY_REVIEW,
-            "quality_repair": AgentPhase.QUALITY_REPAIR,
-            "review": AgentPhase.CODE_REVIEW,
-            "repair": AgentPhase.CI_REPAIR,
-            "architect": AgentPhase.ARCHITECTURE,
-        }
-        agent_phase = phase_map.get(phase, AgentPhase.GENERAL_ACTION)
-        request = AgentRequest(phase=agent_phase, task=job.task, prompt=prompt, cwd=worktree)
-
-        excluded: set[str] = set()
-        if agent_phase is AgentPhase.CODE_REVIEW:
-            excluded = {
-                str(entry["provider"])
-                for entry in job.provider_history
-                if entry.get("phase") == AgentPhase.IMPLEMENTATION.value
-                and isinstance(entry.get("provider"), str)
-            }
-        result = self.router.run(request, job, exclude=excluded)
-
-        # Track history
-        for attempt in self.router.last_attempts or [result]:
-            history_entry: dict[str, Any] = {
-                "provider": attempt.provider,
-                "phase": attempt.phase.value,
-                "success": attempt.success,
-                "started_at": attempt.started_at.isoformat(),
-                "finished_at": attempt.finished_at.isoformat(),
-            }
-            if attempt.exit_code is not None:
-                history_entry["exit_code"] = attempt.exit_code
-            if attempt.failure:
-                history_entry["error"] = attempt.failure.message
-                history_entry["kind"] = attempt.failure.kind.value
-            job.provider_history.append(history_entry)
-
-        if not result.success:
-            if result.failure:
-                if result.provider == "openhands":
-                    raise FactoryError(result.failure.message)
-                raise FactoryError(
-                    f"Agent provider '{result.provider}' failed: {result.failure.message}"
-                )
-            raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
-
     @staticmethod
     def _backoff_for(attempts: int) -> timedelta:
         minutes = min(5 * 2 ** max(attempts - 1, 0), 24 * 60)
@@ -303,10 +211,6 @@ class FactoryPipeline:
                     )
                     stale_workflow.archive_worktree(worktree, recovery)
                 stale_workflow.remove_worktree(worktree, force=True)
-            if job.task.source == "github-issue":
-                tags = self._triage_task(job.task)
-                if tags:
-                    job.task = dataclasses.replace(job.task, triage_tags=tags)
             self.tasks.acquire(job.task, "factory")
             workflow = GitWorkflow(self.config.repository, self.config.base_branch)
             job.branch = workflow.prepare_worktree(worktree, job.task.identifier, job.task.title)
@@ -336,15 +240,15 @@ class FactoryPipeline:
                 self._verification_descriptions(worktree),
                 [],
             )
-            self._run_agent(job, worktree, "implementation", prompt)
+            self.conversations.run(job.task, worktree, prompt)
             if not workflow.has_changes():
                 raise FactoryError("Implementation produced no repository changes")
             job.state = JobState.SECURITY_REVIEW
             return
 
         if job.state is JobState.SECURITY_REVIEW:
-            self._run_agent(
-                job, worktree, "security", build_phase_prompt(prompt_dir, "security", job.task)
+            self.conversations.run(
+                job.task, worktree, build_phase_prompt(prompt_dir, "security", job.task)
             )
             job.state = JobState.VERIFYING
             return
@@ -377,10 +281,9 @@ class FactoryPipeline:
             )
             extra = f"Quality gate findings:\n\n{finding_text}"
 
-            self._run_agent(
-                job,
+            self.conversations.run(
+                job.task,
                 worktree,
-                "quality_repair",
                 build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
             )
 
@@ -418,8 +321,8 @@ class FactoryPipeline:
             # (re)write a valid report is reported as missing one, not judged against
             # someone else's stale output.
             (worktree / ".factory-review.json").unlink(missing_ok=True)
-            self._run_agent(
-                job, worktree, "review", build_phase_prompt(prompt_dir, "review", job.task)
+            self.conversations.run(
+                job.task, worktree, build_phase_prompt(prompt_dir, "review", job.task)
             )
             report = validate_review_report(worktree, job.task.body)
             if workflow.has_changes():
@@ -477,8 +380,8 @@ class FactoryPipeline:
         if job.state is JobState.REPAIRING:
             if job.repair_attempts >= 5:
                 raise FactoryError("Repair limit exceeded")
-            self._run_agent(
-                job, worktree, "repair", build_phase_prompt(prompt_dir, "repair", job.task)
+            self.conversations.run(
+                job.task, worktree, build_phase_prompt(prompt_dir, "repair", job.task)
             )
             if not workflow.has_changes():
                 raise FactoryError("Repair conversation produced no changes")
@@ -651,13 +554,7 @@ class FactoryPipeline:
             source="github-architect",
             priority=10,
         )
-        job = Job(task=task)
-        self._run_agent(
-            job,
-            worktree,
-            "architect",
-            build_phase_prompt(prompt_dir, "architect", task),
-        )
+        self.conversations.run(task, worktree, build_phase_prompt(prompt_dir, "architect", task))
         review_workflow = GitWorkflow(worktree, self.config.base_branch)
         proposals = load_architect_report(worktree)
         if proposals:
@@ -722,38 +619,3 @@ class FactoryPipeline:
 
     def _architect_state_path(self) -> Path:
         return self.config.state_dir / "architect_state.json"
-
-    def _triage_task(self, task: Task) -> frozenset[str]:
-        from openhands_factory.models import ProviderName
-
-        try:
-            from openhands.sdk import Message, TextContent
-
-            from openhands_factory.provider_profiles import build_llm
-
-            # Triage uses the configured OpenCode subscription and is optional.
-            llm = build_llm(self.config, provider=ProviderName.OPENCODE_GO, role="triage")
-
-            prompt = (
-                "Analyze this issue and tag it with ONE of: "
-                "[deep-refactor, ci-fix, terminal-task].\n\n"
-                f"Title: {task.title}\nBody: {task.body}\n\n"
-                "Reply with JUST the tag name and nothing else."
-            )
-
-            message = Message(role="user", content=[TextContent(text=prompt)])
-            response = llm.completion(messages=[message])
-
-            content = " ".join(
-                item.text
-                for item in response.message.content
-                if isinstance(item, TextContent)
-            )
-            if content:
-                tag = content.strip().lower()
-                for valid in ["deep-refactor", "ci-fix", "terminal-task"]:
-                    if valid in tag:
-                        return frozenset({valid})
-        except Exception as e:
-            LOGGER.warning("Triage failed for task %s: %s", task.identifier, e)
-        return frozenset()
