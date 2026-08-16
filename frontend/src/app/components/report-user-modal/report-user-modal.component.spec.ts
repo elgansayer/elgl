@@ -122,7 +122,7 @@ describe('ReportUserModalComponent', () => {
         expect(templateContent).not.toMatch(pattern);
       }
       expect(templateContent).toContain('bg-danger');
-      expect(templateContent).toContain('text-on-fill');
+      expect(templateContent).toContain('variant="destructive-solid"');
     });
   });
 
