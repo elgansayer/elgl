@@ -2,13 +2,29 @@ import { execFileSync } from 'node:child_process';
 import { basename } from 'node:path';
 
 const migrationPrefix = 'supabase/migrations/';
-const suppliedBase = process.env.MIGRATION_BASE_SHA?.trim();
-const unusableBase = !suppliedBase || /^0+$/.test(suppliedBase);
-const base = unusableBase ? 'HEAD^' : suppliedBase;
 
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8' }).trim();
 }
+
+function resolveBase() {
+  const suppliedBase = process.env.MIGRATION_BASE_SHA?.trim();
+  if (suppliedBase && !/^0+$/.test(suppliedBase)) return suppliedBase;
+
+  // Local/Factory verification should compare the whole feature branch, not
+  // merely HEAD^. Worktrees keep the repository's main ref available, so use
+  // the merge-base when possible. HEAD^ remains a defensive fallback for
+  // detached/minimal repositories without a main ref.
+  try {
+    const mergeBase = git(['merge-base', 'HEAD', 'main']);
+    if (mergeBase) return mergeBase;
+  } catch {
+    // Fall through to the historical single-commit fallback.
+  }
+  return 'HEAD^';
+}
+
+const base = resolveBase();
 
 function migrationId(path) {
   const file = basename(path);
