@@ -21,14 +21,14 @@ class ProviderConfig(BaseModel):
 
 
 class AgentsRoutingConfig(BaseModel):
-    planning: list[str] = Field(default_factory=lambda: ["openhands"])
-    architecture: list[str] = Field(default_factory=lambda: ["openhands"])
-    implementation: list[str] = Field(default_factory=lambda: ["openhands"])
-    security_review: list[str] = Field(default_factory=lambda: ["openhands"])
-    quality_repair: list[str] = Field(default_factory=lambda: ["openhands"])
-    code_review: list[str] = Field(default_factory=lambda: ["openhands"])
-    ci_repair: list[str] = Field(default_factory=lambda: ["openhands"])
-    general_action: list[str] = Field(default_factory=lambda: ["openhands"])
+    planning: list[str] = Field(default_factory=lambda: ["claude"])
+    architecture: list[str] = Field(default_factory=lambda: ["claude"])
+    implementation: list[str] = Field(default_factory=lambda: ["codex", "opencode"])
+    security_review: list[str] = Field(default_factory=lambda: ["google"])
+    quality_repair: list[str] = Field(default_factory=lambda: ["codex"])
+    code_review: list[str] = Field(default_factory=lambda: ["google"])
+    ci_repair: list[str] = Field(default_factory=lambda: ["codex"])
+    general_action: list[str] = Field(default_factory=lambda: ["claude", "openhands"])
     skip_busy_providers: bool = True
 
 
@@ -138,11 +138,6 @@ class FactoryConfig(BaseModel):
             raise ValueError(
                 f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
                 "the retired swarm/older architecture must not share this control plane"
-            )
-        if self.gemini_enabled:
-            raise ValueError(
-                "GEMINI_ENABLED is retired for production factory routing; use Codex "
-                "subscription OAuth with OpenCode Go fallback"
             )
         return self
 
