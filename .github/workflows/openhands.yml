@@ -47,8 +47,8 @@ jobs:
             CRITICAL: If GitHub rejects the merge because checks are still running, poll
             'gh pr checks <number> --watch' and retry. DO NOT FINISH until the PR is created.
 
-      # Auto-skip: claude-code-action exits 0 even on auth/quota errors.
-      # We check whether a PR was actually created for this issue instead.
+      # claude-code-action can exit 0 even on auth/quota errors. Verify the
+      # observable outcome instead of trusting the action exit status.
       - name: Check if Claude created a PR
         id: check_claude
         if: github.event.issue.number != ''
@@ -70,7 +70,7 @@ jobs:
             echo "Claude created a PR — skipping lower tiers."
           else
             echo "pr_exists=false" >> "$GITHUB_OUTPUT"
-            echo "Claude did NOT create a PR (token exhausted or error) — falling through to Tier 2."
+            echo "Claude did NOT create a PR — falling through to Tier 2."
           fi
 
       # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
@@ -95,10 +95,33 @@ jobs:
           openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
 
+      # OpenHands actions can also report success without the required PR. Check
+      # Tier 2's observable result before deciding whether Tier 3 is necessary.
+      - name: Check if DeepSeek created a PR
+        id: check_secondary
+        if: always() && steps.secondary.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          COUNT=$(gh pr list --repo "$REPOSITORY" \
+            --search "Fixes #${ISSUE} in:body" \
+            --state open --json number -q 'length' 2>/dev/null || echo "0")
+          echo "pr_count=$COUNT"
+          if [ "$COUNT" -gt 0 ]; then
+            echo "pr_exists=true" >> "$GITHUB_OUTPUT"
+            echo "DeepSeek created a PR — skipping Tier 3."
+          else
+            echo "pr_exists=false" >> "$GITHUB_OUTPUT"
+            echo "DeepSeek did NOT create a PR — falling through to Tier 3."
+          fi
+
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
         id: tertiary
-        if: steps.secondary.outcome == 'failure'
+        if: steps.secondary.outcome == 'failure' || steps.check_secondary.outputs.pr_exists == 'false'
+        continue-on-error: true
         uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04 # v1.0.1
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
@@ -114,3 +137,23 @@ jobs:
           cli_args: "--max-iterations 30"
           openhands_image: "ghcr.io/all-hands-ai/openhands:0.32"
           runtime_image: "ghcr.io/all-hands-ai/runtime:0.32-nikolaik"
+
+      - name: Verify resolver produced a PR or release the dispatch lock
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          COUNT=$(gh pr list --repo "$REPOSITORY" \
+            --search "Fixes #${ISSUE} in:body" \
+            --state open --json number -q 'length' 2>/dev/null || echo "0")
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "Resolver outcome verified: $COUNT open PR(s) reference issue #$ISSUE."
+            exit 0
+          fi
+
+          echo "No PR was created by any resolver tier. Releasing swarm-active so the issue can be retried."
+          gh issue edit "$ISSUE" --repo "$REPOSITORY" --remove-label "swarm-active" || true
+          exit 1
