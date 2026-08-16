@@ -83,6 +83,8 @@ class AgentRequest:
     task: Task
     prompt: str
     cwd: Path
+    timeout_seconds: int | None = None
+    max_output_bytes: int | None = None
 
 
 class AgentProvider(Protocol):
