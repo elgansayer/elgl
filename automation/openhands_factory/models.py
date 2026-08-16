@@ -72,6 +72,10 @@ class Job:
     quality_repairs: int = 0
     last_error: str | None = None
     next_attempt_at: datetime | None = None
+    failure_counts: dict[str, int] = field(default_factory=dict)
+    last_failure_kind: str | None = None
+    last_failure_fingerprint: str | None = None
+    repeated_failure_count: int = 0
     factory_generation: str = "unknown"
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
