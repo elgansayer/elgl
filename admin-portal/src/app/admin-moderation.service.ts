@@ -31,6 +31,7 @@ export class AdminModerationService {
     page: number,
     pageSize: number,
     status?: string,
+    reasonCategory?: string,
   ): Observable<AdminModerationReportList> {
     const token = this.login.accessToken();
     if (!token) {
@@ -41,7 +42,11 @@ export class AdminModerationService {
       .set('page', String(page))
       .set('pageSize', String(pageSize));
     const normalizedStatus = status?.trim();
+    const normalizedReasonCategory = reasonCategory?.trim();
     if (normalizedStatus) params = params.set('status', normalizedStatus);
+    if (normalizedReasonCategory) {
+      params = params.set('reasonCategory', normalizedReasonCategory);
+    }
 
     return from(this.login.apiBaseUrl()).pipe(
       switchMap((apiBaseUrl) =>

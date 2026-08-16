@@ -22,18 +22,27 @@ import {
       </p>
 
       <form class="filters" (ngSubmit)="load(true)">
-        <label for="moderation-status">Status</label>
-        <div class="filter-row">
+        <label>Status
           <input
-            id="moderation-status"
             name="status"
             [(ngModel)]="status"
             maxlength="40"
             placeholder="e.g. open"
             [disabled]="busy()"
           />
+        </label>
+        <label>Reason category
+          <input
+            name="reasonCategory"
+            [(ngModel)]="reasonCategory"
+            maxlength="80"
+            placeholder="e.g. harassment"
+            [disabled]="busy()"
+          />
+        </label>
+        <div class="filter-row">
           <button type="submit" [disabled]="busy()">Apply</button>
-          <button type="button" (click)="clearStatus()" [disabled]="busy()">Clear</button>
+          <button type="button" (click)="clearFilters()" [disabled]="busy()">Clear</button>
         </div>
       </form>
 
@@ -89,7 +98,7 @@ import {
           }
         </div>
       } @else if (loaded() && !busy() && !error()) {
-        <p>No moderation reports matched the current filter.</p>
+        <p>No moderation reports matched the current filters.</p>
       }
 
       @if (loaded() && total() > pageSize) {
@@ -102,9 +111,9 @@ import {
     </section>
   `,
   styles: [`
-    .filters { display: grid; gap: .5rem; max-width: 42rem; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .5rem; max-width: 56rem; align-items: end; }
+    .filters label { display: grid; gap: .35rem; }
     .filter-row { display: flex; flex-wrap: wrap; gap: .5rem; }
-    .filter-row input { flex: 1 1 16rem; min-width: 0; }
     .reports { display: grid; gap: 1rem; margin-top: 1rem; }
     .report-card { border: 1px solid currentColor; border-radius: .75rem; padding: 1rem; overflow-wrap: anywhere; }
     .report-card h3 { margin: 0; }
@@ -115,13 +124,13 @@ import {
     .description { border-block-start: 1px solid currentColor; padding-block-start: .75rem; }
     .description h4 { margin-block: 0 .4rem; }
     .pagination { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-top: 1rem; }
-    @media (max-width: 36rem) { .filter-row { flex-direction: column; } }
   `],
 })
 export class ModerationPageComponent {
   private readonly moderation = inject(AdminModerationService);
   readonly pageSize = 20;
   status = '';
+  reasonCategory = '';
   readonly reports = signal<AdminModerationReport[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -139,7 +148,12 @@ export class ModerationPageComponent {
     this.error.set(null);
     try {
       const result = await firstValueFrom(
-        this.moderation.listReports(this.page(), this.pageSize, this.status),
+        this.moderation.listReports(
+          this.page(),
+          this.pageSize,
+          this.status,
+          this.reasonCategory,
+        ),
       );
       this.reports.set(result.reports);
       this.total.set(result.total);
@@ -157,8 +171,9 @@ export class ModerationPageComponent {
     }
   }
 
-  clearStatus(): void {
+  clearFilters(): void {
     this.status = '';
+    this.reasonCategory = '';
     void this.load(true);
   }
 

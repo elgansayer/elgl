@@ -23,6 +23,7 @@ import {
 } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
+import { AdminModerationQueryService } from './admin-moderation-query.service';
 import {
   AdminRoleInventoryEntry,
   AdminRoleInventoryService,
@@ -61,6 +62,7 @@ export class AdminV1Controller {
     private readonly userDetailService: AdminUserDetailService,
     private readonly audit: AdminAuditService,
     private readonly auditQuery: AdminAuditQueryService,
+    private readonly moderationQuery: AdminModerationQueryService,
     private readonly systemHealth: AdminSystemHealthService,
     private readonly roleInventory: AdminRoleInventoryService,
   ) {}
@@ -132,17 +134,13 @@ export class AdminV1Controller {
   @ApiOperation({
     summary: 'List bounded moderation reports for triage',
     description:
-      'Returns newest-first report summaries through the dedicated admin API. This read-only queue requires moderation.cases.read and supports an exact status filter.',
+      'Returns newest-first report summaries through the dedicated admin API. This read-only queue requires moderation.cases.read and supports exact status and reason-category filters.',
   })
   @ApiOkResponse({ description: 'Paginated moderation reports' })
   listModerationReports(
     @Query() query: AdminReportsQueryDto,
   ): Promise<AdminReportsListResult> {
-    return this.adminService.listReports(
-      query.page,
-      query.pageSize,
-      query.status,
-    );
+    return this.moderationQuery.list(query);
   }
 
   @Get('users')
