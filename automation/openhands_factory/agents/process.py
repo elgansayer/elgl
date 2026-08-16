@@ -20,11 +20,17 @@ from openhands_factory.sandbox import SandboxRunner
 
 DEFAULT_AGENT_TIMEOUT_SECONDS = 30 * 60
 DEFAULT_MAX_OUTPUT_BYTES = 1_000_000
+MAX_RETRY_AFTER_SECONDS = 7 * 24 * 3600
 
 _SECRET_PATTERNS = (
     re.compile(r"(?i)(authorization:\s*bearer\s+)[^\s]+"),
     re.compile(r"(?i)((?:api[_-]?key|access[_-]?token|refresh[_-]?token|secret)\s*[=:]\s*)[^\s]+"),
     re.compile(r"\b(?:sk|ghp|github_pat|xox[baprs])-[-A-Za-z0-9_]{16,}\b"),
+)
+_RETRY_AFTER_PATTERNS = (
+    re.compile(r"(?i)retry[- ]after\s*[:=]?\s*(\d+)\s*(?:s|seconds?)?"),
+    re.compile(r"(?i)resets?[_ -]in[_ -]seconds\s*[\":= ]+\s*(\d+)"),
+    re.compile(r"(?i)try again in\s+(\d+)\s*(?:s|seconds?)"),
 )
 
 
@@ -36,6 +42,16 @@ def redact_agent_output(text: str) -> str:
         else:
             redacted = pattern.sub("[REDACTED]", redacted)
     return redacted
+
+
+def extract_retry_after_seconds(output: str) -> int | None:
+    """Extract bounded provider reset hints without trusting arbitrary durations."""
+    for pattern in _RETRY_AFTER_PATTERNS:
+        match = pattern.search(output)
+        if match is None:
+            continue
+        return min(max(int(match.group(1)), 1), MAX_RETRY_AFTER_SECONDS)
+    return None
 
 
 def passive_cli_health(provider: str) -> ProviderHealth:
@@ -88,6 +104,8 @@ def classify_cli_failure(output: str, exit_code: int, *, timed_out: bool) -> Age
             "too many requests",
             "http 429",
             "status 429",
+            "resets_in_seconds",
+            "retry-after",
         )
     ):
         return AgentFailureKind.PROVIDER_RATE_LIMIT
@@ -141,6 +159,11 @@ def run_cli_provider(
                     f"{output[:500]}"
                 ),
                 exit_code=process.exit_code,
+                retry_after_seconds=(
+                    extract_retry_after_seconds(output)
+                    if kind is AgentFailureKind.PROVIDER_RATE_LIMIT
+                    else None
+                ),
             )
         return AgentResult(
             provider=provider,
