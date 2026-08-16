@@ -29,6 +29,7 @@ class MetricsStore:
         fallback: bool = False,
         rate_limited: bool = False,
         authentication_failure: bool = False,
+        capacity_wait_seconds: float = 0,
         estimated_cost_usd: float | None = None,
     ) -> None:
         key = self._key(provider, model)
@@ -39,6 +40,8 @@ class MetricsStore:
         usage.fallbacks += int(fallback)
         usage.rate_limits += int(rate_limited)
         usage.authentication_failures += int(authentication_failure)
+        usage.capacity_wait_seconds += max(capacity_wait_seconds, 0)
+        usage.capacity_waited_calls += int(capacity_wait_seconds > 0.01)
         if estimated_cost_usd is None:
             usage.unknown_cost_calls += 1
         else:
@@ -71,6 +74,8 @@ class MetricsStore:
                 fallbacks=int(item.get("fallbacks", 0)),
                 rate_limits=int(item.get("rate_limits", 0)),
                 authentication_failures=int(item.get("authentication_failures", 0)),
+                capacity_wait_seconds=float(item.get("capacity_wait_seconds", 0)),
+                capacity_waited_calls=int(item.get("capacity_waited_calls", 0)),
                 estimated_cost_usd=float(item.get("estimated_cost_usd", 0)),
                 unknown_cost_calls=int(item.get("unknown_cost_calls", 0)),
             )
