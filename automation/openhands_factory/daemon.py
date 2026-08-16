@@ -14,6 +14,12 @@ from threading import Semaphore
 from filelock import FileLock, Timeout
 
 from openhands_factory.config import FactoryConfig
+from openhands_factory.generation import (
+    FACTORY_RUNTIME_VERSION,
+    FactoryGeneration,
+    activate_generation,
+    assert_generation_current,
+)
 from openhands_factory.models import Job
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.state import atomic_write_json, read_json
@@ -80,6 +86,7 @@ class FactoryDaemon:
     def __init__(self, config: FactoryConfig) -> None:
         self.config = config
         self.stopping = False
+        self.generation: FactoryGeneration | None = None
         self.tasks = TaskStore(config.state_dir)
         self.pipeline = FactoryPipeline(config)
         self.verification_slots = Semaphore(1)
@@ -94,19 +101,36 @@ class FactoryDaemon:
     def paused(self) -> bool:
         return bool(read_json(self.control_path, {"paused": False}).get("paused", False))
 
+    def _activate_generation(self) -> None:
+        generation = FactoryGeneration.create()
+        activate_generation(self.config.state_dir, generation)
+        self.generation = generation
+        self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
+        self.tasks = TaskStore(self.config.state_dir)
+        self.pipeline = FactoryPipeline(self.config)
+        LOGGER.info(
+            "Activated Factory generation %s runtime=%s",
+            generation.identifier,
+            FACTORY_RUNTIME_VERSION,
+        )
+
+    def _assert_owner(self) -> None:
+        if self.generation is None:
+            raise RuntimeError("Factory generation was not activated")
+        assert_generation_current(self.config.state_dir, self.generation)
+
     def run(self) -> int:
         signal.signal(signal.SIGTERM, self.request_stop)
         signal.signal(signal.SIGINT, self.request_stop)
         lock = FileLock(str(self.config.state_dir / "factory.lock"))
         try:
             with lock.acquire(timeout=0):
+                self._activate_generation()
                 return self._loop()
         except Timeout:
             LOGGER.error("Another factory daemon owns the repository lock")
             return 2
         except Exception:
-            # Do not page here. systemd is responsible for automatic restart and the
-            # separate watchdog only pages after repeated restart attempts fail.
             LOGGER.exception("Factory daemon reached an ultimate failure")
             return 1
 
@@ -122,6 +146,7 @@ class FactoryDaemon:
             ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-architect") as architect,
         ):
             while not self.stopping:
+                self._assert_owner()
                 for future, task_id in list(active.items()):
                     if not future.done():
                         continue
@@ -143,6 +168,7 @@ class FactoryDaemon:
                     else:
                         jobs = self.pipeline.jobs.load()
                     for job in select_batch(jobs, capacity, active_task_ids):
+                        self._assert_owner()
                         worker = FactoryPipeline(
                             self.config,
                             verification_slots=self.verification_slots,
@@ -157,6 +183,7 @@ class FactoryDaemon:
                         except Exception:
                             LOGGER.exception("Architect cycle crashed")
                     if self.pipeline.architect_due():
+                        self._assert_owner()
                         LOGGER.info("Scheduling weekly architect cycle")
                         architect_worker = FactoryPipeline(self.config)
                         architect_future = architect.submit(architect_worker.run_architect_cycle)
@@ -166,13 +193,22 @@ class FactoryDaemon:
         return 0
 
     def _write_daemon_state(self, status: str, active: dict[Future[Job | None], str]) -> None:
+        self._assert_owner()
         active_task_ids = set(active.values())
         jobs = self.pipeline.jobs.load()
+        generation = self.generation
+        if generation is None:
+            raise RuntimeError("Factory generation was not activated")
         atomic_write_json(
             self.config.state_dir / "daemon.json",
             {
                 "status": status,
                 "updated_at": datetime.now(UTC).isoformat(),
+                "generation": generation.identifier,
+                "runtime_version": generation.runtime_version,
+                "schema_version": generation.schema_version,
+                "pid": generation.pid,
+                "hostname": generation.hostname,
                 "active_jobs": sorted(active_task_ids, key=int),
                 "queue": queue_snapshot(jobs, active_task_ids),
             },

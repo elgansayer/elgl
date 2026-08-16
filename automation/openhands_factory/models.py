@@ -69,6 +69,7 @@ class Job:
     quality_repairs: int = 0
     last_error: str | None = None
     next_attempt_at: datetime | None = None
+    factory_generation: str = "unknown"
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -94,3 +95,4 @@ class Lease:
     owner: str
     acquired_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime | None = None
+    factory_generation: str = "unknown"
