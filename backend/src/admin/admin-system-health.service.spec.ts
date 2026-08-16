@@ -78,7 +78,9 @@ describe('AdminSystemHealthService', () => {
     try {
       const limit = vi.fn().mockResolvedValue({ data: [], error: null });
       const select = vi.fn().mockReturnValue({ limit });
-      const operationalEvents = { record: vi.fn().mockResolvedValue(undefined) };
+      const operationalEvents = {
+        record: vi.fn().mockResolvedValue(undefined),
+      };
       const service = new AdminSystemHealthService(
         {
           getClient: vi.fn().mockReturnValue({
