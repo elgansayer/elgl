@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Iterator
 
 from filelock import FileLock
 
