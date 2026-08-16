@@ -94,3 +94,33 @@ jobs:
         working-directory: automation
       - run: pytest
         working-directory: automation
+
+  required-gate:
+    name: CI / required
+    if: always()
+    needs: [application-checks, constitution, factory]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every canonical CI group to pass
+        env:
+          APPLICATION_CHECKS_RESULT: ${{ needs.application-checks.result }}
+          CONSTITUTION_RESULT: ${{ needs.constitution.result }}
+          FACTORY_RESULT: ${{ needs.factory.result }}
+        run: |
+          failed=0
+          for result in "$APPLICATION_CHECKS_RESULT" "$CONSTITUTION_RESULT" "$FACTORY_RESULT"; do
+            if [ "$result" != "success" ]; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "Canonical CI did not fully pass."
+            echo "application-checks=$APPLICATION_CHECKS_RESULT"
+            echo "constitution=$CONSTITUTION_RESULT"
+            echo "factory=$FACTORY_RESULT"
+            exit 1
+          fi
+
+          echo "All canonical CI groups passed."
