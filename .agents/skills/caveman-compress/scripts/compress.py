@@ -32,7 +32,7 @@ def split_frontmatter(text: str):
 
     Memory files (and many other markdown docs) start with a YAML frontmatter
     block delimited by `---` lines. The compression LLM has a habit of stripping
-    or rewriting these despite preserve-structure rules in the prompt — so we
+    or rewriting these despite preserve-structure rules in the prompt - so we
     surgically remove the frontmatter before compression and prepend it back
     verbatim to the output. Files without frontmatter pass through unchanged.
     """
@@ -42,7 +42,7 @@ def split_frontmatter(text: str):
     return "", text
 
 # Filenames and paths that almost certainly hold secrets or PII. Compressing
-# them ships raw bytes to the Anthropic API — a third-party data boundary that
+# them ships raw bytes to the Anthropic API - a third-party data boundary that
 # developers on sensitive codebases cannot cross. detect.py already skips .env
 # by extension, but credentials.md / secrets.txt / ~/.aws/credentials would
 # slip through the natural-language filter. This is a hard refuse before read.
@@ -116,7 +116,7 @@ def strip_llm_wrapper(text: str) -> str:
 def write_text_atomic(path: Path, text: str) -> None:
     """Write ``text`` to ``path`` atomically as UTF-8.
 
-    Path.write_text() truncates the destination before encoding the string —
+    Path.write_text() truncates the destination before encoding the string -
     a UnicodeEncodeError (or any other failure) partway through leaves a
     0-byte file, destroying whatever was there before (issue #655). Encode
     first, write the bytes to a sibling temp file, fsync, then os.replace()
@@ -145,7 +145,7 @@ def write_text_atomic(path: Path, text: str) -> None:
 
 
 def first_nonblank_line(text: str) -> str:
-    """Return the first non-blank line, stripped — used to detect a prose
+    """Return the first non-blank line, stripped - used to detect a prose
     preamble smuggled in ahead of the real content (issue #588)."""
     for line in text.splitlines():
         if line.strip():
@@ -181,7 +181,7 @@ def call_claude(prompt: str) -> str:
     back to the ``claude --print`` CLI (which handles desktop auth).
 
     On Windows the CLI subprocess decoding defaults to the system codepage
-    (cp1251 / cp1252) and crashes on UTF-8 output — see issue #152. Pinning
+    (cp1251 / cp1252) and crashes on UTF-8 output - see issue #152. Pinning
     ``encoding="utf-8"`` with ``errors="replace"`` matches the CLI's actual
     native I/O and prevents the UnicodeDecodeError before validation can
     report. Windows users with non-ASCII content can also set
@@ -233,7 +233,7 @@ STRICT RULES:
 - Preserve ALL URLs exactly
 - Preserve ALL headings exactly
 - Preserve file paths and commands
-- Return ONLY the compressed markdown body — do NOT wrap the entire output in a ```markdown fence or any other fence. Inner code blocks from the original stay as-is; do not add a new outer fence around the whole file.
+- Return ONLY the compressed markdown body - do NOT wrap the entire output in a ```markdown fence or any other fence. Inner code blocks from the original stay as-is; do not add a new outer fence around the whole file.
 
 Only compress natural language.
 
@@ -248,7 +248,7 @@ def build_fix_prompt(original: str, compressed: str, errors: List[str]) -> str:
 
 CRITICAL RULES:
 - DO NOT recompress or rephrase the file
-- ONLY fix the listed errors — leave everything else exactly as-is
+- ONLY fix the listed errors - leave everything else exactly as-is
 - The ORIGINAL is provided as reference only (to restore missing content)
 - Preserve caveman style in all untouched sections
 
@@ -284,7 +284,7 @@ def compress_file(filepath: Path) -> bool:
         raise ValueError(f"File too large to compress safely (max 500KB): {filepath}")
 
     # Refuse files that look like they contain secrets or PII. Compressing ships
-    # the raw bytes to the Anthropic API — a third-party boundary — so we fail
+    # the raw bytes to the Anthropic API - a third-party boundary - so we fail
     # loudly rather than silently exfiltrate credentials or keys. Override is
     # intentional: the user must rename the file if the heuristic is wrong.
     if is_sensitive_path(filepath):
@@ -324,7 +324,7 @@ def compress_file(filepath: Path) -> bool:
     # by removing it from the input and re-prepending it to the output.
     frontmatter, body = split_frontmatter(original_text)
     if frontmatter:
-        print(f"Detected YAML frontmatter ({len(frontmatter)} chars) — preserving verbatim")
+        print(f"Detected YAML frontmatter ({len(frontmatter)} chars) - preserving verbatim")
 
     if not body.strip():
         print("❌ Refusing to compress: body is empty after frontmatter removal.")
@@ -339,7 +339,7 @@ def compress_file(filepath: Path) -> bool:
         print("   Original file is untouched (no backup created).")
         return False
 
-    # Compare the BODY (not the whole file) — frontmatter is preserved verbatim
+    # Compare the BODY (not the whole file) - frontmatter is preserved verbatim
     # and would never change, so identity must be judged on the compressible part.
     if compressed_body.strip() == body.strip():
         print("❌ Compression aborted: output is identical to input.")
@@ -385,7 +385,7 @@ def compress_file(filepath: Path) -> bool:
             # Restore original on failure
             _write_target(filepath, original_text, backup_path)
             backup_path.unlink(missing_ok=True)
-            print("❌ Failed after retries — original restored")
+            print("❌ Failed after retries - original restored")
             return False
 
         print("Fixing with Claude...")
@@ -400,7 +400,7 @@ def compress_file(filepath: Path) -> bool:
 
         # Guard against a prose preamble smuggled in ahead of the real fixed
         # content (issue #588). Only enforced when the original starts with a
-        # structural anchor (frontmatter `---` or a heading) — plain-prose
+        # structural anchor (frontmatter `---` or a heading) - plain-prose
         # first lines get legitimately rewritten by compression, and requiring
         # them verbatim would reject every valid fix.
         anchor = first_nonblank_line(original_text)
