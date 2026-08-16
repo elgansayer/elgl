@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -35,6 +35,8 @@ const MAX_METADATA_STRING_LENGTH = 128;
 
 @Injectable()
 export class AdminAuditService {
+  private readonly logger = new Logger(AdminAuditService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async record(input: AdminAuditEventInput): Promise<void> {
@@ -64,6 +66,17 @@ export class AdminAuditService {
     });
 
     if (error) {
+      this.logger.error(
+        JSON.stringify({
+          event: 'admin_audit_persistence_failed',
+          action: input.action,
+          capabilityKey: input.capabilityKey ?? null,
+          outcome: input.outcome,
+          correlationId,
+          errorType:
+            error instanceof Error ? error.name : 'AuditPersistenceError',
+        }),
+      );
       throw error;
     }
   }
