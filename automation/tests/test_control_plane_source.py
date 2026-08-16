@@ -1,14 +1,10 @@
-from __future__ import annotations
-
-from pathlib import Path
-
-
-REPOSITORY = Path(__file__).parents[2]
-PIPELINE = REPOSITORY / "automation" / "openhands_factory" / "pipeline.py"
+def read_source(path: str) -> str:
+    with open(path, encoding="utf-8") as source_file:
+        return source_file.read()
 
 
 def test_factory_pipeline_uses_openhands_conversation_boundary() -> None:
-    source = PIPELINE.read_text(encoding="utf-8")
+    source = read_source("openhands_factory/pipeline.py")
 
     assert "ConversationRunner" in source
     assert "self.conversations.run(" in source
@@ -20,9 +16,7 @@ def test_factory_pipeline_uses_openhands_conversation_boundary() -> None:
 
 
 def test_provider_fallback_stays_inside_conversation_runner() -> None:
-    source = (
-        REPOSITORY / "automation" / "openhands_factory" / "conversation_runner.py"
-    ).read_text(encoding="utf-8")
+    source = read_source("openhands_factory/conversation_runner.py")
 
     assert "select_provider_decision" in source
     assert "ProviderName.OPENAI_SUBSCRIPTION" in source
