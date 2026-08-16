@@ -1,7 +1,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-from openhands_factory.daemon import select_batch
+from openhands_factory.daemon import queue_snapshot, select_batch
 from openhands_factory.models import Job, JobState, Task
 
 
@@ -50,3 +50,31 @@ def test_select_batch_skips_jobs_still_backing_off() -> None:
     selected = select_batch(jobs, 5, now=now)
 
     assert [item.task.identifier for item in selected] == ["11"]
+
+
+def test_queue_snapshot_separates_runnable_backoff_active_and_terminal_jobs() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+    jobs = {
+        "10": job("10", 0, JobState.IMPLEMENTING),
+        "11": job("11", 0, JobState.DISCOVERED),
+        "12": replace(
+            job("12", 0, JobState.IMPLEMENTING), next_attempt_at=now + timedelta(minutes=5)
+        ),
+        "13": job("13", 0, JobState.DONE),
+        "14": job("14", 0, JobState.QUARANTINED),
+    }
+
+    snapshot = queue_snapshot(jobs, {"10"}, now=now)
+
+    assert snapshot == {
+        "total_jobs": 5,
+        "active_count": 1,
+        "runnable_count": 1,
+        "backing_off_count": 1,
+        "by_state": {
+            "discovered": 1,
+            "done": 1,
+            "implementing": 2,
+            "quarantined": 1,
+        },
+    }
