@@ -4,12 +4,21 @@ import { AdminOperationalEventsService } from './admin-operational-events.servic
 
 export type AdminHealthState = 'healthy' | 'degraded';
 
+interface DependencyHealthCheck {
+  state: AdminHealthState;
+  latencyMs: number;
+}
+
 export interface AdminSystemHealthSnapshot {
   state: AdminHealthState;
   checkedAt: string;
   dependencies: {
     database: AdminHealthState;
     redis: AdminHealthState;
+  };
+  dependencyLatencyMs: {
+    database: number;
+    redis: number;
   };
 }
 
@@ -21,16 +30,22 @@ export class AdminSystemHealthService {
   ) {}
 
   async getSnapshot(): Promise<AdminSystemHealthSnapshot> {
-    const [database, redis] = await Promise.all([
+    const [databaseCheck, redisCheck] = await Promise.all([
       this.checkDatabase(),
       this.checkRedis(),
     ]);
+    const database = databaseCheck.state;
+    const redis = redisCheck.state;
     const state =
       database === 'healthy' && redis === 'healthy' ? 'healthy' : 'degraded';
     const snapshot = {
       state,
       checkedAt: new Date().toISOString(),
       dependencies: { database, redis },
+      dependencyLatencyMs: {
+        database: databaseCheck.latencyMs,
+        redis: redisCheck.latencyMs,
+      },
     } satisfies AdminSystemHealthSnapshot;
 
     if (state === 'degraded') {
@@ -50,25 +65,39 @@ export class AdminSystemHealthService {
     return snapshot;
   }
 
-  private async checkDatabase(): Promise<AdminHealthState> {
+  private async checkDatabase(): Promise<DependencyHealthCheck> {
+    const startedAt = Date.now();
     try {
       const { error } = await this.supabaseService
         .getClient()
         .from('admin_roles')
         .select('id')
         .limit(1);
-      return error ? 'degraded' : 'healthy';
+      return {
+        state: error ? 'degraded' : 'healthy',
+        latencyMs: Math.max(0, Date.now() - startedAt),
+      };
     } catch {
-      return 'degraded';
+      return {
+        state: 'degraded',
+        latencyMs: Math.max(0, Date.now() - startedAt),
+      };
     }
   }
 
-  private async checkRedis(): Promise<AdminHealthState> {
+  private async checkRedis(): Promise<DependencyHealthCheck> {
+    const startedAt = Date.now();
     try {
       const response = await this.supabaseService.getRedisClient().ping();
-      return response === 'PONG' ? 'healthy' : 'degraded';
+      return {
+        state: response === 'PONG' ? 'healthy' : 'degraded',
+        latencyMs: Math.max(0, Date.now() - startedAt),
+      };
     } catch {
-      return 'degraded';
+      return {
+        state: 'degraded',
+        latencyMs: Math.max(0, Date.now() - startedAt),
+      };
     }
   }
 }
