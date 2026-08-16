@@ -20,6 +20,7 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "-- cypress install" in setup
     assert "merge --ff-only origin/main" in setup
     assert "hellotalk-factory@users.noreply.github.com" in setup
+    assert "hellotalk-factory-watchdog.sh" in setup
 
 
 def test_explicit_agent_workflows_are_present() -> None:
@@ -49,29 +50,35 @@ def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> 
     assert "TasksMax=1024" in unit
 
 
-def test_health_service_can_probe_rootless_podman_with_its_own_parent_cap() -> None:
+def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
     unit = (
         Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-health.service"
     ).read_text(encoding="utf-8")
+    timer = (
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-health.timer"
+    ).read_text(encoding="utf-8")
+    watchdog = (
+        Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-watchdog.sh"
+    ).read_text(encoding="utf-8")
 
-    assert "NoNewPrivileges=true" not in unit
-    assert "Delegate=yes" in unit
-    assert "ProtectControlGroups=false" in unit
-    assert "MemoryMax=512M" in unit
-    assert "TasksMax=128" in unit
+    assert "User=hellotalk-factory" not in unit
+    assert "ExecStart=/bin/bash /opt/hellotalk-factory/hellotalk-factory-watchdog.sh" in unit
+    assert "Delegate=yes" not in unit
+    assert "OnUnitActiveSec=2min" in timer
+    assert 'systemctl restart "$SERVICE"' in watchdog
+    assert 'for attempt in 1 2 3' in watchdog
+    assert 'alert-daemon-failed' in watchdog
+    assert 'jobs-quarantined' not in watchdog
+    assert 'jobs-stalled' not in watchdog
     for directive in (
         "PrivateTmp=true",
-        "PrivateDevices=false",
-        "ProtectSystem=full",
         "ProtectHome=true",
-        "ProtectKernelTunables=false",
         "ProtectKernelModules=true",
         "ProtectKernelLogs=true",
         "ProtectClock=true",
         "LockPersonality=true",
         "RestrictRealtime=true",
         "SystemCallArchitectures=native",
-        "LimitNOFILE=4096",
     ):
         assert directive in unit
 

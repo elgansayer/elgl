@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from openhands_factory.alerts import AlertService
 from openhands_factory.config import FactoryConfig
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import JobState
@@ -85,11 +84,6 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                     cgroups="no-conmon",
                 ),
             ]
-            # This fallback needs no systemd user session (cgroup_manager=cgroupfs and
-            # userns=host both sidestep it), which is also the thing intermittently
-            # failing with "Failed to obtain podman configuration" on the primary
-            # attempt - so leave XDG_RUNTIME_DIR out here rather than retry the same
-            # flaky lookup.
             result = subprocess.run(
                 fallback_arguments,
                 capture_output=True,
@@ -194,38 +188,27 @@ def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> lis
         Check(
             "jobs-quarantined",
             True,
-            "none" if not quarantined else f"ALERT: issues={','.join(quarantined)}",
+            "none" if not quarantined else f"retrying legacy state: issues={','.join(quarantined)}",
             bool(quarantined),
         ),
         Check(
             "jobs-stalled",
             True,
-            "none" if not stalled else f"ALERT: issues={','.join(stalled)}",
+            "none" if not stalled else f"retry/recovery pending: issues={','.join(stalled)}",
             bool(stalled),
         ),
     ]
 
 
 def leaked_port_environment_check() -> Check:
-    """Warn if PORT is set in the daemon's own environment.
-
-    Not read by the factory itself, but every subprocess it spawns inherits it -
-    including `npm start` during frontend-e2e verification, whose Vite-based dev
-    server treats PORT as an override and silently stops binding 127.0.0.1:4200 (the
-    fixed port every e2e spec and the exclusive-verification-slot logic assume). This
-    previously reached production as a stray, untracked line in
-    /etc/hellotalk-factory/factory.env with no code path enforcing it never comes
-    back; this check is that enforcement.
-    """
     port = os.environ.get("PORT")
     if port is None:
         return Check("leaked-port-env", True, "PORT is not set")
     return Check(
         "leaked-port-env",
         False,
-        f"PORT={port} is set in the daemon's environment and will leak into every "
-        "subprocess, including the frontend-e2e dev server - remove it from "
-        "factory.env",
+        f"PORT={port} is set in the daemon's environment and will leak into every subprocess, "
+        "including the frontend-e2e dev server - remove it from factory.env",
     )
 
 
@@ -246,19 +229,23 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
         return Check(
             "no-pr-progress",
             True,
-            f"ALERT: no pull request yet; active_jobs={len(active_jobs)}",
+            f"no pull request yet; active_jobs={len(active_jobs)}",
             True,
         )
     latest = max(job.updated_at for job in pull_request_jobs)
     age_hours = max((current - latest).total_seconds(), 0) / 3600
     detail = f"last pull request progress={age_hours:.1f}h ago; active_jobs={len(active_jobs)}"
     warning = age_hours > config.max_no_pr_hours
-    if warning:
-        detail = f"ALERT: {detail}"
     return Check("no-pr-progress", True, detail, warning)
 
 
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
+    """Return diagnostics only. Doctor never pages operators.
+
+    Job stalls, retries, quarantine migrations, provider failures and lack of PR
+    progress are self-healing operational conditions. Telegram paging is reserved
+    for the systemd watchdog after it has tried and failed to recover the daemon.
+    """
     checks: list[Check] = []
     checks.append(
         Check("repository", (config.repository / ".git").exists(), str(config.repository))
@@ -301,18 +288,8 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
         checks.append(Check(f"script:{script.name}", script.is_file(), str(script)))
     checks.append(leaked_port_environment_check())
     checks.append(daemon_health_check(config))
-    job_checks = job_health_checks(config)
-    checks.extend(job_checks)
-    for check in job_checks:
-        if check.detail.startswith("ALERT:"):
-            AlertService(config).send(f"OpenHands factory alert: {check.name}: {check.detail}")
-    progress = no_pr_progress_check(config)
-    checks.append(progress)
-    if progress.name == "no-pr-progress" and progress.detail.startswith("ALERT:"):
-        AlertService(config).send(
-            f"OpenHands factory alert: {progress.detail}. "
-            f"No pull request progress for {config.max_no_pr_hours:g} hours."
-        )
+    checks.extend(job_health_checks(config))
+    checks.append(no_pr_progress_check(config))
     if online:
         from openhands_factory.provider_profiles import validate_gemini, validate_opencode
 

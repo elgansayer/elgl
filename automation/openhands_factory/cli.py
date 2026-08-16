@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 
+from openhands_factory.alerts import AlertService
 from openhands_factory.authentication import authenticate_openai
 from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import FactoryDaemon, set_paused
@@ -40,6 +41,7 @@ def parser() -> argparse.ArgumentParser:
     subcommands.add_parser("resume")
     subcommands.add_parser("metrics")
     subcommands.add_parser("reconcile")
+    subcommands.add_parser("alert-daemon-failed")
     backlog = subcommands.add_parser("backlog")
     backlog.add_argument("action", choices=("requeue-quarantined",))
     return result
@@ -109,6 +111,12 @@ def main(arguments: list[str] | None = None) -> int:
             expired = TaskStore(config.state_dir).prune_expired_leases()
             print(json.dumps({"expired_leases_released": expired}, indent=2))
             return 0
+        if args.command == "alert-daemon-failed":
+            sent = AlertService(config).send(
+                "OpenHands factory daemon is down and automatic restart failed.",
+                category="daemon-restart-failed",
+            )
+            return 0 if sent or config.telegram_bot_token is None else 1
         if args.command == "backlog":
             github = GitHubClient(
                 config.github_repository,

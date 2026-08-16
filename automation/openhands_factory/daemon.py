@@ -12,7 +12,6 @@ from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
-from openhands_factory.alerts import AlertService
 from openhands_factory.config import FactoryConfig
 from openhands_factory.models import Job
 from openhands_factory.pipeline import FactoryPipeline
@@ -46,7 +45,6 @@ class FactoryDaemon:
         self.config = config
         self.stopping = False
         self.tasks = TaskStore(config.state_dir)
-        self.alerts = AlertService(config)
         self.pipeline = FactoryPipeline(config)
         self.verification_slots = Semaphore(1)
 
@@ -70,9 +68,10 @@ class FactoryDaemon:
         except Timeout:
             LOGGER.error("Another factory daemon owns the repository lock")
             return 2
-        except Exception as error:
+        except Exception:
+            # Do not page here. systemd is responsible for automatic restart and the
+            # separate watchdog only pages after repeated restart attempts fail.
             LOGGER.exception("Factory daemon reached an ultimate failure")
-            self.alerts.send(f"OpenHands factory ultimate failure: daemon stopped: {error}")
             return 1
 
     def _loop(self) -> int:
