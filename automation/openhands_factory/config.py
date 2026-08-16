@@ -8,6 +8,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, SecretStr, field_validator, model_validator
 
+from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.exceptions import ConfigurationError
 
 
@@ -19,6 +20,10 @@ class FactoryConfig(BaseModel):
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
+    # Static architecture identity. This is deliberately separate from
+    # factory_generation, which generation.py replaces with a unique per-daemon
+    # ownership UUID after the host-level lock is acquired.
+    factory_architecture: str = EXPECTED_FACTORY_ARCHITECTURE
     factory_generation: str = "unknown"
     openai_model: str = "gpt-5.2-codex"
     openai_max_concurrent_conversations: int = 2
@@ -27,6 +32,9 @@ class FactoryConfig(BaseModel):
     opencode_model: str
     opencode_profile_name: str = "opencode-go"
     opencode_max_concurrent_conversations: int = 3
+    # Legacy fields remain loadable so old environment files fail with a precise
+    # migration error instead of becoming unparsable. Gemini is not a production
+    # execution tier in the Agent Canvas factory.
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.6-flash"
     gemini_profile_name: str = "gemini-flash"
@@ -99,10 +107,16 @@ class FactoryConfig(BaseModel):
             raise ValueError("budgets cannot be negative")
         if self.minimum_free_disk_gib < 1:
             raise ValueError("minimum free disk reserve must be at least 1 GiB")
-        if self.gemini_enabled and self.gemini_api_key is None:
-            raise ValueError("GEMINI_API_KEY is required when Gemini is enabled")
-        if self.gemini_free_tier_only and self.monthly_variable_budget_usd != 0:
-            raise ValueError("free-tier-only Gemini requires a zero variable budget")
+        if self.factory_architecture != EXPECTED_FACTORY_ARCHITECTURE:
+            raise ValueError(
+                f"FACTORY_ARCHITECTURE must be {EXPECTED_FACTORY_ARCHITECTURE!r}; "
+                "the retired swarm/older architecture must not share this control plane"
+            )
+        if self.gemini_enabled:
+            raise ValueError(
+                "GEMINI_ENABLED is retired for production factory routing; use Codex "
+                "subscription OAuth with OpenCode Go fallback"
+            )
         return self
 
     @classmethod
@@ -134,6 +148,9 @@ class FactoryConfig(BaseModel):
                 ),
                 recovery_dir=Path(
                     env.get("FACTORY_RECOVERY_DIR", cls.model_fields["recovery_dir"].default)
+                ),
+                factory_architecture=env.get(
+                    "FACTORY_ARCHITECTURE", EXPECTED_FACTORY_ARCHITECTURE
                 ),
                 factory_generation=env.get("FACTORY_GENERATION", "unknown"),
                 openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.2-codex"),
