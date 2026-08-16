@@ -3,7 +3,7 @@
   <button
     type="button"
     (click)="openModal()"
-    class="flex items-center justify-between w-full min-w-[140px] px-4 py-2 rounded-xl bg-surface-200 text-text-primary text-sm font-medium border border-surface-100 hover:bg-surface-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary shadow-card"
+    class="flex items-center justify-between w-full min-w-[140px] px-4 py-2 rounded-app bg-surface-200 text-text-primary text-sm font-medium border border-surface-100 hover:bg-surface-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary shadow-card"
     aria-haspopup="dialog"
     [attr.aria-expanded]="isOpen()"
     [attr.aria-label]="'lang.selectPlaceholder' | t"
@@ -28,7 +28,7 @@
       aria-labelledby="lang-picker-title"
     >
       <div
-        class="bg-surface-200 rounded-3xl shadow-lift border border-surface-100 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
+        class="bg-surface-200 rounded-sheet shadow-lift border border-surface-100 w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
       >
         <!-- Modal Header -->
         <div
@@ -40,7 +40,7 @@
           <button
             type="button"
             (click)="closeModal()"
-            class="text-text-muted hover:text-text-primary p-2 rounded-xl hover:bg-surface-100 transition-colors"
+            class="text-text-muted hover:text-text-primary p-2 rounded-app hover:bg-surface-100 transition-colors"
             aria-label="Close dialog"
           >
             ✕
@@ -54,7 +54,7 @@
             [value]="searchQuery()"
             (input)="onSearchInput($event)"
             [placeholder]="'lang.searchPlaceholder' | t"
-            class="w-full px-4 py-2.5 rounded-xl bg-surface-300 border border-surface-100 text-sm font-medium text-text-primary focus:outline-none focus:ring-2 focus:ring-primary shadow-inner"
+            class="w-full px-4 py-2.5 rounded-app bg-surface-300 border border-surface-100 text-sm font-medium text-text-primary focus:outline-none focus:ring-2 focus:ring-primary shadow-inner"
             [attr.aria-label]="'text input'"
           />
         </div>
@@ -65,7 +65,7 @@
             <button
               type="button"
               (click)="selectLanguage(lang.code)"
-              class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors text-start"
+              class="w-full flex items-center justify-between px-4 py-3 rounded-app transition-colors text-start"
               [class.bg-primary]="selectedCode() === lang.code"
               [class.bg-opacity-10]="selectedCode() === lang.code"
               [class.text-primary]="selectedCode() === lang.code"
