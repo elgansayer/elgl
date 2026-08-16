@@ -115,6 +115,17 @@ def test_free_tier_requires_zero_variable_budget() -> None:
         )
 
 
+def test_default_provider_architecture_is_codex_oauth_then_opencode_go() -> None:
+    values = environment()
+    values.pop("GEMINI_ENABLED")
+
+    config = FactoryConfig.from_environment(values)
+
+    assert config.openai_model == "gpt-5.6-sol"
+    assert config.opencode_profile_name == "opencode-go"
+    assert config.gemini_enabled is False
+
+
 def test_default_repository_is_production_clone() -> None:
     config = FactoryConfig.from_environment(environment())
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
@@ -131,6 +142,7 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
     assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
     assert "FACTORY_REQUIRE_READY_LABEL=false" in template
+    assert "GEMINI_ENABLED=false" in template
 
 
 def test_parallel_job_limit_must_be_positive() -> None:
