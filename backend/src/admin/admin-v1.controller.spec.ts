@@ -1,6 +1,7 @@
 import { AdminAuditQueryService } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
+import { AdminLoginHistoryQueryService } from './admin-login-history-query.service';
 import { AdminModerationQueryService } from './admin-moderation-query.service';
 import { AdminRoleInventoryService } from './admin-role-inventory.service';
 import { AdminService } from './admin.service';
@@ -22,6 +23,9 @@ describe('AdminV1Controller', () => {
     const userDetailService = {
       getUser: vi.fn(),
     };
+    const loginHistoryQuery = {
+      list: vi.fn(),
+    };
     const audit = {
       record: vi.fn().mockResolvedValue(undefined),
     };
@@ -41,6 +45,7 @@ describe('AdminV1Controller', () => {
       authorization as unknown as AdminAuthorizationService,
       adminService as unknown as AdminService,
       userDetailService as unknown as AdminUserDetailService,
+      loginHistoryQuery as unknown as AdminLoginHistoryQueryService,
       audit as unknown as AdminAuditService,
       auditQuery as unknown as AdminAuditQueryService,
       moderationQuery as unknown as AdminModerationQueryService,
@@ -53,6 +58,7 @@ describe('AdminV1Controller', () => {
       authorization,
       adminService,
       userDetailService,
+      loginHistoryQuery,
       audit,
       auditQuery,
       moderationQuery,
@@ -159,7 +165,7 @@ describe('AdminV1Controller', () => {
   });
 
   it('audits privacy-scrubbed login-history reads before returning them', async () => {
-    const { controller, adminService, audit } = buildController();
+    const { controller, loginHistoryQuery, audit } = buildController();
     const expected = [
       {
         id: 'history-1',
@@ -169,7 +175,7 @@ describe('AdminV1Controller', () => {
         created_at: '2026-08-15T20:00:00.000Z',
       },
     ];
-    adminService.getLoginHistory.mockResolvedValue(expected);
+    loginHistoryQuery.list.mockResolvedValue(expected);
     const request = {
       user: { id: 'admin-1' },
       headers: { 'x-request-id': 'request-1' },
@@ -178,7 +184,7 @@ describe('AdminV1Controller', () => {
     await expect(
       controller.getUserLoginHistory('user-1', request),
     ).resolves.toEqual(expected);
-    expect(adminService.getLoginHistory).toHaveBeenCalledWith('user-1');
+    expect(loginHistoryQuery.list).toHaveBeenCalledWith('user-1');
     expect(audit.record).toHaveBeenCalledWith({
       actorUserId: 'admin-1',
       action: 'users.login_history.read',
@@ -192,9 +198,9 @@ describe('AdminV1Controller', () => {
   });
 
   it('audits failed login-history reads without recording private error details', async () => {
-    const { controller, adminService, audit } = buildController();
+    const { controller, loginHistoryQuery, audit } = buildController();
     const storageError = new Error('private database detail');
-    adminService.getLoginHistory.mockRejectedValue(storageError);
+    loginHistoryQuery.list.mockRejectedValue(storageError);
     const request = {
       user: { id: 'admin-1' },
       headers: { 'x-request-id': 'request-2' },
@@ -219,8 +225,8 @@ describe('AdminV1Controller', () => {
   });
 
   it('fails closed when login-history auditing fails', async () => {
-    const { controller, adminService, audit } = buildController();
-    adminService.getLoginHistory.mockResolvedValue([]);
+    const { controller, loginHistoryQuery, audit } = buildController();
+    loginHistoryQuery.list.mockResolvedValue([]);
     audit.record.mockRejectedValue(new Error('audit unavailable'));
     const request = {
       user: { id: 'admin-1' },
