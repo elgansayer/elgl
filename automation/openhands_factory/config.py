@@ -27,7 +27,7 @@ class FactoryConfig(BaseModel):
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.6-flash"
     gemini_profile_name: str = "gemini-flash"
-    gemini_enabled: bool = True
+    gemini_enabled: bool = False
     gemini_free_tier_only: bool = True
     monthly_subscription_budget_usd: float = 30
     monthly_variable_budget_usd: float = 0
@@ -138,7 +138,7 @@ class FactoryConfig(BaseModel):
                 else None,
                 gemini_model=env.get("GEMINI_MODEL", "gemini-3.6-flash"),
                 gemini_profile_name=env.get("GEMINI_PROFILE_NAME", "gemini-flash"),
-                gemini_enabled=boolean("GEMINI_ENABLED", True),
+                gemini_enabled=boolean("GEMINI_ENABLED", False),
                 gemini_free_tier_only=boolean("GEMINI_FREE_TIER_ONLY", True),
                 monthly_subscription_budget_usd=float(
                     env.get("FACTORY_MONTHLY_SUBSCRIPTION_BUDGET_USD", "30")
