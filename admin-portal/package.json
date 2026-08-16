@@ -14,7 +14,8 @@
     "build": "ng build",
     "test": "ng test --no-watch",
     "lint:check": "eslint \"src/**/*.ts\"",
-    "check:spartan-info": "ng g @spartan-ng/cli:info --json"
+    "check:spartan-info": "ng g @spartan-ng/cli:info --json",
+    "check:spartan-health": "npm run check:spartan-info"
   },
   "dependencies": {
     "@angular/cdk": "^22.1.1",
