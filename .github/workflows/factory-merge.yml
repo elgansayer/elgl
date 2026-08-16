@@ -26,7 +26,13 @@ jobs:
         run: |
           set -euo pipefail
           gh pr list --repo "${GITHUB_REPOSITORY}" --state open --label factory-reviewed --json number,isDraft,headRefName,mergeStateStatus,statusCheckRollup \
-            --jq '.[] | select(.isDraft == false and .mergeStateStatus == "CLEAN" and ([.statusCheckRollup[]? | select((.context // .name) == "factory/independent-review" and (.state == "SUCCESS" or .conclusion == "SUCCESS"))] | length) == 1 and ([.statusCheckRollup[]? | select(((.status == "COMPLETED") and ((.conclusion // "") | IN("SUCCESS", "NEUTRAL", "SKIPPED"))) or .state == "SUCCESS")] | length) == (.statusCheckRollup | length)) | .number' \
+            --jq '.[] | select(
+              .isDraft == false
+              and .mergeStateStatus == "CLEAN"
+              and ([.statusCheckRollup[]? | select((.context // .name) == "factory/independent-review" and (.state == "SUCCESS" or .conclusion == "SUCCESS"))] | length) == 1
+              and ([.statusCheckRollup[]? | select((.context // .name) == "CI / required" and (.state == "SUCCESS" or .conclusion == "SUCCESS"))] | length) == 1
+              and ([.statusCheckRollup[]? | select(((.status == "COMPLETED") and ((.conclusion // "") | IN("SUCCESS", "NEUTRAL", "SKIPPED"))) or .state == "SUCCESS")] | length) == (.statusCheckRollup | length)
+            ) | .number' \
             | while read -r number; do
                 [ -n "$number" ] || continue
                 gh pr merge "$number" --repo "${GITHUB_REPOSITORY}" --squash --delete-branch
