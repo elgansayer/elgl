@@ -188,29 +188,24 @@ def select_primary_provider(config: FactoryConfig) -> ProviderName:
     raise FactoryError("All configured model providers are temporarily unavailable")
 
 
-def build_llm(config: FactoryConfig) -> LLM:
+def build_llm(config: FactoryConfig, provider: ProviderName | None = None) -> LLM:
     """Construct this conversation's sole LLM, with no per-call fallback chain.
 
-    openhands' FallbackStrategy retries the primary model first on every new turn
-    (fallback is per-call, not per-conversation), so a multi-turn conversation that
-    dips to a fallback provider on one turn and back to a strict-validating primary
-    on the next replays that fallback provider's tool-call ID format into the
-    primary - which OpenAI's Responses API rejects outright with "Expected an ID
-    that begins with 'fc'". This is an upstream litellm bug with no released fix
-    yet: https://github.com/BerriAI/litellm/pull/34387 (open since 2026-07-23).
-    Provider selection instead happens once per conversation via
-    select_primary_provider(), which is breaker-aware.
+    The caller may reserve a provider before process startup and pass it here. When
+    no provider is supplied, this helper preserves the existing standalone behavior
+    by selecting the healthiest provider once. A reserved provider is never silently
+    replaced inside the conversation.
     """
     from openhands.sdk import LLM
 
-    provider = select_primary_provider(config)
-    if provider is ProviderName.OPENAI_SUBSCRIPTION:
+    selected_provider = provider or select_primary_provider(config)
+    if selected_provider is ProviderName.OPENAI_SUBSCRIPTION:
         return LLM.subscription_login(
             vendor="openai",
             model=config.openai_model,
             open_browser=False,
         )
-    if provider is ProviderName.GEMINI:
+    if selected_provider is ProviderName.GEMINI:
         return LLM(
             model=f"gemini/{config.gemini_model}",
             api_key=config.gemini_api_key,
