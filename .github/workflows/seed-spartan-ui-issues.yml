@@ -8,6 +8,7 @@ on:
       - scripts/seed-spartan-ui-issues.mjs
       - scripts/verify-spartan-ui-issues.mjs
       - .github/workflows/seed-spartan-ui-issues.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
