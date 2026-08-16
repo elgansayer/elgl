@@ -12,6 +12,7 @@ from pydantic import SecretStr
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError, FactoryError
 from openhands_factory.models import ProviderName
+from openhands_factory.oauth_health import inspect_openai_oauth
 from openhands_factory.provider_health import ProviderHealthStore
 
 if TYPE_CHECKING:
@@ -42,14 +43,16 @@ class ProviderProfile:
 def openai_credentials_available(
     config: FactoryConfig | None = None, home: Path | None = None
 ) -> bool:
-    credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
-    if not (credentials.is_file() and credentials.stat().st_size > 0):
+    if config is None:
+        credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
+        return credentials.is_file() and credentials.stat().st_size > 0
+
+    if not inspect_openai_oauth(config, home).passed:
         return False
-    if config is not None:
-        store = ProviderHealthStore(config.state_dir / "health.json")
-        for breaker in store.load():
-            if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION and not breaker.permits_call():
-                return False
+    store = ProviderHealthStore(config.state_dir / "health.json")
+    for breaker in store.load():
+        if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION and not breaker.permits_call():
+            return False
     return True
 
 
