@@ -32,13 +32,13 @@ export class AppButtonPrimaryComponent {
     let sizeClass = '';
     switch (this.size()) {
       case 'sm':
-        sizeClass = 'ps-3 pe-3 pt-1.5 pb-1.5 text-xs';
+        sizeClass = 'min-h-10 ps-3 pe-3 pt-1.5 pb-1.5 text-xs';
         break;
       case 'md':
-        sizeClass = 'ps-4 pe-4 pt-2.5 pb-2.5 text-sm';
+        sizeClass = 'min-h-11 ps-4 pe-4 pt-2.5 pb-2.5 text-sm';
         break;
       case 'lg':
-        sizeClass = 'ps-6 pe-6 pt-3.5 pb-3.5 text-base';
+        sizeClass = 'min-h-12 ps-6 pe-6 pt-3.5 pb-3.5 text-base';
         break;
     }
 
