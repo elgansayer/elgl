@@ -141,9 +141,10 @@ def test_large_issue_lists_are_compacted_before_delivery(tmp_path: Path, monkeyp
     )
 
     assert sent is True
+    assert "issues=1,2,3,4,5,6,7,8,..." in sent_texts[0]
     assert "total=100" in sent_texts[0]
-    assert "+60 more" in sent_texts[0]
-    assert ",100" not in sent_texts[0]
+    assert "+92 more" in sent_texts[0]
+    assert ",9," not in sent_texts[0]
     assert len(sent_texts[0]) < 4000
 
 

@@ -15,7 +15,7 @@ from openhands_factory.state import atomic_write_json, read_json
 LOGGER = logging.getLogger(__name__)
 
 DEFAULT_COOLDOWN_SECONDS = 1800
-MAX_ALERT_ISSUES = 40
+MAX_ALERT_ISSUES = 8
 MAX_TELEGRAM_TEXT = 4000
 
 
@@ -28,7 +28,7 @@ def _alert_category(message: str) -> str:
 
 
 def _compact_issue_list(message: str) -> str:
-    """Keep large health alerts useful and safely inside Telegram's message limit."""
+    """Keep large health alerts actionable and safely inside Telegram's message limit."""
     match = re.search(r"issues=([0-9,]+)", message)
     if match is None:
         return message
@@ -37,9 +37,7 @@ def _compact_issue_list(message: str) -> str:
         return message
     shown = ",".join(identifiers[:MAX_ALERT_ISSUES])
     remaining = len(identifiers) - MAX_ALERT_ISSUES
-    replacement = (
-        f"issues={shown},... (+{remaining} more; total={len(identifiers)})"
-    )
+    replacement = f"issues={shown},... (+{remaining} more; total={len(identifiers)})"
     return f"{message[:match.start()]}{replacement}{message[match.end():]}"
 
 
