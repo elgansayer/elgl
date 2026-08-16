@@ -21,7 +21,9 @@ export class AdminModerationQueryService {
       query.endTime &&
       Date.parse(query.startTime) > Date.parse(query.endTime)
     ) {
-      throw new BadRequestException('startTime must be before or equal to endTime');
+      throw new BadRequestException(
+        'startTime must be before or equal to endTime',
+      );
     }
 
     let request = this.supabaseService
