@@ -81,11 +81,11 @@ describe('ProfileComponent', () => {
     fixture.componentInstance.toggleEdit();
     fixture.detectChanges();
 
-    const checkbox: HTMLInputElement | null = fixture.nativeElement.querySelector(
-      'input[name="incognitoVisits"]',
+    const checkbox: HTMLElement | null = fixture.nativeElement.querySelector(
+      'hlm-checkbox[name="incognitoVisits"]',
     );
     expect(checkbox).not.toBeNull();
-    expect(checkbox?.disabled).toBe(true);
+    expect(checkbox?.hasAttribute('data-disabled')).toBe(true);
   });
 
   it('should enable the incognito visits toggle for VIP users and reflect its saved state', async () => {
@@ -97,12 +97,13 @@ describe('ProfileComponent', () => {
     fixture.componentInstance.toggleEdit();
     fixture.detectChanges();
 
-    const checkbox: HTMLInputElement | null = fixture.nativeElement.querySelector(
-      'input[name="incognitoVisits"]',
+    const checkbox: HTMLElement | null = fixture.nativeElement.querySelector(
+      'hlm-checkbox[name="incognitoVisits"]',
     );
     expect(checkbox).not.toBeNull();
-    expect(checkbox?.disabled).toBe(false);
-    expect(checkbox?.checked).toBe(true);
+    expect(checkbox?.hasAttribute('data-disabled')).toBe(false);
+    const control = checkbox?.querySelector('brn-checkbox');
+    expect(control?.getAttribute('aria-checked')).toBe('true');
   });
 
   it('should not send incognito_visits=true for a non-VIP user on save', async () => {
