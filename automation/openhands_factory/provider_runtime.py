@@ -8,6 +8,7 @@ from pathlib import Path
 from filelock import FileLock
 
 from openhands_factory.config import FactoryConfig
+from openhands_factory.exceptions import ConfigurationError
 from openhands_factory.models import FailureKind, ProviderName
 from openhands_factory.state import atomic_write_json, read_json
 
@@ -17,11 +18,13 @@ def provider_model(config: FactoryConfig, provider: ProviderName) -> str:
         return config.openai_model
     if provider is ProviderName.OPENCODE_GO:
         return f"openai/{config.opencode_model}"
-    return f"gemini/{config.gemini_model}"
+    raise ConfigurationError(
+        f"Provider {provider.value!r} is historical-only; production routing is "
+        "Codex subscription OAuth -> OpenCode Go"
+    )
 
 
 def conversation_role(prompt: str) -> str:
-    """Derive the trusted Factory phase from its repository-owned prompt prefix."""
     prefixes = {
         "# Task Execution": "implementation",
         "# Independent Pull Request Review": "review",
@@ -59,13 +62,14 @@ class ProviderAttributionStore:
                 provider = item.get("provider")
                 if isinstance(provider, str):
                     try:
-                        return ProviderName(provider)
+                        parsed = ProviderName(provider)
                     except ValueError:
                         continue
+                    if parsed in {ProviderName.OPENAI_SUBSCRIPTION, ProviderName.OPENCODE_GO}:
+                        return parsed
         return None
 
     def task_summary(self, task_id: str) -> list[dict[str, object]]:
-        """Return sanitized attribution suitable for PR metadata or diagnostics."""
         with self.lock:
             return [item.copy() for item in self._attempts() if item.get("task_id") == task_id]
 
