@@ -79,10 +79,12 @@ def test_retired_swarm_entrypoints_cannot_reappear_under_active_automation() -> 
     assert not any(path.exists() for path in prohibited)
 
 
-def test_all_factory_phases_share_the_openhands_conversation_runner() -> None:
+def test_all_factory_phases_share_agent_router_with_openhands_fallback() -> None:
     pipeline = (FACTORY / "pipeline.py").read_text(encoding="utf-8")
 
-    assert pipeline.count("self.conversations.run(") >= 6
+    assert "self.router.run(request, job)" in pipeline
+    assert "OpenHandsProvider(self.conversations)" in pipeline
+    assert pipeline.count("self._run_agent(") >= 6
     for legacy_daemon in ("Aider", "SwarmAgent", "GuardianDaemon", "ResolverDaemon"):
         assert legacy_daemon not in pipeline
 
