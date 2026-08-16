@@ -19,7 +19,7 @@
       "claudeDesignPath": "foundations/tokens.html",
       "syncDirection": "reconcile",
       "lastReconciledCommit": null,
-      "requiredStates": ["light", "dark", "forced-colours"]
+      "requiredStates": ["light", "dark", "forced-colours", "accent-override"]
     },
     {
       "id": "relay.primitives.buttons",
