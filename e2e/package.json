@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "description": "Playwright E2E and RTL Visual Regression Test Suite for HelloTalk",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "test": "npx playwright test",
     "test:rtl": "npx playwright test --project=rtl-arabic --project=rtl-hebrew",
