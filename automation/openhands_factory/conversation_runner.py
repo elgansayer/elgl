@@ -223,7 +223,10 @@ class SdkConversationFactory:
         from openhands.sdk import Agent, Conversation, LLM, Tool
 
         from openhands_factory.prompts import build_system_prompt
-        from openhands_factory.secure_tools import SecureFileEditorTool, SecureTerminalTool
+        from openhands_factory.secure_tools import (
+            SecureFileEditorTool,
+            SecureTerminalTool,
+        )
 
         if provider is ProviderName.OPENAI_SUBSCRIPTION:
             llm = LLM.subscription_login(
