@@ -98,7 +98,8 @@ def validate_opencode(config: FactoryConfig, client: HttpClient | None = None) -
     available = discover_opencode_models(config, client)
     if config.opencode_model not in available:
         raise ConfigurationError(
-            f"Configured OpenCode Go model {config.opencode_model!r} is not in the authenticated catalogue"
+            f"Configured OpenCode Go model {config.opencode_model!r} is not in the "
+            "authenticated catalogue"
         )
     return ProviderProfile(
         name=ProviderName.OPENCODE_GO,
