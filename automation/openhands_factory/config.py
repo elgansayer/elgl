@@ -19,16 +19,20 @@ class FactoryConfig(BaseModel):
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
+    factory_generation: str = "unknown"
     openai_model: str = "gpt-5.2-codex"
+    openai_max_concurrent_conversations: int = 2
     opencode_api_key: SecretStr
     opencode_base_url: str = "https://opencode.ai/zen/go/v1"
     opencode_model: str
     opencode_profile_name: str = "opencode-go"
+    opencode_max_concurrent_conversations: int = 3
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.6-flash"
     gemini_profile_name: str = "gemini-flash"
     gemini_enabled: bool = False
     gemini_free_tier_only: bool = True
+    gemini_max_concurrent_conversations: int = 1
     monthly_subscription_budget_usd: float = 30
     monthly_variable_budget_usd: float = 0
     monthly_total_budget_usd: float = 35
@@ -68,6 +72,9 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
+        "openai_max_concurrent_conversations",
+        "opencode_max_concurrent_conversations",
+        "gemini_max_concurrent_conversations",
         "architect_max_new_issues",
     )
     @classmethod
@@ -126,13 +133,20 @@ class FactoryConfig(BaseModel):
                 recovery_dir=Path(
                     env.get("FACTORY_RECOVERY_DIR", cls.model_fields["recovery_dir"].default)
                 ),
+                factory_generation=env.get("FACTORY_GENERATION", "unknown"),
                 openai_model=env.get("OPENHANDS_OPENAI_MODEL", "gpt-5.2-codex"),
+                openai_max_concurrent_conversations=int(
+                    env.get("FACTORY_OPENAI_MAX_CONCURRENT_CONVERSATIONS", "2")
+                ),
                 opencode_api_key=SecretStr(required("OPENCODE_GO_API_KEY")),
                 opencode_base_url=env.get(
                     "OPENCODE_GO_BASE_URL", "https://opencode.ai/zen/go/v1"
                 ).rstrip("/"),
                 opencode_model=required("OPENCODE_GO_MODEL"),
                 opencode_profile_name=env.get("OPENCODE_GO_PROFILE_NAME", "opencode-go"),
+                opencode_max_concurrent_conversations=int(
+                    env.get("FACTORY_OPENCODE_MAX_CONCURRENT_CONVERSATIONS", "3")
+                ),
                 gemini_api_key=SecretStr(env["GEMINI_API_KEY"])
                 if env.get("GEMINI_API_KEY")
                 else None,
@@ -140,6 +154,9 @@ class FactoryConfig(BaseModel):
                 gemini_profile_name=env.get("GEMINI_PROFILE_NAME", "gemini-flash"),
                 gemini_enabled=boolean("GEMINI_ENABLED", False),
                 gemini_free_tier_only=boolean("GEMINI_FREE_TIER_ONLY", True),
+                gemini_max_concurrent_conversations=int(
+                    env.get("FACTORY_GEMINI_MAX_CONCURRENT_CONVERSATIONS", "1")
+                ),
                 monthly_subscription_budget_usd=float(
                     env.get("FACTORY_MONTHLY_SUBSCRIPTION_BUDGET_USD", "30")
                 ),
