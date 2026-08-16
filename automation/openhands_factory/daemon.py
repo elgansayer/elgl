@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import signal
 import time
+from collections import Counter
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,6 +39,41 @@ def select_batch(
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
     return candidates[:limit]
+
+
+def queue_snapshot(
+    jobs: dict[str, Job],
+    active_task_ids: set[str] | None = None,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    """Summarize the queue into restart-safe operator-facing daemon state."""
+
+    active = active_task_ids or set()
+    current = now or datetime.now(UTC)
+    state_counts = Counter(job.state.value for job in jobs.values())
+    non_terminal = [
+        job for job in jobs.values() if job.state.value not in {"done", "quarantined"}
+    ]
+    backing_off = [
+        job
+        for job in non_terminal
+        if job.task.identifier not in active
+        and job.next_attempt_at is not None
+        and job.next_attempt_at > current
+    ]
+    runnable = [
+        job
+        for job in non_terminal
+        if job.task.identifier not in active
+        and (job.next_attempt_at is None or job.next_attempt_at <= current)
+    ]
+    return {
+        "total_jobs": len(jobs),
+        "active_count": len(active),
+        "runnable_count": len(runnable),
+        "backing_off_count": len(backing_off),
+        "by_state": dict(sorted(state_counts.items())),
+    }
 
 
 class FactoryDaemon:
@@ -130,12 +166,15 @@ class FactoryDaemon:
         return 0
 
     def _write_daemon_state(self, status: str, active: dict[Future[Job | None], str]) -> None:
+        active_task_ids = set(active.values())
+        jobs = self.pipeline.jobs.load()
         atomic_write_json(
             self.config.state_dir / "daemon.json",
             {
                 "status": status,
                 "updated_at": datetime.now(UTC).isoformat(),
-                "active_jobs": sorted(active.values(), key=int),
+                "active_jobs": sorted(active_task_ids, key=int),
+                "queue": queue_snapshot(jobs, active_task_ids),
             },
         )
 
