@@ -35,11 +35,8 @@ from openhands_factory.provider_runtime import (
 
 class ConversationProtocol(Protocol):
     def send_message(self, message: str) -> None: ...
-
     def run(self) -> None: ...
-
     def pause(self) -> None: ...
-
     def close(self) -> None: ...
 
 
@@ -51,8 +48,6 @@ class ConversationResult:
     task_id: str
     elapsed_seconds: float
     completed: bool
-    # Defaults preserve the original three-field public/test interface. Production
-    # ConversationRunner always supplies the real attribution values explicitly.
     provider: ProviderName = ProviderName.OPENAI_SUBSCRIPTION
     model: str = ""
     role: str = "factory-phase"
@@ -68,7 +63,6 @@ def _conversation_process(
     prompt: str,
     result_connection: Connection,
 ) -> None:
-    """Run the SDK in its own process group so the parent can cancel every child."""
     os.setsid()
     conversation: ConversationProtocol | None = None
     outcome: dict[str, object] = {"completed": False, "error": "Conversation did not start"}
@@ -85,10 +79,7 @@ def _conversation_process(
         conversation.run()
         outcome = {"completed": True}
     except BaseException as error:
-        outcome = {
-            "completed": False,
-            "error": f"{type(error).__name__}: {error}"[-2000:],
-        }
+        outcome = {"completed": False, "error": f"{type(error).__name__}: {error}"[-2000:]}
     finally:
         if conversation is not None:
             try:
@@ -131,11 +122,6 @@ class ConversationRunner:
                 self.config.max_consecutive_failures,
                 self.config.provider_cooldown_seconds,
             ),
-            CircuitBreaker(
-                ProviderName.GEMINI,
-                self.config.max_consecutive_failures,
-                self.config.provider_cooldown_seconds,
-            ),
         ]
 
     def _mutate_provider_health(
@@ -145,23 +131,25 @@ class ConversationRunner:
         failure_kind: FailureKind | None = None,
         retry_after_seconds: int | None = None,
     ) -> None:
-        """Update one provider breaker without losing concurrent worker updates."""
+        if provider not in {ProviderName.OPENAI_SUBSCRIPTION, ProviderName.OPENCODE_GO}:
+            return
         store = ProviderHealthStore(self.config.state_dir / "health.json")
         lock = FileLock(str(self.config.state_dir / "health.json.lock"))
         with lock:
-            breakers = store.load() or self._default_breakers()
-            for breaker in breakers:
-                if breaker.provider != provider:
-                    continue
-                if failure_kind is None:
-                    breaker.record_success()
-                else:
-                    breaker.record_failure(
-                        failure_kind,
-                        retry_after_seconds=retry_after_seconds,
-                    )
-                break
-            store.save(breakers)
+            breakers = store.load()
+            active = {
+                breaker.provider: breaker
+                for breaker in breakers
+                if breaker.provider in {ProviderName.OPENAI_SUBSCRIPTION, ProviderName.OPENCODE_GO}
+            }
+            for default in self._default_breakers():
+                active.setdefault(default.provider, default)
+            breaker = active[provider]
+            if failure_kind is None:
+                breaker.record_success()
+            else:
+                breaker.record_failure(failure_kind, retry_after_seconds=retry_after_seconds)
+            store.save(list(active.values()))
 
     def _record_attempt(
         self,
@@ -259,7 +247,6 @@ class ConversationRunner:
                     result_connection.close()
                     process.close()
                     elapsed = time.monotonic() - started
-                    self._mutate_provider_health(provider, failure_kind=FailureKind.TRANSIENT)
                     self._record_attempt(
                         task=task,
                         role=role,
@@ -270,7 +257,7 @@ class ConversationRunner:
                         fallback_reason=decision.fallback_reason,
                         elapsed_seconds=elapsed,
                         capacity_wait_seconds=capacity_wait_seconds,
-                        failure_kind=FailureKind.TRANSIENT,
+                        failure_kind=FailureKind.TASK_TIMEOUT,
                     )
                     raise FactoryError("Conversation exceeded the maximum task duration")
 
