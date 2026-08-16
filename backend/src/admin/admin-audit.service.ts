@@ -73,7 +73,8 @@ export class AdminAuditService {
           capabilityKey: input.capabilityKey ?? null,
           outcome: input.outcome,
           correlationId,
-          errorType: error instanceof Error ? error.name : 'AuditPersistenceError',
+          errorType:
+            error instanceof Error ? error.name : 'AuditPersistenceError',
         }),
       );
       throw error;
