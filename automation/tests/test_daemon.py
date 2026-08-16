@@ -15,12 +15,22 @@ def test_select_batch_fills_parallel_capacity_by_priority() -> None:
         "10": job("10", 0),
         "11": job("11", 0),
         "9": job("9", 0, JobState.DONE),
-        "8": job("8", 0, JobState.QUARANTINED),
     }
 
     selected = select_batch(jobs, 3)
 
     assert [item.task.identifier for item in selected] == ["10", "11", "12"]
+
+
+def test_select_batch_never_treats_legacy_quarantine_as_terminal() -> None:
+    jobs = {
+        "8": job("8", 0, JobState.QUARANTINED),
+        "9": job("9", 0, JobState.DONE),
+    }
+
+    selected = select_batch(jobs, 3)
+
+    assert [item.task.identifier for item in selected] == ["8"]
 
 
 def test_select_batch_refills_free_capacity_without_rescheduling_active_jobs() -> None:
