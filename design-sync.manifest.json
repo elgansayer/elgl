@@ -105,7 +105,7 @@
       "id": "screen.home",
       "kind": "screen",
       "ownerLayer": "feature",
-      "repositoryPaths": ["frontend/src/app/components/home"],
+      "repositoryPaths": ["frontend/src/app/pages/home"],
       "previewPaths": ["frontend/design-preview/screens/home.html"],
       "claudeDesignPath": "screens/home.html",
       "syncDirection": "reconcile",
