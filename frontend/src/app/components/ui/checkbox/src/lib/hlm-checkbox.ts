@@ -26,6 +26,11 @@ export const HLM_CHECKBOX_VALUE_ACCESSOR = {
   multi: true,
 };
 
+export interface HlmCheckboxChangeEvent {
+  readonly target: { readonly checked: boolean };
+  readonly checked: boolean;
+}
+
 @Component({
   selector: 'hlm-checkbox',
   imports: [BrnCheckbox, NgIcon],
@@ -77,44 +82,24 @@ export class HlmCheckbox implements ControlValueAccessor {
     ),
   );
 
-  /** Used to set the id on the underlying brn element. */
   public readonly inputId = input<string | null>(null);
-
-  /** Used to set the aria-label attribute on the underlying brn element. */
   public readonly ariaLabel = input<string | null>(null, { alias: 'aria-label' });
-
-  /** Used to set the aria-labelledby attribute on the underlying brn element. */
   public readonly ariaLabelledby = input<string | null>(null, { alias: 'aria-labelledby' });
-
-  /** Used to set the aria-describedby attribute on the underlying brn element. */
   public readonly ariaDescribedby = input<string | null>(null, { alias: 'aria-describedby' });
 
-  /** The checked state of the checkbox. */
   public readonly checkedInput = input<boolean, BooleanInput>(false, {
     alias: 'checked',
     transform: booleanAttribute,
   });
   public readonly checked = linkedSignal(this.checkedInput);
-
-  /** Emits when checked state changes. */
   public readonly checkedChange = output<boolean>();
+  /** Native-checkbox compatibility output. Prefer checkedChange for new code. */
+  public readonly change = output<HlmCheckboxChangeEvent>();
 
-  /**
-   * The indeterminate state of the checkbox.
-   * For example, a "select all/deselect all" checkbox may be in the indeterminate state when some but not all of its sub-controls are checked.
-   */
   public readonly indeterminate = model<boolean>(false);
-
-  /** The name attribute of the checkbox. */
   public readonly name = input<string | null>(null);
-
-  /** Whether the checkbox is required. */
   public readonly required = input<boolean, BooleanInput>(false, { transform: booleanAttribute });
-
-  /** Whether the checkbox is disabled. */
   public readonly disabled = input<boolean, BooleanInput>(false, { transform: booleanAttribute });
-
-  /** Whether to force the checkbox into an invalid state. */
   public readonly forceInvalid = input<boolean, BooleanInput>(false, {
     transform: booleanAttribute,
   });
@@ -139,10 +124,10 @@ export class HlmCheckbox implements ControlValueAccessor {
     if (this._disabled()) return;
     this.checked.set(value);
     this.checkedChange.emit(value);
+    this.change.emit({ target: { checked: value }, checked: value });
     this._onChange?.(value);
   }
 
-  /** CONTROL VALUE ACCESSOR */
   writeValue(value: boolean): void {
     this.checked.set(value);
   }
