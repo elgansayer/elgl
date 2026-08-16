@@ -21,7 +21,7 @@ The factory dynamically routes tasks to the best provider based on their CLI pro
 Each CLI provider is executed in strict isolation:
 - **SandboxRunner**: Ephemeral `localhost/hellotalk-factory-worker:current` podman containers.
 - **Network Isolation**: `--network none` ensures agents cannot exfiltrate data, force them to use the factory's tools.
-- **PTYWrapper**: A robust pseudo-terminal emulator strips ANSI color codes, handles interactive TTY prompts (like "Are you sure?"), and prevents agents from hanging indefinitely on unhandled `stdin`.
+- **PTYWrapper**: A robust pseudo-terminal emulator strips ANSI colour codes, handles interactive TTY prompts (like "Are you sure?"), and prevents agents from hanging indefinitely on unhandled `stdin`.
 
 ## 3. Caveman Integration
 

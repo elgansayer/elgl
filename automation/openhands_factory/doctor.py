@@ -162,16 +162,12 @@ def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> lis
     jobs_path = config.state_dir / "jobs.json"
     if not jobs_path.is_file():
         detail = "durable job state is missing"
-        return [Check("jobs-quarantined", False, detail), Check("jobs-stalled", False, detail)]
+        return [Check("jobs-stalled", False, detail)]
     try:
         jobs = JobStore(jobs_path).load()
     except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
         detail = f"unreadable durable job state: {error}"[-1000:]
-        return [Check("jobs-quarantined", False, detail), Check("jobs-stalled", False, detail)]
-    quarantined = sorted(
-        (identifier for identifier, job in jobs.items() if job.state is JobState.QUARANTINED),
-        key=int,
-    )
+        return [Check("jobs-stalled", False, detail)]
     stall_threshold = current - timedelta(minutes=config.max_task_minutes + 15)
     active_states = {
         JobState.LEASED,
@@ -192,12 +188,6 @@ def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> lis
         key=int,
     )
     return [
-        Check(
-            "jobs-quarantined",
-            True,
-            "none" if not quarantined else f"retrying legacy state: issues={','.join(quarantined)}",
-            bool(quarantined),
-        ),
         Check(
             "jobs-stalled",
             True,

@@ -72,7 +72,7 @@ jobs:
           # second autonomous executor. Agent Canvas automation owns remediation.
           gh issue edit "$ISSUE_URL" \
             --repo "$REPOSITORY" \
-            --add-label "priority:high" || true
+            --add-label "priority:high,factory-ready,factory-active" || true
 
   resolve-recovery:
     if: github.event.workflow_run.conclusion == 'success'

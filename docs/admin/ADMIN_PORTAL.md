@@ -139,7 +139,7 @@ Requirements:
 
 - WCAG-oriented semantic structure and keyboard operation;
 - screen-reader labels/status announcements;
-- no state conveyed by color alone;
+- no state conveyed by colour alone;
 - robust 200%+ zoom and responsive reflow;
 - large-text mode/high-density mode options;
 - focus management for dialogs/drawers;

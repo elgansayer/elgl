@@ -6,7 +6,7 @@ Relay light and dark themes are independently designed implementations of the sa
 
 ## Semantic parity
 
-Every theme-sensitive Relay variable introduced in the light `:root` token block must have a corresponding definition in `.dark`, and vice versa. This includes `--surface-*`, `--text-*`, `--color-*`, `--on-fill-*` and `--shadow-*` roles. Theme-neutral motion timing remains shared.
+Every theme-sensitive Relay variable introduced in the light `:root` token block must have a corresponding definition in `.dark`, and vice versa. This includes `--surface-*`, `--text-*`, `--colour-*`, `--on-fill-*` and `--shadow-*` roles. Theme-neutral motion timing remains shared.
 
 Parity means matching semantic roles, not matching RGB mathematics. Dark values are independently chosen for contrast, hierarchy and readability.
 
