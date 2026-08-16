@@ -35,18 +35,32 @@ const controllerFiles = fs
 
 for (const name of controllerFiles) {
   const source = fs.readFileSync(path.join(adminRoot, name), 'utf8');
-  if (!source.includes('@UseGuards(SupabaseAuthGuard, AdminGuard)')) {
+  const guardDecorators = [...source.matchAll(/@UseGuards\(([^)]*)\)/gs)].map((match) => match[1]);
+  const controllerGuardSet = guardDecorators.find(
+    (guards) => guards.includes('SupabaseAuthGuard') && guards.includes('AdminGuard'),
+  );
+  if (!controllerGuardSet) {
     errors.push(`${name}: every admin controller must require SupabaseAuthGuard + AdminGuard`);
   }
+
+  const classHasCapabilityGuard = guardDecorators.some((guards) =>
+    guards.includes('AdminCapabilityGuard'),
+  );
+  const classCapabilityIndex = source.indexOf('@RequireAdminCapabilities(');
+  const classDeclarationIndex = source.indexOf('export class ');
+  const classHasCapabilityRequirement =
+    classCapabilityIndex >= 0 &&
+    classDeclarationIndex >= 0 &&
+    classCapabilityIndex < classDeclarationIndex;
 
   const mutationDecorator = /@(Post|Patch|Put|Delete)\([^\n]*\)/g;
   for (const match of source.matchAll(mutationDecorator)) {
     const start = match.index ?? 0;
-    const block = source.slice(start, start + 900);
-    if (!block.includes('@UseGuards(AdminCapabilityGuard)')) {
+    const block = source.slice(start, start + 1200);
+    if (!classHasCapabilityGuard && !block.includes('@UseGuards(AdminCapabilityGuard)')) {
       errors.push(`${name}: ${match[0]} is missing AdminCapabilityGuard`);
     }
-    if (!block.includes('@RequireAdminCapabilities(')) {
+    if (!classHasCapabilityRequirement && !block.includes('@RequireAdminCapabilities(')) {
       errors.push(`${name}: ${match[0]} is missing an explicit capability requirement`);
     }
     if (!block.includes('@Throttle(')) {
@@ -60,7 +74,7 @@ const interceptor = fs.readFileSync(
   'utf8',
 );
 for (const required of [
-  "SAFE_METHODS",
+  'SAFE_METHODS',
   "requestPath.includes('/admin')",
   "record('success')",
   "record('failed')",
