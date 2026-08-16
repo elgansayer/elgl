@@ -18,7 +18,7 @@ class Runner:
         return self.results.pop(0)
 
 
-def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> None:
+def test_collect_prioritises_guardian_and_keeps_failure_labels_eligible(tmp_path: Path) -> None:
     payload = [
         {
             "number": 10,
@@ -34,9 +34,21 @@ def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> N
         },
         {
             "number": 12,
-            "title": "Human decision",
+            "title": "Former human decision",
             "body": "Blocked",
             "labels": [{"name": "needs-human"}],
+        },
+        {
+            "number": 13,
+            "title": "Former quarantine",
+            "body": "Retry me",
+            "labels": [{"name": "factory-quarantined"}],
+        },
+        {
+            "number": 14,
+            "title": "Former quality block",
+            "body": "Repair me",
+            "labels": [{"name": "factory-quality-blocked"}],
         },
     ]
     runner = Runner([ProcessResult(0, json.dumps(payload), "")])
@@ -44,7 +56,7 @@ def test_collect_prioritises_guardian_and_skips_quarantined(tmp_path: Path) -> N
 
     tasks = client.collect_open_issues()
 
-    assert [task.identifier for task in tasks] == ["10", "11"]
+    assert [task.identifier for task in tasks] == ["10", "11", "12", "13", "14"]
     assert tasks[0].priority == 10
     assert tasks[1].priority == 0
     assert "10000" in runner.calls[0]
@@ -75,9 +87,9 @@ def test_collect_skips_swarm_claimed_and_dedupes_titles(tmp_path: Path) -> None:
     runner = Runner(
         [
             ProcessResult(0, json.dumps(payload), ""),
-            ProcessResult(0, "", ""),  # comment on the duplicate issue #21
-            ProcessResult(0, "", ""),  # close the duplicate issue #21
-            ProcessResult(0, "", ""),  # label the duplicate issue #21
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
         ]
     )
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
@@ -93,11 +105,11 @@ def test_requeue_quarantined_issues_clears_stale_labels(tmp_path: Path) -> None:
     payload = [{"number": 30}, {"number": 31}]
     runner = Runner(
         [
-            ProcessResult(0, json.dumps(payload), ""),  # list quarantined
-            ProcessResult(0, "", ""),  # remove labels from #30
-            ProcessResult(0, "", ""),  # comment on #30
-            ProcessResult(0, "", ""),  # remove labels from #31
-            ProcessResult(0, "", ""),  # comment on #31
+            ProcessResult(0, json.dumps(payload), ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
+            ProcessResult(0, "", ""),
         ]
     )
     client = GitHubClient("owner/repo", tmp_path, "secret", runner)
@@ -160,9 +172,6 @@ def test_collect_open_pull_requests_excludes_drafts_and_own_and_reviewed(
     assert [task.identifier for task in tasks] == ["40"]
     assert tasks[0].source == "github-pull-request"
     assert tasks[0].pr_branch == "bolt/optimize-quests"
-    # Above ordinary issue work (10) so a review-only task doesn't sit behind
-    # a long backlog of fresh issue implementations at equal priority, but
-    # below guardian-alert issues (0), which stay most urgent.
     assert tasks[0].priority == 5
 
 
