@@ -241,6 +241,8 @@ class FactoryPipeline:
 
         if not result.success:
             if result.failure:
+                if result.provider == "openhands":
+                    raise FactoryError(result.failure.message)
                 raise FactoryError(
                     f"Agent provider '{result.provider}' failed: {result.failure.message}"
                 )
