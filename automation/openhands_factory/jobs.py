@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Lock
 
@@ -15,6 +15,8 @@ from openhands_factory.retry_policy import (
 )
 from openhands_factory.state import atomic_write_json, read_json
 
+MAX_PERSISTED_RETRY_DELAY = timedelta(hours=24)
+
 
 class JobStore:
     _process_lock = Lock()
@@ -25,6 +27,32 @@ class JobStore:
             generation = read_json(path.parent / "generation.json", {})
             factory_generation = str(generation.get("identifier", "unknown"))
         self.factory_generation = factory_generation
+
+    @staticmethod
+    def _load_next_attempt_at(value: object, now: datetime) -> datetime | None:
+        """Recover a persisted cooldown without letting corrupt state wedge the queue.
+
+        Retry scheduling is capped at 24 hours by policy, so a timestamp farther than
+        one full retry window into the future cannot have been produced by the current
+        scheduler. Malformed or timezone-naive values are treated as immediately due;
+        valid but implausibly distant values are clamped to the maximum retry window.
+        Durable failure counters/fingerprints are left intact so recovery does not
+        erase the evidence that caused the backoff.
+        """
+
+        if not isinstance(value, str) or not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return None
+        parsed = parsed.astimezone(UTC)
+        maximum = now + MAX_PERSISTED_RETRY_DELAY
+        if parsed > maximum:
+            return maximum
+        return parsed
 
     def load(self) -> dict[str, Job]:
         payload = read_json(self.path, {"jobs": []})
@@ -42,9 +70,7 @@ class JobStore:
                 repair_attempts=int(item.get("repair_attempts", 0)),
                 quality_repairs=int(item.get("quality_repairs", 0)),
                 last_error=item.get("last_error"),
-                next_attempt_at=datetime.fromisoformat(item["next_attempt_at"])
-                if item.get("next_attempt_at")
-                else None,
+                next_attempt_at=self._load_next_attempt_at(item.get("next_attempt_at"), now),
                 failure_counts={
                     str(key): int(value) for key, value in item.get("failure_counts", {}).items()
                 },
