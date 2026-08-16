@@ -11,6 +11,7 @@ from openhands_factory.agents.base import (
     AgentRequest,
     AgentResult,
     ProviderHealth,
+    ProviderStatus,
 )
 from openhands_factory.models import Job, Task
 from openhands_factory.state_machine import StateMachine
@@ -35,6 +36,24 @@ class AgentRouter:
         self.providers = {provider.name: provider for provider in providers}
         self.policy = policy
 
+    @staticmethod
+    def _eligible(
+        provider: AgentProvider,
+        phase: AgentPhase,
+        health: ProviderHealth,
+    ) -> bool:
+        """Return whether a provider is currently safe to receive work.
+
+        Routing must fail closed for providers whose live health says they are
+        cooling down, unauthenticated, exhausted, disabled, or unavailable.  A
+        policy may order candidates, but it must never be possible for the
+        router's generic fallback path to bypass the policy's health decision.
+        """
+
+        return health.status in (ProviderStatus.HEALTHY, ProviderStatus.DEGRADED) and provider.supports(
+            phase
+        )
+
     def acquire(
         self,
         *,
@@ -43,20 +62,27 @@ class AgentRouter:
         job: Job,
         exclude: set[str] | None = None,
     ) -> AgentProvider | None:
+        health_data = {provider.name: provider.health() for provider in self.providers.values()}
+
         if self.policy:
-            health_data = {provider.name: provider.health() for provider in self.providers.values()}
             candidates = self.policy.candidates(phase, job, health_data)
             for name in candidates:
                 if exclude and name in exclude:
                     continue
                 provider = self.providers.get(name)
-                if provider and provider.supports(phase):
+                health = health_data.get(name)
+                if provider and health and self._eligible(provider, phase, health):
                     return provider
+            # A configured policy returning no eligible provider is an explicit
+            # bounded-recovery condition. Do not fall through to an unhealthy or
+            # disabled provider simply because it happens to support the phase.
+            return None
 
         for provider in self.providers.values():
             if exclude and provider.name in exclude:
                 continue
-            if provider.supports(phase):
+            health = health_data[provider.name]
+            if self._eligible(provider, phase, health):
                 return provider
         return None
 
