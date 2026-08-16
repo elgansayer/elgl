@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "description": "Artillery load-testing suite for HelloTalk endpoints",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "test:trust-safety": "artillery run trust-and-safety.load.yml",
     "test:trust-safety:report": "artillery run --output ./reports/trust-safety-report.json trust-and-safety.load.yml && artillery report ./reports/trust-safety-report.json",
