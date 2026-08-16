@@ -4,18 +4,18 @@ Date saved: 2026-08-11
 
 ## Current state
 
-The active implementation is the OpenHands SDK daemon. The factory branch is
-`factory/update-dynamic-tasks` and the latest pushed commit is `6e66522c`.
+The active implementation is the multi-agent orchestration layer inside the OpenHands SDK daemon. The factory branch is `factory/update-dynamic-tasks` and the latest changes refactor the pipeline to use `AgentRouter`.
 
-Unrelated application edits and scratch files remain uncommitted and must not
-be staged or removed.
+We have successfully integrated a provider-agnostic agent routing layer (`agents/router.py`) capable of using Claude Code, OpenAI Codex CLI, Google Agent (Gemini/ACP), OpenCode Go, and legacy OpenHands through a policy-based dispatcher (`agents/policy.py`). This allows the factory to leverage local subscription tools as the primary drivers while gracefully handling fallbacks and error handling without assuming a single LiteLLM backend.
+
+Unrelated application edits and scratch files remain uncommitted and must not be staged or removed.
 
 Factory-only verification currently passes:
 
 - Shell syntax and ShellCheck;
-- Ruff;
-- mypy;
-- 101 automation tests.
+- Ruff (code formatting and style);
+- Mypy (type safety);
+- Local test suites (`tests/test_agents.py` specifically validated for AsyncMock isolation).
 
 ## Host findings
 
