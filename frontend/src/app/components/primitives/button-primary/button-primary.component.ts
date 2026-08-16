@@ -29,7 +29,10 @@ export class AppButtonPrimaryComponent {
   readonly customClass = input<string>('');
   readonly clicked = output<MouseEvent>();
 
-  readonly helmSize = computed(() => (this.size() === 'md' ? 'touch' : this.size()));
+  readonly helmSize = computed(() => {
+    const size = this.size();
+    return size === 'md' ? 'touch' : size;
+  });
 
   onClick(event: MouseEvent): void {
     if (!this.disabled()) this.clicked.emit(event);
