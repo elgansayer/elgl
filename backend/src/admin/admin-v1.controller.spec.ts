@@ -191,6 +191,33 @@ describe('AdminV1Controller', () => {
     });
   });
 
+  it('audits failed login-history reads without recording private error details', async () => {
+    const { controller, adminService, audit } = buildController();
+    const storageError = new Error('private database detail');
+    adminService.getLoginHistory.mockRejectedValue(storageError);
+    const request = {
+      user: { id: 'admin-1' },
+      headers: { 'x-request-id': 'request-2' },
+    } as never;
+
+    await expect(
+      controller.getUserLoginHistory('user-1', request),
+    ).rejects.toBe(storageError);
+    expect(audit.record).toHaveBeenCalledWith({
+      actorUserId: 'admin-1',
+      action: 'users.login_history.read',
+      capabilityKey: 'users.sessions.read',
+      targetType: 'user',
+      targetId: 'user-1',
+      outcome: 'failed',
+      correlationId: 'request-2',
+      metadata: { source: 'admin-v1' },
+    });
+    expect(JSON.stringify(audit.record.mock.calls)).not.toContain(
+      'private database detail',
+    );
+  });
+
   it('fails closed when login-history auditing fails', async () => {
     const { controller, adminService, audit } = buildController();
     adminService.getLoginHistory.mockResolvedValue([]);
