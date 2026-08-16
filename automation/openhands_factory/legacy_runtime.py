@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-from subprocess import CompletedProcess, TimeoutExpired, run
+import dataclasses
+import pathlib
+import subprocess
 
 
 LEGACY_SYSTEMD_UNITS = (
@@ -25,16 +25,16 @@ LEGACY_TMUX_SESSIONS = (
 )
 
 LEGACY_STATE_PATHS = (
-    Path("/var/lib/hellotalk-swarm"),
-    Path("/var/log/hellotalk-swarm"),
-    Path("/etc/hellotalk-swarm"),
-    Path("/opt/hellotalk-swarm"),
-    Path("/var/lib/ai-swarm"),
-    Path("/opt/ai-swarm"),
+    pathlib.Path("/var/lib/hellotalk-swarm"),
+    pathlib.Path("/var/log/hellotalk-swarm"),
+    pathlib.Path("/etc/hellotalk-swarm"),
+    pathlib.Path("/opt/hellotalk-swarm"),
+    pathlib.Path("/var/lib/ai-swarm"),
+    pathlib.Path("/opt/ai-swarm"),
 )
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class LegacyFinding:
     kind: str
     identifier: str
@@ -42,8 +42,8 @@ class LegacyFinding:
     detail: str
 
 
-def _run(arguments: tuple[str, ...]) -> CompletedProcess[str]:
-    return run(arguments, capture_output=True, text=True, check=False, timeout=10)
+def _run(arguments: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(arguments, capture_output=True, text=True, check=False, timeout=10)
 
 
 def detect_legacy_systemd_units() -> list[LegacyFinding]:
@@ -52,7 +52,7 @@ def detect_legacy_systemd_units() -> list[LegacyFinding]:
         try:
             active = _run(("systemctl", "is-active", unit))
             enabled = _run(("systemctl", "is-enabled", unit))
-        except (OSError, TimeoutExpired) as error:
+        except (OSError, subprocess.TimeoutExpired) as error:
             findings.append(
                 LegacyFinding(
                     "systemd",
@@ -82,7 +82,7 @@ def detect_legacy_systemd_units() -> list[LegacyFinding]:
 def detect_legacy_tmux_sessions() -> list[LegacyFinding]:
     try:
         result = _run(("tmux", "list-sessions", "-F", "#{session_name}"))
-    except (OSError, TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired):
         return []
     if result.returncode != 0:
         return []
@@ -93,7 +93,9 @@ def detect_legacy_tmux_sessions() -> list[LegacyFinding]:
     ]
 
 
-def detect_legacy_state_paths(paths: tuple[Path, ...] = LEGACY_STATE_PATHS) -> list[LegacyFinding]:
+def detect_legacy_state_paths(
+    paths: tuple[pathlib.Path, ...] = LEGACY_STATE_PATHS,
+) -> list[LegacyFinding]:
     findings: list[LegacyFinding] = []
     for path in paths:
         if path.exists():
