@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   review_and_fix:
-    # This job has privileged repository credentials and may push or admin-merge.
+    # This job has privileged repository credentials and may push fixes or queue merges.
     # Never run that path against a fork-controlled checkout. Same-repository AI
     # branches remain eligible, while external fork PRs are reviewed by normal CI.
     if: >
@@ -21,7 +21,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -33,7 +32,8 @@ jobs:
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
         id: primary
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1
+        # anthropics/claude-code-action v1.0.193
+        uses: anthropics/claude-code-action@9d7150bc8a3dae8149739a88019d192b579ad90c
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
@@ -46,10 +46,10 @@ jobs:
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL: Once all tests pass, execute:
-               gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
-               and retry. DO NOT FINISH until the PR is successfully merged.
+            5. CRITICAL: Once local verification passes, queue a protected squash merge with:
+               gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+               Never use --admin or otherwise bypass required GitHub checks or branch protection.
+               If auto-merge cannot be enabled, leave the PR open for normal protected-branch merging.
 
       # Auto-skip: check if Claude actually merged the PR
       - name: Check if Claude merged the PR
@@ -75,7 +75,8 @@ jobs:
         id: secondary
         if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
         continue-on-error: true
-        uses: xinbenlv/openhands-action@v1.0.1
+        # xinbenlv/openhands-action v1.0.1
+        uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "deepseek/deepseek-v4-pro"
@@ -90,17 +91,18 @@ jobs:
             2. Run the local tests and linters to verify the code is correct.
             3. Check for merge conflicts with `main`. If there are conflicts, resolve them.
             4. If tests fail or the code is substandard, write the fixes, commit, and push them to this branch.
-            5. CRITICAL: Once all tests pass, execute:
-               gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               If checks are still running, poll 'gh pr checks ${{ github.event.pull_request.number }} --watch'
-               and retry. DO NOT FINISH until the PR is successfully merged.
+            5. CRITICAL: Once local verification passes, queue a protected squash merge with:
+               gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+               Never use --admin or otherwise bypass required GitHub checks or branch protection.
+               If auto-merge cannot be enabled, leave the PR open for normal protected-branch merging.
           cli_args: "--max-iterations 50"
 
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
         id: tertiary
         if: steps.secondary.outcome == 'failure'
-        uses: xinbenlv/openhands-action@v1.0.1
+        # xinbenlv/openhands-action v1.0.1
+        uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           llm_model: "gemini/gemini-3.5-flash"
@@ -113,6 +115,8 @@ jobs:
 
             1. Review the code changes in this branch.
             2. Run local tests. Fix any failures, commit, and push.
-            3. CRITICAL: Execute gh pr merge ${{ github.event.pull_request.number }} --admin --squash
-               Poll checks if needed. DO NOT FINISH until the PR is merged.
+            3. CRITICAL: Queue a protected squash merge with:
+               gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+               Never use --admin or bypass required GitHub checks or branch protection.
+               If auto-merge cannot be enabled, leave the PR open for normal protected-branch merging.
           cli_args: "--max-iterations 30"
