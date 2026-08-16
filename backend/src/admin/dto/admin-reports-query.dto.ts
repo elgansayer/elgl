@@ -50,12 +50,16 @@ export class AdminReportsQueryDto {
   @MaxLength(128)
   reporterUserId?: string;
 
-  @ApiPropertyOptional({ description: 'Inclusive ISO-8601 lower creation-time bound' })
+  @ApiPropertyOptional({
+    description: 'Inclusive ISO-8601 lower creation-time bound',
+  })
   @IsOptional()
   @IsISO8601()
   startTime?: string;
 
-  @ApiPropertyOptional({ description: 'Inclusive ISO-8601 upper creation-time bound' })
+  @ApiPropertyOptional({
+    description: 'Inclusive ISO-8601 upper creation-time bound',
+  })
   @IsOptional()
   @IsISO8601()
   endTime?: string;
