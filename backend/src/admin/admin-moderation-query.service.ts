@@ -29,6 +29,9 @@ export class AdminModerationQueryService {
     if (query.reasonCategory?.trim()) {
       request = request.eq('reason_category', query.reasonCategory.trim());
     }
+    if (query.reportedUserId?.trim()) {
+      request = request.eq('reported_user_id', query.reportedUserId.trim());
+    }
 
     const { data, error, count } = await request
       .order('created_at', { ascending: false })
