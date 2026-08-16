@@ -121,7 +121,7 @@ jobs:
         with:
           name: spartan-full-tree-failure-${{ github.sha }}
           path: test-results/spartan-full-tree.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
       - name: Enforce component-system convergence
         run: npm run check:component-system
