@@ -24,6 +24,7 @@ jobs:
       github.event.action != 'labeled' ||
       github.event.label.name == 'factory-ready'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Gate admin issues until explicitly ready
         env:
