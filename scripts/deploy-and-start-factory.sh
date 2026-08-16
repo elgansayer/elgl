@@ -13,8 +13,8 @@ usage() {
 Usage: deploy-and-start-factory.sh --use-existing-credentials
 
 Deploys the OpenHands factory from the configured repository ref, repairs
-canonical host paths, runs the online doctor, and starts the daemon. It never
-prints provider credentials.
+canonical host paths, installs the current systemd/watchdog configuration, runs
+the online doctor, and starts the daemon. It never prints provider credentials.
 
 The repository defaults to the checkout containing this script and the ref
 defaults to main. Override them with FACTORY_SOURCE_REPOSITORY and
@@ -63,6 +63,20 @@ WORKTREE=$(mktemp -d /tmp/hellotalk-factory-deploy.XXXXXX)
 git -C "$REPOSITORY" worktree add --detach "$WORKTREE" "$SOURCE_REF" >/dev/null
 
 "$WORKTREE/scripts/repair-factory-host.sh"
+
+install -o root -g root -m 0644 \
+  "$WORKTREE/config/systemd/hellotalk-factory.service" \
+  /etc/systemd/system/hellotalk-factory.service
+install -o root -g root -m 0644 \
+  "$WORKTREE/config/systemd/hellotalk-factory-health.service" \
+  /etc/systemd/system/hellotalk-factory-health.service
+install -o root -g root -m 0644 \
+  "$WORKTREE/config/systemd/hellotalk-factory-health.timer" \
+  /etc/systemd/system/hellotalk-factory-health.timer
+install -o root -g root -m 0755 \
+  "$WORKTREE/config/systemd/hellotalk-factory-watchdog.sh" \
+  /opt/hellotalk-factory/hellotalk-factory-watchdog.sh
+systemctl daemon-reload
 
 if [ ! -x /opt/hellotalk-factory/venv/bin/pip ]; then
   echo 'Missing factory virtual environment.' >&2
