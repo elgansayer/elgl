@@ -40,6 +40,15 @@ import {
             [disabled]="busy()"
           />
         </label>
+        <label>Reported user ID
+          <input
+            name="reportedUserId"
+            [(ngModel)]="reportedUserId"
+            maxlength="128"
+            placeholder="Exact user ID"
+            [disabled]="busy()"
+          />
+        </label>
         <div class="filter-row">
           <button type="submit" [disabled]="busy()">Apply</button>
           <button type="button" (click)="clearFilters()" [disabled]="busy()">Clear</button>
@@ -131,6 +140,7 @@ export class ModerationPageComponent {
   readonly pageSize = 20;
   status = '';
   reasonCategory = '';
+  reportedUserId = '';
   readonly reports = signal<AdminModerationReport[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -153,6 +163,7 @@ export class ModerationPageComponent {
           this.pageSize,
           this.status,
           this.reasonCategory,
+          this.reportedUserId,
         ),
       );
       this.reports.set(result.reports);
@@ -174,6 +185,7 @@ export class ModerationPageComponent {
   clearFilters(): void {
     this.status = '';
     this.reasonCategory = '';
+    this.reportedUserId = '';
     void this.load(true);
   }
 
