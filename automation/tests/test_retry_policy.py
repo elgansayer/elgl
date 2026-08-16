@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import FailureKind, Job, JobState, Task
@@ -15,10 +16,17 @@ def _job() -> Job:
 
 
 def test_classifies_failure_kinds_from_outer_openhands_diagnostics() -> None:
-    assert classify_failure("Conversation exceeded the maximum task duration") is FailureKind.TASK_TIMEOUT
-    assert classify_failure("OAuth token expired; login required") is FailureKind.AUTHENTICATION
+    assert (
+        classify_failure("Conversation exceeded the maximum task duration")
+        is FailureKind.TASK_TIMEOUT
+    )
+    assert (
+        classify_failure("OAuth token expired; login required") is FailureKind.AUTHENTICATION
+    )
     assert classify_failure("HTTP 429 rate limit exceeded") is FailureKind.RATE_LIMIT
-    assert classify_failure("Malformed response: invalid JSON") is FailureKind.MALFORMED_RESPONSE
+    assert (
+        classify_failure("Malformed response: invalid JSON") is FailureKind.MALFORMED_RESPONSE
+    )
     assert classify_failure("Quality gate validation failed") is FailureKind.VALIDATION
 
 
@@ -96,7 +104,7 @@ def test_backoff_is_deterministic_jittered_exponential_and_capped() -> None:
     assert capped >= timedelta(hours=19, minutes=12)
 
 
-def test_job_store_persists_class_budget_and_jittered_next_attempt(tmp_path) -> None:
+def test_job_store_persists_class_budget_and_jittered_next_attempt(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs.json")
     job = _job()
     job.state = JobState.IMPLEMENTING
@@ -118,7 +126,7 @@ def test_job_store_persists_class_budget_and_jittered_next_attempt(tmp_path) -> 
     assert timedelta(minutes=3, seconds=59) <= delay <= timedelta(minutes=6, seconds=1)
 
 
-def test_job_store_keeps_retry_budget_on_poll_and_resets_on_progress(tmp_path) -> None:
+def test_job_store_keeps_retry_budget_on_poll_and_resets_on_progress(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs.json")
     job = _job()
     job.state = JobState.CI_PENDING
