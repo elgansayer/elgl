@@ -42,4 +42,10 @@ export class AdminReportsQueryDto {
   @IsString()
   @MaxLength(128)
   reportedUserId?: string;
+
+  @ApiPropertyOptional({ description: 'Exact reporter user identifier filter' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  reporterUserId?: string;
 }
