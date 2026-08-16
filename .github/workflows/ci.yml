@@ -5,12 +5,14 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -177,7 +179,7 @@ jobs:
       - run: npm run check:design-sync
       - name: Enforce Spartan ownership boundaries
         env:
-          SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: npm run check:spartan-boundaries
       - name: Enforce full-tree Spartan adoption
         run: |
@@ -196,7 +198,7 @@ jobs:
         run: npm run check:component-system
       - name: Prevent new legacy primitive adoption
         env:
-          LEGACY_PRIMITIVE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          LEGACY_PRIMITIVE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: npm run check:legacy-primitive-delta
       - name: Enforce design-sync drift on pull requests
         if: github.event_name == 'pull_request'
@@ -208,7 +210,7 @@ jobs:
         run: node scripts/check-admin-audit-integrity.mjs
       - name: Enforce append-only, collision-free migration changes
         env:
-          MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: node scripts/check-migration-delta.mjs
 
   factory:
