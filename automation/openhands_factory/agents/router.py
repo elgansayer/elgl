@@ -45,14 +45,13 @@ class AgentRouter:
         """Return whether a provider is currently safe to receive work.
 
         Routing must fail closed for providers whose live health says they are
-        cooling down, unauthenticated, exhausted, disabled, or unavailable.  A
+        cooling down, unauthenticated, exhausted, disabled, or unavailable. A
         policy may order candidates, but it must never be possible for the
         router's generic fallback path to bypass the policy's health decision.
         """
 
-        return health.status in (ProviderStatus.HEALTHY, ProviderStatus.DEGRADED) and provider.supports(
-            phase
-        )
+        usable = health.status in (ProviderStatus.HEALTHY, ProviderStatus.DEGRADED)
+        return usable and provider.supports(phase)
 
     def acquire(
         self,
