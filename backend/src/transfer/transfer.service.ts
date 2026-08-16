@@ -14,8 +14,18 @@ export class TransferService {
     private readonly configService: ConfigService,
   ) {
     const secret = this.configService.get<string>('TRANSFER_SECRET');
-    if (!secret || secret === 'device-transfer-secret-dev-only') {
-      throw new Error('TRANSFER_SECRET must be configured');
+    const nodeEnv = this.configService.get<string>('NODE_ENV');
+
+    if (nodeEnv === 'production') {
+      if (!secret || secret === 'device-transfer-secret-dev-only') {
+        throw new Error(
+          'TRANSFER_SECRET must be securely configured in production',
+        );
+      }
+    } else {
+      if (!secret) {
+        throw new Error('TRANSFER_SECRET must be configured');
+      }
     }
     this.secret = secret;
   }

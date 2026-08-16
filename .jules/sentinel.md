@@ -38,3 +38,7 @@
 **Learning:** Services should employ a fail-secure approach during startup. Defaulting to development secrets is risky unless explicitly constrained to non-production environments.
 **Prevention:** In constructors or initialization blocks, verify that `NODE_ENV === "production"` has the required sensitive environment variables set, and throw a fast-failing error if not.
 
+## 2026-08-16 - [Strict validation for TRANSFER_SECRET]
+**Vulnerability:** Weak hardcoded dev fallbacks present in application secrets allowed them to silently pass into production.
+**Learning:** Checking for node environment is crucial to allow developers to still test easily with fallbacks without leaking these into production environments.
+**Prevention:** Implement checks for `NODE_ENV === 'production'` and throw errors if fallback defaults are used or if secrets are missing in production.
