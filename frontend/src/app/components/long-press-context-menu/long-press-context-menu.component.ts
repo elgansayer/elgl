@@ -1,6 +1,5 @@
 import { Component, computed, input, output, signal } from '@angular/core';
-import type { BrnDialogState } from '@spartan-ng/brain/dialog';
-import { HlmDialogImports } from '@spartan-ng/helm/dialog';
+import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
@@ -138,7 +137,7 @@ export class LongPressContextMenuComponent {
   readonly requestCorrection = output<{ messageId: string; content: string }>();
 
   menuVisible = signal(false);
-  readonly dialogState = computed<BrnDialogState>(() => (this.menuVisible() ? 'open' : 'closed'));
+  readonly dialogState = computed<HlmDialogState>(() => (this.menuVisible() ? 'open' : 'closed'));
 
   private longPressTimer?: ReturnType<typeof setTimeout>;
   private readonly LONG_PRESS_DURATION = 600;
@@ -187,11 +186,11 @@ export class LongPressContextMenuComponent {
     this.menuVisible.set(false);
   }
 
-  /** BrnDialog reports every state transition, including ones this component
+  /** The Helm dialog reports every state transition, including ones this component
    * triggered itself via closeMenu() - only react to a 'closed' we didn't
    * already cause (backdrop click, Escape), guarded by menuVisible() so a
    * self-triggered close is a harmless no-op here. */
-  onDialogStateChanged(state: BrnDialogState): void {
+  onDialogStateChanged(state: HlmDialogState): void {
     if (state === 'closed' && this.menuVisible()) {
       this.menuVisible.set(false);
     }
