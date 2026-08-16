@@ -45,6 +45,15 @@ jobs:
           - directory: frontend
             check: unit
             command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
+          - directory: admin-portal
+            check: lint
+            command: npm run lint:check
+          - directory: admin-portal
+            check: build
+            command: npm run build
+          - directory: admin-portal
+            check: unit
+            command: npm test
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
