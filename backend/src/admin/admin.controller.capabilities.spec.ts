@@ -24,9 +24,7 @@ describe('AdminController legacy capability boundaries', () => {
         ADMIN_CAPABILITIES_METADATA_KEY,
         method,
       ) as string[] | undefined;
-      const guards = Reflect.getMetadata(GUARDS_METADATA, method) as
-        | unknown[]
-        | undefined;
+      const guards = Reflect.getMetadata(GUARDS_METADATA, method) as unknown[] | undefined;
 
       expect(required).toEqual([capability]);
       expect(guards).toContain(AdminCapabilityGuard);
