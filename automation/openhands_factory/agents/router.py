@@ -94,14 +94,25 @@ class AgentRouter:
     def _health(self) -> dict[str, ProviderHealth]:
         health: dict[str, ProviderHealth] = {}
         for name, provider in self.providers.items():
-            provider_health = provider.health()
             breaker = self.breakers.get(name)
             if breaker is not None and not breaker.permits_call():
                 health[name] = breaker.get_health()
-            elif provider_health.status in {
-                ProviderStatus.HEALTHY,
-                ProviderStatus.DEGRADED,
-            } and breaker is not None and breaker.state == "half-open":
+                continue
+            try:
+                provider_health = provider.health()
+            except Exception as error:
+                health[name] = ProviderHealth(
+                    provider=name,
+                    status=ProviderStatus.UNAVAILABLE,
+                    checked_at=datetime.now(UTC),
+                    detail=f"health probe failed: {type(error).__name__}",
+                )
+                continue
+            if (
+                provider_health.status in {ProviderStatus.HEALTHY, ProviderStatus.DEGRADED}
+                and breaker is not None
+                and breaker.state == "half-open"
+            ):
                 health[name] = breaker.get_health()
             else:
                 health[name] = provider_health
@@ -156,6 +167,8 @@ class AgentRouter:
         if result.failure is not None:
             entry["kind"] = result.failure.kind.value
             entry["error"] = result.failure.message[-1000:]
+            if result.failure.retry_after_seconds is not None:
+                entry["retry_after_seconds"] = result.failure.retry_after_seconds
         if fallback_reason:
             entry["fallback_reason"] = fallback_reason
         return entry
@@ -249,7 +262,10 @@ class AgentRouter:
             failure_kind = failure.kind if failure is not None else AgentFailureKind.INVALID_AGENT_OUTPUT
             fallback = failure_kind in FALLBACK_FAILURES
             if breaker is not None:
-                breaker.record_failure(failure_kind)
+                breaker.record_failure(
+                    failure_kind,
+                    retry_after_seconds=(failure.retry_after_seconds if failure is not None else None),
+                )
                 self._save_health()
             job.provider_history.append(
                 self._history_entry(
