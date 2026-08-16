@@ -1,3 +1,5 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource } from '@angular/core';
 import { HelpFaqService, FAQResponse } from '../../services/help-faq.service';
 import { I18nService } from '../../services/i18n.service';
@@ -7,14 +9,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-support-centre',
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmButton, CommonModule, FormsModule, TranslatePipe],
   template: `
     <div class="container mx-auto p-4 max-w-4xl">
       <h1 class="text-2xl font-bold mb-4">{{ 'support.title' | t }}</h1>
       <p class="text-base-content/70 mb-6">{{ 'support.subtitle' | t }}</p>
 
       <div class="flex flex-wrap gap-2 mb-6">
-        <button
+        <button hlmBtn
           [class.btn-primary]="selectedCategory() === ''"
           [class.btn-outline]="selectedCategory() !== ''"
           class="btn btn-sm"
@@ -23,7 +25,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
           {{ 'support.allCategories' | t }}
         </button>
         @for (cat of categories(); track cat) {
-          <button
+          <button hlmBtn
             [class.btn-primary]="selectedCategory() === cat"
             [class.btn-outline]="selectedCategory() !== cat"
             class="btn btn-sm"
@@ -44,7 +46,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <div class="space-y-4">
           @for (faq of faqResource.value()?.items ?? []; track faq.id) {
             <div class="collapse collapse-arrow bg-base-200 rounded-lg">
-              <input type="checkbox" />
+              <hlm-checkbox />
               <div class="collapse-title text-lg font-medium cursor-pointer">
                 {{ faq.question }}
               </div>

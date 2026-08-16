@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   input,
@@ -10,7 +11,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-streak-congratulations',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70"
@@ -37,7 +38,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
         <p class="text-white/70 text-center max-w-xs">
           {{ 'streak_congratulations.subtitle' | t: { days: streakDays() } }}
         </p>
-        <button
+        <button hlmBtn
           class="px-8 py-3 mt-4 rounded-full bg-accent text-white font-semibold text-lg hover:opacity-90 transition-opacity"
           (click)="dismiss.emit()"
           (keydown)="dismiss.emit()"

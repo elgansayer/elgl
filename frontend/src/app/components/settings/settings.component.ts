@@ -1,3 +1,7 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -10,7 +14,7 @@ import { LinkedAccountsService, LinkedAccount } from '../../services/linked-acco
 import { I18nService } from '../../services/i18n.service';
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, TranslatePipe, RouterModule],
+  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe, RouterModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })

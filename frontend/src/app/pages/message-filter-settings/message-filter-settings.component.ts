@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -6,7 +8,7 @@ import { UserService } from '../../services/user.service';
 @Component({
   selector: 'app-message-filter-settings',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmInput, HlmButton, CommonModule, TranslatePipe],
   templateUrl: './message-filter-settings.component.html',
 })
 export class MessageFilterSettingsComponent implements OnInit {

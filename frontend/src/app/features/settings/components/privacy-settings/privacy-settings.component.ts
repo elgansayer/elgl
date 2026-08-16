@@ -1,3 +1,6 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, effect } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../core/services/settings.service';
@@ -5,25 +8,25 @@ import { SettingsService } from '../../../../core/services/settings.service';
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [HlmCheckbox, HlmNativeSelect, HlmButton, ReactiveFormsModule],
   template: `
     <form [formGroup]="form">
       <h3>Direct Messages</h3>
       <label>
-        <input type="checkbox" formControlName="allowFromServerMembers" />
+        <hlm-checkbox formControlName="allowFromServerMembers" />
         Allow direct messages from server members
       </label>
 
       <label>
         Explicit Image Filter Level:
-        <select formControlName="imageFilterLevel">
+        <hlm-native-select formControlName="imageFilterLevel">
           <option value="All">Scan and delete</option>
           <option value="Blurred">Blur explicit images</option>
           <option value="None">Do not filter</option>
-        </select>
+        </hlm-native-select>
       </label>
 
-      <button (click)="save()" [disabled]="form.pristine">Save Changes</button>
+      <button hlmBtn (click)="save()" [disabled]="form.pristine">Save Changes</button>
     </form>
   `,
 })

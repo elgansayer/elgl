@@ -8,7 +8,7 @@
       role="tablist"
       [attr.aria-label]="'moderation.filterAria' | t"
     >
-      <button
+      <button hlmBtn
         [attr.aria-selected]="activeTab() === 'moment'"
         [class.bg-surface-200]="activeTab() === 'moment'"
         [class.text-text-primary]="activeTab() === 'moment'"
@@ -19,7 +19,7 @@
       >
         {{ 'moderation.moment' | t }}
       </button>
-      <button
+      <button hlmBtn
         [attr.aria-selected]="activeTab() === 'profile'"
         [class.bg-surface-200]="activeTab() === 'profile'"
         [class.text-text-primary]="activeTab() === 'profile'"
@@ -107,7 +107,7 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-2 self-end sm:self-start">
-                  <button
+                  <button hlmBtn
                     class="inline-flex items-center justify-center rounded-lg bg-success text-on-fill px-3 py-2 text-sm font-bold hover:bg-success/90 transition-colors"
                     (click)="approveItem(item)"
                     [disabled]="item.status !== 'pending'"
@@ -115,7 +115,7 @@
                   >
                     {{ 'moderation.approve' | t }}
                   </button>
-                  <button
+                  <button hlmBtn
                     class="inline-flex items-center justify-center rounded-lg bg-danger text-on-fill px-3 py-2 text-sm font-bold hover:bg-danger/90 transition-colors"
                     (click)="rejectItem(item)"
                     [disabled]="item.status !== 'pending'"
@@ -187,7 +187,7 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-2 self-end sm:self-start">
-                  <button
+                  <button hlmBtn
                     class="inline-flex items-center justify-center rounded-lg bg-success text-on-fill px-3 py-2 text-sm font-bold hover:bg-success/90 transition-colors"
                     (click)="approveItem(item)"
                     [disabled]="item.status !== 'pending'"
@@ -195,7 +195,7 @@
                   >
                     {{ 'moderation.approve' | t }}
                   </button>
-                  <button
+                  <button hlmBtn
                     class="inline-flex items-center justify-center rounded-lg bg-danger text-on-fill px-3 py-2 text-sm font-bold hover:bg-danger/90 transition-colors"
                     (click)="rejectItem(item)"
                     [disabled]="item.status !== 'pending'"

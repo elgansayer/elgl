@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal } from '@angular/core';
 
 interface Sticker {
@@ -6,6 +7,7 @@ interface Sticker {
 }
 
 @Component({
+  imports: [HlmButton],
   selector: 'app-sticker-picker',
   template: `
     @if (isOpen()) {
@@ -23,7 +25,7 @@ interface Sticker {
         >
           <div class="grid grid-cols-4 gap-4">
             @for (sticker of stickers(); track sticker.id) {
-              <button
+              <button hlmBtn
                 type="button"
                 (click)="onSelect(sticker)"
                 class="flex items-center justify-center w-16 h-16 rounded-card bg-surface-100 hover:bg-surface-50 transition-colors"

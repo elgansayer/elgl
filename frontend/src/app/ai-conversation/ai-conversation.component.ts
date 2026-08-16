@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -19,7 +21,7 @@ interface ChatMessage {
 @Component({
   selector: 'app-ai-conversation',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, TokenisedTextComponent, WordDefinitionModalComponent],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule, TranslatePipe, TokenisedTextComponent, WordDefinitionModalComponent],
   host: {
     class: 'flex flex-col h-full bg-surface-500 text-text-primary',
   },
@@ -31,7 +33,7 @@ interface ChatMessage {
           {{ 'aiConversation.chooseScenarioDesc' | t }}
         </p>
         @for (scenario of scenarioList(); track scenario.id) {
-          <button
+          <button hlmBtn
             type="button"
             (click)="startScenario(scenario)"
             class="flex items-center gap-3 w-full text-start bg-surface-200 hover:bg-surface-300 active:bg-surface-400 text-text-primary px-4 py-3 rounded-xl transition-colors"
@@ -44,7 +46,7 @@ interface ChatMessage {
     } @else {
       <div class="flex items-center justify-between px-4 py-3 border-b border-surface-200">
         <div class="flex items-center gap-2">
-          <button
+          <button hlmBtn
             type="button"
             (click)="backToScenarios()"
             class="text-text-secondary hover:text-text-primary p-1"
@@ -112,7 +114,7 @@ interface ChatMessage {
 
       <div class="ps-4 pe-4 pb-4">
         <div class="flex items-center gap-2 bg-surface-200 rounded-full ps-4 pe-2 py-2">
-          <input
+          <input hlmInput
             type="text"
             class="flex-1 bg-transparent text-text-primary placeholder-text-secondary outline-none ps-0 pe-0"
             [placeholder]="'aiConversation.typeMessage' | t"
@@ -121,7 +123,7 @@ interface ChatMessage {
             (keydown.enter)="send()"
             [disabled]="isLoading()"
           />
-          <button
+          <button hlmBtn
             type="button"
             (click)="send()"
             [disabled]="isLoading() || !inputText().trim()"

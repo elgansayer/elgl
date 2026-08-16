@@ -3,7 +3,7 @@
     <h3 class="app-section-title flex items-center gap-2">
       <span>{{ 'doodle.title' | t }}</span>
     </h3>
-    <button
+    <button hlmBtn
       aria-label="Cancel doodle"
       (click)="cancel()"
       class="text-text-muted hover:text-text-secondary font-bold text-xl"
@@ -36,7 +36,7 @@
         'doodle.colorLabel' | t
       }}</span>
       @for (color of colors; track color) {
-        <button
+        <button hlmBtn
           [attr.aria-label]="'Select ' + color"
           (click)="setColor(color)"
           [class]="
@@ -55,7 +55,7 @@
         'doodle.brushLabel' | t
       }}</span>
       @for (w of [2, 4, 8, 14]; track w) {
-        <button
+        <button hlmBtn
           (click)="setBrushWidth(w)"
           [class]="
             'px-2.5 py-1 rounded-lg text-xs font-bold transition-all ' +

@@ -1,3 +1,4 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { Component, inject, input, output, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -10,7 +11,7 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
 
 @Component({
   selector: 'app-trust-safety-modal',
-  imports: [
+  imports: [HlmNativeSelect, 
     FormsModule,
     TranslatePipe,
     AppSkeletonLoaderComponent,
@@ -86,11 +87,11 @@ import { AppSkeletonLoaderComponent } from '../primitives/skeleton-loader/skelet
             } @else {
               <div>
                 <label for="report-reason-select" class="mb-1 block ps-1 font-bold text-text-primary">{{ 'safety.reasonLabel' | t }}</label>
-                <select id="report-reason-select" [(ngModel)]="reportReason" aria-required="true" class="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium">
+                <hlm-native-select selectId="report-reason-select" [(ngModel)]="reportReason" aria-required="true" class="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium" selectClass="w-full rounded-xl border bg-surface-300 px-3 py-2 font-medium">
                   @for (category of reportCategories(); track category.value) {
                     <option [value]="category.value">{{ category.label }}</option>
                   }
-                </select>
+                </hlm-native-select>
               </div>
             }
             <div>

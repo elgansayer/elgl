@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -36,7 +37,7 @@ import { VideoClassroomErrorBoundaryComponent } from '../video-classroom-error-b
 
 @Component({
   selector: 'app-audio-room',
-  imports: [
+  imports: [HlmButton, 
     TranslatePipe,
     RoomChatComponent,
     VoiceroomNotesComponent,

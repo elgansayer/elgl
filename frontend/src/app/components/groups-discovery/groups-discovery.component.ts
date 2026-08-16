@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, input, resource } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
@@ -26,7 +27,7 @@ interface InterestTopic {
 
 @Component({
   selector: 'app-groups-discovery',
-  imports: [CommonModule, RouterLink, TranslatePipe, SanitiseHtmlPipe],
+  imports: [HlmButton, CommonModule, RouterLink, TranslatePipe, SanitiseHtmlPipe],
   template: `
     <div class="flex flex-col h-full">
       <!-- Topic filter pills -->
@@ -36,7 +37,7 @@ interface InterestTopic {
           role="radiogroup"
           [attr.aria-label]="'groups_discovery_filter_topics' | t"
         >
-          <button
+          <button hlmBtn
             (click)="selectedInterest.set(null)"
             class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200 shrink-0"
             [class.bg-accent-500]="selectedInterest() === null"
@@ -51,7 +52,7 @@ interface InterestTopic {
             {{ 'groups_discovery_all_topics' | t }}
           </button>
           @for (topic of interestPills(); track topic.id) {
-            <button
+            <button hlmBtn
               (click)="selectedInterest.set(topic.id)"
               class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-200 shrink-0"
               [class.bg-accent-500]="selectedInterest() === topic.id"
@@ -95,7 +96,7 @@ interface InterestTopic {
           <span class="text-4xl mb-3">👥</span>
           <p class="text-sm">{{ 'groups_discovery_empty' | t }}</p>
           @if (selectedInterest()) {
-            <button
+            <button hlmBtn
               (click)="selectedInterest.set(null)"
               class="mt-3 text-accent-400 text-sm font-semibold"
             >
@@ -132,7 +133,7 @@ interface InterestTopic {
                 </div>
                 <div class="shrink-0">
                   @if (!group.is_member && group.member_count < group.max_members) {
-                    <button
+                    <button hlmBtn
                       (click)="joinGroup(group.id)"
                       class="bg-accent-500 hover:bg-accent-400 text-on-fill px-4 py-1.5 rounded-full text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                       [disabled]="joiningId() === group.id"

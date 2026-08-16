@@ -1,3 +1,6 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -11,7 +14,7 @@ import {
 
 @Component({
   selector: 'app-notification-preferences',
-  imports: [TranslatePipe],
+  imports: [HlmCheckbox, HlmInput, HlmButton, TranslatePipe],
   template: `
     <div class="bg-surface-200 border border-surface-100 p-4 rounded-lg max-w-2xl mx-auto">
       <h2 class="text-xl font-bold mb-4">{{ 'notification_preferences.title' | t }}</h2>
@@ -27,8 +30,7 @@ import {
             <div class="flex gap-4">
               @for (ch of channels; track ch) {
                 <label class="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="checkbox"
+                  <hlm-checkbox
                     [checked]="channelEnabled(cat, ch)"
                     (change)="toggle(cat, ch)"
                     class="accent-primary h-4 w-4 rounded"
@@ -42,8 +44,7 @@ import {
 
         <div class="mt-6 pt-4 border-t border-surface-100">
           <label class="flex items-center gap-2 mb-4">
-            <input
-              type="checkbox"
+            <hlm-checkbox
               [checked]="doNotDisturb()"
               (change)="toggleDnd()"
               class="accent-primary h-4 w-4 rounded"
@@ -56,7 +57,7 @@ import {
               <label class="block text-xs mb-1" for="quiet-hours-start">{{
                 'notification_preferences.quiet_hours_start' | t
               }}</label>
-              <input
+              <input hlmInput
                 id="quiet-hours-start"
                 type="time"
                 [value]="quietStart()"
@@ -68,7 +69,7 @@ import {
               <label class="block text-xs mb-1" for="quiet-hours-end">{{
                 'notification_preferences.quiet_hours_end' | t
               }}</label>
-              <input
+              <input hlmInput
                 id="quiet-hours-end"
                 type="time"
                 [value]="quietEnd()"
@@ -80,14 +81,14 @@ import {
         </div>
 
         <div class="mt-6 flex gap-3">
-          <button
+          <button hlmBtn
             type="button"
             (click)="reset()"
             class="rounded-app border border-surface-100 text-text-secondary hover:bg-surface-300 transition-colors px-4 py-2 text-sm font-semibold"
           >
             {{ 'common.reset' | t }}
           </button>
-          <button
+          <button hlmBtn
             type="button"
             (click)="save()"
             class="rounded-app bg-primary text-on-fill hover:bg-primary/90 transition-colors px-4 py-2 text-sm font-semibold"

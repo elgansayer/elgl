@@ -1,3 +1,7 @@
+import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -6,7 +10,7 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-resource-library',
-  imports: [CommonModule, TranslatePipe, FormsModule],
+  imports: [HlmNativeSelect, HlmTextarea, HlmInput, HlmButton, CommonModule, TranslatePipe, FormsModule],
   template: `
     <div class="p-2 sm:p-4 md:p-6 max-w-5xl mx-auto">
       <h1 class="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">
@@ -15,28 +19,28 @@ import { FormsModule } from '@angular/forms';
 
       <!-- Filter controls -->
       <div class="mb-3 sm:mb-4 flex flex-wrap gap-1.5 sm:gap-2">
-        <select
+        <hlm-native-select
           [(ngModel)]="filterTopic"
           name="filterTopic"
-          class="p-1.5 sm:p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-xs sm:text-sm min-h-[40px] sm:min-h-0"
+          class="p-1.5 sm:p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-xs sm:text-sm min-h-[40px] sm:min-h-0" selectClass="p-1.5 sm:p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-xs sm:text-sm min-h-[40px] sm:min-h-0"
         >
           <option value="">{{ 'resource_library.all_topics' | t }}</option>
           <option value="grammar">{{ 'resource_library.topic_grammar' | t }}</option>
           <option value="vocabulary">{{ 'resource_library.topic_vocabulary' | t }}</option>
           <option value="pronunciation">{{ 'resource_library.topic_pronunciation' | t }}</option>
           <option value="reading">{{ 'resource_library.topic_reading' | t }}</option>
-        </select>
-        <select
+        </hlm-native-select>
+        <hlm-native-select
           [(ngModel)]="filterDifficulty"
           name="filterDifficulty"
-          class="p-1.5 sm:p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-xs sm:text-sm min-h-[40px] sm:min-h-0"
+          class="p-1.5 sm:p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-xs sm:text-sm min-h-[40px] sm:min-h-0" selectClass="p-1.5 sm:p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-xs sm:text-sm min-h-[40px] sm:min-h-0"
         >
           <option value="">{{ 'resource_library.all_difficulties' | t }}</option>
           <option value="beginner">{{ 'resource_library.difficulty_beginner' | t }}</option>
           <option value="intermediate">{{ 'resource_library.difficulty_intermediate' | t }}</option>
           <option value="advanced">{{ 'resource_library.difficulty_advanced' | t }}</option>
-        </select>
-        <button
+        </hlm-native-select>
+        <button hlmBtn
           (click)="applyFilter()"
           class="bg-primary text-on-fill px-3 sm:px-4 py-1.5 sm:py-2 rounded-app text-xs sm:text-sm font-semibold min-h-[40px] sm:min-h-0"
         >
@@ -49,7 +53,7 @@ import { FormsModule } from '@angular/forms';
         <span class="text-xs sm:text-sm font-semibold text-text-secondary">{{
           'resource_library.group_label' | t
         }}</span>
-        <button
+        <button hlmBtn
           (click)="groupBy.set('none')"
           [class.bg-primary]="groupBy() === 'none'"
           [class.text-on-fill]="groupBy() === 'none'"
@@ -57,7 +61,7 @@ import { FormsModule } from '@angular/forms';
         >
           {{ 'resource_library.group_none' | t }}
         </button>
-        <button
+        <button hlmBtn
           (click)="groupBy.set('topic')"
           [class.bg-primary]="groupBy() === 'topic'"
           [class.text-on-fill]="groupBy() === 'topic'"
@@ -65,7 +69,7 @@ import { FormsModule } from '@angular/forms';
         >
           {{ 'resource_library.group_by_topic' | t }}
         </button>
-        <button
+        <button hlmBtn
           (click)="groupBy.set('difficulty')"
           [class.bg-primary]="groupBy() === 'difficulty'"
           [class.text-on-fill]="groupBy() === 'difficulty'"
@@ -80,21 +84,21 @@ import { FormsModule } from '@angular/forms';
         (ngSubmit)="onSubmit()"
         class="mb-4 sm:mb-6 space-y-2 border border-surface-100 bg-surface-300 p-3 sm:p-4 rounded-card"
       >
-        <input
+        <input hlmInput
           [(ngModel)]="newTitle"
           name="title"
           placeholder="{{ 'resource_library.title_placeholder' | t }}"
           class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
           required
         />
-        <textarea
+        <textarea hlmTextarea
           [(ngModel)]="newDescription"
           name="description"
           placeholder="{{ 'resource_library.description_placeholder' | t }}"
           class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
           rows="2"
         ></textarea>
-        <input
+        <input hlmInput
           [(ngModel)]="newUrl"
           name="url"
           type="url"
@@ -103,38 +107,38 @@ import { FormsModule } from '@angular/forms';
           required
         />
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input
+          <input hlmInput
             [(ngModel)]="newCategory"
             name="category"
             placeholder="{{ 'resource_library.category_placeholder' | t }}"
             class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
           />
-          <select
+          <hlm-native-select
             [(ngModel)]="newType"
             name="type"
-            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
+            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]" selectClass="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
           >
             <option value="">{{ 'resource_library.type_placeholder' | t }}</option>
             <option value="post">{{ 'resource_library.type_post' | t }}</option>
             <option value="tip">{{ 'resource_library.type_tip' | t }}</option>
-          </select>
+          </hlm-native-select>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <select
+          <hlm-native-select
             [(ngModel)]="newTopic"
             name="newTopic"
-            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
+            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]" selectClass="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
           >
             <option value="">{{ 'resource_library.topic_placeholder' | t }}</option>
             <option value="grammar">{{ 'resource_library.topic_grammar' | t }}</option>
             <option value="vocabulary">{{ 'resource_library.topic_vocabulary' | t }}</option>
             <option value="pronunciation">{{ 'resource_library.topic_pronunciation' | t }}</option>
             <option value="reading">{{ 'resource_library.topic_reading' | t }}</option>
-          </select>
-          <select
+          </hlm-native-select>
+          <hlm-native-select
             [(ngModel)]="newDifficulty"
             name="newDifficulty"
-            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
+            class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]" selectClass="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
           >
             <option value="">{{ 'resource_library.difficulty_placeholder' | t }}</option>
             <option value="beginner">{{ 'resource_library.difficulty_beginner' | t }}</option>
@@ -142,16 +146,16 @@ import { FormsModule } from '@angular/forms';
               {{ 'resource_library.difficulty_intermediate' | t }}
             </option>
             <option value="advanced">{{ 'resource_library.difficulty_advanced' | t }}</option>
-          </select>
+          </hlm-native-select>
         </div>
-        <textarea
+        <textarea hlmTextarea
           [(ngModel)]="newContent"
           name="content"
           placeholder="{{ 'resource_library.content_placeholder' | t }}"
           class="w-full p-2 border border-surface-200 bg-surface-200 text-text-primary rounded-app text-sm min-h-[40px]"
           rows="2"
         ></textarea>
-        <button
+        <button hlmBtn
           type="submit"
           class="bg-primary text-on-fill px-4 py-2 rounded-app text-sm font-semibold min-h-[44px]"
         >
@@ -204,13 +208,13 @@ import { FormsModule } from '@angular/forms';
                   }
                 </div>
                 <div class="flex gap-2 self-end sm:self-start flex-shrink-0">
-                  <button
+                  <button hlmBtn
                     (click)="onEdit(resource)"
                     class="text-warning text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200"
                   >
                     {{ 'resource_library.edit' | t }}
                   </button>
-                  <button
+                  <button hlmBtn
                     (click)="onDelete(resource.id)"
                     class="text-danger text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200"
                   >
@@ -273,13 +277,13 @@ import { FormsModule } from '@angular/forms';
                       }
                     </div>
                     <div class="flex gap-2 self-end sm:self-start flex-shrink-0">
-                      <button
+                      <button hlmBtn
                         (click)="onEdit(resource)"
                         class="text-warning text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200"
                       >
                         {{ 'resource_library.edit' | t }}
                       </button>
-                      <button
+                      <button hlmBtn
                         (click)="onDelete(resource.id)"
                         class="text-danger text-xs sm:text-sm font-semibold min-h-[36px] sm:min-h-0 px-2 py-0.5 rounded-app hover:bg-surface-200"
                       >

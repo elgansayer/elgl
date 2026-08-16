@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -24,7 +25,7 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
 @Component({
   selector: 'app-suggest-flashcards',
   standalone: true,
-  imports: [
+  imports: [HlmButton, 
     TranslatePipe,
     SrsErrorBoundaryComponent,
     AppCardComponent,
@@ -60,7 +61,7 @@ import { AppButtonPrimaryComponent } from '../primitives/button-primary/button-p
               @for (word of suggestions(); track word) {
                 <li class="flex items-center justify-between py-2.5">
                   <span class="text-sm font-medium text-text-primary">{{ word }}</span>
-                  <button
+                  <button hlmBtn
                     (click)="addWordToDeck(word)"
                     [disabled]="addingWords().has(word) || addedWords().has(word)"
                     class="rounded-lg border border-neon-primary px-3 py-1 text-xs font-semibold text-neon-primary transition-colors hover:bg-neon-primary/10 disabled:border-surface-500 disabled:text-surface-400"

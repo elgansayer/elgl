@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, effect, viewChild, ElementRef } from '@angular/core';
 import { VideoTrack } from 'livekit-client';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -9,7 +10,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
 
 @Component({
   selector: 'app-video-room',
-  imports: [TranslatePipe, LiveChatOverlayComponent, AppSkeletonLoaderComponent],
+  imports: [HlmButton, TranslatePipe, LiveChatOverlayComponent, AppSkeletonLoaderComponent],
   template: `
     @if (store.currentRoom(); as room) {
       <section
@@ -27,7 +28,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
             @if (isHost() && !hasCoHost()) {
               @if (eligibleSpeakers().length > 0) {
                 <span>
-                  <button
+                  <button hlmBtn
                     (click)="showInvitePicker.set(!showInvitePicker())"
                     [attr.aria-label]="'videoRoom.inviteCoHostAria' | t"
                     [attr.aria-expanded]="showInvitePicker()"
@@ -43,7 +44,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
                 </p>
               }
             }
-            <button
+            <button hlmBtn
               type="button"
               (click)="startOnboardingTour()"
               class="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors text-sm font-bold"
@@ -61,7 +62,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
             [attr.aria-label]="'videoRoom.speakerPickerAria' | t"
           >
             @for (speakerId of eligibleSpeakers(); track speakerId) {
-              <button
+              <button hlmBtn
                 (click)="selectCoHost(speakerId)"
                 role="option"
                 [attr.aria-selected]="false"
@@ -151,7 +152,7 @@ import { VideoClassroomOnboardingService } from '../../services/video-classroom-
               </div>
 
               @if (isHost()) {
-                <button
+                <button hlmBtn
                   (click)="removeCoHost()"
                   [attr.aria-label]="'videoRoom.removeCoHostAria' | t"
                   class="absolute top-3 sm:top-4 end-3 sm:end-4 bg-danger/80 hover:bg-danger text-on-fill p-1.5 sm:p-2 rounded-full backdrop-blur-sm transition-colors focus-visible:outline-2 focus-visible:outline-white"

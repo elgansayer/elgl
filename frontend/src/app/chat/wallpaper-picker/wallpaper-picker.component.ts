@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatService } from '../../services/chat.service';
@@ -10,7 +12,7 @@ interface WallpaperOption {
 
 @Component({
   selector: 'app-wallpaper-picker',
-  imports: [TranslatePipe],
+  imports: [HlmInput, HlmButton, TranslatePipe],
   template: `
     @if (isOpen()) {
       <div
@@ -29,7 +31,7 @@ interface WallpaperOption {
             <span class="text-lg font-semibold text-text-primary">{{
               'chat.wallpaper.title' | t
             }}</span>
-            <button
+            <button hlmBtn
               type="button"
               class="p-2 rounded-app text-text-muted hover:text-text-primary focus:outline-none"
               (click)="close()"
@@ -41,7 +43,7 @@ interface WallpaperOption {
 
           <div class="grid grid-cols-3 gap-3">
             @for (option of wallpaperOptions(); track option.id) {
-              <button
+              <button hlmBtn
                 type="button"
                 (click)="select(option)"
                 class="focus:outline-none rounded-card overflow-hidden border-2 border-surface-100 hover:border-surface-300 transition-colors"
@@ -60,7 +62,7 @@ interface WallpaperOption {
               {{ 'chat.wallpaper.custom_url_label' | t }}
             </label>
             <div class="flex gap-2">
-              <input
+              <input hlmInput
                 #customUrlInput
                 id="wallpaper-custom-url"
                 type="text"
@@ -69,7 +71,7 @@ interface WallpaperOption {
                 placeholder="{{ 'chat.wallpaper.custom_url_placeholder' | t }}"
                 class="flex-1 min-w-0 rounded-app border border-surface-100 bg-surface-300 px-3 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <button
+              <button hlmBtn
                 type="button"
                 (click)="applyCustomUrl()"
                 class="shrink-0 rounded-app bg-primary px-4 py-2 text-on-fill font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary"

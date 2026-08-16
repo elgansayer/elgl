@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { notImplementedToast, showToast } from '../../services/toast.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -29,7 +31,7 @@ interface ChatRoomPreview {
 
 @Component({
   selector: 'app-chat-list',
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent, GroupsDiscoveryComponent],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule, RouterLink, TranslatePipe, ScrollablePillsComponent, AppEmptyStateComponent, GroupsDiscoveryComponent],
   templateUrl: './chat-list.component.html',
 })
 export class ChatListComponent implements OnInit {

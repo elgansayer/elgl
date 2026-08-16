@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessage } from '../../services/chat.service';
@@ -14,7 +15,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-message',
-  imports: [
+  imports: [HlmButton, 
     CommonModule,
     LongPressContextMenuComponent,
     TranslatePipe,
@@ -83,7 +84,7 @@ import { environment } from '../../../environments/environment';
                   [siteName]="lp.siteName"
                 ></app-link-preview-card>
               }
-              <button
+              <button hlmBtn
                 (click)="simplifyText()"
                 class="text-xs text-secondary ms-2 mt-1"
                 [disabled]="simplifying()"
@@ -99,7 +100,7 @@ import { environment } from '../../../environments/environment';
               <div class="mt-1 ps-4 border-s-2 border-success text-xs text-success">
                 <p>{{ 'chatRoom.simplifiedTitle' | t }}</p>
                 <p>{{ simplified }}</p>
-                <button (click)="simplifiedText.set(null)" class="text-danger text-xs ms-1">
+                <button hlmBtn (click)="simplifiedText.set(null)" class="text-danger text-xs ms-1">
                   {{ 'common.close' | t }}
                 </button>
               </div>
@@ -107,7 +108,7 @@ import { environment } from '../../../environments/environment';
 
             @if (message().message_type === 'voice') {
               <div class="flex items-center gap-2">
-                <button
+                <button hlmBtn
                   [attr.aria-label]="'chatRoom.playVoiceMessage' | t"
                   (click)="playVoice()"
                   class="p-2 rounded-full hover:bg-black/10"

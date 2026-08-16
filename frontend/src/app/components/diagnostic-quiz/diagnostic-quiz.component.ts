@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, output, signal, inject, resource, input } from '@angular/core';
 import { QuizService } from '../../services/quiz.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -6,7 +7,7 @@ import { showToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-diagnostic-quiz',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <!-- Loading State -->
     @if (loading()) {
@@ -30,7 +31,7 @@ import { showToast } from '../../services/toast.service';
           {{ 'diagnosticQuiz.errorTitle' | t }}
         </h3>
         <p class="text-text-muted text-sm mb-6">{{ 'diagnosticQuiz.errorDescription' | t }}</p>
-        <button
+        <button hlmBtn
           type="button"
           (click)="reloadQuestions()"
           class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-on-fill font-medium transition-colors"
@@ -84,7 +85,7 @@ import { showToast } from '../../services/toast.service';
             <div class="flex flex-col gap-3">
               @for (option of q.options; track option.id; let idx = $index) {
                 @let isSelected = answers()[q.id] === option.points;
-                <button
+                <button hlmBtn
                   type="button"
                   (click)="selectOption(q.id, option.points)"
                   class="w-full text-start ps-5 pe-5 pt-4 pb-4 rounded-2xl border-2 transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-200"
@@ -124,7 +125,7 @@ import { showToast } from '../../services/toast.service';
         <div
           class="flex items-center justify-between ps-6 pe-6 pt-4 pb-6 bg-surface-400/60 border-t border-primary/10"
         >
-          <button
+          <button hlmBtn
             type="button"
             (click)="previous()"
             [disabled]="isFirstQuestion()"
@@ -134,7 +135,7 @@ import { showToast } from '../../services/toast.service';
           </button>
 
           @if (isLastQuestion()) {
-            <button
+            <button hlmBtn
               type="button"
               (click)="next()"
               [disabled]="!canProceed() || isSubmitting()"
@@ -149,7 +150,7 @@ import { showToast } from '../../services/toast.service';
               {{ 'diagnosticQuiz.submit' | t }}
             </button>
           } @else {
-            <button
+            <button hlmBtn
               type="button"
               (click)="next()"
               [disabled]="!canProceed()"

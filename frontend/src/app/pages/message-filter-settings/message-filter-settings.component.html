@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button
+    <button hlmBtn
       (click)="(null)"
       class="app-button-icon"
       [attr.aria-label]="'common.back' | t"
@@ -39,7 +39,7 @@
               {{ 'settings.messageFilter.ageRange' | t }}
             </span>
             @if (ageMin() != null || ageMax() != null) {
-              <button
+              <button hlmBtn
                 (click)="clearAgeFilters()"
                 class="text-xs text-primary hover:text-primary/80 transition-colors"
               >
@@ -48,7 +48,7 @@
             }
           </div>
           <div class="flex items-center gap-3">
-            <input
+            <input hlmInput
               type="number"
               [value]="ageMin()"
               (input)="ageMin.set(coerceNumber($any($event.target).value))"
@@ -59,7 +59,7 @@
               [attr.aria-label]="'settings.messageFilter.ageMin' | t"
             />
             <span class="text-text-secondary text-sm">{{ 'settings.messageFilter.to' | t }}</span>
-            <input
+            <input hlmInput
               type="number"
               [value]="ageMax()"
               (input)="ageMax.set(coerceNumber($any($event.target).value))"
@@ -79,7 +79,7 @@
           </span>
           <div class="flex flex-wrap gap-2">
             @for (gender of genderOptions; track gender.value) {
-              <button
+              <button hlmBtn
                 (click)="toggleGender(gender.value)"
                 [class.bg-primary]="allowedGenders().includes(gender.value)"
                 [class.text-on-fill]="allowedGenders().includes(gender.value)"
@@ -100,7 +100,7 @@
           </span>
           <div class="flex flex-wrap gap-2">
             @for (lang of commonLanguages; track lang.code) {
-              <button
+              <button hlmBtn
                 (click)="toggleNativeLanguage(lang.code)"
                 [class.bg-primary]="allowedNativeLanguages().includes(lang.code)"
                 [class.text-on-fill]="allowedNativeLanguages().includes(lang.code)"
@@ -117,7 +117,7 @@
 
       <!-- Action Buttons -->
       <div class="space-y-3 pt-2">
-        <button
+        <button hlmBtn
           (click)="saveFilters()"
           [disabled]="saving()"
           class="w-full py-3 rounded-xl bg-primary text-on-fill font-semibold text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
@@ -128,7 +128,7 @@
             {{ 'settings.messageFilter.save' | t }}
           }
         </button>
-        <button
+        <button hlmBtn
           (click)="clearAllFilters()"
           class="w-full py-3 rounded-xl bg-surface-200 text-text-secondary font-medium text-sm hover:bg-surface-300 transition-colors"
         >

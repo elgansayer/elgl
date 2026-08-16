@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, effect, DestroyRef } from '@angular/core';
 import lottie, { AnimationItem } from 'lottie-web';
 import { GiftAnimationService, GiftAnimationType } from '../../services/gift-animation.service';
@@ -18,7 +19,7 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
 
 @Component({
   selector: 'app-gift-animation-overlay',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     @if (animationService.currentAnimation(); as anim) {
       <div
@@ -68,7 +69,7 @@ const DEFAULT_ANIMATION_DATA: Record<GiftAnimationType, unknown> = {
             </p>
           </div>
           <!-- Dismiss button -->
-          <button
+          <button hlmBtn
             class="pointer-events-auto rounded-full bg-white/20 px-5 py-2 text-sm font-bold text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
             (click)="animationService.dismiss()"
           >

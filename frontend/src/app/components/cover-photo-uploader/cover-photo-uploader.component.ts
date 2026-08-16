@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, signal, output, input, inject } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -14,7 +15,7 @@ interface CropBox {
 
 @Component({
   selector: 'app-cover-photo-uploader',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="relative w-full max-w-2xl mx-auto">
       <!-- Hidden file input -->
@@ -142,34 +143,34 @@ interface CropBox {
           <!-- Action buttons -->
           <div class="flex gap-2 mt-4">
             @if (!isCropping()) {
-              <button
+              <button hlmBtn
                 (click)="startCropping()"
                 class="px-4 py-2 bg-surface-200 text-text-primary rounded-lg hover:bg-surface-100 transition-colors text-sm"
               >
                 {{ 'common.crop' | t }}
               </button>
             } @else {
-              <button
+              <button hlmBtn
                 (click)="applyCrop()"
                 class="px-4 py-2 bg-primary text-on-fill rounded-lg hover:bg-primary-dark transition-colors text-sm"
               >
                 {{ 'common.applyCrop' | t }}
               </button>
-              <button
+              <button hlmBtn
                 (click)="cancelCrop()"
                 class="px-4 py-2 bg-surface-100 text-text-primary rounded-lg hover:bg-surface-200 transition-colors text-sm"
               >
                 {{ 'common.cancel' | t }}
               </button>
             }
-            <button
+            <button hlmBtn
               (click)="uploadCropped()"
               [disabled]="isUploading()"
               class="px-4 py-2 bg-success text-on-fill rounded-lg hover:bg-success/90 transition-colors text-sm disabled:opacity-50"
             >
               {{ isUploading() ? ('common.uploading' | t) : ('common.upload' | t) }}
             </button>
-            <button
+            <button hlmBtn
               (click)="reset()"
               class="px-4 py-2 bg-danger text-on-fill rounded-lg hover:bg-danger/90 transition-colors text-sm"
             >

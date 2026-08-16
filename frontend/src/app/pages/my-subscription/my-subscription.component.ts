@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -24,7 +25,7 @@ const EMPTY_PLANS: SubscriptionPlan[] = [];
 
 @Component({
   selector: 'app-my-subscription',
-  imports: [
+  imports: [HlmButton, 
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,

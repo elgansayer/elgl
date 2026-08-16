@@ -1,3 +1,6 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { SettingsService } from '../../../core/services/settings.service';
@@ -7,7 +10,7 @@ import { TranslatePipe } from '../../../services/translate.pipe';
 @Component({
   selector: 'app-account-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
   templateUrl: './account.component.html',
   styleUrls: ['./account.component.scss'],
 })

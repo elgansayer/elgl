@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -25,7 +28,7 @@ interface VoiceRoomNote {
 
 @Component({
   selector: 'app-voiceroom-notes',
-  imports: [TranslatePipe],
+  imports: [HlmTextarea, HlmInput, HlmButton, TranslatePipe],
   templateUrl: './voiceroom-notes.component.html',
   styleUrls: ['./voiceroom-notes.component.css'],
 })

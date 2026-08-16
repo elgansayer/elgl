@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, viewChild, ErrorHandler } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { I18nService } from '../../services/i18n.service';
@@ -12,7 +13,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
 
 @Component({
   selector: 'app-vocabulary-display',
-  imports: [TranslatePipe, SrsErrorBoundaryComponent, AppCardComponent],
+  imports: [HlmButton, TranslatePipe, SrsErrorBoundaryComponent, AppCardComponent],
   template: `
     <app-srs-error-boundary
       [context]="errorContext()"
@@ -22,7 +23,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
       <div class="mx-auto max-w-5xl space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h3 class="app-section-title">{{ 'vocabDisplay.title' | t }}</h3>
-          <button
+          <button hlmBtn
             (click)="refreshVocabulary()"
             class="rounded-app border border-surface-100 ps-3 pe-3 pt-1.5 pb-1.5 text-xs font-bold text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
             [disabled]="loading()"
@@ -61,7 +62,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
                       <p class="text-sm font-bold text-text-primary truncate">{{ item.word }}</p>
                       <p class="text-xs text-text-secondary truncate">{{ item.translation }}</p>
                     </div>
-                    <button
+                    <button hlmBtn
                       (click)="addToFlashcards(item)"
                       class="rounded-app ms-2 bg-primary ps-2.5 pe-2.5 pt-1 pb-1 text-[11px] font-bold text-on-fill hover:opacity-90 flex-shrink-0"
                       [attr.aria-label]="'vocabDisplay.addToSrsAriaLabel' | t: { word: item.word }"

@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, ElementRef, output, viewChild, afterNextRender } from '@angular/core';
 
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -7,7 +8,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-doodle-pad',
-  imports: [
+  imports: [HlmButton, 
     TranslatePipe,
     AppCardComponent,
     AppButtonPrimaryComponent,

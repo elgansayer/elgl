@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast } from '../../services/toast.service';
 import {
   Component,
@@ -43,7 +46,7 @@ interface MentionSuggestion {
 
 @Component({
   selector: 'app-moments-feed',
-  imports: [
+  imports: [HlmTextarea, HlmInput, HlmButton, 
     CommonModule,
     FormsModule,
     RouterLink,

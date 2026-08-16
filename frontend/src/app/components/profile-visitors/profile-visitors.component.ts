@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, effect } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { UserService, ProfileVisitor } from '../../services/user.service';
@@ -7,7 +8,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-profile-visitors',
-  imports: [DatePipe, RouterLink, TranslatePipe],
+  imports: [HlmButton, DatePipe, RouterLink, TranslatePipe],
   template: `
     <div class="profile-visitors">
       <h2 class="profile-visitors-title">{{ 'visitors.title' | t }}</h2>
@@ -90,7 +91,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               <p class="profile-visitors-upgrade-price">
                 {{ 'profile.upgradePrice' | t }}
               </p>
-              <button
+              <button hlmBtn
                 type="button"
                 class="profile-visitors-upgrade-btn"
                 (click)="onUpgradeClick()"

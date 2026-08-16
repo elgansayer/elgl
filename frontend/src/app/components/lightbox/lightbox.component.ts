@@ -1,9 +1,10 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, linkedSignal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-lightbox',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   host: {
     '(window:keydown)': 'handleKeyDown($event)',
   },

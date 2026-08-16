@@ -1,10 +1,12 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, signal } from '@angular/core';
 import { I18nService, LanguageInfo } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-language-selector',
-  imports: [TranslatePipe],
+  imports: [HlmInput, HlmButton, TranslatePipe],
   templateUrl: './language-selector.component.html',
 })
 export class LanguageSelectorComponent {

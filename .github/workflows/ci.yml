@@ -110,6 +110,19 @@ jobs:
         env:
           SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: npm run check:spartan-boundaries
+      - name: Enforce full-tree Spartan adoption
+        run: |
+          mkdir -p test-results
+          set -o pipefail
+          npm run check:spartan-full-tree 2>&1 | tee test-results/spartan-full-tree.txt
+      - name: Upload full-tree Spartan failure report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: spartan-full-tree-failure-${{ github.sha }}
+          path: test-results/spartan-full-tree.txt
+          if-no-files-found: warn
+          retention-days: 14
       - name: Enforce component-system convergence
         run: npm run check:component-system
       - name: Prevent new legacy primitive adoption

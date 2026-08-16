@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource, ErrorHandler } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import {
@@ -17,7 +18,7 @@ import { CrashReportService } from '../services/crash-report.service';
 
 @Component({
   selector: 'app-moderation-queue',
-  imports: [
+  imports: [HlmButton, 
     DatePipe,
     TranslatePipe,
     SanitiseHtmlPipe,

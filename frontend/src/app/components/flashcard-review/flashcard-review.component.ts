@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -27,7 +28,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
 @Component({
   selector: 'app-flashcard-review',
   standalone: true,
-  imports: [
+  imports: [HlmButton, 
     TranslatePipe,
     SrsErrorBoundaryComponent,
     AppSkeletonLoaderComponent,
@@ -218,7 +219,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                         <p class="mt-3 text-sm text-text-primary">{{ card.definition }}</p>
                       }
                       @if (card.pronunciation_url) {
-                        <button
+                        <button hlmBtn
                           type="button"
                           class="mt-3 rounded-app border border-surface-100 px-3 py-1 text-xs font-bold text-text-secondary hover:bg-surface-300"
                           (click)="playAudio(card.pronunciation_url, $event)"
@@ -241,7 +242,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                     role="group"
                     [attr.aria-label]="'review.gradingGroupLabel' | t"
                   >
-                    <button
+                    <button hlmBtn
                       type="button"
                       (click)="gradeReview('again')"
                       class="btn-grade btn-grade-again"
@@ -251,7 +252,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                       <span class="text-xs font-bold">{{ 'review.againBtn' | t }}</span>
                       <span class="text-[10px] opacity-80">{{ 'review.againHint' | t }}</span>
                     </button>
-                    <button
+                    <button hlmBtn
                       type="button"
                       (click)="gradeReview('good')"
                       class="btn-grade btn-grade-good col-span-2"
@@ -261,7 +262,7 @@ type ReviewGrade = 'again' | 'good' | 'known';
                       <span class="text-xs font-bold">{{ 'review.goodBtn' | t }}</span>
                       <span class="text-[10px] opacity-80">{{ nextIntervalHint() }}</span>
                     </button>
-                    <button
+                    <button hlmBtn
                       type="button"
                       (click)="gradeReview('known')"
                       class="btn-grade btn-grade-known"

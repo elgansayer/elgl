@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -11,7 +13,7 @@ import { showToast, showErrorToast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-admin-portal',
-imports: [TranslatePipe, DatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
+imports: [HlmInput, HlmButton, TranslatePipe, DatePipe, AppCardComponent, AppPillComponent, AppEmptyStateComponent, AppSkeletonLoaderComponent],
   templateUrl: './admin-portal.component.html',
   styleUrls: ['./admin-portal.component.scss'],
 })
