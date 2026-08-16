@@ -110,6 +110,8 @@ jobs:
         env:
           SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: npm run check:spartan-boundaries
+      - name: Enforce component-system convergence
+        run: npm run check:component-system
       - name: Prevent new legacy primitive adoption
         env:
           LEGACY_PRIMITIVE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -136,7 +138,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Setup uv
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        uses: astral-sh/setup-uv@d0cc045d04cc9d8b7881df0226f9e82c39688e # v6.8.0
         with:
           version: '0.12.5'
           enable-cache: true
