@@ -326,6 +326,7 @@
                     [original]="msg.correction_payload?.original ?? ''"
                     [corrected]="msg.correction_payload?.corrected ?? ''"
                     [explanation]="msg.correction_payload?.explanation ?? ''"
+                    [showActions]="true"
                   ></app-visual-diff>
                 }
                 @if (msg.message_type === 'correction_request' && msg.correction_request_payload) {
