@@ -6,8 +6,10 @@ on:
     types: [completed]
     branches: [main]
 
+# All main deployments share one lane. A newer successful CI run cancels an
+# older image build instead of allowing multiple commits to race for :latest.
 concurrency:
-  group: deploy-${{ github.event.workflow_run.head_sha }}
+  group: deploy-main
   cancel-in-progress: true
 
 permissions:
@@ -20,15 +22,37 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Verify tested commit is still current main
+        id: deployment-target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          CURRENT_SHA=$(gh api "repos/${REPOSITORY}/git/ref/heads/main" --jq '.object.sha')
+          if [ "$TESTED_SHA" != "$CURRENT_SHA" ]; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping stale tested SHA ${TESTED_SHA}; current main is ${CURRENT_SHA}."
+            exit 0
+          fi
+
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+          echo "Deploying current tested main SHA ${TESTED_SHA}."
+
       - name: Checkout tested commit
+        if: steps.deployment-target.outputs.deploy == 'true'
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Docker Buildx
+        if: steps.deployment-target.outputs.deploy == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
+        if: steps.deployment-target.outputs.deploy == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -36,6 +60,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push API image
+        if: steps.deployment-target.outputs.deploy == 'true'
         uses: docker/build-push-action@v5
         with:
           context: backend
@@ -49,6 +74,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push Web image
+        if: steps.deployment-target.outputs.deploy == 'true'
         uses: docker/build-push-action@v5
         with:
           context: frontend
