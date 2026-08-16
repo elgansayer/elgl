@@ -170,8 +170,8 @@ def deterministic_backoff(retry_count: int, *, jitter_key: str) -> timedelta:
 
     retry_count = max(retry_count, 1)
     base_seconds = min(5 * 60 * 2 ** (retry_count - 1), 24 * 60 * 60)
-    digest = hashlib.sha256(f"{jitter_key}:{retry_count}".encode("utf-8")).digest()
+    digest = hashlib.sha256(f"{jitter_key}:{retry_count}".encode()).digest()
     sample = int.from_bytes(digest[:8], "big") / ((1 << 64) - 1)
     multiplier = 0.8 + (sample * 0.4)
-    seconds = min(max(int(round(base_seconds * multiplier)), 1), 24 * 60 * 60)
+    seconds = min(max(round(base_seconds * multiplier), 1), 24 * 60 * 60)
     return timedelta(seconds=seconds)
