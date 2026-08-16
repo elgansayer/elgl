@@ -16,6 +16,9 @@ class JobStore:
 
     def __init__(self, path: Path, factory_generation: str = "unknown") -> None:
         self.path = path
+        if factory_generation == "unknown":
+            generation = read_json(path.parent / "generation.json", {})
+            factory_generation = str(generation.get("identifier", "unknown"))
         self.factory_generation = factory_generation
 
     def load(self) -> dict[str, Job]:
