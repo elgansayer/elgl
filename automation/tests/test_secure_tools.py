@@ -125,8 +125,8 @@ def test_terminal_worker_environment_excludes_controller_secrets(
         "OPENCODE_GO_API_KEY",
         "GEMINI_API_KEY",
     )
-    secret_values = {f"controller-secret-{index}" for index in range(len(secret_names))}
-    for name, value in zip(secret_names, sorted(secret_values), strict=True):
+    secret_values = tuple(f"controller-secret-{index}" for index in range(len(secret_names)))
+    for name, value in zip(secret_names, secret_values, strict=True):
         monkeypatch.setenv(name, value)
     monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
 
@@ -144,8 +144,8 @@ def test_terminal_worker_environment_excludes_controller_secrets(
 
     assert not result.is_error
     assert set(captured_environment) == {"HOME", "PATH"}
-    assert secret_names.isdisjoint(captured_environment)
-    assert secret_values.isdisjoint(captured_environment.values())
+    assert set(secret_names).isdisjoint(captured_environment)
+    assert set(secret_values).isdisjoint(captured_environment.values())
 
 
 def test_terminal_retries_without_nested_cgroup_limits(
