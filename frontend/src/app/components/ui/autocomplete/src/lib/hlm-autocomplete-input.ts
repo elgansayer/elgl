@@ -1,5 +1,11 @@
 import { BooleanInput } from '@angular/cdk/coercion';
-import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@angular/core';
+import {
+  booleanAttribute,
+  ChangeDetectionStrategy,
+  Component,
+  input,
+  output,
+} from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideSearch, lucideX } from '@ng-icons/lucide';
 import {
@@ -23,8 +29,13 @@ import { classes } from '@spartan-ng/helm/utils';
       hlmInputGroupInput
       [id]="inputId()"
       [placeholder]="placeholder()"
+      [attr.aria-label]="ariaLabel()"
+      [attr.data-testid]="testId()"
+      [class]="inputClass()"
       [aria-invalid]="ariaInvalidOverride()"
       [forceInvalid]="forceInvalid()"
+      (input)="inputEvent.emit($event)"
+      (keydown)="keyDown.emit($event)"
     />
 
     @if (showSearch()) {
@@ -56,6 +67,12 @@ export class HlmAutocompleteInput {
   public readonly inputId = input<string>(`hlm-autocomplete-input-${HlmAutocompleteInput._id++}`);
 
   public readonly placeholder = input<string>('');
+  public readonly ariaLabel = input<string | null>(null);
+  public readonly testId = input<string | null>(null);
+  public readonly inputClass = input<string>('');
+
+  public readonly inputEvent = output<Event>();
+  public readonly keyDown = output<KeyboardEvent>();
 
   public readonly showSearch = input<boolean, BooleanInput>(true, { transform: booleanAttribute });
   public readonly showClear = input<boolean, BooleanInput>(false, { transform: booleanAttribute });
