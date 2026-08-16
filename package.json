@@ -11,6 +11,7 @@
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
+    "check:design-sync-drift": "node scripts/check-design-sync-drift.mjs",
     "check:spartan-boundaries": "node scripts/verify-spartan-boundaries.mjs",
     "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
