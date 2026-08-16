@@ -220,9 +220,8 @@
             >{{ 'discovery.seriousModeToggle' | t }}</span
           >
           <div class="flex items-center">
-            <input
-              type="checkbox"
-              id="seriousModeCheckbox"
+            <hlm-checkbox
+              inputId="seriousModeCheckbox"
               [checked]="seriousLearnerMode()"
               (change)="toggleSeriousLearnerMode()"
               class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400"
@@ -244,9 +243,8 @@
             >{{ 'discovery.voiceRoomActiveToggle' | t }}</span
           >
           <div class="flex items-center">
-            <input
-              type="checkbox"
-              id="voiceRoomActiveCheckbox"
+            <hlm-checkbox
+              inputId="voiceRoomActiveCheckbox"
               [checked]="voiceRoomActive()"
               (change)="toggleVoiceRoomActive()"
               class="h-4 w-4 text-accent-500 border-surface-300 rounded focus:ring-accent-400"

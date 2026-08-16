@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, effect } from '@angular/core';
@@ -7,12 +8,12 @@ import { SettingsService } from '../../../../core/services/settings.service';
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
-  imports: [HlmNativeSelect, HlmButton, ReactiveFormsModule],
+  imports: [HlmCheckbox, HlmNativeSelect, HlmButton, ReactiveFormsModule],
   template: `
     <form [formGroup]="form">
       <h3>Direct Messages</h3>
       <label>
-        <input type="checkbox" formControlName="allowFromServerMembers" />
+        <hlm-checkbox formControlName="allowFromServerMembers" />
         Allow direct messages from server members
       </label>
 

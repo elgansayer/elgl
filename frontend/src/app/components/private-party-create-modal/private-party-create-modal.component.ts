@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -28,7 +29,7 @@ interface FriendProfile {
 
 @Component({
   selector: 'app-private-party-create-modal',
-  imports: [HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
   templateUrl: './private-party-create-modal.component.html',
 })
 export class PrivatePartyCreateModalComponent implements OnInit {

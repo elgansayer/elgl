@@ -44,7 +44,7 @@
     </div>
     <form [formGroup]="twoFactorForm">
       <label class="toggle-switch">
-        <input type="checkbox" formControlName="twoFactorEnabled" (change)="updateTwoFactorSetting()">
+        <hlm-checkbox formControlName="twoFactorEnabled" (change)="updateTwoFactorSetting()">
         <span class="slider"></span>
         <span class="label-text">{{ 'settings.account.security.two_factor.enable' | t }}</span>
       </label>

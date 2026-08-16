@@ -214,8 +214,7 @@
 
       <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
         <label class="flex items-center gap-2 text-xs font-bold text-text-primary cursor-pointer">
-          <input
-            type="checkbox"
+          <hlm-checkbox
             [ngModel]="spoofVipLocation()"
             (ngModelChange)="spoofVipLocation.set($event)"
             class="rounded border-surface-100 text-primary focus:ring-primary"

@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { Component, inject } from '@angular/core';
@@ -11,7 +12,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-onboarding-wizard',
-  imports: [HlmNativeSelect, HlmInput, CommonModule, TranslatePipe, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
+  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, CommonModule, TranslatePipe, AppButtonPrimaryComponent, AppButtonSecondaryComponent],
   template: `
     <div class="onboarding-wizard bg-surface-500 text-text-primary ps-4 pe-4 pt-6 pb-6">
       <h1 class="text-xl font-bold">{{ 'onboarding.title' | t }}</h1>
@@ -61,8 +62,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
           <div class="grid grid-cols-1 gap-2">
             @for (lang of i18n.availableLanguages; track lang.code) {
               <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+                <hlm-checkbox
                   [checked]="onboardingService.targetLanguages().has(lang.code)"
                   (change)="onboardingService.toggleTargetLanguage(lang.code)"
                 />

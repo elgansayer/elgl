@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -19,7 +20,7 @@ interface SelectOption {
 
 @Component({
   selector: 'app-voiceroom-create-modal',
-  imports: [HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, FormsModule, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
@@ -99,9 +100,8 @@ interface SelectOption {
             for="isVideoStream"
             class="flex items-center gap-3 text-sm font-medium text-text-secondary"
           >
-            <input
-              id="isVideoStream"
-              type="checkbox"
+            <hlm-checkbox
+              inputId="isVideoStream"
               [(ngModel)]="isVideoStream"
               class="h-4 w-4 rounded border-surface-100 bg-surface-300 text-primary focus:ring-primary"
             />

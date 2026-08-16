@@ -93,8 +93,7 @@
             }}</span>
             <span class="text-xs text-text-secondary">{{ 'dataStorage.cellularDesc' | t }}</span>
           </div>
-          <input
-            type="checkbox"
+          <hlm-checkbox
             [checked]="cellularAutoDownload()"
             (change)="toggleCellular()"
             class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"

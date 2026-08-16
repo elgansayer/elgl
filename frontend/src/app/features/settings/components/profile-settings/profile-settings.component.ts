@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -39,7 +40,7 @@ const isJLPTLevel = (level: unknown): level is JLPTLevel => {
 @Component({
   selector: 'app-profile-settings',
   standalone: true,
-  imports: [HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
+  imports: [HlmCheckbox, HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
   templateUrl: './profile-settings.component.html',
 })
 export class ProfileSettingsComponent implements OnInit {

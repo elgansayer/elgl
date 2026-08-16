@@ -165,8 +165,7 @@
             <span class="text-sm font-medium text-text-primary">{{
               'settings.autoPlayVoiceNotes' | t
             }}</span>
-            <input
-              type="checkbox"
+            <hlm-checkbox
               [ngModel]="autoPlayVoiceNotes()"
               (ngModelChange)="autoPlayVoiceNotes.set($event)"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"
@@ -179,8 +178,7 @@
             <span class="text-sm font-medium text-text-primary">{{
               'settings.enterToSend' | t
             }}</span>
-            <input
-              type="checkbox"
+            <hlm-checkbox
               [ngModel]="chatEnterToSend()"
               (ngModelChange)="chatEnterToSend.set($event)"
               class="h-5 w-5 rounded border-surface-300 text-primary focus:ring-primary/30"

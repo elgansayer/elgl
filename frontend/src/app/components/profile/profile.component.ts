@@ -1,3 +1,4 @@
+import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { HlmNativeSelect } from '@spartan-ng/helm/native-select';
 import { HlmInput } from '@spartan-ng/helm/input';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -40,7 +41,7 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
 
 @Component({
   selector: 'app-profile',
-  imports: [HlmNativeSelect, HlmInput, HlmButton, 
+  imports: [HlmCheckbox, HlmNativeSelect, HlmInput, HlmButton, 
     CommonModule,
     FormsModule,
     RouterLink,
