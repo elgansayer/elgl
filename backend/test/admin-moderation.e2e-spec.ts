@@ -18,10 +18,12 @@ describe('Admin moderation queue E2E', () => {
   let app: INestApplication;
   const hasAllCapabilities = vi.fn();
   const moderationList = vi.fn();
+  const auditRecord = vi.fn();
 
   beforeEach(async () => {
     hasAllCapabilities.mockReset();
     moderationList.mockReset();
+    auditRecord.mockReset();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [AdminV1Controller],
@@ -38,7 +40,7 @@ describe('Admin moderation queue E2E', () => {
         { provide: AdminService, useValue: {} },
         { provide: AdminUserDetailService, useValue: {} },
         { provide: AdminLoginHistoryQueryService, useValue: {} },
-        { provide: AdminAuditService, useValue: { record: vi.fn() } },
+        { provide: AdminAuditService, useValue: { record: auditRecord } },
         { provide: AdminAuditQueryService, useValue: {} },
         {
           provide: AdminModerationQueryService,
@@ -85,9 +87,10 @@ describe('Admin moderation queue E2E', () => {
       'moderation.cases.read',
     ]);
     expect(moderationList).not.toHaveBeenCalled();
+    expect(auditRecord).not.toHaveBeenCalled();
   });
 
-  it('transforms bounded query filters and returns the moderation queue', async () => {
+  it('transforms bounded query filters and audits the moderation queue read', async () => {
     hasAllCapabilities.mockResolvedValue(true);
     moderationList.mockResolvedValue({
       reports: [
@@ -109,6 +112,7 @@ describe('Admin moderation queue E2E', () => {
 
     const response = await request(app.getHttpServer())
       .get('/admin/v1/moderation/reports')
+      .set('x-request-id', 'corr-1')
       .query({
         page: '2',
         pageSize: '25',
@@ -131,6 +135,40 @@ describe('Admin moderation queue E2E', () => {
       startTime: undefined,
       endTime: undefined,
     });
+    expect(auditRecord).toHaveBeenCalledWith({
+      actorUserId: 'admin-1',
+      action: 'moderation.reports.read',
+      capabilityKey: 'moderation.cases.read',
+      targetType: 'moderation-report-queue',
+      outcome: 'success',
+      correlationId: 'corr-1',
+      metadata: {
+        resultCount: 1,
+        total: 1,
+        source: 'admin-v1',
+      },
+    });
+  });
+
+  it('audits a failed moderation queue read without persisting query details', async () => {
+    hasAllCapabilities.mockResolvedValue(true);
+    moderationList.mockRejectedValue(new Error('sensitive storage detail'));
+
+    await request(app.getHttpServer())
+      .get('/admin/v1/moderation/reports')
+      .set('x-request-id', 'corr-fail')
+      .query({ reportedUserId: 'reported-1' })
+      .expect(500);
+
+    expect(auditRecord).toHaveBeenCalledWith({
+      actorUserId: 'admin-1',
+      action: 'moderation.reports.read',
+      capabilityKey: 'moderation.cases.read',
+      targetType: 'moderation-report-queue',
+      outcome: 'failed',
+      correlationId: 'corr-fail',
+      metadata: { source: 'admin-v1' },
+    });
   });
 
   it('rejects an oversized moderation page before querying storage', async () => {
@@ -141,5 +179,6 @@ describe('Admin moderation queue E2E', () => {
       .expect(400);
 
     expect(moderationList).not.toHaveBeenCalled();
+    expect(auditRecord).not.toHaveBeenCalled();
   });
 });
