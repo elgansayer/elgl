@@ -49,6 +49,20 @@ describe('AdminAuthorizationService', () => {
     expect(capabilities.select).not.toHaveBeenCalled();
   });
 
+  it('always scopes role assignments to the user and unexpired roles', async () => {
+    assignments.or.mockResolvedValue({ data: [], error: null });
+
+    await service.getEffectiveCapabilities('admin-1');
+
+    expect(assignments.eq).toHaveBeenCalledWith('user_id', 'admin-1');
+    expect(assignments.or).toHaveBeenCalledOnce();
+    const expiryFilter = assignments.or.mock.calls[0]?.[0];
+    expect(expiryFilter).toEqual(expect.any(String));
+    expect(expiryFilter).toMatch(
+      /^expires_at\.is\.null,expires_at\.gt\.\d{4}-\d{2}-\d{2}T/,
+    );
+  });
+
   it('returns unique registered capabilities from active role assignments', async () => {
     assignments.or.mockResolvedValue({
       data: [
