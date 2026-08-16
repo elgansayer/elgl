@@ -1,5 +1,15 @@
 You are an expert in TypeScript, Angular, Spartan UI, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular, TypeScript, Spartan, and project best practices.
 
+## Frontend Design Authority & Precedence
+
+For all files under `frontend/`, this scoped constitution is the authoritative UI implementation contract and takes precedence over any conflicting legacy visual-aesthetic wording in the root `../AGENTS.md`.
+
+- **Spartan/Helm owns component behaviour and accessible composition.** Use its documented primitives for interactive UI, forms, overlays, dialogs, sheets, popovers, menus, tooltips, and related behaviour.
+- **Relay semantic tokens own visual roles.** Colour, surface, typography, radius, spacing, density, shadow, motion, focus, and theme decisions must use the project Relay/token system when a semantic role exists.
+- **Feature code composes Spartan + Relay.** It must not establish a competing visual system with literal brand/surface colours or hand-built replacements for canonical primitives.
+- The legacy root instruction describing strict `#121212` backgrounds and a generic vibrant-neon aesthetic is **not authoritative for frontend implementation**. Dark mode must be expressed through semantic Relay roles and must preserve light/dark parity, forced-colours support, reduced motion, RTL, high zoom, and WCAG AA behaviour.
+- Product character is allowed only through approved semantic tokens, Spartan variants, or documented design-system extensions. If no suitable role or variant exists, extend the shared design system first rather than adding an ad hoc feature-level escape hatch.
+
 ## Spartan UI - Mandatory Default
 
 Spartan UI is the canonical component architecture for frontend UI work.
