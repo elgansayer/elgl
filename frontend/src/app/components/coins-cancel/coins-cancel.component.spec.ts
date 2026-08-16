@@ -35,12 +35,51 @@ describe('CoinsCancelComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should expose a named main landmark without an unnecessary live region', () => {
+    const main = fixture.nativeElement.querySelector('main');
+    const title = fixture.nativeElement.querySelector('#coins-cancel-title');
+    const message = fixture.nativeElement.querySelector('#coins-cancel-message');
+
+    expect(main).toBeTruthy();
+    expect(main.getAttribute('aria-labelledby')).toBe('coins-cancel-title');
+    expect(main.getAttribute('aria-describedby')).toBe('coins-cancel-message');
+    expect(main.hasAttribute('aria-live')).toBeFalse();
+    expect(title.textContent).toContain('coinsCancel.title');
+    expect(message.textContent).toContain('coinsCancel.message');
+  });
+
+  it('should keep decorative emoji out of the accessibility tree', () => {
+    const decorativeEmoji = fixture.nativeElement.querySelector('[aria-hidden="true"]');
+    expect(decorativeEmoji).toBeTruthy();
+    expect(decorativeEmoji.textContent).toContain('😕');
+  });
+
+  it('should keep the back action keyboard focusable and touch-sized', () => {
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+
+    expect(button.type).toBe('button');
+    expect(button.getAttribute('size')).toBe('touch');
+    button.focus();
+    expect(document.activeElement).toBe(button);
+  });
+
+  it('should use fluid layout primitives that preserve reflow at high zoom', () => {
+    const main = fixture.nativeElement.querySelector('main');
+    const content = main.querySelector('div');
+
+    expect(main.classList).toContain('px-4');
+    expect(content.classList).toContain('w-full');
+    expect(content.classList).toContain('max-w-md');
+  });
+
   it('should verify RTL logical CSS properties (ps-, pe-, ms-, me-, border-s, border-e)', () => {
     const componentHtml = fixture.nativeElement.innerHTML;
     expect(componentHtml).not.toMatch(/\bpl-\d/);
     expect(componentHtml).not.toMatch(/\bpr-\d/);
     expect(componentHtml).not.toMatch(/\bml-\d/);
     expect(componentHtml).not.toMatch(/\bmr-\d/);
+    expect(componentHtml).not.toMatch(/\bleft-\d/);
+    expect(componentHtml).not.toMatch(/\bright-\d/);
     expect(componentHtml).not.toMatch(/\bborder-l\b/);
     expect(componentHtml).not.toMatch(/\bborder-r\b/);
   });
