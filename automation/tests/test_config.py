@@ -23,11 +23,11 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     assert "hellotalk-factory-watchdog.sh" in setup
 
 
-def test_explicit_agent_workflows_are_present() -> None:
+def test_legacy_github_agent_workflows_stay_retired() -> None:
     workflows = Path(__file__).parents[2] / ".github" / "workflows"
 
     for name in ("architect.yml", "auto-dispatcher.yml", "openhands.yml", "pr-reviewer.yml"):
-        assert (workflows / name).exists()
+        assert not (workflows / name).exists()
 
 
 def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
