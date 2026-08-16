@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from subprocess import CompletedProcess, run, TimeoutExpired
 
 
 LEGACY_SYSTEMD_UNITS = (
@@ -42,8 +42,8 @@ class LegacyFinding:
     detail: str
 
 
-def _run(arguments: tuple[str, ...]) -> CompletedProcess[str]:
-    return run(arguments, capture_output=True, text=True, check=False, timeout=10)
+def _run(arguments: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(arguments, capture_output=True, text=True, check=False, timeout=10)
 
 
 def detect_legacy_systemd_units() -> list[LegacyFinding]:
@@ -52,7 +52,7 @@ def detect_legacy_systemd_units() -> list[LegacyFinding]:
         try:
             active = _run(("systemctl", "is-active", unit))
             enabled = _run(("systemctl", "is-enabled", unit))
-        except (OSError, TimeoutExpired) as error:
+        except (OSError, subprocess.TimeoutExpired) as error:
             findings.append(
                 LegacyFinding(
                     "systemd",
@@ -82,7 +82,7 @@ def detect_legacy_systemd_units() -> list[LegacyFinding]:
 def detect_legacy_tmux_sessions() -> list[LegacyFinding]:
     try:
         result = _run(("tmux", "list-sessions", "-F", "#{session_name}"))
-    except (OSError, TimeoutExpired):
+    except (OSError, subprocess.TimeoutExpired):
         return []
     if result.returncode != 0:
         return []
