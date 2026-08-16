@@ -1,0 +1,12 @@
+# Critical repository ownership
+/.github/workflows/ @elgansayer
+/.github/dependabot.yml @elgansayer
+/.github/PULL_REQUEST_TEMPLATE.md @elgansayer
+/docs/CI.md @elgansayer
+/backend/jest.config.* @elgansayer
+/backend/test/ @elgansayer
+/frontend/cypress/ @elgansayer
+/e2e/ @elgansayer
+/admin-portal/ @elgansayer
+/automation/ @elgansayer
+/scripts/audit-workflows.mjs @elgansayer
