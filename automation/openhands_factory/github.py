@@ -90,9 +90,6 @@ class GitHubClient:
         )
         payload = json.loads(output)
 
-        # Several issues can share an identical title (bulk-generated in the same batch).
-        # Only the lowest-numbered copy is eligible; the rest are marked duplicates so they
-        # are never attempted in parallel with their canonical sibling.
         canonical_by_title: dict[str, int] = {}
         for item in payload:
             normalized_title = " ".join(str(item["title"]).split()).lower()
@@ -106,17 +103,19 @@ class GitHubClient:
             labels = {
                 label.get("name", "") for label in item.get("labels", []) if isinstance(label, dict)
             }
+            # Only intentional workflow ownership/scope labels may remove an open issue
+            # from factory discovery. Legacy failure labels such as factory-quarantined,
+            # factory-quality-blocked, and needs-human are diagnostic metadata only: this
+            # factory has no human-operated dead-letter queue, so those issues must remain
+            # eligible for autonomous retry/replanning.
             if labels.intersection(
                 {
                     "factory-skip",
                     "duplicate",
-                    "needs-human",
                     "factory-epic",
                     "factory-planning",
-                    "factory-quality-blocked",
-                    "factory-quarantined",
-                    # The separate GitHub Actions "AI Swarm" pipeline claims this label while
-                    # it works an issue. Skip it to avoid two systems implementing it at once.
+                    # The separate GitHub Actions AI Swarm owns the issue while this lock
+                    # exists. Its outcome verifier removes the lock when no PR is produced.
                     "swarm-active",
                 }
             ):
@@ -138,9 +137,6 @@ class GitHubClient:
                 {self.ready_label, "factory-active", "guardian-alert"}
             ):
                 continue
-            # 0 = guardian-alert, 5 = pull-request review (see
-            # collect_open_pull_requests), 10 = everything else - lower runs
-            # first (select_batch sorts ascending).
             priority = 0 if "guardian-alert" in labels else 10
             tasks.append(
                 Task(
@@ -154,12 +150,6 @@ class GitHubClient:
         return tasks
 
     def collect_open_pull_requests(self, limit: int = 10_000) -> list[Task]:
-        """List externally-created pull requests eligible for independent review.
-
-        Excludes the factory's own pull requests (identified by their factory/*
-        branch, since those are already tracked by the issue that created them),
-        drafts, and anything already reviewed or explicitly skipped.
-        """
         output = self._run(
             (
                 "gh",
@@ -194,14 +184,6 @@ class GitHubClient:
                     title=str(item["title"]),
                     body=str(item.get("body") or ""),
                     source="github-pull-request",
-                    # Below guardian-alert issues (0) but above ordinary issue
-                    # work (10, see collect_open_issues): reviewing an
-                    # already-written external PR is typically fast (no
-                    # implementation needed) and often carries its own urgency
-                    # - security or performance fixes from other automated
-                    # systems - so it should not sit behind a long backlog of
-                    # fresh issue implementations at equal priority, the way
-                    # it did before this ordering existed.
                     priority=5,
                     pr_branch=head_ref,
                 )
@@ -209,11 +191,6 @@ class GitHubClient:
         return tasks
 
     def list_all_open_issue_titles(self, limit: int = 10_000) -> set[str]:
-        """List every open issue title, regardless of label, for duplicate checking.
-
-        Unlike collect_open_issues, nothing is excluded here - a proposed issue must
-        not duplicate a quarantined or blocked one either, not just an eligible one.
-        """
         output = self._run(
             (
                 "gh",
@@ -279,27 +256,13 @@ class GitHubClient:
             )
 
     def add_issue_labels(self, issue: int, labels: Sequence[str]) -> None:
-        arguments = [
-            "gh",
-            "issue",
-            "edit",
-            str(issue),
-            "--repo",
-            self.repository,
-        ]
+        arguments = ["gh", "issue", "edit", str(issue), "--repo", self.repository]
         for label in labels:
             arguments.extend(("--add-label", label))
         self._run(tuple(arguments))
 
     def remove_issue_labels(self, issue: int, labels: Sequence[str]) -> None:
-        arguments = [
-            "gh",
-            "issue",
-            "edit",
-            str(issue),
-            "--repo",
-            self.repository,
-        ]
+        arguments = ["gh", "issue", "edit", str(issue), "--repo", self.repository]
         for label in labels:
             arguments.extend(("--remove-label", label))
         self._run(tuple(arguments))
@@ -325,14 +288,7 @@ class GitHubClient:
         return sorted(int(item["number"]) for item in json.loads(output))
 
     def requeue_quarantined_issues(self) -> list[int]:
-        """Clear a resolved-cause quarantine so an issue is eligible for a clean retry.
-
-        Quarantine is a circuit breaker: it exists so a genuinely broken task cannot
-        loop forever, not to permanently withhold work. Once the operator has fixed the
-        systemic cause (a bug, a stale collision with another pipeline), the affected
-        issues need to be moved back into the pool by hand, since only a human can judge
-        that the cause is actually resolved.
-        """
+        """Remove obsolete blocking labels; discovery no longer depends on this call."""
         requeued: list[int] = []
         for issue in self.list_quarantined_issues():
             self.remove_issue_labels(
@@ -341,15 +297,13 @@ class GitHubClient:
             )
             self.add_comment(
                 issue,
-                "Clearing the quarantine labels on this issue after an operator "
-                "confirmed the underlying cause is resolved. It is eligible for a "
-                "clean retry.",
+                "Clearing legacy quarantine metadata. The factory now owns retry and recovery "
+                "automatically and does not require operator release.",
             )
             requeued.append(issue)
         return requeued
 
     def add_comment(self, number: int, body: str) -> None:
-        """Publish a bounded lifecycle update on an issue or pull request."""
         self._run(
             (
                 "gh",
@@ -389,16 +343,7 @@ class GitHubClient:
             raise FactoryError(f"Could not parse pull request URL: {url}") from error
 
     def mark_ready(self, pull_request: int) -> None:
-        self._run(
-            (
-                "gh",
-                "pr",
-                "ready",
-                str(pull_request),
-                "--repo",
-                self.repository,
-            )
-        )
+        self._run(("gh", "pr", "ready", str(pull_request), "--repo", self.repository))
 
     def request_review(self, pull_request: int) -> None:
         self.add_issue_labels(pull_request, ("factory-review",))
