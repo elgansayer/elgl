@@ -104,6 +104,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check:constitution
+      - run: npm run check:agent-ui-governance
       - run: npm run check:design-sync
       - name: Enforce Spartan ownership boundaries
         env:
