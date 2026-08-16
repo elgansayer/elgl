@@ -17,6 +17,7 @@
     "check:rtl-logical-contract": "node scripts/verify-rtl-logical-contract.mjs",
     "check:focus-ring-contract": "node scripts/verify-focus-ring-contract.mjs",
     "check:reduced-motion-contract": "node scripts/verify-reduced-motion-contract.mjs",
+    "check:ux-100-percent": "node scripts/verify-ux-100-percent.mjs",
     "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
     "report:ux-system-health": "node scripts/report-ux-system-health.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
