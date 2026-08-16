@@ -23,6 +23,6 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify Relay light and dark semantic token parity
         run: node scripts/check-dark-theme-parity.mjs
