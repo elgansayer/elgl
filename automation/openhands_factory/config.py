@@ -6,40 +6,13 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
-from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, SecretStr, field_validator, model_validator
 
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.exceptions import ConfigurationError
 
 
-class ProviderConfig(BaseModel):
-    enabled: bool = False
-    command: str | None = None
-    auth_mode: str | None = None
-    emergency_only: bool = False
-    max_concurrency: int = 2
-
-
-class AgentsRoutingConfig(BaseModel):
-    planning: list[str] = Field(default_factory=lambda: ["openhands"])
-    architecture: list[str] = Field(default_factory=lambda: ["openhands"])
-    implementation: list[str] = Field(default_factory=lambda: ["openhands"])
-    security_review: list[str] = Field(default_factory=lambda: ["openhands"])
-    quality_repair: list[str] = Field(default_factory=lambda: ["openhands"])
-    code_review: list[str] = Field(default_factory=lambda: ["openhands"])
-    ci_repair: list[str] = Field(default_factory=lambda: ["openhands"])
-    general_action: list[str] = Field(default_factory=lambda: ["openhands"])
-    skip_busy_providers: bool = True
-
-
-class AgentsConfig(BaseModel):
-    routing_enabled: bool = False
-    providers: dict[str, ProviderConfig] = Field(default_factory=dict)
-    routing: AgentsRoutingConfig = Field(default_factory=AgentsRoutingConfig)
-
-
 class FactoryConfig(BaseModel):
-    agents: AgentsConfig = Field(default_factory=AgentsConfig)
     repository: Path = Path("/var/lib/hellotalk-factory/repository")
     base_branch: str = "main"
     state_dir: Path = Path("/var/lib/hellotalk-factory")
@@ -159,17 +132,8 @@ class FactoryConfig(BaseModel):
         def boolean(name: str, default: bool) -> bool:
             return env.get(name, str(default)).lower() in {"1", "true", "yes"}
 
-        import json
-        agents_config = AgentsConfig()
-        agents_config_path = env.get("FACTORY_AGENTS_CONFIG")
-        if agents_config_path:
-            with open(agents_config_path) as f:
-                agents_data = json.load(f)
-                agents_config = AgentsConfig(**agents_data)
-
         try:
             return cls(
-                agents=agents_config,
                 repository=Path(
                     env.get("FACTORY_REPOSITORY", cls.model_fields["repository"].default)
                 ),

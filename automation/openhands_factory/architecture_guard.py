@@ -20,6 +20,18 @@ RETIRED_SWARM_WORKFLOWS = (
     ".github/workflows/guardian.yml",
 )
 
+# Provider selection belongs inside bounded OpenHands conversations. These paths
+# represent the direct-provider router that briefly created a second execution
+# plane around OpenHands. Keeping the paths explicit makes accidental resurrection
+# fail closed while still allowing provider health/configuration code elsewhere.
+FORBIDDEN_DIRECT_PROVIDER_PATHS = (
+    "automation/openhands_factory/agents/router.py",
+    "automation/openhands_factory/agents/claude.py",
+    "automation/openhands_factory/agents/codex.py",
+    "automation/openhands_factory/agents/google.py",
+    "automation/openhands_factory/agents/opencode.py",
+)
+
 
 @dataclass(frozen=True)
 class ArchitectureCheck:
@@ -48,10 +60,24 @@ def check_retired_swarm(repository: Path) -> ArchitectureCheck:
     )
 
 
+def check_direct_provider_router(repository: Path) -> ArchitectureCheck:
+    """Fail when direct provider adapters recreate an execution plane around OpenHands."""
+    present = [
+        path for path in FORBIDDEN_DIRECT_PROVIDER_PATHS if (repository / path).is_file()
+    ]
+    if not present:
+        return ArchitectureCheck(True, "no direct-provider router paths present")
+    return ArchitectureCheck(
+        False,
+        "direct-provider execution paths present: " + ", ".join(present),
+    )
+
+
 def assert_single_owner(repository: Path) -> None:
-    """Refuse daemon startup if a retired repository automation owner is active."""
-    check = check_retired_swarm(repository)
-    if not check.passed:
+    """Refuse daemon startup if a retired or alternate repository automation owner is active."""
+    checks = (check_retired_swarm(repository), check_direct_provider_router(repository))
+    failed = [check.detail for check in checks if not check.passed]
+    if failed:
         raise RuntimeError(
-            "OpenHands Factory single-owner invariant violated: " + check.detail
+            "OpenHands Factory single-owner invariant violated: " + "; ".join(failed)
         )
