@@ -46,6 +46,15 @@ jobs:
             )
           fi
 
+          open_pr_count() {
+            gh pr list \
+              --repo "$REPOSITORY" \
+              --head "$1" \
+              --state open \
+              --json number \
+              --jq 'length'
+          }
+
           created=0
           skipped=0
           failed=0
@@ -67,12 +76,20 @@ jobs:
               continue
             fi
 
-            existing=$(gh pr list \
-              --repo "$REPOSITORY" \
-              --head "$branch" \
-              --state open \
-              --json number \
-              --jq 'length')
+            existing=$(open_pr_count "$branch")
+
+            # A push normally comes from a producer that is about to open its own PR.
+            # Give that producer a small bounded window before the hygiene fallback
+            # creates a bot-authored draft. Scheduled/manual reconciliation skips this
+            # grace period because any orphan found there already missed its producer.
+            if [[ "$existing" -eq 0 && "${{ github.event_name }}" == "push" ]]; then
+              for attempt in 1 2 3; do
+                echo "::notice::Waiting for producer PR for $branch (attempt $attempt/3)"
+                sleep 5
+                existing=$(open_pr_count "$branch")
+                [[ "$existing" -gt 0 ]] && break
+              done
+            fi
 
             if [[ "$existing" -gt 0 ]]; then
               echo "PR already exists for $branch"
