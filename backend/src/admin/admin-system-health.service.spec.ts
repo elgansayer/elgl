@@ -73,6 +73,37 @@ describe('AdminSystemHealthService', () => {
     });
   });
 
+  it('times out a hung dependency instead of hanging the health snapshot', async () => {
+    vi.useFakeTimers();
+    try {
+      const limit = vi.fn().mockResolvedValue({ data: [], error: null });
+      const select = vi.fn().mockReturnValue({ limit });
+      const operationalEvents = { record: vi.fn().mockResolvedValue(undefined) };
+      const service = new AdminSystemHealthService(
+        {
+          getClient: vi.fn().mockReturnValue({
+            from: vi.fn().mockReturnValue({ select }),
+          }),
+          getRedisClient: vi.fn().mockReturnValue({
+            ping: vi.fn().mockReturnValue(new Promise<string>(() => undefined)),
+          }),
+        } as unknown as SupabaseService,
+        operationalEvents as unknown as AdminOperationalEventsService,
+      );
+
+      const snapshotPromise = service.getSnapshot();
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      await expect(snapshotPromise).resolves.toMatchObject({
+        state: 'degraded',
+        dependencies: { database: 'healthy', redis: 'degraded' },
+      });
+      expect(operationalEvents.record).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('still returns the degraded snapshot when operational-event storage fails', async () => {
     const limit = vi
       .fn()
