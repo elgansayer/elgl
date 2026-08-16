@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AdminRoleAssignmentsQueryDto } from './dto/admin-role-assignments-query.dto';
 
@@ -47,6 +47,16 @@ export class AdminRoleAssignmentsService {
     const to = from + pageSize - 1;
     const client = this.supabaseService.getClient();
 
+    if (
+      query.startTime &&
+      query.endTime &&
+      Date.parse(query.startTime) > Date.parse(query.endTime)
+    ) {
+      throw new BadRequestException(
+        'startTime must be before or equal to endTime',
+      );
+    }
+
     let assignmentQuery = client
       .from('admin_user_roles')
       .select('user_id, role_id, granted_by, granted_at, expires_at', {
@@ -56,6 +66,10 @@ export class AdminRoleAssignmentsService {
       assignmentQuery = assignmentQuery.eq('user_id', query.userId);
     if (query.grantedBy)
       assignmentQuery = assignmentQuery.eq('granted_by', query.grantedBy);
+    if (query.startTime)
+      assignmentQuery = assignmentQuery.gte('granted_at', query.startTime);
+    if (query.endTime)
+      assignmentQuery = assignmentQuery.lte('granted_at', query.endTime);
 
     let roleIdsForKey: string[] | null = null;
     if (query.roleKey) {
