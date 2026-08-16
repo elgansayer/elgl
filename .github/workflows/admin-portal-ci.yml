@@ -25,9 +25,11 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: admin-portal/package-lock.json
       - name: Install admin portal dependencies
         working-directory: admin-portal
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Lint admin portal
         working-directory: admin-portal
         run: npm run lint:check
