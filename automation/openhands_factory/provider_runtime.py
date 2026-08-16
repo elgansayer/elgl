@@ -1,72 +1,15 @@
-"""Shared provider runtime controls for the active OpenHands Factory."""
+"""Provider attribution helpers for the active OpenHands Factory."""
 
 from __future__ import annotations
 
-from collections import Counter
-from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from threading import BoundedSemaphore, Lock
-from typing import Iterator
 
 from filelock import FileLock
 
 from openhands_factory.config import FactoryConfig
 from openhands_factory.models import FailureKind, ProviderName
 from openhands_factory.state import atomic_write_json, read_json
-
-
-class ProviderConcurrencyLimiter:
-    """Bound concurrent conversations independently for each configured provider."""
-
-    def __init__(self, config: FactoryConfig) -> None:
-        self._limits = {
-            ProviderName.OPENAI_SUBSCRIPTION: config.openai_max_concurrent_conversations,
-            ProviderName.OPENCODE_GO: config.opencode_max_concurrent_conversations,
-            ProviderName.GEMINI: config.gemini_max_concurrent_conversations,
-        }
-        self._slots = {
-            provider: BoundedSemaphore(limit) for provider, limit in self._limits.items()
-        }
-        self._active: Counter[ProviderName] = Counter()
-        self._lock = Lock()
-
-    @contextmanager
-    def reserve(self, provider: ProviderName) -> Iterator[None]:
-        slot = self._slots[provider]
-        slot.acquire()
-        with self._lock:
-            self._active[provider] += 1
-        try:
-            yield
-        finally:
-            with self._lock:
-                self._active[provider] -= 1
-            slot.release()
-
-    def snapshot(self) -> dict[str, dict[str, int]]:
-        with self._lock:
-            return {
-                provider.value: {
-                    "active": self._active[provider],
-                    "limit": self._limits[provider],
-                }
-                for provider in self._limits
-            }
-
-
-_LIMITERS: dict[str, ProviderConcurrencyLimiter] = {}
-_LIMITERS_LOCK = Lock()
-
-
-def shared_provider_limiter(config: FactoryConfig) -> ProviderConcurrencyLimiter:
-    key = str(config.state_dir.resolve())
-    with _LIMITERS_LOCK:
-        limiter = _LIMITERS.get(key)
-        if limiter is None:
-            limiter = ProviderConcurrencyLimiter(config)
-            _LIMITERS[key] = limiter
-        return limiter
 
 
 def provider_model(config: FactoryConfig, provider: ProviderName) -> str:
@@ -77,6 +20,23 @@ def provider_model(config: FactoryConfig, provider: ProviderName) -> str:
     return f"gemini/{config.gemini_model}"
 
 
+def conversation_role(prompt: str) -> str:
+    """Derive the trusted Factory phase from its repository-owned prompt prefix."""
+    prefixes = {
+        "# Task Execution": "implementation",
+        "# Independent Pull Request Review": "review",
+        "# Security": "security-review",
+        "# Quality": "quality-repair",
+        "# Repair": "ci-repair",
+        "# Architect": "architect",
+    }
+    stripped = prompt.lstrip()
+    for prefix, role in prefixes.items():
+        if stripped.startswith(prefix):
+            return role
+    return "factory-phase"
+
+
 class ProviderAttributionStore:
     """Durably record non-secret provider attribution for every conversation attempt."""
 
@@ -84,30 +44,60 @@ class ProviderAttributionStore:
         self.path = path
         self.lock = FileLock(str(path) + ".lock")
 
+    def _attempts(self) -> list[dict[str, object]]:
+        payload = read_json(self.path, {"attempts": []})
+        attempts = payload.get("attempts", []) if isinstance(payload, dict) else []
+        return [item for item in attempts if isinstance(item, dict)]
+
+    def latest_provider(self, task_id: str, *, role: str | None = None) -> ProviderName | None:
+        with self.lock:
+            for item in reversed(self._attempts()):
+                if item.get("task_id") != task_id:
+                    continue
+                if role is not None and item.get("role") != role:
+                    continue
+                provider = item.get("provider")
+                if isinstance(provider, str):
+                    try:
+                        return ProviderName(provider)
+                    except ValueError:
+                        continue
+        return None
+
+    def task_summary(self, task_id: str) -> list[dict[str, object]]:
+        """Return sanitized attribution suitable for PR metadata or diagnostics."""
+        with self.lock:
+            return [item.copy() for item in self._attempts() if item.get("task_id") == task_id]
+
     def record(
         self,
         *,
         task_id: str,
+        role: str,
         provider: ProviderName,
         model: str,
         generation: str,
         successful: bool,
         fallback: bool,
+        fallback_reason: str | None,
         elapsed_seconds: float,
+        capacity_wait_seconds: float = 0,
         failure_kind: FailureKind | None = None,
     ) -> None:
         with self.lock:
-            payload = read_json(self.path, {"attempts": []})
-            attempts = list(payload.get("attempts", []))
+            attempts = self._attempts()
             attempts.append(
                 {
                     "task_id": task_id,
+                    "role": role,
                     "provider": provider.value,
                     "model": model,
                     "factory_generation": generation,
                     "successful": successful,
                     "fallback": fallback,
+                    "fallback_reason": fallback_reason,
                     "elapsed_seconds": round(elapsed_seconds, 3),
+                    "capacity_wait_seconds": round(capacity_wait_seconds, 3),
                     "failure_kind": failure_kind.value if failure_kind else None,
                     "recorded_at": datetime.now(UTC).isoformat(),
                 }
