@@ -1,10 +1,11 @@
 import { Component, computed, input, output, signal } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports, type HlmDialogState } from '@spartan-ng/helm/dialog';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-long-press-context-menu',
-  imports: [TranslatePipe, ...HlmDialogImports],
+  imports: [TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   template: `
     <div
       (touchstart)="onTouchStart($event)"
@@ -22,53 +23,56 @@ import { TranslatePipe } from '../../services/translate.pipe';
       <hlm-dialog-content
         *hlmDialogPortal
         [showCloseButton]="false"
-        class="w-full mx-auto bg-surface-200 rounded-t-sheet sm:rounded-sheet shadow-lift border border-surface-100 px-6 py-4 space-y-2 sm:max-w-sm"
+        class="w-full mx-auto bg-surface-200 rounded-t-sheet sm:rounded-sheet shadow-lift border border-surface-100 px-4 py-3 gap-1 sm:max-w-sm"
       >
-        <button
-          class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
-          (click)="doReply()"
-        >
+        <button hlmBtn variant="ghost" size="touch" class="w-full justify-start" (click)="doReply()">
           {{ 'context_menu.reply' | t }}
         </button>
 
-        <button
-          class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
-          (click)="doCopy()"
-        >
+        <button hlmBtn variant="ghost" size="touch" class="w-full justify-start" (click)="doCopy()">
           {{ 'context_menu.copy' | t }}
         </button>
 
         @if (messageType() === 'text') {
           <button
-            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            hlmBtn
+            variant="ghost"
+            size="touch"
+            class="w-full justify-start"
             (click)="doTranslate()"
           >
             {{ 'context_menu.translate' | t }}
           </button>
 
           <button
-            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            hlmBtn
+            variant="ghost"
+            size="touch"
+            class="w-full justify-start"
             (click)="doTransliterate()"
           >
             {{ 'context_menu.transliterate' | t }}
           </button>
 
-          <button
-            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
-            (click)="doSpeak()"
-          >
+          <button hlmBtn variant="ghost" size="touch" class="w-full justify-start" (click)="doSpeak()">
             {{ 'context_menu.speak' | t }}
           </button>
 
           <button
-            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            hlmBtn
+            variant="ghost"
+            size="touch"
+            class="w-full justify-start"
             (click)="doCorrect()"
           >
             {{ 'context_menu.correct' | t }}
           </button>
 
           <button
-            class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+            hlmBtn
+            variant="ghost"
+            size="touch"
+            class="w-full justify-start"
             (click)="doRequestCorrection()"
           >
             {{ 'context_menu.requestCorrection' | t }}
@@ -76,28 +80,40 @@ import { TranslatePipe } from '../../services/translate.pipe';
         }
 
         <button
-          class="w-full text-start text-text-primary font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+          hlmBtn
+          variant="ghost"
+          size="touch"
+          class="w-full justify-start"
           (click)="doFavourite()"
         >
           {{ 'context_menu.favourite' | t }}
         </button>
 
         <button
-          class="w-full text-start text-danger font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+          hlmBtn
+          variant="destructive"
+          size="touch"
+          class="w-full justify-start"
           (click)="doReport()"
         >
           {{ 'context_menu.report' | t }}
         </button>
 
         <button
-          class="w-full text-start text-danger font-medium py-2 px-3 rounded-lg hover:bg-surface-100"
+          hlmBtn
+          variant="destructive"
+          size="touch"
+          class="w-full justify-start"
           (click)="doBlockToggle()"
         >
           {{ (isBlocked() ? 'context_menu.unblock' : 'context_menu.block') | t }}
         </button>
 
         <button
-          class="w-full text-center text-text-secondary py-2 px-3 rounded-lg hover:bg-surface-100 mt-1"
+          hlmBtn
+          variant="secondary"
+          size="touch"
+          class="mt-1 w-full justify-center"
           (click)="closeMenu()"
         >
           {{ 'context_menu.cancel' | t }}
