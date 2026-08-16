@@ -10,6 +10,7 @@ import os
 import pty
 import re
 import select
+import signal
 import time
 from dataclasses import dataclass
 from subprocess import Popen, TimeoutExpired
@@ -27,6 +28,26 @@ class PTYWrapper:
 
     def __init__(self, command: list[str]) -> None:
         self.command = command
+
+    @staticmethod
+    def _terminate_process_group(process: Popen[bytes]) -> None:
+        """Terminate the isolated process session so grandchildren cannot leak."""
+        if process.poll() is not None:
+            return
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+        try:
+            process.wait(timeout=5)
+            return
+        except TimeoutExpired:
+            pass
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait(timeout=5)
 
     def execute_result(
         self,
@@ -58,12 +79,7 @@ class PTYWrapper:
             while process.poll() is None:
                 if timeout_seconds is not None and time.monotonic() - started >= timeout_seconds:
                     timed_out = True
-                    process.terminate()
-                    try:
-                        process.wait(timeout=5)
-                    except TimeoutExpired:
-                        process.kill()
-                        process.wait(timeout=5)
+                    self._terminate_process_group(process)
                     break
 
                 readable, _, _ = select.select([master], [], [], 0.1)
@@ -88,7 +104,6 @@ class PTYWrapper:
                 elif "Continue? (y/n)" in clean_text:
                     os.write(master, b"y\n")
 
-            # Drain any final PTY bytes after the child exits.
             while captured < max_output_bytes:
                 readable, _, _ = select.select([master], [], [], 0)
                 if master not in readable:
@@ -103,13 +118,7 @@ class PTYWrapper:
                 chunks.append(clean)
                 captured += len(clean)
         finally:
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=5)
+            self._terminate_process_group(process)
             os.close(master)
 
         output = b"".join(chunks).decode("utf-8", errors="replace")
