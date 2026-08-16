@@ -36,7 +36,7 @@ jobs:
         working-directory: frontend
         run: |
           set -euo pipefail
-          for component in native-select checkbox radio-group combobox; do
+          for component in native-select checkbox radio-group combobox autocomplete; do
             target="src/app/components/ui/${component}"
             if [ -d "$target" ]; then
               echo "${component} already owned"
@@ -45,8 +45,10 @@ jobs:
             npx ng g @spartan-ng/cli:ui "$component"
           done
 
-      - name: Apply owned Spartan control migration
-        run: node scripts/migrate-spartan-owned-controls.mjs
+      - name: Apply owned Spartan control migrations
+        run: |
+          node scripts/migrate-spartan-owned-controls.mjs
+          node scripts/migrate-spartan-native-selects.mjs
 
       - name: Commit migration when needed
         env:
@@ -60,5 +62,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend
-          git commit -m "refactor(ui): add missing owned Spartan interaction families"
+          git commit -m "refactor(ui): migrate remaining owned Spartan control families"
           git push origin "HEAD:${HEAD_BRANCH}"
