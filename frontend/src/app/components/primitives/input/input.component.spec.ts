@@ -89,12 +89,13 @@ describe('AppInputComponent', () => {
     expect(host.blurCount).toBe(1);
   });
 
-  it('should apply disabled styles and not emit valueChange when disabled', () => {
+  it('should apply owned Helm disabled semantics and not emit valueChange when disabled', () => {
     host.disabled.set(true);
     fixture.detectChanges();
 
     expect(inputElement.disabled).toBe(true);
-    expect(inputElement.classList.contains('cursor-not-allowed')).toBe(true);
+    expect(inputElement.classList.contains('disabled:cursor-not-allowed')).toBe(true);
+    expect(inputElement.classList.contains('disabled:opacity-50')).toBe(true);
 
     inputElement.value = 'ignored';
     inputElement.dispatchEvent(new Event('input'));

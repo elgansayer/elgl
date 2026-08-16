@@ -89,12 +89,13 @@ describe('AppTextareaComponent', () => {
     expect(host.blurCount).toBe(1);
   });
 
-  it('should apply disabled styles and not emit valueChange when disabled', () => {
+  it('should apply owned Helm disabled semantics and not emit valueChange when disabled', () => {
     host.disabled.set(true);
     fixture.detectChanges();
 
     expect(textareaElement.disabled).toBe(true);
-    expect(textareaElement.classList.contains('cursor-not-allowed')).toBe(true);
+    expect(textareaElement.classList.contains('disabled:cursor-not-allowed')).toBe(true);
+    expect(textareaElement.classList.contains('disabled:opacity-50')).toBe(true);
 
     textareaElement.value = 'ignored text';
     textareaElement.dispatchEvent(new Event('input'));

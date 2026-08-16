@@ -23,10 +23,25 @@ requireCanonicalSizeContract(
   'AppCard',
   "padding = input<'none' | 'sm' | 'md' | 'lg'>('md')",
 );
-requireCanonicalSizeContract(
-  'button-primary/button-primary.component.ts',
-  'AppButtonPrimary',
+
+const primaryButtonSource = readFileSync(
+  resolve(primitiveRoot, 'button-primary/button-primary.component.ts'),
+  'utf8',
+);
+requireFragment(
+  primaryButtonSource,
   "size = input<'sm' | 'md' | 'lg'>('md')",
+  'AppButtonPrimary canonical density input',
+);
+requireFragment(
+  primaryButtonSource,
+  "return size === 'md' ? 'touch' : size;",
+  'AppButtonPrimary Helm density mapping',
+);
+requireFragment(
+  primaryButtonSource,
+  '[size]="helmSize()"',
+  'AppButtonPrimary owned Helm size binding',
 );
 
 const allowedExtensions = new Set(['.html', '.ts', '.scss', '.css']);

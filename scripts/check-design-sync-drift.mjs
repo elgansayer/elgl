@@ -39,9 +39,25 @@ try {
 
 const changedSet = new Set(changed);
 const isWithin = (file, mappedPath) => file === mappedPath || file.startsWith(`${mappedPath}/`);
-const touchedItems = manifest.items.filter((item) =>
-  changed.some((file) => item.repositoryPaths.some((mappedPath) => isWithin(file, mappedPath))),
-);
+
+// A file can sit below several aggregate design mappings (for example app -> components -> primitive family).
+// Only the most-specific matching repository path owns that file for drift purposes. This preserves broad
+// fallback mappings without forcing unrelated previews to change whenever a narrower artefact is edited.
+const touchedIds = new Set();
+for (const file of changed) {
+  const matches = [];
+  for (const item of manifest.items) {
+    for (const mappedPath of item.repositoryPaths) {
+      if (isWithin(file, mappedPath)) matches.push({ item, mappedPath });
+    }
+  }
+  if (matches.length === 0) continue;
+  const maxSpecificity = Math.max(...matches.map(({ mappedPath }) => mappedPath.length));
+  for (const { item, mappedPath } of matches) {
+    if (mappedPath.length === maxSpecificity) touchedIds.add(item.id);
+  }
+}
+const touchedItems = manifest.items.filter((item) => touchedIds.has(item.id));
 
 if (touchedItems.length === 0) {
   console.log('Design sync drift check: no mapped visual-contract paths changed.');

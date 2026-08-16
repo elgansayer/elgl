@@ -1,5 +1,13 @@
-import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
-import { HlmButtonImports } from '@spartan-ng/helm/button';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
+import { HlmButton, HlmButtonImports } from '@spartan-ng/helm/button';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -12,7 +20,6 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
       [size]="helmSize()"
       [type]="type()"
       [disabled]="disabled()"
-      [class]="customClass()"
       (click)="onClick($event)"
     >
       <ng-content />
@@ -29,7 +36,18 @@ export class AppButtonPrimaryComponent {
   readonly customClass = input<string>('');
   readonly clicked = output<MouseEvent>();
 
-  readonly helmSize = computed(() => (this.size() === 'md' ? 'touch' : this.size()));
+  readonly helmSize = computed(() => {
+    const size = this.size();
+    return size === 'md' ? 'touch' : size;
+  });
+
+  private readonly helmButton = viewChild(HlmButton);
+
+  constructor() {
+    effect(() => {
+      this.helmButton()?.setClass(this.customClass());
+    });
+  }
 
   onClick(event: MouseEvent): void {
     if (!this.disabled()) this.clicked.emit(event);
