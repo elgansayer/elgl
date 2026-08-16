@@ -30,7 +30,9 @@ describe('Admin moderation queue E2E', () => {
           provide: AdminAuthorizationService,
           useValue: {
             hasAllCapabilities,
-            getEffectiveCapabilities: vi.fn().mockResolvedValue(['moderation.cases.read']),
+            getEffectiveCapabilities: vi
+              .fn()
+              .mockResolvedValue(['moderation.cases.read']),
           },
         },
         { provide: AdminService, useValue: {} },
@@ -38,7 +40,10 @@ describe('Admin moderation queue E2E', () => {
         { provide: AdminLoginHistoryQueryService, useValue: {} },
         { provide: AdminAuditService, useValue: { record: vi.fn() } },
         { provide: AdminAuditQueryService, useValue: {} },
-        { provide: AdminModerationQueryService, useValue: { list: moderationList } },
+        {
+          provide: AdminModerationQueryService,
+          useValue: { list: moderationList },
+        },
         { provide: AdminSystemHealthService, useValue: {} },
         { provide: AdminRoleInventoryService, useValue: {} },
       ],
