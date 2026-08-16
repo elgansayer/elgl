@@ -60,7 +60,11 @@ def inspect_openai_oauth(config: FactoryConfig, home: Path | None = None) -> OAu
     except ValueError as error:
         return OAuthHealth(OAuthHealthKind.MALFORMED, False, str(error))
     if cache is None:
-        return OAuthHealth(OAuthHealthKind.MISSING, False, "OpenHands OAuth credentials are missing")
+        return OAuthHealth(
+            OAuthHealthKind.MISSING,
+            False,
+            "OpenHands OAuth credentials are missing",
+        )
 
     try:
         from openhands.sdk.llm import OpenAISubscriptionAuth
@@ -95,7 +99,11 @@ def inspect_openai_oauth(config: FactoryConfig, home: Path | None = None) -> OAu
     except RuntimeError as error:
         return OAuthHealth(OAuthHealthKind.AUTH_FAILURE, False, str(error))
 
-    return OAuthHealth(OAuthHealthKind.HEALTHY, True, f"valid subscription OAuth for {config.openai_model}")
+    return OAuthHealth(
+        OAuthHealthKind.HEALTHY,
+        True,
+        f"valid subscription OAuth for {config.openai_model}",
+    )
 
 
 def smoke_openai_subscription(config: FactoryConfig) -> OAuthHealth:
@@ -126,6 +134,18 @@ def smoke_openai_subscription(config: FactoryConfig) -> OAuthHealth:
         message = str(error)
         lowered = f"{name} {message}".lower()
         if "rate" in lowered or "429" in lowered or "thrott" in lowered:
-            return OAuthHealth(OAuthHealthKind.THROTTLED, False, f"subscription throttled: {name}: {message}")
-        return OAuthHealth(OAuthHealthKind.AUTH_FAILURE, False, f"subscription smoke failed: {name}: {message}")
-    return OAuthHealth(OAuthHealthKind.HEALTHY, True, f"subscription smoke passed for {config.openai_model}")
+            return OAuthHealth(
+                OAuthHealthKind.THROTTLED,
+                False,
+                f"subscription throttled: {name}: {message}",
+            )
+        return OAuthHealth(
+            OAuthHealthKind.AUTH_FAILURE,
+            False,
+            f"subscription smoke failed: {name}: {message}",
+        )
+    return OAuthHealth(
+        OAuthHealthKind.HEALTHY,
+        True,
+        f"subscription smoke passed for {config.openai_model}",
+    )
