@@ -7,7 +7,8 @@ describe('AdminModerationQueryService', () => {
       .fn()
       .mockResolvedValue({ data: [], error: null, count: 0 });
     const order = vi.fn().mockReturnValue({ range });
-    const eqReportedUser = vi.fn().mockReturnValue({ order });
+    const eqReporterUser = vi.fn().mockReturnValue({ order });
+    const eqReportedUser = vi.fn().mockReturnValue({ eq: eqReporterUser });
     const eqReason = vi.fn().mockReturnValue({ eq: eqReportedUser });
     const eqStatus = vi.fn().mockReturnValue({ eq: eqReason });
     const select = vi.fn().mockReturnValue({ eq: eqStatus, order });
@@ -24,12 +25,14 @@ describe('AdminModerationQueryService', () => {
         status: ' open ',
         reasonCategory: ' harassment ',
         reportedUserId: ' user-1 ',
+        reporterUserId: ' reporter-1 ',
       }),
     ).resolves.toEqual({ reports: [], total: 0, page: 2, pageSize: 20 });
 
     expect(eqStatus).toHaveBeenCalledWith('status', 'open');
     expect(eqReason).toHaveBeenCalledWith('reason_category', 'harassment');
     expect(eqReportedUser).toHaveBeenCalledWith('reported_user_id', 'user-1');
+    expect(eqReporterUser).toHaveBeenCalledWith('reporter_id', 'reporter-1');
     expect(order).toHaveBeenCalledWith('created_at', { ascending: false });
     expect(range).toHaveBeenCalledWith(20, 39);
   });
