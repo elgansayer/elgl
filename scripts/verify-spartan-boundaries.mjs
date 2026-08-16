@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -32,7 +32,7 @@ function files(path) {
 
 const violations = [];
 const exceptionsSeen = new Set();
-const brainImportPattern = /from\s+['"]@spartan-ng\/brain(?:\/[^'"]*)?['"]/g;
+const brainImportPattern = /from\s+['"]@spartan-ng\/brain(?:\/[^'"]*)?['"]/;
 
 for (const absolutePath of files(appRoot)) {
   const path = relative(root, absolutePath).replaceAll('\\', '/');
