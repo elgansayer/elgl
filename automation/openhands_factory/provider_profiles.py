@@ -171,11 +171,13 @@ def select_provider_decision(
     *,
     prefer_different_from: ProviderName | None = None,
 ) -> ProviderDecision:
-    """Choose one provider for a whole conversation and explain any fallback.
+    """Choose one provider for a whole OpenHands conversation.
 
     The production chain is deliberately fixed to Codex subscription OAuth then
-    OpenCode Go. A third provider must not silently re-enter autonomous execution
-    because stale configuration or historical health state still exists.
+    OpenCode Go. Historical provider configuration must never silently re-enter
+    autonomous execution. If both production providers are unavailable the
+    caller waits/retries through the Factory bounded-recovery path instead of
+    dispatching a third execution provider.
     """
     store = ProviderHealthStore(config.state_dir / "health.json")
     breakers = {breaker.provider: breaker for breaker in store.load()}
@@ -211,16 +213,9 @@ def select_provider_decision(
     if opencode_usable:
         return ProviderDecision(ProviderName.OPENCODE_GO, fallback_reason)
 
-    try:
-        gemini_profile = validate_gemini(config)
-        if gemini_profile is not None:
-            return ProviderDecision(ProviderName.GEMINI, fallback_reason + "-and-opencode-down")
-    except Exception:
-        pass
-
     raise FactoryError(
         "Both production model providers are temporarily unavailable "
-        "(Codex subscription OAuth and OpenCode Go) and Gemini fallback is disabled/unavailable."
+        "(Codex subscription OAuth and OpenCode Go); bounded recovery will retry later."
     )
 
 
@@ -234,7 +229,7 @@ def build_llm(
     provider: ProviderName | None = None,
     role: str | None = None,
 ) -> LLM:
-    """Construct this conversation's sole LLM, with no per-call fallback chain."""
+    """Construct this OpenHands conversation's sole LLM, with no per-call fallback chain."""
     from openhands.sdk import LLM
 
     from openhands_factory.provider_runtime import provider_model
@@ -254,13 +249,7 @@ def build_llm(
             usage_id=config.opencode_profile_name,
             reasoning_effort="none",
         )
-    if selected_provider is ProviderName.GEMINI:
-        return LLM(
-            model=f"gemini/{config.gemini_model}",
-            api_key=config.gemini_api_key,
-            usage_id=config.gemini_profile_name,
-        )
     raise ConfigurationError(
         f"Provider {selected_provider.value!r} is historical-only and is not eligible "
-        "for production factory conversations"
+        "for production OpenHands conversations"
     )
