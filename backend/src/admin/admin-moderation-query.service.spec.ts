@@ -33,9 +33,7 @@ describe('AdminModerationQueryService', () => {
 
   it('fails closed when report storage fails', async () => {
     const error = new Error('reports unavailable');
-    const range = vi
-      .fn()
-      .mockResolvedValue({ data: null, error, count: null });
+    const range = vi.fn().mockResolvedValue({ data: null, error, count: null });
     const order = vi.fn().mockReturnValue({ range });
     const select = vi.fn().mockReturnValue({ order });
     const service = new AdminModerationQueryService({
