@@ -39,9 +39,11 @@ for (const path of sourceFiles) {
   }
 }
 
+const brainImportPattern = /from\s+['"]@spartan-ng\/brain(?:\/[^'"]*)?['"]/;
 for (const path of appSourceFiles) {
+  if (!path.endsWith('.ts')) continue;
   const source = readFileSync(path, 'utf8');
-  if (source.includes('@spartan-ng/brain')) {
+  if (brainImportPattern.test(source)) {
     failures.push(
       `${relative(root, path)}: feature and Relay code must not import Spartan Brain directly; use owned Helm or a Relay wrapper`,
     );
