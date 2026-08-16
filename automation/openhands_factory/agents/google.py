@@ -37,9 +37,7 @@ class GoogleAgentProvider:
 
     async def _run_async(self, request: AgentRequest) -> AgentResult:
         started_at = datetime.now(UTC)
-        
         try:
-            # Assuming `gemini` command accepts prompt as an argument or flag
             process = await asyncio.create_subprocess_exec(
                 self.command,
                 request.prompt,
@@ -47,20 +45,28 @@ class GoogleAgentProvider:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            
             stdout, stderr = await process.communicate()
             exit_code = process.returncode
             finished_at = datetime.now(UTC)
-            
             success = exit_code == 0
-            
+
             failure = None
             if not success:
                 stderr_text = stderr.decode(errors="replace").lower()
-                
-                if "authentication" in stderr_text or "invalid token" in stderr_text or "expired" in stderr_text or "unauthorized" in stderr_text:
+                if any(
+                    marker in stderr_text
+                    for marker in (
+                        "authentication",
+                        "invalid token",
+                        "expired",
+                        "unauthorized",
+                    )
+                ):
                     kind = AgentFailureKind.PROVIDER_AUTH
-                elif "rate limit" in stderr_text or "quota" in stderr_text or "exhausted" in stderr_text:
+                elif any(
+                    marker in stderr_text
+                    for marker in ("rate limit", "quota", "exhausted")
+                ):
                     kind = AgentFailureKind.PROVIDER_RATE_LIMIT
                 elif "timeout" in stderr_text:
                     kind = AgentFailureKind.PROVIDER_TIMEOUT
@@ -68,13 +74,16 @@ class GoogleAgentProvider:
                     kind = AgentFailureKind.PROVIDER_UNAVAILABLE
                 else:
                     kind = AgentFailureKind.INVALID_AGENT_OUTPUT
-                
+
+                stderr_summary = stderr.decode(errors="replace")[:200]
                 failure = AgentFailure(
                     kind=kind,
-                    message=f"Google Agent failed with exit code {exit_code}: {stderr.decode(errors='replace')[:200]}",
+                    message=(
+                        f"Google Agent failed with exit code {exit_code}: {stderr_summary}"
+                    ),
                     exit_code=exit_code,
                 )
-                
+
             return AgentResult(
                 provider=self.name,
                 phase=request.phase,
@@ -86,7 +95,6 @@ class GoogleAgentProvider:
                 output_path=None,
                 failure=failure,
             )
-            
         except FileNotFoundError:
             finished_at = datetime.now(UTC)
             return AgentResult(
@@ -104,7 +112,7 @@ class GoogleAgentProvider:
                     exit_code=127,
                 ),
             )
-        except Exception as e:
+        except Exception as error:
             finished_at = datetime.now(UTC)
             return AgentResult(
                 provider=self.name,
@@ -117,7 +125,7 @@ class GoogleAgentProvider:
                 output_path=None,
                 failure=AgentFailure(
                     kind=AgentFailureKind.INTERNAL_FACTORY_FAILURE,
-                    message=str(e),
+                    message=str(error),
                     exit_code=None,
                 ),
             )
