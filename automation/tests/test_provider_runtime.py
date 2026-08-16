@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-import threading
-import time
 from pathlib import Path
 
+import pytest
+
 from openhands_factory.config import FactoryConfig
+from openhands_factory.exceptions import FactoryError
 from openhands_factory.models import FailureKind, ProviderName
+from openhands_factory.provider_capacity import ProviderCapacityStore, provider_limit
 from openhands_factory.provider_runtime import (
     ProviderAttributionStore,
-    ProviderConcurrencyLimiter,
+    conversation_role,
     provider_model,
 )
 from openhands_factory.state import read_json
@@ -36,38 +38,32 @@ def test_provider_limits_are_independent_from_global_job_limit(tmp_path: Path) -
     )
 
     assert factory_config.max_parallel_jobs == 5
-    assert factory_config.openai_max_concurrent_conversations == 1
-    assert factory_config.opencode_max_concurrent_conversations == 3
+    assert provider_limit(factory_config, ProviderName.OPENAI_SUBSCRIPTION) == 1
+    assert provider_limit(factory_config, ProviderName.OPENCODE_GO) == 3
 
 
-def test_provider_limiter_applies_backpressure_per_provider(tmp_path: Path) -> None:
-    limiter = ProviderConcurrencyLimiter(
-        config(tmp_path, FACTORY_OPENCODE_MAX_CONCURRENT_CONVERSATIONS="1")
+def test_capacity_store_is_cross_process_durable_and_expires_stale_leases(tmp_path: Path) -> None:
+    store = ProviderCapacityStore(tmp_path)
+    store.acquire(
+        ProviderName.OPENCODE_GO,
+        limit=1,
+        owner="first",
+        wait_seconds=1,
+        lease_seconds=60,
     )
-    entered = threading.Event()
-    release = threading.Event()
-    second_entered = threading.Event()
 
-    def first() -> None:
-        with limiter.reserve(ProviderName.OPENCODE_GO):
-            entered.set()
-            release.wait(timeout=2)
+    with pytest.raises(FactoryError, match="capacity exhausted"):
+        store.acquire(
+            ProviderName.OPENCODE_GO,
+            limit=1,
+            owner="second",
+            wait_seconds=1,
+            lease_seconds=60,
+        )
 
-    def second() -> None:
-        with limiter.reserve(ProviderName.OPENCODE_GO):
-            second_entered.set()
-
-    first_thread = threading.Thread(target=first)
-    second_thread = threading.Thread(target=second)
-    first_thread.start()
-    assert entered.wait(timeout=1)
-    second_thread.start()
-    time.sleep(0.05)
-    assert not second_entered.is_set()
-    release.set()
-    first_thread.join(timeout=1)
-    second_thread.join(timeout=1)
-    assert second_entered.is_set()
+    assert store.snapshot()[ProviderName.OPENCODE_GO.value] == 1
+    store.release(ProviderName.OPENCODE_GO, owner="first")
+    assert store.snapshot()[ProviderName.OPENCODE_GO.value] == 0
 
 
 def test_provider_model_is_non_secret_and_provider_specific(tmp_path: Path) -> None:
@@ -77,24 +73,34 @@ def test_provider_model_is_non_secret_and_provider_specific(tmp_path: Path) -> N
     assert provider_model(factory_config, ProviderName.OPENCODE_GO) == "openai/deepseek-v4-flash"
 
 
-def test_attribution_records_generation_provider_model_and_failure_reason(tmp_path: Path) -> None:
+def test_prompt_prefixes_produce_phase_attribution() -> None:
+    assert conversation_role("# Task Execution\nbody") == "implementation"
+    assert conversation_role("# Independent Pull Request Review\nbody") == "review"
+
+
+def test_attribution_records_generation_phase_fallback_reason_and_failure(tmp_path: Path) -> None:
     path = tmp_path / "provider-attribution.json"
     store = ProviderAttributionStore(path)
     store.record(
         task_id="7049",
+        role="implementation",
         provider=ProviderName.OPENCODE_GO,
         model="openai/deepseek-v4-flash",
         generation="test-generation",
         successful=False,
         fallback=True,
+        fallback_reason="openai-oauth-missing",
         elapsed_seconds=1.2345,
+        capacity_wait_seconds=0.25,
         failure_kind=FailureKind.RATE_LIMIT,
     )
 
     attempt = read_json(path, {"attempts": []})["attempts"][0]
     assert attempt["task_id"] == "7049"
+    assert attempt["role"] == "implementation"
     assert attempt["provider"] == "opencode-go"
     assert attempt["factory_generation"] == "test-generation"
-    assert attempt["fallback"] is True
+    assert attempt["fallback_reason"] == "openai-oauth-missing"
     assert attempt["failure_kind"] == "rate-limit"
+    assert store.latest_provider("7049", role="implementation") is ProviderName.OPENCODE_GO
     assert "not-a-real-key" not in path.read_text(encoding="utf-8")
