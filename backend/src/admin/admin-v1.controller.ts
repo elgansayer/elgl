@@ -126,8 +126,49 @@ export class AdminV1Controller {
       'Returns newest-first sanitized audit summaries with exact-match filters. Private operator notes are intentionally excluded from this initial read contract.',
   })
   @ApiOkResponse({ description: 'Paginated administrative audit events' })
-  listAudit(@Query() query: AdminAuditQueryDto): Promise<AdminAuditListResult> {
-    return this.auditQuery.list(query);
+  async listAudit(
+    @Query() query: AdminAuditQueryDto,
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminAuditListResult> {
+    const actorUserId = req.user.id ?? req.user.sub;
+    if (!actorUserId) {
+      throw new UnauthorizedException();
+    }
+
+    const requestId = req.headers['x-request-id'];
+    const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
+
+    let result: AdminAuditListResult;
+    try {
+      result = await this.auditQuery.list(query);
+    } catch (error) {
+      await this.audit.record({
+        actorUserId,
+        action: 'audit.events.read',
+        capabilityKey: 'audit.read',
+        targetType: 'admin-audit-log',
+        outcome: 'failed',
+        correlationId,
+        metadata: { source: 'admin-v1' },
+      });
+      throw error;
+    }
+
+    await this.audit.record({
+      actorUserId,
+      action: 'audit.events.read',
+      capabilityKey: 'audit.read',
+      targetType: 'admin-audit-log',
+      outcome: 'success',
+      correlationId,
+      metadata: {
+        resultCount: result.events.length,
+        total: result.total,
+        source: 'admin-v1',
+      },
+    });
+
+    return result;
   }
 
   @Get('moderation/reports')
