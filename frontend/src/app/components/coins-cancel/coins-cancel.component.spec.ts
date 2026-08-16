@@ -43,7 +43,7 @@ describe('CoinsCancelComponent', () => {
     expect(main).toBeTruthy();
     expect(main.getAttribute('aria-labelledby')).toBe('coins-cancel-title');
     expect(main.getAttribute('aria-describedby')).toBe('coins-cancel-message');
-    expect(main.hasAttribute('aria-live')).toBeFalse();
+    expect(main.hasAttribute('aria-live')).toBe(false);
     expect(title.textContent).toContain('coinsCancel.title');
     expect(message.textContent).toContain('coinsCancel.message');
   });
