@@ -37,8 +37,12 @@ class FactoryConfig(BaseModel):
     max_conversation_turns: int = 100
     max_consecutive_failures: int = 3
     max_parallel_jobs: int = 5
+    openai_max_parallel: int = 2
+    opencode_max_parallel: int = 4
+    gemini_max_parallel: int = 1
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
+    provider_slot_wait_seconds: int = 30
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
     max_no_pr_hours: float = 6
@@ -68,6 +72,10 @@ class FactoryConfig(BaseModel):
         "max_conversation_turns",
         "max_consecutive_failures",
         "max_parallel_jobs",
+        "openai_max_parallel",
+        "opencode_max_parallel",
+        "gemini_max_parallel",
+        "provider_slot_wait_seconds",
         "architect_max_new_issues",
     )
     @classmethod
@@ -94,6 +102,12 @@ class FactoryConfig(BaseModel):
             raise ValueError("GEMINI_API_KEY is required when Gemini is enabled")
         if self.gemini_free_tier_only and self.monthly_variable_budget_usd != 0:
             raise ValueError("free-tier-only Gemini requires a zero variable budget")
+        if self.openai_max_parallel > self.max_parallel_jobs:
+            raise ValueError("OpenAI provider concurrency cannot exceed global parallelism")
+        if self.opencode_max_parallel > self.max_parallel_jobs:
+            raise ValueError("OpenCode provider concurrency cannot exceed global parallelism")
+        if self.gemini_max_parallel > self.max_parallel_jobs:
+            raise ValueError("Gemini provider concurrency cannot exceed global parallelism")
         return self
 
     @classmethod
@@ -152,8 +166,12 @@ class FactoryConfig(BaseModel):
                 max_conversation_turns=int(env.get("FACTORY_MAX_CONVERSATION_TURNS", "100")),
                 max_consecutive_failures=int(env.get("FACTORY_MAX_CONSECUTIVE_FAILURES", "3")),
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
+                openai_max_parallel=int(env.get("FACTORY_OPENAI_MAX_PARALLEL", "2")),
+                opencode_max_parallel=int(env.get("FACTORY_OPENCODE_MAX_PARALLEL", "4")),
+                gemini_max_parallel=int(env.get("FACTORY_GEMINI_MAX_PARALLEL", "1")),
                 cooldown_seconds=int(env.get("FACTORY_COOLDOWN_SECONDS", "60")),
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
+                provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
