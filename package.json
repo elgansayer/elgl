@@ -14,6 +14,7 @@
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
     "check:design-sync-drift": "node scripts/check-design-sync-drift.mjs",
     "check:spartan-boundaries": "node scripts/verify-spartan-boundaries.mjs",
+    "check:legacy-primitive-delta": "node scripts/check-legacy-primitive-delta.mjs",
     "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
     "lint": "npm run lint:frontend && npm run lint:backend",
