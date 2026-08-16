@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from threading import BoundedSemaphore
 from typing import Protocol
 
 from openhands_factory.agents.base import (
@@ -50,11 +51,15 @@ class AgentRouter:
         policy: RoutingPolicy | None = None,
         breakers: Mapping[str, AgentCircuitBreaker] | None = None,
         health_store: AgentHealthStore | None = None,
+        provider_slots: Mapping[str, BoundedSemaphore] | None = None,
+        skip_busy_providers: bool = True,
     ) -> None:
         self.providers = {provider.name: provider for provider in providers}
         self.policy = policy
         self.breakers = dict(breakers or {})
         self.health_store = health_store
+        self.provider_slots = dict(provider_slots or {})
+        self.skip_busy_providers = skip_busy_providers
 
     def _health(self) -> dict[str, ProviderHealth]:
         health: dict[str, ProviderHealth] = {}
@@ -91,7 +96,7 @@ class AgentRouter:
         job: Job,
         exclude: set[str] | None = None,
     ) -> AgentProvider | None:
-        del task  # Routing is phase/job/health based; kept for protocol compatibility.
+        del task
         for name in self._candidate_names(phase, job):
             if exclude and name in exclude:
                 continue
@@ -105,7 +110,10 @@ class AgentRouter:
             self.health_store.save(self.breakers)
 
     @staticmethod
-    def _history_entry(result: AgentResult, fallback_reason: str | None = None) -> dict[str, str | int]:
+    def _history_entry(
+        result: AgentResult,
+        fallback_reason: str | None = None,
+    ) -> dict[str, str | int]:
         entry: dict[str, str | int] = {
             "provider": result.provider,
             "phase": result.phase.value,
@@ -132,6 +140,15 @@ class AgentRouter:
             waits.append(max(1, int((health.retry_after - now).total_seconds())))
         return min(waits) if waits else None
 
+    def _try_acquire_slot(self, name: str) -> tuple[BoundedSemaphore | None, bool]:
+        slot = self.provider_slots.get(name)
+        if slot is None:
+            return None, True
+        if self.skip_busy_providers:
+            return slot, slot.acquire(blocking=False)
+        slot.acquire()
+        return slot, True
+
     def run(
         self,
         request: AgentRequest,
@@ -146,6 +163,7 @@ class AgentRouter:
 
         candidates = self._candidate_names(request.phase, job)
         attempted = False
+        busy = False
         for name in candidates:
             if exclude and name in exclude:
                 continue
@@ -156,26 +174,35 @@ class AgentRouter:
             if breaker is not None and not breaker.permits_call():
                 continue
 
+            slot, acquired = self._try_acquire_slot(name)
+            if not acquired:
+                busy = True
+                continue
+
             attempted = True
             try:
-                result = provider.run(request)
-            except Exception as error:
-                now = datetime.now(UTC)
-                result = AgentResult(
-                    provider=name,
-                    phase=request.phase,
-                    success=False,
-                    started_at=now,
-                    finished_at=now,
-                    exit_code=None,
-                    summary=None,
-                    output_path=None,
-                    failure=AgentFailure(
-                        kind=AgentFailureKind.AGENT_CRASH,
-                        message=f"{type(error).__name__}: {error}",
+                try:
+                    result = provider.run(request)
+                except Exception as error:
+                    now = datetime.now(UTC)
+                    result = AgentResult(
+                        provider=name,
+                        phase=request.phase,
+                        success=False,
+                        started_at=now,
+                        finished_at=now,
                         exit_code=None,
-                    ),
-                )
+                        summary=None,
+                        output_path=None,
+                        failure=AgentFailure(
+                            kind=AgentFailureKind.AGENT_CRASH,
+                            message=f"{type(error).__name__}: {error}",
+                            exit_code=None,
+                        ),
+                    )
+            finally:
+                if slot is not None:
+                    slot.release()
 
             if result.success:
                 if breaker is not None:
@@ -206,9 +233,10 @@ class AgentRouter:
             if not fallback:
                 return result
 
-        detail = (
-            f"All eligible providers failed or were unavailable for phase {request.phase.value}"
-            if attempted
-            else f"No eligible provider is currently available for phase {request.phase.value}"
-        )
+        if busy and not attempted:
+            detail = f"All eligible providers are busy for phase {request.phase.value}"
+        elif attempted:
+            detail = f"All eligible providers failed or were unavailable for phase {request.phase.value}"
+        else:
+            detail = f"No eligible provider is currently available for phase {request.phase.value}"
         raise ProviderCapacityUnavailable(detail, retry_after_seconds=self._retry_after_seconds())
