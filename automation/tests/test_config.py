@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
-from openhands_factory.config import FactoryConfig
+from openhands_factory.config import AgentsConfig, FactoryConfig, ProviderConfig
 from openhands_factory.exceptions import ConfigurationError
 
 RETIRED_SYSTEMD_UNITS = {
@@ -29,14 +29,12 @@ RETIRED_EXECUTOR_FILENAMES = {
 
 def test_worker_image_reuses_the_node_base_image_user() -> None:
     containerfile = (Path(__file__).parents[1] / "Containerfile").read_text(encoding="utf-8")
-
     assert "usermod --login worker" in containerfile
     assert "useradd --create-home --uid 1000 worker" not in containerfile
 
 
 def test_bootstrap_installs_a_self_contained_factory_package() -> None:
     setup = (Path(__file__).parents[2] / "setup-debian.sh").read_text(encoding="utf-8")
-
     assert "--no-editable" in setup
     assert "-- cypress install" in setup
     assert "merge --ff-only origin/main" in setup
@@ -46,7 +44,6 @@ def test_bootstrap_installs_a_self_contained_factory_package() -> None:
 
 def test_legacy_github_agent_workflows_stay_retired() -> None:
     workflows = Path(__file__).parents[2] / ".github" / "workflows"
-
     for name in ("architect.yml", "auto-dispatcher.yml", "openhands.yml", "pr-reviewer.yml"):
         assert not (workflows / name).exists()
 
@@ -56,7 +53,6 @@ def test_retired_autonomous_entrypoints_cannot_reappear() -> None:
     systemd = repository_root / "config" / "systemd"
     factory_sources = repository_root / "automation" / "openhands_factory"
     scripts = repository_root / "scripts"
-
     offenders: list[str] = []
 
     for name in RETIRED_SYSTEMD_UNITS:
@@ -77,7 +73,6 @@ def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
     unit = (
         Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service"
     ).read_text(encoding="utf-8")
-
     assert "NoNewPrivileges=true" not in unit
     assert "RestrictSUIDSGID=true" not in unit
 
@@ -86,7 +81,6 @@ def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> 
     unit = (
         Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory.service"
     ).read_text(encoding="utf-8")
-
     assert "Delegate=yes" in unit
     assert "ProtectControlGroups=false" in unit
     assert "MemoryHigh=6G" in unit
@@ -104,7 +98,6 @@ def test_health_service_is_a_root_daemon_recovery_watchdog() -> None:
     watchdog = (
         Path(__file__).parents[2] / "config" / "systemd" / "hellotalk-factory-watchdog.sh"
     ).read_text(encoding="utf-8")
-
     assert "User=hellotalk-factory" not in unit
     assert "ExecStart=/bin/bash /opt/hellotalk-factory/hellotalk-factory-watchdog.sh" in unit
     assert "Delegate=yes" not in unit
@@ -138,9 +131,33 @@ def environment(**overrides: str) -> dict[str, str]:
     return values
 
 
-def test_missing_required_environment_is_rejected() -> None:
-    with pytest.raises(ConfigurationError, match="OPENCODE_GO_API_KEY"):
+def test_github_token_remains_required() -> None:
+    with pytest.raises(ConfigurationError, match="GITHUB_TOKEN"):
         FactoryConfig.from_environment({})
+
+
+def test_codex_only_openhands_configuration_does_not_require_opencode() -> None:
+    config = FactoryConfig.from_environment({"GITHUB_TOKEN": "not-a-real-token"})
+    assert config.opencode_go_enabled is False
+    assert config.opencode_api_key is None
+    assert config.opencode_model is None
+
+
+def test_partial_opencode_configuration_is_rejected() -> None:
+    with pytest.raises(ConfigurationError, match="must either both be configured"):
+        FactoryConfig.from_environment(
+            {"GITHUB_TOKEN": "not-a-real-token", "OPENCODE_GO_API_KEY": "key-only"}
+        )
+
+
+def test_outer_agent_router_rejects_unknown_provider_names() -> None:
+    with pytest.raises(ValueError, match="Unknown Factory agent providers"):
+        AgentsConfig(providers={"mystery": ProviderConfig(enabled=True)})
+
+
+def test_outer_agent_router_requires_an_enabled_provider() -> None:
+    with pytest.raises(ValueError, match="no providers are enabled"):
+        AgentsConfig(routing_enabled=True, providers={"openhands": ProviderConfig(enabled=False)})
 
 
 def test_gemini_cannot_be_enabled_in_the_production_factory() -> None:
@@ -168,7 +185,6 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     template = (Path(__file__).parents[2] / "config/systemd/factory.env.example").read_text(
         encoding="utf-8"
     )
-
     assert "FACTORY_PODMAN_PATH=/usr/bin/podman" in template
     assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
     assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
