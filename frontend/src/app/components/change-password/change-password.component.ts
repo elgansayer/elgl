@@ -1,63 +1,55 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmInputImports } from '@spartan-ng/helm/input';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-change-password',
-  imports: [FormsModule, RouterLink, TranslatePipe],
+  imports: [FormsModule, RouterLink, TranslatePipe, ...HlmButtonImports, ...HlmInputImports],
   template: `
-    <section class="min-h-screen flex items-center justify-center p-4 bg-surface-500">
-      <div class="w-full max-w-md bg-surface text-text-primary rounded-2xl p-6 shadow-xl">
-        <h1 class="text-2xl font-bold mb-6">{{ 'auth.changePassword.title' | t }}</h1>
-        <form (ngSubmit)="onSubmit()" #changeForm="ngForm">
-          <label class="block mb-1 text-sm" for="currentPassword">{{
-            'auth.changePassword.currentPassword' | t
-          }}</label>
-          <input
-            id="currentPassword"
-            name="currentPassword"
-            type="password"
-            [ngModel]="currentPassword()"
-            (ngModelChange)="currentPassword.set($event)"
-            required
-            class="w-full p-3 mb-4 bg-surface-300 border border-surface-100 rounded-lg"
-          />
-          <label class="block mb-1 text-sm" for="newPassword">{{
-            'auth.changePassword.newPassword' | t
-          }}</label>
-          <input
-            id="newPassword"
-            name="newPassword"
-            type="password"
-            [ngModel]="newPassword()"
-            (ngModelChange)="newPassword.set($event)"
-            required
-            minlength="8"
-            class="w-full p-3 mb-4 bg-surface-300 border border-surface-100 rounded-lg"
-          />
-          <button
-            type="submit"
-            [disabled]="changeForm.invalid || submitting()"
-            class="w-full py-3 bg-primary hover:bg-primary-dark rounded-lg text-on-fill font-semibold transition-colors"
-          >
+    <section class="flex min-h-screen items-center justify-center bg-surface-500 p-4">
+      <div class="w-full max-w-md rounded-2xl bg-surface p-6 text-text-primary shadow-xl">
+        <h1 class="mb-6 text-2xl font-bold">{{ 'auth.changePassword.title' | t }}</h1>
+        <form (ngSubmit)="onSubmit()" #changeForm="ngForm" class="space-y-4">
+          <div>
+            <label class="mb-1 block text-sm" for="currentPassword">{{ 'auth.changePassword.currentPassword' | t }}</label>
+            <input
+              hlmInput
+              id="currentPassword"
+              name="currentPassword"
+              type="password"
+              [ngModel]="currentPassword()"
+              (ngModelChange)="currentPassword.set($event)"
+              required
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm" for="newPassword">{{ 'auth.changePassword.newPassword' | t }}</label>
+            <input
+              hlmInput
+              id="newPassword"
+              name="newPassword"
+              type="password"
+              [ngModel]="newPassword()"
+              (ngModelChange)="newPassword.set($event)"
+              required
+              minlength="8"
+            />
+          </div>
+          <button hlmBtn type="submit" size="touch" class="w-full" [disabled]="changeForm.invalid || submitting()">
             {{ (submitting() ? 'common.pleaseWait' : 'common.submit') | t }}
           </button>
         </form>
         @if (messageKey()) {
-          <p
-            class="mt-4 text-sm text-center"
-            [class.text-success]="!isError()"
-            [class.text-danger]="isError()"
-          >
+          <p class="mt-4 text-center text-sm" [class.text-success]="!isError()" [class.text-danger]="isError()">
             {{ messageKey() ?? '' | t }}
           </p>
         }
         <div class="mt-4 text-center">
-          <a routerLink="/settings" class="text-sm hover:underline">{{
-            'auth.changePassword.backToSettings' | t
-          }}</a>
+          <a hlmBtn variant="link" routerLink="/settings">{{ 'auth.changePassword.backToSettings' | t }}</a>
         </div>
       </div>
     </section>
