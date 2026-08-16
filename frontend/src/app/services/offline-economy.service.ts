@@ -152,7 +152,7 @@ export class OfflineEconomyService {
     payload: Record<string, unknown>,
   ): Promise<string> {
     await this.ensureDB();
-    const id = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `pending_${Date.now()}_${crypto.randomUUID()}`;
     const action: PendingEconomyAction = {
       id,
       actionType,

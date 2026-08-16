@@ -110,7 +110,7 @@ export class OfflineModerationService {
     reason?: string,
   ): Promise<string> {
     await this.ensureDB();
-    const id = `mod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const id = `mod_${Date.now()}_${crypto.randomUUID()}`;
     const action: PendingModerationAction = {
       id,
       actionType,
