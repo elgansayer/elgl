@@ -10,20 +10,30 @@ Global job concurrency and provider conversation concurrency are intentionally s
 - `FACTORY_OPENAI_MAX_CONCURRENT_CONVERSATIONS` defaults to `2` and caps simultaneous Codex subscription conversations.
 - `FACTORY_OPENCODE_MAX_CONCURRENT_CONVERSATIONS` defaults to `3` and caps simultaneous OpenCode Go conversations.
 - `FACTORY_GEMINI_MAX_CONCURRENT_CONVERSATIONS` defaults to `1` and has no production effect while Gemini is disabled.
+- `FACTORY_PROVIDER_SLOT_WAIT_SECONDS` defaults to `30` and bounds how long a worker waits for provider capacity before returning to normal Factory retry/backoff.
 
-A worker that selects a provider reserves that provider's slot before creating the OpenHands conversation subprocess. When all slots are occupied, the worker waits locally instead of starting another provider call. This is deliberate backpressure and prevents global worker capacity from becoming an accidental subscription-rate-limit multiplier.
+Provider slots are durable file-locked leases in `provider-capacity.json`, not process-local semaphores. This means every Factory worker and process observes the same provider cap. Expired leases are discarded automatically after a crashed worker.
+
+The parent selects one provider, reserves that exact provider's durable slot, and explicitly passes the same provider into the spawned OpenHands SDK conversation. The child cannot silently re-select another provider after capacity has been reserved.
 
 Do not replace these controls with the retired swarm, separate provider daemons, or per-call cross-provider fallback. Provider choice remains stable for the lifetime of one OpenHands conversation.
+
+## Fallback and independent review
+
+Provider decisions retain a machine-readable fallback reason. Examples include missing/expired subscription OAuth, an open OpenAI provider circuit, or provider-capacity exhaustion.
+
+For the independent review phase, the Factory prefers a different healthy provider from the provider that performed the implementation when practical. This gives Codex/OpenCode reviews useful independence without violating the authoritative provider chain or enabling per-call provider bouncing. If the alternate provider is unhealthy, normal healthy-provider selection remains authoritative.
 
 ## Attribution
 
 Every conversation attempt records non-secret attribution in `provider-attribution.json` under the Factory state directory. Records include:
 
-- task identifier;
+- task identifier and Factory phase;
 - provider and model;
 - `FACTORY_GENERATION`;
 - success/failure;
-- whether the attempt used a fallback provider;
+- whether the attempt used a fallback provider and why;
+- provider-capacity wait time;
 - elapsed time;
 - normalized failure category where applicable.
 
@@ -33,9 +43,9 @@ The attribution store never records API keys, OAuth tokens, prompts, environment
 
 ## Metrics
 
-Conversation attempts also update the existing `metrics.json` provider/model counters under a file lock so concurrent Factory workers cannot overwrite one another. The metrics distinguish successful and failed calls, fallbacks, rate limiting, authentication failures, estimated cost where known, and unknown-cost subscription calls.
+Conversation attempts update `metrics.json` provider/model counters under a file lock so concurrent Factory workers cannot overwrite one another. Metrics distinguish successes, failures, fallbacks, rate limiting, authentication failures, capacity-waited calls, total provider-capacity wait time, estimated cost where known, and unknown-cost subscription calls.
 
-Use the existing Factory metrics command to compare Codex subscription and OpenCode Go reliability. Provider attribution is the durable task-level evidence when diagnosing why an individual task fell back or failed.
+Use the existing Factory metrics command to compare Codex subscription and OpenCode Go reliability. Provider attribution is the durable task-level evidence when diagnosing why an individual implementation, repair, security review, or independent review selected a provider or fell back.
 
 ## Tuning
 
