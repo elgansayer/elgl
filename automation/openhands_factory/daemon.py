@@ -33,7 +33,7 @@ def select_batch(
         job
         for job in jobs.values()
         if job.task.identifier not in excluded
-        and job.state.value not in {"done", "quarantined"}
+        and job.state.value != "done"
         and (job.next_attempt_at is None or job.next_attempt_at <= current)
     ]
     candidates.sort(key=lambda item: (item.task.priority, int(item.task.identifier)))
@@ -69,8 +69,6 @@ class FactoryDaemon:
             LOGGER.error("Another factory daemon owns the repository lock")
             return 2
         except Exception:
-            # Do not page here. systemd is responsible for automatic restart and the
-            # separate watchdog only pages after repeated restart attempts fail.
             LOGGER.exception("Factory daemon reached an ultimate failure")
             return 1
 
