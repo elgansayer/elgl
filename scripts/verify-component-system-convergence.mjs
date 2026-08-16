@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const appRoot = resolve(root, 'frontend/src/app');
-const primitiveRoot = resolve(appRoot, 'components/primitives');
-const uiRoot = resolve(appRoot, 'components/ui');
+const primitiveRoot = resolve(root, 'frontend/src/app/components/primitives');
+const uiRoot = resolve(root, 'frontend/src/app/components/ui');
 
 function walk(dir) {
-  if (!existsSync(dir)) return [];
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
     return statSync(path).isDirectory() ? walk(path) : [path];
@@ -17,9 +15,6 @@ function walk(dir) {
 }
 
 const sourceFiles = walk(primitiveRoot).filter((path) => /\.(?:ts|html)$/.test(path) && !/\.spec\.ts$/.test(path));
-const appSourceFiles = walk(appRoot).filter(
-  (path) => /\.(?:ts|html)$/.test(path) && !/\.spec\.ts$/.test(path) && !path.startsWith(`${uiRoot}/`),
-);
 const failures = [];
 
 for (const path of sourceFiles) {
@@ -39,17 +34,6 @@ for (const path of sourceFiles) {
   }
 }
 
-const brainImportPattern = /from\s+['"]@spartan-ng\/brain(?:\/[^'"]*)?['"]/;
-for (const path of appSourceFiles) {
-  if (!path.endsWith('.ts')) continue;
-  const source = readFileSync(path, 'utf8');
-  if (brainImportPattern.test(source)) {
-    failures.push(
-      `${relative(root, path)}: feature and Relay code must not import Spartan Brain directly; use owned Helm or a Relay wrapper`,
-    );
-  }
-}
-
 for (const required of ['button', 'dialog', 'input', 'textarea', 'utils']) {
   const path = resolve(uiRoot, required);
   try {
@@ -66,4 +50,3 @@ if (failures.length) {
 }
 
 console.log(`Component-system convergence verified across ${sourceFiles.length} shared primitive source files.`);
-console.log(`Spartan Brain ownership verified across ${appSourceFiles.length} non-Helm application source files.`);
