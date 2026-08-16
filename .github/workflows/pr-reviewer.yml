@@ -17,6 +17,7 @@ jobs:
       github.actor != 'claude-code[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     permissions:
       contents: write
       pull-requests: write
