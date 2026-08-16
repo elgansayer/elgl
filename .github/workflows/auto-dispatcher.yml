@@ -87,7 +87,11 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           NAME: ${{ github.event.repository.name }}
         run: |
-          gh issue comment "$ISSUE_NUM" --body "/openhands-fix" --repo "$REPOSITORY"
+          if ! gh issue comment "$ISSUE_NUM" --body "/openhands-fix" --repo "$REPOSITORY"; then
+            echo "OpenHands handoff failed; returning issue #$ISSUE_NUM to the eligible queue."
+            gh issue edit "$ISSUE_NUM" --remove-label "swarm-active" --repo "$REPOSITORY" || true
+            exit 1
+          fi
 
           # Move issue to In Progress on the Project Board
           sleep 1
