@@ -1,0 +1,92 @@
+name: One-time integrated branch cleanup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/cleanup-integrated-branches-once.yml
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: one-time-integrated-branch-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Delete fully integrated stale branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: main
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+
+          mapfile -t open_pr_heads < <(
+            gh api --paginate "repos/${REPO}/pulls?state=open&per_page=100" \
+              --jq '.[].head.ref' | sort -u
+          )
+
+          is_open_pr_head() {
+            local branch="$1"
+            local candidate
+            for candidate in "${open_pr_heads[@]:-}"; do
+              if [[ "$candidate" == "$branch" ]]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          deleted=0
+          skipped_open_pr=0
+          skipped_unique=0
+
+          while IFS= read -r remote_ref; do
+            branch="${remote_ref#refs/remotes/origin/}"
+
+            [[ "$branch" == "$DEFAULT_BRANCH" ]] && continue
+            [[ "$branch" == "HEAD" ]] && continue
+
+            if is_open_pr_head "$branch"; then
+              echo "KEEP open-PR branch: $branch"
+              skipped_open_pr=$((skipped_open_pr + 1))
+              continue
+            fi
+
+            # `git cherry` marks patch-equivalent commits already represented
+            # upstream with '-' and genuinely unique patches with '+'. Delete
+            # only when the branch has no unique patch relative to main.
+            if git cherry "origin/${DEFAULT_BRANCH}" "$remote_ref" | grep -q '^+'; then
+              echo "KEEP branch with unique patches: $branch"
+              skipped_unique=$((skipped_unique + 1))
+              continue
+            fi
+
+            echo "DELETE fully integrated branch: $branch"
+            git push origin --delete "$branch"
+            deleted=$((deleted + 1))
+          done < <(git for-each-ref --format='%(refname)' refs/remotes/origin/ | sort)
+
+          {
+            echo "## Integrated branch cleanup"
+            echo ""
+            echo "- Deleted: ${deleted}"
+            echo "- Preserved because an open PR exists: ${skipped_open_pr}"
+            echo "- Preserved because unique patches remain: ${skipped_unique}"
+          } >> "$GITHUB_STEP_SUMMARY"
