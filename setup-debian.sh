@@ -104,6 +104,7 @@ fi
 install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory.service" /etc/systemd/system/
 install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-health.service" /etc/systemd/system/
 install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-health.timer" /etc/systemd/system/
+install -o root -g root -m 0755 "$REPOSITORY_SOURCE/config/systemd/hellotalk-factory-watchdog.sh" "$FACTORY_ROOT/hellotalk-factory-watchdog.sh"
 install -o root -g root -m 0644 "$REPOSITORY_SOURCE/config/logrotate/hellotalk-factory" /etc/logrotate.d/
 systemctl daemon-reload
 
