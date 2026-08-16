@@ -45,7 +45,9 @@ describe('AdminV1Controller system health auditing', () => {
       headers: { 'x-request-id': 'health-request-1' },
     } as never;
 
-    await expect(controller.getSystemHealth(request)).resolves.toEqual(snapshot);
+    await expect(controller.getSystemHealth(request)).resolves.toEqual(
+      snapshot,
+    );
     expect(audit.record).toHaveBeenCalledWith({
       actorUserId: 'admin-1',
       action: 'system.health.read',
@@ -59,14 +61,18 @@ describe('AdminV1Controller system health auditing', () => {
 
   it('audits failed reads without persisting dependency error details', async () => {
     const { controller, audit, systemHealth } = buildController();
-    const dependencyError = new Error('redis host private.internal:6379 unavailable');
+    const dependencyError = new Error(
+      'redis host private.internal:6379 unavailable',
+    );
     systemHealth.getSnapshot.mockRejectedValue(dependencyError);
     const request = {
       user: { id: 'admin-1' },
       headers: { 'x-request-id': 'health-request-2' },
     } as never;
 
-    await expect(controller.getSystemHealth(request)).rejects.toBe(dependencyError);
+    await expect(controller.getSystemHealth(request)).rejects.toBe(
+      dependencyError,
+    );
     expect(audit.record).toHaveBeenCalledWith({
       actorUserId: 'admin-1',
       action: 'system.health.read',
@@ -76,7 +82,9 @@ describe('AdminV1Controller system health auditing', () => {
       correlationId: 'health-request-2',
       metadata: { source: 'admin-v1' },
     });
-    expect(JSON.stringify(audit.record.mock.calls)).not.toContain('private.internal');
+    expect(JSON.stringify(audit.record.mock.calls)).not.toContain(
+      'private.internal',
+    );
   });
 
   it('fails closed when the health-read audit event cannot be persisted', async () => {
