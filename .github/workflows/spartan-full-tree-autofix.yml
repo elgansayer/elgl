@@ -1,0 +1,45 @@
+name: Spartan full-tree autofix
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  autofix:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'audit/ux-full-tree-spartan-convergence'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Apply owned Spartan control migration
+        run: node scripts/migrate-spartan-owned-controls.mjs
+
+      - name: Commit migration when needed
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          if git diff --quiet; then
+            echo "No owned-control migration changes remain."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/app
+          git commit -m "refactor(ui): migrate full tree to owned Spartan controls"
+          git push origin "HEAD:${HEAD_BRANCH}"
