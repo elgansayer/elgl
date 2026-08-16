@@ -1,4 +1,7 @@
-from openhands_factory.failure_attribution import attribute_failed_checks
+from openhands_factory.failure_attribution import (
+    attribute_failed_checks,
+    failed_check_names,
+)
 
 
 def test_identical_failed_check_is_attributed_to_the_base() -> None:
@@ -42,3 +45,42 @@ def test_attribution_order_is_stable_for_operator_state() -> None:
 
     assert attribution.base_failures == ("a-check", "z-check")
     assert attribution.introduced_failures == ("m-check",)
+
+
+def test_failed_check_names_handles_check_runs_and_commit_statuses() -> None:
+    failed = failed_check_names(
+        [
+            {
+                "name": "backend / unit",
+                "status": "COMPLETED",
+                "conclusion": "FAILURE",
+            },
+            {"context": "factory/independent-review", "state": "FAILURE"},
+            {
+                "name": "frontend / unit",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+            },
+            {"context": "optional", "state": "SUCCESS"},
+        ]
+    )
+
+    assert failed == frozenset({"backend / unit", "factory/independent-review"})
+
+
+def test_failed_check_names_ignores_pending_and_unnamed_entries() -> None:
+    failed = failed_check_names(
+        [
+            {
+                "name": "backend / unit",
+                "status": "IN_PROGRESS",
+                "conclusion": "",
+            },
+            {"context": "deploy", "state": "PENDING"},
+            {"status": "COMPLETED", "conclusion": "FAILURE"},
+            {"name": "neutral", "status": "COMPLETED", "conclusion": "NEUTRAL"},
+            {"name": "skipped", "status": "COMPLETED", "conclusion": "SKIPPED"},
+        ]
+    )
+
+    assert failed == frozenset()
