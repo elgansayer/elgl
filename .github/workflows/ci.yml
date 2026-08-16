@@ -105,6 +105,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check:constitution
       - run: node scripts/check-conflict-markers.mjs
+      - name: Enforce admin audit append-only integrity
+        run: node scripts/check-admin-audit-integrity.mjs
       - name: Enforce append-only, collision-free migration changes
         env:
           MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
