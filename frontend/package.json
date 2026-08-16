@@ -13,8 +13,9 @@
     "check:rtl-logical": "if (grep -rnE '\\b(pl-|pr-|ml-|mr-|left-|right-|border-l\\b|border-r\\b)' src --include='*.html' --include='*.ts' --include='*.scss' | grep -v '\\.spec\\.ts:' || grep -rnE '\\b(margin-left|margin-right|padding-left|padding-right|border-left\\b|border-right\\b)\\s*:' src --include='*.html' --include='*.ts' --include='*.scss' | grep -v '\\.spec\\.ts:'); then echo 'Use logical direction utilities only: ps/pe/ms/me/border-s/border-e or CSS logical properties (margin-inline-start, margin-inline-end, etc.).' && exit 1; else echo 'RTL logical class check passed.'; fi",
     "check:relay-token-ownership": "node scripts/check-relay-token-ownership.mjs",
     "check:multilingual-typography": "node scripts/check-multilingual-typography.mjs",
-    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography",
-    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography",
+    "check:semantic-colour-roles": "node scripts/check-semantic-colour-roles.mjs",
+    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles",
+    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles",
     "cypress:open": "cypress open",
     "e2e": "cypress run",
     "e2e:ci": "start-server-and-test start http://localhost:4200 e2e"
