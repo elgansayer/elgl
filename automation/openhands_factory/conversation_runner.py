@@ -36,7 +36,7 @@ class ConversationProtocol(Protocol):
     def close(self) -> None: ...
 
 
-ConversationFactory = Callable[[Path, int], ConversationProtocol]
+ConversationFactory = Callable[[Path, int, ProviderName], ConversationProtocol]
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,7 @@ def _conversation_process(
     factory: ConversationFactory,
     workspace: Path,
     max_turns: int,
+    provider: ProviderName,
     prompt: str,
     result_connection: Connection,
 ) -> None:
@@ -65,7 +66,7 @@ def _conversation_process(
 
     signal.signal(signal.SIGTERM, pause_for_shutdown)
     try:
-        conversation = factory(workspace, max_turns)
+        conversation = factory(workspace, max_turns, provider)
         conversation.send_message(prompt)
         conversation.run()
         outcome = {"completed": True}
@@ -158,6 +159,7 @@ class ConversationRunner:
                 self.factory,
                 workspace,
                 self.config.max_conversation_turns,
+                primary_provider,
                 prompt,
                 child_connection,
             ),
@@ -215,7 +217,9 @@ class ConversationRunner:
 class SdkConversationFactory:
     config: FactoryConfig
 
-    def __call__(self, workspace: Path, max_turns: int) -> ConversationProtocol:
+    def __call__(
+        self, workspace: Path, max_turns: int, provider: ProviderName
+    ) -> ConversationProtocol:
         from openhands.sdk import Agent, Conversation, Tool
 
         from openhands_factory.prompts import build_system_prompt
@@ -223,7 +227,7 @@ class SdkConversationFactory:
         from openhands_factory.secure_tools import SecureFileEditorTool, SecureTerminalTool
 
         agent = Agent(
-            llm=build_llm(self.config),
+            llm=build_llm(self.config, provider),
             tools=[Tool(name=SecureTerminalTool.name), Tool(name=SecureFileEditorTool.name)],
             system_prompt=build_system_prompt(workspace / "automation/prompts"),
         )

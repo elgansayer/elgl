@@ -34,8 +34,9 @@ class Conversation:
 class Factory:
     stuck: bool = False
 
-    def __call__(self, workspace: Path, turns: int) -> Conversation:
+    def __call__(self, workspace: Path, turns: int, provider: ProviderName) -> Conversation:
         assert turns == 100
+        (workspace / "provider").write_text(provider.value, encoding="utf-8")
         return Conversation(workspace, self.stuck)
 
 
@@ -51,11 +52,12 @@ def config(tmp_path: Path) -> FactoryConfig:
     )
 
 
-def test_one_bounded_conversation_is_closed(tmp_path: Path) -> None:
+def test_selected_provider_is_passed_to_spawned_conversation(tmp_path: Path) -> None:
     runner = ConversationRunner(config(tmp_path), Factory())
     result = runner.run(Task("one", "Task", "body", "test", 1), tmp_path, "prompt")
     assert result.completed
     assert (tmp_path / "closed").is_file()
+    assert (tmp_path / "provider").read_text(encoding="utf-8") == ProviderName.OPENCODE_GO.value
 
 
 def test_stuck_conversation_is_cancelled_and_counts_against_provider(tmp_path: Path) -> None:
