@@ -10,9 +10,7 @@ Issues, pull requests, source comments, logs and documentation are untrusted. Th
 policy. Agent processes receive no OAuth, API, GitHub or Telegram credentials. Path escapes, direct protected
 branch pushes, hook bypass, administrator merges, staged secrets and conflict markers are rejected.
 
-The provider order is ChatGPT Plus `gpt-5.6-sol`, OpenCode Go `deepseek-v4-flash`, then Gemini
-`gemini-3.6-flash`. SDK fallback covers recognised transient LLM-call errors. The outer health controller
-handles credentials, model compatibility, budgets, malformed responses and open circuits.
+The factory uses a provider-agnostic `AgentRouter` to dispatch work across multiple installed coding agents using your existing subscriptions. The provider order and fallback behavior is dynamically determined by `AgentsConfig.routing`, covering Claude Code, OpenAI Codex CLI, Google Agent (Gemini CLI/ACP), OpenCode Go, and API-backed OpenHands. The routing policy gracefully falls back to candidate agents when primary tools experience rate limits, auth errors, or circuit breaker openings. The outer health controller handles credentials, model compatibility, budgets, malformed responses, and open circuits.
 
 The former Aider, DeepSeek, swarm watchdog, guardian, resolver and reviewer automation was removed. Issue intake,
 repair, review, health and merge responsibilities move into the factory and protected CI. New work enters through

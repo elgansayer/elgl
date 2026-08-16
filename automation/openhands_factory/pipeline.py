@@ -56,6 +56,29 @@ class FactoryPipeline:
         self.conversations = conversations or ConversationRunner(
             config, sdk_conversation_factory(config)
         )
+        
+        # Build the new AgentRouter
+        from openhands_factory.agents import (
+            AgentHealthStore,
+            AgentRouter,
+            ClaudeCodeProvider,
+            CodexProvider,
+            ConfigRoutingPolicy,
+            GoogleAgentProvider,
+            OpenCodeProvider,
+            OpenHandsProvider,
+        )
+        self.health_store = AgentHealthStore(config.state_dir / "agent_health.json")
+        from openhands_factory.agents.base import AgentProvider
+        
+        providers: list[AgentProvider] = [
+            ClaudeCodeProvider(command=config.agents.providers["claude"].command if "claude" in config.agents.providers and config.agents.providers["claude"].command else "claude"),
+            CodexProvider(command=config.agents.providers["codex"].command if "codex" in config.agents.providers and config.agents.providers["codex"].command else "codex"),
+            GoogleAgentProvider(command=config.agents.providers["google"].command if "google" in config.agents.providers and config.agents.providers["google"].command else "gemini"),
+            OpenCodeProvider(command=config.agents.providers["opencode"].command if "opencode" in config.agents.providers and config.agents.providers["opencode"].command else "opencode"),
+            OpenHandsProvider(self.conversations)
+        ]
+        self.router = AgentRouter(providers=providers, policy=ConfigRoutingPolicy(config.agents))
         self.labels_ready = False
         self.verification_slots = verification_slots
 
@@ -173,6 +196,47 @@ class FactoryPipeline:
         # through doctor.py and daemon.py.
         job.next_attempt_at = datetime.now(UTC) + self._backoff_for(job.attempts)
 
+    def _run_agent(self, job: Job, worktree: Path, phase: str, prompt: str) -> None:
+        from openhands_factory.agents.base import AgentPhase, AgentRequest
+        # Map phase string to enum
+        phase_map = {
+            "planning": AgentPhase.PLANNING,
+            "architecture": AgentPhase.ARCHITECTURE,
+            "implementation": AgentPhase.IMPLEMENTATION,
+            "security": AgentPhase.SECURITY_REVIEW,
+            "quality_repair": AgentPhase.QUALITY_REPAIR,
+            "review": AgentPhase.CODE_REVIEW,
+            "repair": AgentPhase.CI_REPAIR,
+            "architect": AgentPhase.ARCHITECTURE,
+        }
+        agent_phase = phase_map.get(phase, AgentPhase.GENERAL_ACTION)
+        request = AgentRequest(phase=agent_phase, task=job.task, prompt=prompt, cwd=worktree)
+        
+        # In a complete implementation, this would load breakers from self.health_store
+        result = self.router.run(request, job)
+        
+        # Track history
+        from typing import Any
+        history_entry: dict[str, Any] = {
+            "provider": result.provider,
+            "phase": result.phase.value,
+            "success": result.success,
+            "started_at": result.started_at.isoformat(),
+            "finished_at": result.finished_at.isoformat(),
+        }
+        if result.exit_code is not None:
+            history_entry["exit_code"] = result.exit_code
+        if result.failure:
+            history_entry["error"] = result.failure.message
+            history_entry["kind"] = result.failure.kind.value
+        
+        job.provider_history.append(history_entry)
+        
+        if not result.success:
+            if result.failure:
+                raise FactoryError(f"Agent provider '{result.provider}' failed: {result.failure.message}")
+            raise FactoryError(f"Agent provider '{result.provider}' failed during {phase}")
+
     @staticmethod
     def _backoff_for(attempts: int) -> timedelta:
         minutes = min(5 * 2 ** max(attempts - 1, 0), 24 * 60)
@@ -240,15 +304,15 @@ class FactoryPipeline:
                 self._verification_descriptions(worktree),
                 [],
             )
-            self.conversations.run(job.task, worktree, prompt)
+            self._run_agent(job, worktree, "implementation", prompt)
             if not workflow.has_changes():
                 raise FactoryError("Implementation produced no repository changes")
             job.state = JobState.SECURITY_REVIEW
             return
 
         if job.state is JobState.SECURITY_REVIEW:
-            self.conversations.run(
-                job.task, worktree, build_phase_prompt(prompt_dir, "security", job.task)
+            self._run_agent(
+                job, worktree, "security", build_phase_prompt(prompt_dir, "security", job.task)
             )
             job.state = JobState.VERIFYING
             return
@@ -281,9 +345,10 @@ class FactoryPipeline:
             )
             extra = f"Quality gate findings:\n\n{finding_text}"
 
-            self.conversations.run(
-                job.task,
+            self._run_agent(
+                job,
                 worktree,
+                "quality_repair",
                 build_phase_prompt(prompt_dir, "quality_repair", job.task, extra=extra),
             )
 
@@ -321,8 +386,8 @@ class FactoryPipeline:
             # (re)write a valid report is reported as missing one, not judged against
             # someone else's stale output.
             (worktree / ".factory-review.json").unlink(missing_ok=True)
-            self.conversations.run(
-                job.task, worktree, build_phase_prompt(prompt_dir, "review", job.task)
+            self._run_agent(
+                job, worktree, "review", build_phase_prompt(prompt_dir, "review", job.task)
             )
             report = validate_review_report(worktree, job.task.body)
             if workflow.has_changes():
@@ -380,8 +445,8 @@ class FactoryPipeline:
         if job.state is JobState.REPAIRING:
             if job.repair_attempts >= 5:
                 raise FactoryError("Repair limit exceeded")
-            self.conversations.run(
-                job.task, worktree, build_phase_prompt(prompt_dir, "repair", job.task)
+            self._run_agent(
+                job, worktree, "repair", build_phase_prompt(prompt_dir, "repair", job.task)
             )
             if not workflow.has_changes():
                 raise FactoryError("Repair conversation produced no changes")
@@ -554,7 +619,8 @@ class FactoryPipeline:
             source="github-architect",
             priority=10,
         )
-        self.conversations.run(task, worktree, build_phase_prompt(prompt_dir, "architect", task))
+        job = Job(task=task)
+        self._run_agent(job, worktree, "architect", build_phase_prompt(prompt_dir, "architect", task))
         review_workflow = GitWorkflow(worktree, self.config.base_branch)
         proposals = load_architect_report(worktree)
         if proposals:
