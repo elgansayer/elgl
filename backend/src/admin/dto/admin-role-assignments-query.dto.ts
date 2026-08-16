@@ -1,6 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class AdminRoleAssignmentsQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -21,10 +28,12 @@ export class AdminRoleAssignmentsQueryDto {
   @ApiPropertyOptional({ description: 'Exact target administrator user ID' })
   @IsOptional()
   @IsString()
+  @MaxLength(128)
   userId?: string;
 
   @ApiPropertyOptional({ description: 'Exact role key filter' })
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   roleKey?: string;
 }
