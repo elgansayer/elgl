@@ -20,9 +20,8 @@ interface AdminMutationRequest extends Request {
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**
- * Makes audit persistence part of the completion contract for legacy admin mutations.
- * The newer v1 read endpoints already record their own bounded audit events; this
- * interceptor closes the historical mutation gap without logging request bodies.
+ * Makes audit persistence part of the completion contract for administrative
+ * mutations. Request bodies are never copied into audit metadata.
  */
 @Injectable()
 export class AdminMutationAuditInterceptor implements NestInterceptor {
@@ -34,7 +33,8 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<AdminMutationRequest>();
     const method = request.method.toUpperCase();
-    if (SAFE_METHODS.has(method)) {
+    const requestPath = `${request.baseUrl ?? ''}${request.path ?? ''}`;
+    if (SAFE_METHODS.has(method) || !requestPath.includes('/admin')) {
       return next.handle();
     }
 
@@ -66,7 +66,7 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
         outcome,
         correlationId,
         metadata: {
-          source: 'legacy-admin-controller',
+          source: 'admin-mutation-interceptor',
           operation: context.getHandler().name,
         },
       });
@@ -74,9 +74,7 @@ export class AdminMutationAuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       mergeMap((value) => from(record('success')).pipe(map(() => value))),
       catchError((error: unknown) =>
-        from(record('failed')).pipe(
-          mergeMap(() => throwError(() => error)),
-        ),
+        from(record('failed')).pipe(mergeMap(() => throwError(() => error))),
       ),
     );
   }
