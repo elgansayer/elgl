@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Mapping
 from pathlib import Path
@@ -11,13 +12,26 @@ from pydantic import BaseModel, Field, SecretStr, field_validator, model_validat
 from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.exceptions import ConfigurationError
 
+KNOWN_AGENT_PROVIDERS = frozenset({"openhands", "codex", "opencode", "claude", "google"})
+
 
 class ProviderConfig(BaseModel):
+    """Execution controls for an optional outer AgentRouter provider."""
+
     enabled: bool = False
     command: str | None = None
     auth_mode: str | None = None
     emergency_only: bool = False
     max_concurrency: int = 2
+    timeout_seconds: int = 30 * 60
+    max_output_bytes: int = 1_000_000
+
+    @field_validator("max_concurrency", "timeout_seconds", "max_output_bytes")
+    @classmethod
+    def positive_provider_limits(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("provider execution limits must be positive")
+        return value
 
 
 class AgentsRoutingConfig(BaseModel):
@@ -31,11 +45,43 @@ class AgentsRoutingConfig(BaseModel):
     general_action: list[str] = Field(default_factory=lambda: ["claude", "openhands"])
     skip_busy_providers: bool = True
 
+    def route_names(self) -> set[str]:
+        return {
+            *self.planning,
+            *self.architecture,
+            *self.implementation,
+            *self.security_review,
+            *self.quality_repair,
+            *self.code_review,
+            *self.ci_repair,
+            *self.general_action,
+        }
+
 
 class AgentsConfig(BaseModel):
+    """Optional outer provider router.
+
+    With routing disabled, the active VPS architecture remains a single OpenHands
+    execution provider. OpenHands then chooses its own LLM using subscription OAuth
+    first and the configured OpenCode Go endpoint as fallback.
+    """
+
     routing_enabled: bool = False
     providers: dict[str, ProviderConfig] = Field(default_factory=dict)
     routing: AgentsRoutingConfig = Field(default_factory=AgentsRoutingConfig)
+
+    @model_validator(mode="after")
+    def validate_provider_names(self) -> AgentsConfig:
+        unknown_configs = set(self.providers) - KNOWN_AGENT_PROVIDERS
+        unknown_routes = self.routing.route_names() - KNOWN_AGENT_PROVIDERS
+        unknown = sorted(unknown_configs | unknown_routes)
+        if unknown:
+            raise ValueError(f"Unknown Factory agent providers: {', '.join(unknown)}")
+        if self.routing_enabled:
+            enabled = {name for name, cfg in self.providers.items() if cfg.enabled}
+            if not enabled:
+                raise ValueError("Agent routing is enabled but no providers are enabled")
+        return self
 
 
 class FactoryConfig(BaseModel):
@@ -47,27 +93,28 @@ class FactoryConfig(BaseModel):
     profile_store: Path = Path("/var/lib/hellotalk-factory/profiles")
     worktree_dir: Path = Path("/var/lib/hellotalk-factory/worktrees")
     recovery_dir: Path = Path("/var/lib/hellotalk-factory/recovery")
-    # Static architecture identity. This is deliberately separate from
-    # factory_generation, which generation.py replaces with a unique per-daemon
-    # ownership UUID after the host-level lock is acquired.
     factory_architecture: str = EXPECTED_FACTORY_ARCHITECTURE
     factory_generation: str = "unknown"
+
+    # Inner OpenHands LLM chain. Codex subscription OAuth is primary. OpenCode Go is
+    # optional and becomes the fallback only when both fields below are configured.
     openai_model: str = "gpt-5.2-codex"
     openai_max_concurrent_conversations: int = 2
-    opencode_api_key: SecretStr
+    opencode_api_key: SecretStr | None = None
     opencode_base_url: str = "https://opencode.ai/zen/go/v1"
-    opencode_model: str
+    opencode_model: str | None = None
     opencode_profile_name: str = "opencode-go"
     opencode_max_concurrent_conversations: int = 3
-    # Legacy fields remain loadable so old environment files fail with a precise
-    # migration error instead of becoming unparsable. Gemini is not a production
-    # execution tier in the Agent Canvas factory.
+
+    # Historical migration-only Gemini fields. Gemini cannot enter production routing
+    # merely because stale credentials remain on a host.
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.6-flash"
     gemini_profile_name: str = "gemini-flash"
     gemini_enabled: bool = False
     gemini_free_tier_only: bool = True
     gemini_max_concurrent_conversations: int = 1
+
     monthly_subscription_budget_usd: float = 30
     monthly_variable_budget_usd: float = 0
     monthly_total_budget_usd: float = 35
@@ -121,7 +168,7 @@ class FactoryConfig(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def consistent_budgets(self) -> FactoryConfig:
+    def consistent_configuration(self) -> FactoryConfig:
         if (
             min(
                 self.monthly_subscription_budget_usd,
@@ -141,9 +188,17 @@ class FactoryConfig(BaseModel):
             )
         if self.gemini_enabled:
             raise ValueError(
-                "GEMINI_ENABLED is retired; production routing is Codex OAuth -> OpenCode Go"
+                "GEMINI_ENABLED is retired; Gemini is migration-only and cannot enter production routing"
+            )
+        if (self.opencode_api_key is None) != (self.opencode_model is None):
+            raise ValueError(
+                "OPENCODE_GO_API_KEY and OPENCODE_GO_MODEL must either both be configured or both omitted"
             )
         return self
+
+    @property
+    def opencode_go_enabled(self) -> bool:
+        return self.opencode_api_key is not None and self.opencode_model is not None
 
     @classmethod
     def from_environment(cls, environment: Mapping[str, str] | None = None) -> FactoryConfig:
@@ -155,17 +210,21 @@ class FactoryConfig(BaseModel):
                 raise ConfigurationError(f"Required environment variable {name} is missing")
             return value
 
+        def optional(name: str) -> str | None:
+            value = env.get(name, "").strip()
+            return value or None
+
         def boolean(name: str, default: bool) -> bool:
             return env.get(name, str(default)).lower() in {"1", "true", "yes"}
-
-        import json
 
         agents_config = AgentsConfig()
         agents_config_path = env.get("FACTORY_AGENTS_CONFIG")
         if agents_config_path:
-            with open(agents_config_path) as f:
-                agents_data = json.load(f)
-                agents_config = AgentsConfig(**agents_data)
+            with open(agents_config_path, encoding="utf-8") as file:
+                agents_config = AgentsConfig(**json.load(file))
+
+        opencode_key = optional("OPENCODE_GO_API_KEY")
+        opencode_model = optional("OPENCODE_GO_MODEL")
 
         try:
             return cls(
@@ -193,11 +252,11 @@ class FactoryConfig(BaseModel):
                 openai_max_concurrent_conversations=int(
                     env.get("FACTORY_OPENAI_MAX_CONCURRENT_CONVERSATIONS", "2")
                 ),
-                opencode_api_key=SecretStr(required("OPENCODE_GO_API_KEY")),
+                opencode_api_key=SecretStr(opencode_key) if opencode_key else None,
                 opencode_base_url=env.get(
                     "OPENCODE_GO_BASE_URL", "https://opencode.ai/zen/go/v1"
                 ).rstrip("/"),
-                opencode_model=required("OPENCODE_GO_MODEL"),
+                opencode_model=opencode_model,
                 opencode_profile_name=env.get("OPENCODE_GO_PROFILE_NAME", "opencode-go"),
                 opencode_max_concurrent_conversations=int(
                     env.get("FACTORY_OPENCODE_MAX_CONCURRENT_CONVERSATIONS", "3")
