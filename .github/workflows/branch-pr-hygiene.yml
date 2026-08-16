@@ -1,0 +1,91 @@
+name: Branch PR Hygiene
+
+on:
+  push:
+    branches-ignore:
+      - main
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: branch-pr-hygiene
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY: ${{ github.repository }}
+      BASE_BRANCH: main
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Reconcile branches with pull requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            branches=("${GITHUB_REF_NAME}")
+          else
+            mapfile -t branches < <(gh api --paginate "repos/${REPOSITORY}/branches?per_page=100" --jq '.[].name')
+          fi
+
+          created=0
+          skipped=0
+          failed=0
+
+          for branch in "${branches[@]}"; do
+            [[ -z "$branch" || "$branch" == "$BASE_BRANCH" ]] && continue
+            remote_ref="refs/remotes/origin/${branch}"
+
+            if ! git show-ref --verify --quiet "$remote_ref"; then
+              echo "::notice::Skipping deleted branch: $branch"
+              ((skipped += 1))
+              continue
+            fi
+
+            ahead=$(git rev-list --count "origin/${BASE_BRANCH}..${remote_ref}")
+            if [[ "$ahead" -eq 0 ]]; then
+              echo "::notice::No unmerged commits on $branch"
+              ((skipped += 1))
+              continue
+            fi
+
+            existing=$(gh pr list --repo "$REPOSITORY" --head "$branch" --state open --json number --jq 'length')
+            if [[ "$existing" -gt 0 ]]; then
+              echo "PR already exists for $branch"
+              ((skipped += 1))
+              continue
+            fi
+
+            title="chore: review ${branch}"
+            body="Automated branch-hygiene PR for \`${branch}\`. This branch is ${ahead} commit(s) ahead of \`${BASE_BRANCH}\` and had no open pull request."
+
+            if gh pr create --repo "$REPOSITORY" --base "$BASE_BRANCH" --head "$branch" --draft --title "$title" --body "$body"; then
+              ((created += 1))
+            else
+              echo "::error::Failed to create PR for $branch"
+              ((failed += 1))
+            fi
+          done
+
+          {
+            echo "### Branch PR hygiene"
+            echo "- Created: $created"
+            echo "- Skipped: $skipped"
+            echo "- Failed: $failed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [[ "$failed" -eq 0 ]]
