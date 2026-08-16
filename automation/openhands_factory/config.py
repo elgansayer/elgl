@@ -21,30 +21,22 @@ class ProviderConfig(BaseModel):
 
 
 class AgentsRoutingConfig(BaseModel):
-    planning: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
-    )
-    architecture: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
-    )
-    implementation: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
-    )
-    security_review: list[str] = Field(
-        default_factory=lambda: ["claude", "codex", "google", "opencode", "openhands"]
-    )
-    quality_repair: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
-    )
-    code_review: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
-    )
-    ci_repair: list[str] = Field(
-        default_factory=lambda: ["codex", "claude", "google", "opencode", "openhands"]
-    )
-    general_action: list[str] = Field(
-        default_factory=lambda: ["opencode", "google", "codex", "claude", "openhands"]
-    )
+    """Outer execution routing.
+
+    OpenHands Agent Canvas is the sole execution control plane. Model/provider
+    fallback is owned inside ConversationRunner: Codex subscription OAuth first,
+    then OpenCode Go. Direct CLI agent providers remain importable only for
+    diagnostics/migration tests and must not enter autonomous production routing.
+    """
+
+    planning: list[str] = Field(default_factory=lambda: ["openhands"])
+    architecture: list[str] = Field(default_factory=lambda: ["openhands"])
+    implementation: list[str] = Field(default_factory=lambda: ["openhands"])
+    security_review: list[str] = Field(default_factory=lambda: ["openhands"])
+    quality_repair: list[str] = Field(default_factory=lambda: ["openhands"])
+    code_review: list[str] = Field(default_factory=lambda: ["openhands"])
+    ci_repair: list[str] = Field(default_factory=lambda: ["openhands"])
+    general_action: list[str] = Field(default_factory=lambda: ["openhands"])
     skip_busy_providers: bool = True
 
 
@@ -52,14 +44,14 @@ class AgentsConfig(BaseModel):
     routing_enabled: bool = True
     providers: dict[str, ProviderConfig] = Field(
         default_factory=lambda: {
-            "claude": ProviderConfig(enabled=True, auth_mode="subscription"),
-            "codex": ProviderConfig(enabled=True, auth_mode="subscription"),
+            "claude": ProviderConfig(enabled=False, auth_mode="subscription"),
+            "codex": ProviderConfig(enabled=False, auth_mode="subscription"),
             "google": ProviderConfig(enabled=False, auth_mode="subscription"),
-            "opencode": ProviderConfig(enabled=True, auth_mode="subscription"),
+            "opencode": ProviderConfig(enabled=False, auth_mode="subscription"),
             "openhands": ProviderConfig(
                 enabled=True,
-                emergency_only=True,
-                auth_mode="api",
+                emergency_only=False,
+                auth_mode="control-plane",
             ),
         }
     )
@@ -80,6 +72,23 @@ class AgentsConfig(BaseModel):
         unknown = sorted(referenced - known)
         if unknown:
             raise ValueError(f"Unknown agent provider(s): {', '.join(unknown)}")
+
+        direct_enabled = sorted(
+            name
+            for name, provider in self.providers.items()
+            if name != "openhands" and provider.enabled
+        )
+        direct_referenced = sorted(referenced - {"openhands"})
+        if direct_enabled or direct_referenced:
+            offenders = sorted(set(direct_enabled + direct_referenced))
+            raise ValueError(
+                "Direct agent providers are disabled in openhands-agent-canvas-v1; "
+                "route every phase through OpenHands and configure model fallback "
+                "inside OpenHands (Codex OAuth then OpenCode Go). Offenders: "
+                + ", ".join(offenders)
+            )
+        if not self.providers["openhands"].enabled:
+            raise ValueError("OpenHands control-plane provider must remain enabled")
         return self
 
 

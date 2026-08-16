@@ -163,18 +163,42 @@ def test_default_repository_is_production_clone() -> None:
     assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
     assert config.factory_generation == "unknown"
     assert config.agents.routing_enabled is True
-    assert config.agents.providers["openhands"].emergency_only is True
-    assert config.agents.routing.implementation[0] == "claude"
+    assert config.agents.providers["openhands"].enabled is True
+    assert config.agents.providers["openhands"].emergency_only is False
+    assert config.agents.providers["openhands"].auth_mode == "control-plane"
+    assert config.agents.routing.implementation == ["openhands"]
+    assert config.agents.routing.code_review == ["openhands"]
+    assert all(
+        not provider.enabled
+        for name, provider in config.agents.providers.items()
+        if name != "openhands"
+    )
 
 
 def test_agent_routing_rejects_unknown_provider_names(tmp_path: Path) -> None:
     config_path = tmp_path / "agents.json"
     config_path.write_text(
-        '{"routing_enabled": true, "providers": {"codex": {"enabled": true}}, '
+        '{"routing_enabled": true, "providers": {"openhands": {"enabled": true}}, '
         '"routing": {"implementation": ["missing"]}}',
         encoding="utf-8",
     )
     with pytest.raises(ConfigurationError, match="Unknown agent provider"):
+        FactoryConfig.from_environment(
+            environment(
+                FACTORY_AGENTS_CONFIG=str(config_path),
+            )
+        )
+
+
+def test_direct_agent_provider_routing_cannot_bypass_openhands(tmp_path: Path) -> None:
+    config_path = tmp_path / "agents.json"
+    config_path.write_text(
+        '{"routing_enabled": true, "providers": {'
+        '"openhands": {"enabled": true}, "codex": {"enabled": true}}, '
+        '"routing": {"implementation": ["codex"]}}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigurationError, match="Direct agent providers are disabled"):
         FactoryConfig.from_environment(
             environment(
                 FACTORY_AGENTS_CONFIG=str(config_path),
