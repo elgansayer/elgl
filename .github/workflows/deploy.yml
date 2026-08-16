@@ -61,7 +61,7 @@ jobs:
 
       - name: Build and push API image
         if: steps.deployment-target.outputs.deploy == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: backend
           file: backend/Dockerfile
@@ -75,7 +75,7 @@ jobs:
 
       - name: Build and push Web image
         if: steps.deployment-target.outputs.deploy == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: frontend
           file: frontend/Dockerfile
