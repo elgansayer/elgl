@@ -22,6 +22,15 @@ import {
       </p>
 
       <form class="filters" (ngSubmit)="load(true)">
+        <label>Report ID
+          <input
+            name="reportId"
+            [(ngModel)]="reportId"
+            maxlength="128"
+            placeholder="Exact report ID"
+            [disabled]="busy()"
+          />
+        </label>
         <label>Status
           <input
             name="status"
@@ -91,6 +100,7 @@ import {
                 <p>{{ report.status }} · {{ formatDate(report.created_at) }}</p>
               </header>
               <dl>
+                <div><dt>Report ID</dt><dd><code>{{ report.id }}</code></dd></div>
                 <div>
                   <dt>Reported user</dt>
                   <dd>
@@ -153,6 +163,7 @@ import {
 export class ModerationPageComponent {
   private readonly moderation = inject(AdminModerationService);
   readonly pageSize = 20;
+  reportId = '';
   status = '';
   reasonCategory = '';
   reportedUserId = '';
@@ -179,6 +190,7 @@ export class ModerationPageComponent {
         this.moderation.listReports(
           this.page(),
           this.pageSize,
+          this.reportId,
           this.status,
           this.reasonCategory,
           this.reportedUserId,
@@ -204,6 +216,7 @@ export class ModerationPageComponent {
   }
 
   clearFilters(): void {
+    this.reportId = '';
     this.status = '';
     this.reasonCategory = '';
     this.reportedUserId = '';

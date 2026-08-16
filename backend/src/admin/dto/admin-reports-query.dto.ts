@@ -26,6 +26,12 @@ export class AdminReportsQueryDto {
   @Max(100)
   pageSize?: number = 20;
 
+  @ApiPropertyOptional({ description: 'Exact report identifier filter' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  reportId?: string;
+
   @ApiPropertyOptional({ description: 'Exact report status filter' })
   @IsOptional()
   @IsString()

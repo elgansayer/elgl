@@ -30,6 +30,7 @@ export class AdminModerationService {
   listReports(
     page: number,
     pageSize: number,
+    reportId?: string,
     status?: string,
     reasonCategory?: string,
     reportedUserId?: string,
@@ -45,10 +46,12 @@ export class AdminModerationService {
     let params = new HttpParams()
       .set('page', String(page))
       .set('pageSize', String(pageSize));
+    const normalizedReportId = reportId?.trim();
     const normalizedStatus = status?.trim();
     const normalizedReasonCategory = reasonCategory?.trim();
     const normalizedReportedUserId = reportedUserId?.trim();
     const normalizedReporterUserId = reporterUserId?.trim();
+    if (normalizedReportId) params = params.set('reportId', normalizedReportId);
     if (normalizedStatus) params = params.set('status', normalizedStatus);
     if (normalizedReasonCategory) {
       params = params.set('reasonCategory', normalizedReasonCategory);
