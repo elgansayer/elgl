@@ -1,6 +1,7 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
-from openhands_factory.models import FailureKind, Job, Task
+from openhands_factory.jobs import JobStore
+from openhands_factory.models import FailureKind, Job, JobState, Task
 from openhands_factory.retry_policy import (
     classify_failure,
     deterministic_backoff,
@@ -93,3 +94,53 @@ def test_backoff_is_deterministic_jittered_exponential_and_capped() -> None:
     assert timedelta(minutes=8) <= second <= timedelta(minutes=12)
     assert capped <= timedelta(hours=24)
     assert capped >= timedelta(hours=19, minutes=12)
+
+
+def test_job_store_persists_class_budget_and_jittered_next_attempt(tmp_path) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    job = _job()
+    job.state = JobState.IMPLEMENTING
+    store.save({job.task.identifier: job})
+
+    failed = store.load()[job.task.identifier]
+    failed.attempts = 1
+    failed.last_error = "Conversation exceeded the maximum task duration"
+    failed.updated_at = datetime.now(UTC)
+    store.save_job(failed)
+
+    restored = store.load()[job.task.identifier]
+    assert restored.failure_counts == {FailureKind.TASK_TIMEOUT.value: 1}
+    assert restored.last_failure_kind == FailureKind.TASK_TIMEOUT.value
+    assert restored.last_failure_fingerprint is not None
+    assert restored.repeated_failure_count == 1
+    assert restored.next_attempt_at is not None
+    delay = restored.next_attempt_at - restored.updated_at
+    assert timedelta(minutes=3, seconds=59) <= delay <= timedelta(minutes=6, seconds=1)
+
+
+def test_job_store_keeps_retry_budget_on_poll_and_resets_on_progress(tmp_path) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    job = _job()
+    job.state = JobState.CI_PENDING
+    job.failure_counts = {FailureKind.TRANSIENT.value: 2}
+    job.last_failure_kind = FailureKind.TRANSIENT.value
+    job.last_failure_fingerprint = "stable"
+    job.repeated_failure_count = 2
+    store.save({job.task.identifier: job})
+
+    polled = store.load()[job.task.identifier]
+    polled.attempts = 0
+    polled.last_error = None
+    polled.next_attempt_at = None
+    store.save_job(polled)
+    still_pending = store.load()[job.task.identifier]
+    assert still_pending.failure_counts == {FailureKind.TRANSIENT.value: 2}
+
+    progressed = store.load()[job.task.identifier]
+    progressed.state = JobState.MERGE_QUEUED
+    store.save_job(progressed)
+    restored = store.load()[job.task.identifier]
+    assert restored.failure_counts == {}
+    assert restored.last_failure_kind is None
+    assert restored.last_failure_fingerprint is None
+    assert restored.repeated_failure_count == 0
