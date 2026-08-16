@@ -21,6 +21,7 @@
     "check:ux-100-percent": "node scripts/verify-ux-100-percent.mjs",
     "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
     "report:ux-system-health": "node scripts/report-ux-system-health.mjs",
+    "report:claude-design-reconciliation": "node scripts/report-claude-design-reconciliation.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
     "lint": "npm run lint:frontend && npm run lint:backend",
     "lint:check": "npm run lint:check:frontend && npm run lint:check:backend",
