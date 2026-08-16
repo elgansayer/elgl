@@ -6,7 +6,6 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-
 LEGACY_SYSTEMD_UNITS = (
     "hellotalk-swarm.service",
     "hellotalk-aider.service",
