@@ -74,19 +74,18 @@ class AgentRouter:
         )
         if not provider:
             raise RuntimeError(f"No available provider found for phase: {request.phase}")
-            
-        # Initialize state machine for context transfer
+
         state_machine = StateMachine(request.work_dir)
         state_machine.initialize_state(request.task.description)
-        
-        # In a real environment, the underlying AgentProvider would be modified 
-        # to execute via PTYWrapper and SandboxRunner, reading the FACTORY_PLAN.md
-        # and FACTORY_STATE.md automatically since they are written to the workdir.
-        
+
         try:
             result = provider.run(request)
-            state_machine.update_state(f"Phase {request.phase} completed successfully by {provider.name}.")
+            state_machine.update_state(
+                f"Phase {request.phase} completed successfully by {provider.name}."
+            )
             return result
-        except Exception as e:
-            state_machine.update_state(f"Phase {request.phase} failed on {provider.name}: {e}")
+        except Exception as error:
+            state_machine.update_state(
+                f"Phase {request.phase} failed on {provider.name}: {error}"
+            )
             raise
