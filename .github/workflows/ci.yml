@@ -44,7 +44,7 @@ jobs:
             command: npm run build
           - directory: frontend
             check: unit
-            command: npm test
+            command: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -79,6 +79,15 @@ jobs:
         with:
           name: backend-${{ matrix.check }}-failure-report-${{ github.sha }}
           path: backend/test-results/${{ matrix.check }}.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload failed frontend unit report
+        if: failure() && matrix.directory == 'frontend' && matrix.check == 'unit'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-unit-failure-report-${{ github.sha }}
+          path: frontend/test-results/unit.json
           if-no-files-found: warn
           retention-days: 14
 
