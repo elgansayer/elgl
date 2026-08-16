@@ -16,8 +16,9 @@
     "check:semantic-colour-roles": "node scripts/check-semantic-colour-roles.mjs",
     "check:surface-elevation": "node scripts/check-surface-elevation.mjs",
     "check:radius-hierarchy": "node scripts/check-radius-hierarchy.mjs",
-    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy",
-    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy",
+    "check:spacing-density": "node scripts/check-spacing-density.mjs",
+    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density",
+    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density",
     "cypress:open": "cypress open",
     "e2e": "cypress run",
     "e2e:ci": "start-server-and-test start http://localhost:4200 e2e"
