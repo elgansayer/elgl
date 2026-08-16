@@ -21,6 +21,7 @@
     "check:ux-platform-contract": "node scripts/verify-ux-platform-contract.mjs",
     "check:ux-100-percent": "node scripts/verify-ux-100-percent.mjs",
     "report:spartan-full-tree": "node scripts/report-full-tree-spartan-adoption.mjs",
+    "report:relay-primitive-usage": "node scripts/report-relay-primitive-usage.mjs",
     "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
     "report:ux-system-health": "node scripts/report-ux-system-health.mjs",
     "report:claude-design-reconciliation": "node scripts/report-claude-design-reconciliation.mjs",
