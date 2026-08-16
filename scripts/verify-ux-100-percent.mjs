@@ -23,6 +23,7 @@ const requiredFiles = [
   'scripts/verify-rtl-logical-contract.mjs',
   'scripts/verify-focus-ring-contract.mjs',
   'scripts/verify-reduced-motion-contract.mjs',
+  'scripts/verify-ux-platform-contract.mjs',
   'scripts/report-ux-system-health.mjs',
   'frontend/components.json',
   'frontend/AGENTS.md',
@@ -42,6 +43,7 @@ const requiredScripts = [
   'check:rtl-logical-contract',
   'check:focus-ring-contract',
   'check:reduced-motion-contract',
+  'check:ux-platform-contract',
   'report:ux-system-health',
 ];
 for (const script of requiredScripts) {
@@ -71,6 +73,7 @@ const checks = [
   ['scripts/verify-rtl-logical-contract.mjs'],
   ['scripts/verify-focus-ring-contract.mjs'],
   ['scripts/verify-reduced-motion-contract.mjs'],
+  ['scripts/verify-ux-platform-contract.mjs'],
 ];
 
 for (const args of checks) {
