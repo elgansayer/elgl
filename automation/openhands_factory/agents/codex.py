@@ -36,14 +36,15 @@ class CodexProvider:
         return asyncio.run(self._run_async(request))
 
     async def _run_async(self, request: AgentRequest) -> AgentResult:
-        from openhands_factory.sandbox import SandboxRunner
         from openhands_factory.pty_wrapper import PTYWrapper
+        from openhands_factory.sandbox import SandboxRunner
+
         started_at = datetime.now(UTC)
         try:
             sandbox = SandboxRunner(request.cwd)
             cmd = ["caveman", self.command, "--prompt", request.prompt]
             wrapper = PTYWrapper(sandbox.get_podman_cmd(cmd))
-            
+
             stdout_text = await asyncio.to_thread(wrapper.execute)
             exit_code = 0 if "Error" not in stdout_text else 1
 
