@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -28,13 +28,14 @@ function changedFrontendFiles() {
   if (!base) return [];
 
   try {
-    return execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], {
+    return execFileSync('git', ['diff', '--name-only', '--diff-filter=ACMRTUXB', `${base}...HEAD`], {
       cwd: root,
       encoding: 'utf8',
     })
       .split('\n')
       .map((path) => path.trim())
-      .filter((path) => path.startsWith('frontend/src/app/') && (path.endsWith('.ts') || path.endsWith('.html')));
+      .filter((path) => path.startsWith('frontend/src/app/') && (path.endsWith('.ts') || path.endsWith('.html')))
+      .filter((path) => existsSync(resolve(root, path)));
   } catch (error) {
     console.error(`Unable to calculate Spartan boundary diff from ${base}.`);
     console.error(error instanceof Error ? error.message : String(error));
