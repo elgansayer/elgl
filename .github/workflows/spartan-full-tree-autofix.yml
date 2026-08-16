@@ -51,6 +51,9 @@ jobs:
           node scripts/migrate-spartan-native-selects.mjs
           node scripts/migrate-spartan-checkboxes.mjs
 
+      - name: Report residual full-tree Spartan debt
+        run: node scripts/report-full-tree-spartan-adoption.mjs
+
       - name: Commit migration when needed
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
