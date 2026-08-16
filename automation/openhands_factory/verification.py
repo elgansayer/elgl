@@ -33,6 +33,9 @@ def commands_for(repository: Path, changed_paths: set[Path]) -> list[Verificatio
             "conflict-markers", ("node", "scripts/check-conflict-markers.mjs"), repository
         ),
         VerificationCommand(
+            "migration-delta", ("node", "scripts/check-migration-delta.mjs"), repository
+        ),
+        VerificationCommand(
             "factory-tests", (sys.executable, "-m", "pytest"), repository / "automation"
         ),
     ]
