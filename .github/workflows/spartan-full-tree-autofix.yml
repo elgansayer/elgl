@@ -49,6 +49,7 @@ jobs:
         run: |
           node scripts/migrate-spartan-owned-controls.mjs
           node scripts/migrate-spartan-native-selects.mjs
+          node scripts/migrate-spartan-checkboxes.mjs
 
       - name: Commit migration when needed
         env:
@@ -62,5 +63,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend
-          git commit -m "refactor(ui): migrate remaining owned Spartan control families"
+          git commit -m "refactor(ui): migrate safe checkbox surfaces to Spartan"
           git push origin "HEAD:${HEAD_BRANCH}"
