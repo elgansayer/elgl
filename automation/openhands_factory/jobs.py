@@ -40,6 +40,12 @@ class JobStore:
                 next_attempt_at=datetime.fromisoformat(item["next_attempt_at"])
                 if item.get("next_attempt_at")
                 else None,
+                failure_counts={
+                    str(key): int(value) for key, value in item.get("failure_counts", {}).items()
+                },
+                last_failure_kind=item.get("last_failure_kind"),
+                last_failure_fingerprint=item.get("last_failure_fingerprint"),
+                repeated_failure_count=int(item.get("repeated_failure_count", 0)),
                 factory_generation=str(item.get("factory_generation", "unknown")),
                 provider_history=item.get("provider_history", []),
                 updated_at=datetime.fromisoformat(item["updated_at"]),
@@ -83,6 +89,10 @@ class JobStore:
         job.quality_repairs = 0
         job.next_attempt_at = None
         job.last_error = None
+        job.failure_counts.clear()
+        job.last_failure_kind = None
+        job.last_failure_fingerprint = None
+        job.repeated_failure_count = 0
         job.updated_at = now
 
     def reconcile(self, tasks: list[Task]) -> dict[str, Job]:
@@ -115,6 +125,10 @@ class JobStore:
                     existing.quality_repairs = 0
                     existing.next_attempt_at = None
                     existing.last_error = None
+                    existing.failure_counts.clear()
+                    existing.last_failure_kind = None
+                    existing.last_failure_fingerprint = None
+                    existing.repeated_failure_count = 0
                     existing.updated_at = now
             self.save(jobs)
             return jobs
