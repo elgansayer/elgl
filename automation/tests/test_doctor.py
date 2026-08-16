@@ -58,11 +58,18 @@ def test_worker_terminal_probe_falls_back_when_nested_cgroup_is_unavailable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     calls: list[list[str]] = []
+
     def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
         calls.append(arguments)
         if len(calls) == 1:
-            return CompletedProcess(arguments, 125, "cannot set cgroup: permission denied", "")
+            return CompletedProcess(
+                arguments,
+                125,
+                "cannot set cgroup: permission denied",
+                "",
+            )
         return CompletedProcess(arguments, 0, "factory-terminal-ready\n", "")
+
     monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
     check = worker_terminal_check(config(tmp_path))
     assert check.passed
@@ -76,11 +83,18 @@ def test_worker_terminal_probe_falls_back_when_user_namespace_is_blocked(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     calls: list[list[str]] = []
+
     def run(arguments: list[str], **kwargs: object) -> CompletedProcess[str]:
         calls.append(arguments)
         if len(calls) == 1:
-            return CompletedProcess(arguments, 125, "newuidmap: Operation not permitted", "")
+            return CompletedProcess(
+                arguments,
+                125,
+                "newuidmap: Operation not permitted",
+                "",
+            )
         return CompletedProcess(arguments, 0, "factory-terminal-ready\n", "")
+
     monkeypatch.setattr("openhands_factory.doctor.subprocess.run", run)
     check = worker_terminal_check(config(tmp_path))
     assert check.passed
@@ -96,7 +110,10 @@ def test_doctor_reports_openai_subscription_credentials(
     auth.mkdir(parents=True)
     (auth / "openai_oauth.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr("openhands_factory.doctor.Path.home", lambda: tmp_path / "home")
-    monkeypatch.setattr("openhands_factory.doctor.subprocess.run", lambda *args, **kwargs: CompletedProcess(args, 0, "", ""))
+    monkeypatch.setattr(
+        "openhands_factory.doctor.subprocess.run",
+        lambda *args, **kwargs: CompletedProcess(args, 0, "", ""),
+    )
     checks = {check.name: check for check in run_doctor(factory_config)}
     assert checks["openai-subscription"].passed
     assert checks["openai-subscription"].detail == "gpt-5.2-codex"
@@ -121,7 +138,9 @@ def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
     quarantined = Job(Task("3152", "Task", "", "github", 0), JobState.QUARANTINED)
     stalled = Job(Task("239", "Task", "", "github", 0), JobState.IMPLEMENTING)
     stalled.updated_at = now - timedelta(minutes=factory_config.max_task_minutes + 16)
-    JobStore(factory_config.state_dir / "jobs.json").save({"3152": quarantined, "239": stalled})
+    JobStore(factory_config.state_dir / "jobs.json").save(
+        {"3152": quarantined, "239": stalled}
+    )
     checks = {check.name: check for check in job_health_checks(factory_config, now)}
     assert checks["jobs-quarantined"].passed
     assert checks["jobs-quarantined"].detail == "retrying legacy state: issues=3152"
@@ -132,7 +151,14 @@ def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
 def test_health_reports_stale_daemon_heartbeat(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
     now = datetime.now(UTC)
-    atomic_write_json(factory_config.state_dir / "daemon.json", {"status": "running", "updated_at": (now - timedelta(minutes=5)).isoformat(), "active_jobs": ["242"]})
+    atomic_write_json(
+        factory_config.state_dir / "daemon.json",
+        {
+            "status": "running",
+            "updated_at": (now - timedelta(minutes=5)).isoformat(),
+            "active_jobs": ["242"],
+        },
+    )
     check = daemon_health_check(factory_config, now)
     assert not check.passed
     assert "active_jobs=1" in check.detail
@@ -140,8 +166,12 @@ def test_health_reports_stale_daemon_heartbeat(tmp_path: Path) -> None:
 
 def test_health_fails_closed_for_malformed_state_payloads(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
-    atomic_write_json(factory_config.state_dir / "daemon.json", ["not", "a", "mapping"])
-    atomic_write_json(factory_config.state_dir / "jobs.json", ["not", "a", "mapping"])
+    atomic_write_json(
+        factory_config.state_dir / "daemon.json", ["not", "a", "mapping"]
+    )
+    atomic_write_json(
+        factory_config.state_dir / "jobs.json", ["not", "a", "mapping"]
+    )
     heartbeat = daemon_health_check(factory_config)
     jobs = job_health_checks(factory_config)
     assert not heartbeat.passed
@@ -158,7 +188,14 @@ def test_health_fails_closed_when_durable_job_state_is_missing(tmp_path: Path) -
 def test_health_rejects_a_materially_future_dated_heartbeat(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
     now = datetime.now(UTC)
-    atomic_write_json(factory_config.state_dir / "daemon.json", {"status": "running", "updated_at": (now + timedelta(minutes=5)).isoformat(), "active_jobs": []})
+    atomic_write_json(
+        factory_config.state_dir / "daemon.json",
+        {
+            "status": "running",
+            "updated_at": (now + timedelta(minutes=5)).isoformat(),
+            "active_jobs": [],
+        },
+    )
     check = daemon_health_check(factory_config, now)
     assert not check.passed
     assert "future timestamp" in check.detail
@@ -167,9 +204,19 @@ def test_health_rejects_a_materially_future_dated_heartbeat(tmp_path: Path) -> N
 def test_health_reports_no_pull_request_progress_with_active_jobs(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
     now = datetime.now(UTC)
-    atomic_write_json(factory_config.state_dir / "daemon.json", {"status": "running", "updated_at": now.isoformat(), "active_jobs": ["1"]})
-    JobStore(factory_config.state_dir / "jobs.json").save({"1": Job(Task("1", "Task", "", "github", 0), JobState.IMPLEMENTING)})
+    atomic_write_json(
+        factory_config.state_dir / "daemon.json",
+        {
+            "status": "running",
+            "updated_at": now.isoformat(),
+            "active_jobs": ["1"],
+        },
+    )
+    JobStore(factory_config.state_dir / "jobs.json").save(
+        {"1": Job(Task("1", "Task", "", "github", 0), JobState.IMPLEMENTING)}
+    )
     from openhands_factory.doctor import no_pr_progress_check
+
     check = no_pr_progress_check(factory_config, now)
     assert check.passed
     assert check.detail == "no pull request yet; active_jobs=1"
