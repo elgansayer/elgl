@@ -314,9 +314,16 @@ export class LanguageChallengesService {
     const prizePool = challenge.prize_pool_coins ?? 0;
     const share = Math.floor(prizePool / completerIds.length);
 
-    // award coins to each completer
-    for (const cid of completerIds) {
-      await this.monetisationService.addCoins(cid, share);
+    // award coins to each completer concurrently
+    // ⚡ Bolt: Optimize monetisation payouts via Promise.allSettled
+    const payoutResults = await Promise.allSettled(
+      completerIds.map((cid) => this.monetisationService.addCoins(cid, share)),
+    );
+    const failedPayouts = payoutResults.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failedPayouts.length > 0) {
+      throw failedPayouts[0].reason;
     }
 
     // mark challenge as completed, leave remaining prize in pool
