@@ -12,6 +12,7 @@ from pydantic import SecretStr
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError, FactoryError
 from openhands_factory.models import ProviderName
+from openhands_factory.oauth_health import inspect_openai_oauth
 from openhands_factory.provider_health import ProviderHealthStore
 
 if TYPE_CHECKING:
@@ -42,14 +43,16 @@ class ProviderProfile:
 def openai_credentials_available(
     config: FactoryConfig | None = None, home: Path | None = None
 ) -> bool:
-    credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
-    if not (credentials.is_file() and credentials.stat().st_size > 0):
+    if config is None:
+        credentials = (home or Path.home()) / ".openhands" / "auth" / "openai_oauth.json"
+        return credentials.is_file() and credentials.stat().st_size > 0
+
+    if not inspect_openai_oauth(config, home).passed:
         return False
-    if config is not None:
-        store = ProviderHealthStore(config.state_dir / "health.json")
-        for breaker in store.load():
-            if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION and not breaker.permits_call():
-                return False
+    store = ProviderHealthStore(config.state_dir / "health.json")
+    for breaker in store.load():
+        if breaker.provider == ProviderName.OPENAI_SUBSCRIPTION and not breaker.permits_call():
+            return False
     return True
 
 
@@ -161,12 +164,7 @@ def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
 
 
 def select_primary_provider(config: FactoryConfig) -> ProviderName:
-    """Pick the healthiest available provider tier for one conversation.
-
-    Every configured tier's circuit breaker is authoritative. If all usable tiers
-    are cooling down, fail the attempt locally so the job-level backoff can wait
-    rather than hammering a provider whose breaker is already open.
-    """
+    """Pick the healthiest available provider tier for one conversation."""
     if openai_credentials_available(config):
         return ProviderName.OPENAI_SUBSCRIPTION
 
@@ -186,18 +184,7 @@ def select_primary_provider(config: FactoryConfig) -> ProviderName:
 
 
 def build_llm(config: FactoryConfig) -> LLM:
-    """Construct this conversation's sole LLM, with no per-call fallback chain.
-
-    openhands' FallbackStrategy retries the primary model first on every new turn
-    (fallback is per-call, not per-conversation), so a multi-turn conversation that
-    dips to a fallback provider on one turn and back to a strict-validating primary
-    on the next replays that fallback provider's tool-call ID format into the
-    primary - which OpenAI's Responses API rejects outright with "Expected an ID
-    that begins with 'fc'". This is an upstream litellm bug with no released fix
-    yet: https://github.com/BerriAI/litellm/pull/34387 (open since 2026-07-23).
-    Provider selection instead happens once per conversation via
-    select_primary_provider(), which is breaker-aware.
-    """
+    """Construct this conversation's sole LLM, with no per-call fallback chain."""
     from openhands.sdk import LLM
 
     provider = select_primary_provider(config)
