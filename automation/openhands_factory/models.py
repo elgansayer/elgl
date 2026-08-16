@@ -24,6 +24,7 @@ class FailureKind(StrEnum):
     MALFORMED_RESPONSE = "malformed-response"
     TOOL = "tool"
     TASK_TIMEOUT = "task-timeout"
+    VALIDATION = "validation"
 
 
 class CircuitState(StrEnum):
