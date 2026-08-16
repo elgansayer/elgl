@@ -58,6 +58,12 @@ import {
             [disabled]="busy()"
           />
         </label>
+        <label>From
+          <input type="datetime-local" name="startTime" [(ngModel)]="startTime" [disabled]="busy()" />
+        </label>
+        <label>Until
+          <input type="datetime-local" name="endTime" [(ngModel)]="endTime" [disabled]="busy()" />
+        </label>
         <div class="filter-row">
           <button type="submit" [disabled]="busy()">Apply</button>
           <button type="button" (click)="clearFilters()" [disabled]="busy()">Clear</button>
@@ -151,6 +157,8 @@ export class ModerationPageComponent {
   reasonCategory = '';
   reportedUserId = '';
   reporterUserId = '';
+  startTime = '';
+  endTime = '';
   readonly reports = signal<AdminModerationReport[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -175,6 +183,8 @@ export class ModerationPageComponent {
           this.reasonCategory,
           this.reportedUserId,
           this.reporterUserId,
+          this.toIso(this.startTime),
+          this.toIso(this.endTime),
         ),
       );
       this.reports.set(result.reports);
@@ -198,6 +208,8 @@ export class ModerationPageComponent {
     this.reasonCategory = '';
     this.reportedUserId = '';
     this.reporterUserId = '';
+    this.startTime = '';
+    this.endTime = '';
     void this.load(true);
   }
 
@@ -220,5 +232,11 @@ export class ModerationPageComponent {
   formatDate(value: string): string {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? 'Unknown' : date.toLocaleString();
+  }
+
+  private toIso(value: string): string | undefined {
+    if (!value) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
   }
 }

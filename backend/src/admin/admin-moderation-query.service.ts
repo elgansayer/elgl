@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AdminReportsQueryDto } from './dto/admin-reports-query.dto';
 import {
@@ -15,6 +15,16 @@ export class AdminModerationQueryService {
     const pageSize = query.pageSize ?? 20;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
+
+    if (
+      query.startTime &&
+      query.endTime &&
+      Date.parse(query.startTime) > Date.parse(query.endTime)
+    ) {
+      throw new BadRequestException(
+        'startTime must be before or equal to endTime',
+      );
+    }
 
     let request = this.supabaseService
       .getClient()
@@ -35,6 +45,8 @@ export class AdminModerationQueryService {
     if (query.reporterUserId?.trim()) {
       request = request.eq('reporter_id', query.reporterUserId.trim());
     }
+    if (query.startTime) request = request.gte('created_at', query.startTime);
+    if (query.endTime) request = request.lte('created_at', query.endTime);
 
     const { data, error, count } = await request
       .order('created_at', { ascending: false })
