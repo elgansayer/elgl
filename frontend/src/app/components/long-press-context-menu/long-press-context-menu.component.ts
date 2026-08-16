@@ -8,9 +8,11 @@ import { TranslatePipe } from '../../services/translate.pipe';
   template: `
     <div
       (touchstart)="onTouchStart($event)"
+      (touchmove)="onTouchMove($event)"
       (touchend)="onTouchEnd()"
       (touchcancel)="onTouchCancel()"
       (mousedown)="onMouseDown($event)"
+      (mousemove)="onMouseMove($event)"
       (mouseup)="onMouseUp()"
       (mouseleave)="onMouseCancel()"
       style="display: contents"
@@ -140,11 +142,23 @@ export class LongPressContextMenuComponent {
   readonly dialogState = computed<HlmDialogState>(() => (this.menuVisible() ? 'open' : 'closed'));
 
   private longPressTimer?: ReturnType<typeof setTimeout>;
-  private readonly LONG_PRESS_DURATION = 600;
+  private pressStart?: { x: number; y: number };
+  private readonly LONG_PRESS_DURATION = 500;
+  private readonly MOVE_TOLERANCE_PX = 8;
 
   onTouchStart(event: TouchEvent) {
     if (event.touches.length !== 1) return;
-    this.startTimer();
+    const touch = event.touches[0];
+    this.startTimer(touch.clientX, touch.clientY);
+  }
+
+  onTouchMove(event: TouchEvent) {
+    if (event.touches.length !== 1) {
+      this.cancelTimer();
+      return;
+    }
+    const touch = event.touches[0];
+    this.cancelIfMoved(touch.clientX, touch.clientY);
   }
 
   onTouchEnd() {
@@ -157,7 +171,11 @@ export class LongPressContextMenuComponent {
 
   onMouseDown(event: MouseEvent) {
     if (event.button !== 0) return;
-    this.startTimer();
+    this.startTimer(event.clientX, event.clientY);
+  }
+
+  onMouseMove(event: MouseEvent) {
+    this.cancelIfMoved(event.clientX, event.clientY);
   }
 
   onMouseUp() {
@@ -168,11 +186,22 @@ export class LongPressContextMenuComponent {
     this.cancelTimer();
   }
 
-  private startTimer() {
+  private startTimer(x: number, y: number) {
     this.cancelTimer();
+    this.pressStart = { x, y };
     this.longPressTimer = setTimeout(() => {
+      this.longPressTimer = undefined;
+      this.pressStart = undefined;
       this.menuVisible.set(true);
     }, this.LONG_PRESS_DURATION);
+  }
+
+  private cancelIfMoved(x: number, y: number) {
+    if (!this.pressStart) return;
+    const distance = Math.hypot(x - this.pressStart.x, y - this.pressStart.y);
+    if (distance > this.MOVE_TOLERANCE_PX) {
+      this.cancelTimer();
+    }
   }
 
   private cancelTimer() {
@@ -180,6 +209,7 @@ export class LongPressContextMenuComponent {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = undefined;
     }
+    this.pressStart = undefined;
   }
 
   closeMenu() {
