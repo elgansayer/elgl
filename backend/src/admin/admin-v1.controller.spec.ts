@@ -122,7 +122,9 @@ describe('AdminV1Controller', () => {
       headers: {},
     } as never;
 
-    await expect(controller.getSystemHealth(request)).resolves.toEqual(expected);
+    await expect(controller.getSystemHealth(request)).resolves.toEqual(
+      expected,
+    );
     expect(systemHealth.getSnapshot).toHaveBeenCalledOnce();
   });
 
