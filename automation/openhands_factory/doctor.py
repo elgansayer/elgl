@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from openhands_factory.architecture_guard import (
+    check_factory_architecture,
+    check_retired_swarm,
+)
 from openhands_factory.config import FactoryConfig
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import JobState
@@ -98,6 +102,7 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
                         "worker-terminal",
                         True,
                         "rootless terminal ready with host user namespace fallback",
+                        warning=True,
                     )
                 return Check(
                     "worker-terminal",
@@ -108,11 +113,13 @@ def worker_terminal_check(config: FactoryConfig) -> Check:
         return Check("worker-terminal", False, str(error)[-1000:])
     passed = result.returncode == 0 and result.stdout == "factory-terminal-ready\n"
     detail = "rootless constrained terminal ready"
+    warning = False
     if passed and used_resource_fallback:
         detail = "rootless terminal ready without nested cgroup limits"
+        warning = True
     if not passed:
         detail = f"exit {result.returncode}: {result.stdout}{result.stderr}"[-1000:]
-    return Check("worker-terminal", passed, detail)
+    return Check("worker-terminal", passed, detail, warning)
 
 
 def daemon_health_check(config: FactoryConfig, now: datetime | None = None) -> Check:
@@ -240,13 +247,13 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
 
 
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
-    """Return diagnostics only. Doctor never pages operators.
-
-    Job stalls, retries, quarantine migrations, provider failures and lack of PR
-    progress are self-healing operational conditions. Telegram paging is reserved
-    for the systemd watchdog after it has tried and failed to recover the daemon.
-    """
+    """Return diagnostics only. Doctor never pages operators."""
     checks: list[Check] = []
+    architecture = check_factory_architecture(config.factory_architecture)
+    checks.append(Check("factory-architecture", architecture.passed, architecture.detail))
+    single_owner = check_retired_swarm(config.repository)
+    checks.append(Check("single-owner", single_owner.passed, single_owner.detail))
+    checks.append(Check("provider-chain", True, "Codex OAuth -> OpenCode Go"))
     checks.append(
         Check("repository", (config.repository / ".git").exists(), str(config.repository))
     )
@@ -291,21 +298,13 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     checks.extend(job_health_checks(config))
     checks.append(no_pr_progress_check(config))
     if online:
-        from openhands_factory.provider_profiles import validate_gemini, validate_opencode
+        from openhands_factory.provider_profiles import validate_opencode
 
         try:
             validate_opencode(config)
             checks.append(Check("opencode-go", True, config.opencode_model))
         except (RuntimeError, ValueError) as error:
             checks.append(Check("opencode-go", False, str(error)))
-        if not config.gemini_enabled:
-            checks.append(Check("gemini", True, "disabled by configuration"))
-        else:
-            try:
-                profile = validate_gemini(config)
-                checks.append(Check("gemini", profile is not None, config.gemini_model))
-            except (RuntimeError, ValueError) as error:
-                checks.append(Check("gemini", False, str(error)))
     systemd = subprocess.run(
         (
             "systemd-analyze",

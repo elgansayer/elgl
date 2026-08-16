@@ -10,6 +10,8 @@ from enum import StrEnum
 class ProviderName(StrEnum):
     OPENAI_SUBSCRIPTION = "openai-subscription"
     OPENCODE_GO = "opencode-go"
+    # Retained only so historical provider-health/attribution state can still be
+    # deserialized during migration. Production routing is Codex OAuth -> OpenCode Go.
     GEMINI = "gemini-flash"
 
 
@@ -21,6 +23,7 @@ class FailureKind(StrEnum):
     RATE_LIMIT = "rate-limit"
     MALFORMED_RESPONSE = "malformed-response"
     TOOL = "tool"
+    TASK_TIMEOUT = "task-timeout"
 
 
 class CircuitState(StrEnum):

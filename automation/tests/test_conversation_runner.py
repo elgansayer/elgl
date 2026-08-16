@@ -7,8 +7,9 @@ import pytest
 from openhands_factory.config import FactoryConfig
 from openhands_factory.conversation_runner import ConversationRunner
 from openhands_factory.exceptions import FactoryError
-from openhands_factory.models import ProviderName, Task
+from openhands_factory.models import FailureKind, ProviderName, Task
 from openhands_factory.provider_health import ProviderHealthStore
+from openhands_factory.provider_runtime import ProviderAttributionStore
 
 
 class Conversation:
@@ -60,7 +61,7 @@ def test_selected_provider_is_passed_to_spawned_conversation(tmp_path: Path) -> 
     assert (tmp_path / "provider").read_text(encoding="utf-8") == ProviderName.OPENCODE_GO.value
 
 
-def test_stuck_conversation_is_cancelled_and_counts_against_provider(tmp_path: Path) -> None:
+def test_stuck_conversation_is_cancelled_without_poisoning_provider_health(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
     runner = ConversationRunner(
         factory_config, Factory(stuck=True), timeout_seconds=0.2, cancellation_grace_seconds=1
@@ -72,5 +73,9 @@ def test_stuck_conversation_is_cancelled_and_counts_against_provider(tmp_path: P
 
     assert time.monotonic() - started < 5
     breakers = ProviderHealthStore(factory_config.state_dir / "health.json").load()
-    opencode = next(item for item in breakers if item.provider is ProviderName.OPENCODE_GO)
-    assert opencode.consecutive_failures == 1
+    assert all(item.consecutive_failures == 0 for item in breakers)
+
+    attempts = ProviderAttributionStore(
+        factory_config.state_dir / "provider-attribution.json"
+    ).task_summary("two")
+    assert attempts[-1]["failure_kind"] == FailureKind.TASK_TIMEOUT.value

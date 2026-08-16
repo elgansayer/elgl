@@ -32,7 +32,6 @@ PrivateTmp=true
 # nested worker containers. The worker itself remains capability- and
 # network-constrained by secure_tools.py.
 PrivateDevices=false
-ProtectKernelTunables=false
 ProtectSystem=full
 ProtectHome=true
 ProtectKernelTunables=false
@@ -50,6 +49,9 @@ ReadWritePaths=/var/lib/hellotalk-factory /var/log/hellotalk-factory
 LimitNOFILE=4096
 LimitNPROC=1024
 TasksMax=1024
+# Start reclaiming pressure before the hard OOM boundary so active jobs can
+# finish/drain instead of letting concurrent builds hit the service ceiling.
+MemoryHigh=6G
 MemoryMax=7G
 
 [Install]

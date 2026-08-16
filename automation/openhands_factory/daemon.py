@@ -13,6 +13,7 @@ from threading import Semaphore
 
 from filelock import FileLock, Timeout
 
+from openhands_factory.architecture_guard import assert_single_owner
 from openhands_factory.config import FactoryConfig
 from openhands_factory.generation import (
     FACTORY_RUNTIME_VERSION,
@@ -105,6 +106,9 @@ class FactoryDaemon:
         generation = FactoryGeneration.create()
         activate_generation(self.config.state_dir, generation)
         self.generation = generation
+        # The configured architecture generation has already been validated by
+        # FactoryConfig. This runtime identifier is a separate per-daemon ownership
+        # token used by JobStore/TaskStore to stop stale processes writing state.
         self.config = self.config.model_copy(update={"factory_generation": generation.identifier})
         self.tasks = TaskStore(self.config.state_dir)
         self.pipeline = FactoryPipeline(self.config)
@@ -125,6 +129,9 @@ class FactoryDaemon:
         lock = FileLock(str(self.config.state_dir / "factory.lock"))
         try:
             with lock.acquire(timeout=0):
+                # Fail before durable generation takeover if the active checkout has
+                # resurrected a known autonomous swarm workflow.
+                assert_single_owner(self.config.repository)
                 self._activate_generation()
                 return self._loop()
         except Timeout:

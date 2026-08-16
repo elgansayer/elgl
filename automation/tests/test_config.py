@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from openhands_factory.architecture_guard import EXPECTED_FACTORY_ARCHITECTURE
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
@@ -88,6 +89,7 @@ def test_service_delegates_only_its_cgroup_beneath_the_parent_resource_cap() -> 
 
     assert "Delegate=yes" in unit
     assert "ProtectControlGroups=false" in unit
+    assert "MemoryHigh=6G" in unit
     assert "MemoryMax=7G" in unit
     assert "TasksMax=1024" in unit
 
@@ -141,20 +143,16 @@ def test_missing_required_environment_is_rejected() -> None:
         FactoryConfig.from_environment({})
 
 
-def test_gemini_is_configurable_but_requires_a_key() -> None:
-    with pytest.raises(ConfigurationError, match="GEMINI_API_KEY"):
-        FactoryConfig.from_environment(environment(GEMINI_ENABLED="true"))
-
-
-def test_free_tier_requires_zero_variable_budget() -> None:
-    with pytest.raises(ConfigurationError, match="zero variable budget"):
+def test_gemini_cannot_be_enabled_in_the_production_factory() -> None:
+    with pytest.raises(ConfigurationError, match="GEMINI_ENABLED is retired"):
         FactoryConfig.from_environment(
-            environment(
-                GEMINI_ENABLED="true",
-                GEMINI_API_KEY="not-a-real-key",
-                FACTORY_MONTHLY_VARIABLE_BUDGET_USD="1",
-            )
+            environment(GEMINI_ENABLED="true", GEMINI_API_KEY="not-a-real-key")
         )
+
+
+def test_retired_factory_architecture_is_rejected() -> None:
+    with pytest.raises(ConfigurationError, match="FACTORY_ARCHITECTURE must be"):
+        FactoryConfig.from_environment(environment(FACTORY_ARCHITECTURE="old-swarm"))
 
 
 def test_default_repository_is_production_clone() -> None:
@@ -162,6 +160,8 @@ def test_default_repository_is_production_clone() -> None:
     assert config.repository == Path("/var/lib/hellotalk-factory/repository")
     assert config.minimum_free_disk_gib == 5
     assert config.max_parallel_jobs == 5
+    assert config.factory_architecture == EXPECTED_FACTORY_ARCHITECTURE
+    assert config.factory_generation == "unknown"
 
 
 def test_factory_environment_template_contains_runtime_path_settings() -> None:
@@ -173,6 +173,8 @@ def test_factory_environment_template_contains_runtime_path_settings() -> None:
     assert "FACTORY_TASK_IMAGE=localhost/hellotalk-factory-worker:current" in template
     assert "FACTORY_RECOVERY_DIR=/var/lib/hellotalk-factory/recovery" in template
     assert "FACTORY_REQUIRE_READY_LABEL=false" in template
+    assert f"FACTORY_ARCHITECTURE={EXPECTED_FACTORY_ARCHITECTURE}" in template
+    assert "GEMINI_ENABLED=false" in template
 
 
 def test_parallel_job_limit_must_be_positive() -> None:

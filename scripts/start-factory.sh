@@ -5,6 +5,7 @@ FACTORY_CONFIG=/etc/hellotalk-factory/factory.env
 FACTORY_SERVICE=hellotalk-factory.service
 FACTORY_HEALTH_TIMER=hellotalk-factory-health.timer
 FACTORY_CLI=/opt/hellotalk-factory/venv/bin/hellotalk-factory
+EXPECTED_ARCHITECTURE=openhands-agent-canvas-v1
 
 if [ "$(id -u)" -ne 0 ]; then
   echo 'Run this command as root.' >&2
@@ -17,7 +18,7 @@ if [ ! -r "$FACTORY_CONFIG" ]; then
 fi
 
 required_names=(
-  OPENCODE_GO_API_KEY OPENCODE_GO_MODEL GITHUB_TOKEN
+  FACTORY_ARCHITECTURE OPENCODE_GO_API_KEY OPENCODE_GO_MODEL GITHUB_TOKEN
 )
 
 for name in "${required_names[@]}"; do
@@ -34,6 +35,13 @@ for name in "${required_names[@]}"; do
   fi
 done
 
+configured_architecture="$(awk -F= '/^[[:space:]]*FACTORY_ARCHITECTURE=/ {print $2; exit}' "$FACTORY_CONFIG" | xargs)"
+if [ "$configured_architecture" != "$EXPECTED_ARCHITECTURE" ]; then
+  echo "FACTORY_ARCHITECTURE must be $EXPECTED_ARCHITECTURE (found $configured_architecture)." >&2
+  echo 'Refusing to start an older/retired automation architecture against this state.' >&2
+  exit 1
+fi
+
 if awk '
   /^[[:space:]]*GEMINI_ENABLED=/ {
     enabled = $0
@@ -41,10 +49,9 @@ if awk '
   }
   END { exit(enabled == "true" ? 0 : 1) }
 ' "$FACTORY_CONFIG"; then
-  if ! awk '/^[[:space:]]*GEMINI_API_KEY=/ { value=$0; sub(/^[^=]*=/, "", value); if (value !~ /^[[:space:]]*$/) found=1 } END { exit(found ? 0 : 1) }' "$FACTORY_CONFIG"; then
-    echo 'GEMINI_ENABLED=true requires a non-empty GEMINI_API_KEY.' >&2
-    exit 1
-  fi
+  echo 'GEMINI_ENABLED=true is retired for production factory routing.' >&2
+  echo 'Use Codex through OpenHands subscription OAuth with OpenCode Go fallback.' >&2
+  exit 1
 fi
 
 if ! command -v systemctl >/dev/null 2>&1; then
