@@ -5,7 +5,6 @@ import pytest
 from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
-
 RETIRED_SYSTEMD_UNITS = {
     "hellotalk-swarm.service",
     "hellotalk-aider.service",
