@@ -110,6 +110,8 @@ jobs:
         env:
           SPARTAN_BOUNDARY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: npm run check:spartan-boundaries
+      - name: Enforce full-tree Spartan adoption
+        run: npm run check:spartan-full-tree
       - name: Enforce component-system convergence
         run: npm run check:component-system
       - name: Prevent new legacy primitive adoption
