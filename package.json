@@ -11,6 +11,7 @@
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
     "check:design-sync": "node scripts/verify-design-sync-manifest.mjs",
+    "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
     "lint": "npm run lint:frontend && npm run lint:backend",
     "lint:check": "npm run lint:check:frontend && npm run lint:check:backend",
