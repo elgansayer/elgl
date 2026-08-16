@@ -18,6 +18,7 @@
     "check:legacy-primitive-delta": "node scripts/check-legacy-primitive-delta.mjs",
     "check:visual-contract-matrix": "node scripts/verify-visual-contract-matrix.mjs",
     "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
+    "report:ux-system-health": "node scripts/report-ux-system-health.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
     "lint": "npm run lint:frontend && npm run lint:backend",
     "lint:check": "npm run lint:check:frontend && npm run lint:check:backend",
