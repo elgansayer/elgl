@@ -13,6 +13,7 @@ from openhands_factory.daemon import FactoryDaemon, set_paused
 from openhands_factory.doctor import Check, run_doctor
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
+from openhands_factory.legacy_runtime import detect_legacy_runtime
 from openhands_factory.metrics import MetricsStore
 from openhands_factory.oauth_health import smoke_openai_subscription
 from openhands_factory.provider_profiles import discover_gemini_models, discover_opencode_models
@@ -32,6 +33,8 @@ def parser() -> argparse.ArgumentParser:
     models.add_argument("provider", choices=("opencode-go", "gemini"))
     providers = subcommands.add_parser("providers")
     providers.add_argument("action", choices=("check",))
+    legacy = subcommands.add_parser("legacy")
+    legacy.add_argument("action", choices=("scan",))
     task = subcommands.add_parser("task")
     task.add_argument("action", choices=("run",))
     task.add_argument("--issue", type=int)
@@ -52,8 +55,27 @@ def _config() -> FactoryConfig:
     return FactoryConfig.from_environment()
 
 
+def _legacy_checks() -> list[Check]:
+    findings = detect_legacy_runtime()
+    if not findings:
+        return [Check("legacy-runtime", True, "no retired swarm runtime artifacts detected")]
+    active = [finding for finding in findings if finding.active]
+    detail = "; ".join(
+        f"{finding.kind}:{finding.identifier} ({finding.detail})" for finding in findings
+    )
+    return [
+        Check(
+            "legacy-runtime",
+            not active,
+            detail,
+            warning=not active,
+        )
+    ]
+
+
 def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
     checks = run_doctor(config, online=online)
+    checks.extend(_legacy_checks())
     if online:
         oauth = smoke_openai_subscription(config)
         checks.append(Check("openai-subscription-online", oauth.passed, f"{oauth.kind}: {oauth.detail}"))
@@ -91,6 +113,23 @@ def main(arguments: list[str] | None = None) -> int:
             for check in provider_checks:
                 print(f"{'PASS' if check.passed else 'FAIL'} {check.name}: {check.detail}")
             return 0 if all(check.passed for check in provider_checks) else 1
+        if args.command == "legacy":
+            findings = detect_legacy_runtime()
+            print(
+                json.dumps(
+                    [
+                        {
+                            "kind": finding.kind,
+                            "identifier": finding.identifier,
+                            "active": finding.active,
+                            "detail": finding.detail,
+                        }
+                        for finding in findings
+                    ],
+                    indent=2,
+                )
+            )
+            return 1 if any(finding.active for finding in findings) else 0
         if args.command == "task":
             if not args.dry_run:
                 print(
