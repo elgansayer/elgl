@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+import subprocess
 
 
 LEGACY_SYSTEMD_UNITS = (
@@ -56,7 +56,10 @@ def detect_legacy_systemd_units() -> list[LegacyFinding]:
             findings.append(LegacyFinding("systemd", unit, False, f"inspection failed: {error}"))
             continue
         is_active = active.returncode == 0 and active.stdout.strip() == "active"
-        is_enabled = enabled.returncode == 0 and enabled.stdout.strip() in {"enabled", "enabled-runtime"}
+        is_enabled = enabled.returncode == 0 and enabled.stdout.strip() in {
+            "enabled",
+            "enabled-runtime",
+        }
         if is_active or is_enabled:
             findings.append(
                 LegacyFinding(
