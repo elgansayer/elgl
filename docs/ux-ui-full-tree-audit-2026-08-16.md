@@ -1,4 +1,4 @@
-# UX/UI full-tree Spartan audit — 2026-08-16
+# UX/UI full-tree Spartan audit - 2026-08-16
 
 ## Executive conclusion
 
@@ -60,6 +60,12 @@ The scanner inspects every Angular TypeScript/template source file and reports:
 `npm run check:spartan-full-tree` runs the scanner in strict mode and is now part of canonical `npm run verify`.
 
 `npm run report:spartan-full-tree` prints the complete inventory without failing.
+
+## Primitive usage audit
+
+This PR also adds `npm run report:relay-primitive-usage`. It inventories component selectors and exported symbols in every Relay primitive family and scans the rest of the Angular tree for external consumers.
+
+A zero-consumer result is a review signal, not automatic proof that the primitive should be deleted: dynamic rendering, public exports and intentionally staged primitives can make a static zero-consumer result legitimate. The report exists to make those cases explicit rather than letting dead or speculative primitives accumulate invisibly.
 
 ## Deliberate non-goals
 
