@@ -33,6 +33,7 @@ export class AdminModerationService {
     status?: string,
     reasonCategory?: string,
     reportedUserId?: string,
+    reporterUserId?: string,
   ): Observable<AdminModerationReportList> {
     const token = this.login.accessToken();
     if (!token) {
@@ -45,12 +46,16 @@ export class AdminModerationService {
     const normalizedStatus = status?.trim();
     const normalizedReasonCategory = reasonCategory?.trim();
     const normalizedReportedUserId = reportedUserId?.trim();
+    const normalizedReporterUserId = reporterUserId?.trim();
     if (normalizedStatus) params = params.set('status', normalizedStatus);
     if (normalizedReasonCategory) {
       params = params.set('reasonCategory', normalizedReasonCategory);
     }
     if (normalizedReportedUserId) {
       params = params.set('reportedUserId', normalizedReportedUserId);
+    }
+    if (normalizedReporterUserId) {
+      params = params.set('reporterUserId', normalizedReporterUserId);
     }
 
     return from(this.login.apiBaseUrl()).pipe(
