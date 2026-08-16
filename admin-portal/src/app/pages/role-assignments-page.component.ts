@@ -21,8 +21,8 @@ import {
       </p>
 
       <form class="filters" (ngSubmit)="load(true)">
-        <label>User ID <input name="userId" [(ngModel)]="userId" /></label>
-        <label>Role key <input name="roleKey" [(ngModel)]="roleKey" /></label>
+        <label>User ID <input name="userId" [(ngModel)]="userId" maxlength="128" /></label>
+        <label>Role key <input name="roleKey" [(ngModel)]="roleKey" maxlength="80" /></label>
         <div class="actions">
           <button type="submit" [disabled]="busy()">Apply filters</button>
           <button type="button" (click)="clearFilters()" [disabled]="busy()">Clear</button>

@@ -25,6 +25,7 @@ import { AdminUserSummary, AdminUsersService } from '../admin-users.service';
             name="search"
             type="search"
             autocomplete="off"
+            maxlength="120"
             [(ngModel)]="query"
             [disabled]="busy()"
           />
