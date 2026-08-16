@@ -26,6 +26,26 @@ updates:
           - 'minor'
           - 'patch'
 
+  - package-ecosystem: 'pip'
+    directory: '/automation'
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 20
+    assignees:
+      - 'elgansayer'
+    groups:
+      python-security-updates:
+        applies-to: security-updates
+        patterns:
+          - '*'
+      python-routine-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
