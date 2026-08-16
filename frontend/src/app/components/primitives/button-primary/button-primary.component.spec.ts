@@ -50,12 +50,22 @@ describe('AppButtonPrimaryComponent', () => {
     expect(buttonElement.type).toBe('button');
   });
 
-  it('should apply primary styles and size md by default', () => {
+  it('should apply primary styles and standard density by default', () => {
     expect(buttonElement.classList.contains('bg-primary')).toBe(true);
     expect(buttonElement.classList.contains('text-on-fill')).toBe(true);
     expect(buttonElement.classList.contains('rounded-app')).toBe(true);
+    expect(buttonElement.classList.contains('min-h-11')).toBe(true);
     expect(buttonElement.classList.contains('ps-4')).toBe(true);
     expect(buttonElement.classList.contains('pe-4')).toBe(true);
+  });
+
+  it('should preserve a compact target floor for sm density', () => {
+    host.size.set('sm');
+    fixture.detectChanges();
+
+    expect(buttonElement.classList.contains('min-h-10')).toBe(true);
+    expect(buttonElement.classList.contains('ps-3')).toBe(true);
+    expect(buttonElement.classList.contains('pe-3')).toBe(true);
   });
 
   it('should emit clicked event when clicked and not disabled', () => {
@@ -75,11 +85,12 @@ describe('AppButtonPrimaryComponent', () => {
     expect(host.clickCount).toBe(0);
   });
 
-  it('should update classes on size change to lg and customClass', () => {
+  it('should update classes on size change to comfortable lg and customClass', () => {
     host.size.set('lg');
     host.customClass.set('my-btn');
     fixture.detectChanges();
 
+    expect(buttonElement.classList.contains('min-h-12')).toBe(true);
     expect(buttonElement.classList.contains('ps-6')).toBe(true);
     expect(buttonElement.classList.contains('pe-6')).toBe(true);
     expect(buttonElement.classList.contains('my-btn')).toBe(true);
