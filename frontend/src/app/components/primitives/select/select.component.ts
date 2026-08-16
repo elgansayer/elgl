@@ -27,9 +27,10 @@ import { TranslatePipe } from '../../../services/translate.pipe';
       [selectId]="selectId()"
       [value]="value()"
       [disabled]="disabled()"
-      [class]="selectClasses()" [selectClass]="selectClasses()"
+      [class]="selectClasses()"
+      [selectClass]="selectClasses()"
       [aria-label]="ariaLabel() ? (ariaLabel() | t) : null"
-      (change)="onChange($event)"
+      (valueChange)="onValueChange($event)"
     >
       <ng-content />
     </hlm-native-select>
@@ -58,10 +59,9 @@ export class AppSelectComponent {
     return `${base} ${state}${extra ? ' ' + extra : ''}`.trim();
   });
 
-  onChange(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLSelectElement && !this.disabled()) {
-      this.valueChange.emit(target.value);
+  onValueChange(value: string | undefined | null): void {
+    if (!this.disabled() && value != null) {
+      this.valueChange.emit(value);
     }
   }
 }
