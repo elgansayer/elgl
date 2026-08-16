@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, resource, signal, computed } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { MilestoneService, Milestone, MilestoneProgress } from '../../services/milestone.service';
@@ -6,7 +8,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
 
 @Component({
   selector: 'app-milestone',
-  imports: [TranslatePipe],
+  imports: [HlmInput, HlmButton, TranslatePipe],
   template: `
     <div class="p-4">
       <h2 class="text-xl font-bold text-text-primary">{{ 'milestones.title' | t }}</h2>
@@ -36,7 +38,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
           <label for="milestone-title" class="block text-sm font-medium text-text-secondary">
             {{ 'milestones.titleLabel' | t }}
           </label>
-          <input
+          <input hlmInput
             id="milestone-title"
             type="text"
             required
@@ -50,7 +52,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
           <label for="milestone-description" class="block text-sm font-medium text-text-secondary">
             {{ 'milestones.descriptionLabel' | t }}
           </label>
-          <input
+          <input hlmInput
             id="milestone-description"
             type="text"
             [value]="newDescription()"
@@ -59,7 +61,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
             class="mt-1 w-full ps-3 pe-3 py-2 rounded-lg border border-surface-100 bg-surface-200 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
-        <button
+        <button hlmBtn
           type="submit"
           [disabled]="!newTitle().trim() || creating()"
           class="px-4 py-2 bg-primary text-on-fill rounded-lg text-sm font-semibold disabled:opacity-50"
@@ -86,7 +88,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 @if (!ms.completed) {
-                  <button
+                  <button hlmBtn
                     type="button"
                     (click)="complete(ms.id)"
                     [attr.aria-label]="'milestones.completeBtn' | t"
@@ -98,7 +100,7 @@ const EMPTY_PROGRESS: MilestoneProgress = { total: 0, completed: 0, percentage: 
                   <span class="text-success" aria-hidden="true">&check;</span>
                   <span class="sr-only">{{ 'milestones.completedStatus' | t }}</span>
                 }
-                <button
+                <button hlmBtn
                   type="button"
                   (click)="remove(ms.id)"
                   [attr.aria-label]="'milestones.removeBtn' | t"

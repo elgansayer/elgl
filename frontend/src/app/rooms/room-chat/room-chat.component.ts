@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   DestroyRef,
@@ -15,7 +17,7 @@ import { DraftService } from '../../services/draft.service';
   selector: 'app-room-chat',
   templateUrl: './room-chat.component.html',
   styleUrls: ['./room-chat.component.css'],
-  imports: [TranslatePipe],
+  imports: [HlmInput, HlmButton, TranslatePipe],
 })
 export class RoomChatComponent {
   readonly roomId = input.required<string>();

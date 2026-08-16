@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
@@ -49,7 +51,7 @@ const GENDER_OPTIONS: LanguageOption[] = [
   standalone: true,
   selector: 'app-message-filter-settings',
   templateUrl: './message-filter-settings.component.html',
-  imports: [TranslatePipe, FormsModule],
+  imports: [HlmInput, HlmButton, TranslatePipe, FormsModule],
 })
 export class MessageFilterSettingsComponent implements OnInit {
   private readonly userService = inject(UserService);

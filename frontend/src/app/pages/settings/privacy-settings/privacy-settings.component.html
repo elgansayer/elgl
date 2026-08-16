@@ -1,6 +1,6 @@
 <div class="app-screen bg-surface-50">
   <header class="app-header">
-    <button (click)="goBack()" class="app-button-icon" aria-label="Back">
+    <button hlmBtn (click)="goBack()" class="app-button-icon" aria-label="Back">
       <span class="text-xl" aria-hidden="true">←</span>
     </button>
     <h1 class="app-header-title">{{ 'privacy.hub.title' | t }}</h1>
@@ -46,7 +46,7 @@
       </h2>
       <div class="rounded-2xl bg-surface-100 border border-surface-200 overflow-hidden shadow-sm">
         <div class="flex items-center gap-3 p-4 border-b border-surface-200">
-          <input
+          <input hlmInput
             type="text"
             [ngModel]="mutedWordInput()"
             (ngModelChange)="mutedWordInput.set($event)"
@@ -55,7 +55,7 @@
             class="flex-1 bg-surface-200 border border-surface-300 rounded-lg px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
             [attr.aria-label]="'privacy.hub.addMutedWordPlaceholder' | t"
           />
-          <button
+          <button hlmBtn
             (click)="addMutedWord()"
             class="px-4 py-2 rounded-lg bg-primary text-on-fill text-sm font-medium hover:bg-primary/90 transition-colors"
             [attr.aria-label]="'privacy.hub.addMutedWord' | t"
@@ -75,7 +75,7 @@
                 class="flex items-center justify-between p-3 hover:bg-surface-200 transition-colors"
               >
                 <span class="text-sm text-text-primary">{{ word }}</span>
-                <button
+                <button hlmBtn
                   (click)="removeMutedWord(word)"
                   class="text-danger hover:text-danger/80 text-sm font-medium transition-colors"
                   [attr.aria-label]="'privacy.hub.removeMutedWordAria' | t: { word: word }"

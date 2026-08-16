@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, signal, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -9,7 +10,7 @@ import { ModerationService, ModerationItem } from '../../services/moderation.ser
 
 @Component({
   selector: 'app-moderation-queue',
-  imports: [DatePipe, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [HlmButton, DatePipe, TranslatePipe, SanitiseHtmlPipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './moderation-queue.component.html',
   styleUrls: ['./moderation-queue.component.scss'],
 })

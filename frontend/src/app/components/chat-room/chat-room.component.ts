@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { showToast, showErrorToast } from '../../services/toast.service';
 import { Component, inject, signal, computed, OnDestroy, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -38,7 +40,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-chat-room',
-  imports: [
+  imports: [HlmInput, HlmButton, 
     CommonModule,
     FormsModule,
     TranslatePipe,

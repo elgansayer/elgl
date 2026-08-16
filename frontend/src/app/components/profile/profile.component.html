@@ -103,7 +103,7 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <button
+          <button hlmBtn
             (click)="showVisitors.set(!showVisitors())"
             class="app-pill"
             [attr.aria-label]="'profile.visitorsHide' | t"
@@ -494,7 +494,7 @@
                     >
                       <span>{{ getLanguageFlagIcon(code) }}</span>
                       <span>{{ getLanguageName(code) }}</span>
-                      <button
+                      <button hlmBtn
                         type="button"
                         (click)="removeNativeLanguage(code)"
                         class="text-on-fill/70 hover:text-on-fill"
@@ -524,7 +524,7 @@
                   >
                     <span>{{ getLanguageFlagIcon(code) }}</span>
                     <span>{{ getLanguageName(code) }}</span>
-                    <button
+                    <button hlmBtn
                       type="button"
                       (click)="removeTargetLanguage(code)"
                       class="text-on-fill/70 hover:text-on-fill"
@@ -590,7 +590,7 @@
               'profile.visibilityLabel' | t
             }}</label>
             <div class="flex gap-2" role="radiogroup">
-              <button
+              <button hlmBtn
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'everyone'"
@@ -603,7 +603,7 @@
               >
                 {{ 'profile.visibility.everyone' | t }}
               </button>
-              <button
+              <button hlmBtn
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'vips_only'"
@@ -616,7 +616,7 @@
               >
                 {{ 'profile.visibility.vipsOnly' | t }}
               </button>
-              <button
+              <button hlmBtn
                 type="button"
                 class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
                 [class.bg-primary]="profileVisibility() === 'hidden'"
@@ -729,7 +729,7 @@
             <label class="block text-xs font-semibold uppercase text-text-secondary mb-2">{{
               'profile.statusLabel' | t
             }}</label>
-            <input
+            <input hlmInput
               type="text"
               [(ngModel)]="statusText"
               name="statusText"

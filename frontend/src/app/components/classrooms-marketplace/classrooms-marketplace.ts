@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, computed, OnInit, DestroyRef } from '@angular/core';
 import { AudioRoomsStore, AudioRoomRecord } from '../../services/audio-rooms.store';
 import { AuthService } from '../../services/auth.service';
@@ -17,7 +18,7 @@ import { JoyrideModule } from 'ngx-joyride';
 
 @Component({
   selector: 'app-classrooms-marketplace',
-  imports: [TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
+  imports: [HlmButton, TranslatePipe, VideoClassroomErrorBoundaryComponent, AppSkeletonLoaderComponent, AppEmptyStateComponent, JoyrideModule],
   templateUrl: './classrooms-marketplace.html',
   styles: [''],
 })

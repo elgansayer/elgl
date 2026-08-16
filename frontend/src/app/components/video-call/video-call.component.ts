@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   OnInit,
@@ -31,7 +32,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-video-call',
-  imports: [
+  imports: [HlmButton, 
     AppButtonSecondaryComponent,
     AppGradientButtonComponent,
     LiveChatOverlayComponent,
@@ -66,7 +67,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
               <p class="text-sm text-white/50">
                 {{ 'videoClassroomErrorBoundary.description' | t }}
               </p>
-              <button
+              <button hlmBtn
                 type="button"
                 (click)="endCall()"
                 class="rounded-full bg-danger hover:bg-danger/90 text-on-fill font-bold px-6 py-2.5 text-sm transition-colors"

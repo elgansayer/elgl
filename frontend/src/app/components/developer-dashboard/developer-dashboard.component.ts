@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource } from '@angular/core';
 import { UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +16,7 @@ import { AppButtonSecondaryComponent } from '../primitives/button-secondary/butt
 
 @Component({
   selector: 'app-developer-dashboard',
-  imports: [
+  imports: [HlmButton, 
     FormsModule,
     TranslatePipe,
     UpperCasePipe,

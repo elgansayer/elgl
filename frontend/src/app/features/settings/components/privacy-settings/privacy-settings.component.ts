@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, effect } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../core/services/settings.service';
@@ -5,7 +6,7 @@ import { SettingsService } from '../../../../core/services/settings.service';
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [HlmButton, ReactiveFormsModule],
   template: `
     <form [formGroup]="form">
       <h3>Direct Messages</h3>
@@ -23,7 +24,7 @@ import { SettingsService } from '../../../../core/services/settings.service';
         </select>
       </label>
 
-      <button (click)="save()" [disabled]="form.pristine">Save Changes</button>
+      <button hlmBtn (click)="save()" [disabled]="form.pristine">Save Changes</button>
     </form>
   `,
 })

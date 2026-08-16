@@ -9,7 +9,7 @@
         <label for="customToneUrl" class="block text-sm font-medium">
           {{ 'notification_customization.tone_url_label' | t }}
         </label>
-        <input
+        <input hlmInput
           id="customToneUrl"
           type="url"
           [value]="customToneUrl()"
@@ -23,7 +23,7 @@
         <label for="vibrationPattern" class="block text-sm font-medium">
           {{ 'notification_customization.vibration_pattern_label' | t }}
         </label>
-        <input
+        <input hlmInput
           id="vibrationPattern"
           type="text"
           [value]="vibrationPattern()"
@@ -41,7 +41,7 @@
         <p class="text-success">{{ 'common.saved' | t }}</p>
       }
 
-      <button
+      <button hlmBtn
         type="submit"
         [disabled]="saving()"
         class="rounded-md bg-primary px-4 py-2 text-on-fill"

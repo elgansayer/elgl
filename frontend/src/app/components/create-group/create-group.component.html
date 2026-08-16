@@ -7,7 +7,7 @@
   <section class="create-group-form">
     <div class="form-group">
       <label for="groupNameInput" class="form-label">{{ 'group.nameLabel' | t }}</label>
-      <input
+      <input hlmInput
         id="groupNameInput"
         type="text"
         [(ngModel)]="groupName"
@@ -28,7 +28,7 @@
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.35-4.35" />
           </svg>
-          <input
+          <input hlmInput
             type="text"
             [(ngModel)]="searchQuery"
             (ngModelChange)="searchUsers()"
@@ -49,7 +49,7 @@
       @if (searchResults().length > 0) {
         <div class="search-results">
           @for (user of searchResults(); track user.id) {
-            <button
+            <button hlmBtn
               class="search-result-item"
               (click)="addMember(user)"
               [disabled]="selectedMemberIds().includes(user.id)"
@@ -95,7 +95,7 @@
                 <div class="user-info">
                   <span class="user-name">{{ member.display_name || member.id }}</span>
                 </div>
-                <button
+                <button hlmBtn
                   class="remove-btn"
                   (click)="removeMember(member)"
                   [attr.aria-label]="'group.removeMemberAria' | t: { name: member.display_name || member.id }"
@@ -121,7 +121,7 @@
       <p class="success-message">{{ 'group.successMsg' | t }}</p>
     }
 
-    <button
+    <button hlmBtn
       class="create-btn"
       (click)="createGroup()"
       [disabled]="isCreating() || !groupName.trim() || selectedMembers().length === 0"

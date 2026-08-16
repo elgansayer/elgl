@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -5,7 +7,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
 @Component({
   selector: 'app-room-chat',
-  imports: [CommonModule, FormsModule],
+  imports: [HlmInput, HlmButton, CommonModule, FormsModule],
   template: `
     <div
       class="bg-surface-200 rounded-3xl shadow-xl border border-surface-100 flex flex-col h-96 overflow-hidden"
@@ -16,7 +18,7 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
         <span class="font-black text-xs text-text-primary flex items-center gap-1.5">
           <span>💬 Synchronised room chat and subtitles</span>
         </span>
-        <button
+        <button hlmBtn
           (click)="activeTab.set(activeTab() === 'chat' ? 'subtitles' : 'chat')"
           [class]="
             'px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-colors ' +
@@ -77,14 +79,14 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
       @if (activeTab() === 'chat') {
         <div class="p-3 bg-surface-300 border-t border-surface-100 flex gap-2">
-          <input
+          <input hlmInput
             type="text"
             [(ngModel)]="inputText"
             (keyup.enter)="send()"
             placeholder="Send a chat message to the room..."
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-primary"
           />
-          <button
+          <button hlmBtn
             (click)="send()"
             class="px-4 py-1.5 bg-primary hover:bg-primary-dark text-on-fill rounded-xl font-bold text-xs shadow"
           >
@@ -95,20 +97,20 @@ import { AudioRoomsStore } from '../../services/audio-rooms.store';
 
       @if (activeTab() === 'subtitles' && store.isSpeaker()) {
         <div class="p-3 bg-secondary/10 border-t border-secondary/30 flex gap-2">
-          <input
+          <input hlmInput
             type="text"
             [(ngModel)]="inputCaption"
             (keyup.enter)="sendSubtitle()"
             placeholder="Simulate speech-to-text live subtitle broadcast..."
             class="flex-1 px-3 py-1.5 border rounded-xl bg-surface-200 text-xs focus:ring-2 focus:ring-secondary"
           />
-          <button
+          <button hlmBtn
             (click)="sendSubtitle()"
             class="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-on-fill rounded-xl font-bold text-xs shadow"
           >
             Broadcast caption
           </button>
-          <button
+          <button hlmBtn
             (click)="broadcastAICaption()"
             class="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-on-fill rounded-xl font-bold text-xs shadow"
           >

@@ -1,3 +1,4 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { form, required, FormField } from '@angular/forms/signals';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -15,7 +16,7 @@ interface ReportFormModel {
 
 @Component({
   selector: 'app-report-user-modal',
-  imports: [FormField, TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
+  imports: [HlmTextarea, FormField, TranslatePipe, ...HlmButtonImports, ...HlmDialogImports],
   templateUrl: './report-user-modal.component.html',
 })
 export class ReportUserModalComponent {

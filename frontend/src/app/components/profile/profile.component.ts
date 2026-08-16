@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, viewChild, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -37,7 +39,7 @@ type PrivacyVisibility = 'everyone' | 'vips_only' | 'hidden';
 
 @Component({
   selector: 'app-profile',
-  imports: [
+  imports: [HlmInput, HlmButton, 
     CommonModule,
     FormsModule,
     RouterLink,

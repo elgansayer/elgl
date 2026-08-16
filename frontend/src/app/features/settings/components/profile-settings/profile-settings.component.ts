@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, FormArray, Validators } from '@angular/forms';
 import { debounceTime } from 'rxjs';
@@ -36,7 +39,7 @@ const isJLPTLevel = (level: unknown): level is JLPTLevel => {
 @Component({
   selector: 'app-profile-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
   templateUrl: './profile-settings.component.html',
 })
 export class ProfileSettingsComponent implements OnInit {

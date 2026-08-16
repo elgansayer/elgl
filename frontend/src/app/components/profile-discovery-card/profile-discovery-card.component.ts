@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { SanitiseHtmlPipe } from '../../pipes/sanitise-html.pipe';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -7,7 +8,7 @@ import { DiscoveryService } from '../../services/discovery.service';
 
 @Component({
   selector: 'app-profile-discovery-card',
-  imports: [SanitiseHtmlPipe, TranslatePipe],
+  imports: [HlmButton, SanitiseHtmlPipe, TranslatePipe],
   template: `
     <article
       class="bg-surface-400 rounded-xl overflow-hidden border border-surface-100 p-3 sm:p-4 transition hover:border-accent-500/50 active:scale-[0.98] touch-manipulation cursor-pointer"
@@ -33,7 +34,7 @@ import { DiscoveryService } from '../../services/discovery.service';
       @if (displayBio(); as bio) {
         <p class="mt-2 text-text-secondary text-xs sm:text-sm line-clamp-2">{{ bio | sanitiseHtml }}</p>
         @if (profile()?.bio_text) {
-          <button
+          <button hlmBtn
             type="button"
             class="mt-1 text-[10px] text-accent-400 hover:text-accent-300 transition-colors"
             (click)="toggleTranslation($event)"

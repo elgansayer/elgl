@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { DatePipe, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -15,7 +16,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 @Component({
   selector: 'app-escrow',
-  imports: [
+  imports: [HlmButton, 
     RouterLink,
     DatePipe,
     TranslatePipe,
@@ -28,7 +29,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
   template: `
     <div class="app-screen app-padded pb-10">
       <header class="flex items-center gap-3 pt-2">
-        <button
+        <button hlmBtn
           type="button"
           (click)="goBack()"
           [attr.aria-label]="'common.back' | t"
@@ -40,7 +41,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
           <h1 class="app-section-title">{{ 'escrow.title' | t }}</h1>
           <p class="app-muted">{{ 'escrow.subtitle' | t }}</p>
         </div>
-        <button
+        <button hlmBtn
           type="button"
           (click)="startOnboardingTour()"
           class="ms-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary text-on-fill hover:bg-primary/90 transition-colors text-sm font-bold"
@@ -54,7 +55,7 @@ type StatusFilter = (typeof STATUS_FILTERS)[number];
       <!-- Status Filter Pills -->
       <nav class="flex gap-2 overflow-x-auto py-3" aria-label="{{ 'escrow.filterLabel' | t }}">
         @for (f of statusFilters; track f) {
-          <button
+          <button hlmBtn
             type="button"
             class="whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors"
             [class.bg-primary]="selectedStatus() === f"

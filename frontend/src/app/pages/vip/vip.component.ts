@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { JoyrideModule } from 'ngx-joyride';
@@ -31,7 +32,7 @@ interface FaqItem {
 
 @Component({
   selector: 'app-vip',
-  imports: [
+  imports: [HlmButton, 
     JoyrideModule,
     TranslatePipe,
     AppButtonPrimaryComponent,

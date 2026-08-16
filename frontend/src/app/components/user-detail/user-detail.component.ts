@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, input, effect } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -10,7 +11,7 @@ import { AchievementsComponent } from '../../achievements/achievements.component
 
 @Component({
   selector: 'app-user-detail',
-  imports: [CommonModule, RouterLink, TranslatePipe, ReportButtonComponent, AchievementsComponent],
+  imports: [HlmButton, CommonModule, RouterLink, TranslatePipe, ReportButtonComponent, AchievementsComponent],
   templateUrl: './user-detail.component.html',
   styleUrls: ['./user-detail.component.scss'],
 })

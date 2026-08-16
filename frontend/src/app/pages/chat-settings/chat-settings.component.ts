@@ -1,10 +1,11 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { ChatSettingsService } from '../../services/chat-settings.service';
 
 @Component({
   selector: 'app-chat-settings',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="p-4 max-w-md mx-auto space-y-6 bg-surface-500 min-h-screen">
       <h2 class="text-xl font-semibold text-text-primary">{{ 'chat_settings.title' | t }}</h2>
@@ -22,7 +23,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
               'chat_settings.auto_translate_desc' | t
             }}</span>
           </div>
-          <button
+          <button hlmBtn
             role="switch"
             [attr.aria-checked]="autoTranslate()"
             [attr.aria-label]="'chat_settings.auto_translate' | t"
@@ -47,7 +48,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
               'chat_settings.read_receipts_desc' | t
             }}</span>
           </div>
-          <button
+          <button hlmBtn
             role="switch"
             [attr.aria-checked]="readReceipts()"
             [attr.aria-label]="'chat_settings.read_receipts' | t"
@@ -72,7 +73,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
               'chat_settings.enter_to_send_desc' | t
             }}</span>
           </div>
-          <button
+          <button hlmBtn
             role="switch"
             [attr.aria-checked]="enterToSend()"
             [attr.aria-label]="'chat_settings.enter_to_send' | t"
@@ -91,7 +92,7 @@ import { ChatSettingsService } from '../../services/chat-settings.service';
 
         <!-- Reset to defaults -->
         <div class="mt-8 text-center">
-          <button
+          <button hlmBtn
             class="text-primary text-sm underline decoration-primary"
             (click)="resetToDefaults()"
           >

@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, signal, resource } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -9,7 +12,7 @@ import {
 
 @Component({
   selector: 'app-communities',
-  imports: [FormsModule, TranslatePipe],
+  imports: [HlmTextarea, HlmInput, HlmButton, FormsModule, TranslatePipe],
   templateUrl: './communities.component.html',
 })
 export class CommunitiesComponent {

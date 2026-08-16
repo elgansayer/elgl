@@ -1,3 +1,6 @@
+import { HlmTextarea } from '@spartan-ng/helm/textarea';
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, output } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -6,7 +9,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-create-event-modal',
-  imports: [ReactiveFormsModule, TranslatePipe],
+  imports: [HlmTextarea, HlmInput, HlmButton, ReactiveFormsModule, TranslatePipe],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div class="max-w-md w-full rounded-2xl bg-surface-200 p-6 shadow-xl">
@@ -20,7 +23,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="titleInput">
               {{ 'events.title' | t }}
             </label>
-            <input
+            <input hlmInput
               id="titleInput"
               formControlName="title"
               type="text"
@@ -35,7 +38,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="dateTimeInput">
               {{ 'events.dateTime' | t }}
             </label>
-            <input
+            <input hlmInput
               id="dateTimeInput"
               formControlName="date_time"
               type="datetime-local"
@@ -100,7 +103,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="locationInput">
               {{ 'events.where' | t }}
             </label>
-            <input
+            <input hlmInput
               id="locationInput"
               formControlName="location"
               type="text"
@@ -114,7 +117,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="maxParticipantsInput">
               {{ 'events.maxParticipants' | t }}
             </label>
-            <input
+            <input hlmInput
               id="maxParticipantsInput"
               formControlName="max_participants"
               type="number"
@@ -130,7 +133,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
             <label class="mb-1 block text-sm" for="descriptionInput">
               {{ 'events.description' | t }}
             </label>
-            <textarea
+            <textarea hlmTextarea
               id="descriptionInput"
               formControlName="description"
               rows="3"
@@ -141,14 +144,14 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
           <!-- Action buttons -->
           <div class="flex justify-end gap-3">
-            <button
+            <button hlmBtn
               type="button"
               (click)="dismiss.emit()"
               class="rounded-lg bg-surface-400 text-text-primary px-4 py-2 text-sm"
             >
               {{ 'events.cancel' | t }}
             </button>
-            <button
+            <button hlmBtn
               type="submit"
               [disabled]="eventForm.invalid"
               class="rounded-lg bg-accent text-on-fill px-4 py-2 text-sm font-semibold disabled:opacity-50"

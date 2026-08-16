@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   computed,
@@ -48,7 +49,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 @Component({
   selector: 'app-root',
-  imports: [
+  imports: [HlmButton, 
     RouterOutlet,
     RouterLink,
     RouterLinkActive,

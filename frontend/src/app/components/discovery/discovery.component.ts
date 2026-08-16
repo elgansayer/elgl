@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -44,7 +45,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 @Component({
   selector: 'app-discovery',
-  imports: [
+  imports: [HlmButton, 
     FormsModule,
     TranslatePipe,
     ScrollablePillsComponent,

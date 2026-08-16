@@ -2,7 +2,7 @@
   <!-- Top App Bar -->
   <header class="bg-gradient-to-b from-surface-400 to-surface-500 pt-12 pb-3 ps-4 pe-4 shrink-0">
     <div class="flex items-center justify-between mb-4">
-      <button
+      <button hlmBtn
         [attr.aria-label]="'common.openMenu' | t"
         (click)="notImplemented()"
         class="text-text-primary"
@@ -20,7 +20,7 @@
 
     <!-- Tab Navigation: Chats | Groups -->
     <div class="flex rounded-full bg-surface-300 p-1 mb-4 mx-4">
-      <button
+      <button hlmBtn
         (click)="activeTab.set('chats')"
         class="flex-1 py-2 rounded-full text-sm font-semibold transition-colors duration-200"
         [class.bg-accent-500]="activeTab() === 'chats'"
@@ -30,7 +30,7 @@
       >
         {{ 'chatList.tabChats' | t }}
       </button>
-      <button
+      <button hlmBtn
         (click)="activeTab.set('groups')"
         class="flex-1 py-2 rounded-full text-sm font-semibold transition-colors duration-200"
         [class.bg-accent-500]="activeTab() === 'groups'"
@@ -73,7 +73,7 @@
             'chatList.quickPlay' | t
           }}</span>
         </a>
-        <button
+        <button hlmBtn
           (click)="notImplemented()"
           class="flex flex-col items-center gap-1"
           [attr.aria-label]="'chatList.quickAiTrans' | t"
@@ -87,7 +87,7 @@
             'chatList.quickAiTrans' | t
           }}</span>
         </button>
-        <button
+        <button hlmBtn
           (click)="notImplemented()"
           class="flex flex-col items-center gap-1"
           [attr.aria-label]="'chatList.quickJpAi' | t"
@@ -101,7 +101,7 @@
             'chatList.quickJpAi' | t
           }}</span>
         </button>
-        <button
+        <button hlmBtn
           (click)="notImplemented()"
           class="flex flex-col items-center gap-1"
           [attr.aria-label]="'chatList.quickMore' | t"
@@ -122,7 +122,7 @@
     @if (activeTab() === 'chats') {
       <div class="bg-surface-200 rounded-pill px-3 py-1.5 flex items-center gap-2 mb-3">
         <span class="text-text-muted text-sm">🔍</span>
-        <input
+        <input hlmInput
           [ngModel]="search()"
           (ngModelChange)="search.set($event)"
           type="text"
@@ -136,7 +136,7 @@
     <!-- Filter Pills (chats tab only) -->
     @if (activeTab() === 'chats') {
       <div class="flex items-center">
-        <button
+        <button hlmBtn
           [attr.aria-label]="'common.filterOptions' | t"
           (click)="notImplemented()"
           class="bg-surface-200 text-text-secondary w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ms-4"
@@ -228,7 +228,7 @@
             </div>
           </div>
 
-          <button
+          <button hlmBtn
             type="button"
             (click)="toggleRoomLock($event, preview.id)"
             class="shrink-0 text-text-muted hover:text-text-primary p-1"
@@ -243,7 +243,7 @@
       <!-- Locked folder section -->
       @if (lockedRoomIds().length > 0) {
         <div class="px-4 py-2 border-t border-surface-200">
-          <button
+          <button hlmBtn
             (click)="toggleLockedFolder()"
             class="flex items-center gap-2 text-text-primary"
             [attr.aria-label]="'chatList.lockedFolder' | t"
@@ -303,7 +303,7 @@
                 </div>
               </div>
 
-              <button
+              <button hlmBtn
                 type="button"
                 (click)="toggleRoomLock($event, preview.id)"
                 class="shrink-0 text-text-muted hover:text-text-primary p-1"

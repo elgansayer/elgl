@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, input, output, signal, computed } from '@angular/core';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -15,7 +17,7 @@ export interface ShareEntity {
 @Component({
   selector: 'app-share-modal',
   standalone: true,
-  imports: [TranslatePipe, A11yClickableDirective],
+  imports: [HlmInput, HlmButton, TranslatePipe, A11yClickableDirective],
   templateUrl: './share-modal.html',
   styleUrls: ['./share-modal.scss']
 })

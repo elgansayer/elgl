@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -21,7 +22,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
 
 @Component({
   selector: 'app-voip-call',
-  imports: [FormsModule],
+  imports: [HlmButton, FormsModule],
   template: `
     @if (showCallUI()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -50,7 +51,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
           <div class="flex justify-center gap-6">
             <!-- Incoming call actions -->
             @if (callDirection() === 'incoming' && callState() === 'ringing') {
-              <button
+              <button hlmBtn
                 (click)="acceptCall()"
                 class="w-16 h-16 rounded-full bg-success hover:bg-success/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
@@ -63,7 +64,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                   />
                 </svg>
               </button>
-              <button
+              <button hlmBtn
                 (click)="rejectCall()"
                 class="w-16 h-16 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >
@@ -84,7 +85,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
               callState() === 'connected' ||
               callState() === 'connecting'
             ) {
-              <button
+              <button hlmBtn
                 (click)="toggleMute()"
                 [class]="
                   isMuted()
@@ -106,7 +107,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                   />
                 </svg>
               </button>
-              <button
+              <button hlmBtn
                 (click)="toggleVideo()"
                 [class]="
                   isVideoEnabled()
@@ -128,7 +129,7 @@ export type CallState = 'ringing' | 'connecting' | 'connected' | 'ended' | 'miss
                   />
                 </svg>
               </button>
-              <button
+              <button hlmBtn
                 (click)="endCall()"
                 class="w-16 h-16 rounded-full bg-danger hover:bg-danger/90 text-white flex items-center justify-center transition-all hover:scale-110 shadow-lg"
               >

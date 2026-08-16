@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal, ErrorHandler } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
@@ -9,7 +10,7 @@ import { CrashReportService } from '../../../services/crash-report.service';
 
 @Component({
   selector: 'app-admin-blocks',
-  imports: [
+  imports: [HlmButton, 
     TranslatePipe,
     DatePipe,
     AppCardComponent,

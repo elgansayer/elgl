@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -34,7 +35,7 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
 
 @Component({
   selector: 'app-backup-restore',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="min-h-screen bg-surface-500 text-text-primary ps-4 pe-4 pt-6 pb-10">
       <h1 class="text-2xl font-bold mb-1">{{ 'backupRestore.title' | t }}</h1>
@@ -61,7 +62,7 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
       }
 
       <div class="flex flex-col gap-3 sm:flex-row">
-        <button
+        <button hlmBtn
           type="button"
           class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-fill hover:bg-primary/90 disabled:opacity-50"
           [disabled]="!selectedRoom()"
@@ -84,7 +85,7 @@ function isRecordArray(value: unknown): value is Record<string, unknown>[] {
           />
         </label>
 
-        <button
+        <button hlmBtn
           type="button"
           class="rounded-lg bg-success px-4 py-2 text-sm font-semibold text-on-fill hover:bg-success/90 disabled:opacity-50"
           [disabled]="!selectedRoom() || !importFile()"

@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, signal, computed, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AuthService } from '../../services/auth.service';
@@ -10,7 +12,7 @@ function getInputValue(event: Event): string {
 @Component({
   selector: 'app-password-policy-reset',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [HlmInput, HlmButton, TranslatePipe],
   template: `
     <div class="max-w-md mx-auto my-8 p-6 rounded-xl bg-surface-200 text-text-primary">
       <h2 class="mb-6 text-xl font-semibold">{{ 'password.resetTitle' | t }}</h2>
@@ -19,7 +21,7 @@ function getInputValue(event: Event): string {
         <label for="current-password" class="block mb-1 text-sm text-text-secondary">{{
           'password.currentPassword' | t
         }}</label>
-        <input
+        <input hlmInput
           id="current-password"
           type="password"
           [value]="currentPassword()"
@@ -32,7 +34,7 @@ function getInputValue(event: Event): string {
         <label for="new-password" class="block mb-1 text-sm text-text-secondary">{{
           'password.newPassword' | t
         }}</label>
-        <input
+        <input hlmInput
           id="new-password"
           type="password"
           [value]="newPassword()"
@@ -60,7 +62,7 @@ function getInputValue(event: Event): string {
         <label for="confirm-password" class="block mb-1 text-sm text-text-secondary">{{
           'password.confirmPassword' | t
         }}</label>
-        <input
+        <input hlmInput
           id="confirm-password"
           type="password"
           [value]="confirmPassword()"
@@ -76,7 +78,7 @@ function getInputValue(event: Event): string {
         </div>
       }
 
-      <button
+      <button hlmBtn
         class="block w-full py-2.5 rounded-lg text-on-fill font-semibold cursor-pointer bg-gradient-to-r from-primary to-secondary disabled:opacity-40"
         [disabled]="!allValid() || isSubmitting()"
         (click)="resetPassword()"

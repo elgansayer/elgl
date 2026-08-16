@@ -1,3 +1,5 @@
+import { HlmInput } from '@spartan-ng/helm/input';
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, computed, inject, signal, resource } from '@angular/core';
 import { Location } from '@angular/common';
 import { TranslatePipe } from '../../../services/translate.pipe';
@@ -13,7 +15,7 @@ import { AppButtonPrimaryComponent } from '../../../components/primitives/button
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [
+  imports: [HlmInput, HlmButton, 
     TranslatePipe,
     FormsModule,
     FontScaleSliderComponent,

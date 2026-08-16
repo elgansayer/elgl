@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { EventsService, Event } from '../../services/events.service';
@@ -6,13 +7,13 @@ import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-events-feed',
-  imports: [CommonModule, TranslatePipe, DatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe, DatePipe],
   template: `
     <h1 class="text-2xl font-bold mb-4">{{ 'events.title' | t }}</h1>
 
     <!-- Filter bar -->
     <div class="flex gap-2 mb-4 items-center flex-wrap">
-      <button
+      <button hlmBtn
         class="px-3 py-1 rounded-full text-sm"
         [class.bg-primary]="status() === 'upcoming'"
         [class.text-on-fill]="status() === 'upcoming'"
@@ -20,7 +21,7 @@ import { firstValueFrom } from 'rxjs';
       >
         {{ 'events.filter_upcoming' | t }}
       </button>
-      <button
+      <button hlmBtn
         class="px-3 py-1 rounded-full text-sm"
         [class.bg-primary]="status() === 'past'"
         [class.text-on-fill]="status() === 'past'"
@@ -71,7 +72,7 @@ import { firstValueFrom } from 'rxjs';
         }
       </div>
       @if (hasMore()) {
-        <button
+        <button hlmBtn
           class="mt-4 w-full py-2 bg-surface-300 border border-surface-100 text-text-primary rounded text-sm font-medium disabled:opacity-50"
           [disabled]="isLoading()"
           (click)="loadMore()"

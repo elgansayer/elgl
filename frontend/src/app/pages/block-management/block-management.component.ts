@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 import { AppEmptyStateComponent } from '../../components/primitives/empty-state/empty-state.component';
@@ -10,7 +11,7 @@ import {
 
 @Component({
   selector: 'app-block-management',
-  imports: [TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
+  imports: [HlmButton, TranslatePipe, AppEmptyStateComponent, AppSkeletonLoaderComponent, AppCardComponent],
   templateUrl: './block-management.component.html',
   styles: [],
 })

@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output } from '@angular/core';
 import { TranslatePipe } from '../../services/translate.pipe';
 
@@ -10,7 +11,7 @@ export interface PollViewData {
 
 @Component({
   selector: 'app-quick-poll-display',
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   template: `
     <div class="bg-surface p-4 rounded-xl shadow-lg">
       <h4 class="font-semibold mb-3">{{ data().question }}</h4>
@@ -23,7 +24,7 @@ export interface PollViewData {
             <span class="relative z-10 pe-2 text-sm leading-6 float-end">{{ data().votes[idx] }}</span>
           </div>
           @if (allowVote()) {
-            <button (click)="vote.emit(idx)" class="px-3 py-1 rounded bg-primary text-on-primary text-xs">{{ 'quickPoll.vote' | t }}</button>
+            <button hlmBtn (click)="vote.emit(idx)" class="px-3 py-1 rounded bg-primary text-on-primary text-xs">{{ 'quickPoll.vote' | t }}</button>
           }
         </div>
       }

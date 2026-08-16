@@ -13,7 +13,7 @@
         class="w-full"
       ></audio>
       <div class="mt-2 flex items-center gap-2">
-        <button
+        <button hlmBtn
           type="button"
           (click)="togglePlayback()"
           class="rounded bg-primary px-4 py-2 text-sm font-medium text-on-fill transition hover:bg-primary/80"
@@ -34,7 +34,7 @@
       </p>
     </div>
   } @else {
-    <button
+    <button hlmBtn
       type="button"
       (click)="startRecording()"
       class="rounded bg-primary px-4 py-2 text-sm font-medium text-on-fill transition hover:bg-primary/80"
@@ -45,7 +45,7 @@
   }
 
   @if (isRecording()) {
-    <button
+    <button hlmBtn
       type="button"
       (click)="stopRecording()"
       class="rounded bg-danger px-4 py-2 text-sm font-medium text-on-fill transition hover:bg-danger/80 ms-2 me-2"

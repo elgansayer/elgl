@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import {
   Component,
   inject,
@@ -12,7 +13,7 @@ import { AudioIntroService } from '../../services/audio-intro.service';
 
 @Component({
   selector: 'app-audio-recorder',
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe],
   templateUrl: './audio-recorder.component.html',
   host: { class: 'block' },
 })

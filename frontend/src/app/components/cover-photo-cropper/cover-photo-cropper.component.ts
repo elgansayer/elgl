@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, input, output, signal } from '@angular/core';
 import { ImageCropperComponent } from 'ngx-image-cropper';
 
@@ -5,7 +6,7 @@ import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-cover-photo-cropper',
-  imports: [ImageCropperComponent, TranslatePipe],
+  imports: [HlmButton, ImageCropperComponent, TranslatePipe],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
@@ -37,13 +38,13 @@ import { TranslatePipe } from '../../services/translate.pipe';
         </div>
 
         <div class="flex justify-end gap-3">
-          <button
+          <button hlmBtn
             (click)="cancelCrop.emit()"
             class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary bg-surface-200 hover:bg-surface-100 rounded-lg transition-colors"
           >
             {{ 'common.cancel' | t }}
           </button>
-          <button
+          <button hlmBtn
             (click)="save()"
             [disabled]="!croppedBlob()"
             class="px-4 py-2 text-sm font-medium text-on-fill bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"

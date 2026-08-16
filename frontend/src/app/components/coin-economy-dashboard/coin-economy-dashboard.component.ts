@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, AfterViewInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
@@ -10,7 +11,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
 @Component({
   selector: 'app-coin-economy-dashboard',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, DecimalPipe, AppCardComponent],
+  imports: [HlmButton, TranslatePipe, RouterLink, DecimalPipe, AppCardComponent],
   template: `<div class="min-h-screen bg-surface-300 text-text-primary">
     <!-- Header with Coin Balance -->
     <section
@@ -22,7 +23,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
             <h1 class="text-3xl md:text-4xl font-extrabold">{{ 'coinEconomy.title' | t }}</h1>
             <p class="text-text-secondary mt-1">{{ 'coinEconomy.subtitle' | t }}</p>
           </div>
-          <button
+          <button hlmBtn
             type="button"
             class="rounded-full bg-surface-200 border border-surface-100 px-4 py-2 text-sm font-medium hover:bg-surface-100 transition-colors"
             (click)="startTour()"
@@ -46,7 +47,7 @@ import { AppCardComponent } from '../primitives/card/card.component';
             </div>
           </div>
           <div class="mt-4 flex flex-wrap gap-2">
-            <button
+            <button hlmBtn
               type="button"
               class="rounded-full bg-vip/20 px-4 py-2 text-sm font-semibold text-vip hover:bg-vip/30 transition-colors"
               (click)="claimDailyReward()"

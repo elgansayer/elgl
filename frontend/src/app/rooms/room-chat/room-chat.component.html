@@ -16,7 +16,7 @@
     }
   </div>
   <form class="flex items-center gap-2 border-t border-surface-100 p-3" (submit)="sendMessage()">
-    <input
+    <input hlmInput
       type="text"
       [value]="inputText()"
       (input)="onInput($event)"
@@ -24,7 +24,7 @@
       class="flex-1 rounded-full bg-surface-200 px-4 py-2 text-sm outline-none focus:bg-surface-100"
       [attr.aria-label]="'rooms.roomChat.send' | t"
     />
-    <button
+    <button hlmBtn
       type="submit"
       class="rounded-full bg-primary px-4 py-2 text-sm font-medium text-on-fill disabled:cursor-not-allowed disabled:opacity-50"
       [disabled]="!inputText().trim()"

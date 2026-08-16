@@ -16,7 +16,7 @@
           [attr.aria-label]="'nav.notifications' | t"
           >🔔</a
         >
-        <button
+        <button hlmBtn
           (click)="showComposeForm.set(!showComposeForm())"
           class="text-text-primary"
           [attr.aria-label]="'nav.compose' | t"
@@ -62,7 +62,7 @@
           class="h-10 w-10 rounded-full border border-surface-100 object-cover"
           loading="lazy"
         />
-        <textarea
+        <textarea hlmTextarea
           [ngModel]="newText()"
           (ngModelChange)="newText.set($event)"
           rows="3"
@@ -85,7 +85,7 @@
               @if (newMediaType() === 'audio') {
                 <audio [src]="url" controls class="h-8 max-w-[200px] rounded-full"></audio>
               }
-              <button
+              <button hlmBtn
                 aria-label="Remove media"
                 (click)="removeMedia(i)"
                 class="absolute -top-2 -end-2 h-5 w-5 bg-danger rounded-full flex items-center justify-center text-[10px] text-on-fill"
@@ -109,7 +109,7 @@
 
       <div class="mt-3 ms-13 flex justify-between items-center">
         <div class="flex items-center gap-2">
-          <button
+          <button hlmBtn
             aria-label="Record voice"
             (click)="showVoiceRecorder.set(true)"
             class="p-2 rounded-full bg-surface-300 text-primary hover:text-primary/80"
@@ -119,14 +119,14 @@
           <div
             class="flex items-center bg-surface-300 rounded-full px-2 py-1 focus-within:ring-1 ring-primary"
           >
-            <input
+            <input hlmInput
               type="text"
               [(ngModel)]="tempImageUrlInput"
               [placeholder]="'moments.imageUrlPlaceholder' | t"
               class="bg-transparent border-none text-xs w-24 text-text-primary outline-none px-2"
               [attr.aria-label]="'text input'"
             />
-            <button
+            <button hlmBtn
               (click)="addTempImageUrl()"
               class="text-[10px] font-bold text-primary"
               [attr.aria-label]="'moments.addImageBtn' | t"
@@ -135,7 +135,7 @@
             </button>
           </div>
         </div>
-        <button
+        <button hlmBtn
           [disabled]="isCreating() || (!newText().trim() && newMediaUrls().length === 0)"
           (click)="submitMoment(); showComposeForm.set(false)"
           class="bg-primary text-on-fill font-bold text-xs px-4 py-1.5 rounded-full shadow-lg hover:bg-primary/90 disabled:opacity-50 transition-opacity"
@@ -218,7 +218,7 @@
                 </div>
               </div>
               @if (moment.user_id === authService.currentUser()?.id) {
-                <button
+                <button hlmBtn
                   (click)="momentsStore.togglePin(moment.id)"
                   class="text-xs text-text-muted hover:text-text-primary"
                   [attr.aria-label]="'moments.unpinBtn' | t"
@@ -237,7 +237,7 @@
                   (wordClicked)="onWordClicked($event)"
                 ></app-tokenised-text>
                 @if (isMomentLong(moment)) {
-                  <button
+                  <button hlmBtn
                     (click)="toggleMomentExpansion(moment.id)"
                     class="text-xs font-bold text-primary block mt-1"
                     [attr.aria-label]="'moments.showLess' | t"
@@ -288,7 +288,7 @@
 
             <!-- Action Bar -->
             <div class="flex items-center gap-5 mt-4 text-text-secondary text-xs flex-wrap">
-              <button
+              <button hlmBtn
                 (click)="momentsStore.toggleLike(moment.id)"
                 class="flex items-center gap-1.5 transition-colors"
                 [class.text-danger]="moment.is_liked_by_me"
@@ -296,13 +296,13 @@
               >
                 <span class="text-lg leading-none">{{ moment.is_liked_by_me ? '❤️' : '🤍' }}</span>
               </button>
-              <button
+              <button hlmBtn
                 (click)="openLikedBy(moment)"
                 class="flex items-center gap-1.5 hover:text-text-primary transition-colors font-bold"
               >
                 <span>{{ moment.likes_count || 0 }}</span>
               </button>
-              <button
+              <button hlmBtn
                 (click)="toggleComments(moment)"
                 class="flex items-center gap-1.5 hover:text-text-primary transition-colors"
                 [attr.aria-label]="'moments.commentBtn' | t"
@@ -317,21 +317,21 @@
                   [text]="moment.text_content"
                   [language]="moment.target_language || 'en-GB'"
                 ></app-text-to-speech>
-                <button
+                <button hlmBtn
                   (click)="openGhostCorrection(moment)"
                   class="flex items-center gap-1.5 text-warning hover:opacity-80 font-bold transition-opacity"
                   [attr.aria-label]="'moments.correctBtn' | t"
                 >
                   <span>✏️</span> <span>{{ 'moments.correctBtn' | t }}</span>
                 </button>
-                <button
+                <button hlmBtn
                   (click)="quoteTextToComment(moment, moment.text_content)"
                   class="flex items-center gap-1 hover:text-text-primary font-bold transition-colors"
                   [attr.aria-label]="'moments.quoteBtn' | t"
                 >
                   <span>💬</span> <span>{{ 'moments.quoteBtn' | t }}</span>
                 </button>
-                <button
+                <button hlmBtn
                   (click)="toggleInlineTranslation(moment)"
                   class="flex items-center gap-1 hover:text-primary transition-colors ms-auto font-bold"
                   [attr.aria-label]="'moments.hideTranslation' | t"
@@ -359,7 +359,7 @@
                       }}</span>
                       <div class="flex items-center gap-2">
                         @if (comment.text_content) {
-                          <button
+                          <button hlmBtn
                             (click)="openGhostCorrection(moment, comment.text_content)"
                             class="text-[10px] text-warning font-bold hover:underline"
                             [attr.aria-label]="'moments.correctBtn' | t"
@@ -367,7 +367,7 @@
                             ✏️ {{ 'moments.correctBtn' | t }}
                           </button>
                         }
-                        <button
+                        <button hlmBtn
                           (click)="startReply(moment.id, comment)"
                           class="text-[10px] text-primary font-bold hover:underline"
                           [attr.aria-label]="'moments.replyBtn' | t"
@@ -398,7 +398,7 @@
                     class="flex items-center justify-between bg-primary/20 text-primary text-xs px-3 py-1 rounded-full border border-primary/30"
                   >
                     <span>{{ 'moments.replyingTo' | t: { name: '@' + replyTo.replyToName } }}</span>
-                    <button
+                    <button hlmBtn
                       (click)="cancelReply(moment.id)"
                       class="text-xs text-text-muted hover:text-text-primary font-bold"
                       [attr.aria-label]="'moments.cancelReply' | t"
@@ -410,7 +410,7 @@
 
                 <!-- Write Comment -->
                 <div class="flex gap-2 items-center">
-                  <input
+                  <input hlmInput
                     type="text"
                     [(ngModel)]="commentInputMap[moment.id]"
                     (keyup.enter)="submitComment(moment)"
@@ -422,7 +422,7 @@
                     class="flex-1 bg-surface-200 border-none rounded-full px-4 py-2 text-xs text-text-primary focus:ring-1 focus:ring-primary outline-none"
                     [attr.aria-label]="'text input'"
                   />
-                  <button
+                  <button hlmBtn
                     aria-label="Submit comment"
                     (click)="submitComment(moment)"
                     class="bg-primary text-on-fill rounded-full p-2 h-8 w-8 flex items-center justify-center shrink-0"

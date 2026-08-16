@@ -1,3 +1,4 @@
+import { HlmButton } from '@spartan-ng/helm/button';
 import { Component, inject, computed, signal, resource } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -5,7 +6,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
 
 @Component({
   selector: 'app-call-logs',
-  imports: [CommonModule, TranslatePipe],
+  imports: [HlmButton, CommonModule, TranslatePipe],
   template: `
     <div class="p-4">
       <h1 class="text-2xl font-bold mb-4">
@@ -13,7 +14,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
       </h1>
 
       <div class="flex gap-2 mb-4">
-        <button
+        <button hlmBtn
           class="px-3 py-1 rounded-full"
           [class.bg-primary-500]="selectedCallType() === undefined"
           [class.bg-surface]="selectedCallType() !== undefined"
@@ -21,7 +22,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
         >
           {{ 'call_logs.all' | t }}
         </button>
-        <button
+        <button hlmBtn
           class="px-3 py-1 rounded-full"
           [class.bg-primary-500]="selectedCallType() === 'incoming'"
           [class.bg-surface]="selectedCallType() !== 'incoming'"
@@ -29,7 +30,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
         >
           {{ 'call_logs.incoming' | t }}
         </button>
-        <button
+        <button hlmBtn
           class="px-3 py-1 rounded-full"
           [class.bg-primary-500]="selectedCallType() === 'outgoing'"
           [class.bg-surface]="selectedCallType() !== 'outgoing'"
@@ -37,7 +38,7 @@ import { CallLogRecord, CallLogsService } from '../../services/call-logs.service
         >
           {{ 'call_logs.outgoing' | t }}
         </button>
-        <button
+        <button hlmBtn
           class="px-3 py-1 rounded-full"
           [class.bg-primary-500]="selectedCallType() === 'missed'"
           [class.bg-surface]="selectedCallType() !== 'missed'"
