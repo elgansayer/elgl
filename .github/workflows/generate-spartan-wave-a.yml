@@ -1,0 +1,52 @@
+name: Generate Spartan foundation wave A
+
+on:
+  push:
+    branches: [spartan/foundation-wave-a]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-spartan-wave-a
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.event.head_commit.message == 'ci(spartan): bootstrap foundation wave A'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: spartan/foundation-wave-a
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+        working-directory: frontend
+      - name: Generate core Helm components with pinned Spartan CLI
+        working-directory: frontend
+        run: |
+          for component in card input textarea field label checkbox switch badge avatar empty; do
+            npx ng g @spartan-ng/cli:ui "$component"
+          done
+      - name: Run Spartan health gate
+        run: npm run check:spartan-health
+        working-directory: frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+      - name: Commit generated Helm files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add frontend
+          if git diff --cached --quiet; then
+            echo 'No generated changes found.'
+            exit 1
+          fi
+          git commit -m 'chore(spartan): generate foundation wave A'
+          git push origin HEAD:spartan/foundation-wave-a
