@@ -51,29 +51,30 @@ jobs:
                Never use --admin or otherwise bypass required GitHub checks or branch protection.
                If auto-merge cannot be enabled, leave the PR open for normal protected-branch merging.
 
-      # Auto-skip: check if Claude actually merged the PR
-      - name: Check if Claude merged the PR
+      - name: Check if Claude completed the reviewer handoff
         id: check_claude
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          STATE=$(gh pr view "$PR_NUMBER" \
-            --repo "$REPOSITORY" --json state -q '.state' 2>/dev/null || echo "OPEN")
-          echo "pr_state=$STATE"
-          if [ "$STATE" = "MERGED" ]; then
-            echo "merged=true" >> "$GITHUB_OUTPUT"
-            echo "PR already merged by Claude."
+          INFO=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" \
+            --json state,autoMergeRequest 2>/dev/null || echo '{"state":"OPEN","autoMergeRequest":null}')
+          STATE=$(echo "$INFO" | jq -r '.state // "OPEN"')
+          AUTO=$(echo "$INFO" | jq -r 'if .autoMergeRequest == null then "false" else "true" end')
+          echo "pr_state=$STATE auto_merge=$AUTO"
+          if [ "$STATE" = "MERGED" ] || [ "$STATE" = "CLOSED" ] || [ "$AUTO" = "true" ]; then
+            echo "done=true" >> "$GITHUB_OUTPUT"
+            echo "Claude completed the reviewer handoff; lower tiers are unnecessary."
           else
-            echo "merged=false" >> "$GITHUB_OUTPUT"
-            echo "PR not merged — falling through to Tier 2."
+            echo "done=false" >> "$GITHUB_OUTPUT"
+            echo "Claude did not merge or queue auto-merge — falling through to Tier 2."
           fi
 
       # ── TIER 2: DeepSeek V3 Chat (paid, heavy lifting) ────────────────────
       - name: Tier 2 - OpenHands (DeepSeek V3 — paid heavy fallback)
         id: secondary
-        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.merged == 'false'
+        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.done == 'false'
         continue-on-error: true
         # xinbenlv/openhands-action v1.0.1
         uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04
@@ -97,10 +98,31 @@ jobs:
                If auto-merge cannot be enabled, leave the PR open for normal protected-branch merging.
           cli_args: "--max-iterations 50"
 
+      - name: Check if DeepSeek completed the reviewer handoff
+        id: check_secondary
+        if: always() && steps.secondary.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          INFO=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" \
+            --json state,autoMergeRequest 2>/dev/null || echo '{"state":"OPEN","autoMergeRequest":null}')
+          STATE=$(echo "$INFO" | jq -r '.state // "OPEN"')
+          AUTO=$(echo "$INFO" | jq -r 'if .autoMergeRequest == null then "false" else "true" end')
+          echo "pr_state=$STATE auto_merge=$AUTO"
+          if [ "$STATE" = "MERGED" ] || [ "$STATE" = "CLOSED" ] || [ "$AUTO" = "true" ]; then
+            echo "done=true" >> "$GITHUB_OUTPUT"
+            echo "DeepSeek completed the reviewer handoff; Tier 3 is unnecessary."
+          else
+            echo "done=false" >> "$GITHUB_OUTPUT"
+            echo "DeepSeek did not merge or queue auto-merge — falling through to Tier 3."
+          fi
+
       # ── TIER 3: Gemini 3.6 Flash (lightweight last resort) ────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
         id: tertiary
-        if: steps.secondary.outcome == 'failure'
+        if: steps.secondary.outcome == 'failure' || steps.check_secondary.outputs.done == 'false'
         # xinbenlv/openhands-action v1.0.1
         uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04
         with:
