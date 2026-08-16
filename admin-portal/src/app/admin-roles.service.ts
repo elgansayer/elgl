@@ -58,6 +58,8 @@ export class AdminRolesService {
     userId?: string,
     roleKey?: string,
     grantedBy?: string,
+    startTime?: string,
+    endTime?: string,
   ): Observable<AdminRoleAssignmentsListResult> {
     const token = this.login.accessToken();
     if (!token) {
@@ -70,6 +72,8 @@ export class AdminRolesService {
     if (userId?.trim()) params = params.set('userId', userId.trim());
     if (roleKey?.trim()) params = params.set('roleKey', roleKey.trim());
     if (grantedBy?.trim()) params = params.set('grantedBy', grantedBy.trim());
+    if (startTime) params = params.set('startTime', startTime);
+    if (endTime) params = params.set('endTime', endTime);
 
     return from(this.login.apiBaseUrl()).pipe(
       switchMap((apiBaseUrl) =>

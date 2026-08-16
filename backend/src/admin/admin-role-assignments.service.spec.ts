@@ -74,4 +74,48 @@ describe('AdminRoleAssignmentsService', () => {
     });
     expect(eqGrantedBy).toHaveBeenCalledWith('granted_by', 'admin-2');
   });
+
+  it('filters assignments by inclusive grant-time bounds', async () => {
+    const range = vi
+      .fn()
+      .mockResolvedValue({ data: [], error: null, count: 0 });
+    const order = vi.fn().mockReturnValue({ range });
+    const lte = vi.fn().mockReturnValue({ order });
+    const gte = vi.fn().mockReturnValue({ lte });
+    const assignmentSelect = vi.fn().mockReturnValue({ gte, order });
+    const service = new AdminRoleAssignmentsService({
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ select: assignmentSelect }),
+      }),
+    } as unknown as SupabaseService);
+
+    await service.list({
+      startTime: '2026-08-15T20:00:00.000Z',
+      endTime: '2026-08-15T21:00:00.000Z',
+    });
+
+    expect(gte).toHaveBeenCalledWith(
+      'granted_at',
+      '2026-08-15T20:00:00.000Z',
+    );
+    expect(lte).toHaveBeenCalledWith(
+      'granted_at',
+      '2026-08-15T21:00:00.000Z',
+    );
+  });
+
+  it('rejects inverted grant-time bounds before querying storage', async () => {
+    const from = vi.fn();
+    const service = new AdminRoleAssignmentsService({
+      getClient: vi.fn().mockReturnValue({ from }),
+    } as unknown as SupabaseService);
+
+    await expect(
+      service.list({
+        startTime: '2026-08-15T22:00:00.000Z',
+        endTime: '2026-08-15T21:00:00.000Z',
+      }),
+    ).rejects.toThrow('startTime must be before or equal to endTime');
+    expect(from).not.toHaveBeenCalled();
+  });
 });
