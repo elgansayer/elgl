@@ -235,8 +235,8 @@ def test_pull_request_status_requires_all_checks_to_pass(tmp_path: Path) -> None
         "reviewDecision": "APPROVED",
         "headRefOid": "abc123",
         "statusCheckRollup": [
-            {"status": "COMPLETED", "conclusion": "SUCCESS"},
-            {"status": "COMPLETED", "conclusion": "SKIPPED"},
+            {"name": "backend / unit", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "frontend / build", "status": "COMPLETED", "conclusion": "SKIPPED"},
         ],
     }
     runner = Runner([ProcessResult(0, json.dumps(payload), "")])
@@ -246,7 +246,34 @@ def test_pull_request_status_requires_all_checks_to_pass(tmp_path: Path) -> None
 
     assert status.checks_passed
     assert not status.checks_pending
+    assert status.failed_checks == frozenset()
     assert status.head_sha == "abc123"
+
+
+def test_pull_request_status_exposes_terminal_failed_check_names(tmp_path: Path) -> None:
+    payload = {
+        "number": 42,
+        "state": "OPEN",
+        "isDraft": False,
+        "mergeable": "MERGEABLE",
+        "reviewDecision": "APPROVED",
+        "headRefOid": "abc123",
+        "statusCheckRollup": [
+            {"name": "backend / unit", "status": "COMPLETED", "conclusion": "FAILURE"},
+            {"context": "factory/independent-review", "state": "FAILURE"},
+            {"name": "frontend / build", "status": "IN_PROGRESS", "conclusion": ""},
+        ],
+    }
+    runner = Runner([ProcessResult(0, json.dumps(payload), "")])
+    client = GitHubClient("owner/repo", tmp_path, "secret", runner)
+
+    status = client.pull_request_status(42)
+
+    assert not status.checks_passed
+    assert status.checks_pending
+    assert status.failed_checks == frozenset(
+        {"backend / unit", "factory/independent-review"}
+    )
 
 
 def test_review_status_is_anchored_to_head_sha(tmp_path: Path) -> None:

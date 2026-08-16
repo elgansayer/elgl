@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Protocol
 
 from openhands_factory.exceptions import FactoryError
+from openhands_factory.failure_attribution import failed_check_names
 from openhands_factory.models import Task
 from openhands_factory.repository_guard import ProcessResult, run_process
 
@@ -31,6 +32,7 @@ class PullRequestStatus:
     head_sha: str
     checks_passed: bool
     checks_pending: bool
+    failed_checks: frozenset[str] = frozenset()
 
 
 class GitHubClient:
@@ -463,9 +465,10 @@ class GitHubClient:
             )
         )
         item = json.loads(output)
+        check_rollup = item.get("statusCheckRollup", [])
         conclusions: list[str] = []
         pending = False
-        for check in item.get("statusCheckRollup", []):
+        for check in check_rollup:
             conclusion = check.get("conclusion")
             status = check.get("status")
             if isinstance(conclusion, str) and conclusion:
@@ -484,4 +487,5 @@ class GitHubClient:
             head_sha=str(item["headRefOid"]),
             checks_passed=passed,
             checks_pending=pending,
+            failed_checks=failed_check_names(check_rollup),
         )
