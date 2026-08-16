@@ -8,6 +8,11 @@ from pathlib import Path
 from threading import Lock
 
 from openhands_factory.models import Job, JobState, Task
+from openhands_factory.retry_policy import (
+    deterministic_backoff,
+    record_failure_diagnostics,
+    reset_retry_diagnostics,
+)
 from openhands_factory.state import atomic_write_json, read_json
 
 
@@ -72,10 +77,44 @@ class JobStore:
             serialised.append(item)
         atomic_write_json(self.path, {"jobs": serialised})
 
+    @staticmethod
+    def _made_meaningful_progress(previous: Job, current: Job) -> bool:
+        """Return whether durable execution moved rather than merely being polled.
+
+        CI-pending and merge-queued states can be revisited many times without any
+        repository or state change. Those polls must not erase retry diagnostics.
+        A state transition, branch change, or reviewed head change is real progress.
+        """
+
+        return (
+            previous.state is not current.state
+            or previous.branch != current.branch
+            or previous.head_sha != current.head_sha
+        )
+
+    def _apply_retry_policy(self, previous: Job | None, job: Job) -> None:
+        """Attach restart-safe retry accounting immediately before durable save."""
+
+        if job.state in {JobState.DONE, JobState.QUARANTINED}:
+            return
+        if job.last_error and job.attempts > 0:
+            class_retry_count = record_failure_diagnostics(job, job.last_error)
+            fingerprint = job.last_failure_fingerprint or "unknown"
+            delay = deterministic_backoff(
+                class_retry_count,
+                jitter_key=f"{job.task.identifier}:{fingerprint}",
+            )
+            job.next_attempt_at = datetime.now(UTC) + delay
+            return
+        if previous is not None and self._made_meaningful_progress(previous, job):
+            reset_retry_diagnostics(job)
+
     def save_job(self, job: Job) -> None:
         """Merge one completed worker transition without losing sibling jobs."""
         with self._process_lock:
             jobs = self.load()
+            previous = jobs.get(job.task.identifier)
+            self._apply_retry_policy(previous, job)
             self._stamp(job)
             jobs[job.task.identifier] = job
             self.save(jobs)
