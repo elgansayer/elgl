@@ -32,7 +32,7 @@ class PullRequestStatus:
     head_sha: str
     checks_passed: bool
     checks_pending: bool
-    failed_checks: frozenset[str]
+    failed_checks: frozenset[str] = frozenset()
 
 
 class GitHubClient:
