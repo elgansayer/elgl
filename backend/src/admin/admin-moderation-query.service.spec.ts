@@ -13,7 +13,8 @@ describe('AdminModerationQueryService', () => {
     const eqReportedUser = vi.fn().mockReturnValue({ eq: eqReporterUser });
     const eqReason = vi.fn().mockReturnValue({ eq: eqReportedUser });
     const eqStatus = vi.fn().mockReturnValue({ eq: eqReason });
-    const select = vi.fn().mockReturnValue({ eq: eqStatus, gte, order });
+    const eqReportId = vi.fn().mockReturnValue({ eq: eqStatus });
+    const select = vi.fn().mockReturnValue({ eq: eqReportId, gte, order });
     const service = new AdminModerationQueryService({
       getClient: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({ select }),
@@ -24,6 +25,7 @@ describe('AdminModerationQueryService', () => {
       service.list({
         page: 2,
         pageSize: 20,
+        reportId: ' report-1 ',
         status: ' open ',
         reasonCategory: ' harassment ',
         reportedUserId: ' user-1 ',
@@ -33,6 +35,7 @@ describe('AdminModerationQueryService', () => {
       }),
     ).resolves.toEqual({ reports: [], total: 0, page: 2, pageSize: 20 });
 
+    expect(eqReportId).toHaveBeenCalledWith('id', 'report-1');
     expect(eqStatus).toHaveBeenCalledWith('status', 'open');
     expect(eqReason).toHaveBeenCalledWith('reason_category', 'harassment');
     expect(eqReportedUser).toHaveBeenCalledWith('reported_user_id', 'user-1');
