@@ -106,10 +106,10 @@ def test_doctor_reports_openai_subscription_credentials(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     factory_config = config(tmp_path)
-    auth = tmp_path / "home" / ".openhands" / "auth"
-    auth.mkdir(parents=True)
-    (auth / "openai_oauth.json").write_text("{}", encoding="utf-8")
-    monkeypatch.setattr("openhands_factory.doctor.Path.home", lambda: tmp_path / "home")
+    monkeypatch.setattr(
+        "openhands_factory.doctor.openai_credentials_available",
+        lambda _config: True,
+    )
     monkeypatch.setattr(
         "openhands_factory.doctor.subprocess.run",
         lambda *args, **kwargs: CompletedProcess(args, 0, "", ""),
