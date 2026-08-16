@@ -13,8 +13,9 @@ usage() {
 Usage: deploy-and-start-factory.sh --use-existing-credentials
 
 Deploys the OpenHands factory from the configured repository ref, repairs
-canonical host paths, installs the current systemd/watchdog configuration, runs
-the online doctor, and starts the daemon. It never prints provider credentials.
+canonical host paths, installs the current systemd/watchdog configuration,
+starts recovery supervision, and then runs online diagnostics. It never prints
+provider credentials.
 
 The repository defaults to the checkout containing this script and the ref
 defaults to main. Override them with FACTORY_SOURCE_REPOSITORY and
@@ -89,15 +90,9 @@ if [ ! -r /etc/hellotalk-factory/factory.env ]; then
   exit 1
 fi
 
-set -a
-# shellcheck disable=SC1091
-. /etc/hellotalk-factory/factory.env
-set +a
-export HOME=/var/lib/hellotalk-factory/home
-cd /tmp
-runuser -u hellotalk-factory --preserve-environment -- \
-  /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
-
+# start-factory owns the start-before-doctor ordering. In particular, do not run
+# doctor here while the daemon may still be stopped: daemon-heartbeat is one of
+# the diagnostics and would otherwise block recovery before it can start.
 "$WORKTREE/scripts/start-factory.sh"
 
 echo 'Factory deployment and startup completed.'
