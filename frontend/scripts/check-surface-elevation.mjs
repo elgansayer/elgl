@@ -13,8 +13,8 @@ function requireFragment(source, fragment, description) {
   if (!source.includes(fragment)) failures.push(`${description}: missing ${fragment}`);
 }
 
-requireFragment(tailwind, 'shadow-card', 'Relay card elevation token');
-requireFragment(tailwind, 'shadow-lift', 'Relay lift elevation token');
+requireFragment(tailwind, "card: '0 1px 2px", 'Relay card elevation token');
+requireFragment(tailwind, "lift: '0 12px 32px", 'Relay lift elevation token');
 requireFragment(card, 'bg-surface-200', 'AppCard base surface');
 requireFragment(card, 'border border-surface-100 shadow-card', 'AppCard default elevation');
 requireFragment(card, 'border border-surface-100 shadow-lift', 'AppCard elevated elevation');
