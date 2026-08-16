@@ -10,7 +10,7 @@ import httpx
 from pydantic import SecretStr
 
 from openhands_factory.config import FactoryConfig
-from openhands_factory.exceptions import ConfigurationError
+from openhands_factory.exceptions import ConfigurationError, FactoryError
 from openhands_factory.models import ProviderName
 from openhands_factory.provider_health import ProviderHealthStore
 
@@ -161,24 +161,28 @@ def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
 
 
 def select_primary_provider(config: FactoryConfig) -> ProviderName:
-    """Pick the healthiest provider tier for a conversation to use exclusively.
+    """Pick the healthiest available provider tier for one conversation.
 
-    No per-call cross-provider fallback is attached in build_llm() (see there for
-    why), so the provider chosen here is the only one the conversation will use for
-    its whole duration. Resilience across tiers instead comes from the daemon's job
-    retry: build_llm() is called fresh per attempt, and each tier's circuit breaker
-    in health.json already tracks whether it is currently healthy enough to try.
+    Every configured tier's circuit breaker is authoritative. If all usable tiers
+    are cooling down, fail the attempt locally so the job-level backoff can wait
+    rather than hammering a provider whose breaker is already open.
     """
     if openai_credentials_available(config):
         return ProviderName.OPENAI_SUBSCRIPTION
+
     store = ProviderHealthStore(config.state_dir / "health.json")
     breakers = {breaker.provider: breaker for breaker in store.load()}
+
     opencode_breaker = breakers.get(ProviderName.OPENCODE_GO)
     if opencode_breaker is None or opencode_breaker.permits_call():
         return ProviderName.OPENCODE_GO
+
     if config.gemini_enabled and config.gemini_api_key is not None:
-        return ProviderName.GEMINI
-    return ProviderName.OPENCODE_GO
+        gemini_breaker = breakers.get(ProviderName.GEMINI)
+        if gemini_breaker is None or gemini_breaker.permits_call():
+            return ProviderName.GEMINI
+
+    raise FactoryError("All configured model providers are temporarily unavailable")
 
 
 def build_llm(config: FactoryConfig) -> LLM:
@@ -214,14 +218,5 @@ def build_llm(config: FactoryConfig) -> LLM:
         api_key=config.opencode_api_key,
         base_url=config.opencode_base_url,
         usage_id=config.opencode_profile_name,
-        # deepseek-v4-flash's thinking mode hits a well-documented, still-open
-        # litellm bug class: reasoning_content from one turn isn't correctly
-        # forwarded on the next, so the provider (Console Go) rejects the
-        # follow-up turn outright with "reasoning_content ... must be passed
-        # back to the API" - killing the whole conversation.
-        # reasoning_effort="none" disables thinking mode for this tier,
-        # sidestepping the bug rather than chasing a moving target of fixes.
-        # See e.g. https://github.com/BerriAI/litellm/issues/26395 and
-        # https://github.com/BerriAI/litellm/pull/28080 (both DeepSeek V4).
         reasoning_effort="none",
     )
