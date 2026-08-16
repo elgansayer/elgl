@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+
+_PASSING_CONCLUSIONS = frozenset({"SUCCESS", "NEUTRAL", "SKIPPED"})
+_PENDING_STATES = frozenset({"QUEUED", "IN_PROGRESS", "PENDING", "WAITING"})
 
 
 @dataclass(frozen=True)
@@ -19,6 +23,34 @@ class FailureAttribution:
     @property
     def has_introduced_failures(self) -> bool:
         return bool(self.introduced_failures)
+
+
+def failed_check_names(checks: Iterable[Mapping[str, object]]) -> frozenset[str]:
+    """Return stable identities for completed, non-passing GitHub check-rollup entries.
+
+    GitHub mixes check runs (``name``/``conclusion``) and commit statuses
+    (``context``/``state``) in a pull request rollup. Pending entries are excluded so
+    attribution is only based on terminal evidence.
+    """
+
+    failed: set[str] = set()
+    for check in checks:
+        raw_name = check.get("name") or check.get("context")
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            continue
+        name = raw_name.strip()
+
+        status = str(check.get("status") or "").upper()
+        state = str(check.get("state") or "").upper()
+        if status in _PENDING_STATES or state in _PENDING_STATES:
+            continue
+
+        conclusion = str(check.get("conclusion") or "").upper()
+        terminal_result = conclusion or state
+        if terminal_result and terminal_result not in _PASSING_CONCLUSIONS:
+            failed.add(name)
+
+    return frozenset(failed)
 
 
 def attribute_failed_checks(
