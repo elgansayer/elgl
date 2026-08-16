@@ -27,13 +27,18 @@ jobs:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          # Allow up to 3 concurrent resolvers to match per-issue parallelism
+          # Count both running and queued resolvers so queued work cannot oversubscribe
+          # the intended maximum of three active OpenHands tasks.
           RUNNING=$(gh run list --repo "$REPOSITORY" \
             --workflow openhands.yml --status in_progress \
             --json databaseId -q 'length' 2>/dev/null || echo "0")
+          QUEUED=$(gh run list --repo "$REPOSITORY" \
+            --workflow openhands.yml --status queued \
+            --json databaseId -q 'length' 2>/dev/null || echo "0")
+          ACTIVE=$((RUNNING + QUEUED))
 
-          if [ "$RUNNING" -ge 3 ]; then
-            echo "3 resolvers already running. Waiting for a slot."
+          if [ "$ACTIVE" -ge 3 ]; then
+            echo "$ACTIVE resolvers are running or queued. Waiting for a slot."
             exit 0
           fi
 
