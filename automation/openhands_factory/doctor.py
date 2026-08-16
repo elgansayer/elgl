@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from openhands_factory.agents.base import ProviderStatus
+from openhands_factory.agents.health import AgentHealthStore
 from openhands_factory.architecture_guard import (
     check_factory_architecture,
     check_retired_swarm,
@@ -161,13 +163,11 @@ def job_health_checks(config: FactoryConfig, now: datetime | None = None) -> lis
     current = now or datetime.now(UTC)
     jobs_path = config.state_dir / "jobs.json"
     if not jobs_path.is_file():
-        detail = "durable job state is missing"
-        return [Check("jobs-stalled", False, detail)]
+        return [Check("jobs-stalled", False, "durable job state is missing")]
     try:
         jobs = JobStore(jobs_path).load()
     except (AttributeError, KeyError, TypeError, ValueError, OSError) as error:
-        detail = f"unreadable durable job state: {error}"[-1000:]
-        return [Check("jobs-stalled", False, detail)]
+        return [Check("jobs-stalled", False, f"unreadable durable job state: {error}"[-1000:])]
     stall_threshold = current - timedelta(minutes=config.max_task_minutes + 15)
     active_states = {
         JobState.LEASED,
@@ -236,6 +236,43 @@ def no_pr_progress_check(config: FactoryConfig, now: datetime | None = None) -> 
     return Check("no-pr-progress", True, detail, warning)
 
 
+def outer_agent_health_checks(config: FactoryConfig) -> list[Check]:
+    """Expose persisted outer AgentRouter circuit state to operators."""
+    if not config.agents.routing_enabled:
+        return [Check("agent-router", True, "disabled; OpenHands owns execution")]
+    path = config.state_dir / "agent_health.json"
+    if not path.is_file():
+        return [Check("agent-router", True, "enabled; no persisted provider failures yet", warning=True)]
+    try:
+        breakers = AgentHealthStore(path).load()
+    except (KeyError, TypeError, ValueError, OSError) as error:
+        return [Check("agent-router", False, f"unreadable provider health: {error}"[-1000:])]
+    checks: list[Check] = []
+    for name in sorted(config.agents.providers):
+        provider_cfg = config.agents.providers[name]
+        if not provider_cfg.enabled:
+            checks.append(Check(f"agent:{name}", True, "disabled"))
+            continue
+        breaker = breakers.get(name)
+        if breaker is None:
+            checks.append(Check(f"agent:{name}", True, "enabled; no failures recorded"))
+            continue
+        health = breaker.get_health()
+        passed = health.status in {ProviderStatus.HEALTHY, ProviderStatus.DEGRADED}
+        detail = health.status.value
+        if health.retry_after is not None:
+            detail += f" retry_after={health.retry_after.isoformat()}"
+        checks.append(
+            Check(
+                f"agent:{name}",
+                passed,
+                detail,
+                warning=health.status is ProviderStatus.DEGRADED,
+            )
+        )
+    return checks or [Check("agent-router", True, "enabled; no providers configured")]
+
+
 def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     """Return diagnostics only. Doctor never pages operators."""
     checks: list[Check] = []
@@ -243,10 +280,14 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     checks.append(Check("factory-architecture", architecture.passed, architecture.detail))
     single_owner = check_retired_swarm(config.repository)
     checks.append(Check("single-owner", single_owner.passed, single_owner.detail))
-    checks.append(Check("provider-chain", True, "Codex OAuth -> OpenCode Go"))
-    checks.append(
-        Check("repository", (config.repository / ".git").exists(), str(config.repository))
-    )
+    chain = "Codex subscription OAuth"
+    if config.opencode_go_enabled:
+        chain += " -> OpenCode Go"
+    else:
+        chain += " (OpenCode Go not configured)"
+    checks.append(Check("provider-chain", True, chain))
+    checks.extend(outer_agent_health_checks(config))
+    checks.append(Check("repository", (config.repository / ".git").exists(), str(config.repository)))
     checks.append(Check("podman", config.podman_path.is_file(), str(config.podman_path)))
     openai_ready = openai_credentials_available(config)
     checks.append(
@@ -288,13 +329,16 @@ def run_doctor(config: FactoryConfig, *, online: bool = False) -> list[Check]:
     checks.extend(job_health_checks(config))
     checks.append(no_pr_progress_check(config))
     if online:
-        from openhands_factory.provider_profiles import validate_opencode
+        if not config.opencode_go_enabled:
+            checks.append(Check("opencode-go", True, "not configured; optional fallback disabled"))
+        else:
+            from openhands_factory.provider_profiles import validate_opencode
 
-        try:
-            validate_opencode(config)
-            checks.append(Check("opencode-go", True, config.opencode_model))
-        except (RuntimeError, ValueError) as error:
-            checks.append(Check("opencode-go", False, str(error)))
+            try:
+                profile = validate_opencode(config)
+                checks.append(Check("opencode-go", True, profile.model))
+            except (RuntimeError, ValueError) as error:
+                checks.append(Check("opencode-go", False, str(error)))
     systemd = subprocess.run(
         (
             "systemd-analyze",
