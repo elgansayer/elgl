@@ -43,6 +43,7 @@ class FactoryConfig(BaseModel):
     max_parallel_jobs: int = 5
     cooldown_seconds: int = 60
     provider_cooldown_seconds: int = 300
+    provider_slot_wait_seconds: int = 30
     oauth_degraded_hours: int = 24
     minimum_free_disk_gib: float = 5
     max_no_pr_hours: float = 6
@@ -75,6 +76,7 @@ class FactoryConfig(BaseModel):
         "openai_max_concurrent_conversations",
         "opencode_max_concurrent_conversations",
         "gemini_max_concurrent_conversations",
+        "provider_slot_wait_seconds",
         "architect_max_new_issues",
     )
     @classmethod
@@ -171,6 +173,7 @@ class FactoryConfig(BaseModel):
                 max_parallel_jobs=int(env.get("FACTORY_MAX_PARALLEL_JOBS", "5")),
                 cooldown_seconds=int(env.get("FACTORY_COOLDOWN_SECONDS", "60")),
                 provider_cooldown_seconds=int(env.get("FACTORY_PROVIDER_COOLDOWN_SECONDS", "300")),
+                provider_slot_wait_seconds=int(env.get("FACTORY_PROVIDER_SLOT_WAIT_SECONDS", "30")),
                 oauth_degraded_hours=int(env.get("FACTORY_OAUTH_DEGRADED_HOURS", "24")),
                 minimum_free_disk_gib=float(env.get("FACTORY_MINIMUM_FREE_DISK_GIB", "5")),
                 max_no_pr_hours=float(env.get("FACTORY_MAX_NO_PR_HOURS", "6")),
