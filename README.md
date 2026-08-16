@@ -4,23 +4,23 @@ A HelloTalk-inspired social language-exchange platform with real-time messaging,
 
 The repository is a multi-application workspace:
 
-- `frontend/` — Angular 22 consumer application using the repository-owned Spartan UI/design-system conventions.
-- `backend/` — NestJS API and domain services.
-- `admin-portal/` — separate Angular administration application backed only by server-authorized admin APIs.
-- `supabase/` — PostgreSQL/Supabase schema and migrations.
-- `automation/` — the bounded OpenHands Factory used for supervised autonomous engineering on the VPS.
+- `frontend/`: Angular 22 consumer application using the repository-owned Spartan UI/design-system conventions.
+- `backend/`: NestJS API and domain services.
+- `admin-portal/`: separate Angular administration application backed only by server-authorized admin APIs.
+- `supabase/`: PostgreSQL/Supabase schema and migrations.
+- `automation/`: the bounded OpenHands Factory used for supervised autonomous engineering on the VPS.
 
 ## Authoritative documentation
 
 `README.md` is intentionally an index rather than a duplicate specification. The canonical sources are:
 
-- [`AGENTS.md`](AGENTS.md) — engineering constitution, safety rules and contribution requirements.
-- [`FEATURES_SPEC.md`](FEATURES_SPEC.md) — product capability inventory.
-- [`SPEC.md`](SPEC.md) — platform/data architecture.
-- [`DESIGN.md`](DESIGN.md) — product and design-system decisions.
-- [`ui_architecture.md`](ui_architecture.md) — Angular, Spartan UI, accessibility and UI architecture.
-- [`docs/factory/README.md`](docs/factory/README.md) — Factory deployment and operations.
-- [`docs/architecture/REPOSITORY_SOURCES_OF_TRUTH.md`](docs/architecture/REPOSITORY_SOURCES_OF_TRUTH.md) — ownership of canonical, generated, provider-specific and runtime artifacts.
+- [`AGENTS.md`](AGENTS.md): engineering constitution, safety rules and contribution requirements.
+- [`FEATURES_SPEC.md`](FEATURES_SPEC.md): product capability inventory.
+- [`SPEC.md`](SPEC.md): platform/data architecture.
+- [`DESIGN.md`](DESIGN.md): product and design-system decisions.
+- [`ui_architecture.md`](ui_architecture.md): Angular, Spartan UI, accessibility and UI architecture.
+- [`docs/factory/README.md`](docs/factory/README.md): Factory deployment and operations.
+- [`docs/architecture/REPOSITORY_SOURCES_OF_TRUTH.md`](docs/architecture/REPOSITORY_SOURCES_OF_TRUTH.md): ownership of canonical, generated, provider-specific and runtime artifacts.
 
 The generated [`wiki/`](wiki/) is useful for navigation and reporting, but it is derived material and does not override the sources above.
 
