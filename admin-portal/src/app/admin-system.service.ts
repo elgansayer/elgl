@@ -12,6 +12,10 @@ export interface AdminSystemHealthSnapshot {
     database: AdminHealthState;
     redis: AdminHealthState;
   };
+  dependencyLatencyMs: {
+    database: number;
+    redis: number;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
