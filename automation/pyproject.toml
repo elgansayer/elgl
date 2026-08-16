@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 development = [
-  "mypy==1.17.1",
+  "mypy==2.3.0",
   "pytest==8.4.1",
   "pytest-cov==6.2.1",
   "ruff==0.12.8",
