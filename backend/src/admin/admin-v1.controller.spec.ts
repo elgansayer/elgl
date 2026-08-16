@@ -117,8 +117,14 @@ describe('AdminV1Controller', () => {
       dependencies: { database: 'healthy', redis: 'healthy' },
     };
     systemHealth.getSnapshot.mockResolvedValue(expected);
+    const request = {
+      user: { id: 'admin-1' },
+      headers: {},
+    } as never;
 
-    await expect(controller.getSystemHealth()).resolves.toEqual(expected);
+    await expect(controller.getSystemHealth(request)).resolves.toEqual(
+      expected,
+    );
     expect(systemHealth.getSnapshot).toHaveBeenCalledOnce();
   });
 

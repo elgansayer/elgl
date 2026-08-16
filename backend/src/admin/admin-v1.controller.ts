@@ -113,8 +113,44 @@ export class AdminV1Controller {
       'Reports only healthy/degraded state for core database and Redis dependencies. It intentionally excludes hosts, credentials, connection strings and raw exception details.',
   })
   @ApiOkResponse({ description: 'Bounded system health snapshot' })
-  getSystemHealth(): Promise<AdminSystemHealthSnapshot> {
-    return this.systemHealth.getSnapshot();
+  async getSystemHealth(
+    @Req() req: AdminAuthRequest,
+  ): Promise<AdminSystemHealthSnapshot> {
+    const actorUserId = req.user.id ?? req.user.sub;
+    if (!actorUserId) {
+      throw new UnauthorizedException();
+    }
+
+    const requestId = req.headers['x-request-id'];
+    const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
+
+    let result: AdminSystemHealthSnapshot;
+    try {
+      result = await this.systemHealth.getSnapshot();
+    } catch (error) {
+      await this.audit.record({
+        actorUserId,
+        action: 'system.health.read',
+        capabilityKey: 'system.health.read',
+        targetType: 'system-health',
+        outcome: 'failed',
+        correlationId,
+        metadata: { source: 'admin-v1' },
+      });
+      throw error;
+    }
+
+    await this.audit.record({
+      actorUserId,
+      action: 'system.health.read',
+      capabilityKey: 'system.health.read',
+      targetType: 'system-health',
+      outcome: 'success',
+      correlationId,
+      metadata: { source: 'admin-v1' },
+    });
+
+    return result;
   }
 
   @Get('audit')
