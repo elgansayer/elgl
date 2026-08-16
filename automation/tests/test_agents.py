@@ -1,7 +1,7 @@
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from openhands_factory.agents.base import (
     AgentPhase,
@@ -77,13 +77,8 @@ class TestHealthTracking(unittest.TestCase):
 
 
 class TestAgentProviders(unittest.IsolatedAsyncioTestCase):
-    @patch("asyncio.create_subprocess_exec")
-    async def test_claude_provider(self, mock_exec):
-        mock_process = AsyncMock()
-        mock_process.communicate.return_value = (b"success output", b"")
-        mock_process.returncode = 0
-        mock_exec.return_value = mock_process
-
+    @patch("openhands_factory.agents.claude.PTYWrapper.execute", return_value="success output")
+    async def test_claude_provider(self, _mock_execute):
         provider = ClaudeCodeProvider()
         task = Task("1", "test", "body", "issue", 1)
         request = AgentRequest(
@@ -97,13 +92,8 @@ class TestAgentProviders(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.summary, "success output")
 
-    @patch("asyncio.create_subprocess_exec")
-    async def test_codex_provider(self, mock_exec):
-        mock_process = AsyncMock()
-        mock_process.communicate.return_value = (b"codex success", b"")
-        mock_process.returncode = 0
-        mock_exec.return_value = mock_process
-
+    @patch("openhands_factory.agents.codex.PTYWrapper.execute", return_value="codex success")
+    async def test_codex_provider(self, _mock_execute):
         provider = CodexProvider()
         task = Task("1", "test", "body", "issue", 1)
         request = AgentRequest(
@@ -117,13 +107,8 @@ class TestAgentProviders(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.summary, "codex success")
 
-    @patch("asyncio.create_subprocess_exec")
-    async def test_google_provider(self, mock_exec):
-        mock_process = AsyncMock()
-        mock_process.communicate.return_value = (b"google success", b"")
-        mock_process.returncode = 0
-        mock_exec.return_value = mock_process
-
+    @patch("openhands_factory.agents.google.PTYWrapper.execute", return_value="google success")
+    async def test_google_provider(self, _mock_execute):
         provider = GoogleAgentProvider()
         task = Task("1", "test", "body", "issue", 1)
         request = AgentRequest(
@@ -137,13 +122,8 @@ class TestAgentProviders(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.success)
         self.assertEqual(result.summary, "google success")
 
-    @patch("asyncio.create_subprocess_exec")
-    async def test_opencode_provider(self, mock_exec):
-        mock_process = AsyncMock()
-        mock_process.communicate.return_value = (b"opencode success", b"")
-        mock_process.returncode = 0
-        mock_exec.return_value = mock_process
-
+    @patch("openhands_factory.agents.opencode.PTYWrapper.execute", return_value="opencode success")
+    async def test_opencode_provider(self, _mock_execute):
         provider = OpenCodeProvider()
         task = Task("1", "test", "body", "issue", 1)
         request = AgentRequest(
