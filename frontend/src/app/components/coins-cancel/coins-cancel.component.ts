@@ -1,23 +1,20 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { TranslatePipe } from '../../services/translate.pipe';
 
 @Component({
   selector: 'app-coins-cancel',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ...HlmButtonImports],
   template: `
-    <div class="min-h-screen bg-surface-500 flex items-center justify-center px-4">
-      <div class="text-center max-w-md w-full" role="region" aria-live="polite">
-        <div class="text-5xl sm:text-6xl mb-6" aria-hidden="true">😕</div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-text-primary mb-4">
+    <div class="flex min-h-screen items-center justify-center bg-surface-500 px-4">
+      <div class="w-full max-w-md text-center" role="region" aria-live="polite">
+        <div class="mb-6 text-5xl sm:text-6xl" aria-hidden="true">😕</div>
+        <h1 class="mb-4 text-2xl font-bold text-text-primary sm:text-3xl">
           {{ 'coinsCancel.title' | t }}
         </h1>
-        <p class="text-text-secondary mb-8 text-sm sm:text-base">{{ 'coinsCancel.message' | t }}</p>
-        <button
-          type="button"
-          (click)="goBack()"
-          class="bg-primary hover:bg-primary/90 text-on-fill font-bold py-3 px-8 rounded-2xl transition-all duration-200 text-sm sm:text-base"
-        >
+        <p class="mb-8 text-sm text-text-secondary sm:text-base">{{ 'coinsCancel.message' | t }}</p>
+        <button hlmBtn type="button" size="touch" (click)="goBack()">
           {{ 'coinsCancel.backBtn' | t }}
         </button>
       </div>
