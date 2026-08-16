@@ -3,7 +3,7 @@ import { AdminOperationalEventsService } from './admin-operational-events.servic
 import { AdminSystemHealthService } from './admin-system-health.service';
 
 describe('AdminSystemHealthService', () => {
-  it('reports healthy without emitting an operational warning', async () => {
+  it('reports healthy with bounded dependency latency and no operational warning', async () => {
     const limit = vi.fn().mockResolvedValue({ data: [], error: null });
     const select = vi.fn().mockReturnValue({ limit });
     const operationalEvents = { record: vi.fn() };
@@ -25,6 +25,12 @@ describe('AdminSystemHealthService', () => {
       database: 'healthy',
       redis: 'healthy',
     });
+    expect(snapshot.dependencyLatencyMs).toEqual({
+      database: expect.any(Number),
+      redis: expect.any(Number),
+    });
+    expect(snapshot.dependencyLatencyMs.database).toBeGreaterThanOrEqual(0);
+    expect(snapshot.dependencyLatencyMs.redis).toBeGreaterThanOrEqual(0);
     expect(snapshot.checkedAt).toEqual(expect.any(String));
     expect(operationalEvents.record).not.toHaveBeenCalled();
   });
@@ -53,6 +59,10 @@ describe('AdminSystemHealthService', () => {
     expect(snapshot.dependencies).toEqual({
       database: 'degraded',
       redis: 'degraded',
+    });
+    expect(snapshot.dependencyLatencyMs).toEqual({
+      database: expect.any(Number),
+      redis: expect.any(Number),
     });
     expect(JSON.stringify(snapshot)).not.toContain('internal detail');
     expect(operationalEvents.record).toHaveBeenCalledWith({
@@ -88,6 +98,10 @@ describe('AdminSystemHealthService', () => {
       dependencies: {
         database: 'degraded',
         redis: 'healthy',
+      },
+      dependencyLatencyMs: {
+        database: expect.any(Number),
+        redis: expect.any(Number),
       },
     });
     expect(operationalEvents.record).toHaveBeenCalledOnce();
