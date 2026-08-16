@@ -34,6 +34,8 @@ export class AdminModerationService {
     reasonCategory?: string,
     reportedUserId?: string,
     reporterUserId?: string,
+    startTime?: string,
+    endTime?: string,
   ): Observable<AdminModerationReportList> {
     const token = this.login.accessToken();
     if (!token) {
@@ -57,6 +59,8 @@ export class AdminModerationService {
     if (normalizedReporterUserId) {
       params = params.set('reporterUserId', normalizedReporterUserId);
     }
+    if (startTime) params = params.set('startTime', startTime);
+    if (endTime) params = params.set('endTime', endTime);
 
     return from(this.login.apiBaseUrl()).pipe(
       switchMap((apiBaseUrl) =>

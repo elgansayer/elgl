@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsISO8601,
   IsInt,
   IsOptional,
   IsString,
@@ -48,4 +49,14 @@ export class AdminReportsQueryDto {
   @IsString()
   @MaxLength(128)
   reporterUserId?: string;
+
+  @ApiPropertyOptional({ description: 'Inclusive ISO-8601 lower creation-time bound' })
+  @IsOptional()
+  @IsISO8601()
+  startTime?: string;
+
+  @ApiPropertyOptional({ description: 'Inclusive ISO-8601 upper creation-time bound' })
+  @IsOptional()
+  @IsISO8601()
+  endTime?: string;
 }
