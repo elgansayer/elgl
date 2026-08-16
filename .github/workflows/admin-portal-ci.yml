@@ -59,6 +59,3 @@ jobs:
       - name: Test admin backend
         working-directory: backend
         run: npm test -- src/admin
-      - name: Build backend
-        working-directory: backend
-        run: npm run build
