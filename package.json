@@ -4,9 +4,10 @@
   "private": true,
   "description": "HelloTalk Open-Core Platform (Angular v22 + NestJS + Supabase + Centrifugo + LiveKit)",
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
   },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
