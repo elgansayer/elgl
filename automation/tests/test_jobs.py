@@ -64,6 +64,27 @@ def test_reconcile_migrates_quarantined_job_not_in_active_tasks(tmp_path: Path) 
     assert restored["258"].next_attempt_at is None
 
 
+def test_load_normalizes_legacy_quarantine_without_reconciliation(tmp_path: Path) -> None:
+    store = JobStore(tmp_path / "jobs.json")
+    task = Task("259", "Legacy quarantined issue", "", "github-issue", 0)
+    jobs = store.reconcile([task])
+    jobs["259"].state = JobState.QUARANTINED
+    jobs["259"].attempts = 8
+    jobs["259"].repair_attempts = 3
+    jobs["259"].quality_repairs = 2
+    jobs["259"].last_error = "legacy terminal state"
+    store.save(jobs)
+
+    restored = store.load()
+
+    assert restored["259"].state is JobState.DISCOVERED
+    assert restored["259"].attempts == 0
+    assert restored["259"].repair_attempts == 0
+    assert restored["259"].quality_repairs == 0
+    assert restored["259"].last_error is None
+    assert restored["259"].next_attempt_at is None
+
+
 def test_parallel_job_updates_do_not_lose_sibling_state(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs.json")
     tasks = [Task(str(identifier), "Task", "", "github-issue", 0) for identifier in range(6)]

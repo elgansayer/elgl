@@ -20,9 +20,10 @@ class JobStore:
     def load(self) -> dict[str, Job]:
         payload = read_json(self.path, {"jobs": []})
         jobs: dict[str, Job] = {}
+        now = datetime.now(UTC)
         for item in payload.get("jobs", []):
             task = Task(**item["task"])
-            jobs[task.identifier] = Job(
+            job = Job(
                 task=task,
                 state=JobState(item["state"]),
                 branch=item.get("branch"),
@@ -37,6 +38,9 @@ class JobStore:
                 else None,
                 updated_at=datetime.fromisoformat(item["updated_at"]),
             )
+            if job.state is JobState.QUARANTINED:
+                self._reset_legacy_quarantine(job, now)
+            jobs[task.identifier] = job
         return jobs
 
     def save(self, jobs: dict[str, Job]) -> None:
@@ -74,11 +78,8 @@ class JobStore:
             jobs = self.load()
             now = datetime.now(UTC)
 
-            # QUARANTINED used to be terminal, but the pipeline now retries indefinitely
-            # with bounded backoff. Migrate every persisted legacy record, not only jobs
-            # that still appear in today's open-issue/open-PR task set. Otherwise closed
-            # or otherwise inactive historical jobs remain quarantined forever and the
-            # production doctor repeatedly pages an ever-growing stale backlog.
+            # load() normalizes every persisted quarantine record. Keep this defensive pass
+            # for callers that may have supplied an in-memory legacy job.
             for persisted_job in jobs.values():
                 if persisted_job.state is JobState.QUARANTINED:
                     self._reset_legacy_quarantine(persisted_job, now)
