@@ -68,18 +68,11 @@ jobs:
 
           echo "Created workflow incident: ${ISSUE_URL}"
 
-          # Labels are useful but must never make failure reporting fail when a
-          # repository label is renamed or removed.
+          # Keep the incident visible and high priority without dispatching a
+          # second autonomous executor. Agent Canvas automation owns remediation.
           gh issue edit "$ISSUE_URL" \
             --repo "$REPOSITORY" \
-            --add-label "priority:high" \
-            --add-label "ai-agent-task" || true
-
-          # Only dispatch an agent for the first failure in an incident. Later
-          # failures append fresh run details without spawning duplicate work.
-          gh issue comment "$ISSUE_URL" \
-            --repo "$REPOSITORY" \
-            --body "/openhands-fix please investigate the logs of this workflow run and fix the failure!"
+            --add-label "priority:high" || true
 
   resolve-recovery:
     if: github.event.workflow_run.conclusion == 'success'
