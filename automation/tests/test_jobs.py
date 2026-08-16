@@ -3,6 +3,7 @@ from pathlib import Path
 
 from openhands_factory.jobs import JobStore
 from openhands_factory.models import JobState, Task
+from openhands_factory.state import atomic_write_json
 
 
 def test_reconcile_is_idempotent_and_preserves_progress(tmp_path: Path) -> None:
@@ -43,6 +44,46 @@ def test_reconcile_requeues_open_issue_marked_done_without_a_pr(tmp_path: Path) 
 
     assert restored["9"].state is JobState.DISCOVERED
     assert restored["9"].last_error is None
+
+
+def test_load_immediately_requeues_legacy_quarantine(tmp_path: Path) -> None:
+    path = tmp_path / "jobs.json"
+    atomic_write_json(
+        path,
+        {
+            "jobs": [
+                {
+                    "task": {
+                        "identifier": "258",
+                        "title": "Historical issue",
+                        "body": "",
+                        "source": "github-issue",
+                        "priority": 0,
+                        "pr_branch": None,
+                    },
+                    "state": "quarantined",
+                    "branch": "factory/258-historical-issue",
+                    "pull_request": None,
+                    "head_sha": None,
+                    "attempts": 12,
+                    "repair_attempts": 5,
+                    "quality_repairs": 2,
+                    "last_error": "legacy permanent failure",
+                    "next_attempt_at": "2099-01-01T00:00:00+00:00",
+                    "updated_at": "2026-08-01T00:00:00+00:00",
+                }
+            ]
+        },
+    )
+
+    restored = JobStore(path).load()["258"]
+
+    assert restored.state is JobState.DISCOVERED
+    assert restored.attempts == 0
+    assert restored.repair_attempts == 0
+    assert restored.quality_repairs == 0
+    assert restored.last_error is None
+    assert restored.next_attempt_at is None
 
 
 def test_reconcile_migrates_quarantined_job_not_in_active_tasks(tmp_path: Path) -> None:
