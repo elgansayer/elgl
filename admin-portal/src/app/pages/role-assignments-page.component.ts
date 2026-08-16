@@ -23,6 +23,7 @@ import {
       <form class="filters" (ngSubmit)="load(true)">
         <label>User ID <input name="userId" [(ngModel)]="userId" maxlength="128" /></label>
         <label>Role key <input name="roleKey" [(ngModel)]="roleKey" maxlength="80" /></label>
+        <label>Granted by <input name="grantedBy" [(ngModel)]="grantedBy" maxlength="128" placeholder="Exact administrator ID" /></label>
         <div class="actions">
           <button type="submit" [disabled]="busy()">Apply filters</button>
           <button type="button" (click)="clearFilters()" [disabled]="busy()">Clear</button>
@@ -82,6 +83,7 @@ export class RoleAssignmentsPageComponent {
   readonly pageSize = 50;
   userId = '';
   roleKey = '';
+  grantedBy = '';
   readonly assignments = signal<AdminRoleAssignmentSummary[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -97,7 +99,13 @@ export class RoleAssignmentsPageComponent {
     this.error.set(null);
     try {
       const result = await firstValueFrom(
-        this.roles.listAssignments(this.page(), this.pageSize, this.userId, this.roleKey),
+        this.roles.listAssignments(
+          this.page(),
+          this.pageSize,
+          this.userId,
+          this.roleKey,
+          this.grantedBy,
+        ),
       );
       this.assignments.set(result.assignments);
       this.total.set(result.total);
@@ -116,6 +124,7 @@ export class RoleAssignmentsPageComponent {
   clearFilters(): void {
     this.userId = '';
     this.roleKey = '';
+    this.grantedBy = '';
     void this.load(true);
   }
 
