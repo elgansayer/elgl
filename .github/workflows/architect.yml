@@ -5,6 +5,10 @@ on:
     - cron: '0 0 * * 1'
   workflow_dispatch:
 
+concurrency:
+  group: ai-architect-planner
+  cancel-in-progress: false
+
 jobs:
   architect_planning:
     runs-on: ubuntu-latest
@@ -15,6 +19,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Snapshot issue sequence before planning
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          BASELINE=$(gh issue list --repo "$REPOSITORY" --state all --limit 1 \
+            --json number -q '.[0].number // 0' 2>/dev/null || echo "0")
+          echo "ARCHITECT_ISSUE_BASELINE=$BASELINE" >> "$GITHUB_ENV"
+          echo "Architect issue baseline: #$BASELINE"
 
       # ── TIER 1: Claude Code ────────────────────────────────────────────────
       - name: Tier 1 - Claude Code (Claude Pro via OAuth)
@@ -29,36 +43,40 @@ jobs:
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
 
-            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
+            1. Read AGENTS.md, SPEC.md (if available), README.md, and existing open and closed issues before proposing work.
             2. Explore the codebase to assess the current implementation status.
             3. Identify gaps between the planned features and the current state.
-            4. Self-modify ROADMAP.md or SPEC.md to reflect next steps.
-            5. For each gap, create a GitHub issue using this exact command format:
+            4. Update ROADMAP.md or SPEC.md only when the repository needs a durable planning change; commit and push any such documentation change.
+            5. Before creating any issue, search existing open and closed issues for the same requirement. Never create a duplicate. Prefer updating or referencing an existing issue when overlap exists.
+            6. For each genuinely new gap, create a GitHub issue using this exact command format:
                gh issue create --title "..." --body "..." --label "ai-agent-task,priority:high"
                Use priority:high for core features/bugs, priority:medium for enhancements, priority:low for nice-to-haves.
 
-            IMPORTANT: Do NOT write code. Only plan and create tickets. Other agents handle coding.
+            IMPORTANT: Do NOT write product code. Only plan, maintain planning documentation, and create non-duplicate tickets.
 
-      - name: Check if Claude created issues
+      - name: Check if Claude created new architect issues
         id: check_claude
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
+          BASELINE: ${{ env.ARCHITECT_ISSUE_BASELINE }}
         run: |
-          COUNT=$(gh issue list --repo "$REPOSITORY" --label "ai-agent-task" \
-            --state open --limit 1 --json number -q 'length' 2>/dev/null || echo "0")
+          COUNT=$(gh issue list --repo "$REPOSITORY" --state all --label "ai-agent-task" \
+            --limit 100 --json number \
+            --jq "[.[] | select(.number > ($BASELINE | tonumber))] | length" 2>/dev/null || echo "0")
+          echo "new_issue_count=$COUNT"
           if [ "$COUNT" -gt 0 ]; then
-            echo "has_issues=true" >> "$GITHUB_OUTPUT"
-            echo "Claude created issues successfully."
+            echo "has_new_issues=true" >> "$GITHUB_OUTPUT"
+            echo "Claude created $COUNT new architect issue(s)."
           else
-            echo "has_issues=false" >> "$GITHUB_OUTPUT"
-            echo "Claude did not create issues — falling through to Tier 2."
+            echo "has_new_issues=false" >> "$GITHUB_OUTPUT"
+            echo "Claude created no new architect issues — falling through to Tier 2."
           fi
 
       # ── TIER 2: DeepSeek V3 Chat (paid fallback) ──────────────────────────
       - name: Tier 2 - OpenHands (DeepSeek V3 — paid fallback)
         id: secondary
-        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.has_issues == 'false'
+        if: steps.primary.outcome == 'failure' || steps.check_claude.outputs.has_new_issues == 'false'
         continue-on-error: true
         uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04 # v1.0.1
         with:
@@ -71,21 +89,42 @@ jobs:
             You are the Lead AI Architect for this project.
             Your job is to evaluate the current state of the app against its goals.
 
-            1. Read AGENTS.md, SPEC.md (if available), and the README.md to understand the project goals.
+            1. Read AGENTS.md, SPEC.md (if available), README.md, and existing open and closed issues before proposing work.
             2. Explore the codebase to assess the current implementation status.
             3. Identify gaps between the planned features and the current state.
-            4. Self-modify ROADMAP.md or SPEC.md to reflect next steps.
-            5. For each gap, create a GitHub issue using this exact command format:
+            4. Update ROADMAP.md or SPEC.md only when needed; commit and push durable planning changes.
+            5. Search existing issues before creating any ticket. Never create duplicates.
+            6. For each genuinely new gap, create a GitHub issue using this exact command format:
                gh issue create --title "..." --body "..." --label "ai-agent-task,priority:high"
                Use priority:high for core features/bugs, priority:medium for enhancements, priority:low for nice-to-haves.
 
-            IMPORTANT: Do NOT write code. Only plan and create tickets.
+            IMPORTANT: Do NOT write product code. Only plan and create non-duplicate tickets.
           cli_args: "--max-iterations 50"
+
+      - name: Check if DeepSeek created new architect issues
+        id: check_secondary
+        if: always() && steps.secondary.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BASELINE: ${{ env.ARCHITECT_ISSUE_BASELINE }}
+        run: |
+          COUNT=$(gh issue list --repo "$REPOSITORY" --state all --label "ai-agent-task" \
+            --limit 100 --json number \
+            --jq "[.[] | select(.number > ($BASELINE | tonumber))] | length" 2>/dev/null || echo "0")
+          echo "new_issue_count=$COUNT"
+          if [ "$COUNT" -gt 0 ]; then
+            echo "has_new_issues=true" >> "$GITHUB_OUTPUT"
+            echo "DeepSeek created new architect issue(s); Tier 3 is unnecessary."
+          else
+            echo "has_new_issues=false" >> "$GITHUB_OUTPUT"
+            echo "DeepSeek created no new architect issues — falling through to Tier 3."
+          fi
 
       # ── TIER 3: Gemini 3.6 Flash (last resort) ────────────────────────────
       - name: Tier 3 - OpenHands (Gemini 3.6 Flash — last resort)
         id: tertiary
-        if: steps.secondary.outcome == 'failure'
+        if: steps.secondary.outcome == 'failure' || steps.check_secondary.outputs.has_new_issues == 'false'
         uses: xinbenlv/openhands-action@fd1a7b376a5a86c29e3d1a331c75d0ea99b06e04 # v1.0.1
         with:
           github_token: ${{ github.token }}
@@ -96,9 +135,10 @@ jobs:
           prompt: >
             You are the Lead AI Architect for this project.
 
-            1. Read README.md to understand the project goals.
-            2. Identify the most important missing features or bugs.
-            3. Create GitHub issues: gh issue create --title "..." --body "..." --label "ai-agent-task,priority:high"
+            1. Read README.md and search existing open and closed issues.
+            2. Identify the most important genuinely missing features or bugs.
+            3. Never create an issue that duplicates an existing open or closed ticket.
+            4. Create only new GitHub issues: gh issue create --title "..." --body "..." --label "ai-agent-task,priority:high"
 
-            IMPORTANT: Do NOT write code. Only create tickets.
+            IMPORTANT: Do NOT write product code. Only create non-duplicate tickets.
           cli_args: "--max-iterations 30"
