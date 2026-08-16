@@ -6,7 +6,7 @@ After=hellotalk-factory.service
 Type=oneshot
 EnvironmentFile=/etc/hellotalk-factory/factory.env
 Environment=HOME=/var/lib/hellotalk-factory/home
-ExecStart=/bin/bash /var/lib/hellotalk-factory/repository/config/systemd/hellotalk-factory-watchdog.sh
+ExecStart=/bin/bash /opt/hellotalk-factory/hellotalk-factory-watchdog.sh
 UMask=0077
 PrivateTmp=true
 ProtectHome=true
