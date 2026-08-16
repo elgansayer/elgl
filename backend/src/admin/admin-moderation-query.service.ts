@@ -34,6 +34,7 @@ export class AdminModerationQueryService {
         { count: 'exact' },
       );
 
+    if (query.reportId?.trim()) request = request.eq('id', query.reportId.trim());
     if (query.status?.trim())
       request = request.eq('status', query.status.trim());
     if (query.reasonCategory?.trim()) {
