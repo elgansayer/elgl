@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { Theme, ThemeService } from '../../services/theme.service';
 import { I18nService } from '../../services/i18n.service';
 import { TranslatePipe } from '../../services/translate.pipe';
@@ -7,19 +8,25 @@ import { AppCardComponent } from '../primitives/card/card.component';
 @Component({
   selector: 'app-appearance-settings',
   standalone: true,
-  imports: [TranslatePipe, AppCardComponent],
+  imports: [TranslatePipe, AppCardComponent, ...HlmButtonImports],
   template: `
     <app-card variant="default" padding="lg">
-      <h2 class="text-lg font-semibold mb-4">{{ 'appearance.title' | t }}</h2>
+      <h2 class="mb-4 text-lg font-semibold">{{ 'appearance.title' | t }}</h2>
 
-      <!-- Theme selection -->
       <div class="mb-6">
-        <h3 class="text-sm text-content-muted mb-2">{{ 'appearance.themeLabel' | t }}</h3>
-        <div class="flex gap-2">
+        <h3 class="mb-2 text-sm text-content-muted">{{ 'appearance.themeLabel' | t }}</h3>
+        <div class="flex gap-2" role="radiogroup">
           @for (opt of themeOptions; track opt) {
             <button
+              hlmBtn
+              type="button"
+              variant="secondary"
+              size="sm"
+              role="radio"
+              [attr.aria-checked]="themeService.currentTheme() === opt"
+              [class.bg-primary]="themeService.currentTheme() === opt"
+              [class.text-on-fill]="themeService.currentTheme() === opt"
               (click)="setTheme(opt)"
-              [class]="'px-4 py-2 rounded-lg transition-colors ' + (themeService.currentTheme() === opt ? 'bg-primary text-white' : 'bg-surface-100 text-content hover:bg-surface-200')"
             >
               {{ ('theme.' + opt) | t }}
             </button>
@@ -27,18 +34,15 @@ import { AppCardComponent } from '../primitives/card/card.component';
         </div>
       </div>
 
-      <!-- Language selection -->
       <div class="mb-2">
-        <h3 class="text-sm text-content-muted mb-2">{{ 'appearance.languageLabel' | t }}</h3>
+        <h3 class="mb-2 text-sm text-content-muted">{{ 'appearance.languageLabel' | t }}</h3>
         <select
           [value]="i18nService.currentLang()"
           (change)="onLanguageChange($event)"
-          class="w-full rounded-lg border border-surface-100 bg-surface-200 px-3 py-2 text-content focus:outline-none focus:ring-2 focus:ring-primary"
+          class="w-full rounded-lg border border-surface-100 bg-surface-200 px-3 py-2 text-content"
         >
           @for (lang of i18nService.availableLanguages; track lang.code) {
-            <option [value]="lang.code">
-              {{ lang.nativeName }} ({{ lang.flag }})
-            </option>
+            <option [value]="lang.code">{{ lang.nativeName }} ({{ lang.flag }})</option>
           }
         </select>
       </div>
@@ -48,7 +52,6 @@ import { AppCardComponent } from '../primitives/card/card.component';
 export class AppearanceSettingsComponent {
   readonly themeService = inject(ThemeService);
   readonly i18nService = inject(I18nService);
-
   readonly themeOptions: Theme[] = ['light', 'dark', 'system'];
 
   setTheme(opt: Theme): void {
@@ -58,9 +61,6 @@ export class AppearanceSettingsComponent {
   onLanguageChange(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLSelectElement)) return;
-    const value = target.value;
-    if (value) {
-      this.i18nService.setLanguage(value);
-    }
+    if (target.value) this.i18nService.setLanguage(target.value);
   }
 }
