@@ -66,3 +66,7 @@
 ## 2026-08-16 - [Optimize event reminders via Promise.allSettled]
 **Learning:** In the backend `events.service.ts`, sending push reminders to users (`checkReminders`) sequentially iterated over events invoking `sendRemindersBatch` using `await` inside a `for...of` loop. In a benchmark simulation, executing this sequentially for 100 items took ~1000ms, while executing it concurrently took only 10ms.
 **Action:** When dispatching bulk events or notifications, replace sequential awaits with concurrent execution via `Promise.allSettled`. This mitigates significant N+1 network/database latency overheads.
+
+## 2026-08-16 - [Optimize heavy sequential I/O via chunked Promise.all]
+**Learning:** When refactoring unbounded sequential background jobs (like Cron tasks deleting users) into concurrent operations, unconditionally pushing hundreds of async I/O operations into `Promise.all` can overwhelm database connection pools and cause timeouts. Additionally, when mapping over results that resolve to success/failure objects (e.g. returning `{success: true}` vs `{success: false}` in catch), the resulting type becomes a generic union unless discriminated explicitly.
+**Action:** Always wrap concurrent background operations in bounded chunks (e.g., using `slice()` in a loop). To satisfy TypeScript when mapping to union states, explicitly narrow the boolean values using `as const` (e.g., `success: true as const, error: undefined`) so the compiler successfully resolves the discriminated union.
