@@ -76,7 +76,7 @@ def inspect_openai_oauth(config: FactoryConfig, home: Path | None = None) -> OAu
         )
 
     try:
-        auth = OpenAISubscriptionAuth.init()
+        auth = OpenAISubscriptionAuth()
         credentials = auth.get_credentials()
         if credentials is None:
             return OAuthHealth(
