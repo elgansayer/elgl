@@ -44,16 +44,20 @@ def fingerprint_failure(
     kind: FailureKind,
     detail: str,
     *,
-    provider: ProviderName | None = None,
+    provider: ProviderName | str | None = None,
     phase: str | None = None,
 ) -> FailureFingerprint:
     """Build a restart-stable fingerprint for semantically equivalent failures."""
 
     normalised_phase = _WHITESPACE.sub("-", (phase or "").strip().lower())
+    if isinstance(provider, ProviderName):
+        provider_value = provider.value
+    else:
+        provider_value = (provider or "").strip().lower()
     canonical = "|".join(
         (
             kind.value,
-            provider.value if provider is not None else "",
+            provider_value,
             normalised_phase,
             _normalise_detail(detail),
         )
