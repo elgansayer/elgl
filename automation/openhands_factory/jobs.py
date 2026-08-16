@@ -14,8 +14,9 @@ from openhands_factory.state import atomic_write_json, read_json
 class JobStore:
     _process_lock = Lock()
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, factory_generation: str = "unknown") -> None:
         self.path = path
+        self.factory_generation = factory_generation
 
     def load(self) -> dict[str, Job]:
         payload = read_json(self.path, {"jobs": []})
@@ -36,6 +37,7 @@ class JobStore:
                 next_attempt_at=datetime.fromisoformat(item["next_attempt_at"])
                 if item.get("next_attempt_at")
                 else None,
+                factory_generation=str(item.get("factory_generation", "unknown")),
                 updated_at=datetime.fromisoformat(item["updated_at"]),
             )
             if job.state is JobState.QUARANTINED:
@@ -43,9 +45,14 @@ class JobStore:
             jobs[task.identifier] = job
         return jobs
 
+    def _stamp(self, job: Job) -> None:
+        if self.factory_generation != "unknown":
+            job.factory_generation = self.factory_generation
+
     def save(self, jobs: dict[str, Job]) -> None:
         serialised = []
         for job in jobs.values():
+            self._stamp(job)
             item = asdict(job)
             item["state"] = job.state.value
             item["updated_at"] = job.updated_at.isoformat()
@@ -59,6 +66,7 @@ class JobStore:
         """Merge one completed worker transition without losing sibling jobs."""
         with self._process_lock:
             jobs = self.load()
+            self._stamp(job)
             jobs[job.task.identifier] = job
             self.save(jobs)
 
@@ -78,18 +86,20 @@ class JobStore:
             jobs = self.load()
             now = datetime.now(UTC)
 
-            # load() normalizes every persisted quarantine record. Keep this defensive pass
-            # for callers that may have supplied an in-memory legacy job.
             for persisted_job in jobs.values():
+                self._stamp(persisted_job)
                 if persisted_job.state is JobState.QUARANTINED:
                     self._reset_legacy_quarantine(persisted_job, now)
 
             for task in tasks:
                 existing = jobs.get(task.identifier)
                 if existing is None:
-                    jobs[task.identifier] = Job(task=task)
+                    job = Job(task=task)
+                    self._stamp(job)
+                    jobs[task.identifier] = job
                     continue
                 existing.task = task
+                self._stamp(existing)
                 if (
                     existing.state is JobState.DONE
                     and existing.pull_request is None
