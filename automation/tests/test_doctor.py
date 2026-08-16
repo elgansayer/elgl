@@ -134,7 +134,7 @@ def test_no_port_env_passes_the_check(monkeypatch: pytest.MonkeyPatch) -> None:
     assert check.passed
 
 
-def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
+def test_health_migrates_quarantined_and_reports_stalled_jobs(tmp_path: Path) -> None:
     factory_config = config(tmp_path)
     now = datetime.now(UTC)
     quarantined = Job(Task("3152", "Task", "", "github", 0), JobState.QUARANTINED)
@@ -145,7 +145,7 @@ def test_health_reports_quarantined_and_stalled_jobs(tmp_path: Path) -> None:
     checks = {check.name: check for check in job_health_checks(factory_config, now)}
 
     assert checks["jobs-quarantined"].passed
-    assert checks["jobs-quarantined"].detail == "retrying legacy state: issues=3152"
+    assert checks["jobs-quarantined"].detail == "none"
     assert checks["jobs-stalled"].passed
     assert checks["jobs-stalled"].detail == "retry/recovery pending: issues=239"
 
