@@ -13,6 +13,11 @@ from threading import Semaphore
 from filelock import FileLock, Timeout
 
 from openhands_factory.config import FactoryConfig
+from openhands_factory.generation import (
+    FactoryGeneration,
+    activate_generation,
+    assert_generation_current,
+)
 from openhands_factory.models import Job
 from openhands_factory.pipeline import FactoryPipeline
 from openhands_factory.state import atomic_write_json, read_json
@@ -47,6 +52,7 @@ class FactoryDaemon:
         self.tasks = TaskStore(config.state_dir)
         self.pipeline = FactoryPipeline(config)
         self.verification_slots = Semaphore(1)
+        self.generation = FactoryGeneration.create()
 
     @property
     def control_path(self) -> Path:
@@ -64,13 +70,12 @@ class FactoryDaemon:
         lock = FileLock(str(self.config.state_dir / "factory.lock"))
         try:
             with lock.acquire(timeout=0):
+                activate_generation(self.config.state_dir, self.generation)
                 return self._loop()
         except Timeout:
             LOGGER.error("Another factory daemon owns the repository lock")
             return 2
         except Exception:
-            # Do not page here. systemd is responsible for automatic restart and the
-            # separate watchdog only pages after repeated restart attempts fail.
             LOGGER.exception("Factory daemon reached an ultimate failure")
             return 1
 
@@ -86,6 +91,7 @@ class FactoryDaemon:
             ThreadPoolExecutor(max_workers=1, thread_name_prefix="factory-architect") as architect,
         ):
             while not self.stopping:
+                assert_generation_current(self.config.state_dir, self.generation)
                 for future, task_id in list(active.items()):
                     if not future.done():
                         continue
@@ -130,12 +136,19 @@ class FactoryDaemon:
         return 0
 
     def _write_daemon_state(self, status: str, active: dict[Future[Job | None], str]) -> None:
+        assert_generation_current(self.config.state_dir, self.generation)
         atomic_write_json(
             self.config.state_dir / "daemon.json",
             {
                 "status": status,
                 "updated_at": datetime.now(UTC).isoformat(),
                 "active_jobs": sorted(active.values(), key=int),
+                "generation": self.generation.identifier,
+                "runtime_version": self.generation.runtime_version,
+                "schema_version": self.generation.schema_version,
+                "pid": self.generation.pid,
+                "hostname": self.generation.hostname,
+                "started_at": self.generation.started_at,
             },
         )
 
