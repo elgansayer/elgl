@@ -20,11 +20,13 @@ class JobStore:
     def load(self) -> dict[str, Job]:
         payload = read_json(self.path, {"jobs": []})
         jobs: dict[str, Job] = {}
+        now = datetime.now(UTC)
         for item in payload.get("jobs", []):
             task = Task(**item["task"])
-            jobs[task.identifier] = Job(
+            state = JobState(item["state"])
+            job = Job(
                 task=task,
-                state=JobState(item["state"]),
+                state=state,
                 branch=item.get("branch"),
                 pull_request=item.get("pull_request"),
                 head_sha=item.get("head_sha"),
@@ -37,6 +39,13 @@ class JobStore:
                 else None,
                 updated_at=datetime.fromisoformat(item["updated_at"]),
             )
+            # QUARANTINED is retained in JobState only so old durable files remain
+            # readable. It is not an operational state. Normalize it immediately on
+            # every read so no caller, scheduler path, daemon restart, or doctor run
+            # can accidentally preserve an inert job until a later reconcile cycle.
+            if job.state is JobState.QUARANTINED:
+                self._reset_legacy_quarantine(job, now)
+            jobs[task.identifier] = job
         return jobs
 
     def save(self, jobs: dict[str, Job]) -> None:
@@ -74,11 +83,9 @@ class JobStore:
             jobs = self.load()
             now = datetime.now(UTC)
 
-            # QUARANTINED used to be terminal, but the pipeline now retries indefinitely
-            # with bounded backoff. Migrate every persisted legacy record, not only jobs
-            # that still appear in today's open-issue/open-PR task set. Otherwise closed
-            # or otherwise inactive historical jobs remain quarantined forever and the
-            # production doctor repeatedly pages an ever-growing stale backlog.
+            # load() already normalizes every legacy quarantine record. Keep this
+            # defensive pass so an in-memory caller can never persist quarantine as
+            # terminal during reconciliation either.
             for persisted_job in jobs.values():
                 if persisted_job.state is JobState.QUARANTINED:
                     self._reset_legacy_quarantine(persisted_job, now)
