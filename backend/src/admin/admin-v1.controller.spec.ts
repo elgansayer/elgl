@@ -132,7 +132,9 @@ describe('AdminV1Controller', () => {
       headers: { 'x-request-id': 'request-audit-1' },
     } as never;
 
-    await expect(controller.listAudit(query, request)).resolves.toEqual(expected);
+    await expect(controller.listAudit(query, request)).resolves.toEqual(
+      expected,
+    );
     expect(auditQuery.list).toHaveBeenCalledWith(query);
     expect(audit.record).toHaveBeenCalledWith({
       actorUserId: 'admin-1',
@@ -171,7 +173,12 @@ describe('AdminV1Controller', () => {
 
   it('fails closed when audit-log read auditing fails', async () => {
     const { controller, auditQuery, audit } = buildController();
-    auditQuery.list.mockResolvedValue({ events: [], total: 0, page: 1, pageSize: 50 });
+    auditQuery.list.mockResolvedValue({
+      events: [],
+      total: 0,
+      page: 1,
+      pageSize: 50,
+    });
     audit.record.mockRejectedValue(new Error('audit unavailable'));
     const request = {
       user: { id: 'admin-1' },
