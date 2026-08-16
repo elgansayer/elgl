@@ -20,6 +20,9 @@ jobs:
     permissions:
       issues: write
       actions: read
+      pull-requests: read
+    env:
+      MAX_OPEN_PRS: ${{ vars.SWARM_MAX_OPEN_PRS || '25' }}
     steps:
       - name: Find Next Task
         env:
@@ -27,6 +30,22 @@ jobs:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
           REPOSITORY: ${{ github.repository }}
         run: |
+          set -euo pipefail
+
+          # Apply repository-level backpressure before starting more implementation work.
+          # Local worker concurrency alone is not enough when CI/review/merge WIP is saturated.
+          OPEN_PRS=$(gh pr list --repo "$REPOSITORY" \
+            --state open --limit 200 \
+            --json number \
+            --jq 'length' 2>/dev/null || echo "0")
+
+          if [ "$OPEN_PRS" -ge "$MAX_OPEN_PRS" ]; then
+            echo "Repository WIP is saturated: $OPEN_PRS open PRs (limit $MAX_OPEN_PRS)."
+            echo "No new task will be dispatched until integration WIP drains."
+            echo "Override with repository variable SWARM_MAX_OPEN_PRS when intentionally changing capacity."
+            exit 0
+          fi
+
           # Count both running and queued resolvers so queued work cannot oversubscribe
           # the intended maximum of three active OpenHands tasks.
           RUNNING=$(gh run list --repo "$REPOSITORY" \
