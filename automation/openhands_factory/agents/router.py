@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from threading import BoundedSemaphore
 from typing import Protocol
@@ -52,14 +53,43 @@ class AgentRouter:
         breakers: Mapping[str, AgentCircuitBreaker] | None = None,
         health_store: AgentHealthStore | None = None,
         provider_slots: Mapping[str, BoundedSemaphore] | None = None,
-        skip_busy_providers: bool = True,
+        skip_busy_providers: bool | None = None,
     ) -> None:
         self.providers = {provider.name: provider for provider in providers}
         self.policy = policy
         self.breakers = dict(breakers or {})
         self.health_store = health_store
-        self.provider_slots = dict(provider_slots or {})
-        self.skip_busy_providers = skip_busy_providers
+
+        policy_config = getattr(policy, "config", None)
+        configured_providers = getattr(policy_config, "providers", {}) if policy_config else {}
+        if provider_slots is None:
+            self.provider_slots = {
+                name: BoundedSemaphore(provider_cfg.max_concurrency)
+                for name, provider_cfg in configured_providers.items()
+                if provider_cfg.enabled and name in self.providers
+            }
+        else:
+            self.provider_slots = dict(provider_slots)
+
+        configured_routing = getattr(policy_config, "routing", None) if policy_config else None
+        if skip_busy_providers is None and configured_routing is not None:
+            skip_busy_providers = configured_routing.skip_busy_providers
+        self.skip_busy_providers = True if skip_busy_providers is None else skip_busy_providers
+
+    def _provider_config(self, name: str):
+        policy_config = getattr(self.policy, "config", None)
+        providers = getattr(policy_config, "providers", {}) if policy_config else {}
+        return providers.get(name)
+
+    def _request_for_provider(self, request: AgentRequest, name: str) -> AgentRequest:
+        provider_cfg = self._provider_config(name)
+        if provider_cfg is None:
+            return request
+        return replace(
+            request,
+            timeout_seconds=request.timeout_seconds or provider_cfg.timeout_seconds,
+            max_output_bytes=request.max_output_bytes or provider_cfg.max_output_bytes,
+        )
 
     def _health(self) -> dict[str, ProviderHealth]:
         health: dict[str, ProviderHealth] = {}
@@ -180,9 +210,10 @@ class AgentRouter:
                 continue
 
             attempted = True
+            provider_request = self._request_for_provider(request, name)
             try:
                 try:
-                    result = provider.run(request)
+                    result = provider.run(provider_request)
                 except Exception as error:
                     now = datetime.now(UTC)
                     result = AgentResult(
