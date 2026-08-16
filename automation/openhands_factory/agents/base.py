@@ -62,6 +62,7 @@ class AgentFailure:
     kind: AgentFailureKind
     message: str
     exit_code: int | None = None
+    retry_after_seconds: int | None = None
 
 
 @dataclass
