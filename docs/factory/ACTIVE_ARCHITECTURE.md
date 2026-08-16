@@ -8,17 +8,17 @@ The active autonomous coding system is the OpenHands Factory daemon running on t
 
 The retired AI swarm, Aider-based workers, swarm watchdogs, legacy guardians, legacy resolver/reviewer daemons, and any other pre-OpenHands orchestration are not part of the active architecture. They must not be re-enabled, called as fallbacks, or treated as authoritative state.
 
-## Provider order
+## Provider order and routing
 
-For each new OpenHands conversation, provider selection is conversation-scoped and health-aware:
+For each new autonomous task phase (planning, implementation, review, etc.), provider selection is orchestrated by the `AgentRouter` and is both phase-scoped and health-aware. The default routing preference is:
 
-1. ChatGPT subscription authentication through `LLM.subscription_login(vendor="openai", ...)`, using a Codex model supported by the installed OpenHands SDK.
-2. OpenCode Go through its authenticated OpenAI-compatible endpoint.
-3. No third provider is enabled by default.
+1. **Claude Code** (`claude`) via local Claude subscription CLI.
+2. **OpenAI Codex** (`codex`) via local ChatGPT Plus subscription CLI.
+3. **Google Agent** (`gemini`) via local Gemini/ACP CLI.
+4. **OpenCode Go** (`opencode`) via its authenticated endpoint.
+5. **OpenHands Legacy** (`openhands`) as the final LiteLLM API-backed fallback.
 
-Gemini support remains optional code only. It may be enabled deliberately through configuration for a controlled experiment, but it is not part of the production fallback chain unless an operator explicitly changes `GEMINI_ENABLED=true`.
-
-Do not replace this with OpenHands `FallbackStrategy` for multi-turn conversations while cross-provider tool-call replay can produce provider-incompatible conversation state. Provider selection happens once per conversation. A job-level retry starts a fresh bounded conversation and may select the next healthy provider.
+Do not rely on the internal LiteLLM `FallbackStrategy` for multi-turn conversations, as cross-provider tool-call replay can produce incompatible conversation states. Provider selection and fallback interception happen at the `AgentRouter` layer per phase. A job-level or phase-level retry spins up a fresh isolated agent session and transparently falls back to the next healthy provider in the routing policy.
 
 ## OAuth ownership and health
 
@@ -78,8 +78,7 @@ Major-version upgrades require migration-specific acceptance criteria and must n
 
 The following are intended to become mechanically enforced CI invariants:
 
-- Default provider order is OpenAI subscription/Codex then OpenCode Go.
-- Gemini is disabled by default.
+- Default routing order prioritizes local authenticated CLIs: `claude` -> `codex` -> `gemini` -> `opencode` -> `openhands`.
 - Provider selection is stable for the lifetime of one conversation.
 - Workers receive no controller OAuth, GitHub or Telegram secrets.
 - Autonomous changes do not push directly to protected `main` or bypass required checks.
