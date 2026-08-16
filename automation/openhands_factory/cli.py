@@ -10,10 +10,11 @@ from openhands_factory.alerts import AlertService
 from openhands_factory.authentication import authenticate_openai
 from openhands_factory.config import FactoryConfig
 from openhands_factory.daemon import FactoryDaemon, set_paused
-from openhands_factory.doctor import run_doctor
+from openhands_factory.doctor import Check, run_doctor
 from openhands_factory.exceptions import FactoryError
 from openhands_factory.github import GitHubClient
 from openhands_factory.metrics import MetricsStore
+from openhands_factory.oauth_health import smoke_openai_subscription
 from openhands_factory.provider_profiles import discover_gemini_models, discover_opencode_models
 from openhands_factory.state import read_json
 from openhands_factory.task_source import TaskStore
@@ -51,12 +52,26 @@ def _config() -> FactoryConfig:
     return FactoryConfig.from_environment()
 
 
+def _doctor_checks(config: FactoryConfig, *, online: bool) -> list[Check]:
+    checks = run_doctor(config, online=online)
+    if online:
+        oauth = smoke_openai_subscription(config)
+        checks.append(
+            Check(
+                "openai-subscription-online",
+                oauth.passed,
+                f"{oauth.kind}: {oauth.detail}",
+            )
+        )
+    return checks
+
+
 def main(arguments: list[str] | None = None) -> int:
     args = parser().parse_args(arguments)
     try:
         config = _config()
         if args.command == "doctor":
-            checks = run_doctor(config, online=args.online)
+            checks = _doctor_checks(config, online=args.online)
             for check in checks:
                 status = "FAIL" if not check.passed else "WARN" if check.warning else "PASS"
                 print(f"{status} {check.name}: {check.detail}")
@@ -73,8 +88,12 @@ def main(arguments: list[str] | None = None) -> int:
             print("\n".join(sorted(models)))
             return 0
         if args.command == "providers":
-            checks = run_doctor(config, online=True)
-            provider_checks = [check for check in checks if check.name in {"opencode-go", "gemini"}]
+            checks = _doctor_checks(config, online=True)
+            provider_checks = [
+                check
+                for check in checks
+                if check.name in {"openai-subscription-online", "opencode-go", "gemini"}
+            ]
             for check in provider_checks:
                 print(f"{'PASS' if check.passed else 'FAIL'} {check.name}: {check.detail}")
             return 0 if all(check.passed for check in provider_checks) else 1
