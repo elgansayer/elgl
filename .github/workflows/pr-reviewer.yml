@@ -11,10 +11,12 @@ concurrency:
 jobs:
   review_and_fix:
     # This job has privileged repository credentials and may push fixes or queue merges.
-    # Never run that path against a fork-controlled checkout. Same-repository AI
-    # branches remain eligible, while external fork PRs are reviewed by normal CI.
+    # Never run that path against a fork-controlled checkout or Dependabot PRs. Dependabot
+    # events intentionally do not receive repository Actions secrets, so every AI tier would
+    # fail authentication while deterministic CI/workflow checks remain available.
     if: >
       github.actor != 'claude-code[bot]' &&
+      github.actor != 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 90
