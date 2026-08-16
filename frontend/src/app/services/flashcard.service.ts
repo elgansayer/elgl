@@ -83,7 +83,7 @@ export class FlashcardService {
     } catch {
       // Offline: create a locally generated flashcard
       const degradedCard: Flashcard = {
-        id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        id: `offline-${Date.now()}-${crypto.randomUUID()}`,
         user_id: '',
         word_token: dto.word_token,
         original_context: dto.original_context,

@@ -119,7 +119,7 @@ export class CrashReportService {
     try {
       const db = await this.ensureDB();
       const entry: StoredCrashEntry = {
-        id: `crash-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `crash-${Date.now()}-${crypto.randomUUID()}`,
         payload,
         storedAt: Date.now(),
         synced: false,
