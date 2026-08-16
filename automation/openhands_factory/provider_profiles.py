@@ -1,4 +1,9 @@
-"""Validated OpenHands provider construction."""
+"""Validated OpenHands provider construction.
+
+Production routing is intentionally narrow: OpenAI subscription OAuth (Codex)
+first, then OpenCode Go. Historical Gemini helpers remain only for state/config
+migration compatibility and are never selected by the production router.
+"""
 
 from __future__ import annotations
 
@@ -106,6 +111,7 @@ def validate_opencode(config: FactoryConfig, client: HttpClient | None = None) -
 
 
 def discover_gemini_models(config: FactoryConfig, client: HttpClient | None = None) -> set[str]:
+    """Legacy diagnostic helper retained for backwards-compatible config migration."""
     if config.gemini_api_key is None:
         return set()
     http = client or httpx.Client()
@@ -121,6 +127,7 @@ def discover_gemini_models(config: FactoryConfig, client: HttpClient | None = No
 def validate_gemini(
     config: FactoryConfig, client: HttpClient | None = None
 ) -> ProviderProfile | None:
+    """Legacy diagnostic helper; Gemini is not eligible for production routing."""
     if not config.gemini_enabled:
         return None
     if config.monthly_variable_budget_usd != 0 or not config.gemini_free_tier_only:
@@ -140,7 +147,8 @@ def validate_gemini(
 
 
 def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
-    profiles = [
+    """Return the authoritative production provider chain."""
+    return [
         ProviderProfile(
             ProviderName.OPENAI_SUBSCRIPTION,
             "openai-subscription",
@@ -156,17 +164,6 @@ def ordered_profiles(config: FactoryConfig) -> list[ProviderProfile]:
             config.opencode_api_key,
         ),
     ]
-    if config.gemini_enabled:
-        profiles.append(
-            ProviderProfile(
-                ProviderName.GEMINI,
-                config.gemini_profile_name,
-                f"gemini/{config.gemini_model}",
-                None,
-                config.gemini_api_key,
-            )
-        )
-    return profiles
 
 
 def select_provider_decision(
@@ -174,7 +171,12 @@ def select_provider_decision(
     *,
     prefer_different_from: ProviderName | None = None,
 ) -> ProviderDecision:
-    """Choose one provider for a whole conversation and explain any fallback."""
+    """Choose one provider for a whole conversation and explain any fallback.
+
+    The production chain is deliberately fixed to Codex subscription OAuth then
+    OpenCode Go. A third provider must not silently re-enter autonomous execution
+    because stale configuration or historical health state still exists.
+    """
     store = ProviderHealthStore(config.state_dir / "health.json")
     breakers = {breaker.provider: breaker for breaker in store.load()}
     oauth = inspect_openai_oauth(config)
@@ -185,14 +187,16 @@ def select_provider_decision(
     opencode_breaker = breakers.get(ProviderName.OPENCODE_GO)
     opencode_usable = opencode_breaker is None or opencode_breaker.permits_call()
 
-    # Independent review should prefer a different healthy provider when practical,
-    # while still remaining provider-stable after the conversation starts.
-    if (
-        prefer_different_from is ProviderName.OPENAI_SUBSCRIPTION
-        and opencode_usable
-    ):
+    # Independent review should prefer the other healthy production provider while
+    # remaining provider-stable once the review conversation starts.
+    if prefer_different_from is ProviderName.OPENAI_SUBSCRIPTION and opencode_usable:
         return ProviderDecision(
             ProviderName.OPENCODE_GO,
+            "independent-review-provider-diversity",
+        )
+    if prefer_different_from is ProviderName.OPENCODE_GO and openai_usable:
+        return ProviderDecision(
+            ProviderName.OPENAI_SUBSCRIPTION,
             "independent-review-provider-diversity",
         )
 
@@ -207,12 +211,10 @@ def select_provider_decision(
     if opencode_usable:
         return ProviderDecision(ProviderName.OPENCODE_GO, fallback_reason)
 
-    if config.gemini_enabled and config.gemini_api_key is not None:
-        gemini_breaker = breakers.get(ProviderName.GEMINI)
-        if gemini_breaker is None or gemini_breaker.permits_call():
-            return ProviderDecision(ProviderName.GEMINI, "opencode-provider-circuit-open")
-
-    raise FactoryError("All configured model providers are temporarily unavailable")
+    raise FactoryError(
+        "Both production model providers are temporarily unavailable "
+        "(Codex subscription OAuth and OpenCode Go)"
+    )
 
 
 def select_primary_provider(config: FactoryConfig) -> ProviderName:
@@ -221,13 +223,7 @@ def select_primary_provider(config: FactoryConfig) -> ProviderName:
 
 
 def build_llm(config: FactoryConfig, provider: ProviderName | None = None) -> LLM:
-    """Construct this conversation's sole LLM, with no per-call fallback chain.
-
-    The caller may reserve a provider before process startup and pass it here. When
-    no provider is supplied, this helper preserves the existing standalone behavior
-    by selecting the healthiest provider once. A reserved provider is never silently
-    replaced inside the conversation.
-    """
+    """Construct this conversation's sole LLM, with no per-call fallback chain."""
     from openhands.sdk import LLM
 
     selected_provider = provider or select_primary_provider(config)
@@ -237,16 +233,15 @@ def build_llm(config: FactoryConfig, provider: ProviderName | None = None) -> LL
             model=config.openai_model,
             open_browser=False,
         )
-    if selected_provider is ProviderName.GEMINI:
+    if selected_provider is ProviderName.OPENCODE_GO:
         return LLM(
-            model=f"gemini/{config.gemini_model}",
-            api_key=config.gemini_api_key,
-            usage_id=config.gemini_profile_name,
+            model=f"openai/{config.opencode_model}",
+            api_key=config.opencode_api_key,
+            base_url=config.opencode_base_url,
+            usage_id=config.opencode_profile_name,
+            reasoning_effort="none",
         )
-    return LLM(
-        model=f"openai/{config.opencode_model}",
-        api_key=config.opencode_api_key,
-        base_url=config.opencode_base_url,
-        usage_id=config.opencode_profile_name,
-        reasoning_effort="none",
+    raise ConfigurationError(
+        f"Provider {selected_provider.value!r} is historical-only and is not eligible "
+        "for production factory conversations"
     )
