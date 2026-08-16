@@ -20,8 +20,10 @@
     "check:motion-contract": "node scripts/check-motion-contract.mjs",
     "check:iconography": "node scripts/check-iconography.mjs",
     "check:density-modes": "node scripts/check-density-modes.mjs",
-    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:iconography && npm run check:density-modes",
-    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:iconography && npm run check:density-modes",
+    "check:theme-service": "node scripts/check-theme-service.mjs",
+    "check:design-foundations": "node scripts/check-design-foundations.mjs",
+    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:design-foundations",
+    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:design-foundations",
     "cypress:open": "cypress open",
     "e2e": "cypress run",
     "e2e:ci": "start-server-and-test start http://localhost:4200 e2e"

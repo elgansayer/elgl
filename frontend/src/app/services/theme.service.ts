@@ -8,8 +8,12 @@ function isTheme(value: unknown): value is Theme {
   return typeof value === 'string' && ['light', 'dark', 'system'].includes(value);
 }
 
+function isHexColour(value: unknown): value is string {
+  return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
+}
+
 function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
+  const h = hex.slice(1);
   return [
     Number.parseInt(h.slice(0, 2), 16),
     Number.parseInt(h.slice(2, 4), 16),
@@ -62,8 +66,10 @@ export class ThemeService {
   private initAccent(): void {
     if (typeof localStorage !== 'undefined') {
       const savedAccent = localStorage.getItem('app_primary_accent_color');
-      if (savedAccent) {
+      if (isHexColour(savedAccent)) {
         this.primaryAccentColor.set(savedAccent);
+      } else if (savedAccent) {
+        localStorage.removeItem('app_primary_accent_color');
       }
     }
   }
@@ -75,16 +81,29 @@ export class ThemeService {
     }
   }
 
-  setPrimaryAccentColor(colour: string): void {
+  setPrimaryAccentColor(colour: string): boolean {
+    if (!isHexColour(colour)) return false;
+
     this.primaryAccentColor.set(colour);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('app_primary_accent_color', colour);
     }
+    return true;
+  }
+
+  clearPrimaryAccentColor(): void {
+    this.primaryAccentColor.set(null);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('app_primary_accent_color');
+    }
   }
 
   loadFromProfile(profile: Partial<Pick<UserProfile, 'primary_accent_color'>> | null): void {
-    if (profile?.primary_accent_color) {
-      this.setPrimaryAccentColor(profile.primary_accent_color);
+    const colour = profile?.primary_accent_color;
+    if (isHexColour(colour)) {
+      this.setPrimaryAccentColor(colour);
+    } else {
+      this.clearPrimaryAccentColor();
     }
   }
 
@@ -93,8 +112,8 @@ export class ThemeService {
     const root = this.document?.documentElement;
     if (!root) return;
 
-    if (!colour) {
-      // No custom preference: fall through to the theme-aware Ember/Tide CSS default.
+    if (!colour || !isHexColour(colour)) {
+      // No valid custom preference: fall through to the theme-aware Ember/Tide CSS default.
       root.style.removeProperty('--color-primary-rgb');
       root.style.removeProperty('--color-primary');
       return;
