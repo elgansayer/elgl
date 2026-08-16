@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import BoundedSemaphore
 from unittest.mock import patch
 
 from openhands_factory.agents.base import (
@@ -143,6 +144,41 @@ class TestAgentRouter(unittest.TestCase):
         router = AgentRouter(providers=[first, second])
         with self.assertRaises(ProviderCapacityUnavailable):
             router.run(self.request, self.job)
+
+    def test_busy_provider_is_skipped_without_exceeding_capacity(self):
+        first = ScriptedProvider("first", [result_for("first", success=True)])
+        second = ScriptedProvider("second", [result_for("second", success=True)])
+        first_slot = BoundedSemaphore(1)
+        self.assertTrue(first_slot.acquire(blocking=False))
+        router = AgentRouter(
+            providers=[first, second],
+            provider_slots={"first": first_slot, "second": BoundedSemaphore(1)},
+            skip_busy_providers=True,
+        )
+        try:
+            result = router.run(self.request, self.job)
+        finally:
+            first_slot.release()
+        self.assertEqual(result.provider, "second")
+        self.assertEqual(first.calls, 0)
+        self.assertEqual(second.calls, 1)
+
+    def test_all_busy_providers_defer_instead_of_consuming_a_task_failure(self):
+        provider = ScriptedProvider("only", [result_for("only", success=True)])
+        slot = BoundedSemaphore(1)
+        self.assertTrue(slot.acquire(blocking=False))
+        router = AgentRouter(
+            providers=[provider],
+            provider_slots={"only": slot},
+            skip_busy_providers=True,
+        )
+        try:
+            with self.assertRaisesRegex(ProviderCapacityUnavailable, "busy"):
+                router.run(self.request, self.job)
+        finally:
+            slot.release()
+        self.assertEqual(provider.calls, 0)
+        self.assertEqual(self.job.provider_history, [])
 
 
 class TestHealthTracking(unittest.TestCase):
