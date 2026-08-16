@@ -13,6 +13,7 @@ def test_every_change_runs_full_frontend_backend_and_factory_gate(tmp_path: Path
     commands = commands_for(tmp_path, {Path("README.md")})
     names = {command.name for command in commands}
 
+    assert "migration-delta" in names
     assert "factory-tests" in names
     assert "frontend-build" in names
     assert "frontend-test" in names
@@ -20,8 +21,14 @@ def test_every_change_runs_full_frontend_backend_and_factory_gate(tmp_path: Path
     assert "backend-build" in names
     assert "backend-test" in names
     assert "backend-test:e2e" in names
+    migration = next(command for command in commands if command.name == "migration-delta")
+    assert migration.arguments == ("node", "scripts/check-migration-delta.mjs")
+    assert migration.directory == tmp_path
     factory = next(command for command in commands if command.name == "factory-tests")
     assert factory.arguments[:3] == (sys.executable, "-m", "pytest")
+    assert [command.name for command in commands].index("migration-delta") < [
+        command.name for command in commands
+    ].index("factory-tests")
     frontend_commands = commands_for(tmp_path, {Path("frontend/src/app/app.ts")})
     frontend_e2e = next(command for command in frontend_commands if command.name == "frontend-e2e")
     assert frontend_e2e.arguments[:2] == ("bash", "-lc")
