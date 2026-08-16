@@ -70,6 +70,10 @@ if [ ! -x "$FACTORY_CLI" ]; then
   exit 1
 fi
 
-runuser -u hellotalk-factory --preserve-environment -- "$FACTORY_CLI" doctor --online
+# Start recovery supervision before running diagnostics. Doctor includes the
+# daemon heartbeat, so running it first would make a stopped daemon block the
+# very start/recovery path intended to bring it back.
 systemctl enable --now "$FACTORY_SERVICE" "$FACTORY_HEALTH_TIMER"
+sleep 2
+runuser -u hellotalk-factory --preserve-environment -- "$FACTORY_CLI" doctor --online
 systemctl --no-pager --full status "$FACTORY_SERVICE"
