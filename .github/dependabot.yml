@@ -6,6 +6,8 @@ updates:
       - '/frontend'
       - '/backend'
       - '/admin-portal'
+      - '/e2e'
+      - '/tests/load'
     schedule:
       interval: 'daily'
     open-pull-requests-limit: 50

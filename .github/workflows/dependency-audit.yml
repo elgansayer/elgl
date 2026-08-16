@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          npm audit --json > npm-audit.json
+          npm audit --audit-level=high --json > npm-audit.json
           status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           exit 0
@@ -78,6 +78,8 @@ jobs:
             ...severities.map((key) => `| ${key} | ${Number(v[key] ?? 0)} |`),
             `| total | ${total} |`,
             '',
+            'Policy: high and critical vulnerabilities fail this job; moderate/low are reported for triage.',
+            '',
           ];
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
           NODE
@@ -88,3 +90,10 @@ jobs:
           path: ${{ matrix.directory }}/npm-audit.json
           if-no-files-found: error
           retention-days: 30
+      - name: Enforce high/critical vulnerability policy
+        if: ${{ steps.audit.outputs.exit_code != '0' }}
+        env:
+          PACKAGE_NAME: ${{ matrix.name }}
+        run: |
+          echo "High or critical npm vulnerabilities detected in ${PACKAGE_NAME}. See the uploaded audit artifact and job summary."
+          exit 1
