@@ -104,6 +104,13 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check:constitution
+      - run: npm run check:design-sync
+      - run: npm run check:spartan-boundaries
+      - name: Enforce design-sync drift on pull requests
+        if: github.event_name == 'pull_request'
+        env:
+          DESIGN_SYNC_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: npm run check:design-sync-drift
       - run: node scripts/check-conflict-markers.mjs
       - name: Enforce admin audit append-only integrity
         run: node scripts/check-admin-audit-integrity.mjs

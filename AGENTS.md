@@ -114,17 +114,20 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
 
 ## 6. UI Evolution & Design System Protocol
 
-- **Design System Adherence:** We are moving beyond strict screenshot parity. You must maintain the core design system established in the app: a mobile-first design featuring strict dark mode (`#121212` backgrounds), vibrant neon accents, horizontal scrollable pills, and dense flag indicators. Do not use generic web dashboard styles or standard Bootstrap/Tailwind web forms. You have the freedom to design net-new UI layouts that fit this aesthetic.
-- **Responsive Device Support:** We are mobile design first, but the application must fully support tablet and desktop screens. You must provide a unique, rich experience for each device or screen size rather than simply stretching the mobile layout (e.g., utilizing sidebars, multi-pane layouts, or grid adaptations for larger screens).
+- **Single visual authority:** `DESIGN.md`, `docs/spartan-relay-architecture.md`, and the scoped `frontend/AGENTS.md` define the frontend visual and component contract. Relay semantic tokens own colour, surface, typography, spacing, radius, elevation, density, and motion roles. Spartan Brain owns reusable accessible interaction behaviour. Owned Spartan Helm code under `frontend/src/app/components/ui/` adapts that behaviour for the application. Feature code composes Relay/Helm primitives and must not create a competing visual system.
+- **Theme parity:** Light and dark themes are both first-class. Never impose a global `#121212`, neon, or dark-only mandate. Product character must be expressed through Relay semantic roles and approved variants that remain valid across themes, forced colours, reduced motion, and per-user primary accents.
+- **Spartan first for interactive mechanics:** Do not hand-roll focus traps, roving tabindex, combobox/listbox/menu keyboard state, dialog Escape/backdrop behaviour, or other interaction state machines when an approved Spartan primitive exists. Prefer existing Helm components and Relay wrappers before adding new abstractions.
+- **Claude Design two-way workflow:** For material UI work follow `docs/claude-design-two-way-sync.md`. Claude Design is the editable design-intent/review workspace, while runtime Angular code, Relay tokens, Spartan interaction contracts, and automated tests remain authoritative for shipped software. Design-first and code-first changes must reconcile rather than silently overwrite either side.
+- **Responsive Device Support:** We are mobile design first, but the application must fully support tablet and desktop screens. Provide deliberate responsive compositions rather than simply stretching mobile layout, using sidebars, multi-pane layouts, or grid adaptations where they improve the experience.
 - **Zero hard-coded strings:** Never write raw hard-coded text inside templates (`*.html`) or component code (`*.ts`). Always pipe UI text through `TranslatePipe` (`| t` / `| t: params`) using keys from `I18nService`.
-- **Feature-first scope:** Focus on delivering high-quality user experiences for both parity features and net-new ideas, ensuring they visually fit the established design language.
+- **Feature-first scope:** Deliver high-quality user experiences for parity features and net-new ideas while remaining inside the Relay + Spartan contract.
 - **Template control flow only:** Never use `*ngIf`, `*ngFor`, `*ngSwitch`, `*ngSwitchCase`, or `*ngSwitchDefault`. Use `@if`, `@for`, and `@switch` exclusively.
 - **No `ngClass` or `ngStyle`:** Use native `[class]`, `[class.foo]`, and `[style.prop]` bindings only.
 - **Stable tracking:** Every `@for` must track a stable identity key (for example `track item.id`) unless no stable key exists.
-- **Design primitives first:** Reuse shared primitives (`app-card`, `app-button-primary`, `app-button-secondary`, `app-input`, `app-textarea`, `app-chip`, `app-pill`, `app-empty-state`) before adding ad hoc utility combinations.
-- **Token fidelity:** Prefer values from Tailwind tokens and global app tokens (`surface`, radius, shadow, motion). Do not invent one-off values if an existing token covers the use case.
+- **Relay primitives first:** Reuse the current approved Relay primitives and Spartan Helm adapters before adding ad hoc utility combinations or a new primitive. When an existing primitive lacks a required capability, extend its documented API or add a justified semantic variant rather than creating a parallel component family.
+- **Token fidelity:** Use Relay semantic tokens for product styling. Do not invent one-off colours, surfaces, radii, shadows, or motion values when a semantic role already exists.
 - **RTL-safe utilities only:** Use logical spacing and borders (`ps`, `pe`, `ms`, `me`, `border-s`, `border-e`) in preference to physical direction utilities.
-- **VIP and monetisation copy:** - **VIP and monetisation copy:** Ensure any price shown in UI is formatted properly.
+- **VIP and monetisation copy:** Ensure any price shown in UI is formatted properly.
 - **Discovery UX parity:** The discovery surface must follow a `Find partners` model, not a `Nearby`-first model. Prioritise partner intent, filter controls, and profile quality signals over distance framing.
 - **Filter controls policy:** Do not use free-text input boxes for discovery filters. Use compact controls only (segmented buttons, selects, toggles, chips, and controlled lists). Language filters must be list-driven and searchable via control behaviour.
 - **Completion gate for frontend changes:** Before marking frontend work complete, run:
@@ -133,15 +136,16 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
   - `npm run test -- --watch=false`
   - `npm run check:rtl-logical`
   - `npm run lint` if the script exists in the project
+  - the root `npm run check:design-sync` when a mapped visual contract changes
 
 ## 7. Universal Testing Mandate & Test Visiting Protocol (Mandatory)
 
 - **Always Visit Tests:** Whenever you inspect, add, refactor, or debug any code across the workspace (frontend or backend), you must simultaneously open and review the associated test files (`*.spec.ts` / `*.e2e-spec.ts`).
-- **Full Primitive Coverage:** Every UI design primitive (`app-card`, `app-button-primary`, `app-button-secondary`, `app-input`, `app-textarea`, `app-chip`, `app-pill`, `app-empty-state`) must be backed by both a standalone component and an exhaustive Vitest unit test suite verifying signal reactivity, host class bindings, accessibility ARIA attributes, and RTL classes.
+- **Full Primitive Coverage:** Every approved Relay UI primitive must be backed by a standalone component or directive where applicable and a comprehensive test suite covering its public contract, accessibility semantics, state changes, and RTL behaviour. Do not preserve obsolete primitive names merely to satisfy this rule.
 - **Full API Controller & Service Coverage:** Every NestJS API controller, service, guard, and worker in the `backend/` workspace must have a comprehensive Vitest unit test suite (`*.spec.ts`) validating request/response DTO handling, authentication/authorization flows, external service mocks (Supabase, Centrifugo, LiveKit, R2, Redis, NLP.js), and database queries (`pg_trgm`/PostGIS).
 - **Continuous Verification:** After modifying any code or test, run the relevant test suite immediately (`npm test` in `backend/` or `npm test -- --watch=false` in `frontend/`) to guarantee zero regressions.
 
-## 8. Known Issues / Audit Findings (Last audited 2026-07-29)
+## 8. Known Issues / Audit Findings (Last audited 2026-08-16)
 
 `TODO.md` currently marks every phase as complete, but the following items are the authoritative backlog.
 
@@ -172,7 +176,10 @@ Limited exceptions for `ngOnInit`/`ngOnDestroy`: ONLY allowed when integrating w
 
 ### 8.5 Critical UI Audit Findings (pending)
 
-- **Discovery + chat-list UI:** Must be rebuilt to match original HelloTalk dark-theme screenshots (`/home/elgan/dev/hellotalk/original-hello-talk-screenshots/`). Current UI uses generic web dashboard styling instead of `#121212` backgrounds, neon accents, horizontal scrollable pills, flag indicators, and gradient buttons.
+- **Spartan migration incomplete:** Spartan Brain/Helm is installed and the Relay ownership architecture is established, but the numbered migration backlog remains active across shared primitives and feature surfaces. Do not equate package installation with full integration.
+- **Design-system drift risk:** Shared overlays/dialogs, direct Brain imports from feature code, generated Helm drift, and remaining hand-built interaction behaviour must converge on the Relay + Spartan ownership model.
+- **Claude Design reconciliation:** `docs/claude-design-two-way-sync.md` defines the required two-way workflow. Stable mapping coverage and changed-files-aware drift detection are still being expanded.
+- **Legacy screenshot references:** `original-hello-talk-screenshots/` may inform product behaviour and useful interaction ideas, but it does not override Relay semantic tokens, first-class light/dark themes, accessibility, Spartan ownership, or the current design system.
 - **`.env.example`** missing most required configuration variables (see `backend/src/config/validation.schema.ts` for full list).
 
 ## 9. Skills System
@@ -188,10 +195,10 @@ Domain-specific, on-demand workflows for recurring engineering tasks on this cod
 
 ## 10. Strict Execution & Quality Rules (Added 2026-07-23)
 
-- **Design Language Consistency:** You must strictly follow the established aesthetic for all UI development. Do not build standard web forms; instead, continue building custom Angular primitives (e.g., scrollable pills, gradient buttons, flag fluency indicators) that match the mobile-first experience.
+- **Design Language Consistency:** All UI development must follow the Relay + Spartan architecture defined by `DESIGN.md` and `docs/spartan-relay-architecture.md`. Preserve the product's distinctive language-learning identity through semantic tokens and documented variants, not through parallel custom primitive families or a mandatory dark/neon aesthetic.
 - **No Dead Buttons:** The application must have absolutely zero buttons that do nothing. Every single `<button>`, `<a>`, or clickable element must either have a functional `(click)` handler, a valid `[routerLink]`, or trigger a "Not Implemented" toast notification if the feature is pending.
 - **Test Coverage Mandate:** A test must be added for every single feature developed. This includes unit tests for both Angular frontend components/services (`*.spec.ts`) and NestJS backend controllers/services.
 - **No Deprecated Packages:** You must never pick npm packages that are deprecated, but still feel free to pick any tools or packages widely in use. Always verify dependencies before adding them.
 - **Fake Data First:** Fake/mock seed data must be added to the backend for every feature as it is developed. The frontend should never render empty states indefinitely during development; it must always populate with realistic placeholder data served from the backend or database seeds to properly validate the UI.
 - **NEVER Hardcode Anything:** You must NEVER hardcode data, coin balances, usernames, languages, or UI strings in the frontend or backend services (except inside dedicated mock data generators like `mock-data.ts` or internationalisation dictionaries). Every piece of dynamic state MUST flow from a backend service, state store, or translation pipe. If a database query fails or returns empty, rely ONLY on the centralized `mock-data.ts` for fallback data.
-- **Aggressive Idea Stealing:** When building out features or designing UX flows, you must actively study and steal as many good ideas, mechanics, and design patterns as possible from the following apps: HelloTalk, Tandem, HiNative, Speaky, italki, X, zoom, teams, slack, google meet, whatsapp, facebook, instagram, tiktok, (Twitter), Facebook, and Discord. Incorporate their best engagement loops and layouts into this app.
+- **Competitive UX Research:** When building features or designing UX flows, study relevant patterns from leading language-learning, social, communication, conferencing, and collaboration products. Adopt useful interaction ideas only when they fit the Relay design system, accessibility requirements, product goals, and legal/licensing constraints. Do not copy proprietary assets or blindly duplicate another product's visual identity.
