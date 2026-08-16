@@ -25,12 +25,20 @@ def test_equivalent_failures_collapse_volatile_identifiers() -> None:
 
 def test_provider_and_failure_kind_remain_part_of_identity() -> None:
     detail = "request failed with status 429"
-    opencode = fingerprint_failure(FailureKind.RATE_LIMIT, detail, provider=ProviderName.OPENCODE_GO)
+    opencode = fingerprint_failure(
+        FailureKind.RATE_LIMIT,
+        detail,
+        provider=ProviderName.OPENCODE_GO,
+    )
     openai = fingerprint_failure(
-        FailureKind.RATE_LIMIT, detail, provider=ProviderName.OPENAI_SUBSCRIPTION
+        FailureKind.RATE_LIMIT,
+        detail,
+        provider=ProviderName.OPENAI_SUBSCRIPTION,
     )
     authentication = fingerprint_failure(
-        FailureKind.AUTHENTICATION, detail, provider=ProviderName.OPENCODE_GO
+        FailureKind.AUTHENTICATION,
+        detail,
+        provider=ProviderName.OPENCODE_GO,
     )
 
     assert opencode.digest != openai.digest
