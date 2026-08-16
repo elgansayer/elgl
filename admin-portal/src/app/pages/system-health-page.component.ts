@@ -38,10 +38,12 @@ import {
           <div>
             <dt>Database</dt>
             <dd>{{ health.dependencies.database }}</dd>
+            <dd>{{ health.dependencyLatencyMs.database }} ms</dd>
           </div>
           <div>
             <dt>Redis</dt>
             <dd>{{ health.dependencies.redis }}</dd>
+            <dd>{{ health.dependencyLatencyMs.redis }} ms</dd>
           </div>
         </dl>
 
