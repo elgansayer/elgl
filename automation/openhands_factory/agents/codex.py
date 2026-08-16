@@ -14,6 +14,8 @@ from openhands_factory.agents.base import (
     ProviderHealth,
     ProviderStatus,
 )
+from openhands_factory.pty_wrapper import PTYWrapper
+from openhands_factory.sandbox import SandboxRunner
 
 
 class CodexProvider:
@@ -35,14 +37,13 @@ class CodexProvider:
     def run(self, request: AgentRequest) -> AgentResult:
         return asyncio.run(self._run_async(request))
 
-        from openhands_factory.sandbox import SandboxRunner
-        from openhands_factory.pty_wrapper import PTYWrapper
+    async def _run_async(self, request: AgentRequest) -> AgentResult:
         started_at = datetime.now(UTC)
         try:
             sandbox = SandboxRunner(request.cwd)
             cmd = [self.command, "--prompt", request.prompt]
             wrapper = PTYWrapper(sandbox.get_podman_cmd(cmd))
-            
+
             stdout_text = await asyncio.to_thread(wrapper.execute)
             exit_code = 0 if "Error" not in stdout_text else 1
 
