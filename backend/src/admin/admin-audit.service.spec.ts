@@ -41,6 +41,36 @@ describe('AdminAuditService', () => {
     });
   });
 
+  it('bounds caller-controlled correlation IDs and metadata strings', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const service = new AdminAuditService({
+      getClient: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({ insert }),
+      }),
+    } as unknown as SupabaseService);
+
+    await service.record({
+      actorUserId: 'admin-1',
+      action: 'users.login_history.read',
+      outcome: 'success',
+      correlationId: `  ${'r'.repeat(200)}  `,
+      metadata: {
+        source: 's'.repeat(200),
+        operation: 'o'.repeat(200),
+      },
+    });
+
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        correlation_id: 'r'.repeat(128),
+        metadata: {
+          source: 's'.repeat(128),
+          operation: 'o'.repeat(128),
+        },
+      }),
+    );
+  });
+
   it('persists a structured reason and normalized private operator note', async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
     const service = new AdminAuditService({

@@ -30,13 +30,18 @@ const ALLOWED_METADATA_KEYS = new Set([
   'page',
   'pageSize',
 ]);
+const MAX_CORRELATION_ID_LENGTH = 128;
+const MAX_METADATA_STRING_LENGTH = 128;
 
 @Injectable()
 export class AdminAuditService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async record(input: AdminAuditEventInput): Promise<void> {
-    const correlationId = input.correlationId?.trim() || randomUUID();
+    const suppliedCorrelationId = input.correlationId?.trim();
+    const correlationId = suppliedCorrelationId
+      ? suppliedCorrelationId.slice(0, MAX_CORRELATION_ID_LENGTH)
+      : randomUUID();
     const metadata = this.sanitizeMetadata(input.metadata ?? {});
     const operatorNote = normalizeAdminOperatorNote(input.operatorNote);
 
@@ -69,9 +74,12 @@ export class AdminAuditService {
     const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(metadata)) {
       if (!ALLOWED_METADATA_KEYS.has(key)) continue;
+      if (typeof value === 'string') {
+        sanitized[key] = value.slice(0, MAX_METADATA_STRING_LENGTH);
+        continue;
+      }
       if (
         value === null ||
-        typeof value === 'string' ||
         typeof value === 'number' ||
         typeof value === 'boolean'
       ) {
