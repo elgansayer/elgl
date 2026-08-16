@@ -20,6 +20,7 @@
     "check:motion-contract": "node scripts/check-motion-contract.mjs",
     "check:icon-contract": "node scripts/check-icon-contract.mjs",
     "check:density-modes": "node scripts/check-density-modes.mjs",
+    "check:forced-colors": "node scripts/check-forced-colors-contract.mjs",
     "check:spartan-config": "node scripts/check-spartan-health.mjs",
     "check:spartan-info": "ng g @spartan-ng/cli:info --json",
     "check:spartan-healthcheck": "ng g @spartan-ng/cli:healthcheck",
@@ -27,8 +28,8 @@
     "visual:serve": "node scripts/serve-design-preview.mjs",
     "visual:capture": "cypress run --config-file cypress.visual.config.ts --browser electron",
     "visual:capture:ci": "start-server-and-test visual:serve http://127.0.0.1:4300 visual:capture",
-    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract && npm run check:density-modes",
-    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract && npm run check:density-modes",
+    "lint": "eslint \"src/**/*.ts\" --fix && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract && npm run check:density-modes && npm run check:forced-colors",
+    "lint:check": "eslint \"src/**/*.ts\" && npm run check:control-flow && npm run check:template-bindings && npm run check:rtl-logical && npm run check:relay-token-ownership && npm run check:multilingual-typography && npm run check:semantic-colour-roles && npm run check:surface-elevation && npm run check:radius-hierarchy && npm run check:spacing-density && npm run check:motion-contract && npm run check:icon-contract && npm run check:density-modes && npm run check:forced-colors",
     "cypress:open": "cypress open",
     "e2e": "cypress run",
     "e2e:ci": "start-server-and-test start http://localhost:4200 e2e"
