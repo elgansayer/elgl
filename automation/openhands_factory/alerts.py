@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 import httpx
 
 from openhands_factory.config import FactoryConfig
+from openhands_factory.generation import FACTORY_RUNTIME_VERSION
 from openhands_factory.redaction import redact_text
 from openhands_factory.state import atomic_write_json, read_json
 
@@ -53,8 +54,6 @@ class AlertService:
         if self.config.telegram_bot_token is None or self.config.telegram_chat_id is None:
             return False
 
-        # Alerts are keyed by their concrete check/category so a burst of the same
-        # failure collapses without unrelated factory alerts suppressing each other.
         resolved_category = category or _alert_category(message)
         now = datetime.now(UTC)
         state = read_json(self.state_path, {})
@@ -70,6 +69,11 @@ class AlertService:
 
         suppressed = entry.get("suppressed", 0) if entry is not None else 0
         text = _compact_issue_list(message)
+        generation = self.config.factory_generation
+        text = (
+            f"{text}\n\nFactory generation: {generation}\n"
+            f"Factory runtime: {FACTORY_RUNTIME_VERSION}"
+        )
         if suppressed:
             minutes = max(1, self.cooldown_seconds // 60)
             text = (
