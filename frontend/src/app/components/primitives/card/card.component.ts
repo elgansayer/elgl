@@ -59,7 +59,7 @@ export class AppCardComponent {
         break;
       case 'interactive':
         variantClass =
-          'border border-surface-100 shadow-card cursor-pointer hover:shadow-lift hover:border-surface-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
+          'border border-surface-100 shadow-card cursor-pointer hover:shadow-lift hover:border-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2';
         break;
     }
 
