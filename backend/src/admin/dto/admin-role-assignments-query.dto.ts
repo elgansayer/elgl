@@ -36,4 +36,10 @@ export class AdminRoleAssignmentsQueryDto {
   @IsString()
   @MaxLength(80)
   roleKey?: string;
+
+  @ApiPropertyOptional({ description: 'Exact granting administrator user ID' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  grantedBy?: string;
 }

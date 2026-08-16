@@ -57,6 +57,7 @@ export class AdminRolesService {
     pageSize: number,
     userId?: string,
     roleKey?: string,
+    grantedBy?: string,
   ): Observable<AdminRoleAssignmentsListResult> {
     const token = this.login.accessToken();
     if (!token) {
@@ -68,6 +69,7 @@ export class AdminRolesService {
       .set('pageSize', String(pageSize));
     if (userId?.trim()) params = params.set('userId', userId.trim());
     if (roleKey?.trim()) params = params.set('roleKey', roleKey.trim());
+    if (grantedBy?.trim()) params = params.set('grantedBy', grantedBy.trim());
 
     return from(this.login.apiBaseUrl()).pipe(
       switchMap((apiBaseUrl) =>

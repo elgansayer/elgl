@@ -54,6 +54,8 @@ export class AdminRoleAssignmentsService {
       });
     if (query.userId)
       assignmentQuery = assignmentQuery.eq('user_id', query.userId);
+    if (query.grantedBy)
+      assignmentQuery = assignmentQuery.eq('granted_by', query.grantedBy);
 
     let roleIdsForKey: string[] | null = null;
     if (query.roleKey) {
