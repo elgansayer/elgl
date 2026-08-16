@@ -1,18 +1,25 @@
+import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { AdminReportsQueryDto } from './admin-reports-query.dto';
 
 describe('AdminReportsQueryDto', () => {
-  it('accepts a bounded exact status filter', async () => {
-    const dto = plainToInstance(AdminReportsQueryDto, { status: 'open' });
+  it('accepts bounded exact moderation filters', async () => {
+    const dto = plainToInstance(AdminReportsQueryDto, {
+      status: 'open',
+      reasonCategory: 'harassment',
+    });
     await expect(validate(dto)).resolves.toEqual([]);
   });
 
-  it('rejects an overlong status filter', async () => {
+  it.each([
+    ['status', 41],
+    ['reasonCategory', 81],
+  ])('rejects an overlong %s filter', async (field, length) => {
     const dto = plainToInstance(AdminReportsQueryDto, {
-      status: 'x'.repeat(41),
+      [field]: 'x'.repeat(length),
     });
     const errors = await validate(dto);
-    expect(errors.some((error) => error.property === 'status')).toBe(true);
+    expect(errors.some((error) => error.property === field)).toBe(true);
   });
 });
