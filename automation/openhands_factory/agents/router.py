@@ -76,6 +76,22 @@ class AgentRouter:
             skip_busy_providers = configured_routing.skip_busy_providers
         self.skip_busy_providers = True if skip_busy_providers is None else skip_busy_providers
 
+    @staticmethod
+    def _eligible(
+        provider: AgentProvider,
+        phase: AgentPhase,
+        health: ProviderHealth,
+    ) -> bool:
+        """Return whether a provider is currently safe to receive work.
+
+        Routing fails closed for providers whose live health says they are cooling
+        down, unauthenticated, exhausted, disabled or unavailable. A policy may
+        order candidates, but it cannot bypass this final eligibility check.
+        """
+
+        usable = health.status in (ProviderStatus.HEALTHY, ProviderStatus.DEGRADED)
+        return usable and provider.supports(phase)
+
     def _provider_config(self, name: str):
         policy_config = getattr(self.policy, "config", None)
         providers = getattr(policy_config, "providers", {}) if policy_config else {}
@@ -121,13 +137,19 @@ class AgentRouter:
     def _candidate_names(self, phase: AgentPhase, job: Job) -> list[str]:
         health_data = self._health()
         if self.policy:
-            return list(self.policy.candidates(phase, job, health_data))
-        return [
-            name
-            for name, provider in self.providers.items()
-            if provider.supports(phase)
-            and health_data[name].status in {ProviderStatus.HEALTHY, ProviderStatus.DEGRADED}
-        ]
+            preferred = self.policy.candidates(phase, job, health_data)
+        else:
+            preferred = list(self.providers)
+
+        candidates: list[str] = []
+        for name in preferred:
+            provider = self.providers.get(name)
+            provider_health = health_data.get(name)
+            if provider is None or provider_health is None:
+                continue
+            if self._eligible(provider, phase, provider_health):
+                candidates.append(name)
+        return candidates
 
     def acquire(
         self,
@@ -141,9 +163,7 @@ class AgentRouter:
         for name in self._candidate_names(phase, job):
             if exclude and name in exclude:
                 continue
-            provider = self.providers.get(name)
-            if provider and provider.supports(phase):
-                return provider
+            return self.providers[name]
         return None
 
     def _save_health(self) -> None:
@@ -210,9 +230,7 @@ class AgentRouter:
         for name in candidates:
             if exclude and name in exclude:
                 continue
-            provider = self.providers.get(name)
-            if provider is None or not provider.supports(request.phase):
-                continue
+            provider = self.providers[name]
             breaker = self.breakers.get(name)
             if breaker is not None and not breaker.permits_call():
                 continue
