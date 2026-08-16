@@ -90,3 +90,38 @@ The current `CommunitiesComponent` handles data fetching via Angular signals/res
 - bug
 - tech-debt
 - ui
+
+## Issue 6: Implement Advanced Ranking Signals for Partner Discovery
+
+**Description**
+To enhance the partner discovery algorithm beyond basic language pairing, we need to introduce multiple ranking signals. These signals should calculate a compatibility score based on complementary languages, proficiency levels, timezone overlap, shared interests, response behavior (e.g., response rate and time), correction behavior (e.g., correction ratio), and overall learning seriousness (e.g., study streak).
+
+**Acceptance Criteria**
+- Update the `DiscoveryService` and `RecommendationsService` to compute a multi-dimensional compatibility score.
+- Integrate timezone overlap calculation based on user timezone or availability preferences. Add necessary timezone/availability fields to the user profile if they do not currently exist.
+- Factor in `correction_ratio`, `study_streak_days`, and `is_serious_learner` into the weighting.
+- Include a response behavior metric (e.g., average response time) if available in metrics/stats.
+- Return the computed scores as part of the matchmaking API responses.
+
+**Suggested Labels**
+- enhancement
+- matchmaking
+- algorithm
+
+---
+
+## Issue 7: Add Explanations for Partner Recommendations
+
+**Description**
+To build trust and transparency in the matchmaking system, the UI and API should explain *why* a specific user was recommended. The backend needs to provide a breakdown of the match criteria (e.g., "Matches your target language", "Both online now", "Shared interest in Music").
+
+**Acceptance Criteria**
+- Update `RecommendedUserDto` and discovery response DTOs to include a `matchReasons` array or object.
+- Modify the recommendation engine (in `RecommendationsService` and `DiscoveryService`) to populate `matchReasons` based on the ranking signals that contributed most to the match.
+- Examples of reasons: 'Complementary language exchange', 'High timezone overlap', '3 shared interests', 'Top corrector in the community'.
+- Ensure this data is cleanly serialized and available for the Angular frontend to render.
+
+**Suggested Labels**
+- enhancement
+- user-experience
+- matchmaking
