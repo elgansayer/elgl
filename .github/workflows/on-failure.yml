@@ -18,36 +18,108 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Create failure issue
+      - name: Create or update failure incident
         env:
           GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
           FAILED_WORKFLOW: ${{ github.event.workflow_run.name }}
           FAILED_RUN_URL: ${{ github.event.workflow_run.html_url }}
           FAILED_EVENT: ${{ github.event.workflow_run.event }}
           FAILED_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          FAILED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
 
-          ISSUE_URL=$(gh issue create \
-            --repo "${{ github.repository }}" \
-            --title "Workflow failed: ${FAILED_WORKFLOW}" \
-            --body "The workflow **${FAILED_WORKFLOW}** failed.
+          INCIDENT_TITLE="Workflow failed: ${FAILED_WORKFLOW} [${FAILED_BRANCH}]"
+          EXISTING_NUMBER=$(
+            gh issue list \
+              --repo "$REPOSITORY" \
+              --state open \
+              --limit 1000 \
+              --json number,title |
+              jq -r --arg title "$INCIDENT_TITLE" \
+                '.[] | select(.title == $title) | .number' |
+              head -n 1
+          )
+
+          FAILURE_DETAILS="The workflow **${FAILED_WORKFLOW}** failed.
 
           **Run URL:** ${FAILED_RUN_URL}
           **Event:** ${FAILED_EVENT}
           **Branch:** ${FAILED_BRANCH}
+          **Head SHA:** ${FAILED_SHA}
 
-          Please investigate the failing job logs and fix the underlying issue.")
+          Please investigate the failing job logs and fix the underlying issue."
 
-          echo "Created issue: ${ISSUE_URL}"
+          if [ -n "$EXISTING_NUMBER" ]; then
+            gh issue comment "$EXISTING_NUMBER" \
+              --repo "$REPOSITORY" \
+              --body "A new failure occurred for this incident.
+
+          ${FAILURE_DETAILS}"
+            echo "Updated existing workflow incident #${EXISTING_NUMBER}."
+            exit 0
+          fi
+
+          ISSUE_URL=$(gh issue create \
+            --repo "$REPOSITORY" \
+            --title "$INCIDENT_TITLE" \
+            --body "$FAILURE_DETAILS")
+
+          echo "Created workflow incident: ${ISSUE_URL}"
 
           # Labels are useful but must never make failure reporting fail when a
           # repository label is renamed or removed.
-          gh issue edit "${ISSUE_URL}" \
-            --repo "${{ github.repository }}" \
+          gh issue edit "$ISSUE_URL" \
+            --repo "$REPOSITORY" \
             --add-label "priority:high" \
             --add-label "ai-agent-task" || true
 
-          gh issue comment "${ISSUE_URL}" \
-            --repo "${{ github.repository }}" \
+          # Only dispatch an agent for the first failure in an incident. Later
+          # failures append fresh run details without spawning duplicate work.
+          gh issue comment "$ISSUE_URL" \
+            --repo "$REPOSITORY" \
             --body "/openhands-fix please investigate the logs of this workflow run and fix the failure!"
+
+  resolve-recovery:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Close recovered workflow incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RECOVERED_WORKFLOW: ${{ github.event.workflow_run.name }}
+          RECOVERED_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RECOVERED_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RECOVERED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          INCIDENT_TITLE="Workflow failed: ${RECOVERED_WORKFLOW} [${RECOVERED_BRANCH}]"
+          EXISTING_NUMBER=$(
+            gh issue list \
+              --repo "$REPOSITORY" \
+              --state open \
+              --limit 1000 \
+              --json number,title |
+              jq -r --arg title "$INCIDENT_TITLE" \
+                '.[] | select(.title == $title) | .number' |
+              head -n 1
+          )
+
+          if [ -z "$EXISTING_NUMBER" ]; then
+            echo "No open workflow incident to resolve."
+            exit 0
+          fi
+
+          gh issue close "$EXISTING_NUMBER" \
+            --repo "$REPOSITORY" \
+            --comment "Workflow recovered successfully.
+
+          **Run URL:** ${RECOVERED_RUN_URL}
+          **Branch:** ${RECOVERED_BRANCH}
+          **Head SHA:** ${RECOVERED_SHA}"
+
+          echo "Closed recovered workflow incident #${EXISTING_NUMBER}."
