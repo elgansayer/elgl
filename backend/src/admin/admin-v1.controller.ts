@@ -139,10 +139,49 @@ export class AdminV1Controller {
       'Returns newest-first report summaries through the dedicated admin API. This read-only queue requires moderation.cases.read and supports exact status and reason-category filters.',
   })
   @ApiOkResponse({ description: 'Paginated moderation reports' })
-  listModerationReports(
+  async listModerationReports(
     @Query() query: AdminReportsQueryDto,
+    @Req() req: AdminAuthRequest,
   ): Promise<AdminReportsListResult> {
-    return this.moderationQuery.list(query);
+    const actorUserId = req.user.id ?? req.user.sub;
+    if (!actorUserId) {
+      throw new UnauthorizedException();
+    }
+
+    const requestId = req.headers['x-request-id'];
+    const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
+
+    let result: AdminReportsListResult;
+    try {
+      result = await this.moderationQuery.list(query);
+    } catch (error) {
+      await this.audit.record({
+        actorUserId,
+        action: 'moderation.reports.read',
+        capabilityKey: 'moderation.cases.read',
+        targetType: 'moderation-report-queue',
+        outcome: 'failed',
+        correlationId,
+        metadata: { source: 'admin-v1' },
+      });
+      throw error;
+    }
+
+    await this.audit.record({
+      actorUserId,
+      action: 'moderation.reports.read',
+      capabilityKey: 'moderation.cases.read',
+      targetType: 'moderation-report-queue',
+      outcome: 'success',
+      correlationId,
+      metadata: {
+        resultCount: result.reports.length,
+        total: result.total,
+        source: 'admin-v1',
+      },
+    });
+
+    return result;
   }
 
   @Get('users')
