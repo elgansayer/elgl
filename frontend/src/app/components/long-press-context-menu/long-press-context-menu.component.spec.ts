@@ -38,9 +38,7 @@ describe('LongPressContextMenuComponent', () => {
 
     component.doReply();
 
-    expect(component.reply.emit).toHaveBeenCalledWith({
-      messageId: 'test-message-id',
-    });
+    expect(component.reply.emit).toHaveBeenCalledWith({ messageId: 'test-message-id' });
     expect(component.menuVisible()).toBe(false);
   });
 
@@ -164,20 +162,19 @@ describe('LongPressContextMenuComponent', () => {
 
     component.doBlockToggle();
 
-    expect(component.block.emit).toHaveBeenCalledWith({
-      senderId: 'user-123',
-      blocked: true,
-    });
+    expect(component.block.emit).toHaveBeenCalledWith({ senderId: 'user-123', blocked: true });
     expect(component.menuVisible()).toBe(false);
   });
 
-  it('should open the menu after a long mouse press', () => {
+  it('should open the menu after a 500ms long mouse press', () => {
     vi.useFakeTimers();
 
-    component.onMouseDown(new MouseEvent('mousedown', { button: 0 }));
+    component.onMouseDown(new MouseEvent('mousedown', { button: 0, clientX: 10, clientY: 10 }));
     expect(component.menuVisible()).toBe(false);
 
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(499);
+    expect(component.menuVisible()).toBe(false);
+    vi.advanceTimersByTime(1);
     expect(component.menuVisible()).toBe(true);
 
     vi.useRealTimers();
@@ -188,7 +185,18 @@ describe('LongPressContextMenuComponent', () => {
 
     component.onMouseDown(new MouseEvent('mousedown', { button: 0 }));
     component.onMouseUp();
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(500);
+
+    expect(component.menuVisible()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('should cancel the menu when mouse movement exceeds the selection tolerance', () => {
+    vi.useFakeTimers();
+
+    component.onMouseDown(new MouseEvent('mousedown', { button: 0, clientX: 10, clientY: 10 }));
+    component.onMouseMove(new MouseEvent('mousemove', { clientX: 30, clientY: 10 }));
+    vi.advanceTimersByTime(500);
 
     expect(component.menuVisible()).toBe(false);
     vi.useRealTimers();
@@ -198,7 +206,7 @@ describe('LongPressContextMenuComponent', () => {
     vi.useFakeTimers();
 
     component.onMouseDown(new MouseEvent('mousedown', { button: 1 }));
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(500);
 
     expect(component.menuVisible()).toBe(false);
     vi.useRealTimers();
@@ -225,25 +233,37 @@ describe('LongPressContextMenuComponent', () => {
 
     component.doBlockToggle();
 
-    expect(component.block.emit).toHaveBeenCalledWith({
-      senderId: 'user-123',
-      blocked: false,
-    });
+    expect(component.block.emit).toHaveBeenCalledWith({ senderId: 'user-123', blocked: false });
     expect(component.menuVisible()).toBe(false);
   });
 
-  it('should open the menu after a long touch press', () => {
+  it('should open the menu after a 500ms long touch press', () => {
     vi.useFakeTimers();
 
     const touchStartEvent = {
-      touches: [{ identifier: 0 }],
+      touches: [{ identifier: 0, clientX: 10, clientY: 10 }],
     } as unknown as TouchEvent;
     component.onTouchStart(touchStartEvent);
     expect(component.menuVisible()).toBe(false);
 
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(500);
     expect(component.menuVisible()).toBe(true);
 
+    vi.useRealTimers();
+  });
+
+  it('should cancel the menu when touch movement exceeds the selection tolerance', () => {
+    vi.useFakeTimers();
+
+    component.onTouchStart({
+      touches: [{ identifier: 0, clientX: 10, clientY: 10 }],
+    } as unknown as TouchEvent);
+    component.onTouchMove({
+      touches: [{ identifier: 0, clientX: 10, clientY: 30 }],
+    } as unknown as TouchEvent);
+    vi.advanceTimersByTime(500);
+
+    expect(component.menuVisible()).toBe(false);
     vi.useRealTimers();
   });
 
@@ -251,10 +271,13 @@ describe('LongPressContextMenuComponent', () => {
     vi.useFakeTimers();
 
     const multiTouchEvent = {
-      touches: [{ identifier: 0 }, { identifier: 1 }],
+      touches: [
+        { identifier: 0, clientX: 0, clientY: 0 },
+        { identifier: 1, clientX: 0, clientY: 0 },
+      ],
     } as unknown as TouchEvent;
     component.onTouchStart(multiTouchEvent);
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(500);
 
     expect(component.menuVisible()).toBe(false);
     vi.useRealTimers();
@@ -264,11 +287,11 @@ describe('LongPressContextMenuComponent', () => {
     vi.useFakeTimers();
 
     const touchStartEvent = {
-      touches: [{ identifier: 0 }],
+      touches: [{ identifier: 0, clientX: 0, clientY: 0 }],
     } as unknown as TouchEvent;
     component.onTouchStart(touchStartEvent);
     component.onTouchEnd();
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(500);
 
     expect(component.menuVisible()).toBe(false);
     vi.useRealTimers();
@@ -278,11 +301,11 @@ describe('LongPressContextMenuComponent', () => {
     vi.useFakeTimers();
 
     const touchStartEvent = {
-      touches: [{ identifier: 0 }],
+      touches: [{ identifier: 0, clientX: 0, clientY: 0 }],
     } as unknown as TouchEvent;
     component.onTouchStart(touchStartEvent);
     component.onTouchCancel();
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(500);
 
     expect(component.menuVisible()).toBe(false);
     vi.useRealTimers();
@@ -293,7 +316,7 @@ describe('LongPressContextMenuComponent', () => {
 
     component.onMouseDown(new MouseEvent('mousedown', { button: 0 }));
     component.onMouseCancel();
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(500);
 
     expect(component.menuVisible()).toBe(false);
     vi.useRealTimers();
