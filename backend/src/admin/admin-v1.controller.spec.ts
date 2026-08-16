@@ -122,14 +122,65 @@ describe('AdminV1Controller', () => {
     expect(systemHealth.getSnapshot).toHaveBeenCalledOnce();
   });
 
-  it('delegates bounded audit queries to AdminAuditQueryService', async () => {
-    const { controller, auditQuery } = buildController();
+  it('audits successful bounded audit-log reads', async () => {
+    const { controller, auditQuery, audit } = buildController();
     const query = { page: 2, pageSize: 25, action: 'users.login_history.read' };
     const expected = { events: [], total: 0, page: 2, pageSize: 25 };
     auditQuery.list.mockResolvedValue(expected);
+    const request = {
+      user: { id: 'admin-1' },
+      headers: { 'x-request-id': 'request-audit-1' },
+    } as never;
 
-    await expect(controller.listAudit(query)).resolves.toEqual(expected);
+    await expect(controller.listAudit(query, request)).resolves.toEqual(expected);
     expect(auditQuery.list).toHaveBeenCalledWith(query);
+    expect(audit.record).toHaveBeenCalledWith({
+      actorUserId: 'admin-1',
+      action: 'audit.events.read',
+      capabilityKey: 'audit.read',
+      targetType: 'admin-audit-log',
+      outcome: 'success',
+      correlationId: 'request-audit-1',
+      metadata: { resultCount: 0, total: 0, source: 'admin-v1' },
+    });
+  });
+
+  it('audits failed audit-log reads without recording private error details', async () => {
+    const { controller, auditQuery, audit } = buildController();
+    const storageError = new Error('private audit storage detail');
+    auditQuery.list.mockRejectedValue(storageError);
+    const request = {
+      user: { id: 'admin-1' },
+      headers: { 'x-request-id': 'request-audit-2' },
+    } as never;
+
+    await expect(controller.listAudit({}, request)).rejects.toBe(storageError);
+    expect(audit.record).toHaveBeenCalledWith({
+      actorUserId: 'admin-1',
+      action: 'audit.events.read',
+      capabilityKey: 'audit.read',
+      targetType: 'admin-audit-log',
+      outcome: 'failed',
+      correlationId: 'request-audit-2',
+      metadata: { source: 'admin-v1' },
+    });
+    expect(JSON.stringify(audit.record.mock.calls)).not.toContain(
+      'private audit storage detail',
+    );
+  });
+
+  it('fails closed when audit-log read auditing fails', async () => {
+    const { controller, auditQuery, audit } = buildController();
+    auditQuery.list.mockResolvedValue({ events: [], total: 0, page: 1, pageSize: 50 });
+    audit.record.mockRejectedValue(new Error('audit unavailable'));
+    const request = {
+      user: { id: 'admin-1' },
+      headers: {},
+    } as never;
+
+    await expect(controller.listAudit({}, request)).rejects.toThrow(
+      'audit unavailable',
+    );
   });
 
   it('delegates and audits bounded moderation reports', async () => {
