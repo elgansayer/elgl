@@ -3,20 +3,21 @@ name: AI Auto-Resolver
 on:
   issue_comment:
     types: [created]
-  pull_request_review_comment:
-    types: [created]
 
 concurrency:
-  # Per-issue concurrency: different issues run in parallel, same issue is serialised
-  group: openhands-issue-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  # Per-issue concurrency: different issues run in parallel, same issue is serialised.
+  group: openhands-issue-${{ github.event.issue.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   ai-agent:
+    # This workflow is an issue-to-PR resolver. PR conversations and review comments
+    # are handled by the dedicated PR reviewer so we never resolve them from main or
+    # accidentally create a second PR for an existing pull request.
     if: >
+      !github.event.issue.pull_request &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
-      ((github.event_name == 'issue_comment' && github.event.comment.body == '/openhands-fix') ||
-      (github.event_name == 'pull_request_review_comment' && github.event.comment.body == '/openhands-fix'))
+      github.event.comment.body == '/openhands-fix'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
