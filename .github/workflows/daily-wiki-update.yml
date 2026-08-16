@@ -51,9 +51,9 @@ jobs:
       # not pushed. main is protected and all repository changes must go through a
       # pull request. This workflow publishes only the generated wiki snapshot.
       - name: Commit and Push Wiki Repository
+        working-directory: wiki-repo
         run: |
           set -euo pipefail
-          cd wiki-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
