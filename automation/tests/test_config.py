@@ -6,6 +6,27 @@ from openhands_factory.config import FactoryConfig
 from openhands_factory.exceptions import ConfigurationError
 
 
+RETIRED_SYSTEMD_UNITS = {
+    "hellotalk-swarm.service",
+    "hellotalk-aider.service",
+    "hellotalk-swarm-watchdog.service",
+    "hellotalk-guardian.service",
+    "hellotalk-resolver.service",
+    "hellotalk-reviewer.service",
+}
+
+RETIRED_EXECUTOR_FILENAMES = {
+    "architect.py",
+    "auto_dispatcher.py",
+    "swarm.py",
+    "aider.py",
+    "guardian.py",
+    "resolver.py",
+    "reviewer.py",
+    "pr_reviewer.py",
+}
+
+
 def test_worker_image_reuses_the_node_base_image_user() -> None:
     containerfile = (Path(__file__).parents[1] / "Containerfile").read_text(encoding="utf-8")
 
@@ -28,6 +49,28 @@ def test_legacy_github_agent_workflows_stay_retired() -> None:
 
     for name in ("architect.yml", "auto-dispatcher.yml", "openhands.yml", "pr-reviewer.yml"):
         assert not (workflows / name).exists()
+
+
+def test_retired_autonomous_entrypoints_cannot_reappear() -> None:
+    repository_root = Path(__file__).parents[2]
+    systemd = repository_root / "config" / "systemd"
+    factory_sources = repository_root / "automation" / "openhands_factory"
+    scripts = repository_root / "scripts"
+
+    offenders: list[str] = []
+
+    for name in RETIRED_SYSTEMD_UNITS:
+        if (systemd / name).exists():
+            offenders.append(str((systemd / name).relative_to(repository_root)))
+
+    for root in (factory_sources, scripts):
+        if not root.exists():
+            continue
+        for path in root.rglob("*"):
+            if path.is_file() and path.name in RETIRED_EXECUTOR_FILENAMES:
+                offenders.append(str(path.relative_to(repository_root)))
+
+    assert offenders == [], f"retired autonomous executor entrypoints reappeared: {offenders}"
 
 
 def test_service_allows_rootless_podman_user_namespace_helpers() -> None:
