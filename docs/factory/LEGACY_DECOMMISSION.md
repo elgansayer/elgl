@@ -11,7 +11,7 @@ sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory lega
 sudo -u hellotalk-factory /opt/hellotalk-factory/venv/bin/hellotalk-factory doctor --online
 ```
 
-The detector checks known retired HelloTalk swarm systemd units, old tmux orchestration sessions and legacy state locations. An active retired service/session fails the doctor check. Inactive legacy state is reported as a warning because historical evidence may still be useful.
+The detector checks known retired HelloTalk swarm systemd units, old tmux orchestration sessions and legacy state locations. An active or enabled retired service/session fails the doctor check. Inactive legacy state is reported as a warning because historical evidence may still be useful.
 
 Legacy queues, leases and databases are never imported into current Factory state. GitHub issues and the current Factory state directory remain the only work authorities.
 
@@ -20,18 +20,18 @@ Legacy queues, leases and databases are never imported into current Factory stat
 Preview decommission actions first:
 
 ```bash
-sudo ./scripts/decommission-legacy-factory.sh
+sudo bash ./scripts/decommission-legacy-factory.sh
 ```
 
 After reviewing the output:
 
 ```bash
-sudo ./scripts/decommission-legacy-factory.sh --apply
+sudo bash ./scripts/decommission-legacy-factory.sh --apply
 ```
 
 The helper is deliberately conservative. It disables/stops known retired systemd units, terminates known retired tmux sessions, and makes detected legacy state read-only. It does not delete state and it does not touch `/var/lib/hellotalk-factory`, current Factory worktrees, OAuth credentials, or human branches.
 
-After applying cleanup, run `legacy scan` and `doctor --online` again. A clean production host has no active retired runtime findings.
+After applying cleanup, run `legacy scan` and `doctor --online` again. A clean production host has no active or enabled retired runtime findings.
 
 ## Adding newly discovered legacy artifacts
 
