@@ -64,7 +64,7 @@
     },
     {
       "name": "profile and language preferences",
-      "anchors": ["backend/src/profiles", "frontend/src/app"]
+      "anchors": ["backend/src/users", "frontend/src/app"]
     },
     {
       "name": "audio-room authorization",
