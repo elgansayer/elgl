@@ -175,9 +175,25 @@ export class AdminV1Controller {
       throw new UnauthorizedException();
     }
 
-    const result = await this.adminService.getLoginHistory(id);
     const requestId = req.headers['x-request-id'];
     const correlationId = Array.isArray(requestId) ? requestId[0] : requestId;
+
+    let result: LoginHistoryEntry[];
+    try {
+      result = await this.adminService.getLoginHistory(id);
+    } catch (error) {
+      await this.audit.record({
+        actorUserId,
+        action: 'users.login_history.read',
+        capabilityKey: 'users.sessions.read',
+        targetType: 'user',
+        targetId: id,
+        outcome: 'failed',
+        correlationId,
+        metadata: { source: 'admin-v1' },
+      });
+      throw error;
+    }
 
     await this.audit.record({
       actorUserId,
