@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   generate:
-    if: github.event.head_commit.message == 'ci(spartan): bootstrap foundation wave A'
+    if: github.event.head_commit.message == 'bootstrap wave A'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
