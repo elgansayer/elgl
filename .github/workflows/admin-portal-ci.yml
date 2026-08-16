@@ -21,9 +21,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  admin-portal:
+  admin-portal-lint:
+    name: admin-portal / lint
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -37,6 +38,21 @@ jobs:
       - name: Lint admin portal
         working-directory: admin-portal
         run: npm run lint:check
+
+  admin-portal-test:
+    name: admin-portal / test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin-portal/package-lock.json
+      - name: Install admin portal dependencies
+        working-directory: admin-portal
+        run: npm ci --no-audit --no-fund
       - name: Test admin portal
         working-directory: admin-portal
         run: mkdir -p test-results && npm test -- --reporters=json --reporters=default --output-file=test-results/unit.json
@@ -48,6 +64,21 @@ jobs:
           path: admin-portal/test-results/unit.json
           if-no-files-found: warn
           retention-days: 14
+
+  admin-portal-build:
+    name: admin-portal / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin-portal/package-lock.json
+      - name: Install admin portal dependencies
+        working-directory: admin-portal
+        run: npm ci --no-audit --no-fund
       - name: Build admin portal
         working-directory: admin-portal
         run: npm run build
