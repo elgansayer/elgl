@@ -47,7 +47,9 @@ for attempt in 1 2 3; do
 done
 
 # Telegram is deliberately invoked as the factory user so alert cooldown state
-# remains owned by the service account. No job/stall/provider condition reaches
-# this path; this is only for a daemon that stayed unhealthy after restart attempts.
-runuser -u "$FACTORY_USER" -- "$FACTORY" alert-daemon-failed || true
+# remains owned by the service account. Preserve the EnvironmentFile values so
+# the notifier can read Telegram credentials without copying or printing them.
+# No job/stall/provider condition reaches this path; this is only for a daemon
+# that stayed unhealthy after restart attempts.
+runuser -u "$FACTORY_USER" --preserve-environment -- "$FACTORY" alert-daemon-failed || true
 exit 1
