@@ -75,8 +75,11 @@ class AgentRouter:
         if not provider:
             raise RuntimeError(f"No available provider found for phase: {request.phase}")
 
-        state_machine = StateMachine(request.work_dir)
-        state_machine.initialize_state(request.task.description)
+        state_machine = StateMachine(request.cwd)
+        initial_plan = request.task.title
+        if request.task.body:
+            initial_plan = f"{initial_plan}\n\n{request.task.body}"
+        state_machine.initialize_state(initial_plan)
 
         try:
             result = provider.run(request)
