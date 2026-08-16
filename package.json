@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "HelloTalk Open-Core Platform (Angular v22 + NestJS + Supabase + Centrifugo + LiveKit)",
-  "engines": {
-    "node": ">=22.0.0",
-    "npm": ">=10.0.0"
-  },
+  "engines": {"node": ">=22.0.0", "npm": ">=10.0.0"},
   "packageManager": "npm@10.9.8",
   "scripts": {
     "check:constitution": "node scripts/verify-constitution.mjs",
@@ -17,6 +14,7 @@
     "check:component-system": "node scripts/verify-component-system-convergence.mjs",
     "check:legacy-primitive-delta": "node scripts/check-legacy-primitive-delta.mjs",
     "check:visual-contract-matrix": "node scripts/verify-visual-contract-matrix.mjs",
+    "check:rtl-logical-contract": "node scripts/verify-rtl-logical-contract.mjs",
     "report:ui-design-coverage": "node scripts/report-ui-design-coverage.mjs",
     "report:ux-system-health": "node scripts/report-ux-system-health.mjs",
     "check:control-flow": "cd frontend && npm run check:control-flow",
@@ -38,27 +36,13 @@
     "test:frontend": "cd frontend && npm run test",
     "test:backend": "cd backend && npm run test",
     "test:admin": "cd admin-portal && npm run test",
-    "verify": "npm run check:constitution && npm run check:agent-ui-governance && npm run check:design-sync && npm run check:spartan-boundaries && npm run check:component-system && npm run check:visual-contract-matrix && npm run lint:check && npm run build && npm test && node scripts/check-conflict-markers.mjs && cd backend && npm run verify",
+    "verify": "npm run check:constitution && npm run check:agent-ui-governance && npm run check:design-sync && npm run check:spartan-boundaries && npm run check:component-system && npm run check:visual-contract-matrix && npm run check:rtl-logical-contract && npm run lint:check && npm run build && npm test && node scripts/check-conflict-markers.mjs && cd backend && npm run verify",
     "verify:node": "node --version && npm --version && echo '✅ Node.js and npm verified'",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "if [ -d .git ]; then npx husky || true; fi"
   },
-  "dependencies": {
-    "@ngx-translate/core": "^15.0.0",
-    "@ngx-translate/http-loader": "^8.0.0",
-    "xss": "^1.0.15"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "artillery": "^2.0.33",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.2.10",
-    "prettier": "^3.3.3"
-  },
-  "lint-staged": {
-    "*.{js,ts,html,css,scss,json,md,mdx,yaml,yml}": [
-      "prettier --write"
-    ]
-  }
+  "dependencies": {"@ngx-translate/core": "^15.0.0", "@ngx-translate/http-loader": "^8.0.0", "xss": "^1.0.15"},
+  "devDependencies": {"@eslint/js": "^10.0.1", "artillery": "^2.0.33", "husky": "^9.1.7", "lint-staged": "^15.2.10", "prettier": "^3.3.3"},
+  "lint-staged": {"*.{js,ts,html,css,scss,json,md,mdx,yaml,yml}": ["prettier --write"]}
 }
