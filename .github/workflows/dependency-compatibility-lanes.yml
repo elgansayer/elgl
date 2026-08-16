@@ -1,8 +1,9 @@
 name: Dependency Compatibility Lanes
 
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_run:
+    workflows: ['Dependency review']
+    types: [completed]
   schedule:
     - cron: '41 */6 * * *'
   workflow_dispatch:
@@ -23,7 +24,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
-      CURRENT_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
     steps:
       - name: Checkout trusted default branch
         uses: actions/checkout@v7
