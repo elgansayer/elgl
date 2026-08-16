@@ -1,6 +1,7 @@
 import { AdminAuditQueryService } from './admin-audit-query.service';
 import { AdminAuditService } from './admin-audit.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
+import { AdminModerationQueryService } from './admin-moderation-query.service';
 import { AdminRoleInventoryService } from './admin-role-inventory.service';
 import { AdminService } from './admin.service';
 import { AdminSystemHealthService } from './admin-system-health.service';
@@ -16,7 +17,6 @@ describe('AdminV1Controller', () => {
     };
     const adminService = {
       listUsers: vi.fn(),
-      listReports: vi.fn(),
       getLoginHistory: vi.fn(),
     };
     const userDetailService = {
@@ -26,6 +26,9 @@ describe('AdminV1Controller', () => {
       record: vi.fn().mockResolvedValue(undefined),
     };
     const auditQuery = {
+      list: vi.fn(),
+    };
+    const moderationQuery = {
       list: vi.fn(),
     };
     const systemHealth = {
@@ -40,6 +43,7 @@ describe('AdminV1Controller', () => {
       userDetailService as unknown as AdminUserDetailService,
       audit as unknown as AdminAuditService,
       auditQuery as unknown as AdminAuditQueryService,
+      moderationQuery as unknown as AdminModerationQueryService,
       systemHealth as unknown as AdminSystemHealthService,
       roleInventory as unknown as AdminRoleInventoryService,
     );
@@ -51,6 +55,7 @@ describe('AdminV1Controller', () => {
       userDetailService,
       audit,
       auditQuery,
+      moderationQuery,
       systemHealth,
       roleInventory,
     };
@@ -121,16 +126,21 @@ describe('AdminV1Controller', () => {
     expect(auditQuery.list).toHaveBeenCalledWith(query);
   });
 
-  it('delegates bounded moderation reports to AdminService', async () => {
-    const { controller, adminService } = buildController();
-    const query = { page: 2, pageSize: 25, status: 'open' };
+  it('delegates bounded moderation reports to AdminModerationQueryService', async () => {
+    const { controller, moderationQuery } = buildController();
+    const query = {
+      page: 2,
+      pageSize: 25,
+      status: 'open',
+      reasonCategory: 'harassment',
+    };
     const expected = { reports: [], total: 0, page: 2, pageSize: 25 };
-    adminService.listReports.mockResolvedValue(expected);
+    moderationQuery.list.mockResolvedValue(expected);
 
     await expect(controller.listModerationReports(query)).resolves.toEqual(
       expected,
     );
-    expect(adminService.listReports).toHaveBeenCalledWith(2, 25, 'open');
+    expect(moderationQuery.list).toHaveBeenCalledWith(query);
   });
 
   it('delegates bounded user search to AdminService', async () => {
